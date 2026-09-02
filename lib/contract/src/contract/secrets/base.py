@@ -14,12 +14,13 @@ a second mechanism.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import field
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar, Final, Literal, Self
 from uuid import UUID  # noqa: TC003 SecretRef crosses the wire inside the bundle, so pydantic resolves this at runtime
 
 from pydantic import BaseModel, ConfigDict
+from pydantic.dataclasses import dataclass
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -67,8 +68,8 @@ class SecretPurpose(StrEnum):
     provider = "provider"
 
 
-@dataclass(frozen=True, kw_only=True)
-class SecretRef:
+@dataclass(frozen=True, kw_only=True, config=ConfigDict(extra="forbid"))
+class _SecretRef:
     """A stable reference to a secret value and the scope that owns it."""
 
     purpose: SecretPurpose
@@ -77,11 +78,6 @@ class SecretRef:
     secret_id: UUID
     org_id: UUID | None = None
     workspace_id: UUID | None = None
-
-    def __post_init__(self) -> None:
-        if self.workspace_id is not None and self.org_id is None:
-            msg = "workspace secret reference requires an organization"
-            raise ValueError(msg)
 
     @property
     def is_platform(self) -> bool:
@@ -95,24 +91,24 @@ class SecretRef:
 
 
 @dataclass(frozen=True, kw_only=True)
-class PlatformSecretRef(SecretRef):
+class PlatformSecretRef(_SecretRef):
     org_id: None = None
     workspace_id: None = None
 
 
 @dataclass(frozen=True, kw_only=True)
-class OrgSecretRef(SecretRef):
-    org_id: UUID
+class OrgSecretRef(_SecretRef):
+    org_id: UUID = field()
     workspace_id: None = None
 
 
 @dataclass(frozen=True, kw_only=True)
-class WorkspaceSecretRef(SecretRef):
-    org_id: UUID
-    workspace_id: UUID
+class WorkspaceSecretRef(_SecretRef):
+    org_id: UUID = field()
+    workspace_id: UUID = field()
 
 
-SecretReference = PlatformSecretRef | OrgSecretRef | WorkspaceSecretRef
+SecretRef = PlatformSecretRef | OrgSecretRef | WorkspaceSecretRef
 
 
 def path_segments(ref: SecretRef) -> tuple[str, ...]:

@@ -6,7 +6,7 @@ from conftest import MODEL, PROVIDER, make_bundle, make_credential, make_key
 from contract import Catalog, uuid7
 from data_plane.bundle import BundleSnapshot
 from data_plane.canonical import (
-    CanonicalMessage,
+    AssistantMessage,
     CanonicalRequest,
     DocumentPart,
     ImagePart,
@@ -15,6 +15,7 @@ from data_plane.canonical import (
     ReasoningPart,
     ToolCallPart,
     ToolDef,
+    UserMessage,
 )
 from data_plane.policy import Allow, Deny, evaluate
 
@@ -62,8 +63,8 @@ def test_request_capabilities_are_derived_from_every_canonical_feature():
     request = CanonicalRequest(
         model=MODEL.model_id,
         messages=[
-            CanonicalMessage(role="user", content=[ImagePart(url="https://example.com/image.png"), DocumentPart(url="https://example.com/doc.pdf")]),
-            CanonicalMessage(role="assistant", content=[ReasoningPart(text="think"), ToolCallPart(id="call-1", name="lookup", arguments="{}")]),
+            UserMessage(content=[ImagePart(url="https://example.com/image.png"), DocumentPart(url="https://example.com/doc.pdf")]),
+            AssistantMessage(content=[ReasoningPart(text="think"), ToolCallPart(id="call-1", name="lookup", arguments="{}")]),
         ],
         stream=True,
         tools=[ToolDef(name="lookup")],
@@ -93,7 +94,7 @@ def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality(
     bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[CREDENTIAL]), org=ORG_A)
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[CanonicalMessage(role="user", content=[ImagePart(url="https://example.com/image.png")])],
+        messages=[UserMessage(content=[ImagePart(url="https://example.com/image.png")])],
     )
 
     assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_input_modality: image", status=400)

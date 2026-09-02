@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, BeforeValidator, Field, RootModel, field_validator
+from pydantic import BaseModel, Field, RootModel, field_validator
 
 from contract import PLAYGROUND_COOKIE
 from control_plane.authority import effective_permissions, principal_can_issue_instance_access_key, principal_can_select_org, visible_org_ids
@@ -226,23 +225,16 @@ class _CliAuthApproveIn(RequestModel):
 
 
 class CliInstanceAuthApproveIn(_CliAuthApproveIn):
-    scope: Literal["instance"] = Field("instance", description="Issue an instance-scoped CLI access key")
+    scope: Literal["instance"] = Field(description="Issue an instance-scoped CLI access key")
     org_id: None = Field(None, description="Organization is absent for instance access")
 
 
 class CliOrgAuthApproveIn(_CliAuthApproveIn):
-    scope: Literal["org"] = Field("org", description="Issue an organization-scoped CLI access key")
+    scope: Literal["org"] = Field(description="Issue an organization-scoped CLI access key")
     org_id: UUID = Field(description="Organization the CLI access key should use")
 
 
-def _default_cli_approval_scope(value: object) -> object:
-    if isinstance(value, Mapping) and "scope" not in value:
-        return {**value, "scope": "org"}
-    return value
-
-
-CliAuthApproval = Annotated[CliInstanceAuthApproveIn | CliOrgAuthApproveIn, Field(discriminator="scope")]
-CliAuthApproveIn = Annotated[CliAuthApproval, BeforeValidator(_default_cli_approval_scope)]
+CliAuthApproveIn = Annotated[CliInstanceAuthApproveIn | CliOrgAuthApproveIn, Field(discriminator="scope")]
 
 
 class CliAuthApprovedOut(BaseModel):

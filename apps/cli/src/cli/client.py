@@ -60,7 +60,7 @@ def access_client(control_plane_url: str = "", token: str | None = None) -> http
 
 def resolve_org_id(override: str = "") -> str:
     profile = load_active_profile()
-    selected_org = override or os.environ.get("GW_ORG_ID") or (profile.org_id if profile is not None else None)
+    selected_org = override or os.environ.get("GW_ORG_ID") or (profile.org_id if profile is not None and profile.scope == "org" else None)
     if selected_org:
         return str(selected_org)
     console.print("[red]No organization selected. Pass --org, set GW_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
@@ -119,7 +119,7 @@ def resolve_workspace(workspace: str) -> str:
     if workspace:
         return workspace
     profile = load_active_profile()
-    default = (profile.workspace or profile.workspace_id) if profile is not None else None
+    default = profile.workspace if profile is not None and profile.scope == "org" else None
     if default:
         return str(default)
     console.print("[red]No workspace selected. Pass --workspace, or set a default with [bold]airllm workspaces use <name>[/bold].[/red]")

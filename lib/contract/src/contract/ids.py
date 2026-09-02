@@ -2,28 +2,9 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Annotated
-from uuid import UUID, uuid5
+from uuid import UUID
 
-from pydantic import BeforeValidator
-
-LEGACY_INFERENCE_KEY_NAMESPACE = UUID("9f09b7c3-1424-5c04-a175-eac16b26b2a4")
-
-
-def inference_key_id(value: object) -> object:
-    if isinstance(value, UUID):
-        return value
-    if isinstance(value, str):
-        if not value:
-            return value
-        try:
-            return UUID(value)
-        except ValueError:
-            return uuid5(LEGACY_INFERENCE_KEY_NAMESPACE, value)
-    return value
-
-
-InferenceKeyId = Annotated[UUID, BeforeValidator(inference_key_id)]
+InferenceKeyId = UUID
 
 
 def uuid7() -> UUID:

@@ -160,7 +160,7 @@ def upgrade() -> None:
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
-        sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("key_id", sa.Uuid(), nullable=False),
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bundle_id", sa.Uuid(), nullable=False),

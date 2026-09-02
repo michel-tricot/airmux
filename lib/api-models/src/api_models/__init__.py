@@ -157,7 +157,7 @@ class CliInstanceAuthApproveIn(BaseModel):
     scope: Annotated[
         Literal["instance"],
         Field(description="Issue an instance-scoped CLI access key", title="Scope"),
-    ] = "instance"
+    ]
     org_id: Annotated[
         None,
         Field(description="Organization is absent for instance access", title="Org Id"),
@@ -180,7 +180,7 @@ class CliOrgAuthApproveIn(BaseModel):
     scope: Annotated[
         Literal["org"],
         Field(description="Issue an organization-scoped CLI access key", title="Scope"),
-    ] = "org"
+    ]
     org_id: Annotated[
         UUID,
         Field(description="Organization the CLI access key should use", title="Org Id"),

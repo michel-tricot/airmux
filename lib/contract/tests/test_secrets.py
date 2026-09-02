@@ -6,7 +6,7 @@ import stat
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from contract import (
     EnvSecretStore,
@@ -17,6 +17,8 @@ from contract import (
     InsecureDatabaseStoreConfig,
     MemorySecretStore,
     MemoryStoreConfig,
+    OrgSecretRef,
+    PlatformSecretRef,
     Secret,
     SecretNotFoundError,
     SecretPurpose,
@@ -24,6 +26,7 @@ from contract import (
     SecretRejectedError,
     SecretsConfig,
     SecretStoreUnavailableError,
+    WorkspaceSecretRef,
 )
 
 ORG = uuid4()
@@ -36,18 +39,27 @@ class Configured(BaseModel):
     secrets: SecretsConfig
 
 
-def a_ref(service="openai", name="default", org_id=ORG, workspace_id=WORKSPACE, purpose=SecretPurpose.provider):
-    return SecretRef(purpose=purpose, service=service, name=name, secret_id=uuid4(), org_id=org_id, workspace_id=workspace_id)
+def a_ref(service="openai", name="default", org_id=ORG, workspace_id=WORKSPACE, secret_id=None):
+    resolved_id = secret_id or uuid4()
+    if workspace_id is not None:
+        return WorkspaceSecretRef(
+            purpose=SecretPurpose.provider, service=service, name=name, secret_id=resolved_id, org_id=org_id, workspace_id=workspace_id
+        )
+    if org_id is not None:
+        return OrgSecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=resolved_id, org_id=org_id)
+    return PlatformSecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=resolved_id)
 
 
 def test_workspace_secret_reference_requires_an_organization():
-    with pytest.raises(ValueError, match="workspace secret reference requires an organization"):
-        SecretRef(
-            purpose=SecretPurpose.provider,
-            service="openai",
-            name="default",
-            secret_id=uuid4(),
-            workspace_id=WORKSPACE,
+    with pytest.raises(ValidationError):
+        TypeAdapter(SecretRef).validate_python(
+            {
+                "purpose": SecretPurpose.provider,
+                "service": "openai",
+                "name": "default",
+                "secret_id": uuid4(),
+                "workspace_id": WORKSPACE,
+            }
         )
 
 
@@ -153,9 +165,7 @@ async def test_scopes_do_not_read_as_one_another(store):
     secret_id = uuid4()
 
     def scoped(org_id=None, workspace_id=None):
-        return SecretRef(
-            purpose=SecretPurpose.provider, service="openai", name="default", secret_id=secret_id, org_id=org_id, workspace_id=workspace_id
-        )
+        return a_ref(org_id=org_id, workspace_id=workspace_id, secret_id=secret_id)
 
     workspace_scoped = scoped(org_id=ORG, workspace_id=WORKSPACE)
     org_scoped = scoped(org_id=ORG)
@@ -256,7 +266,7 @@ async def test_a_file_store_reports_an_unusable_root_as_unavailable(tmp_path):
 
 
 def a_platform_ref(service="openai", name="default"):
-    return SecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=uuid4())
+    return PlatformSecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=uuid4())
 
 
 async def test_an_env_store_resolves_a_provider_by_its_conventional_variable(monkeypatch):

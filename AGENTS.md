@@ -115,21 +115,20 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 ## Interface boundaries, non-negotiable
 - Domain and internal types describe only valid states. Do not make a required value optional, use a
   free-form string for a closed vocabulary, or return an untyped dict because validation happens later
-- Uncertain and legacy input is accepted only at a wire, file, or environment parser and normalized once
-  into the strict internal type. Backward compatibility belongs in a BeforeValidator or adapter, never in
-  every consumer
+- This project has no deployed compatibility surface. Do not add legacy parsing, compatibility defaults or aliases,
+  deterministic conversions, or backfill behavior for obsolete shapes. Change every producer and consumer
+  to the strict interface instead. Add compatibility only when a user names a real deployed contract
 - Conditional shapes are discriminated unions with one model per valid state. Do not represent state
   machines as one model whose fields become conditionally required through `T | None`
 - Closed vocabularies use a shared Literal or StrEnum. Identifiers use their domain type, including UUID,
   after boundary normalization
-- A database column is non-null when the domain requires the value. Tightening a persisted field includes
-  a backfill migration and a migration test that covers legacy data
+- A database column is non-null when the domain requires the value. Before the first production release,
+  fix the migration that introduced the column instead of adding a follow-up compatibility migration
 - CLI control-plane responses are decoded into generated `api_models` in `cli.client`. Commands never
   consume raw response dicts, and payload helpers always require the expected response model
 - Optional update fields, partial stream deltas, provider wire JSON, JSON Schema values, and the canonical
   request's documented top-level passthrough are intentionally open. Do not generalize those exceptions
 - Every tightened boundary gets a behavior or generated-schema test proving invalid states are rejected
-  and valid legacy input is normalized
 
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket

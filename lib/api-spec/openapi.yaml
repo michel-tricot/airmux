@@ -4378,7 +4378,6 @@ components:
           const: instance
           title: Scope
           description: Issue an instance-scoped CLI access key
-          default: instance
         org_id:
           type: 'null'
           title: Org Id
@@ -4387,6 +4386,7 @@ components:
       type: object
       required:
       - user_code
+      - scope
       title: CliInstanceAuthApproveIn
     CliOrgAuthApproveIn:
       properties:
@@ -4401,7 +4401,6 @@ components:
           const: org
           title: Scope
           description: Issue an organization-scoped CLI access key
-          default: org
         org_id:
           type: string
           format: uuid
@@ -4411,6 +4410,7 @@ components:
       type: object
       required:
       - user_code
+      - scope
       - org_id
       title: CliOrgAuthApproveIn
     DataPlaneInstanceOut:

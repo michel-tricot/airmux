@@ -120,56 +120,29 @@ ContentPart = Annotated[
 
 AssistantPart = Annotated[TextPart | ReasoningPart | ToolCallPart, Field(discriminator="type")]
 
-Role = Literal["system", "user", "assistant"]
-
-ALLOWED_PARTS: dict[Role, frozenset[str]] = {
-    "system": frozenset({"text"}),
-    "user": frozenset({"text", "image", "document", "tool_result"}),
-    "assistant": frozenset({"text", "reasoning", "tool_call"}),
-}
-
-
-class CanonicalMessage(BaseModel):
+class _CanonicalMessage(BaseModel):
     model_config = WIRE
-
-    role: Role
-    content: Annotated[list[ContentPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[ContentPart] | str)]
-
-    @model_validator(mode="after")
-    def parts_fit_role(self) -> CanonicalMessage:
-        allowed = ALLOWED_PARTS[self.role]
-        offending = sorted({part.type for part in self.content} - allowed)
-        if offending:
-            msg = f"{self.role} message cannot carry {', '.join(offending)}"
-            raise ValueError(msg)
-        return self
 
 
 UserPart = Annotated[TextPart | ImagePart | DocumentPart | ToolResultPart, Field(discriminator="type")]
 
 
-class SystemMessage(CanonicalMessage):
+class SystemMessage(_CanonicalMessage):
     role: Literal["system"] = "system"
     content: Annotated[list[TextPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[TextPart] | str)]
 
 
-class UserMessage(CanonicalMessage):
+class UserMessage(_CanonicalMessage):
     role: Literal["user"] = "user"
     content: Annotated[list[UserPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[UserPart] | str)]
 
 
-class AssistantMessage(CanonicalMessage):
+class AssistantMessage(_CanonicalMessage):
     role: Literal["assistant"] = "assistant"
     content: Annotated[list[AssistantPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[AssistantPart] | str)]
 
 
 CanonicalMessageValue = Annotated[SystemMessage | UserMessage | AssistantMessage, Field(discriminator="role")]
-
-
-def _message_models(messages: object) -> object:
-    if isinstance(messages, list):
-        return [message.model_dump() if isinstance(message, CanonicalMessage) else message for message in messages]
-    return messages
 
 
 class ToolDef(BaseModel):
@@ -193,45 +166,29 @@ class NamedTool(BaseModel):
 ToolChoice = Literal["auto", "none", "required"] | NamedTool
 
 
-class ResponseFormat(BaseModel):
+class _ResponseFormat(BaseModel):
     """A caller's demand for structured output. A model that cannot honor it is a rejection, never a drop."""
 
     model_config = WIRE
 
-    type: Literal["text", "json_object", "json_schema"]
-    json_schema: dict[str, Any] | None = None
-
-    @model_validator(mode="after")
-    def valid_shape(self) -> ResponseFormat:
-        if self.type == "json_schema" and self.json_schema is None:
-            msg = "json_schema response format requires json_schema"
-            raise ValueError(msg)
-        if self.type != "json_schema" and self.json_schema is not None:
-            msg = f"{self.type} response format does not accept json_schema"
-            raise ValueError(msg)
-        return self
 
 
-class TextResponseFormat(ResponseFormat):
+class TextResponseFormat(_ResponseFormat):
     type: Literal["text"] = "text"
     json_schema: None = None
 
 
-class JsonObjectResponseFormat(ResponseFormat):
+class JsonObjectResponseFormat(_ResponseFormat):
     type: Literal["json_object"] = "json_object"
     json_schema: None = None
 
 
-class JsonSchemaResponseFormat(ResponseFormat):
+class JsonSchemaResponseFormat(_ResponseFormat):
     type: Literal["json_schema"] = "json_schema"
     json_schema: dict[str, Any]
 
 
 ResponseFormatValue = Annotated[TextResponseFormat | JsonObjectResponseFormat | JsonSchemaResponseFormat, Field(discriminator="type")]
-
-
-def _response_format_model(response_format: object) -> object:
-    return response_format.model_dump() if isinstance(response_format, ResponseFormat) else response_format
 
 
 class ReasoningConfig(BaseModel):
@@ -248,7 +205,7 @@ class CanonicalRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
 
     model: str
-    messages: Annotated[list[CanonicalMessageValue], BeforeValidator(_message_models)] = Field(min_length=1)
+    messages: list[CanonicalMessageValue] = Field(min_length=1)
     stream: bool = False
     max_tokens: int | None = Field(default=None, ge=1)
     temperature: float | None = Field(default=None, ge=0)
@@ -257,7 +214,7 @@ class CanonicalRequest(BaseModel):
     seed: int | None = None
     tools: list[ToolDef] | None = None
     tool_choice: ToolChoice | None = None
-    response_format: Annotated[ResponseFormatValue | None, BeforeValidator(_response_format_model)] = None
+    response_format: ResponseFormatValue | None = None
     reasoning: ReasoningConfig | None = None
     parallel_tool_calls: bool | None = None
 
@@ -346,36 +303,22 @@ class ToolCallDelta(BaseModel):
 Delta = Annotated[TextDelta | ReasoningDelta | ToolCallDelta, Field(discriminator="type")]
 
 
-class CanonicalChunk(BaseModel):
+class _CanonicalChunk(BaseModel):
     """One streamed increment. The closing chunk carries finish_reason, usage and gateway, and no delta."""
 
     model_config = WIRE
 
     id: str
-    delta: Delta | None = None
-    finish_reason: FinishReason | None = None
-    usage: Usage | None = None
-    gateway: GatewayInfo | None = None
-
-    @model_validator(mode="after")
-    def valid_shape(self) -> CanonicalChunk:
-        if self.delta is not None and any(value is not None for value in (self.finish_reason, self.usage, self.gateway)):
-            msg = "a delta chunk cannot carry final accounting"
-            raise ValueError(msg)
-        if self.delta is None and self.usage is None:
-            msg = "a final chunk requires usage"
-            raise ValueError(msg)
-        return self
 
 
-class DeltaChunk(CanonicalChunk):
+class DeltaChunk(_CanonicalChunk):
     delta: Delta
     finish_reason: None = None
     usage: None = None
     gateway: None = None
 
 
-class FinalChunk(CanonicalChunk):
+class FinalChunk(_CanonicalChunk):
     delta: None = None
     finish_reason: FinishReason | None = None
     usage: Usage

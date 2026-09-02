@@ -28,7 +28,7 @@ from contract.events import (
     UsageEventV1,
     UsageStatus,
 )
-from contract.ids import InferenceKeyId, inference_key_id, uuid7
+from contract.ids import InferenceKeyId, uuid7
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
     EnvSecretStore,
@@ -45,7 +45,6 @@ from contract.secrets import (
     SecretNotFoundError,
     SecretPurpose,
     SecretRef,
-    SecretReference,
     SecretRejectedError,
     SecretsConfig,
     SecretStore,
@@ -104,7 +103,6 @@ __all__ = [
     "SecretNotFoundError",
     "SecretPurpose",
     "SecretRef",
-    "SecretReference",
     "SecretRejectedError",
     "SecretStore",
     "SecretStoreConfig",
@@ -118,7 +116,6 @@ __all__ = [
     "UsageStatus",
     "WorkspaceSecretRef",
     "canonical_json",
-    "inference_key_id",
     "load_config_section",
     "private_key_from_b64",
     "private_key_to_b64",

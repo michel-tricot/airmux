@@ -59,7 +59,7 @@ from cli.common import (
     workspaces_app,
 )
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
-from cli.profiles import Profile, load_active_profile, upsert_profile
+from cli.profiles import load_active_profile, profile_from, upsert_profile
 
 if TYPE_CHECKING:
     from rich.table import Table
@@ -178,9 +178,7 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
         console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airllm workspaces list[/bold].[/red]")
         raise typer.Exit(1)
     chosen = payload(resp, WorkspaceOut)
-    updated_profile = Profile.model_validate(
-        {**profile.model_dump(mode="python", exclude={"name"}), "workspace": chosen.slug, "workspace_name": chosen.name}
-    )
+    updated_profile = profile_from({**profile.model_dump(mode="python", exclude={"name"}), "workspace": chosen.slug, "workspace_name": chosen.name})
     upsert_profile(profile.name, updated_profile)
     console.print(f"Using workspace [bold]{chosen.slug}[/bold]")
 

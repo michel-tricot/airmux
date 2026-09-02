@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 from data_plane.canonical.completion import (
-    ALLOWED_PARTS,
     Adjustment,
     AssistantMessage,
     AssistantPart,
-    CanonicalChunk,
-    CanonicalMessage,
     CanonicalMessageValue,
     CanonicalRequest,
     CanonicalResponse,
@@ -28,9 +25,7 @@ from data_plane.canonical.completion import (
     ReasoningConfig,
     ReasoningDelta,
     ReasoningPart,
-    ResponseFormat,
     ResponseFormatValue,
-    Role,
     SystemMessage,
     TextDelta,
     TextPart,
@@ -43,16 +38,14 @@ from data_plane.canonical.completion import (
     ToolResultPart,
     Usage,
     UserMessage,
+    UserPart,
     json_schemas,
 )
 
 __all__ = [
-    "ALLOWED_PARTS",
     "Adjustment",
     "AssistantMessage",
     "AssistantPart",
-    "CanonicalChunk",
-    "CanonicalMessage",
     "CanonicalMessageValue",
     "CanonicalRequest",
     "CanonicalResponse",
@@ -72,9 +65,7 @@ __all__ = [
     "ReasoningConfig",
     "ReasoningDelta",
     "ReasoningPart",
-    "ResponseFormat",
     "ResponseFormatValue",
-    "Role",
     "SystemMessage",
     "TextDelta",
     "TextPart",
@@ -87,5 +78,6 @@ __all__ = [
     "ToolResultPart",
     "Usage",
     "UserMessage",
+    "UserPart",
     "json_schemas",
 ]

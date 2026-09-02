@@ -36,7 +36,16 @@ if TYPE_CHECKING:
 from cli.client import api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import DEFAULT_CONSOLE_URL, Profile, config_path, load_active_profile, load_config, set_active, upsert_url_profile
+from cli.profiles import (
+    DEFAULT_CONSOLE_URL,
+    InstanceProfile,
+    OrgProfile,
+    config_path,
+    load_active_profile,
+    load_config,
+    set_active,
+    upsert_url_profile,
+)
 
 MINE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -344,7 +353,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         workspace = _default_workspace(c, str(org_id), bearer)
         upsert_url_profile(
             org_name,
-            Profile(
+            OrgProfile(
                 control_plane_url=url,
                 console_url=console_url,
                 gateway_url=gateway_url.rstrip("/"),
@@ -427,14 +436,17 @@ def login(
             done = payload(poll, CliAuthPollOut).root
             if not isinstance(done, CliAuthPendingOut):
                 target_name = done.org_name if isinstance(done, CliAuthOrgCompleteOut) else "instance"
-                profile = Profile(
-                    control_plane_url=control_plane_url,
-                    console_url=console_url,
-                    gateway_url=gateway_url,
-                    scope=done.scope,
-                    token=done.token,
-                    org_id=str(done.org_id) if isinstance(done, CliAuthOrgCompleteOut) else None,
-                    org_name=done.org_name if isinstance(done, CliAuthOrgCompleteOut) else None,
+                profile = (
+                    OrgProfile(
+                        control_plane_url=control_plane_url,
+                        console_url=console_url,
+                        gateway_url=gateway_url,
+                        token=done.token,
+                        org_id=str(done.org_id),
+                        org_name=done.org_name,
+                    )
+                    if isinstance(done, CliAuthOrgCompleteOut)
+                    else InstanceProfile(control_plane_url=control_plane_url, console_url=console_url, gateway_url=gateway_url, token=done.token)
                 )
                 profile_name = upsert_url_profile(
                     target_name,

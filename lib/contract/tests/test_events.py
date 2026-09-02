@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from contract import UsageEventV1, inference_key_id, uuid7
+from contract import UsageEventV1, uuid7
 
 
 def usage_event(**overrides: object) -> dict[str, object]:
@@ -46,7 +46,6 @@ def test_early_denial_rejects_provider_and_credential_data():
         UsageEventV1.model_validate(usage_event(status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace"))
 
 
-def test_legacy_inference_key_ids_normalize_at_the_event_boundary():
-    event = UsageEventV1.model_validate(usage_event(key_id="legacy-key"))
-
-    assert event.key_id == inference_key_id("legacy-key")
+def test_usage_events_reject_arbitrary_key_ids():
+    with pytest.raises(ValidationError):
+        UsageEventV1.model_validate(usage_event(key_id="not-a-uuid"))

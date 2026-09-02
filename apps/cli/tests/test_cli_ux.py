@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 from api_models import ModelOut, ProviderOut, TaxonomyOut
 from cli import diagnostics, resources
 from cli.main import app
-from cli.profiles import Profile, upsert_profile
+from cli.profiles import OrgProfile, upsert_profile
 
 runner = CliRunner()
 
@@ -26,9 +26,10 @@ def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
-        Profile(
+        OrgProfile(
             control_plane_url="https://airllm.example.com",
             gateway_url="https://gateway.example.com",
+            org_id="org-1",
             org_name="Acme",
             workspace="production",
             token="secret-token",
@@ -51,7 +52,8 @@ def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch
     assert "secret-token" not in result.stdout
 
 
-def test_doctor_renders_every_check_and_fails_when_one_is_unhealthy(monkeypatch):
+def test_doctor_renders_every_check_and_fails_when_one_is_unhealthy(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr(
         diagnostics,
         "diagnostic_rows",

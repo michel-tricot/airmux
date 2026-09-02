@@ -2,46 +2,59 @@ from __future__ import annotations
 
 import os
 import tomllib
-from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 import tomli_w
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from contract.secrets.file import write_private_text
 
 
-class Profile(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="allow")
+class _Profile(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     control_plane_url: str | None = None
     console_url: str | None = None
     gateway_url: str | None = None
     token: str | None = None
-    scope: Literal["instance", "org"] | None = None
-    org_id: str | None = None
-    org_name: str | None = None
-    personal_org_id: str | None = None
+
+
+class InstanceProfile(_Profile):
+    scope: Literal["instance"] = "instance"
+
+
+class OrgProfile(_Profile):
+    scope: Literal["org"] = "org"
+    org_id: str
+    org_name: str
     workspace: str | None = None
-    workspace_id: str | None = None
     workspace_name: str | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def infer_legacy_scope(cls, value: object) -> object:
-        if isinstance(value, Mapping) and "scope" not in value and value.get("org_id"):
-            return {**value, "scope": "org"}
-        return value
+
+Profile = Annotated[InstanceProfile | OrgProfile, Field(discriminator="scope")]
+PROFILE_ADAPTER = TypeAdapter(Profile)
 
 
-class NamedProfile(Profile):
+class NamedInstanceProfile(InstanceProfile):
     name: str
 
 
+class NamedOrgProfile(OrgProfile):
+    name: str
+
+
+NamedProfile = Annotated[NamedInstanceProfile | NamedOrgProfile, Field(discriminator="scope")]
+NAMED_PROFILE_ADAPTER = TypeAdapter(NamedProfile)
+
+
+def profile_from(value: object) -> Profile:
+    return PROFILE_ADAPTER.validate_python(value)
+
+
 class CliConfig(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="allow")
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     active: str | None = None
     profiles: dict[str, Profile] = Field(default_factory=dict)
@@ -67,7 +80,7 @@ def save_config(config: CliConfig) -> None:
 def active_profile(config: CliConfig) -> NamedProfile | None:
     name = config.active
     if name is not None and (profile := config.profiles.get(name)) is not None:
-        return NamedProfile.model_validate({"name": name, **profile.model_dump(mode="python")})
+        return NAMED_PROFILE_ADAPTER.validate_python({"name": name, **profile.model_dump(mode="python")})
     return None
 
 
@@ -81,10 +94,6 @@ def upsert_profile(name: str, profile: Profile, *, activate: bool = True) -> Non
     save_config(config.model_copy(update={"profiles": profiles, "active": name if activate else config.active}))
 
 
-def _profile_scope(profile: Profile) -> Literal["instance", "org"] | None:
-    return profile.scope
-
-
 def upsert_url_profile(name: str, profile: Profile, *, activate: bool = True) -> str:
     config = load_config()
     profiles = config.profiles
@@ -93,9 +102,9 @@ def upsert_url_profile(name: str, profile: Profile, *, activate: bool = True) ->
         (
             profile_name
             for profile_name, candidate_profile in profiles.items()
-            if name in (profile_name, candidate_profile.org_name)
+            if (name == profile_name or (candidate_profile.scope == "org" and name == candidate_profile.org_name))
             and (candidate_profile.control_plane_url or "").rstrip("/") == control_plane_url
-            and _profile_scope(candidate_profile) == _profile_scope(profile)
+            and candidate_profile.scope == profile.scope
         ),
         None,
     )

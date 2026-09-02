@@ -6,14 +6,14 @@ from pathlib import Path
 import pytest
 import yaml
 from corpus import CORPUS, request_of
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from data_plane.canonical import (
     Adjustment,
-    CanonicalChunk,
-    CanonicalMessage,
+    CanonicalMessageValue,
     CanonicalRequest,
     CanonicalResponse,
+    CanonicalStreamChunk,
     DeltaChunk,
     DocumentPart,
     FinalChunk,
@@ -59,8 +59,8 @@ def test_the_corpus_reaches_every_part_type():
     ],
 )
 def test_a_part_outside_its_role_is_rejected(role, part):
-    with pytest.raises(ValidationError, match="cannot carry"):
-        CanonicalMessage(role=role, content=[part])
+    with pytest.raises(ValidationError):
+        TypeAdapter(CanonicalMessageValue).validate_python({"role": role, "content": [part]})
 
 
 def test_an_image_needs_exactly_one_source():
@@ -114,7 +114,7 @@ def test_an_unknown_request_field_is_kept_for_forwarding():
 
 def test_string_content_is_shorthand_for_one_text_part():
     """The wire accepts the shorthand; the model only ever holds the typed form."""
-    message = CanonicalMessage.model_validate({"role": "user", "content": "hi"})
+    message = TypeAdapter(CanonicalMessageValue).validate_python({"role": "user", "content": "hi"})
     assert message.content == [TextPart(text="hi")]
     result = ToolResultPart.model_validate({"type": "tool_result", "call_id": "c1", "content": "18C, light rain"})
     assert result.content == [TextPart(text="18C, light rain")]
@@ -137,9 +137,9 @@ def test_response_format_states_are_structural():
 
 def test_stream_chunks_are_either_deltas_or_final_accounting():
     with pytest.raises(ValidationError):
-        CanonicalChunk.model_validate({"id": "r1"})
+        TypeAdapter(CanonicalStreamChunk).validate_python({"id": "r1"})
     with pytest.raises(ValidationError):
-        CanonicalChunk.model_validate({"id": "r1", "delta": {"type": "text", "text": "hi"}, "usage": {}})
+        TypeAdapter(CanonicalStreamChunk).validate_python({"id": "r1", "delta": {"type": "text", "text": "hi"}, "usage": {}})
 
 
 def test_request_schema_exposes_role_specific_messages():

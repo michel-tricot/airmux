@@ -11,7 +11,6 @@ from jsonschema import Draft202012Validator
 
 from contract import Secret
 from data_plane.canonical import (
-    CanonicalMessage,
     CanonicalRequest,
     DocumentPart,
     JsonSchemaResponseFormat,
@@ -19,6 +18,7 @@ from data_plane.canonical import (
     ReasoningPart,
     TextPart,
     ToolDef,
+    UserMessage,
 )
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
@@ -268,7 +268,7 @@ def test_openai_inline_document_without_a_name_gets_a_pdf_filename():
     adapter, model = _adapter("openai_compatible")
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[CanonicalMessage(role="user", content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
+        messages=[UserMessage(content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -283,7 +283,7 @@ def test_responses_inline_document_without_a_name_gets_a_pdf_filename():
     adapter, model = _adapter("openai_responses")
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[CanonicalMessage(role="user", content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
+        messages=[UserMessage(content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)

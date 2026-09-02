@@ -17,8 +17,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("model", sa.Column("input_modalities", sa.JSON(), nullable=True))
-    op.add_column("model", sa.Column("output_modalities", sa.JSON(), nullable=True))
+    op.add_column("model", sa.Column("input_modalities", sa.JSON(), nullable=False))
+    op.add_column("model", sa.Column("output_modalities", sa.JSON(), nullable=False))
 
 
 def downgrade() -> None:

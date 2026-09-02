@@ -47,9 +47,9 @@ def _profile_rows() -> list[dict[str, object]]:
         {
             "active": name == config.active,
             "name": name,
-            "scope": profile.scope or ("org" if profile.org_id else "instance"),
-            "organization": profile.org_name or "",
-            "workspace": profile.workspace_name or profile.workspace or "",
+            "scope": profile.scope,
+            "organization": profile.org_name if profile.scope == "org" else "",
+            "workspace": (profile.workspace_name or profile.workspace or "") if profile.scope == "org" else "",
             "control_plane_url": profile.control_plane_url or "",
             "gateway_url": profile.gateway_url or "",
         }
@@ -99,8 +99,8 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
             "profile": profile.name if profile is not None else "none",
             "control_plane": resolve_control_plane_url(),
             "gateway": resolve_gateway_url(),
-            "organization": os.environ.get("GW_ORG_ID") or (profile.org_name if profile is not None else ""),
-            "workspace": (profile.workspace_name or profile.workspace) if profile is not None else "",
+            "organization": os.environ.get("GW_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else ""),
+            "workspace": (profile.workspace_name or profile.workspace) if profile is not None and profile.scope == "org" else "",
             "authentication": "environment" if os.environ.get("GW_ACCESS_KEY") else "profile" if profile is not None and profile.token else "none",
         }
     ]

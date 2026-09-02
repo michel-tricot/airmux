@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from datetime import datetime
 from typing import Annotated, Literal, cast, get_args
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from contract.ids import InferenceKeyId
-from contract.secrets import SecretRef, SecretReference
+from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
 Modality = Literal["text", "image", "audio", "video", "pdf"]
@@ -16,10 +15,6 @@ MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
 Capability = Literal["streaming", "tools", "reasoning", "structured_output"]
 Modalities = Annotated[list[Modality], Field(min_length=1, max_length=len(MODALITIES))]
 Capabilities = Annotated[list[Capability], Field(max_length=4)]
-
-
-def _secret_reference(value: object) -> object:
-    return asdict(value) if type(value) is SecretRef else value
 
 
 class KeyEntry(BaseModel):
@@ -80,7 +75,7 @@ class CredentialEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    ref: Annotated[SecretReference, BeforeValidator(_secret_reference)]
+    ref: SecretRef
     priority: int  # lower is tried first, ties break by the ref's name
     version: int
 

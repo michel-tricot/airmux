@@ -45,8 +45,14 @@ def test_device_flow_end_to_end(tmp_path):
         assert details.status_code == 200
         assert details.json()["data"]["client_name"] == "mbp"
 
-        assert c.post("/api/v1/auth/cli/approve", json={"user_code": "XXXX-XXXX", "org_id": org["id"]}, headers=CSRF).status_code == 404
-        approved = c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"].lower(), "org_id": org["id"]}, headers=CSRF)
+        assert (
+            c.post("/api/v1/auth/cli/approve", json={"user_code": "XXXX-XXXX", "scope": "org", "org_id": org["id"]}, headers=CSRF).status_code == 404
+        )
+        approved = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"].lower(), "scope": "org", "org_id": org["id"]},
+            headers=CSRF,
+        )
         assert approved.status_code == 200, approved.text
         assert c.get(f"/api/v1/auth/cli/request?code={started['user_code']}", headers=CSRF).status_code == 409
 
@@ -117,6 +123,21 @@ def test_instance_cli_approval_rejects_an_organization(tmp_path):
             headers=CSRF,
         )
 
+    assert response.status_code == 422
+
+
+def test_cli_approval_requires_an_explicit_scope(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        _, org = _signup_with_org(c)
+        started = _start(c)
+
+        response = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "org_id": org["id"]},
+            headers=CSRF,
+        )
+
         assert response.status_code == 422
 
 
@@ -125,7 +146,14 @@ def test_two_simultaneous_polls_deliver_one_key(tmp_path):
     with _client(cp) as c:
         _, org = _signup_with_org(c)
         started = _start(c)
-        assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 200
+        assert (
+            c.post(
+                "/api/v1/auth/cli/approve",
+                json={"user_code": started["user_code"], "scope": "org", "org_id": org["id"]},
+                headers=CSRF,
+            ).status_code
+            == 200
+        )
         barrier = Barrier(2)
 
         def poll():
@@ -148,7 +176,14 @@ def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_pa
 
         def login_once(replaced: str | None = None) -> str:
             started = _start(c, client_name="mbp")
-            assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 200
+            assert (
+                c.post(
+                    "/api/v1/auth/cli/approve",
+                    json={"user_code": started["user_code"], "scope": "org", "org_id": org["id"]},
+                    headers=CSRF,
+                ).status_code
+                == 200
+            )
             headers = {"authorization": f"Bearer {replaced}"} if replaced else {}
             return c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}, headers=headers).json()["data"]["token"]
 
@@ -176,7 +211,14 @@ def test_login_without_an_existing_key_does_not_retire_matching_labels(tmp_path)
 
         def login_once() -> str:
             started = _start(c, client_name="mbp")
-            assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 200
+            assert (
+                c.post(
+                    "/api/v1/auth/cli/approve",
+                    json={"user_code": started["user_code"], "scope": "org", "org_id": org["id"]},
+                    headers=CSRF,
+                ).status_code
+                == 200
+            )
             return c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]["token"]
 
         first = login_once()
@@ -193,11 +235,15 @@ def test_approval_requires_membership_and_a_browser_session(tmp_path):
         other_org = make_org(c, root, "other")
         _signup_with_org(c)
         started = _start(c)
-        no_membership = c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(other_org)}, headers=CSRF)
+        no_membership = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "scope": "org", "org_id": str(other_org)},
+            headers=CSRF,
+        )
         assert no_membership.status_code == 403
 
     with _client(cp) as anonymous:
-        started_body = {"user_code": started["user_code"], "org_id": str(other_org)}
+        started_body = {"user_code": started["user_code"], "scope": "org", "org_id": str(other_org)}
         assert anonymous.post("/api/v1/auth/cli/approve", json=started_body, headers={**CSRF, **root}).status_code == 401
 
 
@@ -214,7 +260,14 @@ def test_expired_requests_are_gone_from_both_sides(tmp_path):
 
         run_in_db(tmp_path, expire)
         assert c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 410
-        assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 410
+        assert (
+            c.post(
+                "/api/v1/auth/cli/approve",
+                json={"user_code": started["user_code"], "scope": "org", "org_id": org["id"]},
+                headers=CSRF,
+            ).status_code
+            == 410
+        )
         assert c.get(f"/api/v1/auth/cli/request?code={started['user_code']}", headers=CSRF).status_code == 410
         _start(c)
         assert len(run_in_db(tmp_path, CliAuthRequest.find)) == 1
@@ -228,7 +281,14 @@ def test_deleting_an_approved_org_removes_its_device_request(tmp_path):
         org_id = make_org(c, root, "temporary")
         assert c.put(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
         started = _start(c)
-        assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
+        assert (
+            c.post(
+                "/api/v1/auth/cli/approve",
+                json={"user_code": started["user_code"], "scope": "org", "org_id": str(org_id)},
+                headers=CSRF,
+            ).status_code
+            == 200
+        )
 
         deleted = c.delete(f"/api/v1/orgs/{org_id}", headers=root)
 
@@ -246,7 +306,14 @@ def test_deleting_an_approver_removes_their_device_request(tmp_path):
         org = cp.headers(org_id)
         assert c.put(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=org).status_code == 200
         started = _start(c)
-        assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
+        assert (
+            c.post(
+                "/api/v1/auth/cli/approve",
+                json={"user_code": started["user_code"], "scope": "org", "org_id": str(org_id)},
+                headers=CSRF,
+            ).status_code
+            == 200
+        )
         assert c.delete(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", headers=org).status_code == 200
 
         deleted = c.delete(f"/api/v1/users/{user['user_id']}", headers=root)

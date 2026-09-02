@@ -16,7 +16,7 @@ from helpers import MODEL, PROVIDER, make_org, setup_control_plane
 from typer.testing import CliRunner
 
 from cli.main import app as cli_app
-from contract import SecretPurpose, SecretRef
+from contract import OrgSecretRef, SecretPurpose, WorkspaceSecretRef
 
 KEY = "sk-provider-abcd1234"
 runner = CliRunner()
@@ -44,6 +44,7 @@ def cli(tmp_path, monkeypatch):
             return nullcontext(c)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
+        monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
         monkeypatch.setenv("GW_ACCESS_KEY", org["authorization"].removeprefix("Bearer "))
         monkeypatch.setenv("GW_ORG_ID", str(org_id))
         yield cp, workspace["slug"]
@@ -56,13 +57,23 @@ def run(*args, stdin: str | None = None):
 
 
 def stored(cp, credential: dict) -> str:
-    ref = SecretRef(
-        purpose=SecretPurpose.provider,
-        service=credential["provider_name"],
-        name=credential["name"],
-        secret_id=credential["id"],
-        org_id=credential["org_id"],
-        workspace_id=credential["workspace_id"],
+    ref = (
+        WorkspaceSecretRef(
+            purpose=SecretPurpose.provider,
+            service=credential["provider_name"],
+            name=credential["name"],
+            secret_id=credential["id"],
+            org_id=credential["org_id"],
+            workspace_id=credential["workspace_id"],
+        )
+        if credential["workspace_id"]
+        else OrgSecretRef(
+            purpose=SecretPurpose.provider,
+            service=credential["provider_name"],
+            name=credential["name"],
+            secret_id=credential["id"],
+            org_id=credential["org_id"],
+        )
     )
     return asyncio.run(cp.app.state.secret_store.get(ref)).reveal()
 

@@ -71,6 +71,8 @@ def test_cli_auth_openapi_models_each_valid_state():
     approve = spec["paths"]["/api/v1/auth/cli/approve"]["post"]["requestBody"]["content"]["application/json"]["schema"]
     assert approve["discriminator"]["propertyName"] == "scope"
     assert len(approve["oneOf"]) == 2
+    approval_models = [spec["components"]["schemas"][variant["$ref"].rsplit("/", 1)[-1]] for variant in approve["oneOf"]]
+    assert all("scope" in model["required"] for model in approval_models)
 
     response = spec["paths"]["/api/v1/auth/cli/poll"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
     envelope_name = response["$ref"].rsplit("/", 1)[-1]

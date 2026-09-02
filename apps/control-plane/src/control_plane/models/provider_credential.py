@@ -16,7 +16,7 @@ from contract import (
     PlatformSecretRef,
     SecretNotFoundError,
     SecretPurpose,
-    SecretReference,
+    SecretRef,
     SecretRejectedError,
     SecretStore,
     WorkspaceSecretRef,
@@ -100,7 +100,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
             return "platform"
         return "workspace" if self.workspace_id is not None else "org"
 
-    def secret_ref(self) -> SecretReference:
+    def secret_ref(self) -> SecretRef:
         """Where the value is, said in domain terms and derived from this row alone.
 
         The one place a row becomes a ref, so the write path, the compiler and the delete path

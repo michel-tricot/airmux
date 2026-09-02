@@ -13,7 +13,7 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamStreamError
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalChunk, CanonicalResponse
+    from data_plane.canonical import CanonicalResponse, DeltaChunk
 
 # The streaming path is a pure fold over a recorded byte log: no transport, no asyncio, no mocks.
 # One recorded case per adapter kind; a new adapter joins by adding its own log here.
@@ -216,7 +216,7 @@ def _adapter(kind: str):
     return REGISTRY[kind](PROVIDER.model_copy(update={"kind": kind}), Secret("sk-test"))
 
 
-def fold(adapter, log: bytes, size: int) -> tuple[list[CanonicalChunk], CanonicalResponse]:
+def fold(adapter, log: bytes, size: int) -> tuple[list[DeltaChunk], CanonicalResponse]:
     state = adapter.new_stream_state(CTX)
     chunks = [
         c for i in range(0, len(log), size) for ev in adapter.frame(log[i : i + size], state) for c in adapter.transform_stream_event(ev, state)

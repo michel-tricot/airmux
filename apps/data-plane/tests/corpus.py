@@ -3,9 +3,10 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from data_plane.canonical import (
-    CanonicalMessage,
+    AssistantMessage,
+    AssistantPart,
+    CanonicalMessageValue,
     CanonicalRequest,
-    ContentPart,
     DocumentPart,
     ImagePart,
     JsonObjectResponseFormat,
@@ -13,11 +14,14 @@ from data_plane.canonical import (
     NamedTool,
     ReasoningPart,
     ResponseFormatValue,
+    SystemMessage,
     TextPart,
     ToolCallPart,
     ToolChoice,
     ToolDef,
     ToolResultPart,
+    UserMessage,
+    UserPart,
 )
 
 # The conversations every surface must parse into the definition and every adapter must render out of it.
@@ -27,7 +31,7 @@ class Case(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     name: str
-    messages: list[CanonicalMessage]
+    messages: list[CanonicalMessageValue]
     tools: list[ToolDef] = Field(default_factory=list)
     tool_choice: ToolChoice | None = None
     stop: list[str] | None = None
@@ -59,16 +63,16 @@ SEARCH = ToolDef(
 )
 
 
-def user(*parts: ContentPart) -> CanonicalMessage:
-    return CanonicalMessage(role="user", content=list(parts))
+def user(*parts: UserPart) -> UserMessage:
+    return UserMessage(content=list(parts))
 
 
-def assistant(*parts: ContentPart) -> CanonicalMessage:
-    return CanonicalMessage(role="assistant", content=list(parts))
+def assistant(*parts: AssistantPart) -> AssistantMessage:
+    return AssistantMessage(content=list(parts))
 
 
-def system(text: str) -> CanonicalMessage:
-    return CanonicalMessage(role="system", content=[TextPart(text=text)])
+def system(text: str) -> SystemMessage:
+    return SystemMessage(content=[TextPart(text=text)])
 
 
 CORPUS: list[Case] = [
@@ -183,7 +187,7 @@ CORPUS: list[Case] = [
     Case(
         name="cache_breakpoint_after_system",
         messages=[
-            CanonicalMessage(role="system", content=[TextPart(text="A very long system prompt worth caching.", cache="ephemeral")]),
+            SystemMessage(content=[TextPart(text="A very long system prompt worth caching.", cache="ephemeral")]),
             user(TextPart(text="hi")),
         ],
     ),

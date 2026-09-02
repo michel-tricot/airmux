@@ -7,7 +7,7 @@ from click import unstyle
 from typer.testing import CliRunner
 
 from cli.main import app
-from cli.profiles import Profile, load_active_profile, upsert_profile
+from cli.profiles import OrgProfile, load_active_profile, upsert_profile
 
 runner = CliRunner()
 ORG_ID = "019c0000-0000-7000-8000-000000000001"
@@ -34,10 +34,11 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     upsert_profile(
         "old",
-        Profile.model_validate(
+        OrgProfile.model_validate(
             {
                 "control_plane_url": stored_url,
                 "console_url": "https://console.example",
+                "scope": "org",
                 "org_id": "old-org",
                 "org_name": "old",
                 "token": "sk-cp-old",
@@ -125,5 +126,3 @@ def test_login_saves_instance_access_without_an_organization(tmp_path, monkeypat
     assert profile is not None
     assert profile.name == "instance"
     assert profile.scope == "instance"
-    assert profile.org_id is None
-    assert profile.org_name is None

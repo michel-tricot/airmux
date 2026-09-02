@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract import KeyEntry, ModelEntry, inference_key_id, uuid7
+from contract import KeyEntry, ModelEntry, uuid7
 
 
 def model_entry(**overrides: object) -> dict[str, object]:
@@ -35,7 +35,6 @@ def test_model_capabilities_use_the_policy_vocabulary():
         ModelEntry.model_validate(model_entry(capabilities=["visionary"]))
 
 
-def test_legacy_inference_key_ids_normalize_at_the_bundle_boundary():
-    key = KeyEntry(key_id="legacy-key", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")
-
-    assert key.key_id == inference_key_id("legacy-key")
+def test_inference_key_ids_reject_arbitrary_strings():
+    with pytest.raises(ValidationError):
+        KeyEntry(key_id="not-a-uuid", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")

@@ -436,7 +436,7 @@ def _event(org: UUID) -> dict:
         "occurred_at": datetime.now(tz=UTC).isoformat(),
         "org_id": str(org),
         "workspace_id": str(uuid7()),
-        "key_id": "k1",
+        "key_id": str(uuid7()),
         "model_id": "gpt-test",
         "provider_id": "openai",
         "bundle_id": str(uuid4()),
