@@ -17,6 +17,7 @@ from model_audit.catalog_ops import (
     load_provider_entries,
     preflight_source,
     provider_sources,
+    retain_documented_models,
 )
 
 
@@ -90,6 +91,19 @@ def test_provider_preflight_names_models_with_incomplete_modalities():
         match=r"incomplete/model\.input_modalities, incomplete/model\.output_modalities",
     ):
         preflight_source(IncompleteSource(), None)
+
+
+def test_provider_sync_retains_documented_models_missing_from_the_api():
+    acquired: list[dict[str, object]] = [{"id": "api-model", "input_modalities": ["text"], "output_modalities": ["text"]}]
+    previous: list[dict[str, object]] = [
+        {"id": "api-model", "source": "https://provider.example/api-model", "supports_tools": True},
+        {"id": "docs-model", "source": "https://provider.example/docs-model", "input_modalities": ["text"], "output_modalities": ["text"]},
+        {"id": "retired-api-model", "input_modalities": ["text"], "output_modalities": ["text"]},
+    ]
+
+    retained = retain_documented_models(acquired, previous)
+
+    assert retained == [acquired[0], previous[1]]
 
 
 def test_adding_a_provider_uses_a_typed_definition_and_removes_its_candidate(tmp_path):

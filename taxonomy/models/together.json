@@ -3,7 +3,7 @@
   "source": "https://api.together.ai/v1/models",
   "source_type": "api",
   "updated": "2026-09-01",
-  "count": 74,
+  "count": 76,
   "models": [
     {
       "id": "arcee-ai/trinity-mini",
@@ -84,6 +84,34 @@
       "display_name": "Arize AI Qwen 2 1.5B Instruct",
       "hugging_face_id": "api/models/togethercomputer/arize-ai-qwen-2-1.5b-instruct",
       "organization": "Togethercomputer"
+    },
+    {
+      "id": "deepcogito/cogito-v2-1-671b",
+      "kind": "text",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.together.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
+      "source": "https://www.together.ai/models/cogito-v2-1-671b"
     },
     {
       "id": "deepseek-ai/deepseek-coder-33b-instruct",
@@ -503,6 +531,40 @@
       "hugging_face_id": "google/gemma-2b-it",
       "license": "gemma-terms-of-use",
       "organization": "Google"
+    },
+    {
+      "id": "google/gemma-3n-E4B-it",
+      "kind": "text",
+      "context_length": 32768,
+      "max_output_tokens": 32768,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.together.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
+      "documentation_url": "https://www.together.ai/models/gemma-3n-e4b-it",
+      "source": "https://www.together.ai/models/gemma-3n-e4b-it"
     },
     {
       "id": "google/gemma-4-31B-it",

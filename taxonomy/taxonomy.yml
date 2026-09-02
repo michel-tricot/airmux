@@ -4937,6 +4937,29 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
+- model_id: together/google/gemma-3n-E4B-it
+  provider_id: together
+  upstream_model: google/gemma-3n-E4B-it
+  input_price_per_mtok: 0.0
+  output_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 32768
+  max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/google/gemma-4-31B-it
   provider_id: together
   upstream_model: google/gemma-4-31B-it
