@@ -9,24 +9,22 @@ from corpus import CORPUS, request_of
 from pydantic import TypeAdapter, ValidationError
 
 from data_plane.canonical import (
-    Adjustment,
-    CanonicalMessageValue,
+    CanonicalAdjustment,
+    CanonicalChunk,
+    CanonicalDocumentPart,
+    CanonicalGatewayInfo,
+    CanonicalImagePart,
+    CanonicalMessage,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
     CanonicalRequest,
     CanonicalResponse,
-    CanonicalStreamChunk,
-    DeltaChunk,
-    DocumentPart,
-    FinalChunk,
-    GatewayInfo,
-    ImagePart,
-    ReasoningDelta,
-    ReasoningPart,
-    TextDelta,
-    TextPart,
-    ToolCallDelta,
-    ToolCallPart,
-    ToolResultPart,
-    Usage,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalToolCallDelta,
+    CanonicalToolCallPart,
+    CanonicalToolResultPart,
+    CanonicalUsage,
     json_schemas,
 )
 
@@ -48,37 +46,37 @@ def test_the_corpus_reaches_every_part_type():
 @pytest.mark.parametrize(
     ("role", "part"),
     [
-        ("system", ImagePart(url="https://example.com/cat.png")),
-        ("system", DocumentPart(url="https://example.com/report.pdf")),
-        ("system", ToolCallPart(id="c1", name="f", arguments="{}")),
-        ("user", ToolCallPart(id="c1", name="f", arguments="{}")),
-        ("user", ReasoningPart(text="hm")),
-        ("assistant", ToolResultPart(call_id="c1", content=[TextPart(text="out")])),
-        ("assistant", ImagePart(url="https://example.com/cat.png")),
-        ("assistant", DocumentPart(url="https://example.com/report.pdf")),
+        ("system", CanonicalImagePart(url="https://example.com/cat.png")),
+        ("system", CanonicalDocumentPart(url="https://example.com/report.pdf")),
+        ("system", CanonicalToolCallPart(id="c1", name="f", arguments="{}")),
+        ("user", CanonicalToolCallPart(id="c1", name="f", arguments="{}")),
+        ("user", CanonicalReasoningPart(text="hm")),
+        ("assistant", CanonicalToolResultPart(call_id="c1", content=[CanonicalTextPart(text="out")])),
+        ("assistant", CanonicalImagePart(url="https://example.com/cat.png")),
+        ("assistant", CanonicalDocumentPart(url="https://example.com/report.pdf")),
     ],
 )
 def test_a_part_outside_its_role_is_rejected(role, part):
     with pytest.raises(ValidationError):
-        TypeAdapter(CanonicalMessageValue).validate_python({"role": role, "content": [part]})
+        TypeAdapter(CanonicalMessage).validate_python({"role": role, "content": [part]})
 
 
 def test_an_image_needs_exactly_one_source():
     with pytest.raises(ValidationError, match="exactly one"):
-        ImagePart(url="https://example.com/cat.png", data="iVBORw0KGgo=", media_type="image/png")
+        CanonicalImagePart(url="https://example.com/cat.png", data="iVBORw0KGgo=", media_type="image/png")
     with pytest.raises(ValidationError, match="exactly one"):
-        ImagePart(media_type="image/png")
+        CanonicalImagePart(media_type="image/png")
     with pytest.raises(ValidationError, match="media_type"):
-        ImagePart(data="iVBORw0KGgo=")
+        CanonicalImagePart(data="iVBORw0KGgo=")
 
 
 def test_a_document_needs_exactly_one_source():
     with pytest.raises(ValidationError, match="exactly one"):
-        DocumentPart(url="https://example.com/report.pdf", data="JVBERi0=", media_type="application/pdf")
+        CanonicalDocumentPart(url="https://example.com/report.pdf", data="JVBERi0=", media_type="application/pdf")
     with pytest.raises(ValidationError, match="exactly one"):
-        DocumentPart(media_type="application/pdf")
+        CanonicalDocumentPart(media_type="application/pdf")
     with pytest.raises(ValidationError, match="media_type"):
-        DocumentPart(data="JVBERi0=")
+        CanonicalDocumentPart(data="JVBERi0=")
 
 
 def test_tool_arguments_stay_json_text():
@@ -114,17 +112,17 @@ def test_an_unknown_request_field_is_kept_for_forwarding():
 
 def test_string_content_is_shorthand_for_one_text_part():
     """The wire accepts the shorthand; the model only ever holds the typed form."""
-    message = TypeAdapter(CanonicalMessageValue).validate_python({"role": "user", "content": "hi"})
-    assert message.content == [TextPart(text="hi")]
-    result = ToolResultPart.model_validate({"type": "tool_result", "call_id": "c1", "content": "18C, light rain"})
-    assert result.content == [TextPart(text="18C, light rain")]
+    message = TypeAdapter(CanonicalMessage).validate_python({"role": "user", "content": "hi"})
+    assert message.content == [CanonicalTextPart(text="hi")]
+    result = CanonicalToolResultPart.model_validate({"type": "tool_result", "call_id": "c1", "content": "18C, light rain"})
+    assert result.content == [CanonicalTextPart(text="18C, light rain")]
     assert '"content":[{' in message.model_dump_json(exclude_none=True)
 
 
 def test_an_unknown_field_inside_a_part_is_rejected():
     """Nested shapes are restructured in translation, so an unknown field there has nothing faithful to forward."""
     with pytest.raises(ValidationError, match="glow"):
-        TextPart.model_validate({"type": "text", "text": "hi", "glow": True})
+        CanonicalTextPart.model_validate({"type": "text", "text": "hi", "glow": True})
 
 
 def test_response_format_states_are_structural():
@@ -133,13 +131,6 @@ def test_response_format_states_are_structural():
         CanonicalRequest.model_validate({**body, "response_format": {"type": "json_schema"}})
     with pytest.raises(ValidationError):
         CanonicalRequest.model_validate({**body, "response_format": {"type": "text", "json_schema": {"type": "object"}}})
-
-
-def test_stream_chunks_are_either_deltas_or_final_accounting():
-    with pytest.raises(ValidationError):
-        TypeAdapter(CanonicalStreamChunk).validate_python({"id": "r1"})
-    with pytest.raises(ValidationError):
-        TypeAdapter(CanonicalStreamChunk).validate_python({"id": "r1", "delta": {"type": "text", "text": "hi"}, "usage": {}})
 
 
 def test_request_schema_exposes_role_specific_messages():
@@ -154,17 +145,17 @@ def test_what_the_gateway_did_is_reported_under_its_own_field():
     response = CanonicalResponse(
         id="r1",
         model="m",
-        content=[TextPart(text="ok")],
+        content=[CanonicalTextPart(text="ok")],
         finish_reason="stop",
-        usage=Usage(),
-        gateway=GatewayInfo(
+        usage=CanonicalUsage(),
+        gateway=CanonicalGatewayInfo(
             finish_reason="stop",
-            adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")],
+            adjustments=[CanonicalAdjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")],
         ),
     )
     assert CanonicalResponse.model_validate_json(response.model_dump_json()) == response
-    bare = CanonicalResponse(id="r2", model="m", content=[TextPart(text="ok")], finish_reason="stop", usage=Usage())
-    assert bare.gateway == GatewayInfo()
+    bare = CanonicalResponse(id="r2", model="m", content=[CanonicalTextPart(text="ok")], finish_reason="stop", usage=CanonicalUsage())
+    assert bare.gateway == CanonicalGatewayInfo()
 
 
 def test_the_definition_is_frozen():
@@ -176,13 +167,13 @@ def test_the_definition_is_frozen():
 def test_a_stream_of_typed_deltas_reassembles_the_response():
     """The stream face and the response face describe the same conversation: folding one yields the other."""
     chunks = [
-        DeltaChunk(id="r1", delta=ReasoningDelta(text="think ")),
-        DeltaChunk(id="r1", delta=ReasoningDelta(text="hard", signature="sig_1")),
-        DeltaChunk(id="r1", delta=TextDelta(text="hé")),
-        DeltaChunk(id="r1", delta=TextDelta(text="llo")),
-        DeltaChunk(id="r1", delta=ToolCallDelta(index=0, id="call_1", name="get_weather", arguments='{"ci')),
-        DeltaChunk(id="r1", delta=ToolCallDelta(index=0, arguments='ty":"Paris"}')),
-        FinalChunk(id="r1", finish_reason="tool_calls", usage=Usage(input_tokens=5, output_tokens=7)),
+        CanonicalChunk(id="r1", delta=CanonicalReasoningDelta(text="think ")),
+        CanonicalChunk(id="r1", delta=CanonicalReasoningDelta(text="hard", signature="sig_1")),
+        CanonicalChunk(id="r1", delta=CanonicalTextDelta(text="hé")),
+        CanonicalChunk(id="r1", delta=CanonicalTextDelta(text="llo")),
+        CanonicalChunk(id="r1", delta=CanonicalToolCallDelta(index=0, id="call_1", name="get_weather", arguments='{"ci')),
+        CanonicalChunk(id="r1", delta=CanonicalToolCallDelta(index=0, arguments='ty":"Paris"}')),
+        CanonicalChunk(id="r1", finish_reason="tool_calls", usage=CanonicalUsage(input_tokens=5, output_tokens=7)),
     ]
 
     reasoning_text = "".join(c.delta.text for c in chunks if c.delta is not None and c.delta.type == "reasoning")
@@ -199,7 +190,7 @@ def test_a_stream_of_typed_deltas_reassembles_the_response():
     assert json.loads(arguments) == {"city": "Paris"}
     assert (opener.id, opener.name) == ("call_1", "get_weather")
     assert closing.delta is None
-    assert closing.usage == Usage(input_tokens=5, output_tokens=7)
+    assert closing.usage == CanonicalUsage(input_tokens=5, output_tokens=7)
 
 
 @pytest.mark.parametrize("face", ["request", "response", "stream"])

@@ -118,9 +118,9 @@ def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    from cli.profiles import InstanceProfile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
+    from cli.profiles import Profile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
 
-    upsert_profile("prod", InstanceProfile(control_plane_url="https://prod.example.com", token="t"))
+    upsert_profile("prod", Profile(scope="instance", control_plane_url="https://prod.example.com", token="t"))
     set_active("prod")
 
     assert resolve_control_plane_url() == "https://prod.example.com"

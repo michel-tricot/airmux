@@ -4,8 +4,6 @@ import os
 import time
 from uuid import UUID
 
-InferenceKeyId = UUID
-
 
 def uuid7() -> UUID:
     """RFC 9562 UUIDv7: 48-bit unix milliseconds, then version, then 74 random bits.

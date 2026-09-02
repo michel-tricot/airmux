@@ -13,16 +13,16 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 
 from data_plane.canonical import (
-    AssistantPart,
+    CanonicalAssistantPart,
+    CanonicalChunk,
+    CanonicalDelta,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
     CanonicalResponse,
-    Delta,
-    DeltaChunk,
-    ReasoningDelta,
-    ReasoningPart,
-    TextDelta,
-    TextPart,
-    ToolCallDelta,
-    ToolCallPart,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalToolCallDelta,
+    CanonicalToolCallPart,
 )
 from data_plane.egress.base import (
     CanonicalError,
@@ -82,21 +82,21 @@ class OpenAIStreamState(StreamState):
         return self.response_id or str(self.ctx.request_id)
 
 
-def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[DeltaChunk]:
+def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[CanonicalChunk]:
     """Deltas out, accumulation in: everything finalize needs folds into the state as it streams."""
     if choice.finish_reason:
         state.finish = choice.finish_reason
-    deltas: list[Delta] = []
+    deltas: list[CanonicalDelta] = []
     if reasoning := choice.delta.reasoning_content or choice.delta.reasoning:
         state.reasoning.append(reasoning)
-        deltas.append(ReasoningDelta(text=reasoning))
+        deltas.append(CanonicalReasoningDelta(text=reasoning))
     block_reasoning, text = content_texts(choice.delta.content)
     if block_reasoning:
         state.reasoning.append(block_reasoning)
-        deltas.append(ReasoningDelta(text=block_reasoning))
+        deltas.append(CanonicalReasoningDelta(text=block_reasoning))
     if text:
         state.text.append(text)
-        deltas.append(TextDelta(text=text))
+        deltas.append(CanonicalTextDelta(text=text))
     for tc in choice.delta.tool_calls or []:
         draft = state.tool_drafts.setdefault(tc.index, ToolCallDraft())
         if tc.id:
@@ -104,8 +104,8 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
         if tc.function.name:
             draft.name = tc.function.name
         draft.arguments += tc.function.arguments
-        deltas.append(ToolCallDelta(index=tc.index, id=tc.id, name=tc.function.name or None, arguments=tc.function.arguments))
-    return [DeltaChunk(id=state.chunk_id, delta=delta) for delta in deltas]
+        deltas.append(CanonicalToolCallDelta(index=tc.index, id=tc.id, name=tc.function.name or None, arguments=tc.function.arguments))
+    return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
 
 class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
@@ -164,7 +164,7 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
                 return
             yield event
 
-    def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[DeltaChunk]:
+    def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[CanonicalChunk]:
         try:
             data = json.loads(ev.data)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
@@ -192,12 +192,12 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             raise UpstreamProtocolError.incomplete_stream()
 
     def finalize(self, state: OpenAIStreamState) -> CanonicalResponse:
-        parts: list[AssistantPart] = []
+        parts: list[CanonicalAssistantPart] = []
         if reasoning := "".join(state.reasoning):
-            parts.append(ReasoningPart(text=reasoning))
+            parts.append(CanonicalReasoningPart(text=reasoning))
         if text := "".join(state.text):
-            parts.append(TextPart(text=text))
-        parts.extend(ToolCallPart(id=draft.id, name=draft.name, arguments=draft.arguments) for _, draft in sorted(state.tool_drafts.items()))
+            parts.append(CanonicalTextPart(text=text))
+        parts.extend(CanonicalToolCallPart(id=draft.id, name=draft.name, arguments=draft.arguments) for _, draft in sorted(state.tool_drafts.items()))
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,

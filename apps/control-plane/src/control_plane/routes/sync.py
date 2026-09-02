@@ -12,7 +12,7 @@ from sqlmodel import col
 from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageStatus
 from contract import UsageEvent as UsageEventContract
 from control_plane.authority import ensure_allowed_for_scopes
-from control_plane.authz import Permission, Scope, ScopeLevel, ScopeValue
+from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
@@ -60,7 +60,7 @@ async def selected_bundle(bundle_id: UUID) -> Bundle:
 BundleDep = Annotated[Bundle, Depends(selected_bundle)]
 
 
-async def selected_bundle_scope(bundle: BundleDep) -> ScopeValue:
+async def selected_bundle_scope(bundle: BundleDep) -> Scope:
     return Scope.org(bundle.org_id)
 
 

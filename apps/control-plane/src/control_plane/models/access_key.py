@@ -10,7 +10,7 @@ from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import Field, col
 
-from control_plane.authz import Permission, Scope, ScopeValue
+from control_plane.authz import Permission, Scope
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -56,7 +56,7 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
 
     @property
-    def scope(self) -> ScopeValue:
+    def scope(self) -> Scope:
         if self.workspace_id is not None:
             org_id = self.org_id
             if org_id is None:
@@ -73,7 +73,7 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
         return "active"
 
     @classmethod
-    async def retire_replaced(cls, key_id: UUID, user_id: UUID, scope: ScopeValue, revoked_at: datetime) -> Self | None:
+    async def retire_replaced(cls, key_id: UUID, user_id: UUID, scope: Scope, revoked_at: datetime) -> Self | None:
         key = await cls.first(
             cls.id == key_id,
             cls.user_id == user_id,
@@ -126,7 +126,7 @@ class AccessKeyOut(RecordOut[AccessKey]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    scope: ScopeValue
+    scope: Scope
     status: AccessKeyStatus
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"scope", "status"})
@@ -146,7 +146,7 @@ class AccessKeyMintedOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    scope: ScopeValue
+    scope: Scope
     status: AccessKeyStatus
     token: str
 

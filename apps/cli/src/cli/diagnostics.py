@@ -10,7 +10,7 @@ import typer
 from cli.client import resolve_control_plane_url
 from cli.common import SETUP, app, console, profiles_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import config_path, load_active_profile, load_config, remove_profile, set_active
+from cli.profiles import active_profile, config_path, load_active_profile, load_config, remove_profile, set_active
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -93,10 +93,11 @@ def profiles_remove(name: str) -> None:
 @app.command(rich_help_panel=SETUP)
 def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
-    profile = load_active_profile()
+    config = load_config()
+    profile = active_profile(config)
     rows = [
         {
-            "profile": profile.name if profile is not None else "none",
+            "profile": config.active or "none",
             "control_plane": resolve_control_plane_url(),
             "gateway": resolve_gateway_url(),
             "organization": os.environ.get("GW_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else ""),

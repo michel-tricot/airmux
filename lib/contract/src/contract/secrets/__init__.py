@@ -5,8 +5,6 @@ from typing import Annotated
 from pydantic import Field
 
 from contract.secrets.base import (
-    OrgSecretRef,
-    PlatformSecretRef,
     Secret,
     SecretNotFoundError,
     SecretPurpose,
@@ -15,7 +13,6 @@ from contract.secrets.base import (
     SecretStore,
     SecretStoreConfig,
     SecretStoreUnavailableError,
-    WorkspaceSecretRef,
 )
 from contract.secrets.env import EnvSecretStore, EnvStoreConfig
 from contract.secrets.file import FileSecretStore, FileStoreConfig
@@ -39,8 +36,6 @@ __all__ = [
     "InsecureDatabaseStoreConfig",
     "MemorySecretStore",
     "MemoryStoreConfig",
-    "OrgSecretRef",
-    "PlatformSecretRef",
     "Secret",
     "SecretNotFoundError",
     "SecretPurpose",
@@ -50,5 +45,4 @@ __all__ = [
     "SecretStoreConfig",
     "SecretStoreUnavailableError",
     "SecretsConfig",
-    "WorkspaceSecretRef",
 ]

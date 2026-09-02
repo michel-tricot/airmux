@@ -13,26 +13,26 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from data_plane.canonical import (
-    AssistantMessage,
-    AssistantPart,
-    CanonicalMessageValue,
+    CanonicalAssistantMessage,
+    CanonicalAssistantPart,
+    CanonicalContentPart,
+    CanonicalDocumentPart,
+    CanonicalFinishReason,
+    CanonicalGatewayInfo,
+    CanonicalImagePart,
+    CanonicalMessage,
+    CanonicalNamedTool,
+    CanonicalPart,
+    CanonicalReasoningPart,
     CanonicalRequest,
-    ContentPart,
-    DocumentPart,
-    FinishReason,
-    GatewayInfo,
-    ImagePart,
-    NamedTool,
-    Part,
-    ReasoningPart,
-    SystemMessage,
-    TextPart,
-    ToolCallPart,
-    ToolChoice,
-    ToolDef,
-    ToolResultPart,
-    Usage,
-    UserMessage,
+    CanonicalSystemMessage,
+    CanonicalTextPart,
+    CanonicalToolCallPart,
+    CanonicalToolChoice,
+    CanonicalToolDef,
+    CanonicalToolResultPart,
+    CanonicalUsage,
+    CanonicalUserMessage,
 )
 
 if TYPE_CHECKING:
@@ -63,11 +63,11 @@ class ChatBody(BaseModel):
     stream_options: dict[str, Any] | None = None
 
 
-def _image_to_url(part: ImagePart) -> str:
+def _image_to_url(part: CanonicalImagePart) -> str:
     return part.url if part.url is not None else f"{DATA_URL}{part.media_type};base64,{part.data}"
 
 
-def _document(part: DocumentPart) -> dict[str, Any]:
+def _document(part: CanonicalDocumentPart) -> dict[str, Any]:
     file: dict[str, Any] = {}
     if part.filename is not None or part.data is not None:
         file["filename"] = part.filename or "document.pdf"
@@ -80,39 +80,39 @@ def _document(part: DocumentPart) -> dict[str, Any]:
     return {"type": "file", "file": file}
 
 
-def _text_of_parts(parts: Sequence[Part]) -> str:
-    return "".join(part.text for part in parts if isinstance(part, TextPart))
+def _text_of_parts(parts: Sequence[CanonicalPart]) -> str:
+    return "".join(part.text for part in parts if isinstance(part, CanonicalTextPart))
 
 
-def _user_content(parts: Sequence[ContentPart]) -> str | list[dict[str, Any]]:
-    if all(isinstance(part, TextPart) for part in parts):
+def _user_content(parts: Sequence[CanonicalContentPart]) -> str | list[dict[str, Any]]:
+    if all(isinstance(part, CanonicalTextPart) for part in parts):
         return _text_of_parts(parts)
     blocks: list[dict[str, Any]] = []
     for part in parts:
-        if isinstance(part, TextPart):
+        if isinstance(part, CanonicalTextPart):
             blocks.append({"type": "text", "text": part.text})
-        elif isinstance(part, ImagePart):
+        elif isinstance(part, CanonicalImagePart):
             blocks.append({"type": "image_url", "image_url": {"url": _image_to_url(part)}})
-        elif isinstance(part, DocumentPart):
+        elif isinstance(part, CanonicalDocumentPart):
             blocks.append(_document(part))
     return blocks
 
 
-def _assistant_message(parts: Sequence[ContentPart]) -> dict[str, Any]:
-    calls = [part for part in parts if isinstance(part, ToolCallPart)]
+def _assistant_message(parts: Sequence[CanonicalContentPart]) -> dict[str, Any]:
+    calls = [part for part in parts if isinstance(part, CanonicalToolCallPart)]
     message: dict[str, Any] = {"role": "assistant", "content": _text_of_parts(parts) or None}
     if calls:
         message["tool_calls"] = [{"id": call.id, "type": "function", "function": {"name": call.name, "arguments": call.arguments}} for call in calls]
     return message
 
 
-def to_messages(messages: Sequence[CanonicalMessageValue]) -> list[dict[str, Any]]:
+def to_messages(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
     """Canonical into OpenAI's wire messages. Tool result parts expand back into their own tool
     messages, and reasoning is dropped: OpenAI does not accept it back on a later turn."""
     out: list[dict[str, Any]] = []
     for message in messages:
-        results = [part for part in message.content if isinstance(part, ToolResultPart)]
-        rest: list[ContentPart] = [part for part in message.content if not isinstance(part, ToolResultPart)]
+        results = [part for part in message.content if isinstance(part, CanonicalToolResultPart)]
+        rest: list[CanonicalContentPart] = [part for part in message.content if not isinstance(part, CanonicalToolResultPart)]
         out.extend({"role": "tool", "tool_call_id": result.call_id, "content": _text_of_parts(result.content)} for result in results)
         if not rest:
             continue
@@ -125,7 +125,7 @@ def to_messages(messages: Sequence[CanonicalMessageValue]) -> list[dict[str, Any
     return out
 
 
-def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
+def to_tools(tools: Sequence[CanonicalToolDef] | None) -> list[dict[str, Any]] | None:
     if not tools:
         return None
     return [
@@ -142,10 +142,10 @@ def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
     ]
 
 
-def to_tool_choice(choice: ToolChoice | None) -> str | dict[str, Any] | None:
+def to_tool_choice(choice: CanonicalToolChoice | None) -> str | dict[str, Any] | None:
     if choice is None:
         return None
-    if isinstance(choice, NamedTool):
+    if isinstance(choice, CanonicalNamedTool):
         return {"type": "function", "function": {"name": choice.name}}
     return choice
 
@@ -336,7 +336,7 @@ class UpstreamChunk(BaseModel):
     usage: UpstreamUsage | None = None
 
 
-FINISH_REASONS: dict[str, FinishReason] = {
+FINISH_REASONS: dict[str, CanonicalFinishReason] = {
     "stop": "stop",
     "length": "length",
     "tool_calls": "tool_calls",
@@ -345,7 +345,7 @@ FINISH_REASONS: dict[str, FinishReason] = {
 }
 
 
-def finish_reason(raw: str | None) -> FinishReason | None:
+def finish_reason(raw: str | None) -> CanonicalFinishReason | None:
     """A buffered response always finished; an unrecognized provider spelling reads as a plain stop."""
     if raw is None:
         return None
@@ -361,27 +361,27 @@ def content_texts(content: UpstreamContent | None) -> tuple[str, str]:
     return reasoning, text
 
 
-def response_parts(message: UpstreamMessage) -> list[AssistantPart]:
+def response_parts(message: UpstreamMessage) -> list[CanonicalAssistantPart]:
     """Order is reasoning, then text, then tool calls; empty parts are omitted so the streaming and
     non-streaming paths agree."""
-    parts: list[AssistantPart] = []
+    parts: list[CanonicalAssistantPart] = []
     block_reasoning, text = content_texts(message.content)
     if reasoning := (message.reasoning_content or message.reasoning or "") + block_reasoning:
-        parts.append(ReasoningPart(text=reasoning))
+        parts.append(CanonicalReasoningPart(text=reasoning))
     if text:
-        parts.append(TextPart(text=text))
-    parts.extend(ToolCallPart(id=call.id, name=call.function.name, arguments=call.function.arguments) for call in message.tool_calls or [])
+        parts.append(CanonicalTextPart(text=text))
+    parts.extend(CanonicalToolCallPart(id=call.id, name=call.function.name, arguments=call.function.arguments) for call in message.tool_calls or [])
     return parts
 
 
-def usage_of(reported: UpstreamUsage | None) -> Usage:
+def usage_of(reported: UpstreamUsage | None) -> CanonicalUsage:
     """OpenAI counts cache hits inside prompt_tokens, the convention canonical already uses.
 
     A usage block with no recognizable counts reads as absent: a provider reporting usage in an
     unknown shape must surface as an estimate, never as a free request."""
     if reported is None or (reported.prompt_tokens == 0 and reported.completion_tokens == 0):
-        return Usage(estimated=True)
-    return Usage(
+        return CanonicalUsage(estimated=True)
+    return CanonicalUsage(
         input_tokens=reported.prompt_tokens,
         output_tokens=reported.completion_tokens,
         cache_read_tokens=reported.prompt_tokens_details.cached_tokens if reported.prompt_tokens_details is not None else 0,
@@ -404,23 +404,23 @@ def _bool(value: object) -> bool | None:
     return value if isinstance(value, bool) else None
 
 
-def _image_from_url(url: str) -> ImagePart:
+def _image_from_url(url: str) -> CanonicalImagePart:
     if not url.startswith(DATA_URL):
-        return ImagePart(url=url)
+        return CanonicalImagePart(url=url)
     header, _, payload = url[len(DATA_URL) :].partition(",")
-    return ImagePart(media_type=header.removesuffix(";base64"), data=payload)
+    return CanonicalImagePart(media_type=header.removesuffix(";base64"), data=payload)
 
 
-def _document_from_file(value: object) -> DocumentPart:
+def _document_from_file(value: object) -> CanonicalDocumentPart:
     file = _mapping(value)
     filename = _str(file.get("filename")) or None
     if file_id := _str(file.get("file_id")):
-        return DocumentPart(filename=filename, file_id=file_id)
+        return CanonicalDocumentPart(filename=filename, file_id=file_id)
     file_data = _str(file.get("file_data"))
     if file_data.startswith(DATA_URL) and "," in file_data:
         header, payload = file_data[len(DATA_URL) :].split(",", 1)
-        return DocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload)
-    return DocumentPart(filename=filename, url=file_data)
+        return CanonicalDocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload)
+    return CanonicalDocumentPart(filename=filename, url=file_data)
 
 
 def _text_of(content: object) -> str:
@@ -432,16 +432,16 @@ def _text_of(content: object) -> str:
     return ""
 
 
-def _user_parts(content: object) -> list[ContentPart]:
+def _user_parts(content: object) -> list[CanonicalContentPart]:
     if isinstance(content, str):
-        return [TextPart(text=content)] if content else []
+        return [CanonicalTextPart(text=content)] if content else []
     if not isinstance(content, list):
         return []
-    parts: list[ContentPart] = []
+    parts: list[CanonicalContentPart] = []
     for raw in content:
         block = _mapping(raw)
         if block.get("type") == "text":
-            parts.append(TextPart(text=_str(block.get("text"))))
+            parts.append(CanonicalTextPart(text=_str(block.get("text"))))
         elif block.get("type") == "image_url":
             parts.append(_image_from_url(_str(_mapping(block.get("image_url")).get("url"))))
         elif block.get("type") == "file":
@@ -449,56 +449,58 @@ def _user_parts(content: object) -> list[ContentPart]:
     return parts
 
 
-def _assistant_parts(message: dict[str, object]) -> list[ContentPart]:
-    parts: list[ContentPart] = []
+def _assistant_parts(message: dict[str, object]) -> list[CanonicalContentPart]:
+    parts: list[CanonicalContentPart] = []
     if reasoning := _str(message.get("reasoning_content")) or _str(message.get("reasoning")):
-        parts.append(ReasoningPart(text=reasoning))
+        parts.append(CanonicalReasoningPart(text=reasoning))
     if text := _text_of(message.get("content")):
-        parts.append(TextPart(text=text))
+        parts.append(CanonicalTextPart(text=text))
     calls = message.get("tool_calls")
     for raw in calls if isinstance(calls, list) else []:
         call = _mapping(raw)
         function = _mapping(call.get("function"))
-        parts.append(ToolCallPart(id=_str(call.get("id")), name=_str(function.get("name")), arguments=_str(function.get("arguments"))))
+        parts.append(CanonicalToolCallPart(id=_str(call.get("id")), name=_str(function.get("name")), arguments=_str(function.get("arguments"))))
     return parts
 
 
-def from_messages(messages: object) -> list[CanonicalMessageValue]:
+def from_messages(messages: object) -> list[CanonicalMessage]:
     """OpenAI's wire messages into canonical. A tool message becomes a tool result part on a user
     message, and consecutive tool messages merge into one so a parallel call's results stay one turn."""
-    out: list[CanonicalMessageValue] = []
-    pending: list[ContentPart] = []
+    out: list[CanonicalMessage] = []
+    pending: list[CanonicalContentPart] = []
 
     def flush() -> None:
         if pending:
-            out.append(UserMessage.model_validate({"content": list(pending)}))
+            out.append(CanonicalUserMessage.model_validate({"content": list(pending)}))
             pending.clear()
 
     for raw in messages if isinstance(messages, list) else []:
         message = _mapping(raw)
         role = message.get("role")
         if role == "tool":
-            pending.append(ToolResultPart(call_id=_str(message.get("tool_call_id")), content=[TextPart(text=_text_of(message.get("content")))]))
+            pending.append(
+                CanonicalToolResultPart(call_id=_str(message.get("tool_call_id")), content=[CanonicalTextPart(text=_text_of(message.get("content")))])
+            )
             continue
         flush()
         if role in {"system", "developer"}:
-            out.append(SystemMessage(content=[TextPart(text=_text_of(message.get("content")))]))
+            out.append(CanonicalSystemMessage(content=[CanonicalTextPart(text=_text_of(message.get("content")))]))
         elif role == "assistant":
-            out.append(AssistantMessage.model_validate({"content": _assistant_parts(message)}))
+            out.append(CanonicalAssistantMessage.model_validate({"content": _assistant_parts(message)}))
         else:
-            out.append(UserMessage.model_validate({"content": _user_parts(message.get("content"))}))
+            out.append(CanonicalUserMessage.model_validate({"content": _user_parts(message.get("content"))}))
     flush()
     return out
 
 
-def from_tools(tools: object) -> list[ToolDef] | None:
+def from_tools(tools: object) -> list[CanonicalToolDef] | None:
     if not isinstance(tools, list) or not tools:
         return None
-    defs: list[ToolDef] = []
+    defs: list[CanonicalToolDef] = []
     for raw in tools:
         function = _mapping(_mapping(raw).get("function"))
         defs.append(
-            ToolDef(
+            CanonicalToolDef(
                 name=_str(function.get("name")),
                 description=_str(function.get("description")) or None,
                 parameters=dict(_mapping(function.get("parameters"))),
@@ -508,7 +510,7 @@ def from_tools(tools: object) -> list[ToolDef] | None:
     return defs
 
 
-def from_tool_choice(choice: object) -> ToolChoice | None:
+def from_tool_choice(choice: object) -> CanonicalToolChoice | None:
     if choice == "auto":
         return "auto"
     if choice == "none":
@@ -516,7 +518,7 @@ def from_tool_choice(choice: object) -> ToolChoice | None:
     if choice == "required":
         return "required"
     name = _str(_mapping(_mapping(choice).get("function")).get("name"))
-    return NamedTool(name=name) if name else None
+    return CanonicalNamedTool(name=name) if name else None
 
 
 class ToolCallOut(BaseModel):
@@ -558,7 +560,7 @@ class ChatCompletionOut(BaseModel):
     model: str
     choices: list[ChoiceOut]
     usage: UsageOut
-    gateway: GatewayInfo | None = None
+    gateway: CanonicalGatewayInfo | None = None
 
 
 class ToolCallDeltaOut(BaseModel):
@@ -588,13 +590,13 @@ class ChatCompletionChunkOut(BaseModel):
     model: str
     choices: list[ChunkChoiceOut]
     usage: UsageOut | None = None
-    gateway: GatewayInfo | None = None
+    gateway: CanonicalGatewayInfo | None = None
 
     def sse(self) -> bytes:
         return b"data: " + self.model_dump_json(exclude_none=True).encode() + b"\n\n"
 
 
-def usage_out(usage: Usage) -> UsageOut:
+def usage_out(usage: CanonicalUsage) -> UsageOut:
     return UsageOut(
         prompt_tokens=usage.input_tokens,
         completion_tokens=usage.output_tokens,
@@ -603,11 +605,15 @@ def usage_out(usage: Usage) -> UsageOut:
     )
 
 
-def to_message(parts: Sequence[ContentPart]) -> MessageOut:
+def to_message(parts: Sequence[CanonicalContentPart]) -> MessageOut:
     """Canonical response content as one assistant message. content is null rather than empty when the
     turn is only tool calls, which is the shape OpenAI itself returns."""
     text = _text_of_parts(parts)
-    reasoning_parts = [part for part in parts if isinstance(part, ReasoningPart)]
+    reasoning_parts = [part for part in parts if isinstance(part, CanonicalReasoningPart)]
     reasoning = "".join(part.text for part in reasoning_parts)
-    calls = [ToolCallOut(id=part.id, function={"name": part.name, "arguments": part.arguments}) for part in parts if isinstance(part, ToolCallPart)]
+    calls = [
+        ToolCallOut(id=part.id, function={"name": part.name, "arguments": part.arguments})
+        for part in parts
+        if isinstance(part, CanonicalToolCallPart)
+    ]
     return MessageOut(content=text or None, reasoning_content=reasoning if reasoning_parts else None, tool_calls=calls or None)

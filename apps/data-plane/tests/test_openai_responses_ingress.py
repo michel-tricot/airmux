@@ -8,16 +8,16 @@ from conftest import CTX
 from jsonschema import Draft202012Validator
 
 from data_plane.canonical import (
-    CanonicalMessageValue,
+    CanonicalChunk,
+    CanonicalDocumentPart,
+    CanonicalMessage,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
     CanonicalResponse,
-    DeltaChunk,
-    DocumentPart,
-    ReasoningDelta,
-    ReasoningPart,
-    TextDelta,
-    TextPart,
-    ToolCallDelta,
-    Usage,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalToolCallDelta,
+    CanonicalUsage,
 )
 from data_plane.egress.base import CanonicalError
 from data_plane.formats.openai_responses import ResponseMetadata, input_of, json_response, messages_of
@@ -57,8 +57,8 @@ SPELLINGS = [
 ]
 
 
-def _said(messages: list[CanonicalMessageValue]) -> list[tuple[str, str]]:
-    return [(m.role, "".join(p.text for p in m.content if isinstance(p, TextPart))) for m in messages]
+def _said(messages: list[CanonicalMessage]) -> list[tuple[str, str]]:
+    return [(m.role, "".join(p.text for p in m.content if isinstance(p, CanonicalTextPart))) for m in messages]
 
 
 @pytest.mark.parametrize(("items", "expected"), [(i, e) for _, i, e in SPELLINGS], ids=[n for n, _, _ in SPELLINGS])
@@ -80,7 +80,7 @@ def test_a_conversation_read_then_rewritten_keeps_every_turn():
 
 
 def test_content_filter_is_visible_in_a_responses_reply():
-    response = json_response(ResponseMetadata("response-1", "model-1", 1), [], "content_filter", Usage())
+    response = json_response(ResponseMetadata("response-1", "model-1", 1), [], "content_filter", CanonicalUsage())
 
     assert response["status"] == "incomplete"
     assert response["incomplete_details"] == {"reason": "content_filter"}
@@ -128,9 +128,9 @@ def test_reasoning_configuration_is_translated_into_canonical():
 def test_reasoning_response_preserves_the_provider_item_id():
     response = json_response(
         ResponseMetadata("response-1", "model-1", 1),
-        [ReasoningPart(id="rs_provider", text="thinking", signature="encrypted")],
+        [CanonicalReasoningPart(id="rs_provider", text="thinking", signature="encrypted")],
         "stop",
-        Usage(),
+        CanonicalUsage(),
     )
 
     assert response["output"][0]["id"] == "rs_provider"
@@ -153,11 +153,11 @@ def test_input_file_is_preserved_as_a_document():
         ]
     )
 
-    assert messages[0].content == [DocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0=")]
+    assert messages[0].content == [CanonicalDocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0=")]
 
 
 def test_streaming_reasoning_uses_the_provider_item_id():
-    frames = ResponsesStream().chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="")))
+    frames = ResponsesStream().chunk(CanonicalChunk(id="response-1", delta=CanonicalReasoningDelta(id="rs_provider", text="")))
 
     event = json.loads(frames[0].split(b"data: ", 1)[1])
     assert event["item"]["id"] == "rs_provider"
@@ -170,8 +170,8 @@ def _payload(frame: bytes) -> dict:
 def test_mixed_text_and_tool_streams_allocate_distinct_output_items():
     stream = ResponsesStream()
     frames = [
-        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="checking"))),
-        *stream.chunk(DeltaChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalTextDelta(text="checking"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
     ]
     payloads = [_payload(frame) for frame in frames]
     added = [payload for payload in payloads if payload["type"] == "response.output_item.added"]
@@ -188,9 +188,11 @@ def test_responses_stream_events_carry_sequence_and_complete_item_identity():
 
     frames = [
         *start(CTX),
-        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="hello"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalTextDelta(text="hello"))),
         *stream.closing(
-            CanonicalResponse(id="response-1", model="gpt-test", content=[TextPart(text="hello")], finish_reason="stop", usage=Usage()),
+            CanonicalResponse(
+                id="response-1", model="gpt-test", content=[CanonicalTextPart(text="hello")], finish_reason="stop", usage=CanonicalUsage()
+            ),
             [],
         ),
     ]
@@ -208,10 +210,10 @@ def test_responses_output_events_match_the_checked_in_openai_schema():
     stream = ResponsesStream()
     frames = [
         *stream.start(CTX),
-        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="hello"))),
-        *stream.chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs-1", text="think"))),
-        *stream.chunk(DeltaChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
-        *stream.closing(CanonicalResponse(id="response-1", model="gpt-test", content=[], finish_reason="stop", usage=Usage()), []),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalTextDelta(text="hello"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalReasoningDelta(id="rs-1", text="think"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
+        *stream.closing(CanonicalResponse(id="response-1", model="gpt-test", content=[], finish_reason="stop", usage=CanonicalUsage()), []),
         *stream.error(CanonicalError(status=502, code="upstream_error", message="failed")),
     ]
     payloads = [_payload(frame) for frame in frames]
@@ -228,9 +230,9 @@ def test_streaming_response_reports_the_canonical_finish_reason():
     final = CanonicalResponse(
         id="response-1",
         model="model-1",
-        content=[TextPart(text="done")],
+        content=[CanonicalTextPart(text="done")],
         finish_reason="stop",
-        usage=Usage(input_tokens=3, output_tokens=2),
+        usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
 
     terminal = ResponsesStream().closing(final, [])[-1]

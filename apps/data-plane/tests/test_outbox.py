@@ -21,7 +21,7 @@ def make_event(request_id) -> RoutedUsageEventV1:
         occurred_at=datetime.now(tz=UTC),
         org_id=uuid7(),
         workspace_id=uuid7(),
-        key_id=uuid7(),
+        key_id=str(uuid7()),
         model_id="gpt-test",
         provider_id="openai",
         bundle_id=uuid4(),

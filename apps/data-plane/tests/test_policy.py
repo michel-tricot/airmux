@@ -6,16 +6,16 @@ from conftest import MODEL, PROVIDER, make_bundle, make_credential, make_key
 from contract import Catalog, uuid7
 from data_plane.bundle import BundleSnapshot
 from data_plane.canonical import (
-    AssistantMessage,
+    CanonicalAssistantMessage,
+    CanonicalDocumentPart,
+    CanonicalImagePart,
+    CanonicalJsonObjectResponseFormat,
+    CanonicalReasoningConfig,
+    CanonicalReasoningPart,
     CanonicalRequest,
-    DocumentPart,
-    ImagePart,
-    JsonObjectResponseFormat,
-    ReasoningConfig,
-    ReasoningPart,
-    ToolCallPart,
-    ToolDef,
-    UserMessage,
+    CanonicalToolCallPart,
+    CanonicalToolDef,
+    CanonicalUserMessage,
 )
 from data_plane.policy import Allow, Deny, evaluate
 
@@ -63,13 +63,17 @@ def test_request_capabilities_are_derived_from_every_canonical_feature():
     request = CanonicalRequest(
         model=MODEL.model_id,
         messages=[
-            UserMessage(content=[ImagePart(url="https://example.com/image.png"), DocumentPart(url="https://example.com/doc.pdf")]),
-            AssistantMessage(content=[ReasoningPart(text="think"), ToolCallPart(id="call-1", name="lookup", arguments="{}")]),
+            CanonicalUserMessage(
+                content=[CanonicalImagePart(url="https://example.com/image.png"), CanonicalDocumentPart(url="https://example.com/doc.pdf")]
+            ),
+            CanonicalAssistantMessage(
+                content=[CanonicalReasoningPart(text="think"), CanonicalToolCallPart(id="call-1", name="lookup", arguments="{}")]
+            ),
         ],
         stream=True,
-        tools=[ToolDef(name="lookup")],
-        reasoning=ReasoningConfig(effort="low"),
-        response_format=JsonObjectResponseFormat(),
+        tools=[CanonicalToolDef(name="lookup")],
+        reasoning=CanonicalReasoningConfig(effort="low"),
+        response_format=CanonicalJsonObjectResponseFormat(),
     )
 
     decision = evaluate(request, KEY, snap(BUNDLE))
@@ -83,7 +87,7 @@ def test_request_is_denied_before_egress_when_the_model_lacks_a_required_capabil
     request = CanonicalRequest(
         model=model.model_id,
         messages=[{"role": "user", "content": "hi"}],
-        tools=[ToolDef(name="lookup")],
+        tools=[CanonicalToolDef(name="lookup")],
     )
 
     assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_feature: tools", status=400)
@@ -94,7 +98,7 @@ def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality(
     bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[CREDENTIAL]), org=ORG_A)
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[UserMessage(content=[ImagePart(url="https://example.com/image.png")])],
+        messages=[CanonicalUserMessage(content=[CanonicalImagePart(url="https://example.com/image.png")])],
     )
 
     assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_input_modality: image", status=400)

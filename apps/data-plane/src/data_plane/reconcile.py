@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from data_plane.canonical import Adjustment, CanonicalRequest
+from data_plane.canonical import CanonicalAdjustment, CanonicalRequest
 
 if TYPE_CHECKING:
     from contract import ModelEntry
@@ -31,11 +31,13 @@ def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: Compiled
     return None
 
 
-def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
+def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
     unsupported = {
         param for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and _value(request, param) is not None
     }
-    adjustments = [Adjustment(param=param, action="dropped", detail=f"{model.model_id} does not support this parameter") for param in unsupported]
+    adjustments = [
+        CanonicalAdjustment(param=param, action="dropped", detail=f"{model.model_id} does not support this parameter") for param in unsupported
+    ]
     if unsupported:
         updates = {param: None for param in unsupported if param != "reasoning_effort"}
         if "reasoning_effort" in unsupported and request.reasoning is not None:
@@ -49,9 +51,9 @@ def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledPro
         if reason is None:
             forwarded[param] = value
         else:
-            adjustments.append(Adjustment(param=param, action="dropped", detail=reason))
+            adjustments.append(CanonicalAdjustment(param=param, action="dropped", detail=reason))
     if request.max_tokens and model.max_output_tokens and request.max_tokens > model.max_output_tokens:
-        adjustments.append(Adjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
+        adjustments.append(CanonicalAdjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
         request = request.model_copy(update={"max_tokens": model.max_output_tokens})
     if len(forwarded) == len(extra):
         return request, adjustments

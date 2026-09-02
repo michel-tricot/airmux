@@ -66,27 +66,6 @@ def test_access_key_docs_distinguish_tenant_scopes():
     }
 
 
-def test_cli_auth_openapi_models_each_valid_state():
-    spec = make_app().openapi()
-    approve = spec["paths"]["/api/v1/auth/cli/approve"]["post"]["requestBody"]["content"]["application/json"]["schema"]
-    assert approve["discriminator"]["propertyName"] == "scope"
-    assert len(approve["oneOf"]) == 2
-    approval_models = [spec["components"]["schemas"][variant["$ref"].rsplit("/", 1)[-1]] for variant in approve["oneOf"]]
-    assert all("scope" in model["required"] for model in approval_models)
-
-    response = spec["paths"]["/api/v1/auth/cli/poll"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
-    envelope_name = response["$ref"].rsplit("/", 1)[-1]
-    poll = spec["components"]["schemas"][envelope_name]["properties"]["data"]
-    poll = spec["components"]["schemas"][poll["$ref"].rsplit("/", 1)[-1]]
-    assert len(poll["anyOf"]) == 3
-
-
-def test_access_key_scope_openapi_models_each_tenant_level():
-    scope = make_app().openapi()["components"]["schemas"]["AccessKeyOut"]["properties"]["scope"]
-    assert scope["discriminator"]["propertyName"] == "level"
-    assert len(scope["oneOf"]) == 3
-
-
 def test_documentation_groups_follow_authority_scopes():
     app = make_app()
     groups = {tag: group["name"] for group in app.openapi()["x-tagGroups"] for tag in group["tags"]}

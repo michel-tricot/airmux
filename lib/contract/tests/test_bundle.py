@@ -35,6 +35,6 @@ def test_model_capabilities_use_the_policy_vocabulary():
         ModelEntry.model_validate(model_entry(capabilities=["visionary"]))
 
 
-def test_inference_key_ids_reject_arbitrary_strings():
-    with pytest.raises(ValidationError):
-        KeyEntry(key_id="not-a-uuid", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")
+def test_inference_key_ids_are_opaque_strings():
+    key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")
+    assert key.key_id == "external-key"

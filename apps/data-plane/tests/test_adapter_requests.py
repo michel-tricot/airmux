@@ -11,14 +11,14 @@ from jsonschema import Draft202012Validator
 
 from contract import Secret
 from data_plane.canonical import (
+    CanonicalDocumentPart,
+    CanonicalJsonSchemaResponseFormat,
+    CanonicalReasoningConfig,
+    CanonicalReasoningPart,
     CanonicalRequest,
-    DocumentPart,
-    JsonSchemaResponseFormat,
-    ReasoningConfig,
-    ReasoningPart,
-    TextPart,
-    ToolDef,
-    UserMessage,
+    CanonicalTextPart,
+    CanonicalToolDef,
+    CanonicalUserMessage,
 )
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
@@ -205,7 +205,7 @@ def test_openai_compatible_preserves_reasoning_spelled_without_content():
 
     final = adapter.transform_response(json.dumps(response).encode(), CTX)
 
-    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="42")]
+    assert final.content == [CanonicalReasoningPart(text="20 + 22"), CanonicalTextPart(text="42")]
 
 
 def test_openai_compatible_preserves_mistral_content_blocks():
@@ -228,7 +228,7 @@ def test_openai_compatible_preserves_mistral_content_blocks():
 
     final = adapter.transform_response(json.dumps(response).encode(), CTX)
 
-    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="42")]
+    assert final.content == [CanonicalReasoningPart(text="20 + 22"), CanonicalTextPart(text="42")]
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
@@ -268,7 +268,7 @@ def test_openai_inline_document_without_a_name_gets_a_pdf_filename():
     adapter, model = _adapter("openai_compatible")
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[UserMessage(content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
+        messages=[CanonicalUserMessage(content=[CanonicalDocumentPart(media_type="application/pdf", data="JVBERi0=")])],
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -283,7 +283,7 @@ def test_responses_inline_document_without_a_name_gets_a_pdf_filename():
     adapter, model = _adapter("openai_responses")
     request = CanonicalRequest(
         model=model.model_id,
-        messages=[UserMessage(content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
+        messages=[CanonicalUserMessage(content=[CanonicalDocumentPart(media_type="application/pdf", data="JVBERi0=")])],
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -307,7 +307,7 @@ def test_openai_json_schema_without_a_name_gets_a_stable_name():
     adapter, model = _adapter("openai_compatible")
     request = request_of(
         CORPUS[0],
-        response_format=JsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
+        response_format=CanonicalJsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -319,7 +319,7 @@ def test_responses_json_schema_without_a_name_gets_a_stable_name():
     adapter, model = _adapter("openai_responses")
     request = request_of(
         CORPUS[0],
-        response_format=JsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
+        response_format=CanonicalJsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -331,9 +331,9 @@ def test_openai_chat_maps_supported_reasoning_and_tool_options():
     adapter, model = _adapter("openai_compatible")
     request = request_of(
         CORPUS[0],
-        reasoning=ReasoningConfig(effort="low"),
+        reasoning=CanonicalReasoningConfig(effort="low"),
         parallel_tool_calls=True,
-        tools=[ToolDef(name="answer", parameters={"type": "object"}, strict=True)],
+        tools=[CanonicalToolDef(name="answer", parameters={"type": "object"}, strict=True)],
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -347,11 +347,11 @@ def test_anthropic_maps_reasoning_structured_output_and_tool_options():
     adapter, model = _adapter("anthropic")
     request = request_of(
         CORPUS[0],
-        reasoning=ReasoningConfig(effort="low", summary="auto"),
+        reasoning=CanonicalReasoningConfig(effort="low", summary="auto"),
         parallel_tool_calls=True,
-        tools=[ToolDef(name="answer", parameters={"type": "object"}, strict=True)],
+        tools=[CanonicalToolDef(name="answer", parameters={"type": "object"}, strict=True)],
         tool_choice="required",
-        response_format=JsonSchemaResponseFormat(
+        response_format=CanonicalJsonSchemaResponseFormat(
             json_schema={"name": "answer", "schema": {"type": "object", "properties": {"answer": {"type": "integer"}}}},
         ),
     )

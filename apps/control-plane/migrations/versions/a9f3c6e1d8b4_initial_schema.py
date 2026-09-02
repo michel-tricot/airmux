@@ -1,11 +1,5 @@
 """initial schema
 
-Consolidated on 2026-08-09 from the pre-release chain (initial schema, enrollment and cli auth,
-workspaces, workspace slugs, provider credentials, provider icons), and again on 2026-08-14 to
-fold in the provider profile and direct model pricing. On 2026-08-15 it gained case-insensitive
-identity columns, CLI authorization cascades, and usage-event indexes. Nothing had deployed, so the chain had no consumers.
-From first deployment on the chain is append-only: never squash again or edit a shipped revision.
-
 The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
 under an org and are named within it by an org-unique slug, workspace_membership's composite foreign keys make cross-org membership
 structurally impossible (with a cascade evicting users whose org membership goes), and
@@ -50,19 +44,21 @@ branch_labels = None
 depends_on = None
 
 TOMBSTONED = (
-    "org",
-    "provider",
-    "user",
-    "inference_key",
+    "access_key",
     "auth_identity",
     "auth_session",
-    "access_key",
-    "model",
-    "org_membership",
     "cli_auth_request",
+    "inference_key",
+    "model",
+    "org",
+    "org_invitation",
+    "org_membership",
+    "playground_session",
+    "provider",
+    "provider_credential",
+    "user",
     "workspace",
     "workspace_membership",
-    "provider_credential",
 )
 
 AUDITED = (
@@ -70,7 +66,9 @@ AUDITED = (
     ("access_key", ("id",)),
     ("model", ("id",)),
     ("org", ("id",)),
+    ("org_invitation", ("id",)),
     ("org_membership", ("user_id", "org_id")),
+    ("playground_session", ("id",)),
     ("provider", ("id",)),
     ("provider_credential", ("id",)),
     ("user", ("id",)),
@@ -105,7 +103,12 @@ def upgrade() -> None:
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("instance_role", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("service_account", sa.Boolean(), nullable=False),
+        sa.Column("managing_org_id", sa.Uuid(), nullable=True),
         sa.CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
+        sa.CheckConstraint(
+            "managing_org_id IS NULL OR (service_account AND instance_role IS NULL)",
+            name="user_managing_org_requires_org_scoped_service_account",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )
@@ -116,6 +119,7 @@ def upgrade() -> None:
         sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("slug", postgresql.CITEXT(), nullable=False),
         sa.Column("personal_for", sa.Uuid(), nullable=True),
         sa.ForeignKeyConstraint(
             ["personal_for"],
@@ -124,7 +128,10 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("personal_for", name="org_personal_for_key"),
+        sa.UniqueConstraint("slug", name="org_slug_key"),
     )
+    op.create_index("ix_user_managing_org_id", "user", ["managing_org_id"], unique=False)
+    op.create_foreign_key("user_managing_org_id_fkey", "user", "org", ["managing_org_id"], ["id"])
     op.create_table(
         "data_plane_instance",
         sa.Column("instance_id", sa.Uuid(), nullable=False),
@@ -160,7 +167,7 @@ def upgrade() -> None:
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
-        sa.Column("key_id", sa.Uuid(), nullable=False),
+        sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bundle_id", sa.Uuid(), nullable=False),
@@ -225,7 +232,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("issued_at", UTCDateTime(), nullable=False),
-        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("configuration_revision", sa.Integer(), nullable=False),
         sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("signature", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("signing_key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -251,7 +258,10 @@ def upgrade() -> None:
         sa.Column("cache_write_price_per_mtok", sa.Float(), nullable=False),
         sa.Column("context_window", sa.Integer(), nullable=False),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
+        sa.Column("input_modalities", sa.JSON(), nullable=False),
+        sa.Column("output_modalities", sa.JSON(), nullable=False),
         sa.Column("capabilities", sa.JSON(), nullable=False),
+        sa.Column("parameter_support", sa.JSON(), nullable=False),
         sa.ForeignKeyConstraint(
             ["provider_id"],
             ["provider.id"],
@@ -344,6 +354,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("user_id", "workspace_id"),
     )
+    op.create_index("ix_workspace_membership_workspace_id", "workspace_membership", ["workspace_id"], unique=False)
     op.create_table(
         "access_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -436,6 +447,88 @@ def upgrade() -> None:
             postgresql_nulls_not_distinct=True,
         ),
     )
+    op.create_table(
+        "org_invitation",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("email", postgresql.CITEXT(), nullable=False),
+        sa.Column("org_role", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=True),
+        sa.Column("workspace_role", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("created_by_user_id", sa.Uuid(), nullable=True),
+        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("accepted_at", UTCDateTime(), nullable=True),
+        sa.Column("accepted_by_user_id", sa.Uuid(), nullable=True),
+        sa.Column("revoked_at", UTCDateTime(), nullable=True),
+        sa.CheckConstraint("org_role IN ('admin', 'member')", name="org_invitation_org_role_valid"),
+        sa.CheckConstraint(
+            "workspace_role IS NULL OR workspace_role IN ('admin', 'member', 'viewer')",
+            name="org_invitation_workspace_role_valid",
+        ),
+        sa.CheckConstraint(
+            "(workspace_id IS NULL) = (workspace_role IS NULL)",
+            name="org_invitation_workspace_grant_complete",
+        ),
+        sa.CheckConstraint(
+            "accepted_at IS NULL OR revoked_at IS NULL",
+            name="org_invitation_not_accepted_and_revoked",
+        ),
+        sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["created_by_user_id"], ["user.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["accepted_by_user_id"], ["user.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "org_id"],
+            ["workspace.id", "workspace.org_id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_index(
+        "org_invitation_pending_org_email_key",
+        "org_invitation",
+        ["org_id", "email"],
+        unique=True,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
+    )
+    op.create_table(
+        "runtime_configuration",
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("desired_revision", sa.Integer(), nullable=False),
+        sa.Column("published_revision", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("org_id"),
+    )
+    op.create_table(
+        "playground_session",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("credential_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sa.String(), nullable=False),
+        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("revoked", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("credential_id", name="playground_session_credential_id_key"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_table(
+        "insecure_vault_secret",
+        sa.Column("address", sa.String(length=64), nullable=False),
+        sa.Column("value", sa.String(), nullable=False),
+        sa.PrimaryKeyConstraint("address"),
+    )
     for table in TOMBSTONED:
         for statement in touch_trigger_ddl_v1(table):
             op.execute(statement)
@@ -451,8 +544,14 @@ def downgrade() -> None:
     for table in TOMBSTONED:
         for statement in touch_trigger_drop_ddl_v1(table):
             op.execute(statement)
+    op.drop_table("insecure_vault_secret")
+    op.drop_table("playground_session")
+    op.drop_table("runtime_configuration")
+    op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
+    op.drop_table("org_invitation")
     op.drop_table("provider_credential")
     op.drop_table("inference_key")
+    op.drop_index("ix_workspace_membership_workspace_id", table_name="workspace_membership")
     op.drop_table("workspace_membership")
     op.drop_table("access_key")
     op.drop_table("workspace")
@@ -468,6 +567,7 @@ def downgrade() -> None:
     op.drop_table("usage_event")
     op.drop_table("provider")
     op.drop_table("data_plane_instance")
+    op.drop_constraint("user_managing_org_id_fkey", "user", type_="foreignkey")
     op.drop_table("org")
     op.drop_table("user")
     op.drop_table("audit_log")

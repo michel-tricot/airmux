@@ -11,16 +11,7 @@ from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, Str
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col
 
-from contract import (
-    OrgSecretRef,
-    PlatformSecretRef,
-    SecretNotFoundError,
-    SecretPurpose,
-    SecretRef,
-    SecretRejectedError,
-    SecretStore,
-    WorkspaceSecretRef,
-)
+from contract import CredentialScope, SecretNotFoundError, SecretPurpose, SecretRef, SecretRejectedError, SecretStore
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
@@ -31,7 +22,6 @@ from control_plane.models.common.wire import RecordOut, RecordUpdate, RequestMod
 from control_plane.models.runtime_configuration import runtime_configured
 
 DEFAULT_PRIORITY = 100
-CredentialScope = Literal["platform", "org", "workspace"]
 ProviderCredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
 
 
@@ -106,27 +96,14 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         The one place a row becomes a ref, so the write path, the compiler and the delete path
         cannot disagree about which secret a row names.
         """
-        if self.workspace_id is not None:
-            if self.org_id is None:
-                msg = "workspace provider credential has no organization"
-                raise ValueError(msg)
-            return WorkspaceSecretRef(
-                purpose=SecretPurpose.provider,
-                service=self.provider_name,
-                name=self.name,
-                secret_id=self.id,
-                org_id=self.org_id,
-                workspace_id=self.workspace_id,
-            )
-        if self.org_id is not None:
-            return OrgSecretRef(
-                purpose=SecretPurpose.provider,
-                service=self.provider_name,
-                name=self.name,
-                secret_id=self.id,
-                org_id=self.org_id,
-            )
-        return PlatformSecretRef(purpose=SecretPurpose.provider, service=self.provider_name, name=self.name, secret_id=self.id)
+        return SecretRef(
+            purpose=SecretPurpose.provider,
+            service=self.provider_name,
+            name=self.name,
+            secret_id=self.id,
+            org_id=self.org_id,
+            workspace_id=self.workspace_id,
+        )
 
     @classmethod
     async def in_org(cls, org_id: UUID, ident: UUID) -> Self:

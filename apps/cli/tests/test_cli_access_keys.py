@@ -6,7 +6,7 @@ from uuid import uuid4
 import httpx
 from typer.testing import CliRunner
 
-from api_models import AccessKeyMintedOut, InstanceScope
+from api_models import AccessKeyMintedOut, Scope
 from cli import resources
 from cli.main import app
 
@@ -41,7 +41,7 @@ class Client:
             created_at=now,
             updated_at=now,
             deleted_at=None,
-            scope=InstanceScope(),
+            scope=Scope.model_validate({"level": "instance"}),
             status="active",
             token="shown-once",
         )

@@ -4,9 +4,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
-from contract.ids import InferenceKeyId
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 RoutedUsageStatus = Literal["ok", "upstream_error", "timeout", "cancelled", "credential_rejected", "rate_limited"]
@@ -20,7 +18,7 @@ the credential's status. Everything else upstream stays undifferentiated.
 MAX_EVENT_INTEGER = 2_147_483_647
 
 
-class UsageEventV1(BaseModel):
+class _UsageEventV1(BaseModel):
     """One metered model request reported by a data plane.
 
     `event_id` makes retries idempotent.
@@ -34,7 +32,7 @@ class UsageEventV1(BaseModel):
     occurred_at: datetime = Field(description="Timestamp when the request completed")
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
-    key_id: InferenceKeyId = Field(description="Inference key ID used for the request")
+    key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
     model_id: str = Field(description="Caller-facing model ID", min_length=1, max_length=255)
     provider_id: str = Field(description="Provider that served the request, or empty for an early denial", max_length=63)
     bundle_id: UUID = Field(description="Policy bundle used for the request")
@@ -62,30 +60,15 @@ class UsageEventV1(BaseModel):
             raise ValueError(msg)
         return occurred_at
 
-    @model_validator(mode="after")
-    def require_provider_after_selection(self) -> UsageEventV1:
-        if not self.provider_id:
-            if self.status != "denied" or self.credential_id is not None or self.credential_scope is not None:
-                msg = "an early denial cannot carry provider or credential data"
-                raise ValueError(msg)
-            return self
-        if self.status == "denied":
-            msg = "a denied request cannot carry a selected provider"
-            raise ValueError(msg)
-        if self.credential_id is None or self.credential_scope is None:
-            msg = "a routed request requires credential_id and credential_scope"
-            raise ValueError(msg)
-        return self
 
-
-class DeniedUsageEventV1(UsageEventV1):
+class DeniedUsageEventV1(_UsageEventV1):
     provider_id: Literal[""] = Field("", description="No provider was selected before denial")
     status: Literal["denied"] = Field("denied", description="The request was denied before routing")
     credential_id: None = Field(None, description="No provider credential was selected before denial")
     credential_scope: None = Field(None, description="No provider credential scope was selected before denial")
 
 
-class RoutedUsageEventV1(UsageEventV1):
+class RoutedUsageEventV1(_UsageEventV1):
     provider_id: str = Field(min_length=1, max_length=63, description="Provider that served the request")
     status: RoutedUsageStatus = Field(description="How the routed request ended")
     credential_id: UUID = Field(description="Provider credential used for the request")

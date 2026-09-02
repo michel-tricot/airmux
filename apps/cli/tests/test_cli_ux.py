@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 from api_models import ModelOut, ProviderOut, TaxonomyOut
 from cli import diagnostics, resources
 from cli.main import app
-from cli.profiles import OrgProfile, upsert_profile
+from cli.profiles import Profile, upsert_profile
 
 runner = CliRunner()
 
@@ -26,7 +26,8 @@ def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
-        OrgProfile(
+        Profile(
+            scope="org",
             control_plane_url="https://airllm.example.com",
             gateway_url="https://gateway.example.com",
             org_id="org-1",

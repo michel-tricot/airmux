@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash
-from control_plane.authz import Actor, Grant, Permission, ScopeValue
+from control_plane.authz import Actor, Grant, Permission, Scope
 from control_plane.models import AccessKey, InferenceKey, PlaygroundSession
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ def _new_key(kind: str) -> tuple[str, str]:
 @dataclass(frozen=True)
 class AccessKeyGrant:
     principal_id: UUID
-    scope: ScopeValue
+    scope: Scope
     permissions: frozenset[Permission]
     label: str
     expires_at: datetime | None = None
@@ -52,7 +52,7 @@ async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
     return key.id, token
 
 
-async def mint_standing_access_key(principal_id: UUID, scope: ScopeValue, label: str) -> tuple[UUID, str]:
+async def mint_standing_access_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
     from control_plane.authority import principal_permissions  # noqa: PLC0415 authority loads access-key models
 
     return await mint_access_key(

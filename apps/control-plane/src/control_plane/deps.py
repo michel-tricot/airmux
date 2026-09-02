@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from contract import PLAYGROUND_COOKIE
 from control_plane.authority import effective_permissions
-from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope, ScopeValue
+from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
@@ -124,26 +124,26 @@ async def selected_workspace(workspace_ref: str, org_id: OrgDep) -> Workspace:
 WorkspaceDep = Annotated[Workspace, Depends(selected_workspace)]
 
 
-async def instance_scope() -> ScopeValue:
+async def instance_scope() -> Scope:
     return Scope.instance()
 
 
-async def org_scope(org_id: OrgDep) -> ScopeValue:
+async def org_scope(org_id: OrgDep) -> Scope:
     return Scope.org(org_id)
 
 
-async def workspace_scope(workspace: WorkspaceDep) -> ScopeValue:
+async def workspace_scope(workspace: WorkspaceDep) -> Scope:
     return Scope.workspace(workspace.org_id, workspace.id)
 
 
-async def credential_scope(resolved: ActorDep) -> ScopeValue:
+async def credential_scope(resolved: ActorDep) -> Scope:
     return resolved.grant.scope
 
 
-CredentialScopeDep = Annotated[ScopeValue, Depends(credential_scope)]
+CredentialScopeDep = Annotated[Scope, Depends(credential_scope)]
 
 
-async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> ScopeValue:
+async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
     selected = org_id
     if selected is None and resolved.grant.scope.org_id is not None:
         selected = resolved.grant.scope.org_id
@@ -154,10 +154,10 @@ async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> ScopeV
     return Scope.org(selected)
 
 
-BundleScopeDep = Annotated[ScopeValue, Depends(bundle_scope)]
+BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
 
 
-async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> ScopeValue:
+async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> Scope:
     if workspace_ref is not None and org_id is None:
         raise HTTPException(status_code=422, detail="workspace_ref requires org_id")
     if org_id is None:
@@ -170,7 +170,7 @@ async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None
     return Scope.org(org_id)
 
 
-PermissionScopeDep = Annotated[ScopeValue, Depends(permission_scope)]
+PermissionScopeDep = Annotated[Scope, Depends(permission_scope)]
 
 
 class PermissionCheck(Protocol):
@@ -182,13 +182,13 @@ class PermissionCheck(Protocol):
 
 
 def _require(
-    scope_resolver: Callable[..., Awaitable[ScopeValue]],
+    scope_resolver: Callable[..., Awaitable[Scope]],
     required_permission_rules: tuple[tuple[Permission, ...], ...],
 ) -> params.Depends:
     required = tuple(permission for rule in required_permission_rules for permission in rule)
     scope_dependency = Depends(scope_resolver)
 
-    async def check_permission(resolved: ActorDep, scope: ScopeValue = scope_dependency) -> None:
+    async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
         effective = await effective_permissions(resolved, scope)
         if all(any(permission in effective for permission in rule) for rule in required_permission_rules):
             return
@@ -210,11 +210,11 @@ def _require(
     return Depends(checker)
 
 
-def require(scope_resolver: Callable[..., Awaitable[ScopeValue]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
     return _require(scope_resolver, ((permission, *additional_permissions),))
 
 
-def require_all(scope_resolver: Callable[..., Awaitable[ScopeValue]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+def require_all(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
     return _require(scope_resolver, tuple((required,) for required in (permission, *additional_permissions)))
 
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
 
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
@@ -42,7 +41,7 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
             SignedBundle.model_validate(client.get("/api/v1/bundle/latest", headers=org).json()["data"]), cp.bundle_key.public_key()
         )
         assert len(bundle.keys) == 1
-        assert bundle.keys[0].key_id == UUID(session["id"])
+        assert bundle.keys[0].key_id == session["id"]
         assert bundle.keys[0].expires_at == expires_at
 
 

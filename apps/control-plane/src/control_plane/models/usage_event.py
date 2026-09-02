@@ -26,7 +26,7 @@ class UsageEvent(Record, table=True):
     occurred_at: datetime = Field(sa_type=UTCDateTime)
     org_id: UUID
     workspace_id: UUID
-    key_id: UUID
+    key_id: str
     model_id: str
     provider_id: str
     bundle_id: UUID
@@ -102,7 +102,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     occurred_at: datetime
     org_id: UUID
     workspace_id: UUID
-    key_id: UUID
+    key_id: str
     model_id: str
     provider_id: str
     bundle_id: UUID

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
+
+if TYPE_CHECKING:
+    from typing import Self
 
 
 class ScopeLevel(StrEnum):
@@ -200,26 +203,30 @@ WORKSPACE_ROLE_PERMISSIONS = {
 }
 
 
-def permissions_for_org_role(role: OrgRole) -> frozenset[Permission]:
-    return ORG_ROLE_PERMISSIONS[role]
+def permissions_for_org_role(role: OrgRole | str) -> frozenset[Permission]:
+    return ORG_ROLE_PERMISSIONS[OrgRole(role)]
 
 
 class Scope(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True)
 
     level: ScopeLevel
     org_id: UUID | None = None
     workspace_id: UUID | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def require_concrete_scope(cls, value: object) -> object:
-        if cls is Scope:
-            msg = "use an instance, organization, or workspace scope"
+    @model_validator(mode="after")
+    def valid_level(self) -> Self:
+        expected = {
+            ScopeLevel.instance: (False, False),
+            ScopeLevel.org: (True, False),
+            ScopeLevel.workspace: (True, True),
+        }[self.level]
+        if (self.org_id is not None, self.workspace_id is not None) != expected:
+            msg = f"{self.level} scope has inconsistent tenant identifiers"
             raise ValueError(msg)
-        return value
+        return self
 
-    def covers(self, target: ScopeValue) -> bool:
+    def covers(self, target: Scope) -> bool:
         if self.level is ScopeLevel.instance:
             return True
         if self.level is ScopeLevel.org:
@@ -227,43 +234,22 @@ class Scope(BaseModel):
         return target.level is ScopeLevel.workspace and self.org_id == target.org_id and self.workspace_id == target.workspace_id
 
     @classmethod
-    def instance(cls) -> InstanceScope:
-        return InstanceScope()
+    def instance(cls) -> Self:
+        return cls(level=ScopeLevel.instance)
 
     @classmethod
-    def org(cls, org_id: UUID) -> OrgScope:
-        return OrgScope(org_id=org_id)
+    def org(cls, org_id: UUID) -> Self:
+        return cls(level=ScopeLevel.org, org_id=org_id)
 
     @classmethod
-    def workspace(cls, org_id: UUID, workspace_id: UUID) -> WorkspaceScope:
-        return WorkspaceScope(org_id=org_id, workspace_id=workspace_id)
-
-
-class InstanceScope(Scope):
-    level: Literal[ScopeLevel.instance] = ScopeLevel.instance
-    org_id: None = None
-    workspace_id: None = None
-
-
-class OrgScope(Scope):
-    level: Literal[ScopeLevel.org] = ScopeLevel.org
-    org_id: UUID
-    workspace_id: None = None
-
-
-class WorkspaceScope(Scope):
-    level: Literal[ScopeLevel.workspace] = ScopeLevel.workspace
-    org_id: UUID
-    workspace_id: UUID
-
-
-ScopeValue = Annotated[InstanceScope | OrgScope | WorkspaceScope, Field(discriminator="level")]
+    def workspace(cls, org_id: UUID, workspace_id: UUID) -> Self:
+        return cls(level=ScopeLevel.workspace, org_id=org_id, workspace_id=workspace_id)
 
 
 class Grant(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    scope: ScopeValue
+    scope: Scope
     permissions: frozenset[Permission]
 
 
@@ -280,7 +266,7 @@ class AccessRequest(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     permission: Permission
-    target: ScopeValue
+    target: Scope
 
 
 class Decision(StrEnum):

@@ -16,7 +16,7 @@ from helpers import MODEL, PROVIDER, make_org, setup_control_plane
 from typer.testing import CliRunner
 
 from cli.main import app as cli_app
-from contract import OrgSecretRef, SecretPurpose, WorkspaceSecretRef
+from contract import SecretPurpose, SecretRef
 
 KEY = "sk-provider-abcd1234"
 runner = CliRunner()
@@ -57,23 +57,13 @@ def run(*args, stdin: str | None = None):
 
 
 def stored(cp, credential: dict) -> str:
-    ref = (
-        WorkspaceSecretRef(
-            purpose=SecretPurpose.provider,
-            service=credential["provider_name"],
-            name=credential["name"],
-            secret_id=credential["id"],
-            org_id=credential["org_id"],
-            workspace_id=credential["workspace_id"],
-        )
-        if credential["workspace_id"]
-        else OrgSecretRef(
-            purpose=SecretPurpose.provider,
-            service=credential["provider_name"],
-            name=credential["name"],
-            secret_id=credential["id"],
-            org_id=credential["org_id"],
-        )
+    ref = SecretRef(
+        purpose=SecretPurpose.provider,
+        service=credential["provider_name"],
+        name=credential["name"],
+        secret_id=credential["id"],
+        org_id=credential["org_id"],
+        workspace_id=credential["workspace_id"],
     )
     return asyncio.run(cp.app.state.secret_store.get(ref)).reveal()
 

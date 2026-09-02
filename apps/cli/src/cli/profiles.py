@@ -3,54 +3,38 @@ from __future__ import annotations
 import os
 import tomllib
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal, Self
 from urllib.parse import urlsplit
 
 import tomli_w
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from contract.secrets.file import write_private_text
 
 
-class _Profile(BaseModel):
+class Profile(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    scope: Literal["instance", "org"]
     control_plane_url: str | None = None
     console_url: str | None = None
     gateway_url: str | None = None
     token: str | None = None
-
-
-class InstanceProfile(_Profile):
-    scope: Literal["instance"] = "instance"
-
-
-class OrgProfile(_Profile):
-    scope: Literal["org"] = "org"
-    org_id: str
-    org_name: str
+    org_id: str | None = None
+    org_name: str | None = None
     workspace: str | None = None
     workspace_name: str | None = None
 
-
-Profile = Annotated[InstanceProfile | OrgProfile, Field(discriminator="scope")]
-PROFILE_ADAPTER = TypeAdapter(Profile)
-
-
-class NamedInstanceProfile(InstanceProfile):
-    name: str
-
-
-class NamedOrgProfile(OrgProfile):
-    name: str
-
-
-NamedProfile = Annotated[NamedInstanceProfile | NamedOrgProfile, Field(discriminator="scope")]
-NAMED_PROFILE_ADAPTER = TypeAdapter(NamedProfile)
-
-
-def profile_from(value: object) -> Profile:
-    return PROFILE_ADAPTER.validate_python(value)
+    @model_validator(mode="after")
+    def validate_scope(self) -> Self:
+        organization = self.org_id is not None and self.org_name is not None
+        if self.scope == "org" and not organization:
+            message = "an organization profile requires org_id and org_name"
+            raise ValueError(message)
+        if self.scope == "instance" and any((self.org_id, self.org_name, self.workspace, self.workspace_name)):
+            message = "an instance profile cannot contain organization fields"
+            raise ValueError(message)
+        return self
 
 
 class CliConfig(BaseModel):
@@ -77,14 +61,11 @@ def save_config(config: CliConfig) -> None:
     write_private_text(config_path(), tomli_w.dumps(config.model_dump(mode="python", exclude_none=True)))
 
 
-def active_profile(config: CliConfig) -> NamedProfile | None:
-    name = config.active
-    if name is not None and (profile := config.profiles.get(name)) is not None:
-        return NAMED_PROFILE_ADAPTER.validate_python({"name": name, **profile.model_dump(mode="python")})
-    return None
+def active_profile(config: CliConfig) -> Profile | None:
+    return config.profiles.get(config.active) if config.active is not None else None
 
 
-def load_active_profile() -> NamedProfile | None:
+def load_active_profile() -> Profile | None:
     return active_profile(load_config())
 
 

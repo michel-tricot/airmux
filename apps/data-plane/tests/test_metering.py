@@ -5,7 +5,7 @@ import time
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox
 
 from contract import uuid7
-from data_plane.canonical import CanonicalRequest, CanonicalResponse, TextPart, ToolCallPart, ToolDef, Usage
+from data_plane.canonical import CanonicalRequest, CanonicalResponse, CanonicalTextPart, CanonicalToolCallPart, CanonicalToolDef, CanonicalUsage
 from data_plane.egress.base import Ctx
 from data_plane.metering import RequestStart, cost_breakdown, record_denied, record_usage
 
@@ -22,14 +22,14 @@ def _model():
 
 
 def test_each_usage_bucket_has_a_direct_model_price():
-    usage = Usage(input_tokens=1000, output_tokens=40, cache_read_tokens=300, cache_write_tokens=200)
+    usage = CanonicalUsage(input_tokens=1000, output_tokens=40, cache_read_tokens=300, cache_write_tokens=200)
     cost_in, cost_out = cost_breakdown(usage, _model())
     assert cost_in == (500 * 2.0 + 300 * 0.25 + 200 * 2.5) / 1_000_000
     assert cost_out == 40 * 5.0 / 1_000_000
 
 
 def test_cache_counts_cannot_make_fresh_input_negative():
-    usage = Usage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
+    usage = CanonicalUsage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
     cost_in, _ = cost_breakdown(usage, _model())
     assert cost_in == (80 * 0.25 + 40 * 2.5) / 1_000_000
 
@@ -45,7 +45,7 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
         stream=True,
         org_id=ORG,
         workspace_id=WORKSPACE,
-        key_id=uuid7(),
+        key_id=str(uuid7()),
         credential_id=credential_id,
         credential_scope="workspace",
         bundle_id=bundle_id,
@@ -54,9 +54,9 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
     response = CanonicalResponse(
         id=str(ctx.request_id),
         model=MODEL.model_id,
-        content=[TextPart(text="one two")],
+        content=[CanonicalTextPart(text="one two")],
         finish_reason=None,
-        usage=Usage(estimated=True),
+        usage=CanonicalUsage(estimated=True),
     )
 
     record_usage(outbox, ctx, response, "cancelled", request)
@@ -82,7 +82,7 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content(tmp_pat
         stream=True,
         org_id=ORG,
         workspace_id=WORKSPACE,
-        key_id=uuid7(),
+        key_id=str(uuid7()),
         credential_id=uuid7(),
         credential_scope="workspace",
         bundle_id=uuid7(),
@@ -90,15 +90,15 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content(tmp_pat
     request = CanonicalRequest(
         model=MODEL.model_id,
         messages=[{"role": "user", "content": "use the tool"}],
-        tools=[ToolDef(name="lookup", parameters={"type": "object", "properties": {"city": {"type": "string"}}})],
+        tools=[CanonicalToolDef(name="lookup", parameters={"type": "object", "properties": {"city": {"type": "string"}}})],
         stream=True,
     )
     response = CanonicalResponse(
         id=str(ctx.request_id),
         model=MODEL.model_id,
-        content=[ToolCallPart(id="call-1", name="lookup", arguments='{"city":"Paris"}')],
+        content=[CanonicalToolCallPart(id="call-1", name="lookup", arguments='{"city":"Paris"}')],
         finish_reason=None,
-        usage=Usage(input_tokens=37, estimated=True),
+        usage=CanonicalUsage(input_tokens=37, estimated=True),
     )
 
     record_usage(outbox, ctx, response, "cancelled", request)

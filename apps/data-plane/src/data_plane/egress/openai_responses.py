@@ -7,7 +7,16 @@ from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
-from data_plane.canonical import CanonicalResponse, DeltaChunk, ReasoningDelta, ReasoningPart, TextDelta, TextPart, ToolCallDelta, ToolCallPart
+from data_plane.canonical import (
+    CanonicalChunk,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
+    CanonicalResponse,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalToolCallDelta,
+    CanonicalToolCallPart,
+)
 from data_plane.egress.base import (
     CanonicalError,
     EgressAdapter,
@@ -124,7 +133,7 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         if not state.terminal_seen:
             yield from frame_sse(chunk, state)
 
-    def transform_stream_event(self, ev: RawEvent, state: ResponsesStreamState) -> list[DeltaChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
+    def transform_stream_event(self, ev: RawEvent, state: ResponsesStreamState) -> list[CanonicalChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
         try:
             event = fmt.UpstreamResponseEvent.model_validate_json(ev.data)
         except ValidationError as error:
@@ -160,9 +169,9 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
                     )
                     reasoning = state.reasoning[index]
                     return [
-                        DeltaChunk(
+                        CanonicalChunk(
                             id=state.chunk_id,
-                            delta=ReasoningDelta(id=reasoning.id or None, signature=reasoning.signature or None),
+                            delta=CanonicalReasoningDelta(id=reasoning.id or None, signature=reasoning.signature or None),
                         )
                     ]
                 if item.type == "function_call":
@@ -171,9 +180,9 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
                     output.name = item.name
                     output.arguments = item.arguments
                     return [
-                        DeltaChunk(
+                        CanonicalChunk(
                             id=state.chunk_id,
-                            delta=ToolCallDelta(index=output.ordinal or 0, id=output.id or None, name=output.name or None),
+                            delta=CanonicalToolCallDelta(index=output.ordinal or 0, id=output.id or None, name=output.name or None),
                         )
                     ]
                 state.output[index] = ResponsesOutputDraft(type=item.type)
@@ -181,17 +190,17 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         if kind == "response.output_text.delta":
             delta = event.delta
             state.text[index] = state.text.get(index, "") + delta
-            return [DeltaChunk(id=state.chunk_id, delta=TextDelta(text=delta))] if delta else []
+            return [CanonicalChunk(id=state.chunk_id, delta=CanonicalTextDelta(text=delta))] if delta else []
         if kind in {"response.reasoning_summary_text.delta", "response.reasoning_text.delta"}:
             delta = event.delta
             draft = state.reasoning.setdefault(index, ResponsesReasoningDraft())
             draft.text += delta
-            return [DeltaChunk(id=state.chunk_id, delta=ReasoningDelta(text=delta))] if delta else []
+            return [CanonicalChunk(id=state.chunk_id, delta=CanonicalReasoningDelta(text=delta))] if delta else []
         if kind == "response.function_call_arguments.delta":
             delta = event.delta
             draft = _tool_draft(state, index)
             draft.arguments += delta
-            return [DeltaChunk(id=state.chunk_id, delta=ToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
+            return [CanonicalChunk(id=state.chunk_id, delta=CanonicalToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
         return []
 
     def validate_stream(self, state: ResponsesStreamState) -> None:
@@ -203,16 +212,16 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         for index in sorted(set(state.output) | set(state.text) | set(state.reasoning)):
             if index in state.reasoning:
                 draft = state.reasoning[index]
-                parts.append(ReasoningPart(id=draft.id or None, text=draft.text, signature=draft.signature or None))
+                parts.append(CanonicalReasoningPart(id=draft.id or None, text=draft.text, signature=draft.signature or None))
             if text := state.text.get(index):
-                parts.append(TextPart(text=text))
+                parts.append(CanonicalTextPart(text=text))
             output = state.output.get(index)
             if output and output.type == "function_call":
-                parts.append(ToolCallPart(id=output.id, name=output.name, arguments=output.arguments))
+                parts.append(CanonicalToolCallPart(id=output.id, name=output.name, arguments=output.arguments))
         finish = (
             "length"
             if state.incomplete
-            else ("tool_calls" if any(isinstance(part, ToolCallPart) for part in parts) else ("stop" if state.terminal_seen else None))
+            else ("tool_calls" if any(isinstance(part, CanonicalToolCallPart) for part in parts) else ("stop" if state.terminal_seen else None))
         )
         return CanonicalResponse(
             id=state.chunk_id, model=state.ctx.model.model_id, content=parts, finish_reason=finish, usage=fmt.usage_of(state.usage)

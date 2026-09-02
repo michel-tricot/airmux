@@ -19,7 +19,14 @@ from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
-from data_plane.canonical import CanonicalResponse, DeltaChunk, DocumentPart, ReasoningDelta, ReasoningPart, Usage
+from data_plane.canonical import (
+    CanonicalChunk,
+    CanonicalDocumentPart,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
+    CanonicalResponse,
+    CanonicalUsage,
+)
 from data_plane.ingress import resolve
 from data_plane.ingress.openai_native import OpenAINativeIngress, OpenAIResponseStream
 from data_plane.profiles import compile_profile
@@ -100,7 +107,7 @@ def test_parse_preserves_an_inline_document():
         }
     )
 
-    assert request.messages[0].content == [DocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0=")]
+    assert request.messages[0].content == [CanonicalDocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0=")]
 
 
 def _sdk(client: TestClient, api_key: str) -> OpenAI:
@@ -111,9 +118,9 @@ def test_buffered_chat_preserves_an_empty_reasoning_part():
     final = CanonicalResponse(
         id="response-1",
         model="gpt-test",
-        content=[ReasoningPart(id="rs_1", text="", signature="encrypted")],
+        content=[CanonicalReasoningPart(id="rs_1", text="", signature="encrypted")],
         finish_reason="stop",
-        usage=Usage(input_tokens=3, output_tokens=2),
+        usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
 
     payload = json.loads(bytes(OpenAINativeIngress().render_response(final).body))
@@ -122,7 +129,7 @@ def test_buffered_chat_preserves_an_empty_reasoning_part():
 
 
 def test_streamed_chat_preserves_an_empty_reasoning_part():
-    frames = OpenAIResponseStream().chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs_1", signature="encrypted")))
+    frames = OpenAIResponseStream().chunk(CanonicalChunk(id="response-1", delta=CanonicalReasoningDelta(id="rs_1", signature="encrypted")))
 
     assert json.loads(frames[0].removeprefix(b"data: "))["choices"][0]["delta"]["reasoning_content"] == ""
 

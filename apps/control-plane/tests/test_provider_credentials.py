@@ -12,17 +12,7 @@ from pg import db_url_for
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from contract import (
-    BundleV1,
-    EnvStoreConfig,
-    InsecureDatabaseStoreConfig,
-    OrgSecretRef,
-    PlatformSecretRef,
-    SecretNotFoundError,
-    SecretPurpose,
-    WorkspaceSecretRef,
-    uuid7,
-)
+from contract import BundleV1, EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.db import current_session
 from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
@@ -56,30 +46,13 @@ def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
 
 def _stored(cp, credential: dict) -> str:
     """Read the value back the way a data plane would: from the store, by the ref the row names."""
-    ref = (
-        WorkspaceSecretRef(
-            purpose=SecretPurpose.provider,
-            service=credential["provider_name"],
-            name=credential["name"],
-            secret_id=credential["id"],
-            org_id=credential["org_id"],
-            workspace_id=credential["workspace_id"],
-        )
-        if credential["workspace_id"]
-        else OrgSecretRef(
-            purpose=SecretPurpose.provider,
-            service=credential["provider_name"],
-            name=credential["name"],
-            secret_id=credential["id"],
-            org_id=credential["org_id"],
-        )
-        if credential["org_id"]
-        else PlatformSecretRef(
-            purpose=SecretPurpose.provider,
-            service=credential["provider_name"],
-            name=credential["name"],
-            secret_id=credential["id"],
-        )
+    ref = SecretRef(
+        purpose=SecretPurpose.provider,
+        service=credential["provider_name"],
+        name=credential["name"],
+        secret_id=credential["id"],
+        org_id=credential["org_id"],
+        workspace_id=credential["workspace_id"],
     )
     return asyncio.run(cp.app.state.secret_store.get(ref)).reveal()
 
@@ -397,7 +370,7 @@ def _usage_event(metered, status, occurred_at):
         "occurred_at": occurred_at.isoformat(),
         "org_id": str(metered.org_id),
         "workspace_id": str(metered.workspace_id),
-        "key_id": str(uuid7()),
+        "key_id": "k1",
         "model_id": "gpt-test",
         "provider_id": "openai",
         "bundle_id": str(uuid7()),

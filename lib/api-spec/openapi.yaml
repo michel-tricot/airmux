@@ -639,15 +639,7 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-              - $ref: '#/components/schemas/CliInstanceAuthApproveIn'
-              - $ref: '#/components/schemas/CliOrgAuthApproveIn'
-              title: Body
-              discriminator:
-                propertyName: scope
-                mapping:
-                  instance: '#/components/schemas/CliInstanceAuthApproveIn'
-                  org: '#/components/schemas/CliOrgAuthApproveIn'
+              $ref: '#/components/schemas/CliAuthApproveIn'
         required: true
       responses:
         '200':
@@ -3925,17 +3917,7 @@ components:
           - type: 'null'
           title: Deleted At
         scope:
-          oneOf:
-          - $ref: '#/components/schemas/InstanceScope'
-          - $ref: '#/components/schemas/OrgScope'
-          - $ref: '#/components/schemas/WorkspaceScope'
-          title: Scope
-          discriminator:
-            propertyName: level
-            mapping:
-              instance: '#/components/schemas/InstanceScope'
-              org: '#/components/schemas/OrgScope'
-              workspace: '#/components/schemas/WorkspaceScope'
+          $ref: '#/components/schemas/Scope'
         status:
           type: string
           enum:
@@ -4031,17 +4013,7 @@ components:
           - type: 'null'
           title: Deleted At
         scope:
-          oneOf:
-          - $ref: '#/components/schemas/InstanceScope'
-          - $ref: '#/components/schemas/OrgScope'
-          - $ref: '#/components/schemas/WorkspaceScope'
-          title: Scope
-          discriminator:
-            propertyName: level
-            mapping:
-              instance: '#/components/schemas/InstanceScope'
-              org: '#/components/schemas/OrgScope'
-              workspace: '#/components/schemas/WorkspaceScope'
+          $ref: '#/components/schemas/Scope'
         status:
           type: string
           enum:
@@ -4185,6 +4157,34 @@ components:
       required:
       - claimed
       title: ClaimOut
+    CliAuthApproveIn:
+      properties:
+        user_code:
+          type: string
+          maxLength: 16
+          minLength: 8
+          title: User Code
+          description: Device code shown by the CLI
+        scope:
+          type: string
+          enum:
+          - instance
+          - org
+          title: Scope
+          description: Scope the CLI access key should use
+          default: org
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+          description: Organization the CLI access key should use for organization scope
+      additionalProperties: false
+      type: object
+      required:
+      - user_code
+      title: CliAuthApproveIn
     CliAuthApprovedOut:
       properties:
         status:
@@ -4199,93 +4199,6 @@ components:
       - status
       - client_name
       title: CliAuthApprovedOut
-    CliAuthInstanceCompleteOut:
-      properties:
-        status:
-          type: string
-          const: complete
-          title: Status
-          default: complete
-        interval_seconds:
-          type: integer
-          title: Interval Seconds
-        scope:
-          type: string
-          const: instance
-          title: Scope
-          default: instance
-        token:
-          type: string
-          title: Token
-        org_id:
-          type: 'null'
-          title: Org Id
-        org_name:
-          type: 'null'
-          title: Org Name
-      type: object
-      required:
-      - interval_seconds
-      - token
-      title: CliAuthInstanceCompleteOut
-    CliAuthOrgCompleteOut:
-      properties:
-        status:
-          type: string
-          const: complete
-          title: Status
-          default: complete
-        interval_seconds:
-          type: integer
-          title: Interval Seconds
-        scope:
-          type: string
-          const: org
-          title: Scope
-          default: org
-        token:
-          type: string
-          title: Token
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        org_name:
-          type: string
-          title: Org Name
-      type: object
-      required:
-      - interval_seconds
-      - token
-      - org_id
-      - org_name
-      title: CliAuthOrgCompleteOut
-    CliAuthPendingOut:
-      properties:
-        status:
-          type: string
-          const: pending
-          title: Status
-          default: pending
-        interval_seconds:
-          type: integer
-          title: Interval Seconds
-        scope:
-          type: 'null'
-          title: Scope
-        token:
-          type: 'null'
-          title: Token
-        org_id:
-          type: 'null'
-          title: Org Id
-        org_name:
-          type: 'null'
-          title: Org Name
-      type: object
-      required:
-      - interval_seconds
-      title: CliAuthPendingOut
     CliAuthPollIn:
       properties:
         poll_secret:
@@ -4300,10 +4213,44 @@ components:
       - poll_secret
       title: CliAuthPollIn
     CliAuthPollOut:
-      anyOf:
-      - $ref: '#/components/schemas/CliAuthPendingOut'
-      - $ref: '#/components/schemas/CliAuthInstanceCompleteOut'
-      - $ref: '#/components/schemas/CliAuthOrgCompleteOut'
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - complete
+          title: Status
+        interval_seconds:
+          type: integer
+          title: Interval Seconds
+        scope:
+          anyOf:
+          - type: string
+            enum:
+            - instance
+            - org
+          - type: 'null'
+          title: Scope
+        token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        org_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Org Name
+      type: object
+      required:
+      - status
+      - interval_seconds
       title: CliAuthPollOut
     CliAuthRequestOut:
       properties:
@@ -4365,54 +4312,6 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
-    CliInstanceAuthApproveIn:
-      properties:
-        user_code:
-          type: string
-          maxLength: 16
-          minLength: 8
-          title: User Code
-          description: Device code shown by the CLI
-        scope:
-          type: string
-          const: instance
-          title: Scope
-          description: Issue an instance-scoped CLI access key
-        org_id:
-          type: 'null'
-          title: Org Id
-          description: Organization is absent for instance access
-      additionalProperties: false
-      type: object
-      required:
-      - user_code
-      - scope
-      title: CliInstanceAuthApproveIn
-    CliOrgAuthApproveIn:
-      properties:
-        user_code:
-          type: string
-          maxLength: 16
-          minLength: 8
-          title: User Code
-          description: Device code shown by the CLI
-        scope:
-          type: string
-          const: org
-          title: Scope
-          description: Issue an organization-scoped CLI access key
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-          description: Organization the CLI access key should use
-      additionalProperties: false
-      type: object
-      required:
-      - user_code
-      - scope
-      - org_id
-      title: CliOrgAuthApproveIn
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -4528,7 +4427,8 @@ components:
           description: Workspace that made the request
         key_id:
           type: string
-          format: uuid
+          maxLength: 255
+          minLength: 1
           title: Key Id
           description: Inference key ID used for the request
         model_id:
@@ -5276,22 +5176,6 @@ components:
       - auditor
       - data_plane
       title: InstanceRole
-    InstanceScope:
-      properties:
-        level:
-          type: string
-          const: instance
-          title: Level
-          default: instance
-        org_id:
-          type: 'null'
-          title: Org Id
-        workspace_id:
-          type: 'null'
-          title: Workspace Id
-      additionalProperties: false
-      type: object
-      title: InstanceScope
     InvitationAcceptedOut:
       properties:
         invitation_id:
@@ -5981,25 +5865,6 @@ components:
       - member
       - data_plane
       title: OrgRole
-    OrgScope:
-      properties:
-        level:
-          type: string
-          const: org
-          title: Level
-          default: org
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        workspace_id:
-          type: 'null'
-          title: Workspace Id
-      additionalProperties: false
-      type: object
-      required:
-      - org_id
-      title: OrgScope
     OrgServiceAccountIn:
       properties:
         name:
@@ -6487,7 +6352,8 @@ components:
           description: Workspace that made the request
         key_id:
           type: string
-          format: uuid
+          maxLength: 255
+          minLength: 1
           title: Key Id
           description: Inference key ID used for the request
         model_id:
@@ -6605,6 +6471,33 @@ components:
       - credential_id
       - credential_scope
       title: RoutedUsageEventV1
+    Scope:
+      properties:
+        level:
+          $ref: '#/components/schemas/ScopeLevel'
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+      type: object
+      required:
+      - level
+      title: Scope
+    ScopeLevel:
+      type: string
+      enum:
+      - instance
+      - org
+      - workspace
+      title: ScopeLevel
     ServiceAccountIn:
       properties:
         name:
@@ -6782,7 +6675,6 @@ components:
           title: Workspace Id
         key_id:
           type: string
-          format: uuid
           title: Key Id
         model_id:
           type: string
@@ -7090,27 +6982,6 @@ components:
       - member
       - viewer
       title: WorkspaceRole
-    WorkspaceScope:
-      properties:
-        level:
-          type: string
-          const: workspace
-          title: Level
-          default: workspace
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-      additionalProperties: false
-      type: object
-      required:
-      - org_id
-      - workspace_id
-      title: WorkspaceScope
     WorkspaceUpdate:
       properties:
         name:

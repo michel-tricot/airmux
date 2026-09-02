@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from contract import CredentialScope, ModelEntry, ProviderEntry, Secret
-    from data_plane.canonical import CanonicalRequest, CanonicalResponse, DeltaChunk
+    from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
 
 class CanonicalError(BaseModel):
@@ -124,7 +124,7 @@ class Ctx:
     stream: bool
     org_id: UUID
     workspace_id: UUID
-    key_id: UUID
+    key_id: str
     credential_id: UUID
     credential_scope: CredentialScope
     bundle_id: UUID
@@ -158,7 +158,7 @@ class EgressAdapter[StateT: StreamState](ABC):
         """
 
     @abstractmethod
-    def transform_stream_event(self, ev: RawEvent, state: StateT) -> list[DeltaChunk]:
+    def transform_stream_event(self, ev: RawEvent, state: StateT) -> list[CanonicalChunk]:
         """One wire event into canonical chunks, folding what finalize needs into the state. Synchronous, like frame."""
 
     @abstractmethod
@@ -170,7 +170,7 @@ class EgressAdapter[StateT: StreamState](ABC):
 
         Called after the last event for a normal completion, and from the
         cancellation handler for partial accounting after a client disconnect.
-        Usage lives on the response; cancel-and-still-meter depends on this
+        CanonicalUsage lives on the response; cancel-and-still-meter depends on this
         being valid mid-stream.
         """
 

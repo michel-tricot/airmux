@@ -10,12 +10,10 @@ from typer.testing import CliRunner
 from cli.main import app
 from cli.profiles import (
     CliConfig,
-    InstanceProfile,
-    OrgProfile,
+    Profile,
     config_path,
     load_active_profile,
     load_config,
-    profile_from,
     remove_profile,
     set_active,
     upsert_profile,
@@ -43,7 +41,7 @@ def test_profile_config_rejects_invalid_known_fields(tmp_path, monkeypatch):
 )
 def test_profile_states_are_structural(profile):
     with pytest.raises(ValidationError):
-        profile_from(profile)
+        CliConfig.model_validate({"profiles": {"test": profile}})
 
 
 def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
@@ -51,16 +49,16 @@ def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
     assert load_config() == CliConfig()
     assert load_active_profile() is None
 
-    upsert_profile("acme", OrgProfile(control_plane_url="http://cp:8000", org_id="o1", org_name="acme", token="sk-cp-x"))
-    upsert_profile("beta", OrgProfile(control_plane_url="http://cp:8000", org_id="o2", org_name="beta", token="sk-cp-y"))
+    upsert_profile("acme", Profile(scope="org", control_plane_url="http://cp:8000", org_id="o1", org_name="acme", token="sk-cp-x"))
+    upsert_profile("beta", Profile(scope="org", control_plane_url="http://cp:8000", org_id="o2", org_name="beta", token="sk-cp-y"))
 
     latest = load_active_profile()
     assert latest is not None
-    assert latest.name == "beta"
+    assert load_config().active == "beta"
     set_active("acme")
     profile = load_active_profile()
     assert profile is not None
-    assert profile.name == "acme"
+    assert load_config().active == "acme"
     assert profile.token == "sk-cp-x"
 
     mode = stat.S_IMODE(config_path().stat().st_mode)
@@ -86,9 +84,9 @@ def test_url_profile_updates_the_same_name_on_the_same_deployment(tmp_path, monk
     }
     replacement = {**first, "control_plane_url": "https://airllm.example.com/", "token": "new"}
 
-    assert upsert_url_profile("michel", profile_from(first)) == "michel"
-    assert upsert_url_profile("michel", profile_from(replacement)) == "michel"
-    assert load_config().profiles == {"michel": profile_from(replacement)}
+    assert upsert_url_profile("michel", Profile.model_validate(first)) == "michel"
+    assert upsert_url_profile("michel", Profile.model_validate(replacement)) == "michel"
+    assert load_config().profiles == {"michel": Profile.model_validate(replacement)}
 
 
 def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monkeypatch):
@@ -96,10 +94,10 @@ def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monk
     local = {"control_plane_url": "http://127.0.0.1:8000", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "local"}
     fly = {"control_plane_url": "https://airllm-example.fly.dev", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "fly"}
 
-    assert upsert_url_profile("michel", profile_from(local)) == "michel"
-    assert upsert_url_profile("michel", profile_from(fly)) == "michel@airllm-example.fly.dev"
+    assert upsert_url_profile("michel", Profile.model_validate(local)) == "michel"
+    assert upsert_url_profile("michel", Profile.model_validate(fly)) == "michel@airllm-example.fly.dev"
     set_active("michel")
-    assert upsert_url_profile("michel", profile_from({**fly, "token": "fly-new"})) == "michel@airllm-example.fly.dev"
+    assert upsert_url_profile("michel", Profile.model_validate({**fly, "token": "fly-new"})) == "michel@airllm-example.fly.dev"
 
     config = load_config()
     assert config.active == "michel@airllm-example.fly.dev"
@@ -122,8 +120,8 @@ def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_pa
         "token": "instance",
     }
 
-    assert upsert_url_profile("instance", profile_from(organization)) == "instance"
-    assert upsert_url_profile("instance", profile_from(instance)) == "instance@airllm.example.com"
+    assert upsert_url_profile("instance", Profile.model_validate(organization)) == "instance"
+    assert upsert_url_profile("instance", Profile.model_validate(instance)) == "instance@airllm.example.com"
     assert len(load_config().profiles) == 2
 
 
@@ -136,30 +134,29 @@ def test_profile_selection_rejects_an_unknown_name(tmp_path, monkeypatch):
 
 def test_removing_the_active_profile_selects_the_next_profile(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    upsert_profile("acme", InstanceProfile(token="first"))
-    upsert_profile("beta", InstanceProfile(token="second"))
+    upsert_profile("acme", Profile(scope="instance", token="first"))
+    upsert_profile("beta", Profile(scope="instance", token="second"))
 
     remove_profile("beta")
 
     profile = load_active_profile()
     assert profile is not None
-    assert (profile.name, profile.token) == ("acme", "first")
+    assert load_config().active == "acme"
+    assert profile.token == "first"
 
 
 def test_profile_commands_are_discoverable_and_never_print_tokens(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
-        profile_from(
-                {
-                    "control_plane_url": "https://airllm.example.com",
-                    "gateway_url": "https://gateway.example.com",
-                    "org_id": "org-1",
-                    "org_name": "Acme",
-                "workspace": "production",
-                "scope": "org",
-                "token": "secret-token",
-            }
+        Profile(
+            scope="org",
+            control_plane_url="https://airllm.example.com",
+            gateway_url="https://gateway.example.com",
+            org_id="org-1",
+            org_name="Acme",
+            workspace="production",
+            token="secret-token",
         ),
     )
 

@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal, cast, get_args
+from typing import Literal, cast, get_args
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from contract.ids import InferenceKeyId
 from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
 Modality = Literal["text", "image", "audio", "video", "pdf"]
 MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
 Capability = Literal["streaming", "tools", "reasoning", "structured_output"]
-Modalities = Annotated[list[Modality], Field(min_length=1, max_length=len(MODALITIES))]
-Capabilities = Annotated[list[Capability], Field(max_length=4)]
 
 
 class KeyEntry(BaseModel):
@@ -26,7 +23,7 @@ class KeyEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    key_id: InferenceKeyId
+    key_id: str = Field(min_length=1, max_length=255)
     org_id: UUID
     workspace_id: UUID  # the workspace the key was minted in, stamped onto usage events
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
@@ -60,9 +57,9 @@ class ModelEntry(BaseModel):
     cache_write_price_per_mtok: float  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
-    input_modalities: Modalities
-    output_modalities: Modalities
-    capabilities: Capabilities
+    input_modalities: list[Modality] = Field(min_length=1, max_length=len(MODALITIES))
+    output_modalities: list[Modality] = Field(min_length=1, max_length=len(MODALITIES))
+    capabilities: list[Capability]
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
     egress_kind: str | None = None
 

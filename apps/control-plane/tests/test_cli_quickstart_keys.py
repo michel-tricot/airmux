@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, setup_control_plane
 
 from cli.auth import seed_provider_credentials
-from contract import EnvStoreConfig, PlatformSecretRef, SecretPurpose
+from contract import EnvStoreConfig, SecretPurpose, SecretRef
 
 OPENAI_KEY = "sk-openai-from-the-operator-1111"
 ANTHROPIC = {"provider_id": "anthropic", "kind": "anthropic", "base_url": "https://api.anthropic.com/v1"}
@@ -49,11 +49,13 @@ def _credentials(client):
 
 
 def stored(cp, credential: dict) -> str:
-    ref = PlatformSecretRef(
+    ref = SecretRef(
         purpose=SecretPurpose.provider,
         service=credential["provider_name"],
         name=credential["name"],
         secret_id=credential["id"],
+        org_id=credential["org_id"],
+        workspace_id=credential["workspace_id"],
     )
     return asyncio.run(cp.app.state.secret_store.get(ref)).reveal()
 

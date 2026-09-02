@@ -15,8 +15,6 @@ from api_models import (
     AccessKeyMintedOut,
     ClaimOut,
     CliAuthApprovedOut,
-    CliAuthOrgCompleteOut,
-    CliAuthPendingOut,
     CliAuthPollOut,
     CliAuthStartOut,
     DataPlaneInstanceOut,
@@ -38,8 +36,7 @@ from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import (
     DEFAULT_CONSOLE_URL,
-    InstanceProfile,
-    OrgProfile,
+    Profile,
     config_path,
     load_active_profile,
     load_config,
@@ -228,8 +225,11 @@ def _organization_access_key(client: httpx.Client, org_id: str) -> str:
             json={"poll_secret": started.poll_secret},
         ),
         "access key delivery",
-        CliAuthOrgCompleteOut,
+        CliAuthPollOut,
     )
+    if delivered.status != "complete" or delivered.scope != "org" or delivered.token is None:
+        console.print("[red]Access key delivery returned an incomplete response.[/red]")
+        raise typer.Exit(1)
     return delivered.token
 
 
@@ -353,11 +353,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         workspace = _default_workspace(c, str(org_id), bearer)
         upsert_url_profile(
             org_name,
-            OrgProfile(
+            Profile(
+                scope="org",
                 control_plane_url=url,
                 console_url=console_url,
                 gateway_url=gateway_url.rstrip("/"),
-                scope="org",
                 org_id=str(org_id),
                 org_name=str(org_name),
                 token=str(token),
@@ -433,11 +433,12 @@ def login(
                 console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
                 raise typer.Exit(1)
             ensure_ok(poll)
-            done = payload(poll, CliAuthPollOut).root
-            if not isinstance(done, CliAuthPendingOut):
-                target_name = done.org_name if isinstance(done, CliAuthOrgCompleteOut) else "instance"
-                profile = (
-                    OrgProfile(
+            done = payload(poll, CliAuthPollOut)
+            if done.status == "complete":
+                if done.scope == "org" and done.token is not None and done.org_id is not None and done.org_name is not None:
+                    target_name = done.org_name
+                    profile = Profile(
+                        scope="org",
                         control_plane_url=control_plane_url,
                         console_url=console_url,
                         gateway_url=gateway_url,
@@ -445,13 +446,19 @@ def login(
                         org_id=str(done.org_id),
                         org_name=done.org_name,
                     )
-                    if isinstance(done, CliAuthOrgCompleteOut)
-                    else InstanceProfile(control_plane_url=control_plane_url, console_url=console_url, gateway_url=gateway_url, token=done.token)
-                )
-                profile_name = upsert_url_profile(
-                    target_name,
-                    profile,
-                )
+                elif done.scope == "instance" and done.token is not None:
+                    target_name = "instance"
+                    profile = Profile(
+                        scope="instance",
+                        control_plane_url=control_plane_url,
+                        console_url=console_url,
+                        gateway_url=gateway_url,
+                        token=done.token,
+                    )
+                else:
+                    console.print("[red]Sign-in returned an incomplete profile.[/red]")
+                    raise typer.Exit(1)
+                profile_name = upsert_url_profile(target_name, profile)
                 console.print(f"Signed in to [bold]{target_name}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
                 return
     console.print("[red]Login timed out. Run [bold]airllm login[/bold] again.[/red]")

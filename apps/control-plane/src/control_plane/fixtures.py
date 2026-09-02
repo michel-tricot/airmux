@@ -182,7 +182,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             occurred_at=now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400)),
             org_id=workspace.org_id,
             workspace_id=workspace.id,
-            key_id=key.id,
+            key_id=str(key.id),
             model_id=model_id,
             provider_id=provider_id,
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),

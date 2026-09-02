@@ -22,7 +22,7 @@ from starlette.responses import Response, StreamingResponse
 
 from contract import PLAYGROUND_COOKIE, SecretStoreUnavailableError, uuid7
 from data_plane.auth import authenticate
-from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, Usage
+from data_plane.canonical import CanonicalAdjustment, CanonicalGatewayInfo, CanonicalRequest, CanonicalResponse, CanonicalUsage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.ingress import CANONICAL, UnknownDialectError, resolve
@@ -165,7 +165,7 @@ def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, Bun
     return key, bundle_set.snapshots[key.org_id]
 
 
-def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[Adjustment]]:
+def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
     """The body into canonical, with the dialect's own translation losses carried as adjustments."""
     try:
         return ingress.parse(body)
@@ -196,7 +196,7 @@ class StreamSession:
     ingress: IngressAdapter
     ctx: Ctx
     request: CanonicalRequest
-    adjustments: tuple[Adjustment, ...]
+    adjustments: tuple[CanonicalAdjustment, ...]
     outbox: EventOutbox
     http_client: httpx.AsyncClient
 
@@ -256,7 +256,7 @@ class RequestExecution:
     key: KeyEntry
     snapshot: BundleSnapshot
     ingress: IngressAdapter
-    parse_adjustments: tuple[Adjustment, ...]
+    parse_adjustments: tuple[CanonicalAdjustment, ...]
     runtime: Runtime
     start: RequestStart
 
@@ -318,7 +318,7 @@ class RequestExecution:
                 return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
             try:
                 final = adapter.transform_response(response.content, ctx)
-                final = final.model_copy(update={"gateway": GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
+                final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
             except UpstreamProtocolError as error:
                 return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
             record_usage(self.runtime.outbox, ctx, final, status="ok", request=request)
@@ -392,4 +392,4 @@ def _record_upstream_error(adapter: EgressAdapter, ctx: Ctx, error: Exception, r
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
-    return CanonicalResponse(id=str(ctx.request_id), model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
+    return CanonicalResponse(id=str(ctx.request_id), model=ctx.model.model_id, content=[], finish_reason=None, usage=CanonicalUsage(estimated=True))

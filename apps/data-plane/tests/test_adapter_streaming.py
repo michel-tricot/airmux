@@ -8,12 +8,12 @@ import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
 from contract import Secret
-from data_plane.canonical import ReasoningPart, TextPart, ToolCallPart
+from data_plane.canonical import CanonicalReasoningPart, CanonicalTextPart, CanonicalToolCallPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamStreamError
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalResponse, DeltaChunk
+    from data_plane.canonical import CanonicalChunk, CanonicalResponse
 
 # The streaming path is a pure fold over a recorded byte log: no transport, no asyncio, no mocks.
 # One recorded case per adapter kind; a new adapter joins by adding its own log here.
@@ -216,7 +216,7 @@ def _adapter(kind: str):
     return REGISTRY[kind](PROVIDER.model_copy(update={"kind": kind}), Secret("sk-test"))
 
 
-def fold(adapter, log: bytes, size: int) -> tuple[list[DeltaChunk], CanonicalResponse]:
+def fold(adapter, log: bytes, size: int) -> tuple[list[CanonicalChunk], CanonicalResponse]:
     state = adapter.new_stream_state(CTX)
     chunks = [
         c for i in range(0, len(log), size) for ev in adapter.frame(log[i : i + size], state) for c in adapter.transform_stream_event(ev, state)
@@ -387,7 +387,7 @@ def test_openai_compatible_stream_preserves_reasoning_spelled_without_content():
     chunks, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
 
     assert [chunk.delta.text for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"] == ["20 + ", "22"]
-    assert final.content[0] == ReasoningPart(text="20 + 22")
+    assert final.content[0] == CanonicalReasoningPart(text="20 + 22")
 
 
 def test_openai_compatible_stream_preserves_mistral_content_blocks():
@@ -408,7 +408,7 @@ def test_openai_compatible_stream_preserves_mistral_content_blocks():
     chunks, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
 
     assert [chunk.delta.text for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"] == ["20 + ", "22"]
-    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="The answer is 42")]
+    assert final.content == [CanonicalReasoningPart(text="20 + 22"), CanonicalTextPart(text="The answer is 42")]
 
 
 def test_openai_compatible_stream_accepts_null_tool_fragment_metadata():
@@ -421,7 +421,7 @@ def test_openai_compatible_stream_accepts_null_tool_fragment_metadata():
 
     _, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
 
-    calls = [part for part in final.content if isinstance(part, ToolCallPart)]
+    calls = [part for part in final.content if isinstance(part, CanonicalToolCallPart)]
     assert [(part.id, part.name, part.arguments) for part in calls] == [("call_1", "report_result", '{"value":"ok"}')]
     assert final.finish_reason == "tool_calls"
     assert not final.usage.estimated
@@ -481,7 +481,7 @@ def test_responses_reasoning_identity_survives_the_stream():
     reasoning_chunks = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"]
     assert reasoning_chunks[0].id == "rs_provider"
     assert reasoning_chunks[0].signature == "encrypted"
-    assert final.content == [ReasoningPart(id="rs_provider", text="think", signature="encrypted")]
+    assert final.content == [CanonicalReasoningPart(id="rs_provider", text="think", signature="encrypted")]
 
 
 def test_responses_tool_indices_are_ordinals_not_provider_output_indices():

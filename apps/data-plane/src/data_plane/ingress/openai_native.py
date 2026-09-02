@@ -13,7 +13,14 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalRequest, DeltaChunk, GatewayInfo, ReasoningConfig, ToolCallDelta
+from data_plane.canonical import (
+    CanonicalAdjustment,
+    CanonicalChunk,
+    CanonicalGatewayInfo,
+    CanonicalReasoningConfig,
+    CanonicalRequest,
+    CanonicalToolCallDelta,
+)
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
@@ -80,21 +87,24 @@ class OpenAIResponseStream:
         self.id, self.model, self.created = str(ctx.request_id), ctx.model.model_id, int(time.time())
         return [self._chunk(fmt.DeltaOut(role="assistant"))]
 
-    def chunk(self, c: DeltaChunk) -> list[bytes]:
-        if c.delta.type == "text":
-            return [self._chunk(fmt.DeltaOut(content=c.delta.text))]
-        if c.delta.type == "reasoning":
-            return [self._chunk(fmt.DeltaOut(reasoning_content=c.delta.text))]
-        return [self._chunk(fmt.DeltaOut(tool_calls=[_tool_call_delta(c.delta)]))]
+    def chunk(self, c: CanonicalChunk) -> list[bytes]:
+        delta = c.delta
+        if delta is None:
+            return []
+        if delta.type == "text":
+            return [self._chunk(fmt.DeltaOut(content=delta.text))]
+        if delta.type == "reasoning":
+            return [self._chunk(fmt.DeltaOut(reasoning_content=delta.text))]
+        return [self._chunk(fmt.DeltaOut(tool_calls=[_tool_call_delta(delta)]))]
 
-    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
+    def closing(self, final: CanonicalResponse, adjustments: list[CanonicalAdjustment]) -> list[bytes]:
         usage_chunk = fmt.ChatCompletionChunkOut(
             id=self.id,
             created=self.created,
             model=self.model,
             choices=[],
             usage=fmt.usage_out(final.usage),
-            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
+            gateway=CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
         )
         return [self._chunk(fmt.DeltaOut(), finish_reason=final.finish_reason), usage_chunk.sse(), DONE]
 
@@ -102,7 +112,7 @@ class OpenAIResponseStream:
         return [b"data: " + json.dumps(_error_body(err.status, err.code, err.message)).encode() + b"\n\n", DONE]
 
 
-def _tool_call_delta(delta: ToolCallDelta) -> fmt.ToolCallDeltaOut:
+def _tool_call_delta(delta: CanonicalToolCallDelta) -> fmt.ToolCallDeltaOut:
     function = {**({"name": delta.name} if delta.name else {}), **({"arguments": delta.arguments} if delta.arguments else {})}
     return fmt.ToolCallDeltaOut(index=delta.index, id=delta.id, type="function" if delta.id else None, function=function or None)
 
@@ -120,7 +130,7 @@ class OpenAINativeIngress(IngressAdapter):
             return True
         return _openai_shaped(body)
 
-    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         """An OpenAI chat request into canonical. Unconsumed fields stay extras; stream_options is
         consumed silently because the gateway's own stream always reports usage.
 
@@ -131,7 +141,9 @@ class OpenAINativeIngress(IngressAdapter):
         adjustments = []
         tool_choice = fmt.from_tool_choice(body.get("tool_choice"))
         if body.get("tool_choice") is not None and tool_choice is None:
-            adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
+            adjustments.append(
+                CanonicalAdjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret")
+            )
         response_format = body.get("response_format")
         reasoning_value = body.get("reasoning")
         reasoning: dict[str, Any] = reasoning_value if isinstance(reasoning_value, dict) else {}
@@ -157,7 +169,7 @@ class OpenAINativeIngress(IngressAdapter):
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
                 "response_format": response_format,
-                "reasoning": ReasoningConfig.model_validate(reasoning_values) if has_reasoning else None,
+                "reasoning": CanonicalReasoningConfig.model_validate(reasoning_values) if has_reasoning else None,
                 "parallel_tool_calls": body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
             }
         )

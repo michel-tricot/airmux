@@ -59,7 +59,7 @@ from cli.common import (
     workspaces_app,
 )
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
-from cli.profiles import load_active_profile, profile_from, upsert_profile
+from cli.profiles import active_profile, load_config, upsert_profile
 
 if TYPE_CHECKING:
     from rich.table import Table
@@ -168,8 +168,9 @@ def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputForma
 @workspaces_app.command("use")
 def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
     """Select the workspace that key commands use by default."""
-    profile = load_active_profile()
-    if profile is None:
+    config = load_config()
+    profile = active_profile(config)
+    if profile is None or config.active is None:
         console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
         raise typer.Exit(1)
     with access_client(control_plane_url) as c:
@@ -178,8 +179,8 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
         console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airllm workspaces list[/bold].[/red]")
         raise typer.Exit(1)
     chosen = payload(resp, WorkspaceOut)
-    updated_profile = profile_from({**profile.model_dump(mode="python", exclude={"name"}), "workspace": chosen.slug, "workspace_name": chosen.name})
-    upsert_profile(profile.name, updated_profile)
+    updated_profile = profile.model_copy(update={"workspace": chosen.slug, "workspace_name": chosen.name})
+    upsert_profile(config.active, updated_profile)
     console.print(f"Using workspace [bold]{chosen.slug}[/bold]")
 
 

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from starlette.datastructures import Headers
     from starlette.responses import Response
 
-    from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, DeltaChunk
+    from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
     class ResponseStream(Protocol):
@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 
         def start(self, ctx: Ctx, /) -> list[bytes]: ...
 
-        def chunk(self, c: DeltaChunk) -> list[bytes]: ...
+        def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
 
-        def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]: ...
+        def closing(self, final: CanonicalResponse, adjustments: list[CanonicalAdjustment]) -> list[bytes]: ...
 
         def error(self, err: CanonicalError) -> list[bytes]: ...
 
@@ -42,7 +42,7 @@ class IngressAdapter(ABC):
         """Is this request unmistakably mine? Answer only that; resolve() owns ordering and the default."""
 
     @abstractmethod
-    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         """The body into canonical, plus what this dialect could not carry across.
 
         Translation loss is an adjustment, never silence: a slot value the dialect cannot

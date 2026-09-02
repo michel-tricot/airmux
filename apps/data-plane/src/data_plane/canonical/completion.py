@@ -19,26 +19,26 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
-WIRE = ConfigDict(frozen=True, extra="forbid")
+_WIRE = ConfigDict(frozen=True, extra="forbid")
 
 
-class Part(BaseModel):
+class CanonicalPart(BaseModel):
     """One piece of a message. cache marks a prompt-cache breakpoint after this part, honored by
     providers that take explicit breakpoints and ignored by providers that cache on their own."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     cache: Literal["ephemeral"] | None = None
 
 
-class TextPart(Part):
+class CanonicalTextPart(CanonicalPart):
     type: Literal["text"] = "text"
     text: str
 
 
-class ImagePart(Part):
+class CanonicalImagePart(CanonicalPart):
     """An image by reference or by value; exactly one of url or data is set."""
 
     type: Literal["image"] = "image"
@@ -47,7 +47,7 @@ class ImagePart(Part):
     media_type: str | None = None  # required alongside data, absent for a url the provider fetches itself
 
     @model_validator(mode="after")
-    def one_source(self) -> ImagePart:
+    def one_source(self) -> CanonicalImagePart:
         if (self.url is None) == (self.data is None):
             msg = "image part needs exactly one of url or data"
             raise ValueError(msg)
@@ -57,7 +57,7 @@ class ImagePart(Part):
         return self
 
 
-class DocumentPart(Part):
+class CanonicalDocumentPart(CanonicalPart):
     type: Literal["document"] = "document"
     filename: str | None = None
     url: str | None = None
@@ -66,7 +66,7 @@ class DocumentPart(Part):
     media_type: str | None = None
 
     @model_validator(mode="after")
-    def one_source(self) -> DocumentPart:
+    def one_source(self) -> CanonicalDocumentPart:
         if sum(source is not None for source in (self.url, self.data, self.file_id)) != 1:
             msg = "document part needs exactly one of url, data or file_id"
             raise ValueError(msg)
@@ -76,7 +76,7 @@ class DocumentPart(Part):
         return self
 
 
-class ReasoningPart(Part):
+class CanonicalReasoningPart(CanonicalPart):
     """Model reasoning. signature is an opaque provider token: a provider that issues one rejects a
     later turn whose reasoning comes back without it."""
 
@@ -86,7 +86,7 @@ class ReasoningPart(Part):
     signature: str | None = None
 
 
-class ToolCallPart(Part):
+class CanonicalToolCallPart(CanonicalPart):
     """A tool invocation. arguments stays JSON text: parsing it loses a truncated stream's partial
     arguments and re-serializing changes the key order the provider chose."""
 
@@ -96,7 +96,7 @@ class ToolCallPart(Part):
     arguments: str
 
 
-ToolResultContent = Annotated[TextPart | ImagePart, Field(discriminator="type")]
+CanonicalToolResultContent = Annotated[CanonicalTextPart | CanonicalImagePart, Field(discriminator="type")]
 
 
 def _text_shorthand(content: object) -> object:
@@ -104,51 +104,67 @@ def _text_shorthand(content: object) -> object:
     return [{"type": "text", "text": content}] if isinstance(content, str) else content
 
 
-class ToolResultPart(Part):
+class CanonicalToolResultPart(CanonicalPart):
     """The outcome of a tool call, carried as a user part rather than as its own role."""
 
     type: Literal["tool_result"] = "tool_result"
     call_id: str
-    content: Annotated[list[ToolResultContent], BeforeValidator(_text_shorthand, json_schema_input_type=list[ToolResultContent] | str)]
+    content: Annotated[
+        list[CanonicalToolResultContent],
+        BeforeValidator(_text_shorthand, json_schema_input_type=list[CanonicalToolResultContent] | str),
+    ]
     is_error: bool = False
 
 
-ContentPart = Annotated[
-    TextPart | ImagePart | DocumentPart | ReasoningPart | ToolCallPart | ToolResultPart,
+CanonicalContentPart = Annotated[
+    CanonicalTextPart | CanonicalImagePart | CanonicalDocumentPart | CanonicalReasoningPart | CanonicalToolCallPart | CanonicalToolResultPart,
     Field(discriminator="type"),
 ]
 
-AssistantPart = Annotated[TextPart | ReasoningPart | ToolCallPart, Field(discriminator="type")]
+CanonicalAssistantPart = Annotated[CanonicalTextPart | CanonicalReasoningPart | CanonicalToolCallPart, Field(discriminator="type")]
+
 
 class _CanonicalMessage(BaseModel):
-    model_config = WIRE
+    model_config = _WIRE
 
 
-UserPart = Annotated[TextPart | ImagePart | DocumentPart | ToolResultPart, Field(discriminator="type")]
+CanonicalUserPart = Annotated[
+    CanonicalTextPart | CanonicalImagePart | CanonicalDocumentPart | CanonicalToolResultPart,
+    Field(discriminator="type"),
+]
 
 
-class SystemMessage(_CanonicalMessage):
+class CanonicalSystemMessage(_CanonicalMessage):
     role: Literal["system"] = "system"
-    content: Annotated[list[TextPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[TextPart] | str)]
+    content: Annotated[
+        list[CanonicalTextPart],
+        BeforeValidator(_text_shorthand, json_schema_input_type=list[CanonicalTextPart] | str),
+    ]
 
 
-class UserMessage(_CanonicalMessage):
+class CanonicalUserMessage(_CanonicalMessage):
     role: Literal["user"] = "user"
-    content: Annotated[list[UserPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[UserPart] | str)]
+    content: Annotated[
+        list[CanonicalUserPart],
+        BeforeValidator(_text_shorthand, json_schema_input_type=list[CanonicalUserPart] | str),
+    ]
 
 
-class AssistantMessage(_CanonicalMessage):
+class CanonicalAssistantMessage(_CanonicalMessage):
     role: Literal["assistant"] = "assistant"
-    content: Annotated[list[AssistantPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[AssistantPart] | str)]
+    content: Annotated[
+        list[CanonicalAssistantPart],
+        BeforeValidator(_text_shorthand, json_schema_input_type=list[CanonicalAssistantPart] | str),
+    ]
 
 
-CanonicalMessageValue = Annotated[SystemMessage | UserMessage | AssistantMessage, Field(discriminator="role")]
+CanonicalMessage = Annotated[CanonicalSystemMessage | CanonicalUserMessage | CanonicalAssistantMessage, Field(discriminator="role")]
 
 
-class ToolDef(BaseModel):
+class CanonicalToolDef(BaseModel):
     """A tool the model may call. Flat: the nesting a surface wraps this in is that surface's business."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     name: str
     description: str | None = None
@@ -157,42 +173,44 @@ class ToolDef(BaseModel):
     strict: bool | None = None
 
 
-class NamedTool(BaseModel):
-    model_config = WIRE
+class CanonicalNamedTool(BaseModel):
+    model_config = _WIRE
 
     name: str
 
 
-ToolChoice = Literal["auto", "none", "required"] | NamedTool
+CanonicalToolChoice = Literal["auto", "none", "required"] | CanonicalNamedTool
 
 
 class _ResponseFormat(BaseModel):
     """A caller's demand for structured output. A model that cannot honor it is a rejection, never a drop."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
 
-
-class TextResponseFormat(_ResponseFormat):
+class CanonicalTextResponseFormat(_ResponseFormat):
     type: Literal["text"] = "text"
     json_schema: None = None
 
 
-class JsonObjectResponseFormat(_ResponseFormat):
+class CanonicalJsonObjectResponseFormat(_ResponseFormat):
     type: Literal["json_object"] = "json_object"
     json_schema: None = None
 
 
-class JsonSchemaResponseFormat(_ResponseFormat):
+class CanonicalJsonSchemaResponseFormat(_ResponseFormat):
     type: Literal["json_schema"] = "json_schema"
     json_schema: dict[str, Any]
 
 
-ResponseFormatValue = Annotated[TextResponseFormat | JsonObjectResponseFormat | JsonSchemaResponseFormat, Field(discriminator="type")]
+CanonicalResponseFormat = Annotated[
+    CanonicalTextResponseFormat | CanonicalJsonObjectResponseFormat | CanonicalJsonSchemaResponseFormat,
+    Field(discriminator="type"),
+]
 
 
-class ReasoningConfig(BaseModel):
-    model_config = WIRE
+class CanonicalReasoningConfig(BaseModel):
+    model_config = _WIRE
 
     type: str | None = None
     effort: str | None = None
@@ -205,17 +223,17 @@ class CanonicalRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
 
     model: str
-    messages: list[CanonicalMessageValue] = Field(min_length=1)
+    messages: list[CanonicalMessage] = Field(min_length=1)
     stream: bool = False
     max_tokens: int | None = Field(default=None, ge=1)
     temperature: float | None = Field(default=None, ge=0)
     top_p: float | None = Field(default=None, gt=0, le=1)
     stop: list[str] | None = None
     seed: int | None = None
-    tools: list[ToolDef] | None = None
-    tool_choice: ToolChoice | None = None
-    response_format: ResponseFormatValue | None = None
-    reasoning: ReasoningConfig | None = None
+    tools: list[CanonicalToolDef] | None = None
+    tool_choice: CanonicalToolChoice | None = None
+    response_format: CanonicalResponseFormat | None = None
+    reasoning: CanonicalReasoningConfig | None = None
     parallel_tool_calls: bool | None = None
 
     @property
@@ -224,32 +242,32 @@ class CanonicalRequest(BaseModel):
         return dict(self.__pydantic_extra__ or {})
 
 
-FinishReason = Literal["stop", "length", "tool_calls", "content_filter"]
+CanonicalFinishReason = Literal["stop", "length", "tool_calls", "content_filter"]
 
 
-class Adjustment(BaseModel):
+class CanonicalAdjustment(BaseModel):
     """One reconciliation the gateway made to a request, reported on the response rather than silent."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     param: str
     action: Literal["clamped", "emulated", "dropped"]
     detail: str
 
 
-class GatewayInfo(BaseModel):
+class CanonicalGatewayInfo(BaseModel):
     """What the gateway did on the way to the provider: the one namespaced place data plane
     internals surface to the caller, so the core response stays about the completion. Grows
     additively as the router grows."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
-    finish_reason: FinishReason | None = None
-    adjustments: list[Adjustment] = Field(default_factory=list)
+    finish_reason: CanonicalFinishReason | None = None
+    adjustments: list[CanonicalAdjustment] = Field(default_factory=list)
 
 
-class Usage(BaseModel):
-    model_config = WIRE
+class CanonicalUsage(BaseModel):
+    model_config = _WIRE
 
     input_tokens: int = 0  # total prompt tokens, cache traffic included
     output_tokens: int = 0
@@ -259,27 +277,27 @@ class Usage(BaseModel):
 
 
 class CanonicalResponse(BaseModel):
-    model_config = WIRE
+    model_config = _WIRE
 
     id: str
     model: str
-    content: list[AssistantPart]
-    finish_reason: FinishReason | None
-    usage: Usage
-    gateway: GatewayInfo = Field(default_factory=GatewayInfo)
+    content: list[CanonicalAssistantPart]
+    finish_reason: CanonicalFinishReason | None
+    usage: CanonicalUsage
+    gateway: CanonicalGatewayInfo = Field(default_factory=CanonicalGatewayInfo)
 
 
-class TextDelta(BaseModel):
-    model_config = WIRE
+class CanonicalTextDelta(BaseModel):
+    model_config = _WIRE
 
     type: Literal["text"] = "text"
     text: str
 
 
-class ReasoningDelta(BaseModel):
+class CanonicalReasoningDelta(BaseModel):
     """The provider item id opens replayable reasoning, text follows, and the signature may arrive on a later fragment."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     type: Literal["reasoning"] = "reasoning"
     id: str | None = None
@@ -287,11 +305,11 @@ class ReasoningDelta(BaseModel):
     signature: str | None = None
 
 
-class ToolCallDelta(BaseModel):
+class CanonicalToolCallDelta(BaseModel):
     """One fragment of a tool call. index ties fragments of parallel calls together: id and name
     arrive on the first fragment, arguments accrete as JSON text across the rest."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     type: Literal["tool_call"] = "tool_call"
     index: int = Field(ge=0)
@@ -300,32 +318,19 @@ class ToolCallDelta(BaseModel):
     arguments: str = ""
 
 
-Delta = Annotated[TextDelta | ReasoningDelta | ToolCallDelta, Field(discriminator="type")]
+CanonicalDelta = Annotated[CanonicalTextDelta | CanonicalReasoningDelta | CanonicalToolCallDelta, Field(discriminator="type")]
 
 
-class _CanonicalChunk(BaseModel):
+class CanonicalChunk(BaseModel):
     """One streamed increment. The closing chunk carries finish_reason, usage and gateway, and no delta."""
 
-    model_config = WIRE
+    model_config = _WIRE
 
     id: str
-
-
-class DeltaChunk(_CanonicalChunk):
-    delta: Delta
-    finish_reason: None = None
-    usage: None = None
-    gateway: None = None
-
-
-class FinalChunk(_CanonicalChunk):
-    delta: None = None
-    finish_reason: FinishReason | None = None
-    usage: Usage
-    gateway: GatewayInfo | None = None
-
-
-CanonicalStreamChunk = DeltaChunk | FinalChunk
+    delta: CanonicalDelta | None = None
+    finish_reason: CanonicalFinishReason | None = None
+    usage: CanonicalUsage | None = None
+    gateway: CanonicalGatewayInfo | None = None
 
 
 def json_schemas() -> dict[str, dict[str, Any]]:
@@ -333,5 +338,5 @@ def json_schemas() -> dict[str, dict[str, Any]]:
     return {
         "request": CanonicalRequest.model_json_schema(),
         "response": CanonicalResponse.model_json_schema(),
-        "stream": TypeAdapter(CanonicalStreamChunk).json_schema(),
+        "stream": CanonicalChunk.model_json_schema(),
     }

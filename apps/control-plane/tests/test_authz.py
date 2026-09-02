@@ -254,7 +254,7 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
                 "occurred_at": datetime.now(tz=UTC).isoformat(),
                 "org_id": str(org_id),
                 "workspace_id": str(workspace_id),
-                    "key_id": str(uuid7()),
+                "key_id": "key",
                 "model_id": "model",
                 "provider_id": "provider",
                 "bundle_id": str(uuid4()),

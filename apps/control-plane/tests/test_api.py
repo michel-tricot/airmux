@@ -115,7 +115,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         bundles = c.get(f"/api/v1/orgs/{o1}/bundles", headers=org).json()["data"]
         assert [entry["version"] for entry in bundles] == [1, 2, 3]
         assert str(bundle.bundle_id) == bundles[-1]["id"]
-        assert [k.key_id for k in bundle.keys] == [UUID(key["id"])]
+        assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
         (model,) = bundle.catalog.models
@@ -162,7 +162,7 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
             SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
             cp.bundle_key.public_key(),
         )
-        assert [entry.key_id for entry in created.keys] == [UUID(key["id"])]
+        assert [entry.key_id for entry in created.keys] == [key["id"]]
 
         assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
         revoked = verify_bundle(
@@ -215,7 +215,7 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
             SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"]),
             cp.bundle_key.public_key(),
         )
-        assert [k.key_id for k in bundle.keys] == [UUID(key["id"])]
+        assert [k.key_id for k in bundle.keys] == [key["id"]]
 
 
 def test_the_catalog_refuses_a_credential(tmp_path):
@@ -436,7 +436,7 @@ def _event(org: UUID) -> dict:
         "occurred_at": datetime.now(tz=UTC).isoformat(),
         "org_id": str(org),
         "workspace_id": str(uuid7()),
-        "key_id": str(uuid7()),
+        "key_id": "k1",
         "model_id": "gpt-test",
         "provider_id": "openai",
         "bundle_id": str(uuid4()),

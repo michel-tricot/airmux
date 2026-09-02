@@ -27,7 +27,7 @@ def _record_usage(tmp_path, org_id, workspace_id):
             occurred_at=datetime.now(tz=UTC),
             org_id=org_id,
             workspace_id=workspace_id,
-            key_id=uuid7(),
+            key_id="k",
             model_id="gpt-test",
             provider_id="openai",
             bundle_id=uuid7(),
@@ -37,8 +37,6 @@ def _record_usage(tmp_path, org_id, workspace_id):
             latency_ms=1,
             status="ok",
             stream=False,
-            credential_id=uuid7(),
-            credential_scope="workspace",
         ).save()
 
     run_in_db(tmp_path, write)

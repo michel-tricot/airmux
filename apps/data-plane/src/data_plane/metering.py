@@ -13,7 +13,7 @@ import tiktoken
 from pydantic import BaseModel
 
 from contract import DeniedUsageEventV1, RoutedUsageEventV1, uuid7
-from data_plane.canonical import TextPart, Usage
+from data_plane.canonical import CanonicalTextPart, CanonicalUsage
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -36,7 +36,7 @@ class RequestStart:
     started_at: float
 
 
-def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
+def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[float, float]:
     fresh_input_tokens = max(0, usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
     input_cost = (
         fresh_input_tokens * model.input_price_per_mtok
@@ -74,7 +74,7 @@ def status_for_upstream(status_code: int) -> RoutedUsageStatus:
 def _text_of(parts: Sequence[object]) -> str:
     rendered = []
     for part in parts:
-        if isinstance(part, TextPart):
+        if isinstance(part, CanonicalTextPart):
             rendered.append(part.text)
         elif isinstance(part, BaseModel):
             payload = part.model_dump(mode="json", exclude_none=True, exclude={"data"})
@@ -127,7 +127,7 @@ def record_usage(
 ) -> None:
     usage = response.usage
     if usage.estimated:
-        usage = Usage(
+        usage = CanonicalUsage(
             input_tokens=usage.input_tokens or estimate_tokens(_prompt_text(request), ctx.model),
             output_tokens=usage.output_tokens or estimate_tokens(_text_of(response.content), ctx.model),
             cache_read_tokens=usage.cache_read_tokens,
