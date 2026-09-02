@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse
 
-from data_plane.canonical import CanonicalChunk, CanonicalRequest, GatewayInfo
+from data_plane.canonical import CanonicalRequest, DeltaChunk, FinalChunk, GatewayInfo
 from data_plane.ingress.base import DONE, IngressAdapter, sse
 
 if TYPE_CHECKING:
@@ -28,13 +28,11 @@ class CanonicalResponseStream:
     def start(self, _ctx: Ctx, /) -> list[bytes]:
         return []
 
-    def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
-            return []
+    def chunk(self, c: DeltaChunk) -> list[bytes]:
         return [sse(c.model_dump_json(exclude_none=True).encode())]
 
     def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
-        closing = CanonicalChunk(
+        closing = FinalChunk(
             id=final.id,
             finish_reason=final.finish_reason,
             usage=final.usage,

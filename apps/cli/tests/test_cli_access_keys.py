@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from uuid import uuid4
+
 import httpx
 from typer.testing import CliRunner
 
+from api_models import AccessKeyMintedOut, InstanceScope
 from cli import resources
 from cli.main import app
 
@@ -22,12 +26,30 @@ class Client:
     def post(self, path: str, json: dict) -> httpx.Response:
         self.submitted.update(path=path, body=json)
         request = httpx.Request("POST", f"http://control-plane{path}")
-        return httpx.Response(200, request=request, json={"data": {"id": "key", "scope": {"level": "instance"}, "token": "shown-once"}})
+        now = datetime.now(tz=UTC)
+        key = AccessKeyMintedOut(
+            id=uuid4(),
+            user_id=uuid4(),
+            org_id=None,
+            workspace_id=None,
+            parent_id=None,
+            prefix="sk-access",
+            permissions=["bundles.read"],
+            label="ci",
+            expires_at=None,
+            revoked_at=None,
+            created_at=now,
+            updated_at=now,
+            deleted_at=None,
+            scope=InstanceScope(),
+            status="active",
+            token="shown-once",
+        )
+        return httpx.Response(200, request=request, json={"data": key.model_dump(mode="json")})
 
 
 def test_instance_flag_overrides_the_active_org_for_access_key_mint(monkeypatch):
     submitted = {}
-    monkeypatch.setattr(resources, "active_profile", lambda: {"org_id": "active-org"})
     monkeypatch.setattr(resources, "access_client", lambda _url: Client(submitted))
 
     result = runner.invoke(app, ["access-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance"])

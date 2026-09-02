@@ -10,9 +10,9 @@ from data_plane.canonical import (
     CanonicalRequest,
     DocumentPart,
     ImagePart,
+    JsonObjectResponseFormat,
     ReasoningConfig,
     ReasoningPart,
-    ResponseFormat,
     ToolCallPart,
     ToolDef,
 )
@@ -68,7 +68,7 @@ def test_request_capabilities_are_derived_from_every_canonical_feature():
         stream=True,
         tools=[ToolDef(name="lookup")],
         reasoning=ReasoningConfig(effort="low"),
-        response_format=ResponseFormat(type="json_object"),
+        response_format=JsonObjectResponseFormat(),
     )
 
     decision = evaluate(request, KEY, snap(BUNDLE))

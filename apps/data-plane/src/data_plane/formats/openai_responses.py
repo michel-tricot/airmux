@@ -8,19 +8,22 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from data_plane.canonical import (
+    AssistantMessage,
     AssistantPart,
-    CanonicalMessage,
+    CanonicalMessageValue,
     CanonicalRequest,
     DocumentPart,
     FinishReason,
     ImagePart,
     NamedTool,
     ReasoningPart,
+    SystemMessage,
     TextPart,
     ToolCallPart,
     ToolDef,
     ToolResultPart,
     Usage,
+    UserMessage,
 )
 
 if TYPE_CHECKING:
@@ -95,7 +98,7 @@ def _document(part: DocumentPart) -> dict[str, str]:
     return item
 
 
-def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
+def input_of(messages: Sequence[CanonicalMessageValue]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for message in messages:
         parts = list(message.content)
@@ -215,9 +218,17 @@ def _text(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
-def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - each supported item spelling maps explicitly
+def _message(role: object, content: object) -> CanonicalMessageValue:
+    if role == "system":
+        return SystemMessage.model_validate({"content": content})
+    if role == "assistant":
+        return AssistantMessage.model_validate({"content": content})
+    return UserMessage.model_validate({"content": content})
+
+
+def messages_of(value: object) -> list[CanonicalMessageValue]:  # noqa: PLR0912 - each supported item spelling maps explicitly
     raw_items = [_mapping(item) for item in value] if isinstance(value, list) else []
-    messages: list[CanonicalMessage] = []
+    messages: list[CanonicalMessageValue] = []
     pending_results: list[ToolResultPart] = []
     for item in raw_items:
         kind = item.get("type") or ("message" if "role" in item else None)
@@ -225,19 +236,17 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
             pending_results.append(ToolResultPart(call_id=_text(item.get("call_id")), content=[TextPart(text=_text(item.get("output")))]))
             continue
         if pending_results:
-            messages.append(CanonicalMessage(role="user", content=pending_results))
+            messages.append(UserMessage(content=pending_results))
             pending_results = []
         if kind == "function_call":
             messages.append(
-                CanonicalMessage(
-                    role="assistant",
+                AssistantMessage(
                     content=[ToolCallPart(id=_text(item.get("call_id")), name=_text(item.get("name")), arguments=_text(item.get("arguments")))],
                 )
             )
         elif kind == "reasoning":
             messages.append(
-                CanonicalMessage(
-                    role="assistant",
+                AssistantMessage(
                     content=[
                         ReasoningPart(
                             id=_text(item.get("id")) or None,
@@ -253,7 +262,7 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
             raw_content = item.get("content")
             if isinstance(raw_content, str):
                 if raw_content:
-                    messages.append(CanonicalMessage(role=canonical_role, content=[TextPart(text=raw_content)]))
+                    messages.append(_message(canonical_role, [TextPart(text=raw_content)]))
                 continue
             parts = []
             for content in _items(raw_content):
@@ -277,9 +286,9 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
                     elif file_url := _text(block.get("file_url")):
                         parts.append(DocumentPart(filename=filename, url=file_url))
             if parts:
-                messages.append(CanonicalMessage(role=canonical_role, content=parts))
+                messages.append(_message(canonical_role, parts))
     if pending_results:
-        messages.append(CanonicalMessage(role="user", content=pending_results))
+        messages.append(UserMessage(content=pending_results))
     return messages
 
 

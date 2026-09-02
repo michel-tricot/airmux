@@ -19,7 +19,7 @@ from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
-from data_plane.canonical import CanonicalChunk, CanonicalResponse, DocumentPart, ReasoningDelta, ReasoningPart, Usage
+from data_plane.canonical import CanonicalResponse, DeltaChunk, DocumentPart, ReasoningDelta, ReasoningPart, Usage
 from data_plane.ingress import resolve
 from data_plane.ingress.openai_native import OpenAINativeIngress, OpenAIResponseStream
 from data_plane.profiles import compile_profile
@@ -122,7 +122,7 @@ def test_buffered_chat_preserves_an_empty_reasoning_part():
 
 
 def test_streamed_chat_preserves_an_empty_reasoning_part():
-    frames = OpenAIResponseStream().chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_1", signature="encrypted")))
+    frames = OpenAIResponseStream().chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs_1", signature="encrypted")))
 
     assert json.loads(frames[0].removeprefix(b"data: "))["choices"][0]["delta"]["reasoning_content"] == ""
 

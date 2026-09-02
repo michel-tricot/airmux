@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig
+from data_plane.canonical import Adjustment, CanonicalRequest, DeltaChunk, GatewayInfo, ReasoningConfig
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
@@ -52,7 +52,7 @@ class AnthropicResponseStream:
         self.opened = 0  # blocks opened so far, which is also the next index
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        message = fmt.MessageStartOut(id=ctx.request_id, model=ctx.model.model_id)
+        message = fmt.MessageStartOut(id=str(ctx.request_id), model=ctx.model.model_id)
         return [fmt.MessageStart(message=message).sse(), fmt.Ping().sse()]
 
     def _close(self) -> list[bytes]:
@@ -74,10 +74,8 @@ class AnthropicResponseStream:
         self.opened += 1
         return [*events, fmt.ContentBlockStart(index=self.open.index, content_block=opening).sse()], self.open.index
 
-    def chunk(self, c: CanonicalChunk) -> list[bytes]:
+    def chunk(self, c: DeltaChunk) -> list[bytes]:
         delta = c.delta
-        if delta is None:
-            return []
         if delta.type == "text":
             events, index = self._switch("text", fmt.TextOut(text=""))
             return [*events, fmt.ContentBlockDelta(index=index, delta=fmt.TextDeltaOut(text=delta.text)).sse()]

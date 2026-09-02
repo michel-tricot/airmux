@@ -15,7 +15,7 @@ from uuid import UUID, uuid5
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, PlatformSecretRef, ProviderEntry, SecretPurpose, token_hash
 from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
 from data_plane.tasks import run_periodic
@@ -52,18 +52,16 @@ class LocalBundleSpec(BaseModel):
 def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
     """Pure, like the control plane's compiler: all nondeterminism comes in through the arguments."""
     keys = [
-        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, token_hash=token_hash(token))
+        KeyEntry(key_id=uuid5(_NAMESPACE, f"key:{position}"), org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, token_hash=token_hash(token))
         for position, token in enumerate(spec.keys)
     ]
     credentials = [
         CredentialEntry(
-            ref=SecretRef(
+            ref=PlatformSecretRef(
                 purpose=SecretPurpose.provider,
                 service=provider.provider_id,
                 name="default",
                 secret_id=uuid5(_NAMESPACE, provider.provider_id),
-                org_id=None,
-                workspace_id=None,
             ),
             priority=100,
             version=1,

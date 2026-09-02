@@ -14,9 +14,9 @@ from pydantic import ValidationError
 
 from data_plane.canonical import (
     AssistantPart,
-    CanonicalChunk,
     CanonicalResponse,
     Delta,
+    DeltaChunk,
     ReasoningDelta,
     ReasoningPart,
     TextDelta,
@@ -79,10 +79,10 @@ class OpenAIStreamState(StreamState):
 
     @property
     def chunk_id(self) -> str:
-        return self.response_id or self.ctx.request_id
+        return self.response_id or str(self.ctx.request_id)
 
 
-def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[CanonicalChunk]:
+def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[DeltaChunk]:
     """Deltas out, accumulation in: everything finalize needs folds into the state as it streams."""
     if choice.finish_reason:
         state.finish = choice.finish_reason
@@ -105,7 +105,7 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
             draft.name = tc.function.name
         draft.arguments += tc.function.arguments
         deltas.append(ToolCallDelta(index=tc.index, id=tc.id, name=tc.function.name or None, arguments=tc.function.arguments))
-    return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
+    return [DeltaChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
 
 class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
@@ -131,7 +131,7 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             raise UpstreamProtocolError.buffered_response() from error
         choice = completion.choices[0]
         return CanonicalResponse(
-            id=completion.id or ctx.request_id,
+            id=completion.id or str(ctx.request_id),
             model=ctx.model.model_id,
             content=response_parts(choice.message),
             finish_reason=finish_reason(choice.finish_reason),
@@ -164,7 +164,7 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
                 return
             yield event
 
-    def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[CanonicalChunk]:
+    def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[DeltaChunk]:
         try:
             data = json.loads(ev.data)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:

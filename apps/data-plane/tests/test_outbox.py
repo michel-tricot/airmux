@@ -9,19 +9,19 @@ import pytest
 import respx
 from conftest import make_config, make_outbox
 
-from contract import UsageEventV1, uuid7
+from contract import RoutedUsageEventV1, uuid7
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
 from data_plane.outbox.sqlite import BATCH_SIZE
 
 
-def make_event(request_id) -> UsageEventV1:
-    return UsageEventV1(
+def make_event(request_id) -> RoutedUsageEventV1:
+    return RoutedUsageEventV1(
         event_id=uuid4(),
         request_id=request_id,
         occurred_at=datetime.now(tz=UTC),
         org_id=uuid7(),
         workspace_id=uuid7(),
-        key_id="k1",
+        key_id=uuid7(),
         model_id="gpt-test",
         provider_id="openai",
         bundle_id=uuid4(),
@@ -31,6 +31,8 @@ def make_event(request_id) -> UsageEventV1:
         latency_ms=100,
         status="ok",
         stream=False,
+        credential_id=uuid7(),
+        credential_scope="workspace",
     )
 
 

@@ -57,7 +57,7 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Deci
     model = snap.model_index.get(req.model)
     if model is None:
         return Deny(reason="unknown_model", status=404)
-    missing_modalities = sorted(required_input_modalities(req) - set(model.input_modalities or []))
+    missing_modalities = sorted(required_input_modalities(req) - set(model.input_modalities))
     if missing_modalities:
         return Deny(reason=f"unsupported_input_modality: {', '.join(missing_modalities)}", status=400)
     missing = sorted(required_capabilities(req) - set(model.capabilities))

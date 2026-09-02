@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig, ResponseFormat, ToolCallDelta
+from data_plane.canonical import Adjustment, CanonicalRequest, DeltaChunk, GatewayInfo, ReasoningConfig, ToolCallDelta
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
@@ -77,12 +77,10 @@ class OpenAIResponseStream:
         return fmt.ChatCompletionChunkOut(id=self.id, created=self.created, model=self.model, choices=[choice]).sse()
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        self.id, self.model, self.created = ctx.request_id, ctx.model.model_id, int(time.time())
+        self.id, self.model, self.created = str(ctx.request_id), ctx.model.model_id, int(time.time())
         return [self._chunk(fmt.DeltaOut(role="assistant"))]
 
-    def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
-            return []
+    def chunk(self, c: DeltaChunk) -> list[bytes]:
         if c.delta.type == "text":
             return [self._chunk(fmt.DeltaOut(content=c.delta.text))]
         if c.delta.type == "reasoning":
@@ -158,7 +156,7 @@ class OpenAINativeIngress(IngressAdapter):
                 "seed": body.get("seed"),
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
-                "response_format": ResponseFormat.model_validate(response_format) if response_format else None,
+                "response_format": response_format,
                 "reasoning": ReasoningConfig.model_validate(reasoning_values) if has_reasoning else None,
                 "parallel_tool_calls": body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
             }

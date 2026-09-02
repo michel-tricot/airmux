@@ -7,8 +7,9 @@ import time
 from typing import TYPE_CHECKING
 
 import httpx
+from pydantic import TypeAdapter
 
-from contract import UsageEventV1
+from contract import UsageEvent
 from data_plane.outbox.base import EventOutbox, OutboxStats
 from data_plane.tasks import run_periodic
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from data_plane.config import SqliteOutboxConfig
 
 logger = logging.getLogger("data_plane")
+USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
 
 BATCH_SIZE = 1000
 MAX_BATCHES_PER_FLUSH = 20
@@ -70,7 +72,7 @@ class SqliteOutbox(EventOutbox):
         self._config = config
         self._http_client = http_client
 
-    def record(self, event: UsageEventV1, /) -> None:
+    def record(self, event: UsageEvent, /) -> None:
         with self._conn:
             self._conn.execute("INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)", (str(event.event_id), event.model_dump_json()))
 
@@ -80,9 +82,9 @@ class SqliteOutbox(EventOutbox):
     def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         return (task_group.create_task(self._run_export(), name="event export"),)
 
-    def next_batch(self, limit: int, /) -> list[UsageEventV1]:
+    def next_batch(self, limit: int, /) -> list[UsageEvent]:
         rows = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
-        return [UsageEventV1.model_validate_json(body) for (body,) in rows]
+        return [USAGE_EVENT_ADAPTER.validate_json(body) for (body,) in rows]
 
     def claim_export(self, ttl: float, now: float) -> bool:
         """Win or renew the export lease, which another worker can take after expiry."""
@@ -103,7 +105,7 @@ class SqliteOutbox(EventOutbox):
     def stats(self) -> OutboxStats:
         pending = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0]
         first = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT 1").fetchone()
-        oldest = UsageEventV1.model_validate_json(first[0]).occurred_at if first is not None else None
+        oldest = USAGE_EVENT_ADAPTER.validate_json(first[0]).occurred_at if first is not None else None
         return OutboxStats(pending=pending, oldest_event_at=oldest)
 
     async def export_once(self) -> int:

@@ -6,9 +6,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, model_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import Index, and_, or_
+from sqlalchemy import Index, String, and_, or_
 from sqlmodel import Field, col
 
+from contract import CredentialScope, UsageStatus
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut, RequestModel
@@ -25,7 +26,7 @@ class UsageEvent(Record, table=True):
     occurred_at: datetime = Field(sa_type=UTCDateTime)
     org_id: UUID
     workspace_id: UUID
-    key_id: str
+    key_id: UUID
     model_id: str
     provider_id: str
     bundle_id: UUID
@@ -37,10 +38,10 @@ class UsageEvent(Record, table=True):
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
     latency_ms: int
-    status: str
+    status: UsageStatus = Field(sa_type=String)
     stream: bool
     credential_id: UUID | None = None
-    credential_scope: str | None = None
+    credential_scope: CredentialScope | None = Field(default=None, sa_type=String)
 
     @classmethod
     async def for_scope(
@@ -101,7 +102,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     occurred_at: datetime
     org_id: UUID
     workspace_id: UUID
-    key_id: str
+    key_id: UUID
     model_id: str
     provider_id: str
     bundle_id: UUID
@@ -113,10 +114,10 @@ class UsageEventOut(RecordOut[UsageEvent]):
     cache_read_tokens: int
     cache_write_tokens: int
     latency_ms: int
-    status: str
+    status: UsageStatus
     stream: bool
     credential_id: UUID | None
-    credential_scope: str | None
+    credential_scope: CredentialScope | None
 
 
 class EventsIngestedOut(BaseModel):

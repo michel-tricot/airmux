@@ -26,10 +26,6 @@ def _bundle(*, providers=(PROVIDER,), models=(MODEL,), credentials=(), keys=()):
         (_bundle(models=(MODEL.model_copy(update={"egress_kind": "new_family"}),)), "unknown egress adapter"),
         (_bundle(credentials=(make_credential(service="missing"),)), "unknown provider"),
         (
-            _bundle(credentials=(make_credential(org=None, workspace=make_key()[1].workspace_id),)),
-            r"workspace credential .* must belong to an organization",
-        ),
-        (
             _bundle(credentials=(make_credential(org=make_key("other")[1].workspace_id),)),
             r"credential .* belongs to another organization",
         ),

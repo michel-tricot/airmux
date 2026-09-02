@@ -18,7 +18,7 @@ def test_valid_opaque_token_authenticates():
     token, entry = make_key("k1")
     key = authenticate(token, index_keys(make_bundle([entry])), datetime.now(tz=UTC))
     assert key is not None
-    assert key.key_id == "k1"
+    assert key.key_id == entry.key_id
 
 
 def test_token_absent_from_bundle_rejected():

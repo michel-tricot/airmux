@@ -264,6 +264,8 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
                 "latency_ms": 1,
                 "status": "ok",
                 "stream": False,
+                "credential_id": str(uuid7()),
+                "credential_scope": "workspace",
             }
             for workspace_id in (first, second)
         ]

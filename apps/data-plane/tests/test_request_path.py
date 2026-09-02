@@ -8,7 +8,7 @@ import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_outbox, mock_control_plane
 from starlette.testclient import TestClient
 
-from contract import Secret
+from contract import Secret, inference_key_id
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
 from data_plane.proxy import RequestRejectedError, _transform
@@ -185,7 +185,7 @@ def test_policy_denial_is_metered(api_key, dp_app, tmp_path, http_client):
         )
     assert r.status_code == 404  # unknown model
     events = _recorded(tmp_path, http_client)
-    assert [(e.status, e.model_id, e.key_id, e.workspace_id) for e in events] == [("denied", "ghost", "k-dev", WORKSPACE)]
+    assert [(e.status, e.model_id, e.key_id, e.workspace_id) for e in events] == [("denied", "ghost", inference_key_id("k-dev"), WORKSPACE)]
 
 
 @respx.mock

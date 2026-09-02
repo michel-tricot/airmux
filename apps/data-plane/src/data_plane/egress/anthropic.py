@@ -15,9 +15,9 @@ from pydantic import ValidationError
 
 from data_plane.canonical import (
     AssistantPart,
-    CanonicalChunk,
     CanonicalResponse,
     Delta,
+    DeltaChunk,
     ReasoningDelta,
     ReasoningPart,
     TextDelta,
@@ -92,7 +92,7 @@ class AnthropicStreamState(StreamState):
 
     @property
     def chunk_id(self) -> str:
-        return self.response_id or self.ctx.request_id
+        return self.response_id or str(self.ctx.request_id)
 
 
 def _final_parts(blocks: dict[int, _Block]) -> list[AssistantPart]:
@@ -107,7 +107,7 @@ def _final_parts(blocks: dict[int, _Block]) -> list[AssistantPart]:
     return parts
 
 
-def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> list[CanonicalChunk]:
+def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> list[DeltaChunk]:
     opened = event.content_block
     if opened is None:
         return []
@@ -115,12 +115,12 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
         ordinal = state.tool_count
         state.tool_count += 1
         state.blocks[event.index] = _Block(type="tool_use", tool_id=opened.id, name=opened.name, ordinal=ordinal)
-        return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
+        return [DeltaChunk(id=state.chunk_id, delta=ToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
     state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking)
     return []
 
 
-def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> list[CanonicalChunk]:
+def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> list[DeltaChunk]:
     block = state.blocks.setdefault(event.index, _Block(type="text"))
     delta = UpstreamBlockDelta.model_validate(event.delta)
     out: Delta | None = None
@@ -136,7 +136,7 @@ def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
     elif delta.type == "input_json_delta":
         block.arguments += delta.partial_json
         out = ToolCallDelta(index=block.ordinal, arguments=delta.partial_json)
-    return [CanonicalChunk(id=state.chunk_id, delta=out)] if out is not None else []
+    return [DeltaChunk(id=state.chunk_id, delta=out)] if out is not None else []
 
 
 def _raise_stream_error(data: dict[str, object]) -> None:
@@ -185,7 +185,7 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
         except ValidationError as error:
             raise UpstreamProtocolError.buffered_response() from error
         return CanonicalResponse(
-            id=message.id or ctx.request_id,
+            id=message.id or str(ctx.request_id),
             model=ctx.model.model_id,
             content=response_parts(message.content),
             finish_reason=finish_reason(message.stop_reason),
@@ -208,7 +208,7 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
         """The shared SSE machine; this dialect's event names ride RawEvent.name."""
         return frame_sse(chunk, state)
 
-    def transform_stream_event(self, ev: RawEvent, state: AnthropicStreamState) -> list[CanonicalChunk]:
+    def transform_stream_event(self, ev: RawEvent, state: AnthropicStreamState) -> list[DeltaChunk]:
         try:
             data = json.loads(ev.data)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:

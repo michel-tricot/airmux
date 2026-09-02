@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from uuid import UUID, uuid5
 
 import pytest
 from alembic import command
@@ -118,6 +119,79 @@ def test_org_slug_migration_backfills_unique_handles(pg_db):
     command.upgrade(config, "head")
     slugs = _run_sync(url, lambda conn: list(conn.execute(text("SELECT slug FROM org ORDER BY id")).scalars()))
     assert slugs == ["acme", "acme-2", "organization"]
+
+
+def test_model_modality_migration_backfills_required_lists(pg_db):
+    url = pg_db("model_modality_backfill")
+    config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "c5d6e7f8a9b0")
+
+    def seed_model(conn):
+        conn.execute(text("SELECT set_config('app.user_id', 'schema-test', true)"))
+        conn.execute(
+            text(
+                "INSERT INTO provider (id, name, kind, base_url, icon, param_aliases, params_closed) VALUES "
+                "('00000000-0000-0000-0000-000000000001', 'test', 'openai', 'https://example.com', '', '{}', false)"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO model (id, name, provider_id, upstream_model, input_price_per_mtok, output_price_per_mtok, "
+                "cache_read_price_per_mtok, cache_write_price_per_mtok, context_window, capabilities, parameter_support) VALUES "
+                "('00000000-0000-0000-0000-000000000002', 'test-model', '00000000-0000-0000-0000-000000000001', "
+                "'upstream', 0, 0, 0, 0, 1024, '[]', '{}')"
+            )
+        )
+        conn.commit()
+
+    _run_sync(url, seed_model)
+    command.upgrade(config, "head")
+
+    def modalities(conn):
+        values = conn.execute(text("SELECT input_modalities, output_modalities FROM model WHERE name = 'test-model'")).one()
+        columns = {column["name"]: column for column in inspect(conn).get_columns("model")}
+        return values, columns
+
+    values, columns = _run_sync(url, modalities)
+    assert tuple(values) == (["text"], ["text"])
+    assert columns["input_modalities"]["nullable"] is False
+    assert columns["output_modalities"]["nullable"] is False
+
+
+def test_usage_key_migration_preserves_legacy_ids_as_stable_uuids(pg_db):
+    url = pg_db("usage_key_backfill")
+    config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "d6e7f8a9b0c1")
+
+    def seed_event(conn):
+        conn.execute(
+            text(
+                "INSERT INTO usage_event (event_id, request_id, occurred_at, org_id, workspace_id, key_id, model_id, provider_id, "
+                "bundle_id, input_tokens, output_tokens, cost_usd, cost_input_usd, cost_output_usd, cache_read_tokens, "
+                "cache_write_tokens, latency_ms, status, stream) VALUES ("
+                "'00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', now(), "
+                "'00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000004', 'legacy-key', "
+                "'test-model', '', '00000000-0000-0000-0000-000000000005', 0, 0, 0, 0, 0, 0, 0, 1, 'denied', false)"
+            )
+        )
+        conn.commit()
+
+    _run_sync(url, seed_event)
+    command.upgrade(config, "head")
+
+    def migrated_key(conn):
+        key_id = conn.execute(text("SELECT key_id FROM usage_event")).scalar_one()
+        column = next(column for column in inspect(conn).get_columns("usage_event") if column["name"] == "key_id")
+        return key_id, column["type"]
+
+    key_id, column_type = _run_sync(url, migrated_key)
+    namespace = UUID("9f09b7c3-1424-5c04-a175-eac16b26b2a4")
+    assert key_id == uuid5(namespace, "legacy-key")
+    assert column_type.__class__.__name__ == "UUID"
 
 
 def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db):

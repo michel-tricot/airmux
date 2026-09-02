@@ -8,9 +8,11 @@ from data_plane.canonical import (
     ContentPart,
     DocumentPart,
     ImagePart,
+    JsonObjectResponseFormat,
+    JsonSchemaResponseFormat,
     NamedTool,
     ReasoningPart,
-    ResponseFormat,
+    ResponseFormatValue,
     TextPart,
     ToolCallPart,
     ToolChoice,
@@ -29,7 +31,7 @@ class Case(BaseModel):
     tools: list[ToolDef] = Field(default_factory=list)
     tool_choice: ToolChoice | None = None
     stop: list[str] | None = None
-    response_format: ResponseFormat | None = None
+    response_format: ResponseFormatValue | None = None
 
 
 def request_of(case: Case, **overrides) -> CanonicalRequest:
@@ -193,13 +195,12 @@ CORPUS: list[Case] = [
     Case(
         name="json_response_format",
         messages=[user(TextPart(text="Give me a city and its country"))],
-        response_format=ResponseFormat(type="json_object"),
+        response_format=JsonObjectResponseFormat(),
     ),
     Case(
         name="json_schema_response_format",
         messages=[user(TextPart(text="Give me a city and its country"))],
-        response_format=ResponseFormat(
-            type="json_schema",
+        response_format=JsonSchemaResponseFormat(
             # the vendor shape: a named wrapper around the schema, not the schema itself
             json_schema={
                 "name": "city_and_country",

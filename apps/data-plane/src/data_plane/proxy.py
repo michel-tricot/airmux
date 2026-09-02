@@ -329,7 +329,7 @@ class RequestExecution:
 
     def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
         return Ctx(
-            request_id=str(self.start.request_id),
+            request_id=self.start.request_id,
             model=decision.model,
             provider=decision.provider,
             stream=self.request.stream,
@@ -392,4 +392,4 @@ def _record_upstream_error(adapter: EgressAdapter, ctx: Ctx, error: Exception, r
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
-    return CanonicalResponse(id=ctx.request_id, model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
+    return CanonicalResponse(id=str(ctx.request_id), model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))

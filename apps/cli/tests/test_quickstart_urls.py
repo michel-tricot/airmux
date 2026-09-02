@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import cast
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
 from typer.testing import CliRunner
 
+from api_models import InferenceKeyMintedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
 from cli import auth
 from cli.auth import DEFAULT_CONSOLE_URL, ProviderKey, configured_model, resolve_login_urls, resolve_urls, seed_provider_credentials
 from cli.client import LOCAL_CONTROL_PLANE_URL, resolve_control_plane_url
@@ -15,6 +18,69 @@ from cli.common import invocation
 from cli.main import app
 
 runner = CliRunner()
+NOW = datetime.now(tz=UTC)
+PROVIDER_ONE = UUID("019c0000-0000-7000-8000-000000000001")
+PROVIDER_TWO = UUID("019c0000-0000-7000-8000-000000000002")
+
+
+def provider(provider_id: UUID, name: str) -> ProviderOut:
+    return ProviderOut(
+        id=provider_id,
+        name=name,
+        kind=name,
+        base_url=f"https://api.{name}.com",
+        icon="",
+        param_aliases={},
+        accepted_params=None,
+        params_closed=False,
+        created_at=NOW,
+        updated_at=NOW,
+        deleted_at=None,
+    )
+
+
+def model(provider_id: UUID, name: str) -> ModelOut:
+    return ModelOut(
+        id=uuid4(),
+        name=name,
+        provider_id=provider_id,
+        upstream_model=name,
+        egress_kind=None,
+        input_price_per_mtok=1,
+        output_price_per_mtok=2,
+        cache_read_price_per_mtok=0,
+        cache_write_price_per_mtok=0,
+        context_window=1000,
+        max_output_tokens=100,
+        input_modalities=["text"],
+        output_modalities=["text"],
+        capabilities=["streaming"],
+        parameter_support={},
+        created_at=NOW,
+        updated_at=NOW,
+        deleted_at=None,
+    )
+
+
+def credential(provider_id: UUID, name: str, enabled: bool) -> ProviderCredentialOut:
+    return ProviderCredentialOut(
+        id=uuid4(),
+        org_id=None,
+        workspace_id=None,
+        provider_id=provider_id,
+        provider_name=name,
+        name="default",
+        priority=100,
+        enabled=enabled,
+        version=1,
+        status="unknown",
+        status_at=None,
+        fingerprint="test",
+        created_at=NOW,
+        updated_at=NOW,
+        deleted_at=None,
+        scope="platform",
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -52,9 +118,9 @@ def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    from cli.profiles import set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
+    from cli.profiles import Profile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
 
-    upsert_profile("prod", {"control_plane_url": "https://prod.example.com", "token": "t"})
+    upsert_profile("prod", Profile(control_plane_url="https://prod.example.com", token="t"))
     set_active("prod")
 
     assert resolve_control_plane_url() == "https://prod.example.com"
@@ -100,14 +166,15 @@ def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
 
 
 class QuickstartClient:
-    def __init__(self, catalog: dict, credentials: list[dict]) -> None:
+    def __init__(self, catalog: TaxonomyOut, credentials: list[ProviderCredentialOut]) -> None:
         self.catalog = catalog
         self.credentials = credentials
         self.posts: list[tuple[str, dict]] = []
 
     def get(self, path: str):
         data = self.catalog if path == "/api/v1/instance/taxonomy" else self.credentials
-        return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": data})
+        serialized = data.model_dump(mode="json") if isinstance(data, TaxonomyOut) else [item.model_dump(mode="json") for item in data]
+        return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": serialized})
 
     def post(self, path: str, json: dict):
         self.posts.append((path, json))
@@ -117,8 +184,8 @@ class QuickstartClient:
 def test_quickstart_keeps_an_existing_provider_credential(monkeypatch):
     monkeypatch.setattr("cli.auth._provider_key", lambda _name, _overrides: (_ for _ in ()).throw(AssertionError("must not prompt")))
     client = QuickstartClient(
-        {"providers": [{"id": "provider-1", "name": "openai"}], "models": []},
-        [{"provider_name": "openai", "enabled": True}],
+        TaxonomyOut(providers=[provider(PROVIDER_ONE, "openai")], models=[]),
+        [credential(PROVIDER_ONE, "openai", True)],
     )
 
     result = seed_provider_credentials(cast("httpx.Client", client), {})
@@ -131,8 +198,8 @@ def test_quickstart_keeps_an_existing_provider_credential(monkeypatch):
 def test_quickstart_reports_an_existing_disabled_provider_credential(monkeypatch):
     monkeypatch.setattr("cli.auth._provider_key", lambda _name, _overrides: (_ for _ in ()).throw(AssertionError("must not prompt")))
     client = QuickstartClient(
-        {"providers": [{"id": "provider-1", "name": "openai"}], "models": []},
-        [{"provider_name": "openai", "enabled": False}],
+        TaxonomyOut(providers=[provider(PROVIDER_ONE, "openai")], models=[]),
+        [credential(PROVIDER_ONE, "openai", False)],
     )
 
     result = seed_provider_credentials(cast("httpx.Client", client), {})
@@ -143,17 +210,11 @@ def test_quickstart_reports_an_existing_disabled_provider_credential(monkeypatch
 
 def test_quickstart_uses_a_model_backed_by_a_configured_provider():
     client = QuickstartClient(
-        {
-            "providers": [
-                {"id": "provider-1", "name": "openai"},
-                {"id": "provider-2", "name": "anthropic"},
-            ],
-            "models": [
-                {"name": "anthropic/claude", "provider_id": "provider-2"},
-                {"name": "openai/gpt", "provider_id": "provider-1"},
-            ],
-        },
-        [{"provider_name": "anthropic", "enabled": True}],
+        TaxonomyOut(
+            providers=[provider(PROVIDER_ONE, "openai"), provider(PROVIDER_TWO, "anthropic")],
+            models=[model(PROVIDER_TWO, "anthropic/claude"), model(PROVIDER_ONE, "openai/gpt")],
+        ),
+        [credential(PROVIDER_TWO, "anthropic", True)],
     )
 
     assert configured_model(cast("httpx.Client", client)) == "anthropic/claude"
@@ -165,14 +226,27 @@ def test_quickstart_mints_an_access_key_without_replacing_the_active_one():
     def handle(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         responses = {
-            "/api/v1/auth/cli/start": {"user_code": "CODE", "poll_secret": "secret"},
-            "/api/v1/auth/cli/approve": {},
-            "/api/v1/auth/cli/poll": {"token": "new-token"},
+            "/api/v1/auth/cli/start": {
+                "user_code": "ABCD-EFGH",
+                "verification_url": "http://control-plane/cli?code=ABCD-EFGH",
+                "poll_secret": "secret",
+                "interval_seconds": 0,
+                "expires_in_seconds": 30,
+            },
+            "/api/v1/auth/cli/approve": {"status": "approved", "client_name": "test"},
+            "/api/v1/auth/cli/poll": {
+                "status": "complete",
+                "interval_seconds": 0,
+                "scope": "org",
+                "token": "new-token",
+                "org_id": str(PROVIDER_ONE),
+                "org_name": "Acme",
+            },
         }
         return httpx.Response(200, json={"data": responses[request.url.path]})
 
     with httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(handle)) as client:
-        token = auth._organization_access_key(client, "org-1")
+        token = auth._organization_access_key(client, str(PROVIDER_ONE))
 
     assert token == "new-token"
     poll = next(request for request in requests if request.url.path == "/api/v1/auth/cli/poll")
@@ -201,12 +275,38 @@ def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error:
     verified = []
     monkeypatch.setattr(httpx, "Client", lambda **_kwargs: context)
     monkeypatch.setattr(auth, "_login_or_signup", lambda _client, is_claimed, email, password: login_calls.append((is_claimed, email, password)))
-    monkeypatch.setattr(auth, "_personal_org", lambda _client, _email, _org: {"id": "org-1", "name": "Acme"})
+    monkeypatch.setattr(
+        auth,
+        "_personal_org",
+        lambda _client, _email, _org: OrgOut(
+            id=PROVIDER_ONE,
+            name="Acme",
+            slug="acme",
+            personal_for=None,
+            created_at=NOW,
+            updated_at=NOW,
+            deleted_at=None,
+        ),
+    )
     monkeypatch.setattr(auth, "_organization_access_key", lambda _client, _org_id: "control-token")
-    monkeypatch.setattr(auth, "_default_workspace", lambda _client, _org_id, _bearer: {"id": "workspace-1", "slug": "default", "name": "Default"})
+    monkeypatch.setattr(
+        auth,
+        "_default_workspace",
+        lambda _client, _org_id, _bearer: WorkspaceOut(
+            id=PROVIDER_TWO,
+            org_id=PROVIDER_ONE,
+            slug="default",
+            name="Default",
+            created_at=NOW,
+            updated_at=NOW,
+            deleted_at=None,
+        ),
+    )
     monkeypatch.setattr(auth, "upsert_url_profile", lambda name, values: saved.update(name=name, values=values))
     monkeypatch.setattr(auth, "_install_data_plane_key", lambda _client: None)
-    monkeypatch.setattr(auth, "_inference_key", lambda _client, _org_id, _workspace, _bearer: {"token": "inference-token"})
+    monkeypatch.setattr(
+        auth, "_inference_key", lambda _client, _org_id, _workspace, _bearer: InferenceKeyMintedOut(id=uuid4(), token="inference-token")
+    )
     monkeypatch.setattr(auth, "seed_provider_credentials", lambda _client, _overrides: [ProviderKey("anthropic", "already configured")])
     monkeypatch.setattr(auth, "configured_model", lambda _client: model)
 
@@ -237,7 +337,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
 
     assert result.exit_code == 0, result.output
     assert login_calls == [(True, "owner@example.com", "password123")]
-    assert saved["values"]["gateway_url"] == "https://gateway.example.com"
+    assert saved["values"].gateway_url == "https://gateway.example.com"
     assert verified == [("https://gateway.example.com/", "inference-token", "anthropic/claude-test")]
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout

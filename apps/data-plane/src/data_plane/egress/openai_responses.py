@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
-from data_plane.canonical import CanonicalChunk, CanonicalResponse, ReasoningDelta, ReasoningPart, TextDelta, TextPart, ToolCallDelta, ToolCallPart
+from data_plane.canonical import CanonicalResponse, DeltaChunk, ReasoningDelta, ReasoningPart, TextDelta, TextPart, ToolCallDelta, ToolCallPart
 from data_plane.egress.base import (
     CanonicalError,
     EgressAdapter,
@@ -60,7 +60,7 @@ class ResponsesStreamState(StreamState):
 
     @property
     def chunk_id(self) -> str:
-        return self.response_id or self.ctx.request_id
+        return self.response_id or str(self.ctx.request_id)
 
 
 def _error(error: fmt.UpstreamError | None) -> UpstreamStreamError | None:
@@ -124,7 +124,7 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         if not state.terminal_seen:
             yield from frame_sse(chunk, state)
 
-    def transform_stream_event(self, ev: RawEvent, state: ResponsesStreamState) -> list[CanonicalChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
+    def transform_stream_event(self, ev: RawEvent, state: ResponsesStreamState) -> list[DeltaChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
         try:
             event = fmt.UpstreamResponseEvent.model_validate_json(ev.data)
         except ValidationError as error:
@@ -160,7 +160,7 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
                     )
                     reasoning = state.reasoning[index]
                     return [
-                        CanonicalChunk(
+                        DeltaChunk(
                             id=state.chunk_id,
                             delta=ReasoningDelta(id=reasoning.id or None, signature=reasoning.signature or None),
                         )
@@ -171,7 +171,7 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
                     output.name = item.name
                     output.arguments = item.arguments
                     return [
-                        CanonicalChunk(
+                        DeltaChunk(
                             id=state.chunk_id,
                             delta=ToolCallDelta(index=output.ordinal or 0, id=output.id or None, name=output.name or None),
                         )
@@ -181,17 +181,17 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
         if kind == "response.output_text.delta":
             delta = event.delta
             state.text[index] = state.text.get(index, "") + delta
-            return [CanonicalChunk(id=state.chunk_id, delta=TextDelta(text=delta))] if delta else []
+            return [DeltaChunk(id=state.chunk_id, delta=TextDelta(text=delta))] if delta else []
         if kind in {"response.reasoning_summary_text.delta", "response.reasoning_text.delta"}:
             delta = event.delta
             draft = state.reasoning.setdefault(index, ResponsesReasoningDraft())
             draft.text += delta
-            return [CanonicalChunk(id=state.chunk_id, delta=ReasoningDelta(text=delta))] if delta else []
+            return [DeltaChunk(id=state.chunk_id, delta=ReasoningDelta(text=delta))] if delta else []
         if kind == "response.function_call_arguments.delta":
             delta = event.delta
             draft = _tool_draft(state, index)
             draft.arguments += delta
-            return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
+            return [DeltaChunk(id=state.chunk_id, delta=ToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
         return []
 
     def validate_stream(self, state: ResponsesStreamState) -> None:

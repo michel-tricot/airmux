@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from starlette.datastructures import Headers
     from starlette.responses import Response
 
-    from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
+    from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, DeltaChunk
     from data_plane.egress.base import CanonicalError, Ctx
 
     class ResponseStream(Protocol):
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
         def start(self, ctx: Ctx, /) -> list[bytes]: ...
 
-        def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
+        def chunk(self, c: DeltaChunk) -> list[bytes]: ...
 
         def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]: ...
 

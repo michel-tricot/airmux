@@ -40,6 +40,17 @@ def a_ref(service="openai", name="default", org_id=ORG, workspace_id=WORKSPACE, 
     return SecretRef(purpose=purpose, service=service, name=name, secret_id=uuid4(), org_id=org_id, workspace_id=workspace_id)
 
 
+def test_workspace_secret_reference_requires_an_organization():
+    with pytest.raises(ValueError, match="workspace secret reference requires an organization"):
+        SecretRef(
+            purpose=SecretPurpose.provider,
+            service="openai",
+            name="default",
+            secret_id=uuid4(),
+            workspace_id=WORKSPACE,
+        )
+
+
 @pytest.fixture(params=["memory", "file"])
 def store(request, tmp_path):
     """Every writable store, so the facade is proved once rather than per backend."""

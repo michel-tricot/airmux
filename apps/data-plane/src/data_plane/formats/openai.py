@@ -13,8 +13,9 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from data_plane.canonical import (
+    AssistantMessage,
     AssistantPart,
-    CanonicalMessage,
+    CanonicalMessageValue,
     CanonicalRequest,
     ContentPart,
     DocumentPart,
@@ -24,12 +25,14 @@ from data_plane.canonical import (
     NamedTool,
     Part,
     ReasoningPart,
+    SystemMessage,
     TextPart,
     ToolCallPart,
     ToolChoice,
     ToolDef,
     ToolResultPart,
     Usage,
+    UserMessage,
 )
 
 if TYPE_CHECKING:
@@ -103,7 +106,7 @@ def _assistant_message(parts: Sequence[ContentPart]) -> dict[str, Any]:
     return message
 
 
-def to_messages(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
+def to_messages(messages: Sequence[CanonicalMessageValue]) -> list[dict[str, Any]]:
     """Canonical into OpenAI's wire messages. Tool result parts expand back into their own tool
     messages, and reasoning is dropped: OpenAI does not accept it back on a later turn."""
     out: list[dict[str, Any]] = []
@@ -460,15 +463,15 @@ def _assistant_parts(message: dict[str, object]) -> list[ContentPart]:
     return parts
 
 
-def from_messages(messages: object) -> list[CanonicalMessage]:
+def from_messages(messages: object) -> list[CanonicalMessageValue]:
     """OpenAI's wire messages into canonical. A tool message becomes a tool result part on a user
     message, and consecutive tool messages merge into one so a parallel call's results stay one turn."""
-    out: list[CanonicalMessage] = []
+    out: list[CanonicalMessageValue] = []
     pending: list[ContentPart] = []
 
     def flush() -> None:
         if pending:
-            out.append(CanonicalMessage(role="user", content=list(pending)))
+            out.append(UserMessage.model_validate({"content": list(pending)}))
             pending.clear()
 
     for raw in messages if isinstance(messages, list) else []:
@@ -479,11 +482,11 @@ def from_messages(messages: object) -> list[CanonicalMessage]:
             continue
         flush()
         if role in {"system", "developer"}:
-            out.append(CanonicalMessage(role="system", content=[TextPart(text=_text_of(message.get("content")))]))
+            out.append(SystemMessage(content=[TextPart(text=_text_of(message.get("content")))]))
         elif role == "assistant":
-            out.append(CanonicalMessage(role="assistant", content=_assistant_parts(message)))
+            out.append(AssistantMessage.model_validate({"content": _assistant_parts(message)}))
         else:
-            out.append(CanonicalMessage(role="user", content=_user_parts(message.get("content"))))
+            out.append(UserMessage.model_validate({"content": _user_parts(message.get("content"))}))
     flush()
     return out
 

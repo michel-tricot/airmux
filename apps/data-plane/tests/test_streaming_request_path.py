@@ -33,10 +33,10 @@ def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
     outbox = make_outbox(tmp_path, http_client)
     ctx = replace(
         CTX,
-        request_id=str(uuid7()),
+        request_id=uuid7(),
         org_id=ORG,
         workspace_id=WORKSPACE,
-        key_id="k-dev",
+        key_id=uuid7(),
         credential_id=uuid7(),
         credential_scope="workspace",
         bundle_id=uuid7(),

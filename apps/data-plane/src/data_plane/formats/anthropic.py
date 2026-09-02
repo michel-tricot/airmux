@@ -15,22 +15,27 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from data_plane.canonical import (
+    AssistantMessage,
     AssistantPart,
-    CanonicalMessage,
+    CanonicalMessageValue,
     ContentPart,
     DocumentPart,
     FinishReason,
     GatewayInfo,
     ImagePart,
+    JsonObjectResponseFormat,
+    JsonSchemaResponseFormat,
     NamedTool,
     ReasoningPart,
-    ResponseFormat,
+    ResponseFormatValue,
+    SystemMessage,
     TextPart,
     ToolCallPart,
     ToolChoice,
     ToolDef,
     ToolResultPart,
     Usage,
+    UserMessage,
 )
 
 if TYPE_CHECKING:
@@ -161,7 +166,7 @@ def _collapse(blocks: list[dict[str, Any]]) -> list[dict[str, Any]] | str:
     return blocks
 
 
-def to_request(messages: Sequence[CanonicalMessage]) -> tuple[list[dict[str, Any]] | str | None, list[dict[str, Any]]]:
+def to_request(messages: Sequence[CanonicalMessageValue]) -> tuple[list[dict[str, Any]] | str | None, list[dict[str, Any]]]:
     """Canonical into Anthropic's (system, messages) pair. Consecutive same-role turns merge, because
     Anthropic requires strict user/assistant alternation and a tool result is its own canonical turn."""
     system_parts = [part for message in messages if message.role == "system" for part in message.content]
@@ -224,7 +229,7 @@ def output_config_of(request: CanonicalRequest) -> dict[str, Any] | None:
     return output_config or None
 
 
-def response_format_from(output_config: object) -> ResponseFormat | None:
+def response_format_from(output_config: object) -> ResponseFormatValue | None:
     if not isinstance(output_config, dict):
         return None
     format_value = output_config.get("format")
@@ -232,8 +237,8 @@ def response_format_from(output_config: object) -> ResponseFormat | None:
         return None
     schema = format_value.get("schema") or {}
     if schema == {"type": "object"}:
-        return ResponseFormat(type="json_object")
-    return ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
+        return JsonObjectResponseFormat()
+    return JsonSchemaResponseFormat(json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def thinking_of(request: CanonicalRequest) -> dict[str, Any] | None:
@@ -470,18 +475,21 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
     return parts
 
 
-def from_request(data: dict[str, object]) -> list[CanonicalMessage]:
+def from_request(data: dict[str, object]) -> list[CanonicalMessageValue]:
     """Anthropic's Messages body into canonical, with the out-of-band system prompt as the first message."""
-    messages: list[CanonicalMessage] = []
+    messages: list[CanonicalMessageValue] = []
     system = _parts_from_blocks(data.get("system"))
     if system:
-        messages.append(CanonicalMessage(role="system", content=system))
+        messages.append(SystemMessage.model_validate({"content": system}))
     raw_messages = data.get("messages")
     for raw in raw_messages if isinstance(raw_messages, list) else []:
         message = _mapping(raw)
         parts = _parts_from_blocks(message.get("content"))
         if parts:
-            messages.append(CanonicalMessage(role="assistant" if message.get("role") == "assistant" else "user", content=parts))
+            if message.get("role") == "assistant":
+                messages.append(AssistantMessage.model_validate({"content": parts}))
+            else:
+                messages.append(UserMessage.model_validate({"content": parts}))
     return messages
 
 

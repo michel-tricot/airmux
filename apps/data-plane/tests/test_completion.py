@@ -14,7 +14,9 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     CanonicalResponse,
+    DeltaChunk,
     DocumentPart,
+    FinalChunk,
     GatewayInfo,
     ImagePart,
     ReasoningDelta,
@@ -125,6 +127,27 @@ def test_an_unknown_field_inside_a_part_is_rejected():
         TextPart.model_validate({"type": "text", "text": "hi", "glow": True})
 
 
+def test_response_format_states_are_structural():
+    body = {"model": "m", "messages": [{"role": "user", "content": "hi"}]}
+    with pytest.raises(ValidationError):
+        CanonicalRequest.model_validate({**body, "response_format": {"type": "json_schema"}})
+    with pytest.raises(ValidationError):
+        CanonicalRequest.model_validate({**body, "response_format": {"type": "text", "json_schema": {"type": "object"}}})
+
+
+def test_stream_chunks_are_either_deltas_or_final_accounting():
+    with pytest.raises(ValidationError):
+        CanonicalChunk.model_validate({"id": "r1"})
+    with pytest.raises(ValidationError):
+        CanonicalChunk.model_validate({"id": "r1", "delta": {"type": "text", "text": "hi"}, "usage": {}})
+
+
+def test_request_schema_exposes_role_specific_messages():
+    message_schema = CanonicalRequest.model_json_schema()["properties"]["messages"]["items"]
+    assert message_schema["discriminator"]["propertyName"] == "role"
+    assert len(message_schema["oneOf"]) == 3
+
+
 def test_what_the_gateway_did_is_reported_under_its_own_field():
     """Data plane internals reach the caller through one namespaced envelope; the rest of the
     response stays about the completion."""
@@ -153,13 +176,13 @@ def test_the_definition_is_frozen():
 def test_a_stream_of_typed_deltas_reassembles_the_response():
     """The stream face and the response face describe the same conversation: folding one yields the other."""
     chunks = [
-        CanonicalChunk(id="r1", delta=ReasoningDelta(text="think ")),
-        CanonicalChunk(id="r1", delta=ReasoningDelta(text="hard", signature="sig_1")),
-        CanonicalChunk(id="r1", delta=TextDelta(text="hé")),
-        CanonicalChunk(id="r1", delta=TextDelta(text="llo")),
-        CanonicalChunk(id="r1", delta=ToolCallDelta(index=0, id="call_1", name="get_weather", arguments='{"ci')),
-        CanonicalChunk(id="r1", delta=ToolCallDelta(index=0, arguments='ty":"Paris"}')),
-        CanonicalChunk(id="r1", finish_reason="tool_calls", usage=Usage(input_tokens=5, output_tokens=7)),
+        DeltaChunk(id="r1", delta=ReasoningDelta(text="think ")),
+        DeltaChunk(id="r1", delta=ReasoningDelta(text="hard", signature="sig_1")),
+        DeltaChunk(id="r1", delta=TextDelta(text="hé")),
+        DeltaChunk(id="r1", delta=TextDelta(text="llo")),
+        DeltaChunk(id="r1", delta=ToolCallDelta(index=0, id="call_1", name="get_weather", arguments='{"ci')),
+        DeltaChunk(id="r1", delta=ToolCallDelta(index=0, arguments='ty":"Paris"}')),
+        FinalChunk(id="r1", finish_reason="tool_calls", usage=Usage(input_tokens=5, output_tokens=7)),
     ]
 
     reasoning_text = "".join(c.delta.text for c in chunks if c.delta is not None and c.delta.type == "reasoning")

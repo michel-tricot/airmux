@@ -10,7 +10,7 @@ import typer
 from cli.client import resolve_control_plane_url
 from cli.common import SETUP, app, console, profiles_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import active_profile, config_path, load_config, remove_profile, set_active
+from cli.profiles import config_path, load_active_profile, load_config, remove_profile, set_active
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -41,27 +41,25 @@ DIAGNOSTIC_COLS = [
 PRIVATE_FILE_MODE = 0o600
 
 
-def _profile_rows() -> list[dict]:
+def _profile_rows() -> list[dict[str, object]]:
     config = load_config()
-    active = config.get("active")
-    profiles = config.get("profiles") or {}
     return [
         {
-            "active": name == active,
+            "active": name == config.active,
             "name": name,
-            "scope": profile.get("scope") or ("org" if profile.get("org_id") else "instance"),
-            "organization": profile.get("org_name", ""),
-            "workspace": profile.get("workspace_name") or profile.get("workspace", ""),
-            "control_plane_url": profile.get("control_plane_url", ""),
-            "gateway_url": profile.get("gateway_url", ""),
+            "scope": profile.scope or ("org" if profile.org_id else "instance"),
+            "organization": profile.org_name or "",
+            "workspace": profile.workspace_name or profile.workspace or "",
+            "control_plane_url": profile.control_plane_url or "",
+            "gateway_url": profile.gateway_url or "",
         }
-        for name, profile in profiles.items()
+        for name, profile in config.profiles.items()
     ]
 
 
 def resolve_gateway_url(override: str = "") -> str:
-    profile = active_profile() or {}
-    return override or os.environ.get("GW_GATEWAY_URL") or str(profile.get("gateway_url") or "http://localhost:8080")
+    profile = load_active_profile()
+    return override or os.environ.get("GW_GATEWAY_URL") or (profile.gateway_url if profile is not None else None) or "http://localhost:8080"
 
 
 @profiles_app.command("list")
@@ -95,21 +93,21 @@ def profiles_remove(name: str) -> None:
 @app.command(rich_help_panel=SETUP)
 def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
-    profile = active_profile() or {}
+    profile = load_active_profile()
     rows = [
         {
-            "profile": profile.get("name", "none"),
+            "profile": profile.name if profile is not None else "none",
             "control_plane": resolve_control_plane_url(),
             "gateway": resolve_gateway_url(),
-            "organization": os.environ.get("GW_ORG_ID") or profile.get("org_name", ""),
-            "workspace": profile.get("workspace_name") or profile.get("workspace", ""),
-            "authentication": "environment" if os.environ.get("GW_ACCESS_KEY") else "profile" if profile.get("token") else "none",
+            "organization": os.environ.get("GW_ORG_ID") or (profile.org_name if profile is not None else ""),
+            "workspace": (profile.workspace_name or profile.workspace) if profile is not None else "",
+            "authentication": "environment" if os.environ.get("GW_ACCESS_KEY") else "profile" if profile is not None and profile.token else "none",
         }
     ]
     print_rows("status", rows, STATUS_COLS, fmt)
 
 
-def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict:
+def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict[str, str]:
     try:
         response = request()
     except httpx.HTTPError as error:
@@ -124,9 +122,9 @@ def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict:
     return {"check": name, "status": "failed", "detail": f"HTTP {response.status_code}: {detail}"}
 
 
-def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict]:
-    profile = active_profile() or {}
-    token = os.environ.get("GW_ACCESS_KEY") or profile.get("token")
+def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, str]]:
+    profile = load_active_profile()
+    token = os.environ.get("GW_ACCESS_KEY") or (profile.token if profile is not None else None)
     path = config_path()
     if path.exists():
         private = stat.S_IMODE(path.stat().st_mode) == PRIVATE_FILE_MODE

@@ -16,7 +16,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar, Final, Self
+from typing import TYPE_CHECKING, ClassVar, Final, Literal, Self
 from uuid import UUID  # noqa: TC003 SecretRef crosses the wire inside the bundle, so pydantic resolves this at runtime
 
 from pydantic import BaseModel, ConfigDict
@@ -67,7 +67,7 @@ class SecretPurpose(StrEnum):
     provider = "provider"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class SecretRef:
     """A stable reference to a secret value and the scope that owns it."""
 
@@ -78,9 +78,41 @@ class SecretRef:
     org_id: UUID | None = None
     workspace_id: UUID | None = None
 
+    def __post_init__(self) -> None:
+        if self.workspace_id is not None and self.org_id is None:
+            msg = "workspace secret reference requires an organization"
+            raise ValueError(msg)
+
     @property
     def is_platform(self) -> bool:
         return self.org_id is None
+
+    @property
+    def scope(self) -> Literal["platform", "org", "workspace"]:
+        if self.org_id is None:
+            return "platform"
+        return "workspace" if self.workspace_id is not None else "org"
+
+
+@dataclass(frozen=True, kw_only=True)
+class PlatformSecretRef(SecretRef):
+    org_id: None = None
+    workspace_id: None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class OrgSecretRef(SecretRef):
+    org_id: UUID
+    workspace_id: None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class WorkspaceSecretRef(SecretRef):
+    org_id: UUID
+    workspace_id: UUID
+
+
+SecretReference = PlatformSecretRef | OrgSecretRef | WorkspaceSecretRef
 
 
 def path_segments(ref: SecretRef) -> tuple[str, ...]:

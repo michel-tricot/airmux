@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -9,20 +9,28 @@ from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageEventV1
+from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageStatus
+from contract import UsageEvent as UsageEventContract
 from control_plane.authority import ensure_allowed_for_scopes
-from control_plane.authz import Permission, Scope, ScopeLevel
+from control_plane.authz import Permission, Scope, ScopeLevel, ScopeValue
 from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 
+if TYPE_CHECKING:
+    from control_plane.models.provider_credential import ProviderCredentialStatus
+
 router = APIRouter(tags=["Data Plane API"])
 
-EventBatch = Annotated[list[UsageEventV1], Field(max_length=1000)]
+EventBatch = Annotated[list[UsageEventContract], Field(max_length=1000)]
 
-CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limited": "rate_limited"}
+CREDENTIAL_HEALTH: dict[UsageStatus, ProviderCredentialStatus] = {
+    "ok": "live",
+    "credential_rejected": "invalid",
+    "rate_limited": "rate_limited",
+}
 
 
 def _signed(bundle: Bundle) -> SignedBundle:
@@ -52,7 +60,7 @@ async def selected_bundle(bundle_id: UUID) -> Bundle:
 BundleDep = Annotated[Bundle, Depends(selected_bundle)]
 
 
-async def selected_bundle_scope(bundle: BundleDep) -> Scope:
+async def selected_bundle_scope(bundle: BundleDep) -> ScopeValue:
     return Scope.org(bundle.org_id)
 
 
@@ -89,8 +97,8 @@ async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: Even
     return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
 
 
-def _credential_health(events: list[UsageEventV1]) -> dict[UUID, tuple[datetime, str]]:
-    health: dict[UUID, tuple[datetime, str]] = {}
+def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[datetime, ProviderCredentialStatus]]:
+    health: dict[UUID, tuple[datetime, ProviderCredentialStatus]] = {}
     for event in events:
         status = CREDENTIAL_HEALTH.get(event.status)
         if event.credential_id is None or status is None:

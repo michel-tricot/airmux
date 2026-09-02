@@ -57,35 +57,36 @@ class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
 
 
-class CliAuthApproveIn(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    user_code: Annotated[
-        str,
-        Field(
-            description="Device code shown by the CLI",
-            max_length=16,
-            min_length=8,
-            title="User Code",
-        ),
-    ]
-    scope: Annotated[
-        Literal["instance", "org"] | None,
-        Field(description="Scope the CLI access key should use", title="Scope"),
-    ] = "org"
-    org_id: Annotated[
-        UUID | None,
-        Field(
-            description="Organization the CLI access key should use for organization scope",
-            title="Org Id",
-        ),
-    ] = None
-
-
 class CliAuthApprovedOut(BaseModel):
     status: Annotated[Literal["approved"], Field(title="Status")]
     client_name: Annotated[str, Field(title="Client Name")]
+
+
+class CliAuthInstanceCompleteOut(BaseModel):
+    status: Annotated[Literal["complete"], Field(title="Status")] = "complete"
+    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    scope: Annotated[Literal["instance"], Field(title="Scope")] = "instance"
+    token: Annotated[str, Field(title="Token")]
+    org_id: Annotated[None, Field(title="Org Id")] = None
+    org_name: Annotated[None, Field(title="Org Name")] = None
+
+
+class CliAuthOrgCompleteOut(BaseModel):
+    status: Annotated[Literal["complete"], Field(title="Status")] = "complete"
+    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    scope: Annotated[Literal["org"], Field(title="Scope")] = "org"
+    token: Annotated[str, Field(title="Token")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    org_name: Annotated[str, Field(title="Org Name")]
+
+
+class CliAuthPendingOut(BaseModel):
+    status: Annotated[Literal["pending"], Field(title="Status")] = "pending"
+    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    scope: Annotated[None, Field(title="Scope")] = None
+    token: Annotated[None, Field(title="Token")] = None
+    org_id: Annotated[None, Field(title="Org Id")] = None
+    org_name: Annotated[None, Field(title="Org Name")] = None
 
 
 class CliAuthPollIn(BaseModel):
@@ -103,13 +104,11 @@ class CliAuthPollIn(BaseModel):
     ]
 
 
-class CliAuthPollOut(BaseModel):
-    status: Annotated[Literal["pending", "complete"], Field(title="Status")]
-    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
-    scope: Annotated[Literal["instance", "org"] | None, Field(title="Scope")] = None
-    token: Annotated[str | None, Field(title="Token")] = None
-    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
-    org_name: Annotated[str | None, Field(title="Org Name")] = None
+class CliAuthPollOut(RootModel[CliAuthPendingOut | CliAuthInstanceCompleteOut | CliAuthOrgCompleteOut]):
+    root: Annotated[
+        CliAuthPendingOut | CliAuthInstanceCompleteOut | CliAuthOrgCompleteOut,
+        Field(title="CliAuthPollOut"),
+    ]
 
 
 class CliAuthRequestOut(BaseModel):
@@ -142,6 +141,52 @@ class CliAuthStartOut(BaseModel):
     expires_in_seconds: Annotated[int, Field(title="Expires In Seconds")]
 
 
+class CliInstanceAuthApproveIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    user_code: Annotated[
+        str,
+        Field(
+            description="Device code shown by the CLI",
+            max_length=16,
+            min_length=8,
+            title="User Code",
+        ),
+    ]
+    scope: Annotated[
+        Literal["instance"],
+        Field(description="Issue an instance-scoped CLI access key", title="Scope"),
+    ] = "instance"
+    org_id: Annotated[
+        None,
+        Field(description="Organization is absent for instance access", title="Org Id"),
+    ] = None
+
+
+class CliOrgAuthApproveIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    user_code: Annotated[
+        str,
+        Field(
+            description="Device code shown by the CLI",
+            max_length=16,
+            min_length=8,
+            title="User Code",
+        ),
+    ]
+    scope: Annotated[
+        Literal["org"],
+        Field(description="Issue an organization-scoped CLI access key", title="Scope"),
+    ] = "org"
+    org_id: Annotated[
+        UUID,
+        Field(description="Organization the CLI access key should use", title="Org Id"),
+    ]
+
+
 class DataPlaneInstanceOut(BaseModel):
     instance_id: Annotated[UUID, Field(title="Instance Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")]
@@ -161,6 +206,110 @@ class DeletedOutUUID(BaseModel):
 class DeletedOutStr(BaseModel):
     id: Annotated[str, Field(title="Id")]
     deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
+
+
+class DeniedUsageEventV1(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    schema_version: Annotated[
+        Literal[1],
+        Field(description="Usage event schema version", title="Schema Version"),
+    ] = 1
+    event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
+    request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    occurred_at: Annotated[
+        AwareDatetime,
+        Field(description="Timestamp when the request completed", title="Occurred At"),
+    ]
+    org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
+    workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
+    key_id: Annotated[UUID, Field(description="Inference key ID used for the request", title="Key Id")]
+    model_id: Annotated[
+        str,
+        Field(
+            description="Caller-facing model ID",
+            max_length=255,
+            min_length=1,
+            title="Model Id",
+        ),
+    ]
+    provider_id: Annotated[
+        Literal[""],
+        Field(description="No provider was selected before denial", title="Provider Id"),
+    ] = ""
+    bundle_id: Annotated[UUID, Field(description="Policy bundle used for the request", title="Bundle Id")]
+    input_tokens: Annotated[
+        int,
+        Field(description="Total input tokens", ge=0, le=2147483647, title="Input Tokens"),
+    ]
+    output_tokens: Annotated[
+        int,
+        Field(
+            description="Total output tokens",
+            ge=0,
+            le=2147483647,
+            title="Output Tokens",
+        ),
+    ]
+    cost_usd: Annotated[
+        float,
+        Field(description="Total estimated cost in USD", ge=0.0, title="Cost Usd"),
+    ]
+    cost_input_usd: Annotated[
+        float | None,
+        Field(description="Estimated input cost in USD", ge=0.0, title="Cost Input Usd"),
+    ] = 0.0
+    cost_output_usd: Annotated[
+        float | None,
+        Field(description="Estimated output cost in USD", ge=0.0, title="Cost Output Usd"),
+    ] = 0.0
+    cache_read_tokens: Annotated[
+        int | None,
+        Field(
+            description="Input tokens read from a provider cache",
+            ge=0,
+            le=2147483647,
+            title="Cache Read Tokens",
+        ),
+    ] = 0
+    cache_write_tokens: Annotated[
+        int | None,
+        Field(
+            description="Input tokens written to a provider cache",
+            ge=0,
+            le=2147483647,
+            title="Cache Write Tokens",
+        ),
+    ] = 0
+    latency_ms: Annotated[
+        int,
+        Field(
+            description="End-to-end request latency in milliseconds",
+            ge=0,
+            le=2147483647,
+            title="Latency Ms",
+        ),
+    ]
+    status: Annotated[
+        Literal["denied"],
+        Field(description="The request was denied before routing", title="Status"),
+    ] = "denied"
+    stream: Annotated[bool, Field(description="Whether the response was streamed", title="Stream")]
+    credential_id: Annotated[
+        None,
+        Field(
+            description="No provider credential was selected before denial",
+            title="Credential Id",
+        ),
+    ] = None
+    credential_scope: Annotated[
+        None,
+        Field(
+            description="No provider credential scope was selected before denial",
+            title="Credential Scope",
+        ),
+    ] = None
 
 
 class EnvelopeAccessKeyRevokedOut(BaseModel):
@@ -293,6 +442,15 @@ class InferenceKeyRevokedOut(BaseModel):
 
 class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
     root: Annotated[Literal["owner", "auditor", "data_plane"], Field(title="InstanceRole")]
+
+
+class InstanceScope(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    level: Annotated[Literal["instance"], Field(title="Level")] = "instance"
+    org_id: Annotated[None, Field(title="Org Id")] = None
+    workspace_id: Annotated[None, Field(title="Workspace Id")] = None
 
 
 class InvitationAcceptedOut(BaseModel):
@@ -487,10 +645,10 @@ class ModelIn(BaseModel):
         ),
     ]
     capabilities: Annotated[
-        list[str] | None,
+        list[Literal["streaming", "tools", "reasoning", "structured_output"]] | None,
         Field(
             description="Capabilities supported by the model",
-            max_length=128,
+            max_length=4,
             title="Capabilities",
         ),
     ] = None
@@ -517,14 +675,17 @@ class ModelOut(BaseModel):
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     input_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
+        list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(title="Input Modalities"),
     ]
     output_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
+        list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(title="Output Modalities"),
     ]
-    capabilities: Annotated[list[str], Field(title="Capabilities")]
+    capabilities: Annotated[
+        list[Literal["streaming", "tools", "reasoning", "structured_output"]],
+        Field(title="Capabilities"),
+    ]
     parameter_support: Annotated[dict[str, Literal["supported", "unsupported"]], Field(title="Parameter Support")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
@@ -636,6 +797,15 @@ class OrgOut(BaseModel):
 
 class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
     root: Annotated[Literal["owner", "admin", "member", "data_plane"], Field(title="OrgRole")]
+
+
+class OrgScope(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    level: Annotated[Literal["org"], Field(title="Level")] = "org"
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[None, Field(title="Workspace Id")] = None
 
 
 class Name(RootModel[str]):
@@ -825,7 +995,7 @@ class ProviderCredentialOut(BaseModel):
     priority: Annotated[int, Field(title="Priority")]
     enabled: Annotated[bool, Field(title="Enabled")]
     version: Annotated[int, Field(title="Version")]
-    status: Annotated[str, Field(title="Status")]
+    status: Annotated[Literal["unknown", "live", "invalid", "rate_limited"], Field(title="Status")]
     status_at: Annotated[AwareDatetime | None, Field(title="Status At")]
     fingerprint: Annotated[str, Field(title="Fingerprint")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
@@ -996,8 +1166,120 @@ class QuickstartOut(BaseModel):
     path: Annotated[str, Field(title="Path")]
 
 
-class ScopeLevel(RootModel[Literal["instance", "org", "workspace"]]):
-    root: Annotated[Literal["instance", "org", "workspace"], Field(title="ScopeLevel")]
+class RoutedUsageEventV1(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    schema_version: Annotated[
+        Literal[1],
+        Field(description="Usage event schema version", title="Schema Version"),
+    ] = 1
+    event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
+    request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    occurred_at: Annotated[
+        AwareDatetime,
+        Field(description="Timestamp when the request completed", title="Occurred At"),
+    ]
+    org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
+    workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
+    key_id: Annotated[UUID, Field(description="Inference key ID used for the request", title="Key Id")]
+    model_id: Annotated[
+        str,
+        Field(
+            description="Caller-facing model ID",
+            max_length=255,
+            min_length=1,
+            title="Model Id",
+        ),
+    ]
+    provider_id: Annotated[
+        str,
+        Field(
+            description="Provider that served the request",
+            max_length=63,
+            min_length=1,
+            title="Provider Id",
+        ),
+    ]
+    bundle_id: Annotated[UUID, Field(description="Policy bundle used for the request", title="Bundle Id")]
+    input_tokens: Annotated[
+        int,
+        Field(description="Total input tokens", ge=0, le=2147483647, title="Input Tokens"),
+    ]
+    output_tokens: Annotated[
+        int,
+        Field(
+            description="Total output tokens",
+            ge=0,
+            le=2147483647,
+            title="Output Tokens",
+        ),
+    ]
+    cost_usd: Annotated[
+        float,
+        Field(description="Total estimated cost in USD", ge=0.0, title="Cost Usd"),
+    ]
+    cost_input_usd: Annotated[
+        float | None,
+        Field(description="Estimated input cost in USD", ge=0.0, title="Cost Input Usd"),
+    ] = 0.0
+    cost_output_usd: Annotated[
+        float | None,
+        Field(description="Estimated output cost in USD", ge=0.0, title="Cost Output Usd"),
+    ] = 0.0
+    cache_read_tokens: Annotated[
+        int | None,
+        Field(
+            description="Input tokens read from a provider cache",
+            ge=0,
+            le=2147483647,
+            title="Cache Read Tokens",
+        ),
+    ] = 0
+    cache_write_tokens: Annotated[
+        int | None,
+        Field(
+            description="Input tokens written to a provider cache",
+            ge=0,
+            le=2147483647,
+            title="Cache Write Tokens",
+        ),
+    ] = 0
+    latency_ms: Annotated[
+        int,
+        Field(
+            description="End-to-end request latency in milliseconds",
+            ge=0,
+            le=2147483647,
+            title="Latency Ms",
+        ),
+    ]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(description="How the routed request ended", title="Status"),
+    ]
+    stream: Annotated[bool, Field(description="Whether the response was streamed", title="Stream")]
+    credential_id: Annotated[
+        UUID,
+        Field(
+            description="Provider credential used for the request",
+            title="Credential Id",
+        ),
+    ]
+    credential_scope: Annotated[
+        Literal["platform", "org", "workspace"],
+        Field(
+            description="Scope of the provider credential used for the request",
+            title="Credential Scope",
+        ),
+    ]
 
 
 class ServiceAccountIn(BaseModel):
@@ -1107,7 +1389,7 @@ class UsageEventOut(BaseModel):
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    key_id: Annotated[str, Field(title="Key Id")]
+    key_id: Annotated[UUID, Field(title="Key Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
@@ -1119,113 +1401,6 @@ class UsageEventOut(BaseModel):
     cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
     cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     latency_ms: Annotated[int, Field(title="Latency Ms")]
-    status: Annotated[str, Field(title="Status")]
-    stream: Annotated[bool, Field(title="Stream")]
-    credential_id: Annotated[UUID | None, Field(title="Credential Id")]
-    credential_scope: Annotated[str | None, Field(title="Credential Scope")]
-
-
-class UsageEventV1(BaseModel):
-    """
-    One metered model request reported by a data plane.
-
-    `event_id` makes retries idempotent.
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    schema_version: Annotated[
-        Literal[1],
-        Field(description="Usage event schema version", title="Schema Version"),
-    ] = 1
-    event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
-    request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
-    occurred_at: Annotated[
-        AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
-    ]
-    org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
-    workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
-    key_id: Annotated[
-        str,
-        Field(
-            description="Inference key ID used for the request",
-            max_length=255,
-            min_length=1,
-            title="Key Id",
-        ),
-    ]
-    model_id: Annotated[
-        str,
-        Field(
-            description="Caller-facing model ID",
-            max_length=255,
-            min_length=1,
-            title="Model Id",
-        ),
-    ]
-    provider_id: Annotated[
-        str,
-        Field(
-            description="Provider that served the request, or empty for an early denial",
-            max_length=63,
-            title="Provider Id",
-        ),
-    ]
-    bundle_id: Annotated[UUID, Field(description="Policy bundle used for the request", title="Bundle Id")]
-    input_tokens: Annotated[
-        int,
-        Field(description="Total input tokens", ge=0, le=2147483647, title="Input Tokens"),
-    ]
-    output_tokens: Annotated[
-        int,
-        Field(
-            description="Total output tokens",
-            ge=0,
-            le=2147483647,
-            title="Output Tokens",
-        ),
-    ]
-    cost_usd: Annotated[
-        float,
-        Field(description="Total estimated cost in USD", ge=0.0, title="Cost Usd"),
-    ]
-    cost_input_usd: Annotated[
-        float | None,
-        Field(description="Estimated input cost in USD", ge=0.0, title="Cost Input Usd"),
-    ] = 0.0
-    cost_output_usd: Annotated[
-        float | None,
-        Field(description="Estimated output cost in USD", ge=0.0, title="Cost Output Usd"),
-    ] = 0.0
-    cache_read_tokens: Annotated[
-        int | None,
-        Field(
-            description="Input tokens read from a provider cache",
-            ge=0,
-            le=2147483647,
-            title="Cache Read Tokens",
-        ),
-    ] = 0
-    cache_write_tokens: Annotated[
-        int | None,
-        Field(
-            description="Input tokens written to a provider cache",
-            ge=0,
-            le=2147483647,
-            title="Cache Write Tokens",
-        ),
-    ] = 0
-    latency_ms: Annotated[
-        int,
-        Field(
-            description="End-to-end request latency in milliseconds",
-            ge=0,
-            le=2147483647,
-            title="Latency Ms",
-        ),
-    ]
     status: Annotated[
         Literal[
             "ok",
@@ -1236,26 +1411,11 @@ class UsageEventV1(BaseModel):
             "credential_rejected",
             "rate_limited",
         ],
-        Field(
-            description="How the request ended; cancelled events may contain partial token counts",
-            title="Status",
-        ),
+        Field(title="Status"),
     ]
-    stream: Annotated[bool, Field(description="Whether the response was streamed", title="Stream")]
-    credential_id: Annotated[
-        UUID | None,
-        Field(
-            description="Provider credential used for the request",
-            title="Credential Id",
-        ),
-    ] = None
-    credential_scope: Annotated[
-        Literal["platform", "org", "workspace"] | None,
-        Field(
-            description="Scope of the provider credential used for the request",
-            title="Credential Scope",
-        ),
-    ] = None
+    stream: Annotated[bool, Field(title="Stream")]
+    credential_id: Annotated[UUID | None, Field(title="Credential Id")]
+    credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")]
 
 
 class UserOut(BaseModel):
@@ -1322,6 +1482,15 @@ class WorkspaceOut(BaseModel):
 
 class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
     root: Annotated[Literal["admin", "member", "viewer"], Field(title="WorkspaceRole")]
+
+
+class WorkspaceScope(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    level: Annotated[Literal["workspace"], Field(title="Level")] = "workspace"
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
 
 
 class Name1(RootModel[str]):
@@ -1410,6 +1579,49 @@ class AccessKeyIn(BaseModel):
     ] = None
 
 
+class AccessKeyMintedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    parent_id: Annotated[UUID | None, Field(title="Parent Id")]
+    prefix: Annotated[str, Field(title="Prefix")]
+    permissions: Annotated[list[Permission], Field(title="Permissions")]
+    label: Annotated[str, Field(title="Label")]
+    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")]
+    revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+    scope: Annotated[
+        InstanceScope | OrgScope | WorkspaceScope,
+        Field(discriminator="level", title="Scope"),
+    ]
+    status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
+    token: Annotated[str, Field(title="Token")]
+
+
+class AccessKeyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    parent_id: Annotated[UUID | None, Field(title="Parent Id")]
+    prefix: Annotated[str, Field(title="Prefix")]
+    permissions: Annotated[list[Permission], Field(title="Permissions")]
+    label: Annotated[str, Field(title="Label")]
+    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")]
+    revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+    scope: Annotated[
+        InstanceScope | OrgScope | WorkspaceScope,
+        Field(discriminator="level", title="Scope"),
+    ]
+    status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
+
+
 class BundleManifest(BaseModel):
     """
     The complete set of organization bundles one data plane may serve.
@@ -1422,6 +1634,10 @@ class EnrollOut(BaseModel):
     orgs: Annotated[list[OrgOut], Field(title="Orgs")]
     personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
     pending_invitations: Annotated[list[InvitationPreviewOut], Field(title="Pending Invitations")]
+
+
+class EnvelopeAccessKeyMintedOut(BaseModel):
+    data: AccessKeyMintedOut
 
 
 class EnvelopeBundleManifest(BaseModel):
@@ -1510,6 +1726,10 @@ class EnvelopeUserOut(BaseModel):
 
 class EnvelopeWorkspaceOut(BaseModel):
     data: WorkspaceOut
+
+
+class EnvelopeListAccessKeyOut(BaseModel):
+    data: Annotated[list[AccessKeyOut], Field(title="Data")]
 
 
 class EnvelopeListInferenceKeyOut(BaseModel):
@@ -1610,10 +1830,10 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
-class Scope(BaseModel):
-    level: ScopeLevel
-    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
-    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
+class OrgServiceAccountMintedOut(BaseModel):
+    service_account: UserOut
+    membership: MembershipOut
+    access_key: AccessKeyMintedOut
 
 
 class TaxonomyApplyOut(BaseModel):
@@ -1640,47 +1860,6 @@ class WorkspaceMembershipOut(BaseModel):
     status: Annotated[Literal["member"], Field(title="Status")]
 
 
-class AccessKeyMintedOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    user_id: Annotated[UUID, Field(title="User Id")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")]
-    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
-    parent_id: Annotated[UUID | None, Field(title="Parent Id")]
-    prefix: Annotated[str, Field(title="Prefix")]
-    permissions: Annotated[list[Permission], Field(title="Permissions")]
-    label: Annotated[str, Field(title="Label")]
-    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")]
-    revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
-    created_at: Annotated[AwareDatetime, Field(title="Created At")]
-    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-    scope: Scope
-    status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
-    token: Annotated[str, Field(title="Token")]
-
-
-class AccessKeyOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    user_id: Annotated[UUID, Field(title="User Id")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")]
-    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
-    parent_id: Annotated[UUID | None, Field(title="Parent Id")]
-    prefix: Annotated[str, Field(title="Prefix")]
-    permissions: Annotated[list[Permission], Field(title="Permissions")]
-    label: Annotated[str, Field(title="Label")]
-    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")]
-    revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
-    created_at: Annotated[AwareDatetime, Field(title="Created At")]
-    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-    scope: Scope
-    status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
-
-
-class EnvelopeAccessKeyMintedOut(BaseModel):
-    data: AccessKeyMintedOut
-
-
 class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
 
@@ -1693,6 +1872,10 @@ class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
 
 
+class EnvelopeOrgServiceAccountMintedOut(BaseModel):
+    data: OrgServiceAccountMintedOut
+
+
 class EnvelopeTaxonomyApplyOut(BaseModel):
     data: TaxonomyApplyOut
 
@@ -1701,23 +1884,9 @@ class EnvelopeWorkspaceMembershipOut(BaseModel):
     data: WorkspaceMembershipOut
 
 
-class EnvelopeListAccessKeyOut(BaseModel):
-    data: Annotated[list[AccessKeyOut], Field(title="Data")]
-
-
 class EnvelopeListOrgMemberOut(BaseModel):
     data: Annotated[list[OrgMemberOut], Field(title="Data")]
 
 
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
-
-
-class OrgServiceAccountMintedOut(BaseModel):
-    service_account: UserOut
-    membership: MembershipOut
-    access_key: AccessKeyMintedOut
-
-
-class EnvelopeOrgServiceAccountMintedOut(BaseModel):
-    data: OrgServiceAccountMintedOut

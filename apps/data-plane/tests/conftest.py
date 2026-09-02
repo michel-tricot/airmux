@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -22,6 +22,7 @@ from contract import (
     Secret,
     SecretPurpose,
     SecretRef,
+    inference_key_id,
     sign_bundle,
     token_hash,
     uuid7,
@@ -81,10 +82,12 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
     return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
 
 
-def make_key(key_id="k-dev", org=ORG, workspace=WORKSPACE):
+def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=key_id, org_id=org, workspace_id=workspace, token_hash=token_hash(token))
+    resolved_id = inference_key_id(key_id)
+    assert isinstance(resolved_id, UUID)
+    return token, KeyEntry(key_id=resolved_id, org_id=org, workspace_id=workspace, token_hash=token_hash(token))
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -130,13 +133,13 @@ def mock_control_plane() -> None:
 PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
 CTX = Ctx(
-    request_id="req-1",
+    request_id=uuid7(),
     model=MODEL,
     provider=PROVIDER,
     stream=True,
     org_id=ORG,
     workspace_id=WORKSPACE,
-    key_id="k-dev",
+    key_id=uuid7(),
     credential_id=uuid7(),
     credential_scope="workspace",
     bundle_id=uuid7(),

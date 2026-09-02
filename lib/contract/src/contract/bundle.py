@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime
-from typing import Literal, cast, get_args
+from typing import Annotated, Literal, cast, get_args
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, HttpUrl
 
-from contract.secrets import SecretRef
+from contract.ids import InferenceKeyId
+from contract.secrets import SecretRef, SecretReference
 
 ParameterSupport = Literal["supported", "unsupported"]
 Modality = Literal["text", "image", "audio", "video", "pdf"]
 MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
+Capability = Literal["streaming", "tools", "reasoning", "structured_output"]
+Modalities = Annotated[list[Modality], Field(min_length=1, max_length=len(MODALITIES))]
+Capabilities = Annotated[list[Capability], Field(max_length=4)]
+
+
+def _secret_reference(value: object) -> object:
+    return asdict(value) if type(value) is SecretRef else value
 
 
 class KeyEntry(BaseModel):
@@ -22,7 +31,7 @@ class KeyEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    key_id: str
+    key_id: InferenceKeyId
     org_id: UUID
     workspace_id: UUID  # the workspace the key was minted in, stamped onto usage events
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
@@ -56,9 +65,9 @@ class ModelEntry(BaseModel):
     cache_write_price_per_mtok: float  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
-    input_modalities: list[Modality] | None
-    output_modalities: list[Modality] | None
-    capabilities: list[str]
+    input_modalities: Modalities
+    output_modalities: Modalities
+    capabilities: Capabilities
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
     egress_kind: str | None = None
 
@@ -71,7 +80,7 @@ class CredentialEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    ref: SecretRef
+    ref: Annotated[SecretReference, BeforeValidator(_secret_reference)]
     priority: int  # lower is tried first, ties break by the ref's name
     version: int
 

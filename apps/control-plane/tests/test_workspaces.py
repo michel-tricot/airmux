@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from fastapi.testclient import TestClient
 from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
@@ -299,10 +301,10 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
 
         c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=org)
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"]), cp.bundle_key.public_key())
-        assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(k1["id"], str(ws1)), (k2["id"], str(ws2))}
+        assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(UUID(k1["id"]), str(ws1)), (UUID(k2["id"]), str(ws2))}
 
         assert c.delete(f"/api/v1/orgs/{o1}/workspaces/{ws2}/inference-keys/{k1['id']}", headers=org).status_code == 404
         assert c.delete(f"/api/v1/orgs/{o1}/workspaces/{ws1}/inference-keys/{k1['id']}", headers=org).status_code == 200
         c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=org)
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"]), cp.bundle_key.public_key())
-        assert [k.key_id for k in bundle.keys] == [k2["id"]]
+        assert [k.key_id for k in bundle.keys] == [UUID(k2["id"])]

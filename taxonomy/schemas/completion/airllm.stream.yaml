@@ -23,6 +23,74 @@ $defs:
     - detail
     title: Adjustment
     type: object
+  DeltaChunk:
+    additionalProperties: false
+    properties:
+      id:
+        title: Id
+        type: string
+      delta:
+        discriminator:
+          mapping:
+            reasoning: '#/$defs/ReasoningDelta'
+            text: '#/$defs/TextDelta'
+            tool_call: '#/$defs/ToolCallDelta'
+          propertyName: type
+        oneOf:
+        - $ref: '#/$defs/TextDelta'
+        - $ref: '#/$defs/ReasoningDelta'
+        - $ref: '#/$defs/ToolCallDelta'
+        title: Delta
+      finish_reason:
+        default: null
+        title: Finish Reason
+        type: 'null'
+      usage:
+        default: null
+        title: Usage
+        type: 'null'
+      gateway:
+        default: null
+        title: Gateway
+        type: 'null'
+    required:
+    - id
+    - delta
+    title: DeltaChunk
+    type: object
+  FinalChunk:
+    additionalProperties: false
+    properties:
+      id:
+        title: Id
+        type: string
+      delta:
+        default: null
+        title: Delta
+        type: 'null'
+      finish_reason:
+        anyOf:
+        - enum:
+          - stop
+          - length
+          - tool_calls
+          - content_filter
+          type: string
+        - type: 'null'
+        default: null
+        title: Finish Reason
+      usage:
+        $ref: '#/$defs/Usage'
+      gateway:
+        anyOf:
+        - $ref: '#/$defs/GatewayInfo'
+        - type: 'null'
+        default: null
+    required:
+    - id
+    - usage
+    title: FinalChunk
+    type: object
   GatewayInfo:
     additionalProperties: false
     description: 'What the gateway did on the way to the provider: the one namespaced place data plane
@@ -151,49 +219,6 @@ $defs:
         type: boolean
     title: Usage
     type: object
-additionalProperties: false
-description: One streamed increment. The closing chunk carries finish_reason, usage and gateway, and no delta.
-properties:
-  id:
-    title: Id
-    type: string
-  delta:
-    anyOf:
-    - discriminator:
-        mapping:
-          reasoning: '#/$defs/ReasoningDelta'
-          text: '#/$defs/TextDelta'
-          tool_call: '#/$defs/ToolCallDelta'
-        propertyName: type
-      oneOf:
-      - $ref: '#/$defs/TextDelta'
-      - $ref: '#/$defs/ReasoningDelta'
-      - $ref: '#/$defs/ToolCallDelta'
-    - type: 'null'
-    default: null
-    title: Delta
-  finish_reason:
-    anyOf:
-    - enum:
-      - stop
-      - length
-      - tool_calls
-      - content_filter
-      type: string
-    - type: 'null'
-    default: null
-    title: Finish Reason
-  usage:
-    anyOf:
-    - $ref: '#/$defs/Usage'
-    - type: 'null'
-    default: null
-  gateway:
-    anyOf:
-    - $ref: '#/$defs/GatewayInfo'
-    - type: 'null'
-    default: null
-required:
-- id
-title: CanonicalChunk
-type: object
+anyOf:
+- $ref: '#/$defs/DeltaChunk'
+- $ref: '#/$defs/FinalChunk'

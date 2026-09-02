@@ -8,15 +8,35 @@ import webbrowser
 from typing import TYPE_CHECKING, NamedTuple
 
 import typer
+from pydantic import BaseModel
 from rich.panel import Panel
+
+from api_models import (
+    AccessKeyMintedOut,
+    ClaimOut,
+    CliAuthApprovedOut,
+    CliAuthOrgCompleteOut,
+    CliAuthPendingOut,
+    CliAuthPollOut,
+    CliAuthStartOut,
+    DataPlaneInstanceOut,
+    EnrollOut,
+    InferenceKeyMintedOut,
+    MeOut,
+    OrgOut,
+    ProviderCredentialOut,
+    TaxonomyOut,
+    UserOut,
+    WorkspaceOut,
+)
 
 if TYPE_CHECKING:
     import httpx
 
-from cli.client import api_error, ensure_ok, payload, resolve_control_plane_url
+from cli.client import api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import DEFAULT_CONSOLE_URL, active_profile, config_path, load_config, set_active, upsert_url_profile
+from cli.profiles import DEFAULT_CONSOLE_URL, Profile, config_path, load_active_profile, load_config, set_active, upsert_url_profile
 
 MINE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -36,18 +56,17 @@ def _client_name() -> str:
 
 
 def _existing_access_key(control_plane_url: str) -> str | None:
-    profile = active_profile()
-    if profile is None or str(profile.get("control_plane_url", "")).rstrip("/") != control_plane_url.rstrip("/"):
+    profile = load_active_profile()
+    if profile is None or (profile.control_plane_url or "").rstrip("/") != control_plane_url.rstrip("/"):
         return None
-    token = profile.get("token")
-    return str(token) if token else None
+    return profile.token
 
 
-def _payload_or_die(resp: httpx.Response, what: str) -> dict:
+def _payload_or_die[PayloadT: BaseModel](resp: httpx.Response, what: str, payload_type: type[PayloadT]) -> PayloadT:
     if not resp.is_success:
         console.print(f"[red]{what} failed ({resp.status_code}): {api_error(resp)}[/red]")
         raise typer.Exit(1)
-    return payload(resp)
+    return payload(resp, payload_type)
 
 
 def _step(done: str) -> None:
@@ -124,10 +143,14 @@ def seed_provider_credentials(
     if not catalog.is_success:
         return []
     credentials = client.get("/api/v1/instance/provider-credentials")
-    existing = {credential["provider_name"]: credential["enabled"] for credential in payload(credentials)} if credentials.is_success else {}
+    existing = (
+        {credential.provider_name: credential.enabled for credential in payload_rows(credentials, ProviderCredentialOut)}
+        if credentials.is_success
+        else {}
+    )
     results = []
-    for provider in catalog.json()["data"]["providers"]:
-        name = provider["name"]
+    for provider in payload(catalog, TaxonomyOut).providers:
+        name = provider.name
         if name in existing:
             results.append(ProviderKey(name, "already configured", "" if existing[name] else "credential exists but is disabled"))
             continue
@@ -146,100 +169,105 @@ def configured_model(client: httpx.Client) -> str | None:
     credentials = client.get("/api/v1/instance/provider-credentials")
     if not catalog.is_success or not credentials.is_success:
         return None
-    taxonomy = payload(catalog)
-    configured = {credential["provider_name"] for credential in payload(credentials) if credential["enabled"]}
-    provider_ids = {provider["id"] for provider in taxonomy["providers"] if provider["name"] in configured}
-    models = sorted(model["name"] for model in taxonomy["models"] if model["provider_id"] in provider_ids)
+    taxonomy = payload(catalog, TaxonomyOut)
+    configured = {credential.provider_name for credential in payload_rows(credentials, ProviderCredentialOut) if credential.enabled}
+    provider_ids = {provider.id for provider in taxonomy.providers if provider.name in configured}
+    models = sorted(model.name for model in taxonomy.models if model.provider_id in provider_ids)
     return models[0] if models else None
 
 
 def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str) -> None:
     if claimed:
-        account = _payload_or_die(client.post("/api/v1/auth/login", json={"email": email, "password": password}), "sign in")
-        if account.get("instance_role") != "owner":
+        account = _payload_or_die(client.post("/api/v1/auth/login", json={"email": email, "password": password}), "sign in", MeOut)
+        if account.instance_role is None or account.instance_role.root != "owner":
             console.print("[red]Quickstart requires the instance owner account.[/red]")
             raise typer.Exit(1)
         _step(f"Signed in as [bold]{email}[/bold]")
         return
-    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
+    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up", MeOut)
     _step(f"Account [bold]{email}[/bold]")
 
 
-def _personal_org(client: httpx.Client, email: str, requested_name: str) -> dict:
-    enrollment = _payload_or_die(client.get("/api/v1/enroll"), "organization lookup")
-    personal_id = enrollment.get("personal_org_id")
-    existing = next((organization for organization in enrollment["orgs"] if organization["id"] == personal_id), None)
+def _personal_org(client: httpx.Client, email: str, requested_name: str) -> OrgOut:
+    enrollment = _payload_or_die(client.get("/api/v1/enroll"), "organization lookup", EnrollOut)
+    existing = next((organization for organization in enrollment.orgs if organization.id == enrollment.personal_org_id), None)
     if existing is not None:
-        _step(f"Organization [bold]{existing['name']}[/bold]")
+        _step(f"Organization [bold]{existing.name}[/bold]")
         return existing
     organization = _payload_or_die(
         client.post("/api/v1/enroll/org", json={"name": requested_name or email.split("@", maxsplit=1)[0]}),
         "org creation",
+        OrgOut,
     )
-    _step(f"Organization [bold]{organization['name']}[/bold]")
+    _step(f"Organization [bold]{organization.name}[/bold]")
     return organization
 
 
 def _organization_access_key(client: httpx.Client, org_id: str) -> str:
-    started = _payload_or_die(client.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
+    started = _payload_or_die(client.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request", CliAuthStartOut)
     _payload_or_die(
         client.post(
             "/api/v1/auth/cli/approve",
-            json={"user_code": started["user_code"], "scope": "org", "org_id": org_id},
+            json={"user_code": started.user_code, "scope": "org", "org_id": org_id},
         ),
         "access key approval",
+        CliAuthApprovedOut,
     )
     delivered = _payload_or_die(
         client.post(
             "/api/v1/auth/cli/poll",
-            json={"poll_secret": started["poll_secret"]},
+            json={"poll_secret": started.poll_secret},
         ),
         "access key delivery",
+        CliAuthOrgCompleteOut,
     )
-    return str(delivered["token"])
+    return delivered.token
 
 
-def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]) -> dict:
-    listed = _payload_or_die(client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=bearer), "workspace lookup")
-    workspace = next((candidate for candidate in listed if candidate["slug"] == "default"), None)
+def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]) -> WorkspaceOut:
+    listed = payload_rows(ensure_ok(client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=bearer)), WorkspaceOut)
+    workspace = next((candidate for candidate in listed if candidate.slug == "default"), None)
     if workspace is None:
         workspace = _payload_or_die(
             client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer),
             "workspace creation",
+            WorkspaceOut,
         )
     return workspace
 
 
 def _install_data_plane_key(client: httpx.Client) -> str | None:
-    instances = _payload_or_die(client.get("/api/v1/instance/data-planes", params={"include_offline": True}), "gateway lookup")
+    instances = payload_rows(ensure_ok(client.get("/api/v1/instance/data-planes", params={"include_offline": True})), DataPlaneInstanceOut)
     if instances:
         _step("Gateway already connected")
         return None
-    users = _payload_or_die(client.get("/api/v1/users", params={"service_account": True}), "data-plane principal lookup")
-    data_plane = next((user for user in users if user["name"] == "data-plane" and user["instance_role"] == "data_plane"), None)
+    users = payload_rows(ensure_ok(client.get("/api/v1/users", params={"service_account": True})), UserOut)
+    data_plane = next((user for user in users if user.name == "data-plane" and user.instance_role == "data_plane"), None)
     if data_plane is None:
         data_plane = _payload_or_die(
             client.post("/api/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
             "data-plane principal creation",
+            UserOut,
         )
     data_plane_key = _payload_or_die(
         client.post(
             "/api/v1/instance/access-keys",
-            json={"label": "data-plane", "user_id": data_plane["id"], "permissions": DATA_PLANE_PERMISSIONS},
+            json={"label": "data-plane", "user_id": str(data_plane.id), "permissions": DATA_PLANE_PERMISSIONS},
         ),
         "data-plane key creation",
+        AccessKeyMintedOut,
     )
-    connected = client.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
+    connected = client.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key.token})
     if connected.is_success:
         _step("Connected your gateway")
         return None
     console.print(f"  [yellow]![/yellow] Could not connect your gateway ({connected.status_code}: {api_error(connected)})")
-    return str(data_plane_key["token"])
+    return data_plane_key.token
 
 
-def _inference_key(client: httpx.Client, org_id: str, workspace: dict, bearer: dict[str, str]) -> dict:
-    path = f"/api/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys"
-    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key mint")
+def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyMintedOut:
+    path = f"/api/v1/orgs/{org_id}/workspaces/{workspace.id}/inference-keys"
+    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key mint", InferenceKeyMintedOut)
 
 
 def _gateway_error(response: httpx.Response) -> str:
@@ -307,32 +335,33 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     url, console_url = resolve_urls(control_plane_url, console_url)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
-        claimed = bool(_payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check")["claimed"])
+        claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
         _login_or_signup(c, claimed, email, password)
         organization = _personal_org(c, email, org)
-        org_id, org_name = organization["id"], organization["name"]
-        token = _organization_access_key(c, org_id)
+        org_id, org_name = organization.id, organization.name
+        token = _organization_access_key(c, str(org_id))
         bearer = {"authorization": f"Bearer {token}"}
-        workspace = _default_workspace(c, org_id, bearer)
+        workspace = _default_workspace(c, str(org_id), bearer)
         upsert_url_profile(
             org_name,
-            {
-                "control_plane_url": url,
-                "console_url": console_url,
-                "gateway_url": gateway_url.rstrip("/"),
-                "org_id": org_id,
-                "org_name": org_name,
-                "token": token,
-                "workspace": workspace["slug"],
-                "workspace_name": workspace["name"],
-            },
+            Profile(
+                control_plane_url=url,
+                console_url=console_url,
+                gateway_url=gateway_url.rstrip("/"),
+                scope="org",
+                org_id=str(org_id),
+                org_name=str(org_name),
+                token=str(token),
+                workspace=workspace.slug,
+                workspace_name=workspace.name,
+            ),
         )
-        _step(f"Workspace [bold]{workspace['name']}[/bold], signed in and saved to {config_path()}")
+        _step(f"Workspace [bold]{workspace.name}[/bold], signed in and saved to {config_path()}")
         data_plane_token = _install_data_plane_key(c)
-        key = _inference_key(c, org_id, workspace, bearer)
+        key = _inference_key(c, str(org_id), workspace, bearer)
         _step("API key created")
         console.print(f"\nYour API key for [bold]{org_name}[/bold], shown once:")
-        console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
+        console.print(Panel(key.token, title="AIRLLM_API_KEY", border_style="cyan", expand=False))
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Global provider keys. Press enter to skip a provider.[/dim]")
         results = seed_provider_credentials(c, overrides)
@@ -351,7 +380,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         console.print("\n[red]Setup is incomplete: no model has a configured provider credential.[/red]")
         console.print("Enable or add a provider key, then run [bold]airllm quickstart[/bold] again.")
         raise typer.Exit(1)
-    error = verify_gateway(gateway_url, key["token"], model)
+    error = verify_gateway(gateway_url, key.token, model)
     if error:
         console.print(f"\n[red]Setup is incomplete: the gateway request failed: {error}[/red]")
         console.print("Run [bold]airllm doctor[/bold] after resolving the reported gateway issue.")
@@ -359,7 +388,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
 
     console.print(f"\n[green]Ready.[/green] Verified [bold]{model}[/bold] through the gateway.")
     console.print("\n[dim]Try it:[/dim]")
-    print(_curl(gateway_url, key["token"], model))
+    print(_curl(gateway_url, key.token, model))
     console.print(f"\n[dim]Console:[/dim] {console_url}")
 
 
@@ -379,36 +408,37 @@ def login(
     client_name = _client_name()
     existing_access_key = _existing_access_key(control_plane_url)
     with httpx.Client(base_url=control_plane_url, timeout=10.0) as c:
-        started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
-        console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
+        started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in", CliAuthStartOut)
+        console.print(f"Confirm code [bold]{started.user_code}[/bold] at {started.verification_url}")
         if not no_browser:
-            webbrowser.open(started["verification_url"])
-        deadline = time.monotonic() + started["expires_in_seconds"]
+            webbrowser.open(started.verification_url)
+        deadline = time.monotonic() + started.expires_in_seconds
         while time.monotonic() < deadline:
-            time.sleep(started["interval_seconds"])
+            time.sleep(started.interval_seconds)
             poll = c.post(
                 "/api/v1/auth/cli/poll",
-                json={"poll_secret": started["poll_secret"]},
+                json={"poll_secret": started.poll_secret},
                 headers={"authorization": f"Bearer {existing_access_key}"} if existing_access_key else None,
             )
             if poll.status_code == HTTP_GONE:
                 console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
                 raise typer.Exit(1)
-            done = _payload_or_die(poll, "Sign-in")
-            if done["status"] == "complete":
-                scope = done.get("scope") or ("org" if done.get("org_id") else "instance")
-                target_name = str(done["org_name"]) if scope == "org" else "instance"
-                scoped_values = {"org_id": done["org_id"], "org_name": done["org_name"]} if scope == "org" else {}
+            ensure_ok(poll)
+            done = payload(poll, CliAuthPollOut).root
+            if not isinstance(done, CliAuthPendingOut):
+                target_name = done.org_name if isinstance(done, CliAuthOrgCompleteOut) else "instance"
+                profile = Profile(
+                    control_plane_url=control_plane_url,
+                    console_url=console_url,
+                    gateway_url=gateway_url,
+                    scope=done.scope,
+                    token=done.token,
+                    org_id=str(done.org_id) if isinstance(done, CliAuthOrgCompleteOut) else None,
+                    org_name=done.org_name if isinstance(done, CliAuthOrgCompleteOut) else None,
+                )
                 profile_name = upsert_url_profile(
                     target_name,
-                    {
-                        "control_plane_url": control_plane_url,
-                        "console_url": console_url,
-                        "gateway_url": gateway_url,
-                        "scope": scope,
-                        "token": done["token"],
-                        **scoped_values,
-                    },
+                    profile,
                 )
                 console.print(f"Signed in to [bold]{target_name}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
                 return
@@ -422,13 +452,13 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
     if os.environ.get("GW_ACCESS_KEY"):
         console.print("[yellow]GW_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
-    if name in (config.get("profiles") or {}):
+    if name in config.profiles:
         set_active(name)
         console.print(f"Switched to [bold]{name}[/bold]")
         return
     console.print(f"Not signed in to [bold]{name}[/bold]. Opening browser login, pick [bold]{name}[/bold] to approve.")
     login(url="", control_plane_url=control_plane_url, no_browser=False, console_url="", gateway_url="")
-    active = load_config().get("active")
+    active = load_config().active
     if active != name:
         console.print(f"[yellow]You approved [bold]{active}[/bold], not {name}. It is now active.[/yellow]")
 
@@ -441,6 +471,6 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     with access_client(control_plane_url) as c:
         resp = c.get("/api/v1/enroll")
         ensure_ok(resp)
-        standing = payload(resp)
-        rows = [{**org, "kind": "personal" if org["id"] == standing["personal_org_id"] else "member"} for org in standing["orgs"]]
+        standing = payload(resp, EnrollOut)
+        rows = [{**org.model_dump(mode="json"), "kind": "personal" if org.id == standing.personal_org_id else "member"} for org in standing.orgs]
         print_rows("orgs", rows, MINE_COLS, fmt)

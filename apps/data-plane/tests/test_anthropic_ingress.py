@@ -18,12 +18,13 @@ from pydantic import TypeAdapter
 from starlette.testclient import TestClient
 
 from data_plane.canonical import (
-    CanonicalChunk,
     CanonicalResponse,
+    DeltaChunk,
     DocumentPart,
+    JsonObjectResponseFormat,
+    JsonSchemaResponseFormat,
     ReasoningDelta,
     ReasoningPart,
-    ResponseFormat,
     TextDelta,
     TextPart,
     Usage,
@@ -104,7 +105,7 @@ def test_parse_recovers_json_object_from_anthropic_generic_object_schema():
         }
     )
 
-    assert request.response_format == ResponseFormat(type="json_object")
+    assert request.response_format == JsonObjectResponseFormat()
 
 
 def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
@@ -118,7 +119,7 @@ def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
         }
     )
 
-    assert request.response_format == ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
+    assert request.response_format == JsonSchemaResponseFormat(json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def test_the_sdk_reads_a_thinking_signature_back():
@@ -163,9 +164,9 @@ def test_the_sdk_replays_cross_provider_reasoning_identity():
 def test_the_stream_replays_cross_provider_reasoning_identity():
     stream = AnthropicResponseStream()
     frames = [
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="think", signature="encr"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(signature="ypted"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="ok"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="think", signature="encr"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(signature="ypted"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="ok"))),
     ]
     events = [json.loads(frame.split(b"data: ", 1)[1]) for frame in frames]
     signature = next(

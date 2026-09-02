@@ -10,7 +10,16 @@ from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
 from contract import Secret
-from data_plane.canonical import CanonicalMessage, CanonicalRequest, DocumentPart, ReasoningConfig, ReasoningPart, ResponseFormat, TextPart, ToolDef
+from data_plane.canonical import (
+    CanonicalMessage,
+    CanonicalRequest,
+    DocumentPart,
+    JsonSchemaResponseFormat,
+    ReasoningConfig,
+    ReasoningPart,
+    TextPart,
+    ToolDef,
+)
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
 
@@ -298,7 +307,7 @@ def test_openai_json_schema_without_a_name_gets_a_stable_name():
     adapter, model = _adapter("openai_compatible")
     request = request_of(
         CORPUS[0],
-        response_format=ResponseFormat(type="json_schema", json_schema={"schema": {"type": "object"}}),
+        response_format=JsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -310,7 +319,7 @@ def test_responses_json_schema_without_a_name_gets_a_stable_name():
     adapter, model = _adapter("openai_responses")
     request = request_of(
         CORPUS[0],
-        response_format=ResponseFormat(type="json_schema", json_schema={"schema": {"type": "object"}}),
+        response_format=JsonSchemaResponseFormat(json_schema={"schema": {"type": "object"}}),
     )
 
     sent = json.loads(adapter.transform_request(request, model).body)
@@ -342,8 +351,7 @@ def test_anthropic_maps_reasoning_structured_output_and_tool_options():
         parallel_tool_calls=True,
         tools=[ToolDef(name="answer", parameters={"type": "object"}, strict=True)],
         tool_choice="required",
-        response_format=ResponseFormat(
-            type="json_schema",
+        response_format=JsonSchemaResponseFormat(
             json_schema={"name": "answer", "schema": {"type": "object", "properties": {"answer": {"type": "integer"}}}},
         ),
     )

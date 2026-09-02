@@ -8,9 +8,9 @@ from conftest import CTX
 from jsonschema import Draft202012Validator
 
 from data_plane.canonical import (
-    CanonicalChunk,
-    CanonicalMessage,
+    CanonicalMessageValue,
     CanonicalResponse,
+    DeltaChunk,
     DocumentPart,
     ReasoningDelta,
     ReasoningPart,
@@ -57,7 +57,7 @@ SPELLINGS = [
 ]
 
 
-def _said(messages: list[CanonicalMessage]) -> list[tuple[str, str]]:
+def _said(messages: list[CanonicalMessageValue]) -> list[tuple[str, str]]:
     return [(m.role, "".join(p.text for p in m.content if isinstance(p, TextPart))) for m in messages]
 
 
@@ -157,7 +157,7 @@ def test_input_file_is_preserved_as_a_document():
 
 
 def test_streaming_reasoning_uses_the_provider_item_id():
-    frames = ResponsesStream().chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="")))
+    frames = ResponsesStream().chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="")))
 
     event = json.loads(frames[0].split(b"data: ", 1)[1])
     assert event["item"]["id"] == "rs_provider"
@@ -170,8 +170,8 @@ def _payload(frame: bytes) -> dict:
 def test_mixed_text_and_tool_streams_allocate_distinct_output_items():
     stream = ResponsesStream()
     frames = [
-        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="checking"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="checking"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
     ]
     payloads = [_payload(frame) for frame in frames]
     added = [payload for payload in payloads if payload["type"] == "response.output_item.added"]
@@ -188,7 +188,7 @@ def test_responses_stream_events_carry_sequence_and_complete_item_identity():
 
     frames = [
         *start(CTX),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="hello"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="hello"))),
         *stream.closing(
             CanonicalResponse(id="response-1", model="gpt-test", content=[TextPart(text="hello")], finish_reason="stop", usage=Usage()),
             [],
@@ -208,9 +208,9 @@ def test_responses_output_events_match_the_checked_in_openai_schema():
     stream = ResponsesStream()
     frames = [
         *stream.start(CTX),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="hello"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs-1", text="think"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=TextDelta(text="hello"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=ReasoningDelta(id="rs-1", text="think"))),
+        *stream.chunk(DeltaChunk(id="response-1", delta=ToolCallDelta(index=0, id="call-1", name="lookup", arguments="{}"))),
         *stream.closing(CanonicalResponse(id="response-1", model="gpt-test", content=[], finish_reason="stop", usage=Usage()), []),
         *stream.error(CanonicalError(status=502, code="upstream_error", message="failed")),
     ]

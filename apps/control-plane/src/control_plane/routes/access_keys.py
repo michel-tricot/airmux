@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col
 
 from control_plane.authority import access_key_parent
-from control_plane.authz import Actor, Permission, Scope, ScopeLevel
+from control_plane.authz import Actor, Permission, Scope, ScopeLevel, ScopeValue
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import AccessKeyGrant, mint_access_key
 from control_plane.models import AccessKey, User
@@ -28,7 +28,7 @@ async def selected_access_key(key_id: UUID) -> AccessKey:
 AccessKeyDep = Annotated[AccessKey, Depends(selected_access_key)]
 
 
-async def access_key_scope(key: AccessKeyDep) -> Scope:
+async def access_key_scope(key: AccessKeyDep) -> ScopeValue:
     return key.scope
 
 
@@ -36,7 +36,7 @@ def _out(key: AccessKey, now: datetime) -> AccessKeyOut:
     return AccessKeyOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now)})
 
 
-async def _list_access_keys(scope: Scope, user_id: UUID | None) -> Envelope[list[AccessKeyOut]]:
+async def _list_access_keys(scope: ScopeValue, user_id: UUID | None) -> Envelope[list[AccessKeyOut]]:
     conditions = []
     if scope.level is ScopeLevel.org:
         conditions.append(AccessKey.org_id == scope.org_id)
@@ -49,7 +49,7 @@ async def _list_access_keys(scope: Scope, user_id: UUID | None) -> Envelope[list
     return Envelope(data=[_out(key, now) for key in keys])
 
 
-async def issue_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> AccessKeyMintedOut:
+async def issue_access_key(body: AccessKeyIn, actor: Actor, scope: ScopeValue) -> AccessKeyMintedOut:
     now = datetime.now(tz=UTC)
     if body.expires_at is not None and body.expires_at <= now:
         raise HTTPException(status_code=422, detail="expires_at must be in the future")
@@ -74,7 +74,7 @@ async def issue_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> Acc
     return AccessKeyMintedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token})
 
 
-async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> Envelope[AccessKeyMintedOut]:
+async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: ScopeValue) -> Envelope[AccessKeyMintedOut]:
     return Envelope(data=await issue_access_key(body, actor, scope))
 
 

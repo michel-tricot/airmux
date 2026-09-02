@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, RootModel, field_validator
 
 from contract import PLAYGROUND_COOKIE
 from control_plane.authority import effective_permissions, principal_can_issue_instance_access_key, principal_can_select_org, visible_org_ids
@@ -220,20 +221,28 @@ class CliAuthRequestOut(BaseModel):
     can_approve_instance: bool
 
 
-class CliAuthApproveIn(RequestModel):
+class _CliAuthApproveIn(RequestModel):
     user_code: str = Field(description="Device code shown by the CLI", min_length=8, max_length=16)
-    scope: Literal["instance", "org"] = Field("org", description="Scope the CLI access key should use")
-    org_id: UUID | None = Field(default=None, description="Organization the CLI access key should use for organization scope")
 
-    @model_validator(mode="after")
-    def valid_scope(self) -> CliAuthApproveIn:
-        if self.scope == "org" and self.org_id is None:
-            msg = "org_id is required for organization scope"
-            raise ValueError(msg)
-        if self.scope == "instance" and self.org_id is not None:
-            msg = "org_id is not accepted for instance scope"
-            raise ValueError(msg)
-        return self
+
+class CliInstanceAuthApproveIn(_CliAuthApproveIn):
+    scope: Literal["instance"] = Field("instance", description="Issue an instance-scoped CLI access key")
+    org_id: None = Field(None, description="Organization is absent for instance access")
+
+
+class CliOrgAuthApproveIn(_CliAuthApproveIn):
+    scope: Literal["org"] = Field("org", description="Issue an organization-scoped CLI access key")
+    org_id: UUID = Field(description="Organization the CLI access key should use")
+
+
+def _default_cli_approval_scope(value: object) -> object:
+    if isinstance(value, Mapping) and "scope" not in value:
+        return {**value, "scope": "org"}
+    return value
+
+
+CliAuthApproval = Annotated[CliInstanceAuthApproveIn | CliOrgAuthApproveIn, Field(discriminator="scope")]
+CliAuthApproveIn = Annotated[CliAuthApproval, BeforeValidator(_default_cli_approval_scope)]
 
 
 class CliAuthApprovedOut(BaseModel):
@@ -245,13 +254,35 @@ class CliAuthPollIn(RequestModel):
     poll_secret: str = Field(description="Polling secret returned when device authorization started", min_length=1, max_length=256)
 
 
-class CliAuthPollOut(BaseModel):
-    status: Literal["pending", "complete"]
+class CliAuthPendingOut(BaseModel):
+    status: Literal["pending"] = "pending"
     interval_seconds: int
-    scope: Literal["instance", "org"] | None = None
-    token: str | None = None
-    org_id: UUID | None = None
-    org_name: str | None = None
+    scope: None = None
+    token: None = None
+    org_id: None = None
+    org_name: None = None
+
+
+class CliAuthInstanceCompleteOut(BaseModel):
+    status: Literal["complete"] = "complete"
+    interval_seconds: int
+    scope: Literal["instance"] = "instance"
+    token: str
+    org_id: None = None
+    org_name: None = None
+
+
+class CliAuthOrgCompleteOut(BaseModel):
+    status: Literal["complete"] = "complete"
+    interval_seconds: int
+    scope: Literal["org"] = "org"
+    token: str
+    org_id: UUID
+    org_name: str
+
+
+class CliAuthPollOut(RootModel[CliAuthPendingOut | CliAuthInstanceCompleteOut | CliAuthOrgCompleteOut]):
+    pass
 
 
 def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
@@ -305,8 +336,6 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
             raise HTTPException(status_code=403, detail="You cannot approve instance CLI access")
     else:
         org_id = body.org_id
-        if org_id is None:
-            raise HTTPException(status_code=422, detail="Organization scope requires an organization")
         if await Org.find_by_id(org_id) is None:
             raise HTTPException(status_code=403, detail="That organization no longer exists")
         if not await principal_can_select_org(user.id, org_id):
@@ -326,7 +355,7 @@ async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope
     """
     auth_request = _live(await CliAuthRequest.for_delivery(body.poll_secret))
     if auth_request.approved_user_id is None:
-        return Envelope(data=CliAuthPollOut(status="pending", interval_seconds=CLI_POLL_INTERVAL_SECONDS))
+        return Envelope(data=CliAuthPollOut(root=CliAuthPendingOut(interval_seconds=CLI_POLL_INTERVAL_SECONDS)))
     org = await Org.find_by_id(auth_request.approved_org_id) if auth_request.approved_org_id is not None else None
     if auth_request.approved_org_id is not None and org is None:
         raise HTTPException(status_code=410, detail="The approved organization no longer exists; start again")
@@ -338,13 +367,8 @@ async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope
         await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
     _, token = await mint_standing_access_key(auth_request.approved_user_id, scope, auth_request.client_name)
     await auth_request.delete()
+    if org is None:
+        return Envelope(data=CliAuthPollOut(root=CliAuthInstanceCompleteOut(interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token)))
     return Envelope(
-        data=CliAuthPollOut(
-            status="complete",
-            interval_seconds=CLI_POLL_INTERVAL_SECONDS,
-            scope="org" if org is not None else "instance",
-            token=token,
-            org_id=org.id if org is not None else None,
-            org_name=org.name if org is not None else None,
-        )
+        data=CliAuthPollOut(root=CliAuthOrgCompleteOut(interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token, org_id=org.id, org_name=org.name))
     )

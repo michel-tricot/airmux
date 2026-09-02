@@ -6,9 +6,9 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from contract import Secret, SecretRejectedError, SecretStore
-from control_plane.authz import Permission, Scope
+from control_plane.authz import Permission, Scope, ScopeValue
 from control_plane.deps import OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
-from control_plane.models import Provider, ProviderCredential, Workspace
+from control_plane.models import Provider, ProviderCredential
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.provider_credential import (
     ProviderCredentialIn,
@@ -39,7 +39,7 @@ async def selected_credential(credential_id: UUID, org_id: OrgDep) -> ProviderCr
 CredentialDep = Annotated[ProviderCredential, Depends(selected_credential)]
 
 
-async def credential_scope(credential: CredentialDep) -> Scope:
+async def credential_scope(credential: CredentialDep) -> ScopeValue:
     if credential.workspace_id is not None:
         if credential.org_id is None:
             raise HTTPException(status_code=500, detail="Credential has an invalid scope")
@@ -51,19 +51,17 @@ async def credential_scope(credential: CredentialDep) -> Scope:
 
 async def _create_provider_credential(
     body: ProviderCredentialIn,
-    org_id: UUID | None,
-    workspace: Workspace | None,
+    scope: ScopeValue,
     request: Request,
 ) -> Envelope[ProviderCredentialOut]:
     store = secret_store(request)
     provider = await _provider(body.provider)
-    workspace_id = workspace.id if workspace else None
-    if await ProviderCredential.named(org_id, workspace_id, provider.id, body.name) is not None:
+    if await ProviderCredential.named(scope.org_id, scope.workspace_id, provider.id, body.name) is not None:
         raise HTTPException(status_code=409, detail="a credential with this name already exists for this provider and scope")
     secret = Secret(body.value.get_secret_value())
     credential = await ProviderCredential(
-        org_id=org_id,
-        workspace_id=workspace_id,
+        org_id=scope.org_id,
+        workspace_id=scope.workspace_id,
         provider_id=provider.id,
         provider_name=provider.name,
         name=body.name,
@@ -88,7 +86,7 @@ async def _hold(store: SecretStore, credential: ProviderCredential, secret: Secr
 )
 async def create_instance_provider_credential(body: ProviderCredentialIn, request: Request) -> Envelope[ProviderCredentialOut]:
     """Store a provider API key available to every organization on the instance."""
-    return await _create_provider_credential(body, None, None, request)
+    return await _create_provider_credential(body, Scope.instance(), request)
 
 
 @instance_router.get(
@@ -109,7 +107,7 @@ async def list_instance_provider_credentials() -> Envelope[list[ProviderCredenti
 )
 async def create_org_provider_credential(body: ProviderCredentialIn, org_id: OrgDep, request: Request) -> Envelope[ProviderCredentialOut]:
     """Store a provider API key for every workspace in an organization."""
-    return await _create_provider_credential(body, org_id, None, request)
+    return await _create_provider_credential(body, Scope.org(org_id), request)
 
 
 @router.post(
@@ -124,7 +122,7 @@ async def create_workspace_provider_credential(
     request: Request,
 ) -> Envelope[ProviderCredentialOut]:
     """Store a provider API key for one workspace."""
-    return await _create_provider_credential(body, org_id, workspace, request)
+    return await _create_provider_credential(body, Scope.workspace(org_id, workspace.id), request)
 
 
 @router.get(

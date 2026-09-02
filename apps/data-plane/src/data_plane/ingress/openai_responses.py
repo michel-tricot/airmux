@@ -11,14 +11,17 @@ from starlette.responses import JSONResponse, Response
 
 from data_plane.canonical import (
     Adjustment,
-    CanonicalChunk,
-    CanonicalMessage,
     CanonicalRequest,
+    DeltaChunk,
     GatewayInfo,
+    JsonObjectResponseFormat,
+    JsonSchemaResponseFormat,
     NamedTool,
     ReasoningConfig,
-    ResponseFormat,
+    ResponseFormatValue,
+    SystemMessage,
     TextPart,
+    TextResponseFormat,
     ToolDef,
 )
 from data_plane.formats import openai_responses as fmt
@@ -90,13 +93,15 @@ def _choice(value: object) -> object:
     return value if isinstance(value, str) and value in {"auto", "none", "required"} else None
 
 
-def _response_format(value: object) -> ResponseFormat | None:
+def _response_format(value: object) -> ResponseFormatValue | None:
     format_value = _mapping(value)
     kind = format_value.get("type")
     if kind == "json_schema":
-        return ResponseFormat(type="json_schema", json_schema={key: item for key, item in format_value.items() if key != "type"})
-    if kind in {"text", "json_object"}:
-        return ResponseFormat(type=kind)
+        return JsonSchemaResponseFormat(json_schema={key: item for key, item in format_value.items() if key != "type"})
+    if kind == "text":
+        return TextResponseFormat()
+    if kind == "json_object":
+        return JsonObjectResponseFormat()
     return None
 
 
@@ -147,14 +152,12 @@ class ResponsesStream:
         return b"event: " + kind.encode() + b"\n" + sse(json.dumps(body, separators=(",", ":")).encode())
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        self.id, self.model, self.created_at = ctx.request_id, ctx.model.model_id, int(time.time())
+        self.id, self.model, self.created_at = str(ctx.request_id), ctx.model.model_id, int(time.time())
         metadata = fmt.ResponseMetadata(id=self.id, model=self.model, created_at=self.created_at)
         response = {**fmt.response_metadata(metadata), "status": "in_progress", "output": []}
         return [self._event("response.created", {"response": response}), self._event("response.in_progress", {"response": response})]
 
-    def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
-            return []
+    def chunk(self, c: DeltaChunk) -> list[bytes]:
         ordinal = c.delta.index if c.delta.type == "tool_call" else 0
         key = (c.delta.type, ordinal)
         frames = []
@@ -243,7 +246,7 @@ class OpenAIResponsesIngress(IngressAdapter):
             if not isinstance(instructions, str):
                 message = "instructions must be a string"
                 raise ValueError(message)
-            messages.insert(0, CanonicalMessage(role="system", content=[TextPart(text=instructions)]))
+            messages.insert(0, SystemMessage(content=[TextPart(text=instructions)]))
         text = _mapping(body.get("text"))
         response_format = _response_format(text.get("format"))
         reasoning = _mapping(body.get("reasoning"))

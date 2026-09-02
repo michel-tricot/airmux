@@ -112,6 +112,25 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Never delete a UI primitive from import counts alone; first check whether an application wrapper is
   manually recreating the same behavior and migrate it to composition
 
+## Interface boundaries, non-negotiable
+- Domain and internal types describe only valid states. Do not make a required value optional, use a
+  free-form string for a closed vocabulary, or return an untyped dict because validation happens later
+- Uncertain and legacy input is accepted only at a wire, file, or environment parser and normalized once
+  into the strict internal type. Backward compatibility belongs in a BeforeValidator or adapter, never in
+  every consumer
+- Conditional shapes are discriminated unions with one model per valid state. Do not represent state
+  machines as one model whose fields become conditionally required through `T | None`
+- Closed vocabularies use a shared Literal or StrEnum. Identifiers use their domain type, including UUID,
+  after boundary normalization
+- A database column is non-null when the domain requires the value. Tightening a persisted field includes
+  a backfill migration and a migration test that covers legacy data
+- CLI control-plane responses are decoded into generated `api_models` in `cli.client`. Commands never
+  consume raw response dicts, and payload helpers always require the expected response model
+- Optional update fields, partial stream deltas, provider wire JSON, JSON Schema values, and the canonical
+  request's documented top-level passthrough are intentionally open. Do not generalize those exceptions
+- Every tightened boundary gets a behavior or generated-schema test proving invalid states are rejected
+  and valid legacy input is normalized
+
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket
 `# noqa`. Fix the type or ask. Every suppression that does survive must name the exact rule and carry a
