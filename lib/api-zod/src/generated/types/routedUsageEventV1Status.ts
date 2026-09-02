@@ -12,15 +12,14 @@
  */
 
 /**
- * How the request ended; cancelled events may contain partial token counts
+ * How the routed request ended
  */
-export type UsageEventV1Status = typeof UsageEventV1Status[keyof typeof UsageEventV1Status];
+export type RoutedUsageEventV1Status = typeof RoutedUsageEventV1Status[keyof typeof RoutedUsageEventV1Status];
 
 
-export const UsageEventV1Status = {
+export const RoutedUsageEventV1Status = {
   ok: 'ok',
   upstream_error: 'upstream_error',
-  denied: 'denied',
   timeout: 'timeout',
   cancelled: 'cancelled',
   credential_rejected: 'credential_rejected',

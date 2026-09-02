@@ -11,6 +11,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProviderCredentialOutScope } from './providerCredentialOutScope';
+import type { ProviderCredentialOutStatus } from './providerCredentialOutStatus';
 
 export interface ProviderCredentialOut {
   id: string;
@@ -22,7 +23,7 @@ export interface ProviderCredentialOut {
   priority: number;
   enabled: boolean;
   version: number;
-  status: string;
+  status: ProviderCredentialOutStatus;
   status_at: Date | null;
   fingerprint: string;
   created_at: Date;

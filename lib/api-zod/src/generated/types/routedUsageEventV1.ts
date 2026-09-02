@@ -10,15 +10,10 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { UsageEventV1CredentialScope } from './usageEventV1CredentialScope';
-import type { UsageEventV1Status } from './usageEventV1Status';
+import type { RoutedUsageEventV1CredentialScope } from './routedUsageEventV1CredentialScope';
+import type { RoutedUsageEventV1Status } from './routedUsageEventV1Status';
 
-/**
- * One metered model request reported by a data plane.
- *
- * `event_id` makes retries idempotent.
- */
-export interface UsageEventV1 {
+export interface RoutedUsageEventV1 {
   /** Usage event schema version */
   schema_version?: 1;
   /** Idempotency key for event ingestion */
@@ -44,7 +39,8 @@ export interface UsageEventV1 {
      */
   model_id: string;
   /**
-     * Provider that served the request, or empty for an early denial
+     * Provider that served the request
+     * @minLength 1
      * @maxLength 63
      */
   provider_id: string;
@@ -95,12 +91,12 @@ export interface UsageEventV1 {
      * @maximum 2147483647
      */
   latency_ms: number;
-  /** How the request ended; cancelled events may contain partial token counts */
-  status: UsageEventV1Status;
+  /** How the routed request ended */
+  status: RoutedUsageEventV1Status;
   /** Whether the response was streamed */
   stream: boolean;
   /** Provider credential used for the request */
-  credential_id?: string | null;
+  credential_id: string;
   /** Scope of the provider credential used for the request */
-  credential_scope?: UsageEventV1CredentialScope;
+  credential_scope: RoutedUsageEventV1CredentialScope;
 }

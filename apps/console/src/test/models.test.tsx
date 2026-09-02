@@ -66,7 +66,7 @@ const models = [
     max_output_tokens: 128000,
     input_modalities: ['text', 'image'],
     output_modalities: ['text'],
-    capabilities: ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning'],
+    capabilities: ['streaming', 'tools', 'structured_output', 'reasoning'],
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -220,7 +220,7 @@ describe('organization models', () => {
 
     await user.hover(modelName);
     const tooltip = await screen.findByRole('tooltip');
-    for (const capability of ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning']) {
+    for (const capability of ['streaming', 'tools', 'structured_output', 'reasoning']) {
       expect(within(tooltip).getByText(capability)).toBeInTheDocument();
     }
     expect(within(tooltip).getByText('streaming')).toHaveClass('text-primary');

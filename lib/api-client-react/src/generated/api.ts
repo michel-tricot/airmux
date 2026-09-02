@@ -46,6 +46,7 @@ import type {
   DataPlaneInstanceOut,
   DeletedOutStr,
   DeletedOutUUID,
+  DeniedUsageEventV1,
   EnrollOut,
   EventsIngestedOut,
   HTTPValidationError,
@@ -97,6 +98,7 @@ import type {
   ProviderOut,
   QuickstartIn,
   QuickstartOut,
+  RoutedUsageEventV1,
   ServiceAccountIn,
   SignedBundle,
   SignupIn,
@@ -104,7 +106,6 @@ import type {
   TaxonomyOut,
   TaxonomySpec,
   UsageEventOut,
-  UsageEventV1,
   UserOut,
   WorkspaceCreate,
   WorkspaceMemberCandidateOut,
@@ -6122,14 +6123,14 @@ export const getIngestEventsUrl = () => {
  * Required permission: `usage.ingest`.
  * @summary Ingest Usage Events
  */
-export const ingestEvents = async (usageEventV1: UsageEventV1[], options?: Parameters<typeof customFetch>[1]): Promise<EventsIngestedOut> => {
+export const ingestEvents = async (deniedUsageEventV1RoutedUsageEventV1: (DeniedUsageEventV1 | RoutedUsageEventV1)[], options?: Parameters<typeof customFetch>[1]): Promise<EventsIngestedOut> => {
 
   return customFetch<EventsIngestedOut>(getIngestEventsUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(usageEventV1)
+    body: JSON.stringify(deniedUsageEventV1RoutedUsageEventV1)
   }
 );}
 
@@ -6138,8 +6139,8 @@ export const ingestEvents = async (usageEventV1: UsageEventV1[], options?: Param
 
 
 export const getIngestEventsMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<UsageEventV1[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<UsageEventV1[]>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext> => {
 
 const mutationKey = ['ingestEvents'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -6151,7 +6152,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEvents>>, {data: BodyType<UsageEventV1[]>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEvents>>, {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}> = (props) => {
           const {data} = props ?? {};
 
           return  ingestEvents(data,requestOptions)
@@ -6165,18 +6166,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type IngestEventsMutationResult = NonNullable<Awaited<ReturnType<typeof ingestEvents>>>
-    export type IngestEventsMutationBody = BodyType<UsageEventV1[]>
+    export type IngestEventsMutationBody = BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>
     export type IngestEventsMutationError = ErrorType<void | HTTPValidationError>
 
     /**
  * @summary Ingest Usage Events
  */
 export const useIngestEvents = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<UsageEventV1[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof ingestEvents>>,
         TError,
-        {data: BodyType<UsageEventV1[]>},
+        {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>},
         TContext
       > => {
       return useMutation(getIngestEventsMutationOptions(options));

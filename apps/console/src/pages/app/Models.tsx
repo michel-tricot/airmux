@@ -246,7 +246,7 @@ export default function Models() {
   const filteredModels = catalog
     ?.filter(({ model }) => model.name.toLocaleLowerCase().includes(normalizedFilter))
     .filter(({ model }) => providerFilters.length === 0 || providerFilters.includes(model.provider_id))
-    .filter(({ model }) => capabilityFilters.every((capability) => model.capabilities.includes(capability)))
+    .filter(({ model }) => capabilityFilters.every((capability) => model.capabilities.some((candidate) => candidate === capability)))
     .filter(({ model }) => modalityFilters.every((modality) => supportsModality(model, modality)))
     .sort((left, right) => compareModels(left, right, sortKey, sortDirection));
 

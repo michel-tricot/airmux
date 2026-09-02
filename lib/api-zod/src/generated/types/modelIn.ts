@@ -10,6 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelInCapabilitiesItem } from './modelInCapabilitiesItem';
 import type { ModelInInputModalitiesItem } from './modelInInputModalitiesItem';
 import type { ModelInOutputModalitiesItem } from './modelInOutputModalitiesItem';
 import type { ModelInParameterSupport } from './modelInParameterSupport';
@@ -77,9 +78,9 @@ export interface ModelIn {
   output_modalities: ModelInOutputModalitiesItem[];
   /**
      * Capabilities supported by the model
-     * @maxItems 128
+     * @maxItems 4
      */
-  capabilities?: string[];
+  capabilities?: ModelInCapabilitiesItem[];
   /** Known support for canonical request parameters; an absent parameter is unknown */
   parameter_support?: ModelInParameterSupport;
 }
