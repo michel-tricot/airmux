@@ -8,11 +8,11 @@ This deployment keeps the repository's two existing images:
 The co-located planes share one persistent `/state` volume. The console reaches both backend ports
 through the backend app's private Flycast address.
 
-| Public path | Private target | Target path |
-|---|---|---|
-| `/api/v1/*` | Backend port 8000 | `/api/v1/*` |
-| `/inf/v1/*` | Backend port 8081 | `/inf/v1/*` |
-| Everything else | Console nginx | React SPA |
+| Public path     | Private target    | Target path |
+| --------------- | ----------------- | ----------- |
+| `/api/v1/*`     | Backend port 8000 | `/api/v1/*` |
+| `/inf/v1/*`     | Backend port 8081 | `/inf/v1/*` |
+| Everything else | Console nginx     | React SPA   |
 
 The proxy preserves both API prefixes. The backend generates its bundle signing key pair on the
 volume during the first boot. `airllm quickstart` writes the data-plane credential to the same
@@ -67,9 +67,7 @@ Set up the first account, workspace, data-plane credential, provider credentials
 
 ```sh
 uv run airllm quickstart \
-  --control-plane-url "$AIRLLM_PUBLIC_URL" \
-  --console-url "$AIRLLM_PUBLIC_URL" \
-  --gateway-url "$AIRLLM_PUBLIC_URL"
+  --url "$AIRLLM_PUBLIC_URL"
 ```
 
 No token copying or backend restart is required. Verify both routed services:
@@ -87,13 +85,15 @@ The second request should reach the data plane and return `401 Unauthorized`.
 ## Subsequent deployments
 
 Use the `deploy-fly` workflow's **Run workflow** button in GitHub Actions. The local deployment script
-is also available when the app variables are set:
+is also available when the app variables are set. The workflow runs the same script and then checks
+the public console, control-plane, and gateway routes:
 
 ```sh
 export FLY_BACKEND_APP=airllm-backend
 export FLY_CONSOLE_APP=airllm-frontend
 export FLY_REGION=sjc
 ./deploy/fly/deploy.sh
+AIRLLM_PUBLIC_URL=https://airllm-frontend.fly.dev ./deploy/fly/smoke.sh
 ```
 
 ## Custom domain

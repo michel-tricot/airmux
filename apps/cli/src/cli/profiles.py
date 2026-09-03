@@ -7,7 +7,7 @@ from typing import Literal, Self
 from urllib.parse import urlsplit
 
 import tomli_w
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from contract.secrets.file import write_private_text
 
@@ -44,6 +44,10 @@ class CliConfig(BaseModel):
     profiles: dict[str, Profile] = Field(default_factory=dict)
 
 
+class InvalidConfigError(ValueError):
+    pass
+
+
 def config_path() -> Path:
     if override := os.environ.get("GW_CLI_CONFIG"):
         return Path(override)
@@ -53,7 +57,17 @@ def config_path() -> Path:
 def load_config() -> CliConfig:
     path = config_path()
     if path.exists():
-        return CliConfig.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
+        try:
+            values = tomllib.loads(path.read_text(encoding="utf-8"))
+            return CliConfig.model_validate(values)
+        except (tomllib.TOMLDecodeError, UnicodeDecodeError):
+            message = f"Invalid configuration at {path}: the file is not valid TOML. Fix or move this file, then retry"
+            raise InvalidConfigError(message) from None
+        except ValidationError as error:
+            issues = error.errors(include_url=False, include_context=False, include_input=False)
+            details = "; ".join(f"{'.'.join(str(part) for part in issue['loc'])}: {issue['msg']}" for issue in issues)
+            message = f"Invalid configuration at {path}: {details}. Fix or move this file, then retry"
+            raise InvalidConfigError(message) from None
     return CliConfig()
 
 

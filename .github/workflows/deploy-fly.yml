@@ -8,37 +8,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  backend:
+  deploy:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
+      FLY_BACKEND_APP: ${{ vars.FLY_BACKEND_APP }}
+      FLY_CONSOLE_APP: ${{ vars.FLY_CONSOLE_APP }}
+      FLY_REGION: ${{ vars.FLY_REGION }}
     steps:
       - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: |
-          AIRLLM_PUBLIC_URL=${AIRLLM_PUBLIC_URL:-https://${FLY_CONSOLE_APP}.fly.dev}
-          flyctl deploy . --config deploy/fly/backend.toml --app "$FLY_BACKEND_APP" --primary-region "$FLY_REGION" --remote-only --flycast \
-            --no-public-ips \
-            --env "GW_CONSOLE_URL=$AIRLLM_PUBLIC_URL"
+      - run: ./deploy/fly/deploy.sh
         env:
-          AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
-          FLY_API_TOKEN: ${{ secrets.FLY_BACKEND_API_TOKEN }}
-          FLY_BACKEND_APP: ${{ vars.FLY_BACKEND_APP }}
-          FLY_CONSOLE_APP: ${{ vars.FLY_CONSOLE_APP }}
-          FLY_REGION: ${{ vars.FLY_REGION }}
-
-  console:
-    needs: backend
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v6
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: |
-          flyctl deploy . --config deploy/fly/console.toml --app "$FLY_CONSOLE_APP" --primary-region "$FLY_REGION" --remote-only \
-            --env "CONTROL_PLANE_UPSTREAM=${FLY_BACKEND_APP}.flycast:8000" \
-            --env "DATA_PLANE_UPSTREAM=${FLY_BACKEND_APP}.flycast:8081"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_CONSOLE_API_TOKEN }}
-          FLY_BACKEND_APP: ${{ vars.FLY_BACKEND_APP }}
-          FLY_CONSOLE_APP: ${{ vars.FLY_CONSOLE_APP }}
-          FLY_REGION: ${{ vars.FLY_REGION }}
+          FLY_BACKEND_API_TOKEN: ${{ secrets.FLY_BACKEND_API_TOKEN }}
+          FLY_CONSOLE_API_TOKEN: ${{ secrets.FLY_CONSOLE_API_TOKEN }}
+      - run: ./deploy/fly/smoke.sh
