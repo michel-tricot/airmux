@@ -1,15 +1,32 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Your project name",
+  "name": "AirLLM",
   "colors": {
     "primary": "#ff0000"
   },
   "navigation": {
     "groups": [
       {
-        "group": "Home",
+        "group": "Getting started",
         "pages": ["docs/index"]
+      },
+      {
+        "group": "Deployment",
+        "pages": [
+          "docs/deployment/index",
+          "docs/deployment/docker",
+          "docs/deployment/fly",
+          "docs/deployment/railway",
+          "docs/deployment/render",
+          "docs/deployment/digitalocean",
+          "docs/deployment/scaling",
+          "docs/deployment/operations"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": ["docs/development"]
       }
     ]
   }
