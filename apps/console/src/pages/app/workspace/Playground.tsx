@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, ChevronDown, Copy, Check } from 'lucide-react';
+import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, ChevronDown } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
@@ -16,6 +16,7 @@ import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } f
 import { usePlaygroundState, type PlaygroundMessage, type PlaygroundRequest } from '@/features/playground/state';
 import { ModelPicker } from '@/components/shared/model-picker';
 import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
+import { CopyButton, CopyFeedback } from '@/components/shared/copy-control';
 
 function formatDuration(durationMs: number) {
   return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
@@ -40,8 +41,7 @@ function curlFor(request: PlaygroundRequest) {
 function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChange: (open: boolean) => void; request: PlaygroundRequest }) {
   const curl = curlFor(request);
   const curlText = useRef<HTMLPreElement>(null);
-  const { copy, status } = useClipboardCopy(curl, curlText, request);
-  const copied = status === 'copied';
+  const clipboard = useClipboardCopy(curl, curlText, request);
 
   return (
     <Modal
@@ -54,17 +54,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
       <div className="min-w-0 space-y-3">
         <div className="min-w-0 max-w-full overflow-hidden rounded border border-border bg-background/60">
           <div className="flex justify-end border-b border-border p-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="min-w-20 justify-center gap-1.5 leading-none"
-              onClick={() => void copy()}
-              disabled={status === 'copying'}
-              aria-label={status === 'copying' ? 'Copying cURL' : copied ? 'Copied cURL' : 'Copy cURL'}
-            >
-              {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-              <span className="inline-flex h-full items-center leading-none">{status === 'copying' ? 'Copying' : copied ? 'Copied' : 'Copy'}</span>
-            </Button>
+            <CopyButton {...clipboard} subject="cURL" />
           </div>
           <pre
             ref={curlText}
@@ -78,11 +68,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
             {curl}
           </pre>
         </div>
-        {status === 'manual' && (
-          <p role="alert" className="text-sm text-destructive">
-            Automatic copy was blocked. Press Command+C or Ctrl+C to copy the selected command.
-          </p>
-        )}
+        <CopyFeedback status={clipboard.status} errorMessage="Automatic copy was blocked. Press Command+C or Ctrl+C to copy the selected command." />
       </div>
     </Modal>
   );
