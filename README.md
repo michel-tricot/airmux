@@ -63,7 +63,13 @@ inference key is for local development. Stop the Docker stack first if it occupi
 
 ## Connect your SDK
 
-Use the inference key printed by `quickstart`. For the OpenAI Python SDK:
+Export the inference key printed by `quickstart`:
+
+```sh
+export AIRLLM_API_KEY='the key printed by quickstart'
+```
+
+For the OpenAI Python SDK:
 
 ```python
 import os

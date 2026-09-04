@@ -152,7 +152,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         service_action(compose, "stop", gateways[1])
     if not compact:
         service_action(compose, "stop", "control-plane")
-        assert client.post(path, headers=headers, json=request).status_code == 200
+        assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
     service_action(compose, "restart", gateway)
     eventually(lambda: client.post(path, headers=headers, json=request).status_code == 200)
     if not compact:

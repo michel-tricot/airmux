@@ -174,18 +174,24 @@ def test_local_reload_interval_must_be_positive():
         Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": 0}})
 
 
-def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
-    fly_config = Path(__file__).resolve().parents[3] / "deploy" / "fly" / "airllm.yml"
-    cache_dir = tmp_path / ".airllm"
-    cache_dir.mkdir()
-    (cache_dir / "dataplane.key").write_text("data-plane-token", encoding="utf-8")
+@pytest.mark.parametrize("control_plane_url", ["http://control-plane:8000", "http://127.0.0.1:8000"])
+def test_container_config_separates_gateway_state_from_shared_credentials(tmp_path, monkeypatch, control_plane_url):
+    container_config = Path(__file__).resolve().parents[3] / "deploy/docker/airllm.yml"
+    (tmp_path / "airllm.yml").write_text(container_config.read_text().replace("/state", str(tmp_path)))
+    (tmp_path / "runtime").mkdir()
+    (tmp_path / "runtime/dataplane.key").write_text("data-plane-token")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GW_CONFIG", str(fly_config))
+    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
+    monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", control_plane_url)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
     config = load_config()
 
     assert isinstance(config.bundle, RemoteBundleConfig)
-    assert config.bundle.control_plane.url == "http://127.0.0.1:8000"
-    assert config.bundle.cache_dir == Path(".airllm")
+    assert config.bundle.control_plane.url == control_plane_url
+    assert config.bundle.control_plane.token == "data-plane-token"
+    assert config.bundle.cache_dir == tmp_path / "data-plane"
     assert isinstance(config.events, SqliteOutboxConfig)
-    assert config.secrets == FileStoreConfig(root=Path(".airllm/secrets"))
+    assert config.events.control_plane == config.bundle.control_plane
+    assert config.events.cache_dir == config.bundle.cache_dir
+    assert config.secrets == FileStoreConfig(root=tmp_path / "secrets")
