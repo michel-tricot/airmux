@@ -62,7 +62,7 @@ class ResponsesStreamState(StreamState):
     output: dict[int, ResponsesOutputDraft] = field(default_factory=dict)
     reasoning: dict[int, ResponsesReasoningDraft] = field(default_factory=dict)
     text: dict[int, str] = field(default_factory=dict)
-    usage: dict[str, object] | None = None
+    usage: fmt.UpstreamUsage | None = None
     tool_count: int = 0
     terminal_seen: bool = False
     incomplete: bool = False
@@ -105,14 +105,13 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
             raise UpstreamProtocolError.buffered_response() from error
         if parsed.status == "failed" or parsed.error is not None:
             raise UpstreamProtocolError.buffered_response()
-        response = parsed.model_dump(mode="json", exclude_none=True)
-        parts = fmt.response_parts(response)
+        parts = fmt.response_parts(parsed)
         return CanonicalResponse(
-            id=str(response.get("id") or ctx.request_id),
+            id=parsed.id or str(ctx.request_id),
             model=ctx.model.model_id,
             content=parts,
-            finish_reason=fmt.finish_reason(response, parts),
-            usage=fmt.usage_of(response.get("usage")),
+            finish_reason=fmt.finish_reason(parsed, parts),
+            usage=fmt.usage_of(parsed.usage),
         )
 
     def map_error(self, error: Exception) -> CanonicalError:

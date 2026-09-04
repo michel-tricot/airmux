@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,6 +25,7 @@ from data_plane.canonical import (
     CanonicalUsage,
     CanonicalUserMessage,
 )
+from data_plane.errors import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -37,6 +38,33 @@ class UpstreamError(BaseModel):
     message: str = ""
 
 
+class UpstreamText(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    type: str
+    text: str = ""
+
+
+class UpstreamTokenDetails(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    cached_tokens: int = Field(default=0, ge=0, strict=True)
+
+
+class UpstreamUsage(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    input_tokens: int = Field(ge=0, strict=True)
+    output_tokens: int = Field(ge=0, strict=True)
+    input_tokens_details: UpstreamTokenDetails | None = None
+
+
+class UpstreamIncompleteDetails(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    reason: str
+
+
 class UpstreamOutputItem(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
 
@@ -46,8 +74,8 @@ class UpstreamOutputItem(BaseModel):
     name: str = ""
     arguments: str = ""
     encrypted_content: str = ""
-    content: list[dict[str, Any]] = Field(default_factory=list)
-    summary: list[dict[str, Any]] = Field(default_factory=list)
+    content: list[UpstreamText] = Field(default_factory=list)
+    summary: list[UpstreamText] = Field(default_factory=list)
 
 
 class UpstreamResponse(BaseModel):
@@ -56,7 +84,8 @@ class UpstreamResponse(BaseModel):
     id: str = ""
     status: str | None = None
     output: list[UpstreamOutputItem]
-    usage: dict[str, Any] | None = None
+    usage: UpstreamUsage | None = None
+    incomplete_details: UpstreamIncompleteDetails | None = None
     error: UpstreamError | None = None
 
 
@@ -117,8 +146,8 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
         reasoning = [part for part in rest if isinstance(part, CanonicalReasoningPart)]
         for part in reasoning:
             if part.id is None:
-                error_message = "unsupported_feature: Responses reasoning history requires its original item id"
-                raise ValueError(error_message)
+                error_message = "Responses reasoning history requires its original item id"
+                raise UnsupportedFeatureError(error_message)
             item: dict[str, Any] = {"type": "reasoning", "id": part.id, "summary": []}
             if part.signature:
                 item["encrypted_content"] = part.signature
@@ -165,15 +194,15 @@ def tool_choice_of(choice: object) -> object:
 def _reasoning_of(request: CanonicalRequest) -> dict[str, str] | None:
     if request.reasoning is None:
         return None
-    reasoning = {name: value for name in ("effort", "summary") if (value := getattr(request.reasoning, name)) is not None}
+    reasoning = {name: value for name, value in (("effort", request.reasoning.effort), ("summary", request.reasoning.summary)) if value is not None}
     return reasoning or None
 
 
 def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
     unsupported = [name for name, value in (("stop", request.stop), ("seed", request.seed)) if value is not None]
     if unsupported:
-        message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Responses"
-        raise ValueError(message)
+        message = f"{', '.join(unsupported)} are not representable by Responses"
+        raise UnsupportedFeatureError(message)
     body: dict[str, Any] = {
         "model": upstream_model,
         "input": input_of(request.messages),
@@ -207,15 +236,27 @@ def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
 
 
 def _mapping(value: object) -> dict[str, Any]:
-    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+    if not isinstance(value, dict):
+        message = "expected a JSON object"
+        raise TypeError(message)
+    if any(not isinstance(key, str) for key in value):
+        message = "JSON object keys must be strings"
+        raise TypeError(message)
+    return cast("dict[str, Any]", value)
 
 
 def _items(value: object) -> list[object]:
-    return list(value) if isinstance(value, list) else []
+    if not isinstance(value, list):
+        message = "expected a list"
+        raise TypeError(message)
+    return list(value)
 
 
 def _text(value: object) -> str:
-    return value if isinstance(value, str) else ""
+    if not isinstance(value, str):
+        message = "expected a string"
+        raise TypeError(message)
+    return value
 
 
 def _message(role: object, content: object) -> CanonicalMessage:
@@ -226,8 +267,43 @@ def _message(role: object, content: object) -> CanonicalMessage:
     return CanonicalUserMessage.model_validate({"content": content})
 
 
-def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - each supported item spelling maps explicitly
-    raw_items = [_mapping(item) for item in value] if isinstance(value, list) else []
+def _input_parts(raw_content: object) -> list[CanonicalTextPart | CanonicalImagePart | CanonicalDocumentPart]:
+    parts: list[CanonicalTextPart | CanonicalImagePart | CanonicalDocumentPart] = []
+    for content in _items(raw_content):
+        block = _mapping(content)
+        if block.get("type") in {"input_text", "output_text", "text"}:
+            parts.append(CanonicalTextPart(text=_text(block.get("text"))))
+        elif block.get("type") == "input_image":
+            url = _text(block.get("image_url"))
+            if url.startswith("data:") and "," in url:
+                header, payload = url[5:].split(",", 1)
+                parts.append(CanonicalImagePart(data=payload, media_type=header.removesuffix(";base64")))
+            elif url:
+                parts.append(CanonicalImagePart(url=url))
+        elif block.get("type") == "input_file":
+            filename = _text(block.get("filename", "")) or None
+            if file_id := _text(block.get("file_id", "")):
+                parts.append(CanonicalDocumentPart(filename=filename, file_id=file_id))
+            elif file_data := _text(block.get("file_data", "")):
+                if not file_data.startswith("data:") or ";base64," not in file_data:
+                    message = "file_data must be a base64 data URL"
+                    raise ValueError(message)
+                header, payload = file_data[5:].split(",", 1)
+                parts.append(CanonicalDocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload))
+            elif file_url := _text(block.get("file_url", "")):
+                parts.append(CanonicalDocumentPart(filename=filename, url=file_url))
+            else:
+                message = "input_file requires file_id, file_data, or file_url"
+                raise ValueError(message)
+        else:
+            message = f"unsupported input content type: {block.get('type')}"
+            raise UnsupportedFeatureError(message)
+
+    return parts
+
+
+def messages_of(value: object) -> list[CanonicalMessage]:
+    raw_items = [_mapping(item) for item in _items(value)]
     messages: list[CanonicalMessage] = []
     pending_results: list[CanonicalToolResultPart] = []
     for item in raw_items:
@@ -253,86 +329,67 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
                 CanonicalAssistantMessage(
                     content=[
                         CanonicalReasoningPart(
-                            id=_text(item.get("id")) or None,
+                            id=_text(item.get("id")),
                             text="",
-                            signature=_text(item.get("encrypted_content")) or None,
+                            signature=_text(item.get("encrypted_content", "")) or None,
                         )
                     ],
                 )
             )
         elif kind == "message":
             role = item.get("role")
-            canonical_role = "system" if role in {"system", "developer"} else role if role in {"user", "assistant"} else "user"
+            if role not in ("system", "developer", "user", "assistant"):
+                message = "invalid message role"
+                raise ValueError(message)
+            canonical_role = "system" if role in {"system", "developer"} else role
             raw_content = item.get("content")
             if isinstance(raw_content, str):
                 if raw_content:
                     messages.append(_message(canonical_role, [CanonicalTextPart(text=raw_content)]))
                 continue
-            parts = []
-            for content in _items(raw_content):
-                block = _mapping(content)
-                if block.get("type") in {"input_text", "output_text", "text"}:
-                    parts.append(CanonicalTextPart(text=_text(block.get("text"))))
-                elif block.get("type") == "input_image":
-                    url = _text(block.get("image_url"))
-                    if url.startswith("data:") and "," in url:
-                        header, payload = url[5:].split(",", 1)
-                        parts.append(CanonicalImagePart(data=payload, media_type=header.removesuffix(";base64")))
-                    elif url:
-                        parts.append(CanonicalImagePart(url=url))
-                elif block.get("type") == "input_file":
-                    filename = _text(block.get("filename")) or None
-                    if file_id := _text(block.get("file_id")):
-                        parts.append(CanonicalDocumentPart(filename=filename, file_id=file_id))
-                    elif file_data := _text(block.get("file_data")):
-                        header, payload = file_data[5:].split(",", 1)
-                        parts.append(CanonicalDocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload))
-                    elif file_url := _text(block.get("file_url")):
-                        parts.append(CanonicalDocumentPart(filename=filename, url=file_url))
+            parts = _input_parts(raw_content)
             if parts:
                 messages.append(_message(canonical_role, parts))
+        else:
+            message = f"unsupported input item type: {kind}"
+            raise UnsupportedFeatureError(message)
     if pending_results:
         messages.append(CanonicalUserMessage(content=pending_results))
     return messages
 
 
-def response_parts(response: dict[str, Any]) -> list[CanonicalAssistantPart]:
+def response_parts(response: UpstreamResponse) -> list[CanonicalAssistantPart]:
     parts: list[CanonicalAssistantPart] = []
-    for raw_item in _items(response.get("output")):
-        item = _mapping(raw_item)
-        if item.get("type") == "message":
-            for raw_block in _items(item.get("content")):
-                block = _mapping(raw_block)
-                if block.get("type") == "output_text":
-                    parts.append(CanonicalTextPart(text=_text(block.get("text"))))
-        elif item.get("type") == "reasoning":
-            text = "".join(_text(_mapping(summary).get("text")) for summary in _items(item.get("summary")))
+    for item in response.output:
+        if item.type == "message":
+            parts.extend(CanonicalTextPart(text=block.text) for block in item.content if block.type == "output_text")
+        elif item.type == "reasoning":
+            text = "".join(summary.text for summary in item.summary)
             parts.append(
                 CanonicalReasoningPart(
-                    id=_text(item.get("id")) or None,
+                    id=item.id or None,
                     text=text,
-                    signature=_text(item.get("encrypted_content")) or None,
+                    signature=item.encrypted_content or None,
                 )
             )
-        elif item.get("type") == "function_call":
-            parts.append(CanonicalToolCallPart(id=_text(item.get("call_id")), name=_text(item.get("name")), arguments=_text(item.get("arguments"))))
+        elif item.type == "function_call":
+            parts.append(CanonicalToolCallPart(id=item.call_id, name=item.name, arguments=item.arguments))
     return parts
 
 
-def usage_of(value: object) -> CanonicalUsage:
-    usage = _mapping(value)
-    input_tokens, output_tokens = usage.get("input_tokens"), usage.get("output_tokens")
-    if not isinstance(input_tokens, int) or not isinstance(output_tokens, int):
+def usage_of(usage: UpstreamUsage | None) -> CanonicalUsage:
+    if usage is None:
         return CanonicalUsage(estimated=True)
-    details = _mapping(usage.get("input_tokens_details"))
-    cached = details.get("cached_tokens")
-    return CanonicalUsage(input_tokens=input_tokens, output_tokens=output_tokens, cache_read_tokens=cached if isinstance(cached, int) else 0)
+    return CanonicalUsage(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_read_tokens=usage.input_tokens_details.cached_tokens if usage.input_tokens_details is not None else 0,
+    )
 
 
-def finish_reason(response: dict[str, Any], parts: Sequence[CanonicalAssistantPart]) -> CanonicalFinishReason:
-    if response.get("status") == "incomplete":
-        reason = _mapping(response.get("incomplete_details")).get("reason")
-        return "content_filter" if reason == "content_filter" else "length"
+def finish_reason(response: UpstreamResponse, parts: Sequence[CanonicalAssistantPart]) -> CanonicalFinishReason:
+    if response.status == "incomplete":
+        return "content_filter" if response.incomplete_details is not None and response.incomplete_details.reason == "content_filter" else "length"
     return "tool_calls" if any(isinstance(part, CanonicalToolCallPart) for part in parts) else "stop"
 
 

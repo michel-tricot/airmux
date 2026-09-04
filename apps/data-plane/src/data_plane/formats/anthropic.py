@@ -1,16 +1,11 @@
-"""The Anthropic Messages format, both directions the gateway needs.
-
-Two consumers, one spelling: the anthropic egress adapter renders upstream requests and parses
-provider responses; the /inf/v1/messages ingress reads Anthropic-shaped requests and writes
-Anthropic-shaped replies. Lenient parse models where inputs vary; thinking signatures
-round-trip everywhere, because a later turn without one is rejected."""
+"""Anthropic Messages JSON translation shared by ingress and egress."""
 
 from __future__ import annotations
 
 import base64
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -37,6 +32,7 @@ from data_plane.canonical import (
     CanonicalUsage,
     CanonicalUserMessage,
 )
+from data_plane.errors import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -382,15 +378,29 @@ class UpstreamStreamEvent(BaseModel):
 
 
 def _mapping(value: object) -> dict[str, object]:
-    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        message = "expected a JSON object"
+        raise TypeError(message)
+    if any(not isinstance(key, str) for key in value):
+        message = "JSON object keys must be strings"
+        raise TypeError(message)
+    return cast("dict[str, object]", value)
 
 
 def _str(value: object) -> str:
-    return value if isinstance(value, str) else ""
+    if not isinstance(value, str):
+        message = "expected a string"
+        raise TypeError(message)
+    return value
 
 
 def _bool(value: object) -> bool | None:
-    return value if isinstance(value, bool) else None
+    if value is not None and not isinstance(value, bool):
+        message = "expected a boolean"
+        raise ValueError(message)
+    return value
 
 
 def _cache_of(block: dict[str, object]) -> Literal["ephemeral"] | None:
@@ -422,7 +432,8 @@ def _tool_result_content(content: object) -> list[CanonicalTextPart | CanonicalI
     if isinstance(content, str):
         return [CanonicalTextPart(text=content)]
     if not isinstance(content, list):
-        return []
+        message = "tool result content must be a string or list"
+        raise TypeError(message)
     parts: list[CanonicalTextPart | CanonicalImagePart] = []
     for raw in content:
         block = _mapping(raw)
@@ -430,14 +441,20 @@ def _tool_result_content(content: object) -> list[CanonicalTextPart | CanonicalI
             parts.append(CanonicalTextPart(text=_str(block.get("text"))))
         elif block.get("type") == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))))
+        else:
+            message = f"unsupported tool result content type: {block.get('type')}"
+            raise UnsupportedFeatureError(message)
     return parts
 
 
 def _parts_from_blocks(content: object) -> list[CanonicalContentPart]:
+    if content is None:
+        return []
     if isinstance(content, str):
         return [CanonicalTextPart(text=content)] if content else []
     if not isinstance(content, list):
-        return []
+        message = "message content must be a string or list"
+        raise TypeError(message)
     parts: list[CanonicalContentPart] = []
     for raw in content:
         block = _mapping(raw)
@@ -448,7 +465,7 @@ def _parts_from_blocks(content: object) -> list[CanonicalContentPart]:
         if kind == "text":
             parts.append(CanonicalTextPart(text=_str(block.get("text")), cache=cache))
         elif kind == "thinking":
-            reasoning_id, signature = reasoning_identity(_str(block.get("signature")))
+            reasoning_id, signature = reasoning_identity(_str(block["signature"]) if block.get("signature") is not None else "")
             parts.append(CanonicalReasoningPart(id=reasoning_id, text=_str(block.get("thinking")), signature=signature, cache=cache))
         elif kind == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
@@ -468,10 +485,13 @@ def _parts_from_blocks(content: object) -> list[CanonicalContentPart]:
                 CanonicalToolResultPart(
                     call_id=_str(block.get("tool_use_id")),
                     content=_tool_result_content(block.get("content")),
-                    is_error=bool(block.get("is_error")),
+                    is_error=_bool(block.get("is_error")) or False,
                     cache=cache,
                 )
             )
+        else:
+            message = f"unsupported content type: {kind}"
+            raise UnsupportedFeatureError(message)
     return parts
 
 
@@ -482,8 +502,14 @@ def from_request(data: dict[str, object]) -> list[CanonicalMessage]:
     if system:
         messages.append(CanonicalSystemMessage.model_validate({"content": system}))
     raw_messages = data.get("messages")
-    for raw in raw_messages if isinstance(raw_messages, list) else []:
+    if not isinstance(raw_messages, list):
+        message = "messages must be a list"
+        raise TypeError(message)
+    for raw in raw_messages:
         message = _mapping(raw)
+        if message.get("role") not in ("assistant", "user"):
+            error = "invalid message role"
+            raise ValueError(error)
         parts = _parts_from_blocks(message.get("content"))
         if parts:
             if message.get("role") == "assistant":
@@ -494,15 +520,20 @@ def from_request(data: dict[str, object]) -> list[CanonicalMessage]:
 
 
 def from_tools(tools: object) -> list[CanonicalToolDef] | None:
-    if not isinstance(tools, list) or not tools:
+    if tools is None:
         return None
+    if not isinstance(tools, list):
+        message = "tools must be a list"
+        raise TypeError(message)
     return [
-        CanonicalToolDef(
-            name=_str(_mapping(tool).get("name")),
-            description=_str(_mapping(tool).get("description")) or None,
-            parameters=dict(_mapping(_mapping(tool).get("input_schema"))),
-            cache=_cache_of(_mapping(tool)),
-            strict=_bool(_mapping(tool).get("strict")),
+        CanonicalToolDef.model_validate(
+            {
+                "name": _mapping(tool).get("name"),
+                "description": _mapping(tool).get("description"),
+                "parameters": _mapping(_mapping(tool).get("input_schema")),
+                "cache": _cache_of(_mapping(tool)),
+                "strict": _bool(_mapping(tool).get("strict")),
+            }
         )
         for tool in tools
     ]
@@ -510,10 +541,10 @@ def from_tools(tools: object) -> list[CanonicalToolDef] | None:
 
 def from_tool_choice(choice: object) -> CanonicalToolChoice | None:
     block = _mapping(choice)
+    _bool(block.get("disable_parallel_tool_use"))
     kind = block.get("type")
-    name = _str(block.get("name"))
-    if kind == "tool" and name:
-        return CanonicalNamedTool(name=name)
+    if kind == "tool":
+        return CanonicalNamedTool(name=_str(block.get("name")))
     if kind == "auto":
         return "auto"
     if kind == "any":

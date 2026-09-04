@@ -78,7 +78,7 @@ def test_a_tier_with_a_key_is_the_tier():
 
 
 def test_no_key_anywhere_is_denied():
-    assert decide() == Deny(reason="credential_unavailable", status=402)
+    assert decide() == Deny(code="credential_unavailable", status=402)
 
 
 def test_candidates_come_back_in_try_order():
@@ -99,7 +99,7 @@ def test_a_key_for_another_provider_is_not_a_candidate():
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     key = make_key("k1", org=ORG, workspace=WORKSPACE)[1]
 
-    assert evaluate(request, key, BundleSnapshot.from_bundle(bundle)) == Deny(reason="credential_unavailable", status=402)
+    assert evaluate(request, key, BundleSnapshot.from_bundle(bundle)) == Deny(code="credential_unavailable", status=402)
 
 
 async def test_the_resolver_fetches_and_caches():

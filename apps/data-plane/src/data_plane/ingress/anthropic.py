@@ -1,15 +1,9 @@
-"""The Anthropic dialect: the Messages surface at /inf/v1/messages, routed to any provider.
-
-Claude Code and the Anthropic SDKs speak this. Requests parse through the same canonical
-middle as every other request; replies come back as Anthropic's shapes, buffered and as the
-named-event stream. The route binds this dialect directly, so claims() never competes: per the
-plan's warning, it must not lean on x-stainless-* headers, which every Stainless-generated SDK
-sends."""
+"""Anthropic Messages ingress and streaming responses."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from starlette.responses import JSONResponse, Response
 
@@ -29,7 +23,15 @@ CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop
 
 
 def _mapping(value: object) -> dict[str, Any]:
-    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        message = "expected a JSON object"
+        raise TypeError(message)
+    if any(not isinstance(key, str) for key in value):
+        message = "JSON object keys must be strings"
+        raise TypeError(message)
+    return cast("dict[str, Any]", value)
 
 
 @dataclass
@@ -140,9 +142,9 @@ class AnthropicIngress(IngressAdapter):
         request = CanonicalRequest.model_validate(
             {
                 **extras,
-                "model": str(body.get("model") or ""),
+                "model": body.get("model"),
                 "messages": fmt.from_request(body),
-                "stream": bool(body.get("stream") or False),
+                "stream": body.get("stream", False),
                 "max_tokens": body.get("max_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
@@ -151,8 +153,8 @@ class AnthropicIngress(IngressAdapter):
                 "tool_choice": tool_choice,
                 "parallel_tool_calls": (
                     not raw_tool_choice["disable_parallel_tool_use"]
-                    if isinstance(raw_tool_choice, dict) and isinstance(raw_tool_choice.get("disable_parallel_tool_use"), bool)
-                    else None
+                    if isinstance(raw_tool_choice, dict) and raw_tool_choice.get("disable_parallel_tool_use") is not None
+                    else body.get("parallel_tool_calls")
                 ),
                 "reasoning": reasoning,
                 "response_format": fmt.response_format_from(output_config),

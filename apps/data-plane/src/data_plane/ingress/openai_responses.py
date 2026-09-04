@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from starlette.responses import JSONResponse, Response
 
@@ -24,6 +24,7 @@ from data_plane.canonical import (
     CanonicalTextResponseFormat,
     CanonicalToolDef,
 )
+from data_plane.errors import UnsupportedFeatureError
 from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
 
@@ -60,7 +61,15 @@ def _error(status: int, code: str, message: str) -> dict[str, Any]:
 
 
 def _mapping(value: object) -> dict[str, Any]:
-    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        message = "expected a JSON object"
+        raise TypeError(message)
+    if any(not isinstance(key, str) for key in value):
+        message = "JSON object keys must be strings"
+        raise TypeError(message)
+    return cast("dict[str, Any]", value)
 
 
 def _tools(value: object) -> list[CanonicalToolDef] | None:
@@ -73,27 +82,34 @@ def _tools(value: object) -> list[CanonicalToolDef] | None:
     for raw in value:
         tool = _mapping(raw)
         if tool.get("type") != "function":
-            message = "unsupported_feature: hosted tools are not supported"
-            raise ValueError(message)
+            message = "hosted tools are not supported"
+            raise UnsupportedFeatureError(message)
         tools.append(
-            CanonicalToolDef(
-                name=str(tool.get("name") or ""),
-                description=tool.get("description") if isinstance(tool.get("description"), str) else None,
-                parameters=_mapping(tool.get("parameters")),
-                strict=tool.get("strict") if isinstance(tool.get("strict"), bool) else None,
+            CanonicalToolDef.model_validate(
+                {
+                    "name": tool.get("name"),
+                    "description": tool.get("description"),
+                    "parameters": _mapping(tool.get("parameters")),
+                    "strict": tool.get("strict"),
+                }
             )
         )
     return tools or None
 
 
 def _choice(value: object) -> object:
+    if value is None or (isinstance(value, str) and value in {"auto", "none", "required"}):
+        return value
     choice = _mapping(value)
     if choice.get("type") == "function" and isinstance(choice.get("name"), str):
         return CanonicalNamedTool(name=choice["name"])
-    return value if isinstance(value, str) and value in {"auto", "none", "required"} else None
+    message = "unsupported tool_choice"
+    raise UnsupportedFeatureError(message)
 
 
 def _response_format(value: object) -> CanonicalResponseFormat | None:
+    if value is None:
+        return None
     format_value = _mapping(value)
     kind = format_value.get("type")
     if kind == "json_schema":
@@ -102,7 +118,8 @@ def _response_format(value: object) -> CanonicalResponseFormat | None:
         return CanonicalTextResponseFormat()
     if kind == "json_object":
         return CanonicalJsonObjectResponseFormat()
-    return None
+    message = "unsupported text format"
+    raise UnsupportedFeatureError(message)
 
 
 @dataclass
@@ -230,22 +247,22 @@ class OpenAIResponsesIngress(IngressAdapter):
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         unsupported = sorted(set(body) - SUPPORTED)
         if unsupported:
-            message = f"unsupported_feature: {', '.join(unsupported)}"
-            raise ValueError(message)
-        if body.get("store") not in {None, False}:
-            message = "unsupported_feature: store=true is not supported"
-            raise ValueError(message)
+            message = ", ".join(unsupported)
+            raise UnsupportedFeatureError(message)
+        if body.get("store") is not None and body["store"] is not False:
+            message = "only store=false is supported"
+            raise UnsupportedFeatureError(message)
         include = body.get("include")
         allowed_include = (None, [], ["reasoning.encrypted_content"])
         if include not in allowed_include:
-            message = "unsupported_feature: include is not supported"
-            raise ValueError(message)
+            message = "include is not supported"
+            raise UnsupportedFeatureError(message)
         input_value = body.get("input")
         if isinstance(input_value, str):
             messages = fmt.messages_of([{"type": "message", "role": "user", "content": [{"type": "input_text", "text": input_value}]}])
         else:
             messages = fmt.messages_of(input_value)
-        if instructions := body.get("instructions"):
+        if (instructions := body.get("instructions")) is not None:
             if not isinstance(instructions, str):
                 message = "instructions must be a string"
                 raise ValueError(message)
@@ -253,18 +270,20 @@ class OpenAIResponsesIngress(IngressAdapter):
         text = _mapping(body.get("text"))
         response_format = _response_format(text.get("format"))
         reasoning = _mapping(body.get("reasoning"))
-        request = CanonicalRequest(
-            model=str(body.get("model") or ""),
-            messages=messages,
-            stream=bool(body.get("stream")),
-            max_tokens=body.get("max_output_tokens"),
-            temperature=body.get("temperature"),
-            top_p=body.get("top_p"),
-            tools=_tools(body.get("tools")),
-            tool_choice=_choice(body.get("tool_choice")),
-            parallel_tool_calls=body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
-            reasoning=CanonicalReasoningConfig.model_validate(reasoning) if reasoning else None,
-            response_format=response_format,
+        request = CanonicalRequest.model_validate(
+            {
+                "model": body.get("model"),
+                "messages": messages,
+                "stream": body.get("stream", False),
+                "max_tokens": body.get("max_output_tokens"),
+                "temperature": body.get("temperature"),
+                "top_p": body.get("top_p"),
+                "tools": _tools(body.get("tools")),
+                "tool_choice": _choice(body.get("tool_choice")),
+                "parallel_tool_calls": body.get("parallel_tool_calls"),
+                "reasoning": CanonicalReasoningConfig.model_validate(reasoning) if reasoning else None,
+                "response_format": response_format,
+            }
         )
         return request, []
 
