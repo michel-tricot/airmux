@@ -10,7 +10,6 @@ import {
   getListOrgUsersQueryKey,
   getListOrgAccessKeysQueryKey,
   getListMembersQueryKey,
-  getListMemberCandidatesQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
@@ -22,7 +21,7 @@ export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }
 ];
 
 export function useOrgMembers(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgUsers(orgId, { query: { enabled, queryKey: getListOrgUsersQueryKey(orgId) } });
+  return useListOrgUsers(orgId, { query: { enabled } });
 }
 
 export function useCreateOrgServiceAccountMutation(orgId: string) {
@@ -52,11 +51,11 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
 }
 
 export function useWorkspaceMembers(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListMembers(orgId, workspaceRef, { query: { enabled, queryKey: getListMembersQueryKey(orgId, workspaceRef) } });
+  return useListMembers(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useWorkspaceMemberCandidates(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListMemberCandidates(orgId, workspaceRef, { query: { enabled, queryKey: getListMemberCandidatesQueryKey(orgId, workspaceRef) } });
+  return useListMemberCandidates(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useAddWorkspaceMemberMutation(orgId: string, workspaceRef: string) {

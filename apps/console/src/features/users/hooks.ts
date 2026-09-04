@@ -16,11 +16,11 @@ import {
 import type { EnabledQueryOptions } from '@/features/query-options';
 
 export function useUsers({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListUsers(undefined, { query: { enabled, queryKey: getListUsersQueryKey() } });
+  return useListUsers(undefined, { query: { enabled } });
 }
 
 export function useUser(userId: string) {
-  return useGetUser(userId, { query: { queryKey: getGetUserQueryKey(userId), retry: false } });
+  return useGetUser(userId, { query: { retry: false } });
 }
 
 export function useCreateServiceAccountMutation() {

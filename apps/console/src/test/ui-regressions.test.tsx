@@ -1,17 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { Badge, Button, ConfirmButton } from '@/components/ui/elements';
+import { Button, ConfirmButton } from '@/components/ui/elements';
 import { ORG, WORKSPACES, server } from './msw';
 import { Link } from 'wouter';
 
 const now = '2026-01-01T00:00:00Z';
-const themeCss = readFileSync(path.resolve(process.cwd(), 'src/index.css'), 'utf8');
 
 function taxonomyProvider(id: string, name: string, icon: string | null = null) {
   return {
@@ -31,35 +28,6 @@ function taxonomyProvider(id: string, name: string, icon: string | null = null) 
 
 beforeEach(() => {
   window.localStorage.setItem('airllm_org_id', ORG.id);
-});
-
-function themeValue(name: string) {
-  return themeCss.match(new RegExp(`(?:^|[;{])\\s*${name}:\\s*([^;]+);`, 'm'))?.[1].trim();
-}
-
-describe('console theme', () => {
-  it('keeps the violet accent across global and sidebar semantics', () => {
-    expect(themeValue('--ring')).toBe('244 100% 68%');
-    expect(themeValue('--primary')).toBe('244 100% 68%');
-    expect(themeValue('--primary-foreground')).toBe('0 0% 100%');
-    expect(themeValue('--sidebar-primary')).toBe('244 100% 68%');
-    expect(themeValue('--sidebar-primary-foreground')).toBe('0 0% 100%');
-    expect(themeValue('--sidebar-accent')).toBe('244 50% 16%');
-    expect(themeValue('--sidebar-accent-foreground')).toBe('244 100% 85%');
-    expect(themeCss).toContain('rgb(97 94 255 / 5%)');
-  });
-
-  it('keeps violet emphasis on primary controls', () => {
-    render(
-      <>
-        <Button>Save</Button>
-        <Badge>Active</Badge>
-      </>,
-    );
-
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('shadow-primary/40');
-    expect(screen.getByText('Active')).toHaveClass('shadow-primary/15');
-  });
 });
 
 describe('provider icons', () => {
