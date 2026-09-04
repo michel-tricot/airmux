@@ -132,9 +132,9 @@ def test_supplied_bootstrap_token_is_validated_and_redacted():
         DataPlaneBootstrap(token="not-an-access-key")
 
 
-def test_the_fly_migration_config_uses_the_direct_database_url(monkeypatch):
-    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "migrate-fly.yml"
+def test_shared_migration_config_uses_the_selected_database_url(monkeypatch):
+    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "migrate.yml"
     monkeypatch.setenv("GW_CONFIG", str(migration_config))
-    monkeypatch.setenv("DIRECT_DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
 
     assert database_url() == "postgresql+asyncpg://someone:secret@direct.db.internal:5432/app"

@@ -43,7 +43,8 @@ FLY_APP=your-installation ./deploy/fly/deploy.sh
 AIRLLM_PUBLIC_URL=https://your-installation.fly.dev ./deploy/smoke.sh
 ```
 
-The migration release command uses `DIRECT_DATABASE_URL` without requiring the state volume.
+The Fly release command sets `DATABASE_URL` from the required `DIRECT_DATABASE_URL` for migrations
+and uses the shared `deploy/docker/migrate.yml` config without requiring the state volume.
 The application uses the pooled `DATABASE_URL`. Both are installed as Fly secrets by bootstrap.
 Deployment disables spare high-availability Machines because this layout owns one local volume.
 Updates and process failures can interrupt the combined application.

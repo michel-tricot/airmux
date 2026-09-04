@@ -7,7 +7,8 @@ kill_timeout = "40s"
   build-target = "all-in-one"
 
 [deploy]
-  release_command = "airllmcp migrate --config /app/deploy/docker/migrate-fly.yml"
+  release_command = """sh -ec 'export DATABASE_URL="${DIRECT_DATABASE_URL:?Set DIRECT_DATABASE_URL}";
+    exec airllmcp migrate --config /app/deploy/docker/migrate.yml'"""
   strategy = "rolling"
   wait_timeout = "10m"
 

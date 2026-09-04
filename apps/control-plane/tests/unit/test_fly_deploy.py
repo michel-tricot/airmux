@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -103,6 +105,28 @@ if tool == "gh":
 
 raise SystemExit(f"unexpected {tool} command: {args}")
 """
+
+
+@pytest.mark.parametrize("direct_url", ["postgresql://direct.internal/database", None, ""])
+def test_fly_release_selects_direct_database_for_shared_migration_config(tmp_path, direct_url):
+    root = Path(__file__).resolve().parents[4]
+    config = tomllib.loads((root / "deploy/fly/fly.toml").read_text())
+    command = config["deploy"]["release_command"].replace("/app/", f"{root}/")
+    executable = tmp_path / "airllmcp"
+    executable.write_text(
+        f"#!{sys.executable}\nimport json, os, sys\nprint(json.dumps({{'database_url': os.environ['DATABASE_URL'], 'config': sys.argv[-1]}}))\n"
+    )
+    executable.chmod(0o755)
+    env = {"PATH": f"{tmp_path}:/usr/bin:/bin", "DATABASE_URL": "postgresql://pooled.internal/database"}
+    if direct_url is not None:
+        env["DIRECT_DATABASE_URL"] = direct_url
+    result = subprocess.run(shlex.split(command), env=env, capture_output=True, text=True, check=False)  # noqa: S603 trusted release command
+    if direct_url:
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == {"database_url": direct_url, "config": str(root / "deploy/docker/migrate.yml")}
+    else:
+        assert result.returncode != 0
+        assert not result.stdout
 
 
 def test_fly_dockerfile_exists_relative_to_config():
