@@ -236,19 +236,15 @@ class Stack:
     # setup ----------------------------------------------------------------
 
     def _provision_keys(self) -> None:
-        """What has to exist before the control plane starts: the signing key, pool key, and catalog file.
+        """What has to exist before the control plane starts: the pool key and catalog file.
 
         The configured pool key is seeded by control-plane startup before any human account exists.
         """
         self._write_taxonomy()
-        base = {**os.environ, "GW_CONFIG": str(self.config_path)}
-        key_path = self.cache_dir / "signing.key"
-        self._run([_bin("airllmcp"), "keygen", "--out", str(key_path)], base)
         self.env = {
             **os.environ,
             "GW_CONFIG": str(self.config_path),
             "OPENAI_API_KEY": "sk-stub",
-            "GW_BUNDLE_SIGNING_KEY": key_path.read_text(encoding="utf-8").strip(),
             "GW_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
         }
 
@@ -285,7 +281,6 @@ class Stack:
             "AIRLLM_API_KEY": caller["token"],
             "GW_ACCESS_KEY": access_key["token"],
             "GW_DATAPLANE_TOKEN": self.env["GW_DATAPLANE_TOKEN"],
-            "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
         self.env = {**self.env, **secrets}
@@ -363,8 +358,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
-                "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY"},
-                "bootstrap": {"kind": "token", "token": "env:GW_DATAPLANE_TOKEN"},
+                "bootstrap": {"token": "env:GW_DATAPLANE_TOKEN"},
                 "secrets": secrets_store,
             },
             "data_plane": {

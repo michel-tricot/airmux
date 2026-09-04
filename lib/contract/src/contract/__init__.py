@@ -4,7 +4,6 @@ from contract.bundle import (
     MODALITIES,
     BundleManifest,
     BundleManifestEntry,
-    BundleSigningKey,
     BundleV1,
     Capability,
     Catalog,
@@ -14,7 +13,6 @@ from contract.bundle import (
     ModelEntry,
     ParameterSupport,
     ProviderEntry,
-    SignedBundle,
 )
 from contract.credentials import ACCESS_KEY_PREFIX, INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import (
@@ -27,14 +25,6 @@ from contract.events import (
     UsageStatus,
 )
 from contract.ids import uuid7
-from contract.key_material import (
-    Ed25519PrivateKeyB64,
-    Ed25519PublicKeyB64,
-    private_key_from_b64,
-    private_key_to_b64,
-    public_key_from_b64,
-    public_key_to_b64,
-)
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
     EnvSecretStore,
@@ -55,11 +45,6 @@ from contract.secrets import (
     SecretStoreConfig,
     SecretStoreUnavailableError,
 )
-from contract.signing import (
-    canonical_json,
-    sign_bundle,
-    verify_bundle,
-)
 
 __all__ = [
     "ACCESS_KEY_PREFIX",
@@ -68,15 +53,12 @@ __all__ = [
     "PLAYGROUND_COOKIE",
     "BundleManifest",
     "BundleManifestEntry",
-    "BundleSigningKey",
     "BundleV1",
     "Capability",
     "Catalog",
     "CredentialEntry",
     "CredentialScope",
     "DeniedUsageEventV1",
-    "Ed25519PrivateKeyB64",
-    "Ed25519PublicKeyB64",
     "EnvSecretStore",
     "EnvStoreConfig",
     "FileSecretStore",
@@ -102,21 +84,13 @@ __all__ = [
     "SecretStoreConfig",
     "SecretStoreUnavailableError",
     "SecretsConfig",
-    "SignedBundle",
     "UnknownVarError",
     "UnsupportedRefSchemeError",
     "UsageEvent",
     "UsageStatus",
-    "canonical_json",
     "load_config_section",
-    "private_key_from_b64",
-    "private_key_to_b64",
-    "public_key_from_b64",
-    "public_key_to_b64",
     "resolve_ref",
-    "sign_bundle",
     "token_hash",
     "try_resolve_ref",
     "uuid7",
-    "verify_bundle",
 ]

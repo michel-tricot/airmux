@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func
 from sqlmodel import col, or_, select
 
-from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, uuid7
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, uuid7
 from control_plane.db import current_session
 from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, RuntimeConfiguration
 from control_plane.models.runtime_configuration import runtime_configuration_changes
@@ -14,26 +14,22 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-SIGNING_KEY_ID = "k1"
-
 
 class UnknownOrgError(LookupError):
     def __init__(self, org_id: UUID) -> None:
         super().__init__(str(org_id))
 
 
-async def publish_changes(now: datetime, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
+async def publish_changes(now: datetime) -> tuple[Bundle, ...]:
     await RuntimeConfiguration.advance(runtime_configuration_changes(current_session().sync_session))
-    return await publish_pending(now, signing_key)
+    return await publish_pending(now)
 
 
-async def publish_pending(now: datetime, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
+async def publish_pending(now: datetime) -> tuple[Bundle, ...]:
     published: tuple[Bundle, ...] = ()
     configuration = await RuntimeConfiguration.next_pending()
     while configuration is not None:
-        published = (*published, await _publish_revision(configuration, uuid7(), now, signing_key))
+        published = (*published, await _publish_revision(configuration, uuid7(), now))
         configuration = await RuntimeConfiguration.next_pending()
     return published
 
@@ -42,11 +38,9 @@ async def _publish_revision(
     configuration: RuntimeConfiguration,
     bundle_id: UUID,
     now: datetime,
-    signing_key: Ed25519PrivateKey,
 ) -> Bundle:
     org_id = configuration.org_id
     bundle = await compile_bundle(org_id, bundle_id, now)
-    signed = sign_bundle(bundle, signing_key, SIGNING_KEY_ID)
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
     stored = await Bundle(
         id=bundle_id,
@@ -54,9 +48,7 @@ async def _publish_revision(
         version=version + 1,
         issued_at=now,
         configuration_revision=configuration.desired_revision,
-        payload=signed.payload,
-        signature=signed.signature,
-        signing_key_id=signed.signing_key_id,
+        payload=bundle.model_dump_json(),
     ).save()
     configuration.published_revision = configuration.desired_revision
     await configuration.save()

@@ -34,6 +34,7 @@ import type {
   BundleLatestParams,
   BundleManifest,
   BundleOut,
+  BundleV1,
   ClaimOut,
   CliAuthApproveIn,
   CliAuthApprovedOut,
@@ -98,7 +99,6 @@ import type {
   ProviderOut,
   RoutedUsageEventV1,
   ServiceAccountIn,
-  SignedBundle,
   SignupIn,
   TaxonomyApplyOut,
   TaxonomyOut,
@@ -5357,7 +5357,7 @@ export const getRepublishBundleUrl = (orgId: string,) => {
 }
 
 /**
- * Request a fresh signed bundle for the organization's current configuration.
+ * Request a fresh bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
  * @summary Republish Policy Bundle
@@ -5872,14 +5872,14 @@ export const getGetBundleUrl = (bundleId: string,) => {
 }
 
 /**
- * Return one immutable signed bundle visible to the authenticated data plane credential.
+ * Return one immutable bundle visible to the authenticated data plane credential.
  *
  * Required permission: `bundles.read`.
  * @summary Get Bundle
  */
-export const getBundle = async (bundleId: string, options?: Parameters<typeof customFetch>[1]): Promise<SignedBundle> => {
+export const getBundle = async (bundleId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleV1> => {
 
-  return customFetch<SignedBundle>(getGetBundleUrl(bundleId),
+  return customFetch<BundleV1>(getGetBundleUrl(bundleId),
   {
     ...options,
     method: 'GET'
@@ -5959,14 +5959,14 @@ export const getBundleLatestUrl = (params?: BundleLatestParams,) => {
 }
 
 /**
- * Return the newest signed policy bundle available at the requested organization scope.
+ * Return the newest policy bundle available at the requested organization scope.
  *
  * Required permission: `bundles.read`.
  * @summary Get Latest Bundle
  */
-export const bundleLatest = async (params?: BundleLatestParams, options?: Parameters<typeof customFetch>[1]): Promise<SignedBundle> => {
+export const bundleLatest = async (params?: BundleLatestParams, options?: Parameters<typeof customFetch>[1]): Promise<BundleV1> => {
 
-  return customFetch<SignedBundle>(getBundleLatestUrl(params),
+  return customFetch<BundleV1>(getBundleLatestUrl(params),
   {
     ...options,
     method: 'GET'

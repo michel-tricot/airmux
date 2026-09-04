@@ -10,20 +10,19 @@ from urllib.parse import quote
 import typer
 import uvicorn
 import yaml
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from rich import box
 from rich.console import Console
 from rich.table import Table
 from sqlalchemy.engine import make_url
 
-from contract import private_key_to_b64
 from contract.secrets.file import write_private_text
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.compiler import publish_changes
-from control_plane.config import BundlePolicy, Settings, database_url, load_settings
+from control_plane.config import Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
+from control_plane.keys import new_access_key
 from control_plane.migrate import current_revision, head_revision, run_migrations
 from control_plane.models import Model, Org, User, set_actor
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
@@ -48,28 +47,21 @@ def _table(title: str, headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]
 
 
 def _database_url(config: str) -> str:
-    """The database alone, for the commands that touch rows without needing a signing key."""
+    """Load the database alone for commands that do not need full application settings."""
     os.environ["GW_CONFIG"] = config
     return database_url()
 
 
 @app.command()
-def keygen(
-    out: str = typer.Option(".airllm/signing.key", "--out", help="Bundle private key file"),
-    force: bool = typer.Option(False, "--force", help="Rotate an existing key; this invalidates every bundle signed with the old one"),
-) -> None:
-    """Generate the bundle signing key, the one secret the instance cannot mint for itself.
-
-    Refuses to overwrite an existing key file unless --force is given. Data planes discover the
-    public key through their authenticated bundle manifest.
-    """
+def bootstrap_keygen(out: str = typer.Option(".airllm/dataplane.key", "--out", help="Data-plane bootstrap key file")) -> None:
+    """Generate the shared pool key used to bootstrap control and data planes."""
     key_path = Path(out)
-    if key_path.exists() and not force:
-        typer.echo(f"{key_path} exists; pass --force to rotate (invalidates existing bundles)", err=True)
+    if key_path.exists():
+        typer.echo(f"{key_path} exists", err=True)
         raise typer.Exit(1)
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    key = Ed25519PrivateKey.generate()
-    write_private_text(key_path, private_key_to_b64(key))
+    token, _ = new_access_key()
+    write_private_text(key_path, token)
     typer.echo(f"wrote {key_path}")
 
 
@@ -135,7 +127,7 @@ def fixtures(config: str = "airllm.yml") -> None:
             seeded = await apply_fixtures(datetime.now(tz=UTC), secret_store)
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}
-            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now, settings.bundle.signing_key)]
+            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now)]
             return seeded, versions, len(await Model.find())
 
     try:
@@ -167,9 +159,9 @@ def fixtures(config: str = "airllm.yml") -> None:
 def openapi(out: str = typer.Option("-", "--out", help="Write the spec here; - writes it to stdout")) -> None:
     """Export the API spec as YAML; it is committed at lib/api-spec/openapi.yaml and the console and CLI clients generate from it.
 
-    The spec depends on the routes alone, so this runs against an ephemeral signing key and touches no database and no config file.
+    The spec depends on the routes alone, so this touches no database and no config file.
     """
-    settings = Settings(bundle=BundlePolicy(signing_key=private_key_to_b64(Ed25519PrivateKey.generate())))
+    settings = Settings()
     spec = yaml.safe_dump(create_app(settings).openapi(), sort_keys=False, allow_unicode=True, width=120)
     if out == "-":
         typer.echo(spec, nl=False)
@@ -210,7 +202,7 @@ def taxonomy(
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}
-            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now, settings.bundle.signing_key)]
+            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now)]
             return providers, models, versions
 
     providers, models, versions = asyncio.run(run())

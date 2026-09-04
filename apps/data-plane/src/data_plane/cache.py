@@ -5,9 +5,9 @@ import time
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from contract import BundleSigningKey, SignedBundle, uuid7
+from contract import BundleV1, uuid7
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,10 +46,9 @@ CACHE_FILE = "bundles.json"
 
 
 class CachedBundles(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True)
 
-    signing_keys: list[BundleSigningKey] = Field(min_length=1)
-    bundles: list[SignedBundle]
+    bundles: list[BundleV1]
 
 
 def read_cached_bundles(cache_dir: Path) -> CachedBundles | None:

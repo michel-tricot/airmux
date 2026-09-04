@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col
 
 from control_plane.authz import Permission
@@ -47,7 +47,6 @@ async def get_instance_taxonomy() -> Envelope[TaxonomyOut]:
 
 @router.post("/instance/taxonomy", tags=["Instance Model Catalog"], dependencies=[require(instance_scope, Permission.catalog_manage)])
 async def apply_instance_taxonomy(
-    request: Request,
     body: TaxonomySpec,
     dry_run: Annotated[bool, Query(description="Validate and report changes without applying them")] = False,
 ) -> Envelope[TaxonomyApplyOut]:
@@ -59,7 +58,7 @@ async def apply_instance_taxonomy(
     if dry_run:
         return Envelope(data=TaxonomyApplyOut(dry_run=True, providers=provider_counts, models=model_counts, published=[]))
     await apply_taxonomy(body)
-    published = await publish_changes(datetime.now(tz=UTC), request.app.state.settings.bundle.signing_key)
+    published = await publish_changes(datetime.now(tz=UTC))
     return Envelope(
         data=TaxonomyApplyOut(
             dry_run=False,

@@ -14,8 +14,8 @@ through the backend app's private Flycast address.
 | `/inf/v1/*`     | Backend port 8081 | `/inf/v1/*` |
 | Everything else | Console nginx     | React SPA   |
 
-The proxy preserves both API prefixes. On first boot, the backend generates its bundle signing key
-and one data-plane pool key on the volume. Control-plane startup authorizes that pool key before the
+The proxy preserves both API prefixes. On first boot, the backend generates one data-plane pool key
+on the volume. Control-plane startup authorizes that pool key before the
 data plane starts. Provider credentials also use the shared file-backed secret store.
 
 This is intentionally a single-backend-Machine deployment. A Fly Volume can attach to only one

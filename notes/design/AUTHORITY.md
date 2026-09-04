@@ -163,13 +163,13 @@ Instance scope is the default and registers a global data-plane instance with `o
 Organization scope is available for a dedicated data plane and records that organization on its
 heartbeat. The same credential supports only the actions the data plane performs:
 
-- Poll the latest signed bundle, optionally selecting an organization when instance-scoped
+- Poll the latest bundle, optionally selecting an organization when instance-scoped
 - Ingest usage events after every event's workspace scope is authorized
 - Heartbeat at the credential scope
 
 Control-plane startup seeds one configured pool token into the existing service-account and access-key
-tables before a human claims the instance. File bootstrap creates the secret on shared local state;
-token bootstrap accepts the secret injected by an orchestrator. Startup is idempotent, serializes
+tables before a human claims the instance. The token may resolve from a shared local file or an
+orchestrator-injected environment variable. Startup is idempotent, serializes
 concurrent replicas with a database advisory lock, and never reactivates a revoked key.
 
 ## Adding authority

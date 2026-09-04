@@ -11,9 +11,20 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BundleOut {
-  id: string;
+/**
+ * An active inference key included in a policy bundle.
+ *
+ * The bundle contains a token hash for authorization and a key ID for usage attribution, never
+ * the caller's secret token.
+ */
+export interface KeyEntry {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
   org_id: string;
-  version: number;
-  issued_at: Date;
+  workspace_id: string;
+  token_hash: string;
+  expires_at?: Date | null;
 }

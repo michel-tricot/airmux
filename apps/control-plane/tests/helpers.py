@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 import yaml
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy import event
 
 if TYPE_CHECKING:
@@ -18,11 +17,11 @@ if TYPE_CHECKING:
 
 from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
-from contract import MemoryStoreConfig, private_key_to_b64
+from contract import MemoryStoreConfig
 from control_plane.app import create_app
 from control_plane.authority import principal_permissions
 from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
-from control_plane.config import BundlePolicy, DatabaseConfig, Settings
+from control_plane.config import DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import AccessKeyGrant, mint_access_key
 from control_plane.models import Org, OrgMembership, User, set_actor
@@ -74,7 +73,6 @@ def captured_sql(app: FastAPI) -> Iterator[list[str]]:
 
 @dataclass(frozen=True)
 class ControlPlane:
-    bundle_key: Ed25519PrivateKey
     app: FastAPI
     db_url: str
 
@@ -188,7 +186,6 @@ def make_app() -> FastAPI:
     """An app with no database behind it, for route-metadata tests; anything that touches the database fails loudly."""
     settings = Settings(
         database=DatabaseConfig(url="postgresql+asyncpg://unused:unused@127.0.0.1:1/unused"),
-        bundle=BundlePolicy(signing_key=private_key_to_b64(Ed25519PrivateKey.generate())),
     )
     return create_app(settings)
 
@@ -200,23 +197,16 @@ def setup_control_plane(tmp_path, secrets=None) -> ControlPlane:
     value back the way a data plane would; pass secrets= to prove a differently configured instance.
     """
     url = setup_db(tmp_path)
-    bundle_key = Ed25519PrivateKey.generate()
     settings = Settings(
         database=DatabaseConfig(url=url),
-        bundle=BundlePolicy(signing_key=private_key_to_b64(bundle_key)),
         secrets=secrets if secrets is not None else MemoryStoreConfig(),
     )
-    return ControlPlane(bundle_key=bundle_key, app=create_app(settings), db_url=url)
+    return ControlPlane(app=create_app(settings), db_url=url)
 
 
-def write_config(tmp_path, cp: ControlPlane) -> str:
-    """The minimal config file pointing CLI commands at a setup_control_plane database and keys."""
-    doc = {
-        "control_plane": {
-            "database": {"url": db_url_for(tmp_path)},
-            "bundle": {"signing_key": private_key_to_b64(cp.bundle_key)},
-        }
-    }
+def write_config(tmp_path, _cp: ControlPlane) -> str:
+    """The minimal config file pointing CLI commands at a setup_control_plane database."""
+    doc = {"control_plane": {"database": {"url": db_url_for(tmp_path)}}}
     cfg = tmp_path / "airllm.yml"
     cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
     return str(cfg)

@@ -1,37 +1,27 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from anyio.to_thread import run_sync
 from sqlalchemy import text
 from sqlmodel import col
 
 from contract import ACCESS_KEY_PREFIX, token_hash
-from contract.secrets.file import write_private_text
 from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole
-from control_plane.config import DataPlaneBootstrap, TokenDataPlaneBootstrap, validate_data_plane_token
 from control_plane.db import current_session
-from control_plane.keys import key_prefix, new_access_key
+from control_plane.keys import key_prefix
 from control_plane.models import AccessKey, User, set_actor
+
+if TYPE_CHECKING:
+    from control_plane.config import DataPlaneBootstrap
 
 _BOOTSTRAP_LOCK = 0x41524450
 _BOOTSTRAP_NAME = "deployment data plane"
 
 
-def _token(bootstrap: DataPlaneBootstrap) -> str:
-    if isinstance(bootstrap, TokenDataPlaneBootstrap):
-        return bootstrap.token.get_secret_value()
-    try:
-        token = bootstrap.path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        token, _ = new_access_key()
-        write_private_text(bootstrap.path, token)
-    return validate_data_plane_token(token)
-
-
 async def bootstrap_data_plane(bootstrap: DataPlaneBootstrap) -> None:
     await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _BOOTSTRAP_LOCK})
-    token = await run_sync(_token, bootstrap)
+    token = bootstrap.token.get_secret_value()
     token_digest = token_hash(token)
     existing = await AccessKey.first(AccessKey.token_hash == token_digest)
     if existing is not None:

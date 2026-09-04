@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col
 
 from control_plane.authority import ensure_org_role_change
@@ -132,12 +132,11 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
 
 
 @router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_publish)])
-async def republish_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
-    """Request a fresh signed bundle for the organization's current configuration."""
-    settings = request.app.state.settings
+async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
+    """Request a fresh bundle for the organization's current configuration."""
     now = datetime.now(tz=UTC)
     await RuntimeConfiguration.request_republication(org_id)
-    published = await publish_pending(now, settings.bundle.signing_key)
+    published = await publish_pending(now)
     bundle = next(bundle for bundle in published if bundle.org_id == org_id)
     return Envelope(data=BundleOut.model_validate(bundle))
 

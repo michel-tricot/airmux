@@ -1,7 +1,7 @@
 """A bundle written by hand, for a data plane with no control plane.
 
 The spec compiles to the same BundleV1 the poller fetches, and enters through the same
-admit(). The request path never learns the source. There is no signature: the file is
+admit(). The request path never learns the source. The file is
 trusted because the operator owns the filesystem it sits on."""
 
 from __future__ import annotations

@@ -234,8 +234,6 @@ def upgrade() -> None:
         sa.Column("issued_at", UTCDateTime(), nullable=False),
         sa.Column("configuration_revision", sa.Integer(), nullable=False),
         sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("signature", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("signing_key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["org_id"],
             ["org.id"],

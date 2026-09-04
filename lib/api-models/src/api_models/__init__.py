@@ -50,12 +50,6 @@ class BundleOut(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     version: Annotated[int, Field(title="Version")]
     issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-    signing_key_id: Annotated[str, Field(title="Signing Key Id")]
-
-
-class BundleSigningKey(BaseModel):
-    key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
-    public_key: Annotated[str, Field(title="Public Key")]
 
 
 class ClaimOut(BaseModel):
@@ -445,6 +439,21 @@ class InvitationTokenIn(BaseModel):
     ]
 
 
+class KeyEntry(BaseModel):
+    """
+    An active inference key included in a policy bundle.
+
+    The bundle contains a token hash for authorization and a key ID for usage attribution, never
+    the caller's secret token.
+    """
+
+    key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    token_hash: Annotated[str, Field(title="Token Hash")]
+    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")] = None
+
+
 class LoginIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -475,6 +484,39 @@ class MeOut(BaseModel):
     name: Annotated[str, Field(title="Name")]
     instance_role: InstanceRole | None
     orgs: Annotated[list[UUID], Field(title="Orgs")]
+
+
+class ModelEntry(BaseModel):
+    """
+    A routable model: the caller-facing id plus how to reach and bill it.
+    """
+
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    upstream_model: Annotated[str, Field(title="Upstream Model")]
+    input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
+    context_window: Annotated[int, Field(title="Context Window")]
+    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
+    input_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video", "pdf"]],
+        Field(max_length=5, min_length=1, title="Input Modalities"),
+    ]
+    output_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video", "pdf"]],
+        Field(max_length=5, min_length=1, title="Output Modalities"),
+    ]
+    capabilities: Annotated[
+        list[Literal["streaming", "tools", "reasoning", "structured_output"]],
+        Field(title="Capabilities"),
+    ]
+    parameter_support: Annotated[
+        dict[str, Literal["supported", "unsupported"]] | None,
+        Field(title="Parameter Support"),
+    ] = None
+    egress_kind: Annotated[str | None, Field(title="Egress Kind")] = None
 
 
 class EgressKind(RootModel[str]):
@@ -1005,6 +1047,19 @@ class ProviderCredentialValueIn(BaseModel):
     ]
 
 
+class ProviderEntry(BaseModel):
+    """
+    An upstream LLM provider endpoint and its supported request parameters.
+    """
+
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    kind: Annotated[str, Field(title="Kind")]
+    base_url: Annotated[AnyUrl, Field(title="Base Url")]
+    param_aliases: Annotated[dict[str, str] | None, Field(title="Param Aliases")] = None
+    accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")] = None
+    params_closed: Annotated[bool | None, Field(title="Params Closed")] = False
+
+
 class AcceptedParams(RootModel[list[str]]):
     root: Annotated[
         list[str],
@@ -1225,6 +1280,29 @@ class ScopeLevel(RootModel[Literal["instance", "org", "workspace"]]):
     root: Annotated[Literal["instance", "org", "workspace"], Field(title="ScopeLevel")]
 
 
+class SecretPurpose(RootModel[Literal["provider"]]):
+    root: Annotated[
+        Literal["provider"],
+        Field(
+            description="The kind of credential addressed by a secret reference.",
+            title="SecretPurpose",
+        ),
+    ]
+
+
+class SecretRef(BaseModel):
+    """
+    A stable reference to a secret value and the scope that owns it.
+    """
+
+    purpose: SecretPurpose
+    service: Annotated[str, Field(title="Service")]
+    name: Annotated[str, Field(title="Name")]
+    secret_id: Annotated[UUID, Field(title="Secret Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
+
+
 class ServiceAccountIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1242,18 +1320,6 @@ class ServiceAccountIn(BaseModel):
         InstanceRole | None,
         Field(description="Optional instance-wide role for the service account"),
     ] = None
-
-
-class SignedBundle(BaseModel):
-    """
-    A serialized BundleV1 as it crosses the wire and rests on disk.
-
-    The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
-    """
-
-    payload: Annotated[str, Field(title="Payload")]
-    signature: Annotated[str, Field(title="Signature")]
-    signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
 class SignupIn(BaseModel):
@@ -1519,7 +1585,18 @@ class BundleManifest(BaseModel):
     """
 
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
-    signing_keys: Annotated[list[BundleSigningKey], Field(min_length=1, title="Signing Keys")]
+
+
+class CredentialEntry(BaseModel):
+    """
+    A provider credential reference, priority, and version included in a policy bundle.
+
+    The secret value is not included. A version change tells data planes to refresh their cached value.
+    """
+
+    ref: SecretRef
+    priority: Annotated[int, Field(title="Priority")]
+    version: Annotated[int, Field(title="Version")]
 
 
 class EnrollOut(BaseModel):
@@ -1594,10 +1671,6 @@ class EnvelopeProviderCredentialOut(BaseModel):
 
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
-
-
-class EnvelopeSignedBundle(BaseModel):
-    data: SignedBundle
 
 
 class EnvelopeTaxonomyOut(BaseModel):
@@ -1777,6 +1850,17 @@ class AccessKeyOut(BaseModel):
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
 
 
+class Catalog(BaseModel):
+    """
+    Everything routable in one org: providers, the models that point at them, and the credentials
+    they are reached with.
+    """
+
+    providers: Annotated[list[ProviderEntry], Field(title="Providers")]
+    models: Annotated[list[ModelEntry], Field(title="Models")]
+    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials")] = None
+
+
 class EnvelopeAccessKeyMintedOut(BaseModel):
     data: AccessKeyMintedOut
 
@@ -1817,6 +1901,23 @@ class OrgServiceAccountMintedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     access_key: AccessKeyMintedOut
+
+
+class BundleV1(BaseModel):
+    """
+    A complete, versioned policy snapshot for one organization's model traffic.
+    """
+
+    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+    keys: Annotated[list[KeyEntry], Field(title="Keys")]
+    catalog: Catalog
+
+
+class EnvelopeBundleV1(BaseModel):
+    data: BundleV1
 
 
 class EnvelopeOrgServiceAccountMintedOut(BaseModel):

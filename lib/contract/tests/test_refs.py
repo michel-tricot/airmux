@@ -143,14 +143,14 @@ def test_a_ref_without_a_default_still_voids_the_string(tmp_path, monkeypatch):
 def test_vars_substitute_inside_refs_and_as_plain_values(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "keys").mkdir()
-    (tmp_path / "keys" / "signing.key").write_text("sekrit\n", encoding="utf-8")
+    (tmp_path / "keys" / "dataplane.key").write_text("sekrit\n", encoding="utf-8")
     path = tmp_path / "config.yml"
     path.write_text(
-        "vars:\n  dir: keys\napp:\n  signing_key: ${file:${var:dir}/signing.key}\n  cache_dir: ${var:dir}\n",
+        "vars:\n  dir: keys\napp:\n  token: ${file:${var:dir}/dataplane.key}\n  cache_dir: ${var:dir}\n",
         encoding="utf-8",
     )
     section = load_config_section("app", path)
-    assert section["signing_key"] == "sekrit"
+    assert section["token"] == "sekrit"
     assert section["cache_dir"] == "keys"
 
 

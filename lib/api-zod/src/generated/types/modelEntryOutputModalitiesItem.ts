@@ -11,13 +11,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * A serialized BundleV1 as it crosses the wire and rests on disk.
- *
- * The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
- */
-export interface SignedBundle {
-  payload: string;
-  signature: string;
-  signing_key_id: string;
-}
+export type ModelEntryOutputModalitiesItem = typeof ModelEntryOutputModalitiesItem[keyof typeof ModelEntryOutputModalitiesItem];
+
+
+export const ModelEntryOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;

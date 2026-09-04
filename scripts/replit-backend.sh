@@ -67,8 +67,8 @@ reset_database() {
 require_database_url
 normalize_database_url
 
-if [[ ! -f .airllm/signing.key ]]; then
-  uv run airllmcp keygen
+if [[ ! -f .airllm/dataplane.key ]]; then
+  uv run airllmcp bootstrap-keygen
 fi
 
 if ! uv run airllmcp migrate; then

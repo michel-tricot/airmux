@@ -1860,7 +1860,7 @@ export const DeleteOrgServiceAccountResponse = zod.object({
 
 
 /**
- * Request a fresh signed bundle for the organization's current configuration.
+ * Request a fresh bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
  * @summary Republish Policy Bundle
@@ -1873,8 +1873,7 @@ export const RepublishBundleResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "version": zod.int(),
-  "issued_at": zod.coerce.date(),
-  "signing_key_id": zod.string()
+  "issued_at": zod.coerce.date()
 })
 
 
@@ -1892,8 +1891,7 @@ export const ListBundlesResponseItem = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "version": zod.int(),
-  "issued_at": zod.coerce.date(),
-  "signing_key_id": zod.string()
+  "issued_at": zod.coerce.date()
 })
 export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
 
@@ -2033,25 +2031,16 @@ export const ListActivityResponse = zod.array(ListActivityResponseItem)
  * Required permission: `bundles.read`.
  * @summary Get Authorized Bundle Manifest
  */
-export const bundleManifestResponseSigningKeysItemKeyIdMax = 255;
-
-
-
-
 export const BundleManifestResponse = zod.object({
   "bundles": zod.array(zod.object({
   "org_id": zod.uuid(),
   "bundle_id": zod.uuid()
-}).describe('The immutable identity of one organization bundle available to a data plane.')),
-  "signing_keys": zod.array(zod.object({
-  "key_id": zod.string().min(1).max(bundleManifestResponseSigningKeysItemKeyIdMax),
-  "public_key": zod.string()
-})).min(1)
+}).describe('The immutable identity of one organization bundle available to a data plane.'))
 }).describe('The complete set of organization bundles one data plane may serve.')
 
 
 /**
- * Return one immutable signed bundle visible to the authenticated data plane credential.
+ * Return one immutable bundle visible to the authenticated data plane credential.
  *
  * Required permission: `bundles.read`.
  * @summary Get Bundle
@@ -2060,15 +2049,73 @@ export const GetBundleParams = zod.object({
   "bundle_id": zod.uuid().describe('Policy bundle ID')
 })
 
+export const getBundleResponseSchemaVersionDefault = 1;
+export const getBundleResponseKeysItemKeyIdMax = 255;
+
+export const getBundleResponseCatalogProvidersItemBaseUrlMax = 2083;
+
+export const getBundleResponseCatalogProvidersItemParamsClosedDefault = false;
+export const getBundleResponseCatalogModelsItemInputModalitiesMax = 5;
+
+export const getBundleResponseCatalogModelsItemOutputModalitiesMax = 5;
+
+
+
 export const GetBundleResponse = zod.object({
-  "payload": zod.string(),
-  "signature": zod.string(),
-  "signing_key_id": zod.string()
-}).describe('A serialized BundleV1 as it crosses the wire and rests on disk.\n\nThe signature covers the payload\'s exact UTF-8 bytes. Consumers verify before parsing.')
+  "schema_version": zod.literal(1).default(getBundleResponseSchemaVersionDefault),
+  "bundle_id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "issued_at": zod.coerce.date(),
+  "keys": zod.array(zod.object({
+  "key_id": zod.string().min(1).max(getBundleResponseKeysItemKeyIdMax),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "token_hash": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional()
+}).describe('An active inference key included in a policy bundle.\n\nThe bundle contains a token hash for authorization and a key ID for usage attribution, never\nthe caller\'s secret token.')),
+  "catalog": zod.object({
+  "providers": zod.array(zod.object({
+  "provider_id": zod.string(),
+  "kind": zod.string(),
+  "base_url": zod.url().min(1).max(getBundleResponseCatalogProvidersItemBaseUrlMax),
+  "param_aliases": zod.record(zod.string(), zod.string()).optional(),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "params_closed": zod.boolean().default(getBundleResponseCatalogProvidersItemParamsClosedDefault)
+}).describe('An upstream LLM provider endpoint and its supported request parameters.')),
+  "models": zod.array(zod.object({
+  "model_id": zod.string(),
+  "provider_id": zod.string(),
+  "upstream_model": zod.string(),
+  "input_price_per_mtok": zod.number(),
+  "output_price_per_mtok": zod.number(),
+  "cache_read_price_per_mtok": zod.number(),
+  "cache_write_price_per_mtok": zod.number(),
+  "context_window": zod.int(),
+  "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(getBundleResponseCatalogModelsItemInputModalitiesMax),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(getBundleResponseCatalogModelsItemOutputModalitiesMax),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional(),
+  "egress_kind": zod.union([zod.string(),zod.null()]).optional()
+}).describe('A routable model: the caller-facing id plus how to reach and bill it.')),
+  "credentials": zod.array(zod.object({
+  "ref": zod.object({
+  "purpose": zod.enum(['provider']).describe('The kind of credential addressed by a secret reference.'),
+  "service": zod.string(),
+  "name": zod.string(),
+  "secret_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+}).describe('A stable reference to a secret value and the scope that owns it.'),
+  "priority": zod.int(),
+  "version": zod.int()
+}).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
+}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
+}).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
 
 
 /**
- * Return the newest signed policy bundle available at the requested organization scope.
+ * Return the newest policy bundle available at the requested organization scope.
  *
  * Required permission: `bundles.read`.
  * @summary Get Latest Bundle
@@ -2077,11 +2124,69 @@ export const BundleLatestQueryParams = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization whose latest bundle to return; omit to use the credential\'s scope')
 })
 
+export const bundleLatestResponseSchemaVersionDefault = 1;
+export const bundleLatestResponseKeysItemKeyIdMax = 255;
+
+export const bundleLatestResponseCatalogProvidersItemBaseUrlMax = 2083;
+
+export const bundleLatestResponseCatalogProvidersItemParamsClosedDefault = false;
+export const bundleLatestResponseCatalogModelsItemInputModalitiesMax = 5;
+
+export const bundleLatestResponseCatalogModelsItemOutputModalitiesMax = 5;
+
+
+
 export const BundleLatestResponse = zod.object({
-  "payload": zod.string(),
-  "signature": zod.string(),
-  "signing_key_id": zod.string()
-}).describe('A serialized BundleV1 as it crosses the wire and rests on disk.\n\nThe signature covers the payload\'s exact UTF-8 bytes. Consumers verify before parsing.')
+  "schema_version": zod.literal(1).default(bundleLatestResponseSchemaVersionDefault),
+  "bundle_id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "issued_at": zod.coerce.date(),
+  "keys": zod.array(zod.object({
+  "key_id": zod.string().min(1).max(bundleLatestResponseKeysItemKeyIdMax),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "token_hash": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional()
+}).describe('An active inference key included in a policy bundle.\n\nThe bundle contains a token hash for authorization and a key ID for usage attribution, never\nthe caller\'s secret token.')),
+  "catalog": zod.object({
+  "providers": zod.array(zod.object({
+  "provider_id": zod.string(),
+  "kind": zod.string(),
+  "base_url": zod.url().min(1).max(bundleLatestResponseCatalogProvidersItemBaseUrlMax),
+  "param_aliases": zod.record(zod.string(), zod.string()).optional(),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "params_closed": zod.boolean().default(bundleLatestResponseCatalogProvidersItemParamsClosedDefault)
+}).describe('An upstream LLM provider endpoint and its supported request parameters.')),
+  "models": zod.array(zod.object({
+  "model_id": zod.string(),
+  "provider_id": zod.string(),
+  "upstream_model": zod.string(),
+  "input_price_per_mtok": zod.number(),
+  "output_price_per_mtok": zod.number(),
+  "cache_read_price_per_mtok": zod.number(),
+  "cache_write_price_per_mtok": zod.number(),
+  "context_window": zod.int(),
+  "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(bundleLatestResponseCatalogModelsItemInputModalitiesMax),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(bundleLatestResponseCatalogModelsItemOutputModalitiesMax),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional(),
+  "egress_kind": zod.union([zod.string(),zod.null()]).optional()
+}).describe('A routable model: the caller-facing id plus how to reach and bill it.')),
+  "credentials": zod.array(zod.object({
+  "ref": zod.object({
+  "purpose": zod.enum(['provider']).describe('The kind of credential addressed by a secret reference.'),
+  "service": zod.string(),
+  "name": zod.string(),
+  "secret_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+}).describe('A stable reference to a secret value and the scope that owns it.'),
+  "priority": zod.int(),
+  "version": zod.int()
+}).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
+}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
+}).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
 
 
 /**

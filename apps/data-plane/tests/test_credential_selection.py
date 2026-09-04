@@ -6,19 +6,15 @@ import httpx
 import pytest
 import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.testclient import TestClient
 
 from contract import (
-    BundleSigningKey,
     Catalog,
     FileStoreConfig,
     MemoryStoreConfig,
     Secret,
     SecretStore,
     SecretStoreUnavailableError,
-    public_key_to_b64,
-    sign_bundle,
     uuid7,
 )
 from data_plane.app import create_app
@@ -192,12 +188,10 @@ def _byok_app(tmp_path, credentials):
     the app reach the same values through the same root the way two processes would, instead of
     sharing an object the app never built.
     """
-    bundle_key = Ed25519PrivateKey.generate()
     caller_token, entry = make_key(org=ORG, workspace=WORKSPACE)
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
-    signing_key = BundleSigningKey(key_id="k1", public_key=public_key_to_b64(bundle_key.public_key()))
-    write_cached_bundles(tmp_path, CachedBundles(signing_keys=[signing_key], bundles=[sign_bundle(bundle, bundle_key, "k1")]))
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
@@ -220,21 +214,18 @@ def _complete(app, caller_token):
 
 @respx.mock
 def test_one_data_plane_serves_two_org_bundles(tmp_path):
-    bundle_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
     other_workspace = uuid7()
     first_token, first_key = make_key("first", org=ORG, workspace=WORKSPACE)
     second_token, second_key = make_key("second", org=other_org, workspace=other_workspace)
     platform = make_credential(org=None, name="platform")
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[platform])
-    signing_key = BundleSigningKey(key_id="k1", public_key=public_key_to_b64(bundle_key.public_key()))
     write_cached_bundles(
         tmp_path,
         CachedBundles(
-            signing_keys=[signing_key],
             bundles=[
-                sign_bundle(make_bundle(keys=[first_key], catalog=catalog, org=ORG), bundle_key, "k1"),
-                sign_bundle(make_bundle(keys=[second_key], catalog=catalog, org=other_org), bundle_key, "k1"),
+                make_bundle(keys=[first_key], catalog=catalog, org=ORG),
+                make_bundle(keys=[second_key], catalog=catalog, org=other_org),
             ],
         ),
     )

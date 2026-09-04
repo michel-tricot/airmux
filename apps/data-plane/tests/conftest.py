@@ -9,11 +9,9 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 import respx
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import (
     INFERENCE_TOKEN_PREFIX,
-    BundleSigningKey,
     BundleV1,
     Catalog,
     CredentialEntry,
@@ -23,8 +21,6 @@ from contract import (
     Secret,
     SecretPurpose,
     SecretRef,
-    public_key_to_b64,
-    sign_bundle,
     token_hash,
     uuid7,
 )
@@ -93,9 +89,9 @@ def make_bundle(keys=(), catalog=None, org=ORG):
     )
 
 
-def make_signed(private_key, key_ids=("k1",), org=ORG):
+def make_remote_bundle(key_ids=("k1",), org=ORG):
     keys = [make_key(k, org)[1] for k in key_ids]
-    return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
+    return make_bundle(keys=keys, org=org)
 
 
 def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
@@ -177,17 +173,15 @@ class BootedApp:
 
 @pytest.fixture
 def booted(tmp_path, monkeypatch) -> BootedApp:
-    """A booted-app environment: signed bundle on disk, an app built from a constructed Config, and a valid caller token.
+    """A booted-app environment: cached bundle, constructed Config, and a valid caller token.
 
     The config is constructed and injected through create_app, never parsed; parsing the config
     file is test_config.py's job.
     """
-    bundle_key = Ed25519PrivateKey.generate()
     caller_token, entry = make_key()
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
-    signing_key = BundleSigningKey(key_id="k1", public_key=public_key_to_b64(bundle_key.public_key()))
-    write_cached_bundles(tmp_path, CachedBundles(signing_keys=[signing_key], bundles=[sign_bundle(bundle, bundle_key, "k1")]))
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
     config = Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),

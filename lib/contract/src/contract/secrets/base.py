@@ -6,8 +6,8 @@ vault. Callers name a secret with a SecretRef and never with a path: where a sto
 its own business, so there is no location string for anyone to author, forge, or leak.
 
 Provider credentials are the first thing kept here and the reason the package exists, but nothing
-in it is provider-shaped: a SecretRef says what a secret is for, so a signing key, an outbound
-integration credential, or anything else the platform holds on someone's behalf lands here without
+in it is provider-shaped: a SecretRef says what a secret is for, so an outbound integration
+credential or anything else the platform holds on someone's behalf lands here without
 a second mechanism.
 """
 

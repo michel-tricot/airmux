@@ -11,11 +11,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BundleSigningKey {
-  /**
-     * @minLength 1
-     * @maxLength 255
-     */
-  key_id: string;
-  public_key: string;
-}
+export type ModelEntryCapabilitiesItem = typeof ModelEntryCapabilitiesItem[keyof typeof ModelEntryCapabilitiesItem];
+
+
+export const ModelEntryCapabilitiesItem = {
+  streaming: 'streaming',
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;

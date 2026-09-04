@@ -9,7 +9,7 @@ from data_plane.control_plane_link import ControlPlaneLink
 
 
 class RemoteBundleConfig(BaseModel):
-    """The bundle comes from the control plane: polled, signature-verified, cached on disk."""
+    """The bundle comes from the control plane: authenticated, validated, and cached on disk."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", arbitrary_types_allowed=True)
 

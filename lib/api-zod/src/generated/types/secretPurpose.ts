@@ -11,9 +11,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: Date;
-}
+/**
+ * The kind of credential addressed by a secret reference.
+ */
+export type SecretPurpose = typeof SecretPurpose[keyof typeof SecretPurpose];
+
+
+export const SecretPurpose = {
+  provider: 'provider',
+} as const;

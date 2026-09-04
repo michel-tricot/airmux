@@ -10,10 +10,17 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { Catalog } from './catalog';
+import type { KeyEntry } from './keyEntry';
 
-export interface BundleOut {
-  id: string;
+/**
+ * A complete, versioned policy snapshot for one organization's model traffic.
+ */
+export interface BundleV1 {
+  schema_version?: 1;
+  bundle_id: string;
   org_id: string;
-  version: number;
   issued_at: Date;
+  keys: KeyEntry[];
+  catalog: Catalog;
 }

@@ -4,11 +4,8 @@ vars:
 control_plane:
   database:
     url: ${env:DATABASE_URL}
-  bundle:
-    signing_key: ${file:${var:cache_dir}/signing.key}
   bootstrap:
-    kind: file
-    path: ${var:cache_dir}/dataplane.key
+    token: ${file:${var:cache_dir}/dataplane.key}
   console_url: ${env:GW_CONSOLE_URL}
   secrets:
     kind: file

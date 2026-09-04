@@ -7,40 +7,28 @@ from helpers import run_in_db, setup_db
 from pg import db_name_for, ensure_database
 from typer.testing import CliRunner
 
-from contract import private_key_from_b64
+from control_plane.config import validate_data_plane_token
 from control_plane.main import app as cli_app
 from control_plane.models import User, set_actor
 
 runner = CliRunner()
 
 
-def test_keygen_writes_one_private_signing_key(tmp_path):
-    key_path = tmp_path / "signing.key"
-    result = runner.invoke(cli_app, ["keygen", "--out", str(key_path)])
+def test_bootstrap_keygen_writes_one_private_pool_key(tmp_path):
+    key_path = tmp_path / "dataplane.key"
+    result = runner.invoke(cli_app, ["bootstrap-keygen", "--out", str(key_path)])
     assert result.exit_code == 0, result.output
-    private_key_from_b64(key_path.read_text(encoding="utf-8"))
-    assert not (tmp_path / "signing.pub").exists()
+    validate_data_plane_token(key_path.read_text(encoding="utf-8"))
     assert stat.S_IMODE(key_path.stat().st_mode) == 0o600
 
 
-def test_keygen_refuses_to_clobber_an_existing_key(tmp_path):
-    key_path = tmp_path / "signing.key"
-    assert runner.invoke(cli_app, ["keygen", "--out", str(key_path)]).exit_code == 0
+def test_bootstrap_keygen_refuses_to_clobber_an_existing_key(tmp_path):
+    key_path = tmp_path / "dataplane.key"
+    assert runner.invoke(cli_app, ["bootstrap-keygen", "--out", str(key_path)]).exit_code == 0
     before = key_path.read_text(encoding="utf-8")
-    result = runner.invoke(cli_app, ["keygen", "--out", str(key_path)])
+    result = runner.invoke(cli_app, ["bootstrap-keygen", "--out", str(key_path)])
     assert result.exit_code == 1
     assert key_path.read_text(encoding="utf-8") == before
-
-
-def test_keygen_force_rotates_the_key(tmp_path):
-    key_path = tmp_path / "signing.key"
-    assert runner.invoke(cli_app, ["keygen", "--out", str(key_path)]).exit_code == 0
-    before = key_path.read_text(encoding="utf-8")
-    before_inode = key_path.stat().st_ino
-    result = runner.invoke(cli_app, ["keygen", "--out", str(key_path), "--force"])
-    assert result.exit_code == 0, result.output
-    assert key_path.read_text(encoding="utf-8") != before
-    assert key_path.stat().st_ino != before_inode
 
 
 def test_migrate_reports_what_it_did(tmp_path):

@@ -1,6 +1,6 @@
 """Acceptance: the data plane serves from a hand-written bundle, with no control plane anywhere.
 
-No Postgres, no bootstrap, no signature. The operator writes two files and sets one
+No Postgres and no bootstrap. The operator writes two files and sets one
 environment variable; the same request path serves. This is the local mode of the two-source
 design: one BundleV1, one admit(), a different door."""
 

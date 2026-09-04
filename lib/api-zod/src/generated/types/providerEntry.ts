@@ -10,10 +10,20 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ProviderEntryParamAliases } from './providerEntryParamAliases';
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: Date;
+/**
+ * An upstream LLM provider endpoint and its supported request parameters.
+ */
+export interface ProviderEntry {
+  provider_id: string;
+  kind: string;
+  /**
+     * @minLength 1
+     * @maxLength 2083
+     */
+  base_url: string;
+  param_aliases?: ProviderEntryParamAliases;
+  accepted_params?: string[] | null;
+  params_closed?: boolean;
 }

@@ -68,7 +68,7 @@ class SecretRef:
 ```
 
 Provider credentials are the first purpose and the reason the package exists, but nothing in it is
-provider-shaped. A signing key, an outbound integration credential, or anything else the platform
+provider-shaped. An outbound integration credential or anything else the platform
 holds on someone's behalf is a new `SecretPurpose` member and no new mechanism.
 
 Consequences worth stating, because they delete design surface rather than add it:
@@ -274,9 +274,7 @@ must never flip a working key back to invalid. A provider outage leaves the stat
 naming a credential that has since been deleted are skipped rather than treated as an error.
 
 The deploy is lockstep. Add a `contract_version` check so a mismatch logs loudly at bundle admission
-instead of manifesting as a data plane silently serving a week-old bundle forever: `verify_bundle`
-re-serializes the payload, so an older data plane drops the unknown field and rejects every new
-bundle without saying why.
+instead of manifesting as a data plane silently serving a week-old bundle forever.
 
 ## Data plane read path
 

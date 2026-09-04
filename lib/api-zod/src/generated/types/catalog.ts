@@ -10,10 +10,16 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { CredentialEntry } from './credentialEntry';
+import type { ModelEntry } from './modelEntry';
+import type { ProviderEntry } from './providerEntry';
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: Date;
+/**
+ * Everything routable in one org: providers, the models that point at them, and the credentials
+ * they are reached with.
+ */
+export interface Catalog {
+  providers: ProviderEntry[];
+  models: ModelEntry[];
+  credentials?: CredentialEntry[];
 }
