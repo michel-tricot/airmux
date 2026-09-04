@@ -1,9 +1,4 @@
-"""The OpenAI dialect: an unmodified OpenAI client that swapped only its base URL, per DATAPLANE.md.
-
-Requests are recognized by fingerprint or unambiguous shape, parsed through the same canonical
-middle as every other request, and answered as OpenAI's shapes: choices on the completion,
-chat.completion.chunk objects on the stream, [DONE] at the end. The gateway envelope rides
-along as an extra field SDKs ignore. A canonical caller never sees any of this."""
+"""OpenAI Chat Completions ingress and streaming responses."""
 
 from __future__ import annotations
 
@@ -146,7 +141,10 @@ class OpenAINativeIngress(IngressAdapter):
             )
         response_format = body.get("response_format")
         reasoning_value = body.get("reasoning")
-        reasoning: dict[str, Any] = reasoning_value if isinstance(reasoning_value, dict) else {}
+        if reasoning_value is not None and not isinstance(reasoning_value, dict):
+            message = "reasoning must be a JSON object"
+            raise ValueError(message)
+        reasoning = reasoning_value or {}
         reasoning_values = {
             "type": reasoning.get("type"),
             "effort": reasoning.get("effort") or body.get("reasoning_effort"),
@@ -158,9 +156,9 @@ class OpenAINativeIngress(IngressAdapter):
         request = CanonicalRequest.model_validate(
             {
                 **extras,
-                "model": body.get("model") or "",
+                "model": body.get("model"),
                 "messages": fmt.from_messages(body.get("messages")),
-                "stream": bool(body.get("stream") or False),
+                "stream": body.get("stream", False),
                 "max_tokens": body.get("max_tokens") or body.get("max_completion_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
@@ -170,7 +168,7 @@ class OpenAINativeIngress(IngressAdapter):
                 "tool_choice": tool_choice,
                 "response_format": response_format,
                 "reasoning": CanonicalReasoningConfig.model_validate(reasoning_values) if has_reasoning else None,
-                "parallel_tool_calls": body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
+                "parallel_tool_calls": body.get("parallel_tool_calls"),
             }
         )
         return request, adjustments

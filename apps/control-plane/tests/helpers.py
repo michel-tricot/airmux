@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 import yaml
+from fastapi.routing import APIRoute
 from sqlalchemy import event
 
 if TYPE_CHECKING:
@@ -226,3 +227,12 @@ async def seed_member(email: str = "member@example.com", org_name: str = "o1") -
     org = await Org.create(org_name)
     await OrgMembership(user_id=user.id, org_id=org.id, role=OrgRole.member).save()
     return user, org.id
+
+
+def api_routes(app):
+    def walk(routes):
+        routers = (getattr(route, "original_router", None) for route in routes)
+        nested = [route for router in routers if router is not None for route in walk(router.routes)]
+        return [*(route for route in routes if isinstance(route, APIRoute)), *nested]
+
+    return walk(app.routes)

@@ -1,8 +1,4 @@
-"""The request path behind POST /inf/v1/chat/completions, per notes/design/DATAPLANE.md.
-
-One dialect-blind pass: resolve the caller's ingress adapter, parse to canonical, evaluate
-policy, resolve the credential, reconcile to the target model, translate through the egress
-adapter, call the provider, meter, and answer in whatever dialect the request spoke."""
+"""Inference request execution and stream accounting."""
 
 from __future__ import annotations
 
@@ -25,6 +21,7 @@ from data_plane.auth import authenticate
 from data_plane.canonical import CanonicalAdjustment, CanonicalGatewayInfo, CanonicalRequest, CanonicalResponse, CanonicalUsage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
+from data_plane.errors import UnsupportedFeatureError
 from data_plane.ingress import CANONICAL, UnknownDialectError, resolve
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metering import RequestStart, record_denied, record_usage, status_for_error, status_for_upstream
@@ -62,10 +59,7 @@ def _rejection(error: RequestRejectedError) -> CanonicalError:
 
 
 async def complete(request: Request) -> Response:
-    """The native route: the dialect is detected here, at the door, from the parsed body.
-
-    Failures before detection cannot speak a dialect, so they use the canonical envelope,
-    which is what the canonical ingress renders anyway."""
+    """Use canonical errors until the caller's dialect is known."""
     runtime = runtime_of(request)
     start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
     try:
@@ -143,7 +137,6 @@ async def _run(incoming: IncomingRequest, runtime: Runtime) -> Response:
 
 
 def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
-    """The caller against the bundle, before the body is even read; raises RequestRejectedError on every no."""
     bundle_set = holder.current
     if not bundle_set.snapshots:
         raise RequestRejectedError(503, "bundle_unavailable")
@@ -166,15 +159,14 @@ def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, Bun
 
 
 def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
-    """The body into canonical, with the dialect's own translation losses carried as adjustments."""
     try:
         return ingress.parse(body)
     except ValidationError as error:
         raise RequestRejectedError(400, "invalid_request", str(error.errors(include_url=False)[:3])) from error
+    except UnsupportedFeatureError as error:
+        raise RequestRejectedError(400, "unsupported_feature", str(error)) from error
     except (TypeError, ValueError) as error:
-        message = str(error)
-        code = "unsupported_feature" if message.startswith("unsupported_feature:") else "invalid_request"
-        raise RequestRejectedError(400, code, message) from error
+        raise RequestRejectedError(400, "invalid_request", str(error)) from error
 
 
 def _transform(adapter: EgressAdapter, request: CanonicalRequest, model: ModelEntry) -> UpstreamRequest:
@@ -182,10 +174,10 @@ def _transform(adapter: EgressAdapter, request: CanonicalRequest, model: ModelEn
         return adapter.transform_request(request, model)
     except ValidationError as error:
         raise RequestRejectedError(400, "invalid_request", str(error.errors(include_url=False)[:3])) from error
+    except UnsupportedFeatureError as error:
+        raise RequestRejectedError(400, "unsupported_feature", str(error)) from error
     except (TypeError, ValueError) as error:
-        message = str(error)
-        code = "unsupported_feature" if message.startswith("unsupported_feature:") else "invalid_request"
-        raise RequestRejectedError(400, code, message) from error
+        raise RequestRejectedError(400, "invalid_request", str(error)) from error
 
 
 @dataclass(frozen=True)
@@ -270,8 +262,7 @@ class RequestExecution:
                 self.request,
                 self.start,
             )
-            code, _, message = decision.reason.partition(": ")
-            raise RequestRejectedError(decision.status, code, message)
+            raise RequestRejectedError(decision.status, decision.code, decision.message)
 
         egress_kind = decision.model.egress_kind or decision.provider.kind
         request, reconcile_adjustments = reconcile(self.request, decision.model, decision.profile)

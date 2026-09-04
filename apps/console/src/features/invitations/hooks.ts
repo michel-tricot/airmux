@@ -14,7 +14,7 @@ import {
 import type { EnabledQueryOptions } from '@/features/query-options';
 
 export function useInvitations(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInvitations(orgId, { query: { enabled, queryKey: getListInvitationsQueryKey(orgId) } });
+  return useListInvitations(orgId, { query: { enabled } });
 }
 
 export function useCreateInvitationMutation(orgId: string) {

@@ -7,12 +7,7 @@ import {
   useRepublishBundle,
   useListDataPlanes,
   useListInstanceActivity,
-  getListOrgEventsQueryKey,
-  getListWorkspaceEventsQueryKey,
   getListBundlesQueryKey,
-  getListDataPlanesQueryKey,
-  getListInstanceActivityQueryKey,
-  getListActivityQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
@@ -20,7 +15,7 @@ import {
 import type { EnabledQueryOptions } from '@/features/query-options';
 
 export function useOrgEvents(orgId: string, params: ListOrgEventsParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgEvents(orgId, params, { query: { queryKey: getListOrgEventsQueryKey(orgId, params), enabled, refetchInterval: 3_000 } });
+  return useListOrgEvents(orgId, params, { query: { enabled, refetchInterval: 3_000 } });
 }
 
 export function useWorkspaceEvents(
@@ -30,16 +25,16 @@ export function useWorkspaceEvents(
   { enabled = true }: EnabledQueryOptions = {},
 ) {
   return useListWorkspaceEvents(orgId, workspaceRef, params, {
-    query: { queryKey: getListWorkspaceEventsQueryKey(orgId, workspaceRef, params), enabled, refetchInterval: 3_000 },
+    query: { enabled, refetchInterval: 3_000 },
   });
 }
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListActivity(orgId, params, { query: { enabled, queryKey: getListActivityQueryKey(orgId, params) } });
+  return useListActivity(orgId, params, { query: { enabled } });
 }
 
 export function useBundles(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListBundles(orgId, { query: { enabled, queryKey: getListBundlesQueryKey(orgId) } });
+  return useListBundles(orgId, { query: { enabled } });
 }
 
 export function useRepublishBundleMutation(orgId: string) {
@@ -53,9 +48,9 @@ export function useRepublishBundleMutation(orgId: string) {
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListDataPlanes(undefined, { query: { enabled, queryKey: getListDataPlanesQueryKey(), refetchInterval: 10_000 } });
+  return useListDataPlanes(undefined, { query: { enabled, refetchInterval: 10_000 } });
 }
 
 export function useInstanceActivity(params: { limit?: number }, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceActivity(params, { query: { enabled, queryKey: getListInstanceActivityQueryKey(params) } });
+  return useListInstanceActivity(params, { query: { enabled } });
 }

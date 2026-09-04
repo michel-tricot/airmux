@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -11,30 +12,44 @@ function renderAt(path: string) {
 }
 
 const now = '2026-01-01T00:00:00Z';
-const ORG2 = { id: 'org-2', name: 'Beta Corp', personal_for: null, created_at: now, updated_at: now, deleted_at: null };
+const ORG2: Api.OrgOut = {
+  id: 'org-2',
+  name: 'Beta Corp',
+  slug: 'beta-corp',
+  personal_for: null,
+  created_at: now,
+  updated_at: now,
+  deleted_at: null,
+};
 
 function withTwoOrgs() {
   server.use(
     http.get('/api/v1/auth/me', () =>
-      HttpResponse.json({
-        user_id: 'user-1',
-        email: 'dev@example.com',
-        name: 'Dev',
-        instance_role: null,
-        orgs: [ORG.id, ORG2.id],
+      HttpResponse.json<{ data: Api.MeOut }>({
+        data: {
+          user_id: 'user-1',
+          email: 'dev@example.com',
+          name: 'Dev',
+          instance_role: null,
+          orgs: [ORG.id, ORG2.id],
+        },
       }),
     ),
-    http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id, pending_invitations: [] })),
+    http.get('/api/v1/enroll', () =>
+      HttpResponse.json<{ data: Api.EnrollOut }>({ data: { orgs: [ORG, ORG2], personal_org_id: ORG.id, pending_invitations: [] } }),
+    ),
     http.get('/api/v1/orgs/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
-        return HttpResponse.json([
-          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
-        ]);
+        return HttpResponse.json<{ data: Api.WorkspaceOut[] }>({
+          data: [
+            { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+          ],
+        });
       }
       if (params.orgId === ORG2.id) {
-        return HttpResponse.json([
-          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
-        ]);
+        return HttpResponse.json<{ data: Api.WorkspaceOut[] }>({
+          data: [{ id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null }],
+        });
       }
       return new HttpResponse(null, { status: 403 });
     }),
@@ -70,7 +85,9 @@ function withTwoOrgs() {
         },
       } as const;
       const workspace = rows[params.workspaceRef as keyof typeof rows];
-      return workspace?.org_id === params.orgId ? HttpResponse.json(workspace) : new HttpResponse(null, { status: 404 });
+      return workspace?.org_id === params.orgId
+        ? HttpResponse.json<{ data: Api.WorkspaceOut }>({ data: workspace })
+        : new HttpResponse(null, { status: 404 });
     }),
   );
 }
@@ -79,7 +96,7 @@ describe('sign-in gate', () => {
   it('shows the login page to unauthenticated users', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
     );
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -89,7 +106,7 @@ describe('sign-in gate', () => {
   it('shows a service error when the session endpoint is unavailable', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 503 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
     );
     renderAt('/org');
     expect(await screen.findByRole('alert')).toHaveTextContent('Control plane unreachable');
@@ -101,14 +118,16 @@ describe('sign-in gate', () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
       http.post('/api/v1/auth/login', () =>
-        HttpResponse.json({
-          user_id: 'user-1',
-          email: 'dev@example.com',
-          name: 'Dev',
-          instance_role: null,
-          orgs: [ORG.id],
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: {
+            user_id: 'user-1',
+            email: 'dev@example.com',
+            name: 'Dev',
+            instance_role: null,
+            orgs: [ORG.id],
+          },
         }),
       ),
     );
@@ -125,7 +144,7 @@ describe('sign-in gate', () => {
   it.each(['unknown account', 'incorrect password'])('keeps the sign-in error visible for an %s', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
       http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
     );
     const user = userEvent.setup();
@@ -145,14 +164,16 @@ describe('sign-in gate', () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
         signedIn
-          ? HttpResponse.json({ user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, orgs: [ORG.id] })
+          ? HttpResponse.json<{ data: Api.MeOut }>({
+              data: { user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, orgs: [ORG.id] },
+            })
           : new HttpResponse(null, { status: 401 }),
       ),
       http.post('/api/v1/auth/logout', () => {
         signedIn = false;
-        return HttpResponse.json({ id: 'session-1', status: 'deleted' });
+        return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: 'session-1', deleted_at: now } });
       }),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
     );
     const user = userEvent.setup();
     renderAt('/org');

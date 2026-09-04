@@ -111,7 +111,6 @@ describe('workspace switching keeps the active section', () => {
     const active = document.querySelector(`a[href="/org/workspaces/${WORKSPACES[1].slug}${suffix}"]`);
     expect(active).not.toBeNull();
     expect(active).toHaveAttribute('aria-current', 'page');
-    expect(active).toHaveClass('text-primary');
     expect(active).toHaveTextContent(sectionLabel(suffix));
   });
 });

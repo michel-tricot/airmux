@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -26,7 +27,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
-function accessKey(id: string, revokedAt: string | null = null) {
+function accessKey(id: string, revokedAt: string | null = null): Api.AccessKeyOut {
   return {
     id,
     user_id: 'user-1',
@@ -48,7 +49,7 @@ function accessKey(id: string, revokedAt: string | null = null) {
 
 const WORKSPACE_REF = 'production';
 
-function inferenceKey(id: string, revoked: boolean) {
+function inferenceKey(id: string, revoked: boolean): Api.InferenceKeyOut {
   return {
     id,
     org_id: ORG.id,
@@ -67,10 +68,10 @@ describe('key cache invalidation across pages', () => {
   it('revoking an access key refreshes a filtered access-key list', async () => {
     let key = accessKey('ak-1');
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json([key])),
+      http.get(`/api/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: [key] })),
       http.delete('/api/v1/access-keys/:keyId', () => {
         key = accessKey('ak-1', now);
-        return HttpResponse.json({ id: 'ak-1', status: 'revoked', revoked_at: now });
+        return HttpResponse.json<{ data: Api.AccessKeyRevokedOut }>({ data: { id: 'ak-1', status: 'revoked', revoked_at: now } });
       }),
     );
 
@@ -87,10 +88,10 @@ describe('key cache invalidation across pages', () => {
   it('minting an access key refetches the access-key list', async () => {
     const keys = [accessKey('ak-1')];
     server.use(
-      http.get('/api/v1/instance/access-keys', () => HttpResponse.json(keys)),
+      http.get('/api/v1/instance/access-keys', () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: keys })),
       http.post('/api/v1/instance/access-keys', () => {
         keys.push(accessKey('ak-2'));
-        return HttpResponse.json({ ...accessKey('ak-2'), token: 'tok-once' });
+        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({ data: { ...accessKey('ak-2'), token: 'tok-once' } });
       }),
     );
 
@@ -107,10 +108,12 @@ describe('key cache invalidation across pages', () => {
   it('minting an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () =>
+        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: keys }),
+      ),
       http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
-        return HttpResponse.json({ id: 'ifk-2', token: 'tok-once' });
+        return HttpResponse.json<{ data: Api.InferenceKeyMintedOut }>({ data: { id: 'ifk-2', token: 'tok-once' } });
       }),
     );
 
@@ -127,10 +130,12 @@ describe('key cache invalidation across pages', () => {
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () =>
+        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: [inferenceKey('ifk-1', revoked)] }),
+      ),
       http.delete(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
-        return HttpResponse.json({ id: 'ifk-1', status: 'revoked' });
+        return HttpResponse.json<{ data: Api.InferenceKeyRevokedOut }>({ data: { id: 'ifk-1', status: 'revoked' } });
       }),
     );
 

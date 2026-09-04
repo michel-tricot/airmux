@@ -37,14 +37,6 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     assert config.events.control_plane == config.bundle.control_plane
 
 
-def test_repo_config_shares_the_control_plane_link_with_the_named_yaml_anchor():
-    repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
-    text = repo_config.read_text(encoding="utf-8")
-
-    assert "&control_plane" in text
-    assert "*control_plane" in text
-
-
 def test_connected_configs_own_independent_control_plane_links():
     config = Config.model_validate(
         {

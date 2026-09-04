@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -37,21 +38,23 @@ describe('organization invitations', () => {
   it('shows matching pending invitations after signup', async () => {
     server.use(
       http.get('/api/v1/enroll', () =>
-        HttpResponse.json({
-          orgs: [],
-          personal_org_id: null,
-          pending_invitations: [
-            {
-              email: 'dev@example.com',
-              org_id: ORG.id,
-              org_name: ORG.name,
-              org_role: 'member',
-              workspace_id: WORKSPACES[0].id,
-              workspace_name: WORKSPACES[0].name,
-              workspace_role: 'viewer',
-              expires_at: '2026-08-24T12:00:00Z',
-            },
-          ],
+        HttpResponse.json<{ data: Api.EnrollOut }>({
+          data: {
+            orgs: [],
+            personal_org_id: null,
+            pending_invitations: [
+              {
+                email: 'dev@example.com',
+                org_id: ORG.id,
+                org_name: ORG.name,
+                org_role: 'member',
+                workspace_id: WORKSPACES[0].id,
+                workspace_name: WORKSPACES[0].name,
+                workspace_role: 'viewer',
+                expires_at: '2026-08-24T12:00:00Z',
+              },
+            ],
+          },
         }),
       ),
     );
@@ -67,12 +70,16 @@ describe('organization invitations', () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     let invitations: OrgInvitationOut[] = [];
     server.use(
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['members.manage', 'members.read'] })),
-      http.get('/api/v1/orgs/:orgId/invitations', () => HttpResponse.json(invitations)),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['members.manage', 'members.read'] } }),
+      ),
+      http.get('/api/v1/orgs/:orgId/invitations', () => HttpResponse.json<{ data: Api.OrgInvitationOut[] }>({ data: invitations })),
       http.post('/api/v1/orgs/:orgId/invitations', async ({ request }) => {
         const body = (await request.json()) as { email: string; org_role: string };
         invitations = [{ ...invitation(), email: body.email, org_role: body.org_role }];
-        return HttpResponse.json({ invitation: invitations[0], url: 'https://console.example/invite#token=invite-secret' });
+        return HttpResponse.json<{ data: Api.OrgInvitationMintedOut }>({
+          data: { invitation: invitations[0], url: 'https://console.example/invite#token=invite-secret' },
+        });
       }),
     );
     const user = userEvent.setup();
@@ -94,20 +101,24 @@ describe('organization invitations', () => {
     let accepted = false;
     server.use(
       http.post('/api/v1/enroll/invitations/preview', () =>
-        HttpResponse.json({
-          email: 'dev@example.com',
-          org_id: ORG.id,
-          org_name: ORG.name,
-          org_role: 'member',
-          workspace_id: WORKSPACES[0].id,
-          workspace_name: WORKSPACES[0].name,
-          workspace_role: 'viewer',
-          expires_at: '2026-08-24T12:00:00Z',
+        HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
+          data: {
+            email: 'dev@example.com',
+            org_id: ORG.id,
+            org_name: ORG.name,
+            org_role: 'member',
+            workspace_id: WORKSPACES[0].id,
+            workspace_name: WORKSPACES[0].name,
+            workspace_role: 'viewer',
+            expires_at: '2026-08-24T12:00:00Z',
+          },
         }),
       ),
       http.post('/api/v1/enroll/invitations/accept', () => {
         accepted = true;
-        return HttpResponse.json({ invitation_id: 'invite-1', org_id: ORG.id, workspace_id: WORKSPACES[0].id, status: 'accepted' });
+        return HttpResponse.json<{ data: Api.InvitationAcceptedOut }>({
+          data: { invitation_id: 'invite-1', org_id: ORG.id, workspace_id: WORKSPACES[0].id, status: 'accepted' },
+        });
       }),
     );
     const user = userEvent.setup();
@@ -125,17 +136,19 @@ describe('organization invitations', () => {
   it('locks a signed-out recipient to the invited email', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
-        HttpResponse.json({
-          email: 'teammate@example.com',
-          org_id: ORG.id,
-          org_name: ORG.name,
-          org_role: 'member',
-          workspace_id: null,
-          workspace_name: null,
-          workspace_role: null,
-          expires_at: '2026-08-24T12:00:00Z',
+        HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
+          data: {
+            email: 'teammate@example.com',
+            org_id: ORG.id,
+            org_name: ORG.name,
+            org_role: 'member',
+            workspace_id: null,
+            workspace_name: null,
+            workspace_role: null,
+            expires_at: '2026-08-24T12:00:00Z',
+          },
         }),
       ),
     );
@@ -153,17 +166,19 @@ describe('organization invitations', () => {
   it('keeps the invitation available after sign-in fails', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
-        HttpResponse.json({
-          email: 'teammate@example.com',
-          org_id: ORG.id,
-          org_name: ORG.name,
-          org_role: 'member',
-          workspace_id: null,
-          workspace_name: null,
-          workspace_role: null,
-          expires_at: '2026-08-24T12:00:00Z',
+        HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
+          data: {
+            email: 'teammate@example.com',
+            org_id: ORG.id,
+            org_name: ORG.name,
+            org_role: 'member',
+            workspace_id: null,
+            workspace_name: null,
+            workspace_role: null,
+            expires_at: '2026-08-24T12:00:00Z',
+          },
         }),
       ),
       http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
@@ -184,21 +199,25 @@ describe('organization invitations', () => {
   it('creates the invited account without losing the invitation', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
-        HttpResponse.json({
-          email: 'teammate@example.com',
-          org_id: ORG.id,
-          org_name: ORG.name,
-          org_role: 'member',
-          workspace_id: null,
-          workspace_name: null,
-          workspace_role: null,
-          expires_at: '2026-08-24T12:00:00Z',
+        HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
+          data: {
+            email: 'teammate@example.com',
+            org_id: ORG.id,
+            org_name: ORG.name,
+            org_role: 'member',
+            workspace_id: null,
+            workspace_name: null,
+            workspace_role: null,
+            expires_at: '2026-08-24T12:00:00Z',
+          },
         }),
       ),
       http.post('/api/v1/auth/signup', () =>
-        HttpResponse.json({ user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] }),
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] },
+        }),
       ),
     );
     const user = userEvent.setup();
@@ -217,15 +236,17 @@ describe('organization invitations', () => {
     const accept = vi.fn();
     server.use(
       http.post('/api/v1/enroll/invitations/preview', () =>
-        HttpResponse.json({
-          email: 'teammate@example.com',
-          org_id: ORG.id,
-          org_name: ORG.name,
-          org_role: 'member',
-          workspace_id: null,
-          workspace_name: null,
-          workspace_role: null,
-          expires_at: '2026-08-24T12:00:00Z',
+        HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
+          data: {
+            email: 'teammate@example.com',
+            org_id: ORG.id,
+            org_name: ORG.name,
+            org_role: 'member',
+            workspace_id: null,
+            workspace_name: null,
+            workspace_role: null,
+            expires_at: '2026-08-24T12:00:00Z',
+          },
         }),
       ),
       http.post('/api/v1/enroll/invitations/accept', accept),

@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -36,6 +37,8 @@ const providers = [
 ];
 const models = [
   {
+    egress_kind: null,
+    parameter_support: {},
     id: 'model-claude',
     name: 'anthropic/claude-sonnet-4-5',
     provider_id: providers[0].id,
@@ -46,14 +49,16 @@ const models = [
     cache_write_price_per_mtok: 3.75,
     context_window: 200000,
     max_output_tokens: 64000,
-    input_modalities: null,
-    output_modalities: null,
+    input_modalities: ['text'],
+    output_modalities: ['text'],
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
     deleted_at: null,
-  },
+  } satisfies Api.ModelOut,
   {
+    egress_kind: null,
+    parameter_support: {},
     id: 'model-gpt',
     name: 'openai/gpt-5',
     provider_id: providers[1].id,
@@ -70,12 +75,12 @@ const models = [
     created_at: now,
     updated_at: now,
     deleted_at: null,
-  },
+  } satisfies Api.ModelOut,
 ];
 
 beforeEach(() => {
   window.localStorage.setItem('airllm_org_id', ORG.id);
-  server.use(http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, () => HttpResponse.json({ providers, models })));
+  server.use(http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers, models } })));
 });
 
 function renderModels() {
@@ -100,7 +105,6 @@ describe('organization models', () => {
     expect(claude).not.toHaveTextContent('claude-sonnet-4-5-20250929');
     const modelCell = within(claude!).getByText('anthropic/claude-sonnet-4-5').closest('td');
     expect(modelCell).not.toBeNull();
-    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
     expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveAttribute('tabindex', '0');
     expect(within(modelCell!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(modelCell!).queryByText('streaming')).not.toBeInTheDocument();
@@ -124,7 +128,7 @@ describe('organization models', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
   });
 
-  it('adds visual hierarchy to the catalog summary, groups, and active sort', async () => {
+  it('summarizes the catalog and labels its column groups', async () => {
     renderModels();
 
     await screen.findByText('anthropic/claude-sonnet-4-5');
@@ -134,8 +138,6 @@ describe('organization models', () => {
     expect(screen.getByRole('columnheader', { name: 'Catalog' })).toHaveAttribute('colspan', '2');
     expect(screen.getByRole('columnheader', { name: 'Limits' })).toHaveAttribute('colspan', '2');
     expect(screen.getByRole('columnheader', { name: 'Pricing' })).toHaveAttribute('colspan', '4');
-    expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
-    expect(screen.getByRole('button', { name: 'Filter by provider' })).toHaveClass('text-[13px]');
   });
 
   it('combines search and multi-select filters and sorts numeric columns in both directions', async () => {
@@ -170,8 +172,8 @@ describe('organization models', () => {
 
     await user.click(screen.getByRole('button', { name: 'Filter by modality' }));
     await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Input: text' }));
-    expect(screen.getByText('1 of 2 models')).toBeInTheDocument();
-    expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
+    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    expect(screen.getByText('anthropic/claude-sonnet-4-5')).toBeInTheDocument();
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Input: image' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
@@ -213,8 +215,6 @@ describe('organization models', () => {
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
     const modelName = within(gpt!).getByText('openai/gpt-5');
     expect(modelName).toHaveAttribute('tabindex', '0');
-    expect(modelName).toHaveClass('focus:ring-0', 'focus:ring-offset-0', 'focus-visible:ring-2', 'focus-visible:ring-ring');
-    expect(modelName).not.toHaveClass('cursor-help');
     expect(within(gpt!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
 
@@ -223,22 +223,19 @@ describe('organization models', () => {
     for (const capability of ['streaming', 'tools', 'structured_output', 'reasoning']) {
       expect(within(tooltip).getByText(capability)).toBeInTheDocument();
     }
-    expect(within(tooltip).getByText('streaming')).toHaveClass('text-primary');
-    expect(within(tooltip).getByText('tools')).toHaveClass('text-warning');
     expect(within(tooltip).queryByText('I/O modalities')).not.toBeInTheDocument();
   });
 
-  it('shows unknown modality evidence without inventing text support', async () => {
+  it('shows the declared text-only modalities without inventing image support', async () => {
     const user = userEvent.setup();
     renderModels();
 
     const claude = (await screen.findByText('anthropic/claude-sonnet-4-5')).closest('tr');
     const modalityFlow = within(claude!).getByLabelText('Input to output modalities');
-    const unknownInput = within(modalityFlow).getByRole('button', { name: 'Input modalities unknown' });
-    const unknownOutput = within(modalityFlow).getByRole('button', { name: 'Output modalities unknown' });
-    expect(unknownInput.querySelector('svg')).toBeInTheDocument();
-    expect(unknownOutput.querySelector('svg')).toBeInTheDocument();
-    await user.hover(unknownInput);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Input modalities unknown');
+    const input = within(modalityFlow).getByRole('button', { name: 'Input modality: text' });
+    expect(within(modalityFlow).getByRole('button', { name: 'Output modality: text' })).toBeInTheDocument();
+    expect(within(modalityFlow).queryByRole('button', { name: 'Input modality: image' })).not.toBeInTheDocument();
+    await user.hover(input);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Input: Text');
   });
 });

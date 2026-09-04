@@ -15,11 +15,11 @@ import {
 import type { EnabledQueryOptions } from '@/features/query-options';
 
 export function useOrgs({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgs({ query: { enabled, queryKey: getListOrgsQueryKey() } });
+  return useListOrgs({ query: { enabled } });
 }
 
 export function useOrg(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useGetOrg(orgId, { query: { enabled, queryKey: getGetOrgQueryKey(orgId) } });
+  return useGetOrg(orgId, { query: { enabled } });
 }
 
 export function useCreateOrgMutation() {

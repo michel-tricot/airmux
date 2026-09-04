@@ -5,13 +5,16 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from contract import ACCESS_KEY_PREFIX, INFERENCE_TOKEN_PREFIX, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, token_hash
 from control_plane.authz import Actor, Grant, Permission, Scope
 from control_plane.models import AccessKey, InferenceKey, PlaygroundSession
 
 if TYPE_CHECKING:
     from uuid import UUID
 
+ACCESS_KEY_PREFIX = "sk-cp-"
+MIN_ACCESS_KEY_SECRET_LENGTH = 32
+MAX_ACCESS_KEY_LENGTH = 512
 PREFIX_SECRET_CHARS = 6
 PLAYGROUND_SESSION_TTL = timedelta(hours=1)
 
@@ -27,6 +30,17 @@ def _new_key(kind: str) -> tuple[str, str]:
 
 def new_access_key() -> tuple[str, str]:
     return _new_key(ACCESS_KEY_PREFIX)
+
+
+def validate_access_key_token(token: str) -> str:
+    if (
+        not token.startswith(ACCESS_KEY_PREFIX)
+        or len(token) < len(ACCESS_KEY_PREFIX) + MIN_ACCESS_KEY_SECRET_LENGTH
+        or len(token) > MAX_ACCESS_KEY_LENGTH
+    ):
+        msg = "token must be a complete access key"
+        raise ValueError(msg)
+    return token
 
 
 @dataclass(frozen=True)

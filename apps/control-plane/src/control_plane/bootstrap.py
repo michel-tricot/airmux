@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import text
 from sqlmodel import col
 
-from contract import ACCESS_KEY_PREFIX, token_hash
+from contract import token_hash
 from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole
 from control_plane.db import current_session
-from control_plane.keys import key_prefix
+from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
 from control_plane.models import AccessKey, User, set_actor
 
 if TYPE_CHECKING:

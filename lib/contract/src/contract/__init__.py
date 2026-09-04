@@ -14,7 +14,7 @@ from contract.bundle import (
     ParameterSupport,
     ProviderEntry,
 )
-from contract.credentials import ACCESS_KEY_PREFIX, INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
+from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import (
     CredentialScope,
     DeniedUsageEventV1,
@@ -47,7 +47,6 @@ from contract.secrets import (
 )
 
 __all__ = [
-    "ACCESS_KEY_PREFIX",
     "INFERENCE_TOKEN_PREFIX",
     "MODALITIES",
     "PLAYGROUND_COOKIE",

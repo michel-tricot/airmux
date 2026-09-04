@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from data_plane.credentials import candidates_for
 
@@ -22,8 +22,9 @@ class Allow:
 
 @dataclass(frozen=True)
 class Deny:
-    reason: str
+    code: Literal["unknown_model", "unsupported_input_modality", "unsupported_feature", "provider_not_configured", "credential_unavailable"]
     status: int
+    message: str = ""
 
 
 type Decision = Allow | Deny
@@ -49,24 +50,20 @@ def required_input_modalities(req: CanonicalRequest) -> frozenset[str]:
 
 
 def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
-    """Pure and synchronous: no async, no network, no I/O, no datetime.now(). Under 100 lines.
-
-    Returns the credentials that may be spent rather than a choice between them: picking one means
-    knowing which are in cooldown, which is state, and state does not belong in a pure function.
-    """
+    """Return eligible credentials; cooldown-aware selection belongs to the request executor."""
     model = snap.model_index.get(req.model)
     if model is None:
-        return Deny(reason="unknown_model", status=404)
+        return Deny(code="unknown_model", status=404)
     missing_modalities = sorted(required_input_modalities(req) - set(model.input_modalities))
     if missing_modalities:
-        return Deny(reason=f"unsupported_input_modality: {', '.join(missing_modalities)}", status=400)
+        return Deny(code="unsupported_input_modality", message=", ".join(missing_modalities), status=400)
     missing = sorted(required_capabilities(req) - set(model.capabilities))
     if missing:
-        return Deny(reason=f"unsupported_feature: {', '.join(missing)}", status=400)
+        return Deny(code="unsupported_feature", message=", ".join(missing), status=400)
     provider = snap.provider_index.get(model.provider_id)
     if provider is None:
-        return Deny(reason="provider_not_configured", status=502)
+        return Deny(code="provider_not_configured", status=502)
     candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
     if not candidates:
-        return Deny(reason="credential_unavailable", status=402)
+        return Deny(code="credential_unavailable", status=402)
     return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])

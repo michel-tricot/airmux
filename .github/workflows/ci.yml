@@ -45,7 +45,10 @@ jobs:
       - run: uv run airllm-audit cases coverage
       - run: uv run airllm-audit taxonomy validate
       - run: uv run pytest model-audit/catalog/tests
-      - run: uv run pytest -n auto
+      - run: uv run pytest apps/control-plane/tests/unit
+        env:
+          DOCKER_HOST: unix:///tmp/airllm-no-docker.sock
+      - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
 
   acceptance:
     runs-on: ubuntu-latest

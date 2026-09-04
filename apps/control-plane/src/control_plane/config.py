@@ -4,12 +4,8 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
-from contract import (
-    ACCESS_KEY_PREFIX,
-    EnvStoreConfig,
-    SecretsConfig,
-    load_config_section,
-)
+from contract import EnvStoreConfig, SecretsConfig, load_config_section
+from control_plane.keys import validate_access_key_token
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,9 +15,6 @@ DEFAULT_DATABASE_URL = "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm
 
 DEFAULT_CONSOLE_URL = "http://127.0.0.1:5000"
 """Where the console is served in a checkout; compose sets GW_CONSOLE_URL to the port nginx publishes."""
-
-MIN_ACCESS_KEY_SECRET_LENGTH = 32
-MAX_ACCESS_KEY_LENGTH = 512
 
 
 class DatabaseConfig(BaseModel):
@@ -40,17 +33,6 @@ class DatabaseConfig(BaseModel):
         return f"postgresql+asyncpg://{rest}" if separator and scheme in {"postgres", "postgresql"} else url
 
 
-def validate_data_plane_token(value: str) -> str:
-    if (
-        not value.startswith(ACCESS_KEY_PREFIX)
-        or len(value) < len(ACCESS_KEY_PREFIX) + MIN_ACCESS_KEY_SECRET_LENGTH
-        or len(value) > MAX_ACCESS_KEY_LENGTH
-    ):
-        msg = "bootstrap token must be a complete access key"
-        raise ValueError(msg)
-    return value
-
-
 class DataPlaneBootstrap(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -59,7 +41,7 @@ class DataPlaneBootstrap(BaseModel):
     @field_validator("token")
     @classmethod
     def valid_access_key(cls, token: SecretStr) -> SecretStr:
-        validate_data_plane_token(token.get_secret_value())
+        validate_access_key_token(token.get_secret_value())
         return token
 
 

@@ -1,5 +1,5 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
-import { getMyPermissionsQueryKey, useMyPermissions } from '@workspace/api-client-react';
+import { useMyPermissions } from '@workspace/api-client-react';
 import { allows, anyOf, type AccessPolicy } from './authorization';
 import type { EnabledQueryOptions } from '@/features/query-options';
 
@@ -12,7 +12,7 @@ type AuthorizationLevel = AuthorizationScope['level'];
 
 export function useEffectivePermissions({ orgId, workspaceRef, enabled = true }: { orgId?: string; workspaceRef?: string; enabled?: boolean }) {
   const params = orgId ? { org_id: orgId, ...(workspaceRef ? { workspace_ref: workspaceRef } : {}) } : undefined;
-  return useMyPermissions(params, { query: { enabled, queryKey: getMyPermissionsQueryKey(params) } });
+  return useMyPermissions(params, { query: { enabled } });
 }
 
 export function useScopedAuthorization(scope: AuthorizationScope, { enabled = true }: EnabledQueryOptions = {}) {

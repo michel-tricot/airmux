@@ -243,10 +243,10 @@ async function parseErrorBody(response: Response, method: string): Promise<unkno
 }
 
 function unwrapEnvelope(body: unknown): unknown {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
-
-  const keys = Object.keys(body as Record<string, unknown>);
-  return keys.length === 1 && keys[0] === 'data' ? (body as { data: unknown }).data : body;
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !('data' in body)) {
+    throw new TypeError('Expected a response envelope containing only data');
+  }
+  return body.data;
 }
 
 function inferResponseType(response: Response): 'json' | 'text' | 'blob' {

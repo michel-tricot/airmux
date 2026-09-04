@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 
 INFERENCE_TOKEN_PREFIX = "sk-inf-"  # noqa: S105 token prefix, not a secret
-ACCESS_KEY_PREFIX = "sk-cp-"
 PLAYGROUND_COOKIE = "airllm_playground"
 
 

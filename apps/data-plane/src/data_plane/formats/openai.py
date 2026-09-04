@@ -8,7 +8,7 @@ to a default rather than failing the response."""
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -34,6 +34,7 @@ from data_plane.canonical import (
     CanonicalUsage,
     CanonicalUserMessage,
 )
+from data_plane.errors import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -393,15 +394,29 @@ def usage_of(reported: UpstreamUsage | None) -> CanonicalUsage:
 
 
 def _mapping(value: object) -> dict[str, object]:
-    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        message = "expected a JSON object"
+        raise TypeError(message)
+    if any(not isinstance(key, str) for key in value):
+        message = "JSON object keys must be strings"
+        raise TypeError(message)
+    return cast("dict[str, object]", value)
 
 
 def _str(value: object) -> str:
-    return value if isinstance(value, str) else ""
+    if not isinstance(value, str):
+        message = "expected a string"
+        raise TypeError(message)
+    return value
 
 
 def _bool(value: object) -> bool | None:
-    return value if isinstance(value, bool) else None
+    if value is not None and not isinstance(value, bool):
+        message = "expected a boolean"
+        raise ValueError(message)
+    return value
 
 
 def _image_from_url(url: str) -> CanonicalImagePart:
@@ -413,9 +428,9 @@ def _image_from_url(url: str) -> CanonicalImagePart:
 
 def _document_from_file(value: object) -> CanonicalDocumentPart:
     file = _mapping(value)
-    filename = _str(file.get("filename")) or None
-    if file_id := _str(file.get("file_id")):
-        return CanonicalDocumentPart(filename=filename, file_id=file_id)
+    filename = _str(file["filename"]) if file.get("filename") is not None else None
+    if (file_id := file.get("file_id")) is not None:
+        return CanonicalDocumentPart(filename=filename, file_id=_str(file_id))
     file_data = _str(file.get("file_data"))
     if file_data.startswith(DATA_URL) and "," in file_data:
         header, payload = file_data[len(DATA_URL) :].split(",", 1)
@@ -428,15 +443,23 @@ def _text_of(content: object) -> str:
     if isinstance(content, str):
         return content
     if isinstance(content, list):
-        return "".join(_str(_mapping(block).get("text")) for block in content if _mapping(block).get("type") == "text")
-    return ""
+        blocks = [_mapping(block) for block in content]
+        if any(block.get("type") != "text" for block in blocks):
+            message = "only text content is supported for this message role"
+            raise UnsupportedFeatureError(message)
+        return "".join(_str(block.get("text")) for block in blocks)
+    if content is None:
+        return ""
+    message = "message content must be a string or list"
+    raise TypeError(message)
 
 
 def _user_parts(content: object) -> list[CanonicalContentPart]:
     if isinstance(content, str):
         return [CanonicalTextPart(text=content)] if content else []
     if not isinstance(content, list):
-        return []
+        message = "user content must be a string or list"
+        raise TypeError(message)
     parts: list[CanonicalContentPart] = []
     for raw in content:
         block = _mapping(raw)
@@ -446,13 +469,17 @@ def _user_parts(content: object) -> list[CanonicalContentPart]:
             parts.append(_image_from_url(_str(_mapping(block.get("image_url")).get("url"))))
         elif block.get("type") == "file":
             parts.append(_document_from_file(block.get("file")))
+        else:
+            message = f"unsupported content type: {block.get('type')}"
+            raise UnsupportedFeatureError(message)
     return parts
 
 
 def _assistant_parts(message: dict[str, object]) -> list[CanonicalContentPart]:
     parts: list[CanonicalContentPart] = []
-    if reasoning := _str(message.get("reasoning_content")) or _str(message.get("reasoning")):
-        parts.append(CanonicalReasoningPart(text=reasoning))
+    reasoning = message.get("reasoning_content") if message.get("reasoning_content") is not None else message.get("reasoning")
+    if reasoning is not None:
+        parts.append(CanonicalReasoningPart(text=_str(reasoning)))
     if text := _text_of(message.get("content")):
         parts.append(CanonicalTextPart(text=text))
     calls = message.get("tool_calls")
@@ -474,7 +501,10 @@ def from_messages(messages: object) -> list[CanonicalMessage]:
             out.append(CanonicalUserMessage.model_validate({"content": list(pending)}))
             pending.clear()
 
-    for raw in messages if isinstance(messages, list) else []:
+    if not isinstance(messages, list):
+        error = "messages must be a list"
+        raise TypeError(error)
+    for raw in messages:
         message = _mapping(raw)
         role = message.get("role")
         if role == "tool":
@@ -487,38 +517,48 @@ def from_messages(messages: object) -> list[CanonicalMessage]:
             out.append(CanonicalSystemMessage(content=[CanonicalTextPart(text=_text_of(message.get("content")))]))
         elif role == "assistant":
             out.append(CanonicalAssistantMessage.model_validate({"content": _assistant_parts(message)}))
-        else:
+        elif role == "user":
             out.append(CanonicalUserMessage.model_validate({"content": _user_parts(message.get("content"))}))
+        else:
+            error = "invalid message role"
+            raise ValueError(error)
     flush()
     return out
 
 
 def from_tools(tools: object) -> list[CanonicalToolDef] | None:
-    if not isinstance(tools, list) or not tools:
+    if tools is None:
         return None
+    if not isinstance(tools, list):
+        message = "tools must be a list"
+        raise TypeError(message)
     defs: list[CanonicalToolDef] = []
     for raw in tools:
         function = _mapping(_mapping(raw).get("function"))
         defs.append(
-            CanonicalToolDef(
-                name=_str(function.get("name")),
-                description=_str(function.get("description")) or None,
-                parameters=dict(_mapping(function.get("parameters"))),
-                strict=_bool(function.get("strict")),
+            CanonicalToolDef.model_validate(
+                {
+                    "name": function.get("name"),
+                    "description": function.get("description"),
+                    "parameters": _mapping(function.get("parameters")),
+                    "strict": _bool(function.get("strict")),
+                }
             )
         )
     return defs
 
 
 def from_tool_choice(choice: object) -> CanonicalToolChoice | None:
+    if choice is None:
+        return None
     if choice == "auto":
         return "auto"
     if choice == "none":
         return "none"
     if choice == "required":
         return "required"
-    name = _str(_mapping(_mapping(choice).get("function")).get("name"))
-    return CanonicalNamedTool(name=name) if name else None
+    function = _mapping(_mapping(choice).get("function"))
+    return CanonicalNamedTool(name=_str(function["name"])) if "name" in function else None
 
 
 class ToolCallOut(BaseModel):
