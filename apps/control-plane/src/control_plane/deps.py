@@ -255,9 +255,8 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
         if changes:
             from control_plane.compiler import publish_pending  # noqa: PLC0415 compiler loads every projected model
 
-            settings = request.app.state.settings
             await RuntimeConfiguration.advance(changes)
-            await publish_pending(datetime.now(tz=UTC), settings.bundle.signing_key)
+            await publish_pending(datetime.now(tz=UTC))
 
 
 SessionDep = Annotated["AsyncSession", Depends(get_session, scope="function")]

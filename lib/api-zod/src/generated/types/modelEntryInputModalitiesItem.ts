@@ -11,9 +11,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: Date;
-}
+export type ModelEntryInputModalitiesItem = typeof ModelEntryInputModalitiesItem[keyof typeof ModelEntryInputModalitiesItem];
+
+
+export const ModelEntryInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;

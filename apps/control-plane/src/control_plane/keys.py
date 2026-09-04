@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
 ACCESS_KEY_PREFIX = "sk-cp-"
+MIN_ACCESS_KEY_SECRET_LENGTH = 32
+MAX_ACCESS_KEY_LENGTH = 512
 PREFIX_SECRET_CHARS = 6
 PLAYGROUND_SESSION_TTL = timedelta(hours=1)
 
@@ -26,6 +28,21 @@ def _new_key(kind: str) -> tuple[str, str]:
     return token, key_prefix(token, kind)
 
 
+def new_access_key() -> tuple[str, str]:
+    return _new_key(ACCESS_KEY_PREFIX)
+
+
+def validate_access_key_token(token: str) -> str:
+    if (
+        not token.startswith(ACCESS_KEY_PREFIX)
+        or len(token) < len(ACCESS_KEY_PREFIX) + MIN_ACCESS_KEY_SECRET_LENGTH
+        or len(token) > MAX_ACCESS_KEY_LENGTH
+    ):
+        msg = "token must be a complete access key"
+        raise ValueError(msg)
+    return token
+
+
 @dataclass(frozen=True)
 class AccessKeyGrant:
     principal_id: UUID
@@ -37,7 +54,7 @@ class AccessKeyGrant:
 
 
 async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
-    token, prefix = _new_key(ACCESS_KEY_PREFIX)
+    token, prefix = new_access_key()
     key = await AccessKey(
         user_id=grant.principal_id,
         org_id=grant.scope.org_id,

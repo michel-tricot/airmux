@@ -2,7 +2,7 @@
 set -eu
 
 while [ ! -s /state/.airllm/dataplane.key ]; do
-  echo "waiting for airllm quickstart to connect the data plane"
+  echo "waiting for the control plane to create the data-plane pool key"
   sleep 2
 done
 

@@ -6,13 +6,20 @@ import httpx
 import pytest
 import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.testclient import TestClient
 
-from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
+from contract import (
+    Catalog,
+    FileStoreConfig,
+    MemoryStoreConfig,
+    Secret,
+    SecretStore,
+    SecretStoreUnavailableError,
+    uuid7,
+)
 from data_plane.app import create_app
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
-from data_plane.cache import write_cached_bundles
+from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
@@ -181,15 +188,14 @@ def _byok_app(tmp_path, credentials):
     the app reach the same values through the same root the way two processes would, instead of
     sharing an object the app never built.
     """
-    bundle_key = Ed25519PrivateKey.generate()
     caller_token, entry = make_key(org=ORG, workspace=WORKSPACE)
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
-    write_cached_bundles(tmp_path, [sign_bundle(bundle, bundle_key, "k1")])
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
@@ -208,7 +214,6 @@ def _complete(app, caller_token):
 
 @respx.mock
 def test_one_data_plane_serves_two_org_bundles(tmp_path):
-    bundle_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
     other_workspace = uuid7()
     first_token, first_key = make_key("first", org=ORG, workspace=WORKSPACE)
@@ -217,16 +222,18 @@ def test_one_data_plane_serves_two_org_bundles(tmp_path):
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[platform])
     write_cached_bundles(
         tmp_path,
-        [
-            sign_bundle(make_bundle(keys=[first_key], catalog=catalog, org=ORG), bundle_key, "k1"),
-            sign_bundle(make_bundle(keys=[second_key], catalog=catalog, org=other_org), bundle_key, "k1"),
-        ],
+        CachedBundles(
+            bundles=[
+                make_bundle(keys=[first_key], catalog=catalog, org=ORG),
+                make_bundle(keys=[second_key], catalog=catalog, org=other_org),
+            ],
+        ),
     )
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     asyncio.run(store_config.build().put(platform.ref, Secret("sk-platform")))
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,
         events=DevNullOutboxConfig(),
     )

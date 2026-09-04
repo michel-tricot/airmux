@@ -5,9 +5,8 @@ from types import SimpleNamespace
 import httpx
 import pytest
 import respx
-from conftest import ORG, make_config, make_key, make_signed
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from conftest import ORG, make_config, make_key, make_remote_bundle
+from pydantic import ValidationError
 from starlette.requests import Request
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1, uuid7
@@ -24,74 +23,74 @@ def _source(tmp_path):
     return config.bundle
 
 
-def _remote_source(tmp_path, holder, private_key, http_client) -> RemoteBundleSource:
-    bundle_config = _source(tmp_path)
-    bundle_config = bundle_config.model_copy(update={"verify_key": private_key.public_key()})
-    return RemoteBundleSource(bundle_config, holder, http_client)
+def _remote_source(tmp_path, holder, http_client) -> RemoteBundleSource:
+    return RemoteBundleSource(_source(tmp_path), holder, http_client)
 
 
-def manifest_response(*signed) -> httpx.Response:
-    bundles = [bundle_of(bundle) for bundle in signed]
-    entries = [
-        BundleManifestEntry(
-            org_id=bundle.org_id,
-            bundle_id=bundle.bundle_id,
-        )
-        for bundle in bundles
-    ]
+def manifest_response(*bundles: BundleV1) -> httpx.Response:
+    entries = [BundleManifestEntry(org_id=bundle.org_id, bundle_id=bundle.bundle_id) for bundle in bundles]
     return httpx.Response(200, content=f'{{"data": {BundleManifest(bundles=entries).model_dump_json()}}}')
 
 
-def bundle_response(signed) -> httpx.Response:
-    return httpx.Response(200, content=f'{{"data": {signed.model_dump_json()}}}')
-
-
-def bundle_of(signed) -> BundleV1:
-    return BundleV1.model_validate_json(signed.payload)
+def bundle_response(bundle: BundleV1) -> httpx.Response:
+    return httpx.Response(200, content=f'{{"data": {bundle.model_dump_json()}}}')
 
 
 @respx.mock
 async def test_poll_admits_every_bundle_in_the_authorized_manifest(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
-    first = make_signed(private_key, key_ids=("first",), org=ORG)
-    second = make_signed(private_key, key_ids=("second",), org=other_org)
+    first = make_remote_bundle(key_ids=("first",), org=ORG)
+    second = make_remote_bundle(key_ids=("second",), org=other_org)
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(first).bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(second).bundle_id}").mock(return_value=bundle_response(second))
+    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
+    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
     holder = BundleHolder()
 
-    await _remote_source(tmp_path, holder, private_key, http_client).once()
+    await _remote_source(tmp_path, holder, http_client).once()
 
     assert set(holder.current.snapshots) == {ORG, other_org}
     assert make_key("first", ORG)[1].token_hash in holder.current.key_index
     assert make_key("second", other_org)[1].token_hash in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert {bundle_of(bundle).bundle_id for bundle in cached} == {bundle_of(first).bundle_id, bundle_of(second).bundle_id}
+    assert {bundle.bundle_id for bundle in cached.bundles} == {first.bundle_id, second.bundle_id}
 
 
 @respx.mock
 async def test_poll_swaps_and_persists(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
-    signed = make_signed(private_key)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(signed))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(signed).bundle_id}").mock(return_value=bundle_response(signed))
+    bundle = make_remote_bundle()
+    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
+    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
     holder = BundleHolder()
-    await _remote_source(tmp_path, holder, private_key, http_client).once()
-    assert holder.current.snapshots[ORG].bundle.bundle_id == bundle_of(signed).bundle_id
+
+    await _remote_source(tmp_path, holder, http_client).once()
+
+    assert holder.current.snapshots[ORG].bundle.bundle_id == bundle.bundle_id
     assert make_key("k1")[1].token_hash in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert [bundle_of(bundle).bundle_id for bundle in cached] == [bundle_of(signed).bundle_id]
+    assert [cached_bundle.bundle_id for cached_bundle in cached.bundles] == [bundle.bundle_id]
+
+
+@respx.mock
+async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(tmp_path, http_client):
+    bundle = make_remote_bundle()
+    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
+    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
+    first_holder = BundleHolder()
+    await _remote_source(tmp_path, first_holder, http_client).once()
+
+    restarted_holder = BundleHolder()
+    _remote_source(tmp_path, restarted_holder, http_client)._load_cached()
+
+    assert restarted_holder.current.snapshots[ORG].bundle.bundle_id == bundle.bundle_id
 
 
 @respx.mock
 async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_path, http_client, monkeypatch):
-    private_key = Ed25519PrivateKey.generate()
-    signed = make_signed(private_key)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(signed))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(signed).bundle_id}").mock(return_value=bundle_response(signed))
+    bundle = make_remote_bundle()
+    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
+    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
     holder = BundleHolder()
     error = OSError("cache unavailable")
 
@@ -101,85 +100,81 @@ async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_pat
     monkeypatch.setattr("data_plane.bundle.remote.write_cached_bundles", fail_write)
 
     with pytest.raises(OSError, match="cache unavailable"):
-        await _remote_source(tmp_path, holder, private_key, http_client).once()
+        await _remote_source(tmp_path, holder, http_client).once()
 
     assert holder.current.snapshots == {}
 
 
 @respx.mock
 async def test_poll_same_bundle_is_a_noop(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
-    signed = make_signed(private_key)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(signed))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(signed).bundle_id}").mock(return_value=bundle_response(signed))
+    bundle = make_remote_bundle()
+    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
+    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
     holder = BundleHolder()
-    source = _remote_source(tmp_path, holder, private_key, http_client)
+    source = _remote_source(tmp_path, holder, http_client)
     await source.once()
     (tmp_path / "bundles.json").unlink()
+
     await source.once()
+
     assert not (tmp_path / "bundles.json").exists()
 
 
 @respx.mock
 async def test_poll_revocation_updates_holder(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
-    first = make_signed(private_key, key_ids=("k1",))
-    second = make_signed(private_key, key_ids=())
+    first = make_remote_bundle(key_ids=("k1",))
+    second = make_remote_bundle(key_ids=())
     route = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(first).bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(second).bundle_id}").mock(return_value=bundle_response(second))
+    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
+    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
     holder = BundleHolder()
-    source = _remote_source(tmp_path, holder, private_key, http_client)
+    source = _remote_source(tmp_path, holder, http_client)
     await source.once()
     assert make_key("k1")[1].token_hash in holder.current.key_index
+
     route.mock(return_value=manifest_response(second))
     await source.once()
+
     assert holder.current.key_index == {}
 
 
 @respx.mock
-async def test_poll_signature_failure_identifies_the_signing_key(tmp_path, http_client):
-    signing_key = Ed25519PrivateKey.generate()
-    verify_key = Ed25519PrivateKey.generate()
-    signed = make_signed(signing_key)
-    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(signed))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(signed).bundle_id}").mock(return_value=bundle_response(signed))
+async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http_client):
+    bundle = make_remote_bundle()
+    respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
+    respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=httpx.Response(200, json={"data": {"schema_version": 1}}))
     holder = BundleHolder()
 
-    with pytest.raises(InvalidSignature) as error:
-        await _remote_source(tmp_path, holder, verify_key, http_client).once()
+    with pytest.raises(ValidationError) as error:
+        await _remote_source(tmp_path, holder, http_client).once()
 
-    message = str(error.value)
-    assert signed.signing_key_id in message
-    assert holder.rejected_manifest == message
+    assert holder.rejected_manifest == str(error.value)
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
 
 
 async def test_readiness_rejects_a_new_invalid_manifest_even_with_a_cached_bundle():
-    private_key = Ed25519PrivateKey.generate()
     holder = BundleHolder()
-    holder.swap(BundleSet.from_bundles((bundle_of(make_signed(private_key)),)), "cached")
+    holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder)
 
     assert (await readyz(request)).status_code == 200
-    holder.reject_manifest("signature mismatch")
+    holder.reject_manifest("manifest mismatch")
 
     assert (await readyz(request)).status_code == 503
 
 
 @respx.mock
 async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
-    first = make_signed(private_key, key_ids=("first",), org=ORG)
-    second = make_signed(private_key, key_ids=("second",), org=other_org)
+    first = make_remote_bundle(key_ids=("first",), org=ORG)
+    second = make_remote_bundle(key_ids=("second",), org=other_org)
     manifest = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(first).bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(second).bundle_id}").mock(return_value=bundle_response(second))
+    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
+    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
     holder = BundleHolder()
-    source = _remote_source(tmp_path, holder, private_key, http_client)
+    source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
     manifest.mock(return_value=manifest_response(first))
@@ -189,22 +184,21 @@ async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_
     assert make_key("second", other_org)[1].token_hash not in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert [bundle_of(bundle).org_id for bundle in cached] == [ORG]
+    assert [bundle.org_id for bundle in cached.bundles] == [ORG]
 
 
 @respx.mock
 async def test_poll_fetches_only_the_org_whose_bundle_changed(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
-    first = make_signed(private_key, key_ids=("first",), org=ORG)
-    changed = make_signed(private_key, key_ids=("changed",), org=ORG)
-    second = make_signed(private_key, key_ids=("second",), org=other_org)
+    first = make_remote_bundle(key_ids=("first",), org=ORG)
+    changed = make_remote_bundle(key_ids=("changed",), org=ORG)
+    second = make_remote_bundle(key_ids=("second",), org=other_org)
     manifest = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    first_fetch = respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(first).bundle_id}").mock(return_value=bundle_response(first))
-    changed_fetch = respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(changed).bundle_id}").mock(return_value=bundle_response(changed))
-    second_fetch = respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(second).bundle_id}").mock(return_value=bundle_response(second))
+    first_fetch = respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
+    changed_fetch = respx.get(f"http://cp.test/api/v1/bundles/{changed.bundle_id}").mock(return_value=bundle_response(changed))
+    second_fetch = respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
     holder = BundleHolder()
-    source = _remote_source(tmp_path, holder, private_key, http_client)
+    source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
     manifest.mock(return_value=manifest_response(changed, second))
@@ -219,15 +213,14 @@ async def test_poll_fetches_only_the_org_whose_bundle_changed(tmp_path, http_cli
 
 @respx.mock
 async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
-    expected = make_signed(private_key, key_ids=("expected",))
-    mismatched = make_signed(private_key, key_ids=("mismatched",))
+    expected = make_remote_bundle(key_ids=("expected",))
+    mismatched = make_remote_bundle(key_ids=("mismatched",))
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(expected))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(expected).bundle_id}").mock(return_value=bundle_response(mismatched))
+    respx.get(f"http://cp.test/api/v1/bundles/{expected.bundle_id}").mock(return_value=bundle_response(mismatched))
     holder = BundleHolder()
 
     with pytest.raises(ValueError, match="does not match manifest entry"):
-        await _remote_source(tmp_path, holder, private_key, http_client).once()
+        await _remote_source(tmp_path, holder, http_client).once()
 
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
@@ -235,17 +228,16 @@ async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_
 
 @respx.mock
 async def test_poll_rejects_a_token_hash_shared_by_two_org_bundles(tmp_path, http_client):
-    private_key = Ed25519PrivateKey.generate()
     other_org = uuid7()
-    first = make_signed(private_key, key_ids=("same",), org=ORG)
-    second = make_signed(private_key, key_ids=("same",), org=other_org)
+    first = make_remote_bundle(key_ids=("same",), org=ORG)
+    second = make_remote_bundle(key_ids=("same",), org=other_org)
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(first).bundle_id}").mock(return_value=bundle_response(first))
-    respx.get(f"http://cp.test/api/v1/bundles/{bundle_of(second).bundle_id}").mock(return_value=bundle_response(second))
+    respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
+    respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
     holder = BundleHolder()
 
     with pytest.raises(ValueError, match="token hash appears in more than one bundle"):
-        await _remote_source(tmp_path, holder, private_key, http_client).once()
+        await _remote_source(tmp_path, holder, http_client).once()
 
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None

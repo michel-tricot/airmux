@@ -101,19 +101,6 @@ class BundleV1(BaseModel):
     catalog: Catalog
 
 
-class SignedBundle(BaseModel):
-    """A serialized BundleV1 as it crosses the wire and rests on disk.
-
-    The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    payload: str
-    signature: str  # Ed25519 over payload.encode("utf-8"), base64
-    signing_key_id: str  # selects the public key the data plane verifies with
-
-
 class BundleManifestEntry(BaseModel):
     """The immutable identity of one organization bundle available to a data plane."""
 

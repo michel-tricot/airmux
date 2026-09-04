@@ -11,8 +11,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
 from control_plane.authority import AuthorizationError, CredentialError
+from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import load_settings
-from control_plane.db import make_engine, make_session_factory
+from control_plane.db import make_engine, make_session_factory, transaction
 from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
@@ -62,6 +63,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         await _require_migrated_schema(engine)
         app.state.session_factory = make_session_factory(engine)
+        if settings.bootstrap is not None:
+            async with transaction(app.state.session_factory):
+                await bootstrap_data_plane(settings.bootstrap)
         async with settings.secrets.build() as secret_store:
             app.state.secret_store = secret_store
             yield

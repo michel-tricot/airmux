@@ -11,11 +11,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface QuickstartIn {
-  /**
-     * Existing limited access key for the first data plane
-     * @minLength 1
-     * @maxLength 512
-     */
-  token: string;
-}
+export type ModelEntryOutputModalitiesItem = typeof ModelEntryOutputModalitiesItem[keyof typeof ModelEntryOutputModalitiesItem];
+
+
+export const ModelEntryOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;

@@ -10,10 +10,15 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { SecretRef } from './secretRef';
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
+/**
+ * A provider credential reference, priority, and version included in a policy bundle.
+ *
+ * The secret value is not included. A version change tells data planes to refresh their cached value.
+ */
+export interface CredentialEntry {
+  ref: SecretRef;
+  priority: number;
   version: number;
-  issued_at: Date;
 }

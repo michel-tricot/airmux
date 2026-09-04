@@ -17,14 +17,14 @@ application.
 - Use the OpenAI Chat Completions API and Anthropic Messages API through one gateway
 - Route models across OpenAI, Anthropic, Groq, Fireworks, Together, and other compatible providers
 - Keep provider credentials scoped to an organization or workspace
-- Authenticate, route, and enforce policy from a signed local bundle
+- Authenticate, route, and enforce policy from a validated local bundle
 - Keep serving from cached configuration when the control plane is unavailable
 - Capture usage and cost events without making the management database part of the request path
 - Run only the data plane for local development or the complete stack for a team
 
 ## Try it in two minutes
 
-Standalone mode runs one data-plane process. It needs no Postgres, control plane, signature setup, or web console.
+Standalone mode runs one data-plane process. It needs no Postgres, control plane, or web console.
 
 You need:
 
@@ -59,7 +59,7 @@ intentionally discarded.
 
 ## Run the complete stack
 
-The complete stack adds Postgres, the control plane, the web console, signed bundles, multi-tenant credentials, and durable usage export.
+The complete stack adds Postgres, the control plane, the web console, multi-tenant credentials, and durable usage export.
 
 You need:
 
@@ -79,13 +79,14 @@ cp .env.example .env
 uv sync --all-packages --frozen
 docker compose up -d --build
 uv run airllm --dev quickstart
-docker compose up -d --wait
 ~~~
 
 `quickstart` creates or resumes the owner account, personal organization, and default workspace. It
 keeps existing credentials, stores missing provider keys from `.env` as global defaults, and mints
 a new inference key without replacing earlier keys. Save the `AIRLLM_API_KEY` it prints. The command
 reports `Ready` only after that key and a configured catalog model complete a real gateway request.
+The stack creates and authorizes its shared data-plane pool key before the control plane reports
+healthy. There is no sequential data-plane provisioning step.
 
 The stack is now available at:
 
@@ -113,6 +114,34 @@ docker compose down
 
 `docker compose down -v` also deletes the database and AirLLM state volumes, so use it only when
 you want a clean reset.
+
+### Scale the data plane
+
+Replicas in one gateway pool share one ordinary data-plane access key. Put that token in the
+platform's secret store and expose the same value to the control plane and every data-plane replica:
+
+~~~yaml
+control_plane:
+  bootstrap:
+    token: ${env:GW_DATAPLANE_TOKEN}
+
+data_plane:
+  bundle:
+    kind: remote
+    control_plane: &control_plane
+      url: https://control-plane.internal
+      token: ${env:GW_DATAPLANE_TOKEN}
+    cache_dir: .airllm
+  events:
+    kind: sqlite
+    control_plane: *control_plane
+    cache_dir: .airllm
+~~~
+
+The control plane authorizes the key once; replicas can start, stop, and autoscale independently.
+Each replica validates bundles from the authenticated API and keeps them in its local cache. Use
+HTTPS or a protected private network between the planes. Rotating or revoking the shared access key
+affects the whole pool.
 
 ## Use your existing SDK
 
@@ -168,13 +197,14 @@ flowchart LR
     Clients["OpenAI and Anthropic clients"] --> DP["Data plane"]
     DP --> Providers["Model providers"]
     Console["Web console and CLI"] --> CP["Control plane"]
-    CP -- "signed bundles" --> DP
+    CP -- "policy bundles" --> DP
     DP -- "usage events" --> CP
     CP --> DB[("Postgres")]
 ~~~
 
 The control plane owns organizations, workspaces, credentials, the model catalog, and bundle
-compilation. It publishes signed, self-contained configuration to the data plane. The data plane
+compilation. It publishes self-contained configuration to the data plane over an authenticated
+connection. The data plane
 uses that local snapshot to authenticate callers, select a model and provider, translate the
 request, stream the response, and meter usage. It never queries the control-plane database while
 serving an inference request.
@@ -275,7 +305,7 @@ See [AGENTS.md](AGENTS.md) for the complete development conventions and boundary
 - `apps/control-plane`: management API, catalog, bundle compiler, and event ingestion
 - `apps/console`: React management console
 - `apps/cli`: setup and resource-management CLI
-- `lib/contract`: signed bundle, event, token, and shared wire contracts
+- `lib/contract`: bundle, event, token, and shared wire contracts
 - `model-audit`: provider discovery, behavioral evidence, taxonomy generation, and gateway-gap reporting
 - `taxonomy`: generated provider definitions, model catalog, behavioral evidence, and canonical completion schemas
 - `tests/acceptance`: black-box gateway scenarios

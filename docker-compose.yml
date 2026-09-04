@@ -32,23 +32,21 @@ services:
     profiles: ["backend"]
     # The one checked-in airllm.yml serves the checkout and this stack: the working directory is the shared
     # /state volume, so its relative refs land here, and the values that differ come in as variables below.
-    # Bring your own GW_BUNDLE_SIGNING_KEY (then also pass the matching GW_BUNDLE_PUBLIC_KEY to the data
-    # plane), or leave it unset and keygen writes signing.key and its matching signing.pub together.
     command: >
       sh -c '
         umask 077;
         mkdir -p /state/.airllm;
-        if [ -n "$$GW_BUNDLE_SIGNING_KEY" ]; then
-          printf %s "$$GW_BUNDLE_SIGNING_KEY" > /state/.airllm/signing.key;
+        if [ -n "$$GW_DATAPLANE_TOKEN" ]; then
+          printf %s "$$GW_DATAPLANE_TOKEN" > /state/.airllm/dataplane.key;
         else
-          [ -f /state/.airllm/signing.key ] || airllmcp keygen;
+          [ -f /state/.airllm/dataplane.key ] || airllmcp bootstrap-keygen;
         fi;
         airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
     environment:
       <<: *provider-keys
       DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
       GW_CONSOLE_URL: http://localhost:5000
-      GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:-}
+      GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
     volumes:
       - state:/state
       - ./airllm.yml:/state/airllm.yml:ro
@@ -66,28 +64,10 @@ services:
   data-plane:
     profiles: ["backend"]
     build: .
-    # Bring your own GW_BUNDLE_PUBLIC_KEY (must match the control plane's signing key), or leave it unset
-    # and wait for the key keygen wrote to the shared volume. Then wait for the token airllm quickstart drops.
-    command: >
-      sh -c '
-      umask 077;
-      mkdir -p /state/.airllm;
-      if [ -n "$$GW_BUNDLE_PUBLIC_KEY" ]; then
-        printf %s "$$GW_BUNDLE_PUBLIC_KEY" > /state/.airllm/signing.pub;
-      else
-        until [ -f /state/.airllm/signing.pub ]; do echo "waiting for /state/.airllm/signing.pub (control plane starting)"; sleep 2; done;
-      fi;
-      if [ -n "$$GW_DATAPLANE_TOKEN" ]; then
-        printf %s "$$GW_DATAPLANE_TOKEN" > /state/.airllm/dataplane.key;
-      else
-        until [ -f /state/.airllm/dataplane.key ]; do echo "waiting for /state/.airllm/dataplane.key (run airllm quickstart)"; sleep 2; done;
-      fi;
-      exec airllmdp serve --host 0.0.0.0 --port 8080'
+    command: airllmdp serve --host 0.0.0.0 --port 8080
     environment:
       <<: *provider-keys
       GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
-      GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
-      GW_BUNDLE_PUBLIC_KEY: ${GW_BUNDLE_PUBLIC_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:

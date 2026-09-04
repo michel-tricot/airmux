@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract import KeyEntry, ModelEntry, uuid7
+from contract import BundleManifest, KeyEntry, ModelEntry, uuid7
 
 
 def model_entry(**overrides: object) -> dict[str, object]:
@@ -38,3 +38,7 @@ def test_model_capabilities_use_the_policy_vocabulary():
 def test_inference_key_ids_are_opaque_strings():
     key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")
     assert key.key_id == "external-key"
+
+
+def test_empty_manifest_contains_only_bundle_references():
+    assert BundleManifest(bundles=[]).model_dump() == {"bundles": []}

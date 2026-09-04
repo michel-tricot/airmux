@@ -74,7 +74,7 @@ def _interpolate(value: str) -> str | None:
 
 def _substitute_vars(value: str, variables: dict[str, str]) -> str:
     """The pass before ref resolution: ${var:NAME} is plain text substitution from the vars
-    block, so a var can sit inside a ref, as in ${file:${var:dir}/signing.key}. Vars hold
+    block, so a var can sit inside a ref, as in ${file:${var:dir}/dataplane.key}. Vars hold
     values, never logic; an unknown name fails loudly."""
 
     def replace(match: re.Match[str]) -> str:

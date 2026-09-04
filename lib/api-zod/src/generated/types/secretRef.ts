@@ -10,10 +10,16 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { SecretPurpose } from './secretPurpose';
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: Date;
+/**
+ * A stable reference to a secret value and the scope that owns it.
+ */
+export interface SecretRef {
+  purpose: SecretPurpose;
+  service: string;
+  name: string;
+  secret_id: string;
+  org_id?: string | null;
+  workspace_id?: string | null;
 }

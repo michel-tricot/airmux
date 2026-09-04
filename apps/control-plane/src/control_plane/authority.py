@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from sqlmodel import col
 
 from control_plane.authz import (
-    DATA_PLANE_PERMISSIONS,
     INSTANCE_ROLE_PERMISSIONS,
     ORG_ROLE_PERMISSIONS,
     WORKSPACE_ROLE_PERMISSIONS,
@@ -188,18 +187,3 @@ async def access_key_parent(
         detail = "A delegated key cannot outlive its issuer"
         raise AuthorizationError(detail)
     return parent.id
-
-
-async def is_data_plane_credential(actor: Actor, user: User) -> bool:
-    if (
-        actor.credential_kind != "access_key"
-        or actor.grant.scope.level not in {ScopeLevel.instance, ScopeLevel.org}
-        or actor.grant.permissions != DATA_PLANE_PERMISSIONS
-        or not user.service_account
-    ):
-        return False
-    grants = await standing_grants(actor.principal_id, (actor.grant.scope,))
-    return all(
-        decide(actor, grants, AccessRequest(permission=permission, target=actor.grant.scope)) is Decision.allow
-        for permission in DATA_PLANE_PERMISSIONS
-    )

@@ -13,7 +13,6 @@ from contract.bundle import (
     ModelEntry,
     ParameterSupport,
     ProviderEntry,
-    SignedBundle,
 )
 from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import (
@@ -46,17 +45,6 @@ from contract.secrets import (
     SecretStoreConfig,
     SecretStoreUnavailableError,
 )
-from contract.signing import (
-    Ed25519PrivateKeyB64,
-    Ed25519PublicKeyB64,
-    canonical_json,
-    private_key_from_b64,
-    private_key_to_b64,
-    public_key_from_b64,
-    public_key_to_b64,
-    sign_bundle,
-    verify_bundle,
-)
 
 __all__ = [
     "INFERENCE_TOKEN_PREFIX",
@@ -70,8 +58,6 @@ __all__ = [
     "CredentialEntry",
     "CredentialScope",
     "DeniedUsageEventV1",
-    "Ed25519PrivateKeyB64",
-    "Ed25519PublicKeyB64",
     "EnvSecretStore",
     "EnvStoreConfig",
     "FileSecretStore",
@@ -97,21 +83,13 @@ __all__ = [
     "SecretStoreConfig",
     "SecretStoreUnavailableError",
     "SecretsConfig",
-    "SignedBundle",
     "UnknownVarError",
     "UnsupportedRefSchemeError",
     "UsageEvent",
     "UsageStatus",
-    "canonical_json",
     "load_config_section",
-    "private_key_from_b64",
-    "private_key_to_b64",
-    "public_key_from_b64",
-    "public_key_to_b64",
     "resolve_ref",
-    "sign_bundle",
     "token_hash",
     "try_resolve_ref",
     "uuid7",
-    "verify_bundle",
 ]

@@ -4,11 +4,8 @@ set -eu
 umask 077
 mkdir -p /state/.airllm/secrets
 
-if [ ! -f /state/.airllm/signing.key ] && [ ! -f /state/.airllm/signing.pub ]; then
-  airllmcp keygen --out /state/.airllm/signing.key
-elif [ ! -f /state/.airllm/signing.key ] || [ ! -f /state/.airllm/signing.pub ]; then
-  echo "the bundle signing key pair on /state is incomplete" >&2
-  exit 1
+if [ ! -f /state/.airllm/dataplane.key ]; then
+  airllmcp bootstrap-keygen --out /state/.airllm/dataplane.key
 fi
 
 airllmcp taxonomy --config /app/deploy/fly/airllm.yml --file ../../taxonomy/taxonomy.yml

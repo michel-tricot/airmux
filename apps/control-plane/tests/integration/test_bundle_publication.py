@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
 
-from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, SignedBundle, token_hash, verify_bundle
+from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
 from control_plane.compiler import publish_pending
 from control_plane.db import standalone_transaction
 from control_plane.models import RuntimeConfiguration
@@ -26,7 +26,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
         latest = c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root)
         assert latest.status_code == 200
-        bundle = verify_bundle(SignedBundle.model_validate(latest.json()["data"]), cp.bundle_key.public_key())
+        bundle = BundleV1.model_validate(latest.json()["data"])
         bundles = c.get(f"/api/v1/orgs/{o1}/bundles", headers=org).json()["data"]
         assert [entry["version"] for entry in bundles] == [1, 2, 3]
         assert str(bundle.bundle_id) == bundles[-1]["id"]
@@ -51,10 +51,7 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         ws = make_workspace(c, org)
         key = c.post(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
-        bundle = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
-            cp.bundle_key.public_key(),
-        )
+        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert bundle.keys == []
         bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
         assert [entry["version"] for entry in bundles] == [1, 2]
@@ -73,17 +70,11 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
             json={"label": "automatic"},
             headers=org,
         ).json()["data"]
-        created = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
-            cp.bundle_key.public_key(),
-        )
+        created = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert [entry.key_id for entry in created.keys] == [key["id"]]
 
         assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
-        revoked = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
-            cp.bundle_key.public_key(),
-        )
+        revoked = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert revoked.bundle_id != created.bundle_id
         assert revoked.keys == []
 
@@ -96,16 +87,12 @@ def test_bundle_latest_filters_by_org(tmp_path):
         o2 = make_org(c, root, "o2")
         c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
         c.post(f"/api/v1/orgs/{o2}/bundles/republish", headers=cp.headers(o2))
-        global_latest = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key()
-        )
+        global_latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"])
         assert global_latest.org_id == o2
-        latest = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", headers=cp.headers(o2)).json()["data"]), cp.bundle_key.public_key()
-        )
+        latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=cp.headers(o2)).json()["data"])
         assert latest.org_id == o2
         scoped = c.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(o1)})
-        bundle = verify_bundle(SignedBundle.model_validate(scoped.json()["data"]), cp.bundle_key.public_key())
+        bundle = BundleV1.model_validate(scoped.json()["data"])
         assert bundle.org_id == o1
 
 
@@ -126,8 +113,8 @@ def test_bundle_manifest_follows_the_access_key_scope(tmp_path):
         by_org = {bundle.org_id: bundle for bundle in instance.bundles}
         response = c.get(f"/api/v1/bundles/{by_org[o1].bundle_id}", headers=cp.headers(o1))
         assert response.status_code == 200
-        assert isinstance(response.json()["data"]["payload"], str)
-        assert verify_bundle(SignedBundle.model_validate(response.json()["data"]), cp.bundle_key.public_key()).org_id == o1
+        assert "payload" not in response.json()["data"]
+        assert BundleV1.model_validate(response.json()["data"]).org_id == o1
         assert c.get(f"/api/v1/bundles/{by_org[o2].bundle_id}", headers=cp.headers(o1)).status_code == 403
         workspace_id = make_workspace(c, cp.headers(o1))
         assert c.get("/api/v1/bundles/manifest", headers=cp.headers(o1, workspace_id=workspace_id)).status_code == 403
@@ -141,7 +128,7 @@ def test_concurrent_publications_allocate_distinct_versions(tmp_path):
     async def publish() -> int:
         async with standalone_transaction(cp.db_url):
             await RuntimeConfiguration.request_republication(org_id)
-            bundles = await publish_pending(datetime.now(tz=UTC), cp.bundle_key)
+            bundles = await publish_pending(datetime.now(tz=UTC))
             return bundles[0].version
 
     async def publish_both() -> list[int]:

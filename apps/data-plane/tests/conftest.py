@@ -9,7 +9,6 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 import respx
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import (
     INFERENCE_TOKEN_PREFIX,
@@ -22,13 +21,12 @@ from contract import (
     Secret,
     SecretPurpose,
     SecretRef,
-    sign_bundle,
     token_hash,
     uuid7,
 )
 from data_plane.app import create_app
 from data_plane.bundle import RemoteBundleConfig
-from data_plane.cache import write_cached_bundles
+from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
@@ -44,7 +42,6 @@ NOW = datetime.now(tz=UTC)
 ORG = uuid7()
 WORKSPACE = uuid7()
 
-UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
 CONTROL_PLANE_URL = "http://cp.test"
 
 PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1")
@@ -92,16 +89,16 @@ def make_bundle(keys=(), catalog=None, org=ORG):
     )
 
 
-def make_signed(private_key, key_ids=("k1",), org=ORG):
+def make_remote_bundle(key_ids=("k1",), org=ORG):
     keys = [make_key(k, org)[1] for k in key_ids]
-    return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
+    return make_bundle(keys=keys, org=org)
 
 
 def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
     outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path)
     return Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=outbox_config,
     )
 
@@ -176,19 +173,18 @@ class BootedApp:
 
 @pytest.fixture
 def booted(tmp_path, monkeypatch) -> BootedApp:
-    """A booted-app environment: signed bundle on disk, an app built from a constructed Config, and a valid caller token.
+    """A booted-app environment: cached bundle, constructed Config, and a valid caller token.
 
     The config is constructed and injected through create_app, never parsed; parsing the config
     file is test_config.py's job.
     """
-    bundle_key = Ed25519PrivateKey.generate()
     caller_token, entry = make_key()
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
-    write_cached_bundles(tmp_path, [sign_bundle(bundle, bundle_key, "k1")])
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
     config = Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key

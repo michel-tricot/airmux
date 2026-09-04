@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
 
-from contract import SignedBundle, uuid7, verify_bundle
+from contract import BundleV1, uuid7
 
 
 def test_cross_org_key_revocation_is_not_found(tmp_path):
@@ -16,10 +16,7 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
         key = c.post(f"/api/v1/orgs/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=cp.headers(o1)).json()["data"]
         assert c.delete(f"/api/v1/orgs/{o2}/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
         c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
-        bundle = verify_bundle(
-            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"]),
-            cp.bundle_key.public_key(),
-        )
+        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"])
         assert [k.key_id for k in bundle.keys] == [key["id"]]
 
 

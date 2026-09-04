@@ -9,7 +9,7 @@ from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageStatus
+from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, UsageStatus
 from contract import UsageEvent as UsageEventContract
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
@@ -33,12 +33,8 @@ CREDENTIAL_HEALTH: dict[UsageStatus, ProviderCredentialStatus] = {
 }
 
 
-def _signed(bundle: Bundle) -> SignedBundle:
-    return SignedBundle(
-        payload=bundle.payload,
-        signature=bundle.signature,
-        signing_key_id=bundle.signing_key_id,
-    )
+def _bundle(bundle: Bundle) -> BundleV1:
+    return BundleV1.model_validate_json(bundle.payload)
 
 
 @router.get("/bundles/manifest", dependencies=[require(credential_scope, Permission.bundles_read)])
@@ -65,19 +61,19 @@ async def selected_bundle_scope(bundle: BundleDep) -> Scope:
 
 
 @router.get("/bundles/{bundle_id}", dependencies=[require(selected_bundle_scope, Permission.bundles_read)])
-async def get_bundle(bundle: BundleDep) -> Envelope[SignedBundle]:
-    """Return one immutable signed bundle visible to the authenticated data plane credential."""
-    return Envelope(data=_signed(bundle))
+async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
+    """Return one immutable bundle visible to the authenticated data plane credential."""
+    return Envelope(data=_bundle(bundle))
 
 
 @router.get("/bundle/latest", dependencies=[require(bundle_scope, Permission.bundles_read)])
-async def bundle_latest(scope: BundleScopeDep) -> Envelope[SignedBundle]:
-    """Return the newest signed policy bundle available at the requested organization scope."""
+async def bundle_latest(scope: BundleScopeDep) -> Envelope[BundleV1]:
+    """Return the newest policy bundle available at the requested organization scope."""
     conditions = (Bundle.org_id == scope.org_id,) if scope.org_id is not None else ()
     bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if bundle is None:
         raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this scope")
-    return Envelope(data=_signed(bundle))
+    return Envelope(data=_bundle(bundle))
 
 
 @router.post("/events", dependencies=[require(credential_scope, Permission.usage_ingest)])

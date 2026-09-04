@@ -14,10 +14,9 @@ through the backend app's private Flycast address.
 | `/inf/v1/*`     | Backend port 8081 | `/inf/v1/*` |
 | Everything else | Console nginx     | React SPA   |
 
-The proxy preserves both API prefixes. The backend generates its bundle signing key pair on the
-volume during the first boot. `airllm quickstart` writes the data-plane credential to the same
-volume, and the waiting data-plane process then starts automatically. Provider credentials also use
-the shared file-backed secret store.
+The proxy preserves both API prefixes. On first boot, the backend generates one data-plane pool key
+on the volume. Control-plane startup authorizes that pool key before the
+data plane starts. Provider credentials also use the shared file-backed secret store.
 
 This is intentionally a single-backend-Machine deployment. A Fly Volume can attach to only one
 Machine, so the backend cannot scale horizontally without replacing local state with shared storage.
@@ -63,7 +62,7 @@ FLY_TOKEN_EXPIRY=8760h \
 Existing GitHub deploy secrets are preserved instead of generating additional Fly tokens on every
 run.
 
-Set up the first account, workspace, data-plane credential, provider credentials, and inference key:
+Set up the first account, workspace, provider credentials, and inference key:
 
 ```sh
 uv run airllm quickstart \

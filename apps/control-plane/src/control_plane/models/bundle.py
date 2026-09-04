@@ -20,10 +20,8 @@ class Bundle(Record, OrgOwned, table=True):
     issued_at: datetime = Field(sa_type=UTCDateTime)
     configuration_revision: int = 0
     payload: str
-    signature: str
-    signing_key_id: str
 
-    api_hidden: ClassVar[frozenset[str]] = frozenset({"configuration_revision", "payload", "signature"})
+    api_hidden: ClassVar[frozenset[str]] = frozenset({"configuration_revision", "payload"})
 
     @classmethod
     async def latest_refs_per_org(cls, org_id: UUID | None) -> list[tuple[UUID, UUID]]:
@@ -39,4 +37,3 @@ class BundleOut(RecordOut[Bundle]):
     org_id: UUID
     version: int
     issued_at: datetime
-    signing_key_id: str

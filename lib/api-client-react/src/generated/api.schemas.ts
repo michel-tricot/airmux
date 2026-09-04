@@ -187,7 +187,159 @@ export interface BundleOut {
   org_id: string;
   version: number;
   issued_at: string;
-  signing_key_id: string;
+}
+
+/**
+ * An active inference key included in a policy bundle.
+ *
+ * The bundle contains a token hash for authorization and a key ID for usage attribution, never
+ * the caller's secret token.
+ */
+export interface KeyEntry {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  org_id: string;
+  workspace_id: string;
+  token_hash: string;
+  expires_at?: string | null;
+}
+
+export type ProviderEntryParamAliases = {[key: string]: string};
+
+/**
+ * An upstream LLM provider endpoint and its supported request parameters.
+ */
+export interface ProviderEntry {
+  provider_id: string;
+  kind: string;
+  /**
+     * @minLength 1
+     * @maxLength 2083
+     */
+  base_url: string;
+  param_aliases?: ProviderEntryParamAliases;
+  accepted_params?: string[] | null;
+  params_closed?: boolean;
+}
+
+export type ModelEntryInputModalitiesItem = typeof ModelEntryInputModalitiesItem[keyof typeof ModelEntryInputModalitiesItem];
+
+
+export const ModelEntryInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
+export type ModelEntryOutputModalitiesItem = typeof ModelEntryOutputModalitiesItem[keyof typeof ModelEntryOutputModalitiesItem];
+
+
+export const ModelEntryOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
+export type ModelEntryCapabilitiesItem = typeof ModelEntryCapabilitiesItem[keyof typeof ModelEntryCapabilitiesItem];
+
+
+export const ModelEntryCapabilitiesItem = {
+  streaming: 'streaming',
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export type ModelEntryParameterSupport = {[key: string]: 'supported' | 'unsupported'};
+
+/**
+ * A routable model: the caller-facing id plus how to reach and bill it.
+ */
+export interface ModelEntry {
+  model_id: string;
+  provider_id: string;
+  upstream_model: string;
+  input_price_per_mtok: number;
+  output_price_per_mtok: number;
+  cache_read_price_per_mtok: number;
+  cache_write_price_per_mtok: number;
+  context_window: number;
+  max_output_tokens?: number | null;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  input_modalities: ModelEntryInputModalitiesItem[];
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  output_modalities: ModelEntryOutputModalitiesItem[];
+  capabilities: ModelEntryCapabilitiesItem[];
+  parameter_support?: ModelEntryParameterSupport;
+  egress_kind?: string | null;
+}
+
+/**
+ * The kind of credential addressed by a secret reference.
+ */
+export type SecretPurpose = typeof SecretPurpose[keyof typeof SecretPurpose];
+
+
+export const SecretPurpose = {
+  provider: 'provider',
+} as const;
+
+/**
+ * A stable reference to a secret value and the scope that owns it.
+ */
+export interface SecretRef {
+  purpose: SecretPurpose;
+  service: string;
+  name: string;
+  secret_id: string;
+  org_id?: string | null;
+  workspace_id?: string | null;
+}
+
+/**
+ * A provider credential reference, priority, and version included in a policy bundle.
+ *
+ * The secret value is not included. A version change tells data planes to refresh their cached value.
+ */
+export interface CredentialEntry {
+  ref: SecretRef;
+  priority: number;
+  version: number;
+}
+
+/**
+ * Everything routable in one org: providers, the models that point at them, and the credentials
+ * they are reached with.
+ */
+export interface Catalog {
+  providers: ProviderEntry[];
+  models: ModelEntry[];
+  credentials?: CredentialEntry[];
+}
+
+/**
+ * A complete, versioned policy snapshot for one organization's model traffic.
+ */
+export interface BundleV1 {
+  schema_version?: 1;
+  bundle_id: string;
+  org_id: string;
+  issued_at: string;
+  keys: KeyEntry[];
+  catalog: Catalog;
 }
 
 export interface ClaimOut {
@@ -1033,19 +1185,6 @@ export interface ProviderOut {
   deleted_at: string | null;
 }
 
-export interface QuickstartIn {
-  /**
-     * Existing limited access key for the first data plane
-     * @minLength 1
-     * @maxLength 512
-     */
-  token: string;
-}
-
-export interface QuickstartOut {
-  path: string;
-}
-
 /**
  * How the routed request ended
  */
@@ -1170,17 +1309,6 @@ export interface ServiceAccountIn {
   name: string;
   /** Optional instance-wide role for the service account */
   instance_role?: InstanceRole | null;
-}
-
-/**
- * A serialized BundleV1 as it crosses the wire and rests on disk.
- *
- * The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
- */
-export interface SignedBundle {
-  payload: string;
-  signature: string;
-  signing_key_id: string;
 }
 
 export interface SignupIn {

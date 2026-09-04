@@ -36,7 +36,7 @@ The high-level data flow is:
 
 ```mermaid
 flowchart LR
-    control_plane[control plane] -->|signed BundleV1| remote_source[remote bundle source]
+    control_plane[control plane] -->|BundleV1| remote_source[remote bundle source]
     local_file[local bundle file] --> local_source[local bundle source]
     remote_source --> holder[BundleHolder]
     local_source --> holder
@@ -318,7 +318,7 @@ Workers configured with the same cache directory cooperate through local files:
 
 | File | Purpose |
 |---|---|
-| `bundles.json` | Last admitted set of signed remote bundles, written atomically |
+| `bundles.json` | Last admitted set of validated remote bundles, written atomically |
 | `instance_id` | Stable logical data-plane id shared by workers and reported in heartbeats |
 | `events.db` | SQLite WAL outbox shared by all workers |
 
@@ -353,7 +353,6 @@ data_plane:
     control_plane: &control_plane
       url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
-    verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
 
@@ -376,7 +375,7 @@ cannot silently broaden; mint an organization-scoped data-plane key instead.
 
 ### Local mode
 
-Local mode needs no control plane, signing key, database, heartbeat, or remote bundle cache:
+Local mode needs no control plane, database, heartbeat, or remote bundle cache:
 
 ```yaml
 data_plane:
@@ -422,21 +421,21 @@ live inference-key hashes, but reading it does not reveal the original keys.
 Remote startup is designed to serve through a control-plane outage:
 
 1. Read `bundles.json` from the configured cache directory
-2. Verify each serialized payload's exact UTF-8 bytes with the configured Ed25519 public key
-3. Parse the verified payloads and admit the complete bundle set
+2. Validate each cached `BundleV1`
+3. Admit the complete bundle set
 4. Start the poll and heartbeat loops
 
 The poller immediately requests `GET /api/v1/bundles/manifest`. The control plane derives the
-manifest from the access key's scope. The poller reuses unchanged signed bundles, fetches changed
-entries by immutable bundle id, verifies the complete result, admits it, and atomically persists the
-signed set. Organizations absent from the next successfully admitted manifest are removed. Parse
-errors, signature failures, HTTP failures, and filesystem failures are recoverable. The last admitted
-bundle set remains in service while polling retries.
+manifest from the access key's scope. The poller reuses unchanged bundles, fetches changed entries
+by immutable bundle id, validates their schemas and manifest identities, admits the complete result,
+and atomically persists it. Organizations absent from the next successfully admitted manifest are
+removed. Validation, HTTP, and filesystem failures are recoverable. The last admitted bundle set
+remains in service while polling retries.
 
-`SignedBundle.payload` is the serialized `BundleV1` string covered by the signature. The control
-plane serializes once and stores, signs, and serves that exact text. The data plane verifies it before
-parsing, so signature validity does not depend on reproducing the control plane's serializer and a
-lagging parser can ignore additive fields only after authenticating them.
+The data-plane access key authenticates and authorizes bundle transport. Production deployments use
+HTTPS or a protected private network between the planes. The control plane stores the immutable
+serialized snapshot and serves it as a typed `BundleV1`; the data plane does not trust an unvalidated
+response or adopt a bundle whose organization and bundle ids differ from its manifest entry.
 
 The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
 to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has
@@ -454,8 +453,8 @@ A local bundle file contains plaintext inference tokens plus provider and model 
 
 The initial file load happens during startup. Later reloads run in a worker thread when the file
 modification time changes. A malformed edit is logged and retried while the last good snapshot keeps
-serving. The local file is trusted because the operator controls its filesystem; it is not signed and
-contains plaintext caller tokens.
+serving. The local file is trusted because the operator controls its filesystem and contains
+plaintext caller tokens.
 
 With the environment secret store, a synthesized provider ref resolves through the conventional
 `{PROVIDER_ID}_API_KEY` environment variable.

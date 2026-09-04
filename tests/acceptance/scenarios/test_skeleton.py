@@ -68,7 +68,7 @@ def test_skeleton_syncs_bundle_heartbeat_and_events(stack: Stack) -> None:
     stack.start_cp()
     stack.collect_credentials()
     stack.start_dp()
-    stack.wait_dp_ready()  # readyz turns 200 only once a signed bundle is verified and admitted
+    stack.wait_dp_ready()  # readyz turns 200 only once a bundle is validated and admitted
 
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
         login = admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})

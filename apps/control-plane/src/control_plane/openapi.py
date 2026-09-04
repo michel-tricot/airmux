@@ -81,7 +81,7 @@ API_TAGS = [
         "x-displayName": "Provider Credentials",
         "description": "Manage provider API keys available across an organization",
     },
-    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect signed policy bundles"},
+    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect policy bundles"},
     {
         "name": "Organization Usage Events",
         "x-displayName": "Usage Events",
@@ -196,7 +196,6 @@ OPERATION_SUMMARIES = {
     "preview_invitation": "Preview Invitation",
     "accept_invitation": "Accept Invitation",
     "claim": "Get Instance Claim Status",
-    "quickstart": "Install First Data Plane Credential",
     "list_orgs": "List Organizations",
     "create_org": "Create Organization",
     "update_org": "Update Organization",

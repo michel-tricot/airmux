@@ -42,8 +42,7 @@ def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
 
 
 def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
-    payload = client.get("/api/v1/bundle/latest", headers=headers).json()["data"]["payload"]
-    return BundleV1.model_validate_json(payload)
+    return BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=headers).json()["data"])
 
 
 def _stored(cp, credential: dict) -> str:
@@ -135,7 +134,7 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
         assert response.status_code == 200, response.text
         credential = response.json()["data"]
         bundle_response = c.get("/api/v1/bundle/latest", headers=org)
-        entry = BundleV1.model_validate_json(bundle_response.json()["data"]["payload"]).catalog.credentials[0]
+        entry = BundleV1.model_validate(bundle_response.json()["data"]).catalog.credentials[0]
         rotated = c.put(f"{_credential_path(credential)}/value", json={"value": "sk-rotated-9999"}, headers=org)
         assert rotated.status_code == 200, rotated.text
 

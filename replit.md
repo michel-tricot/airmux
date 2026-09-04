@@ -4,7 +4,7 @@ An LLM gateway prototype with a strict control plane / data plane split, plus th
 
 ## What it does
 
-- **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles signed policy bundles
+- **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles policy bundles
 - **Data plane** (bare Starlette): serves `POST /v1/chat/completions` and `POST /v1/messages` (Anthropic API) with zero I/O on the hot path
 - **Console** (`apps/console`): React/Vite admin and org console
 - **CLI** (`apps/cli`): `airllm` and `airllmcp` commands for managing the gateway
@@ -23,7 +23,7 @@ See README.md for the full getting-started guide. The short version:
 ```bash
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-uv run airllmcp keygen          # bundle signing key pair
+uv run airllmcp bootstrap-keygen # shared data-plane pool key
 # add OPENAI_API_KEY to .env
 uv run airllmcp serve --dev     # control plane on :8000
 # sign up at the console: the first account claims the instance
@@ -38,14 +38,11 @@ See `.env.example`. Key variables:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `GW_BUNDLE_SIGNING_KEY` | Ed25519 private key — signs bundles |
-| `GW_BUNDLE_PUBLIC_KEY` | Ed25519 public key — data plane verifies bundles |
 | `GW_ACCESS_KEY` | Bearer for control-plane APIs |
 | `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRLLM_API_KEY` | Caller inference key |
 
-`uv run airllmcp keygen` writes the key pair; the tokens are minted through the
-API or the CLI and pasted in.
+`uv run airllmcp bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
 
 ## Project layout
 
@@ -55,7 +52,7 @@ apps/
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
 packages/
-  contract/      # shared bundle/event schemas, signing, tokens
+  contract/      # shared bundle/event schemas and tokens
 apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app
 lib/             # Bun workspace libs
   api-spec/         # openapi.yaml — API contract (codegen via orval)
@@ -105,8 +102,7 @@ repository root:
 
 That script runs the required sequence:
 
-1. `uv run airllmcp keygen` (when `.airllm/signing.key` and
-   `.airllm/signing.pub` do not exist)
+1. `uv run airllmcp bootstrap-keygen` (when `.airllm/dataplane.key` does not exist)
 2. `uv run airllmcp migrate`
 3. `uv run airllmcp taxonomy`
 4. `uv run airllmcp fixtures`

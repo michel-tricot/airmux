@@ -1,3 +1,10 @@
+"""What quickstart does about provider keys, against a real control plane.
+
+The command's own flow (signup and device authorization) is covered
+where those surfaces live. This is the part that decides whether a fresh install can serve a
+request at all: an instance with a catalog and no credential is a gateway that routes nothing.
+"""
+
 from __future__ import annotations
 
 import asyncio

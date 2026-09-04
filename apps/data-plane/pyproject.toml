@@ -8,7 +8,6 @@ dependencies = [
   "uvicorn[standard]",
   "httpx[http2]",
   "pydantic>=2",
-  "cryptography",
   "tiktoken",
   "typer",
   "python-dotenv",
