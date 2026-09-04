@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.table import Table
 from sqlalchemy.engine import make_url
 
-from contract import private_key_to_b64, public_key_to_b64
+from contract import private_key_to_b64
 from contract.secrets.file import write_private_text
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
@@ -55,24 +55,22 @@ def _database_url(config: str) -> str:
 
 @app.command()
 def keygen(
-    out: str = typer.Option(".airllm/signing.key", "--out", help="Bundle private key file; the public key is written to <out>.pub"),
+    out: str = typer.Option(".airllm/signing.key", "--out", help="Bundle private key file"),
     force: bool = typer.Option(False, "--force", help="Rotate an existing key; this invalidates every bundle signed with the old one"),
 ) -> None:
-    """Generate the bundle signing key pair, the one secret the instance cannot mint for itself.
+    """Generate the bundle signing key, the one secret the instance cannot mint for itself.
 
-    Refuses to overwrite an existing key file unless --force is given. Point the config at the files
-    with file: refs: control_plane.bundle.signing_key and data_plane.bundle.public_key.
+    Refuses to overwrite an existing key file unless --force is given. Data planes discover the
+    public key through their authenticated bundle manifest.
     """
     key_path = Path(out)
-    public_path = key_path.with_suffix(".pub")
     if key_path.exists() and not force:
         typer.echo(f"{key_path} exists; pass --force to rotate (invalidates existing bundles)", err=True)
         raise typer.Exit(1)
     key_path.parent.mkdir(parents=True, exist_ok=True)
     key = Ed25519PrivateKey.generate()
     write_private_text(key_path, private_key_to_b64(key))
-    write_private_text(public_path, public_key_to_b64(key.public_key()))
-    typer.echo(f"wrote {key_path} and {public_path}")
+    typer.echo(f"wrote {key_path}")
 
 
 @app.command()

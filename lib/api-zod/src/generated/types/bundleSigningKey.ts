@@ -11,11 +11,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface QuickstartIn {
+export interface BundleSigningKey {
   /**
-     * Existing limited access key for the first data plane
      * @minLength 1
-     * @maxLength 512
+     * @maxLength 255
      */
-  token: string;
+  key_id: string;
+  public_key: string;
 }

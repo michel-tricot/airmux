@@ -4,8 +4,9 @@ from datetime import datetime
 from typing import Literal, cast, get_args
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from contract.key_material import Ed25519PublicKeyB64
 from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
@@ -123,9 +124,25 @@ class BundleManifestEntry(BaseModel):
     bundle_id: UUID
 
 
+class BundleSigningKey(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    key_id: str = Field(min_length=1, max_length=255)
+    public_key: Ed25519PublicKeyB64
+
+
 class BundleManifest(BaseModel):
     """The complete set of organization bundles one data plane may serve."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     bundles: list[BundleManifestEntry]
+    signing_keys: list[BundleSigningKey] = Field(min_length=1)
+
+    @field_validator("signing_keys")
+    @classmethod
+    def unique_signing_key_ids(cls, signing_keys: list[BundleSigningKey]) -> list[BundleSigningKey]:
+        if len({key.key_id for key in signing_keys}) != len(signing_keys):
+            msg = "signing key ids must be unique"
+            raise ValueError(msg)
+        return signing_keys

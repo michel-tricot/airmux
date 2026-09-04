@@ -196,7 +196,6 @@ OPERATION_SUMMARIES = {
     "preview_invitation": "Preview Invitation",
     "accept_invitation": "Accept Invitation",
     "claim": "Get Instance Claim Status",
-    "quickstart": "Install First Data Plane Credential",
     "list_orgs": "List Organizations",
     "create_org": "Create Organization",
     "update_org": "Update Organization",

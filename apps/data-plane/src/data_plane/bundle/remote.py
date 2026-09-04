@@ -8,16 +8,18 @@ import httpx
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
 
-from contract import BundleManifest, BundleManifestEntry, SignedBundle, public_key_to_b64, verify_bundle
+from contract import BundleManifest, BundleManifestEntry, BundleSigningKey, SignedBundle, public_key_to_b64, verify_bundle
 from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
+from data_plane.cache import CachedBundles, read_cached_bundles, write_cached_bundles
 from data_plane.cache import instance_id as cache_instance_id
-from data_plane.cache import read_cached_bundles, write_cached_bundles
 from data_plane.heartbeat import Heartbeat
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
     from contract import BundleV1
     from data_plane.bundle.config import RemoteBundleConfig
@@ -37,6 +39,7 @@ class RemoteBundleSource(BundleSource):
         self._holder = holder
         self._http_client = http_client
         self._signed_by_ref: dict[tuple[UUID, UUID], SignedBundle] = {}
+        self._signing_keys: dict[str, Ed25519PublicKey] = {}
 
     async def once(self) -> None:
         try:
@@ -47,9 +50,9 @@ class RemoteBundleSource(BundleSource):
             response.raise_for_status()
             manifest = BundleManifest.model_validate(response.json()["data"])
             current_refs = tuple(sorted(self._signed_by_ref))
-            if _manifest_refs(manifest) != current_refs:
+            if _manifest_refs(manifest) != current_refs or _manifest_keys(manifest) != _key_refs(self._signing_keys):
                 signed_bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
-                self._adopt(signed_bundles, source="polled", persist=True, expected=manifest.bundles)
+                self._adopt(signed_bundles, manifest.signing_keys, source="polled", persist=True, expected=manifest.bundles)
         except (InvalidSignature, ValidationError, ValueError) as error:
             self._holder.reject_manifest(str(error))
             raise
@@ -83,19 +86,21 @@ class RemoteBundleSource(BundleSource):
             if cached is None:
                 logger.warning("no cached bundles in %s, serving 503 until one arrives", self._config.cache_dir)
                 return
-            self._adopt(cached, source="cached", persist=False, expected=None)
+            self._adopt(cached.bundles, cached.signing_keys, source="cached", persist=False, expected=None)
         except (InvalidSignature, ValidationError, ValueError):
             logger.exception("cached bundles in %s are invalid, ignoring them", self._config.cache_dir)
 
     def _adopt(
         self,
         signed_bundles: list[SignedBundle],
+        signing_keys: list[BundleSigningKey],
         source: str,
         *,
         persist: bool,
         expected: list[BundleManifestEntry] | None,
     ) -> None:
-        bundles = tuple(self._verify(signed) for signed in signed_bundles)
+        keys = {key.key_id: key.public_key for key in signing_keys}
+        bundles = tuple(self._verify(signed, keys) for signed in signed_bundles)
         if expected is not None:
             for entry, bundle in zip(expected, bundles, strict=True):
                 if (bundle.org_id, bundle.bundle_id) != (entry.org_id, entry.bundle_id):
@@ -105,9 +110,10 @@ class RemoteBundleSource(BundleSource):
                     raise ValueError(message)
         bundle_set = BundleSet.from_bundles(bundles)
         if persist:
-            write_cached_bundles(self._config.cache_dir, signed_bundles)
+            write_cached_bundles(self._config.cache_dir, CachedBundles(signing_keys=signing_keys, bundles=signed_bundles))
         self._holder.swap(bundle_set, source)
         self._signed_by_ref = {(bundle.org_id, bundle.bundle_id): signed for bundle, signed in zip(bundles, signed_bundles, strict=True)}
+        self._signing_keys = keys
 
     async def _resolve(self, entry: BundleManifestEntry) -> SignedBundle:
         existing = self._signed_by_ref.get((entry.org_id, entry.bundle_id))
@@ -120,13 +126,25 @@ class RemoteBundleSource(BundleSource):
         response.raise_for_status()
         return SignedBundle.model_validate(response.json()["data"])
 
-    def _verify(self, signed: SignedBundle) -> BundleV1:
+    def _verify(self, signed: SignedBundle, signing_keys: dict[str, Ed25519PublicKey]) -> BundleV1:
+        public_key = signing_keys.get(signed.signing_key_id)
+        if public_key is None:
+            message = f"manifest does not contain signing key {signed.signing_key_id}"
+            raise ValueError(message)
         try:
-            return verify_bundle(signed, self._config.verify_key)
+            return verify_bundle(signed, public_key)
         except InvalidSignature as error:
-            message = f"bundle signed by {signed.signing_key_id} failed verification with public key {public_key_to_b64(self._config.verify_key)}"
+            message = f"bundle signed by {signed.signing_key_id} failed verification with public key {public_key_to_b64(public_key)}"
             raise InvalidSignature(message) from error
 
 
 def _manifest_refs(manifest: BundleManifest) -> tuple[tuple[UUID, UUID], ...]:
     return tuple(sorted((entry.org_id, entry.bundle_id) for entry in manifest.bundles))
+
+
+def _manifest_keys(manifest: BundleManifest) -> tuple[tuple[str, str], ...]:
+    return tuple(sorted((key.key_id, public_key_to_b64(key.public_key)) for key in manifest.signing_keys))
+
+
+def _key_refs(signing_keys: dict[str, Ed25519PublicKey]) -> tuple[tuple[str, str], ...]:
+    return tuple(sorted((key_id, public_key_to_b64(public_key)) for key_id, public_key in signing_keys.items()))

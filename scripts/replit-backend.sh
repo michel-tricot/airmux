@@ -67,7 +67,7 @@ reset_database() {
 require_database_url
 normalize_database_url
 
-if [[ ! -f .airllm/signing.key || ! -f .airllm/signing.pub ]]; then
+if [[ ! -f .airllm/signing.key ]]; then
   uv run airllmcp keygen
 fi
 

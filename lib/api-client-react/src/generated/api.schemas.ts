@@ -175,11 +175,22 @@ export interface BundleManifestEntry {
   bundle_id: string;
 }
 
+export interface BundleSigningKey {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  public_key: string;
+}
+
 /**
  * The complete set of organization bundles one data plane may serve.
  */
 export interface BundleManifest {
   bundles: BundleManifestEntry[];
+  /** @minItems 1 */
+  signing_keys: BundleSigningKey[];
 }
 
 export interface BundleOut {
@@ -1031,19 +1042,6 @@ export interface ProviderOut {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-}
-
-export interface QuickstartIn {
-  /**
-     * Existing limited access key for the first data plane
-     * @minLength 1
-     * @maxLength 512
-     */
-  token: string;
-}
-
-export interface QuickstartOut {
-  path: string;
 }
 
 /**

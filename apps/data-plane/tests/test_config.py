@@ -3,14 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from contract import FileStoreConfig, public_key_to_b64
+from contract import FileStoreConfig
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, load_config
-
-PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 
 
 @pytest.fixture
@@ -29,10 +26,7 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     """
     repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
-    # The repo config resolves the public key from a file the operator generates with `airllmcp keygen`.
-    key = Ed25519PrivateKey.generate()
     (clean_env / ".airllm").mkdir()
-    (clean_env / ".airllm" / "signing.pub").write_text(public_key_to_b64(key.public_key()), encoding="utf-8")
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
     config = load_config()
@@ -41,7 +35,6 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     assert config.bundle.control_plane.token == "dp-token"
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.events.control_plane == config.bundle.control_plane
-    assert public_key_to_b64(config.bundle.verify_key) == public_key_to_b64(key.public_key())
 
 
 def test_repo_config_shares_the_control_plane_link_with_the_named_yaml_anchor():
@@ -58,7 +51,6 @@ def test_connected_configs_own_independent_control_plane_links():
             "bundle": {
                 "kind": "remote",
                 "control_plane": {"url": "http://bundle-cp.test", "token": "bundle-token"},
-                "verify_key": PUBLIC_KEY_B64,
             },
             "events": {
                 "kind": "sqlite",
@@ -89,7 +81,6 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
     repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
     (clean_env / ".airllm").mkdir()
-    (clean_env / ".airllm" / "signing.pub").write_text(PUBLIC_KEY_B64, encoding="utf-8")
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
 
@@ -98,8 +89,12 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
     assert bundle.control_plane.url == "http://control-plane:8000"
 
 
-def test_malformed_verify_key_fails_at_load(clean_env):
-    config = "data_plane:\n  bundle:\n    kind: remote\n    control_plane: {url: http://cp.test, token: dp-token}\n    verify_key: not-a-key\n"
+def test_remote_bundle_rejects_a_configured_verify_key(clean_env):
+    config = (
+        "data_plane:\n  bundle:\n    kind: remote\n"
+        "    control_plane: {url: http://cp.test, token: dp-token}\n"
+        "    verify_key: no-longer-configured-here\n"
+    )
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
     with pytest.raises((ValidationError, ValueError)):
         load_config()
@@ -122,7 +117,7 @@ def test_outbox_kind_discriminates_the_config(clean_env):
 
 
 def test_remote_bundle_requires_a_control_plane(clean_env):
-    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n"
+    config = "data_plane:\n  bundle:\n    kind: remote\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
 
     with pytest.raises(ValidationError, match="control_plane"):
@@ -136,7 +131,6 @@ def test_remote_bundle_rejects_the_removed_org_selector():
                 "bundle": {
                     "kind": "remote",
                     "control_plane": {"url": "http://cp.test", "token": "dp-token"},
-                    "verify_key": PUBLIC_KEY_B64,
                     "org": "0198f3c6-e1d8-7b4a-8c2d-1f4e5a6b7c8d",
                 }
             }
@@ -169,7 +163,6 @@ def test_remote_intervals_must_be_positive():
                 "bundle": {
                     "kind": "remote",
                     "control_plane": {"url": "http://cp.test", "token": "dp-token"},
-                    "verify_key": PUBLIC_KEY_B64,
                     "poll_interval_s": 0,
                     "heartbeat_interval_s": 0,
                 },
@@ -191,10 +184,8 @@ def test_local_reload_interval_must_be_positive():
 
 def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
     fly_config = Path(__file__).resolve().parents[3] / "deploy" / "fly" / "airllm.yml"
-    signing_key = Ed25519PrivateKey.generate()
     cache_dir = tmp_path / ".airllm"
     cache_dir.mkdir()
-    (cache_dir / "signing.pub").write_text(public_key_to_b64(signing_key.public_key()), encoding="utf-8")
     (cache_dir / "dataplane.key").write_text("data-plane-token", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("GW_CONFIG", str(fly_config))

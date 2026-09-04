@@ -311,7 +311,6 @@ def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error:
         ),
     )
     monkeypatch.setattr(auth, "upsert_url_profile", lambda name, values: saved.update(name=name, values=values))
-    monkeypatch.setattr(auth, "_install_data_plane_key", lambda _client: None)
     monkeypatch.setattr(
         auth, "_inference_key", lambda _client, _org_id, _workspace, _bearer: InferenceKeyMintedOut(id=uuid4(), token="inference-token")
     )

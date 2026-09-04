@@ -353,7 +353,6 @@ data_plane:
     control_plane: &control_plane
       url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
-    verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
 

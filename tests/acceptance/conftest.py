@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import secrets
 import shutil
 import signal
 import socket
@@ -235,10 +236,9 @@ class Stack:
     # setup ----------------------------------------------------------------
 
     def _provision_keys(self) -> None:
-        """What has to exist before the control plane starts: the bundle key pair and the catalog file.
+        """What has to exist before the control plane starts: the signing key, pool key, and catalog file.
 
-        The signing key comes from `airllmcp keygen`, the same command an operator runs; the config
-        reads both halves out of the environment.
+        The configured pool key is seeded by control-plane startup before any human account exists.
         """
         self._write_taxonomy()
         base = {**os.environ, "GW_CONFIG": str(self.config_path)}
@@ -249,14 +249,14 @@ class Stack:
             "GW_CONFIG": str(self.config_path),
             "OPENAI_API_KEY": "sk-stub",
             "GW_BUNDLE_SIGNING_KEY": key_path.read_text(encoding="utf-8").strip(),
-            "GW_BUNDLE_PUBLIC_KEY": key_path.with_suffix(".pub").read_text(encoding="utf-8").strip(),
+            "GW_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
         }
 
     def _bootstrap(self) -> None:
-        """Provision the deployment the way an operator does, over the public surfaces only.
+        """Provision the tenant the way an operator does, over the public surfaces only.
 
         The first signup claims the instance, which is what makes the rest reachable: the org, a
-        workspace, the caller's inference key, a human access key, and a data-plane access key.
+        workspace, the caller's inference key, and a human access key.
 
         The taxonomy runs in the middle rather than last, because a provider credential names a
         provider that has to exist first. The credential is what a workspace brings, so the deployment
@@ -277,18 +277,6 @@ class Stack:
                     json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
-            data_plane = _payload(session.post("/api/v1/service-accounts", json={"name": "acceptance-data-plane", "instance_role": "data_plane"}))
-            data_plane_key = _payload(
-                session.post(
-                    "/api/v1/instance/access-keys",
-                    json={
-                        "label": "data-plane",
-                        "user_id": data_plane["id"],
-                        "permissions": ["bundles.read", "usage.ingest", "data-planes.heartbeat"],
-                    },
-                )
-            )
-
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
             _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
@@ -296,9 +284,8 @@ class Stack:
         secrets = {
             "AIRLLM_API_KEY": caller["token"],
             "GW_ACCESS_KEY": access_key["token"],
-            "GW_DATAPLANE_TOKEN": data_plane_key["token"],
+            "GW_DATAPLANE_TOKEN": self.env["GW_DATAPLANE_TOKEN"],
             "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
-            "GW_BUNDLE_PUBLIC_KEY": self.env["GW_BUNDLE_PUBLIC_KEY"],
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
         self.env = {**self.env, **secrets}
@@ -377,6 +364,7 @@ class Stack:
             "control_plane": {
                 "database": {"url": self.db_url},
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY"},
+                "bootstrap": {"kind": "token", "token": "env:GW_DATAPLANE_TOKEN"},
                 "secrets": secrets_store,
             },
             "data_plane": {
@@ -384,7 +372,6 @@ class Stack:
                 "bundle": {
                     "kind": "remote",
                     "control_plane": dict(control_plane_link),
-                    "verify_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
                     "poll_interval_s": poll_interval_s,
                     "heartbeat_interval_s": 2,

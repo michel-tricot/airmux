@@ -844,41 +844,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
-  /api/v1/instance/oss/quickstart:
-    post:
-      tags:
-      - OSS
-      summary: Install First Data Plane Credential
-      description: 'Install an existing access key where the first co-located data plane can read it.
-
-
-        This endpoint is available only until a data plane first registers. The key must authenticate a
-
-        service account and carry exactly the bundle, event-ingestion, and heartbeat permissions.
-
-
-        Authentication: none.'
-      operationId: quickstart
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QuickstartIn'
-        required: true
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_QuickstartOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      security: []
   /api/v1/instance/data-planes:
     get:
       tags:
@@ -4099,9 +4064,16 @@ components:
             $ref: '#/components/schemas/BundleManifestEntry'
           type: array
           title: Bundles
+        signing_keys:
+          items:
+            $ref: '#/components/schemas/BundleSigningKey'
+          type: array
+          minItems: 1
+          title: Signing Keys
       type: object
       required:
       - bundles
+      - signing_keys
       title: BundleManifest
       description: The complete set of organization bundles one data plane may serve.
     BundleManifestEntry:
@@ -4148,6 +4120,21 @@ components:
       - issued_at
       - signing_key_id
       title: BundleOut
+    BundleSigningKey:
+      properties:
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+        public_key:
+          type: string
+          title: Public Key
+      type: object
+      required:
+      - key_id
+      - public_key
+      title: BundleSigningKey
     ClaimOut:
       properties:
         claimed:
@@ -4804,14 +4791,6 @@ components:
       required:
       - data
       title: Envelope[ProviderOut]
-    Envelope_QuickstartOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/QuickstartOut'
-      type: object
-      required:
-      - data
-      title: Envelope[QuickstartOut]
     Envelope_SignedBundle_:
       properties:
         data:
@@ -6295,28 +6274,6 @@ components:
       - updated_at
       - deleted_at
       title: ProviderOut
-    QuickstartIn:
-      properties:
-        token:
-          type: string
-          maxLength: 512
-          minLength: 1
-          title: Token
-          description: Existing limited access key for the first data plane
-      additionalProperties: false
-      type: object
-      required:
-      - token
-      title: QuickstartIn
-    QuickstartOut:
-      properties:
-        path:
-          type: string
-          title: Path
-      type: object
-      required:
-      - path
-      title: QuickstartOut
     RoutedUsageEventV1:
       properties:
         schema_version:

@@ -96,8 +96,6 @@ import type {
   ProviderCredentialValueIn,
   ProviderIn,
   ProviderOut,
-  QuickstartIn,
-  QuickstartOut,
   RoutedUsageEventV1,
   ServiceAccountIn,
   SignedBundle,
@@ -1879,83 +1877,6 @@ export function useClaim<TData = Awaited<ReturnType<typeof claim>>, TError = Err
 
 
 
-
-export const getQuickstartUrl = () => {
-
-
-
-
-  return `/api/v1/instance/oss/quickstart`
-}
-
-/**
- * Install an existing access key where the first co-located data plane can read it.
- *
- * This endpoint is available only until a data plane first registers. The key must authenticate a
- * service account and carry exactly the bundle, event-ingestion, and heartbeat permissions.
- *
- * Authentication: none.
- * @summary Install First Data Plane Credential
- */
-export const quickstart = async (quickstartIn: QuickstartIn, options?: Parameters<typeof customFetch>[1]): Promise<QuickstartOut> => {
-
-  return customFetch<QuickstartOut>(getQuickstartUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(quickstartIn)
-  }
-);}
-
-
-
-
-
-export const getQuickstartMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof quickstart>>, TError,{data: BodyType<QuickstartIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof quickstart>>, TError,{data: BodyType<QuickstartIn>}, TContext> => {
-
-const mutationKey = ['quickstart'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof quickstart>>, {data: BodyType<QuickstartIn>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  quickstart(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type QuickstartMutationResult = NonNullable<Awaited<ReturnType<typeof quickstart>>>
-    export type QuickstartMutationBody = BodyType<QuickstartIn>
-    export type QuickstartMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Install First Data Plane Credential
- */
-export const useQuickstart = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof quickstart>>, TError,{data: BodyType<QuickstartIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof quickstart>>,
-        TError,
-        {data: BodyType<QuickstartIn>},
-        TContext
-      > => {
-      return useMutation(getQuickstartMutationOptions(options));
-    }
 
 export const getListDataPlanesUrl = (params?: ListDataPlanesParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -4,6 +4,7 @@ from contract.bundle import (
     MODALITIES,
     BundleManifest,
     BundleManifestEntry,
+    BundleSigningKey,
     BundleV1,
     Capability,
     Catalog,
@@ -15,7 +16,7 @@ from contract.bundle import (
     ProviderEntry,
     SignedBundle,
 )
-from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
+from contract.credentials import ACCESS_KEY_PREFIX, INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import (
     CredentialScope,
     DeniedUsageEventV1,
@@ -26,6 +27,14 @@ from contract.events import (
     UsageStatus,
 )
 from contract.ids import uuid7
+from contract.key_material import (
+    Ed25519PrivateKeyB64,
+    Ed25519PublicKeyB64,
+    private_key_from_b64,
+    private_key_to_b64,
+    public_key_from_b64,
+    public_key_to_b64,
+)
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
     EnvSecretStore,
@@ -47,23 +56,19 @@ from contract.secrets import (
     SecretStoreUnavailableError,
 )
 from contract.signing import (
-    Ed25519PrivateKeyB64,
-    Ed25519PublicKeyB64,
     canonical_json,
-    private_key_from_b64,
-    private_key_to_b64,
-    public_key_from_b64,
-    public_key_to_b64,
     sign_bundle,
     verify_bundle,
 )
 
 __all__ = [
+    "ACCESS_KEY_PREFIX",
     "INFERENCE_TOKEN_PREFIX",
     "MODALITIES",
     "PLAYGROUND_COOKIE",
     "BundleManifest",
     "BundleManifestEntry",
+    "BundleSigningKey",
     "BundleV1",
     "Capability",
     "Catalog",

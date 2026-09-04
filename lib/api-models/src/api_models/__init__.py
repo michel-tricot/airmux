@@ -53,6 +53,11 @@ class BundleOut(BaseModel):
     signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
+class BundleSigningKey(BaseModel):
+    key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    public_key: Annotated[str, Field(title="Public Key")]
+
+
 class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
 
@@ -1092,25 +1097,6 @@ class ProviderOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
-class QuickstartIn(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    token: Annotated[
-        str,
-        Field(
-            description="Existing limited access key for the first data plane",
-            max_length=512,
-            min_length=1,
-            title="Token",
-        ),
-    ]
-
-
-class QuickstartOut(BaseModel):
-    path: Annotated[str, Field(title="Path")]
-
-
 class RoutedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1533,6 +1519,7 @@ class BundleManifest(BaseModel):
     """
 
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
+    signing_keys: Annotated[list[BundleSigningKey], Field(min_length=1, title="Signing Keys")]
 
 
 class EnrollOut(BaseModel):
@@ -1607,10 +1594,6 @@ class EnvelopeProviderCredentialOut(BaseModel):
 
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
-
-
-class EnvelopeQuickstartOut(BaseModel):
-    data: QuickstartOut
 
 
 class EnvelopeSignedBundle(BaseModel):

@@ -619,28 +619,6 @@ export const ClaimResponse = zod.object({
 
 
 /**
- * Install an existing access key where the first co-located data plane can read it.
- *
- * This endpoint is available only until a data plane first registers. The key must authenticate a
- * service account and carry exactly the bundle, event-ingestion, and heartbeat permissions.
- *
- * Authentication: none.
- * @summary Install First Data Plane Credential
- */
-export const quickstartBodyTokenMax = 512;
-
-
-
-export const QuickstartBody = zod.object({
-  "token": zod.string().min(1).max(quickstartBodyTokenMax).describe('Existing limited access key for the first data plane')
-})
-
-export const QuickstartResponse = zod.object({
-  "path": zod.string()
-})
-
-
-/**
  * List data-plane instances by most recent heartbeat.
  *
  * Required permission: `data-planes.read`.
@@ -2055,11 +2033,20 @@ export const ListActivityResponse = zod.array(ListActivityResponseItem)
  * Required permission: `bundles.read`.
  * @summary Get Authorized Bundle Manifest
  */
+export const bundleManifestResponseSigningKeysItemKeyIdMax = 255;
+
+
+
+
 export const BundleManifestResponse = zod.object({
   "bundles": zod.array(zod.object({
   "org_id": zod.uuid(),
   "bundle_id": zod.uuid()
-}).describe('The immutable identity of one organization bundle available to a data plane.'))
+}).describe('The immutable identity of one organization bundle available to a data plane.')),
+  "signing_keys": zod.array(zod.object({
+  "key_id": zod.string().min(1).max(bundleManifestResponseSigningKeysItemKeyIdMax),
+  "public_key": zod.string()
+})).min(1)
 }).describe('The complete set of organization bundles one data plane may serve.')
 
 

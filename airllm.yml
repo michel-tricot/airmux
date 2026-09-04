@@ -8,8 +8,12 @@ control_plane:
     # the asyncpg driver on load and can be used as handed over.
     url: ${env:DATABASE_URL:-postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm}
   bundle:
-    # Generate these files with: uv run airllmcp keygen
+    # Generate the private signing key with: uv run airllmcp keygen
     signing_key: ${file:${var:cache_dir}/signing.key}
+  bootstrap:
+    # Created on first control-plane start and seeded as one ordinary data-plane access key
+    kind: file
+    path: ${var:cache_dir}/dataplane.key
   console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
   secrets:
     # One file per credential under root, owner-readable only. Both planes must name the same
@@ -24,10 +28,8 @@ data_plane:
     kind: remote # or local, with path pointing at a hand-written bundle file
     control_plane: &control_plane
       url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      # Written by `airllm quickstart`, which posts the token the operator holds to the control plane
+      # Created and authorized by the control plane before it reports healthy
       token: ${file:${var:cache_dir}/dataplane.key}
-    # signing.pub is generated alongside signing.key by: uv run airllmcp keygen
-    verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
   events:

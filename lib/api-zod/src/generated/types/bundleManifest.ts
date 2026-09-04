@@ -11,10 +11,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BundleManifestEntry } from './bundleManifestEntry';
+import type { BundleSigningKey } from './bundleSigningKey';
 
 /**
  * The complete set of organization bundles one data plane may serve.
  */
 export interface BundleManifest {
   bundles: BundleManifestEntry[];
+  /** @minItems 1 */
+  signing_keys: BundleSigningKey[];
 }

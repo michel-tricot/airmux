@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from contract import KeyEntry, ModelEntry, uuid7
+from contract import BundleManifest, BundleSigningKey, KeyEntry, ModelEntry, public_key_to_b64, uuid7
 
 
 def model_entry(**overrides: object) -> dict[str, object]:
@@ -38,3 +39,13 @@ def test_model_capabilities_use_the_policy_vocabulary():
 def test_inference_key_ids_are_opaque_strings():
     key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), token_hash="hash")
     assert key.key_id == "external-key"
+
+
+def test_manifest_requires_unique_valid_signing_keys():
+    public_key = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
+    duplicate = BundleSigningKey(key_id="k1", public_key=public_key)
+
+    with pytest.raises(ValidationError, match="signing key ids must be unique"):
+        BundleManifest(bundles=[], signing_keys=[duplicate, duplicate])
+    with pytest.raises((ValidationError, ValueError)):
+        BundleSigningKey(key_id="k1", public_key="not-a-public-key")

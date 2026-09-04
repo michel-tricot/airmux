@@ -6,6 +6,9 @@ control_plane:
     url: ${env:DATABASE_URL}
   bundle:
     signing_key: ${file:${var:cache_dir}/signing.key}
+  bootstrap:
+    kind: file
+    path: ${var:cache_dir}/dataplane.key
   console_url: ${env:GW_CONSOLE_URL}
   secrets:
     kind: file
@@ -17,7 +20,6 @@ data_plane:
     control_plane: &control_plane
       url: http://127.0.0.1:8000
       token: ${file:${var:cache_dir}/dataplane.key}
-    verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
     heartbeat_interval_s: 30

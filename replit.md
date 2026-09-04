@@ -39,13 +39,12 @@ See `.env.example`. Key variables:
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
 | `GW_BUNDLE_SIGNING_KEY` | Ed25519 private key — signs bundles |
-| `GW_BUNDLE_PUBLIC_KEY` | Ed25519 public key — data plane verifies bundles |
 | `GW_ACCESS_KEY` | Bearer for control-plane APIs |
 | `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRLLM_API_KEY` | Caller inference key |
 
-`uv run airllmcp keygen` writes the key pair; the tokens are minted through the
-API or the CLI and pasted in.
+`uv run airllmcp keygen` writes the private signing key. Control-plane startup creates and
+authorizes the local data-plane pool key.
 
 ## Project layout
 
@@ -105,8 +104,7 @@ repository root:
 
 That script runs the required sequence:
 
-1. `uv run airllmcp keygen` (when `.airllm/signing.key` and
-   `.airllm/signing.pub` do not exist)
+1. `uv run airllmcp keygen` (when `.airllm/signing.key` does not exist)
 2. `uv run airllmcp migrate`
 3. `uv run airllmcp taxonomy`
 4. `uv run airllmcp fixtures`

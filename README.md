@@ -79,13 +79,14 @@ cp .env.example .env
 uv sync --all-packages --frozen
 docker compose up -d --build
 uv run airllm --dev quickstart
-docker compose up -d --wait
 ~~~
 
 `quickstart` creates or resumes the owner account, personal organization, and default workspace. It
 keeps existing credentials, stores missing provider keys from `.env` as global defaults, and mints
 a new inference key without replacing earlier keys. Save the `AIRLLM_API_KEY` it prints. The command
 reports `Ready` only after that key and a configured catalog model complete a real gateway request.
+The stack creates and authorizes its shared data-plane pool key before the control plane reports
+healthy. There is no signing-key exchange or data-plane provisioning step.
 
 The stack is now available at:
 
@@ -113,6 +114,34 @@ docker compose down
 
 `docker compose down -v` also deletes the database and AirLLM state volumes, so use it only when
 you want a clean reset.
+
+### Scale the data plane
+
+Replicas in one gateway pool share one ordinary data-plane access key. Put that token in the
+platform's secret store and expose the same value to the control plane and every data-plane replica:
+
+~~~yaml
+control_plane:
+  bootstrap:
+    kind: token
+    token: ${env:GW_DATAPLANE_TOKEN}
+
+data_plane:
+  bundle:
+    kind: remote
+    control_plane: &control_plane
+      url: https://control-plane.internal
+      token: ${env:GW_DATAPLANE_TOKEN}
+    cache_dir: .airllm
+  events:
+    kind: sqlite
+    control_plane: *control_plane
+    cache_dir: .airllm
+~~~
+
+The control plane authorizes the key once; replicas can start, stop, and autoscale independently.
+Each replica learns bundle signing keys from the authenticated manifest and keeps them in its local
+bundle cache. Rotating or revoking the shared access key affects the whole pool.
 
 ## Use your existing SDK
 

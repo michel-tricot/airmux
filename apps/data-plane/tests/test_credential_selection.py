@@ -9,10 +9,21 @@ from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credenti
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.testclient import TestClient
 
-from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
+from contract import (
+    BundleSigningKey,
+    Catalog,
+    FileStoreConfig,
+    MemoryStoreConfig,
+    Secret,
+    SecretStore,
+    SecretStoreUnavailableError,
+    public_key_to_b64,
+    sign_bundle,
+    uuid7,
+)
 from data_plane.app import create_app
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
-from data_plane.cache import write_cached_bundles
+from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
@@ -185,11 +196,12 @@ def _byok_app(tmp_path, credentials):
     caller_token, entry = make_key(org=ORG, workspace=WORKSPACE)
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
-    write_cached_bundles(tmp_path, [sign_bundle(bundle, bundle_key, "k1")])
+    signing_key = BundleSigningKey(key_id="k1", public_key=public_key_to_b64(bundle_key.public_key()))
+    write_cached_bundles(tmp_path, CachedBundles(signing_keys=[signing_key], bundles=[sign_bundle(bundle, bundle_key, "k1")]))
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
@@ -215,18 +227,22 @@ def test_one_data_plane_serves_two_org_bundles(tmp_path):
     second_token, second_key = make_key("second", org=other_org, workspace=other_workspace)
     platform = make_credential(org=None, name="platform")
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[platform])
+    signing_key = BundleSigningKey(key_id="k1", public_key=public_key_to_b64(bundle_key.public_key()))
     write_cached_bundles(
         tmp_path,
-        [
-            sign_bundle(make_bundle(keys=[first_key], catalog=catalog, org=ORG), bundle_key, "k1"),
-            sign_bundle(make_bundle(keys=[second_key], catalog=catalog, org=other_org), bundle_key, "k1"),
-        ],
+        CachedBundles(
+            signing_keys=[signing_key],
+            bundles=[
+                sign_bundle(make_bundle(keys=[first_key], catalog=catalog, org=ORG), bundle_key, "k1"),
+                sign_bundle(make_bundle(keys=[second_key], catalog=catalog, org=other_org), bundle_key, "k1"),
+            ],
+        ),
     )
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     asyncio.run(store_config.build().put(platform.ref, Secret("sk-platform")))
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
-        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,
         events=DevNullOutboxConfig(),
     )

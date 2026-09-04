@@ -7,19 +7,19 @@ from helpers import run_in_db, setup_db
 from pg import db_name_for, ensure_database
 from typer.testing import CliRunner
 
-from contract import private_key_from_b64, public_key_to_b64
+from contract import private_key_from_b64
 from control_plane.main import app as cli_app
 from control_plane.models import User, set_actor
 
 runner = CliRunner()
 
 
-def test_keygen_writes_a_valid_pair(tmp_path):
+def test_keygen_writes_one_private_signing_key(tmp_path):
     key_path = tmp_path / "signing.key"
     result = runner.invoke(cli_app, ["keygen", "--out", str(key_path)])
     assert result.exit_code == 0, result.output
-    private = private_key_from_b64(key_path.read_text(encoding="utf-8"))
-    assert (tmp_path / "signing.pub").read_text(encoding="utf-8") == public_key_to_b64(private.public_key())
+    private_key_from_b64(key_path.read_text(encoding="utf-8"))
+    assert not (tmp_path / "signing.pub").exists()
     assert stat.S_IMODE(key_path.stat().st_mode) == 0o600
 
 

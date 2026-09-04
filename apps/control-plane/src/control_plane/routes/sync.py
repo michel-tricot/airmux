@@ -9,10 +9,11 @@ from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageStatus
+from contract import BundleManifest, BundleManifestEntry, BundleSigningKey, HeartbeatV1, SignedBundle, UsageStatus
 from contract import UsageEvent as UsageEventContract
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
+from control_plane.compiler import SIGNING_KEY_ID
 from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
@@ -42,12 +43,18 @@ def _signed(bundle: Bundle) -> SignedBundle:
 
 
 @router.get("/bundles/manifest", dependencies=[require(credential_scope, Permission.bundles_read)])
-async def bundle_manifest(scope: CredentialScopeDep) -> Envelope[BundleManifest]:
+async def bundle_manifest(scope: CredentialScopeDep, request: Request) -> Envelope[BundleManifest]:
     """Return every latest organization bundle visible to the authenticated data plane credential."""
     if scope.level is ScopeLevel.workspace:
         raise HTTPException(status_code=403, detail="workspace credentials cannot read organization bundles")
     bundle_refs = await Bundle.latest_refs_per_org(scope.org_id)
-    return Envelope(data=BundleManifest(bundles=[BundleManifestEntry(org_id=org_id, bundle_id=bundle_id) for org_id, bundle_id in bundle_refs]))
+    signing_key = request.app.state.settings.bundle.signing_key.public_key()
+    return Envelope(
+        data=BundleManifest(
+            bundles=[BundleManifestEntry(org_id=org_id, bundle_id=bundle_id) for org_id, bundle_id in bundle_refs],
+            signing_keys=[BundleSigningKey(key_id=SIGNING_KEY_ID, public_key=signing_key)],
+        )
+    )
 
 
 async def selected_bundle(bundle_id: UUID) -> Bundle:

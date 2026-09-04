@@ -12,19 +12,16 @@ from pydantic import BaseModel
 from rich.panel import Panel
 
 from api_models import (
-    AccessKeyMintedOut,
     ClaimOut,
     CliAuthApprovedOut,
     CliAuthPollOut,
     CliAuthStartOut,
-    DataPlaneInstanceOut,
     EnrollOut,
     InferenceKeyMintedOut,
     MeOut,
     OrgOut,
     ProviderCredentialOut,
     TaxonomyOut,
-    UserOut,
     WorkspaceOut,
 )
 
@@ -54,7 +51,6 @@ MINE_COLS = [
 HTTP_GONE = 410
 
 CSRF = {"X-Requested-With": "airllm-cli"}
-DATA_PLANE_PERMISSIONS = ["bundles.read", "usage.ingest", "data-planes.heartbeat"]
 DEFAULT_GATEWAY_URL = "http://localhost:8080"
 
 
@@ -245,35 +241,6 @@ def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]
     return workspace
 
 
-def _install_data_plane_key(client: httpx.Client) -> str | None:
-    instances = payload_rows(ensure_ok(client.get("/api/v1/instance/data-planes", params={"include_offline": True})), DataPlaneInstanceOut)
-    if instances:
-        _step("Gateway already connected")
-        return None
-    users = payload_rows(ensure_ok(client.get("/api/v1/users", params={"service_account": True})), UserOut)
-    data_plane = next((user for user in users if user.name == "data-plane" and user.instance_role == "data_plane"), None)
-    if data_plane is None:
-        data_plane = _payload_or_die(
-            client.post("/api/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
-            "data-plane principal creation",
-            UserOut,
-        )
-    data_plane_key = _payload_or_die(
-        client.post(
-            "/api/v1/instance/access-keys",
-            json={"label": "data-plane", "user_id": str(data_plane.id), "permissions": DATA_PLANE_PERMISSIONS},
-        ),
-        "data-plane key creation",
-        AccessKeyMintedOut,
-    )
-    connected = client.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key.token})
-    if connected.is_success:
-        _step("Connected your gateway")
-        return None
-    console.print(f"  [yellow]![/yellow] Could not connect your gateway ({connected.status_code}: {api_error(connected)})")
-    return data_plane_key.token
-
-
 def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyMintedOut:
     path = f"/api/v1/orgs/{org_id}/workspaces/{workspace.id}/inference-keys"
     return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key mint", InferenceKeyMintedOut)
@@ -367,7 +334,6 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             ),
         )
         _step(f"Workspace [bold]{workspace.name}[/bold], signed in and saved to {config_path()}")
-        data_plane_token = _install_data_plane_key(c)
         key = _inference_key(c, str(org_id), workspace, bearer)
         _step("API key created")
         console.print(f"\nYour API key for [bold]{org_name}[/bold], shown once:")
@@ -384,8 +350,6 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             console.print("  [yellow]![/yellow] No global provider key set. Add one in the instance console.")
         model = configured_model(c)
 
-    if data_plane_token:
-        console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_token}")
     if model is None:
         console.print("\n[red]Setup is incomplete: no model has a configured provider credential.[/red]")
         console.print("Enable or add a provider key, then run [bold]airllm quickstart[/bold] again.")

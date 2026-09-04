@@ -5,9 +5,9 @@ import time
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field
 
-from contract import SignedBundle, uuid7
+from contract import BundleSigningKey, SignedBundle, uuid7
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,15 +43,21 @@ def instance_id(cache_dir: Path) -> UUID:
 
 
 CACHE_FILE = "bundles.json"
-_SIGNED_BUNDLES = TypeAdapter(list[SignedBundle])
 
 
-def read_cached_bundles(cache_dir: Path) -> list[SignedBundle] | None:
+class CachedBundles(BaseModel):
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    signing_keys: list[BundleSigningKey] = Field(min_length=1)
+    bundles: list[SignedBundle]
+
+
+def read_cached_bundles(cache_dir: Path) -> CachedBundles | None:
     path = cache_dir / CACHE_FILE
     if not path.exists():
         return None
-    return _SIGNED_BUNDLES.validate_json(path.read_text(encoding="utf-8"))
+    return CachedBundles.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def write_cached_bundles(cache_dir: Path, bundles: list[SignedBundle]) -> None:
-    atomic_write_text(cache_dir / CACHE_FILE, _SIGNED_BUNDLES.dump_json(bundles, indent=2).decode())
+def write_cached_bundles(cache_dir: Path, cached: CachedBundles) -> None:
+    atomic_write_text(cache_dir / CACHE_FILE, cached.model_dump_json(indent=2))

@@ -167,11 +167,10 @@ heartbeat. The same credential supports only the actions the data plane performs
 - Ingest usage events after every event's workspace scope is authorized
 - Heartbeat at the credential scope
 
-The public OSS quickstart endpoint does not mint authority. It accepts an already minted live key
-only while no data plane has registered, validates the service-account principal, supported scope,
-exact permission ceiling, and current standing authority, then writes that token to the shared key
-file. The CLI preserves the simple first run by creating a global service account and limited key
-before calling this endpoint.
+Control-plane startup seeds one configured pool token into the existing service-account and access-key
+tables before a human claims the instance. File bootstrap creates the secret on shared local state;
+token bootstrap accepts the secret injected by an orchestrator. Startup is idempotent, serializes
+concurrent replicas with a database advisory lock, and never reactivates a revoked key.
 
 ## Adding authority
 
