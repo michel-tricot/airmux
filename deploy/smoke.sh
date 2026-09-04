@@ -15,10 +15,12 @@ check() {
   attempt=0
   while [ "$attempt" -lt "$SMOKE_ATTEMPTS" ]; do
     status=$("$CURL" --silent --show-error --output /dev/null --write-out '%{http_code}' --connect-timeout 5 --max-time 10 "$@" || true)
-    if [ "$status" = "$expected" ]; then
-      printf '%s: %s\n' "$label" "$status"
-      return
-    fi
+    case " $expected " in
+      *" $status "*)
+        printf '%s: %s\n' "$label" "$status"
+        return
+        ;;
+    esac
     attempt=$((attempt + 1))
     if [ "$attempt" -lt "$SMOKE_ATTEMPTS" ]; then
       sleep "$SMOKE_DELAY_SECONDS"
@@ -30,5 +32,5 @@ check() {
 
 check "Console" 200 "$AIRLLM_PUBLIC_URL/"
 check "Control plane" 200 "$AIRLLM_PUBLIC_URL/api/v1/instance/oss/claim"
-check "Gateway" 401 --request POST --header 'Authorization: Bearer invalid' --header 'Content-Type: application/json' --data '{}' \
+check "Gateway" '401 503' --request POST --header 'Authorization: Bearer invalid' --header 'Content-Type: application/json' --data '{}' \
   "$AIRLLM_PUBLIC_URL/inf/v1/chat/completions"

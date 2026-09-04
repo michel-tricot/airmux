@@ -1,101 +1,98 @@
-# The provider keys both planes resolve credentials from, named once so they cannot drift apart:
-# the control plane accepts a credential only for a key it can already see, and the data plane
-# spends it. One entry per provider in taxonomy.yml; unset ones simply have no credential.
-x-provider-keys: &provider-keys
-  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-  XAI_API_KEY: ${XAI_API_KEY:-}
-  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-  MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
-  GROQ_API_KEY: ${GROQ_API_KEY:-}
+name: airllm
+
+x-control-plane: &control-plane
+  build:
+    context: .
+    target: control-plane
+  environment:
+    DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
+    GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+    FORWARDED_ALLOW_IPS: "*"
+  init: true
 
 services:
   postgres:
     image: postgres:16
-    profiles: ["backend"]
     environment:
       POSTGRES_USER: airllm
-      POSTGRES_PASSWORD: airllm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airllm}
       POSTGRES_DB: airllm
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airllm"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U airllm -d airllm"]
       interval: 5s
-      start_period: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
 
-  control-plane:
-    build: .
-    profiles: ["backend"]
-    # The one checked-in airllm.yml serves the checkout and this stack: the working directory is the shared
-    # /state volume, so its relative refs land here, and the values that differ come in as variables below.
-    command: >
-      sh -c '
-        umask 077;
-        mkdir -p /state/.airllm;
-        if [ -n "$$GW_DATAPLANE_TOKEN" ]; then
-          printf %s "$$GW_DATAPLANE_TOKEN" > /state/.airllm/dataplane.key;
-        else
-          [ -f /state/.airllm/dataplane.key ] || airllmcp bootstrap-keygen;
-        fi;
-        airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
-    environment:
-      <<: *provider-keys
-      DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
-      GW_CONSOLE_URL: http://localhost:5000
-      GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
+  initialize:
+    <<: *control-plane
+    command: ["sh", "-ec", "airllmcp migrate --config /app/deploy/docker/migrate.yml && /app/deploy/docker/initialize.sh"]
     volumes:
-      - state:/state
-      - ./airllm.yml:/state/airllm.yml:ro
-      - ./taxonomy/taxonomy.yml:/state/taxonomy.yml:ro
-    ports:
-      - "8000:8000"
+      - runtime-credentials:/state/runtime
+      - provider-secrets:/state/secrets
     depends_on:
       postgres:
         condition: service_healthy
+
+  control-plane:
+    <<: *control-plane
+    volumes:
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
       interval: 5s
-      start_period: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
 
   data-plane:
-    profiles: ["backend"]
-    build: .
-    command: airllmdp serve --host 0.0.0.0 --port 8080
-    environment:
-      <<: *provider-keys
-      GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    build:
+      context: .
+      target: data-plane
+    init: true
     volumes:
-      - state:/state
-      - ./airllm.yml:/state/airllm.yml:ro
-    ports:
-      - "8080:8080"
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets:ro
+      - gateway-state:/state/data-plane
     depends_on:
-      control-plane:
-        condition: service_healthy
+      initialize:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/readyz')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz')"]
       interval: 5s
-      start_period: 15s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 40s
+    restart: unless-stopped
 
   console:
     build:
       context: .
-      dockerfile: apps/console/Dockerfile
-    profiles: ["frontend"]
+      target: console
+    environment:
+      GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
     ports:
-      - "5000:80"
+      - "${AIRLLM_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     depends_on:
       control-plane:
         condition: service_healthy
       data-plane:
-        condition: service_healthy
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
-  state:
+  runtime-credentials:
+  provider-secrets:
+  gateway-state:
   pgdata:

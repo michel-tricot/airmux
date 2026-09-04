@@ -84,7 +84,7 @@ if tool == "flyctl":
 if tool == "curl":
     url = args[-1]
     state.setdefault("curl_requests", []).append({"url": url, "args": args})
-    finish("401" if url.endswith("/inf/v1/chat/completions") else "200")
+    finish(os.environ.get("SMOKE_GATEWAY_STATUS", "401") if url.endswith("/inf/v1/chat/completions") else "200")
 
 if tool == "gh":
     if args[:2] == ["repo", "view"]:
@@ -105,9 +105,8 @@ raise SystemExit(f"unexpected {tool} command: {args}")
 """
 
 
-@pytest.mark.parametrize("config_name", ["backend.toml", "console.toml"])
-def test_fly_dockerfile_exists_relative_to_config(config_name):
-    config_path = Path(__file__).resolve().parents[4] / "deploy" / "fly" / config_name
+def test_fly_dockerfile_exists_relative_to_config():
+    config_path = Path(__file__).resolve().parents[4] / "deploy" / "fly" / "fly.toml"
     config = tomllib.loads(config_path.read_text(encoding="utf-8"))
 
     assert (config_path.parent / config["build"]["dockerfile"]).is_file()
@@ -120,11 +119,11 @@ def test_fly_workflow_uses_node_24_checkout():
     assert workflow.count("uses: actions/checkout@v6") == 1
     assert "uses: actions/checkout@v4" not in workflow
     assert "./deploy/fly/deploy.sh" in workflow
-    assert "./deploy/fly/smoke.sh" in workflow
+    assert "./deploy/smoke.sh" in workflow
     assert "flyctl deploy" not in workflow
 
 
-def test_fly_deploy_uses_each_apps_scoped_token(tmp_path):
+def test_fly_deploy_uses_one_app_scoped_token(tmp_path):
     repo = Path(__file__).resolve().parents[4]
     state_path = tmp_path / "state.json"
     state_path.write_text(json.dumps({"deploys": []}), encoding="utf-8")
@@ -135,30 +134,36 @@ def test_fly_deploy_uses_each_apps_scoped_token(tmp_path):
         **os.environ,
         "BOOTSTRAP_TEST_STATE": str(state_path),
         "FLYCTL": str(flyctl),
-        "FLY_BACKEND_APP": "acme-backend",
-        "FLY_CONSOLE_APP": "acme-frontend",
-        "FLY_BACKEND_API_TOKEN": "backend-token",
-        "FLY_CONSOLE_API_TOKEN": "console-token",
+        "FLY_APP": "acme",
+        "FLY_API_TOKEN": "app-token",
     }
 
     subprocess.run([repo / "deploy" / "fly" / "deploy.sh"], cwd=repo, env=env, check=True, capture_output=True, text=True)  # noqa: S603 trusted repository script
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state["deploys"] == ["acme-backend", "acme-frontend"]
-    assert state["deploy_tokens"] == ["backend-token", "console-token"]
+    assert state["deploys"] == ["acme"]
+    assert state["deploy_tokens"] == ["app-token"]
 
 
-def test_fly_smoke_checks_every_public_service(tmp_path):
+@pytest.mark.parametrize("gateway_status", ["401", "503"])
+def test_smoke_checks_every_public_service_before_and_after_setup(tmp_path, gateway_status):
     repo = Path(__file__).resolve().parents[4]
     state_path = tmp_path / "state.json"
     state_path.write_text(json.dumps({}), encoding="utf-8")
     curl = tmp_path / "curl"
     curl.write_text(FAKE_CLI, encoding="utf-8")
     curl.chmod(0o755)
-    env = {**os.environ, "BOOTSTRAP_TEST_STATE": str(state_path), "CURL": str(curl), "AIRLLM_PUBLIC_URL": "https://airllm.example.com"}
+    env = {
+        **os.environ,
+        "BOOTSTRAP_TEST_STATE": str(state_path),
+        "CURL": str(curl),
+        "AIRLLM_PUBLIC_URL": "https://airllm.example.com",
+        "SMOKE_GATEWAY_STATUS": gateway_status,
+        "SMOKE_ATTEMPTS": "1",
+    }
 
     result = subprocess.run(  # noqa: S603 trusted repository script
-        [repo / "deploy" / "fly" / "smoke.sh"], cwd=repo, env=env, check=True, capture_output=True, text=True
+        [repo / "deploy" / "smoke.sh"], cwd=repo, env=env, check=True, capture_output=True, text=True
     )
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -169,7 +174,7 @@ def test_fly_smoke_checks_every_public_service(tmp_path):
     ]
     assert "Console: 200" in result.stdout
     assert "Control plane: 200" in result.stdout
-    assert "Gateway: 401" in result.stdout
+    assert f"Gateway: {gateway_status}" in result.stdout
 
 
 def test_fly_bootstrap_derives_names_and_is_idempotent(tmp_path):
@@ -196,6 +201,7 @@ def test_fly_bootstrap_derives_names_and_is_idempotent(tmp_path):
         "BOOTSTRAP_TEST_STATE": str(state_path),
         "FLYCTL": str(tmp_path / "flyctl"),
         "GH": str(tmp_path / "gh"),
+        "GH_REPO": "owner/repo",
     }
     bootstrap = repo / "deploy" / "fly" / "bootstrap.sh"
 
@@ -203,22 +209,21 @@ def test_fly_bootstrap_derives_names_and_is_idempotent(tmp_path):
         subprocess.run([bootstrap, "acme"], cwd=repo, env=env, check=True, capture_output=True, text=True)  # noqa: S603 trusted repository script
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state["apps"] == ["acme-backend", "acme-frontend"]
+    assert state["apps"] == ["acme"]
     assert state["clusters"] == [{"id": "cluster-1", "name": "acme"}]
-    assert state["attachments"] == ["acme-backend"]
+    assert state["attachments"] == ["acme"]
     assert state["environment"] is True
     assert state["fly_secrets"] == {
-        "acme-backend": {
+        "acme": {
             "DATABASE_URL": "postgresql://user:password@pgbouncer.cluster.internal/database",
             "DIRECT_DATABASE_URL": "postgresql://user:password@direct.cluster.internal/database",
         }
     }
-    assert state["tokens"] == ["acme-backend", "acme-frontend"]
-    assert state["github_secrets"].keys() == {"FLY_BACKEND_API_TOKEN", "FLY_CONSOLE_API_TOKEN"}
+    assert state["tokens"] == ["acme"]
+    assert state["github_secrets"].keys() == {"FLY_API_TOKEN"}
     assert state["variables"] == {
-        "AIRLLM_PUBLIC_URL": "https://acme-frontend.fly.dev",
-        "FLY_BACKEND_APP": "acme-backend",
-        "FLY_CONSOLE_APP": "acme-frontend",
+        "AIRLLM_PUBLIC_URL": "https://acme.fly.dev",
+        "FLY_APP": "acme",
         "FLY_REGION": "sjc",
     }
-    assert state["deploys"] == ["acme-backend", "acme-frontend", "acme-backend", "acme-frontend"]
+    assert state["deploys"] == ["acme", "acme"]

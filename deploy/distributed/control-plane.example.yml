@@ -1,0 +1,8 @@
+control_plane:
+  database:
+    url: ${env:DATABASE_URL}
+  bootstrap:
+    token: ${env:GW_DATAPLANE_TOKEN}
+  console_url: ${env:GW_CONSOLE_URL}
+  secrets:
+    kind: env

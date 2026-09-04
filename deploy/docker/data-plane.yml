@@ -1,0 +1,17 @@
+data_plane:
+  bundle:
+    kind: remote
+    control_plane: &control_plane
+      url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://control-plane:8000}
+      token: ${file:/state/runtime/dataplane.key}
+    cache_dir: /state/data-plane
+    poll_interval_s: 5
+    heartbeat_interval_s: 30
+  events:
+    kind: sqlite
+    control_plane: *control_plane
+    cache_dir: /state/data-plane
+    flush_interval_s: 5
+  secrets:
+    kind: file
+    root: /state/secrets

@@ -1,0 +1,3 @@
+control_plane:
+  database:
+    url: ${env:DATABASE_URL}

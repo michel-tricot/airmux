@@ -103,9 +103,11 @@ def test_the_shipped_config_serves_the_checkout_and_the_stack(tmp_path, monkeypa
     assert stack.database.url == "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm"
 
 
-def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
-    fly_config = Path(__file__).resolve().parents[4] / "deploy" / "fly" / "airllm.yml"
-    cache_dir = tmp_path / ".airllm"
+def test_container_config_uses_shared_credentials_and_separate_secret_storage(tmp_path, monkeypatch):
+    source = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "control-plane.yml"
+    container_config = tmp_path / "control-plane.yml"
+    container_config.write_text(source.read_text().replace("/state/", f"{tmp_path}/"))
+    cache_dir = tmp_path / "runtime"
     cache_dir.mkdir()
     token = "sk-cp-one-shared-pool-secret-that-is-long-enough"
     (cache_dir / "dataplane.key").write_text(token, encoding="utf-8")
@@ -113,11 +115,11 @@ def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@db.internal:5432/app")
     monkeypatch.setenv("GW_CONSOLE_URL", "https://console.example.com")
 
-    settings = load_settings(fly_config)
+    settings = load_settings(container_config)
 
     assert settings.database.url == "postgresql+asyncpg://someone:secret@db.internal:5432/app"
     assert settings.console_url == "https://console.example.com"
-    assert settings.secrets == FileStoreConfig(root=Path(".airllm/secrets"))
+    assert settings.secrets == FileStoreConfig(root=tmp_path / "secrets")
     assert settings.bootstrap == DataPlaneBootstrap(token=token)
 
 
@@ -131,7 +133,7 @@ def test_supplied_bootstrap_token_is_validated_and_redacted():
 
 
 def test_the_fly_migration_config_uses_the_direct_database_url(monkeypatch):
-    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "fly" / "migrate.yml"
+    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "migrate-fly.yml"
     monkeypatch.setenv("GW_CONFIG", str(migration_config))
     monkeypatch.setenv("DIRECT_DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
 

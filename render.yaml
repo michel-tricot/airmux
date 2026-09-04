@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: airllm
+    runtime: docker
+    plan: 1c-2g
+    region: oregon
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: /app/deploy/docker/start-managed.sh
+    healthCheckPath: /api/v1/instance/oss/claim
+    autoDeployTrigger: "off"
+    disk:
+      name: airllm-state
+      mountPath: /state
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: airllm-postgres
+          property: connectionString
+
+databases:
+  - name: airllm-postgres
+    databaseName: airllm
+    user: airllm
+    plan: 0.5c-1g
+    region: oregon
+    postgresMajorVersion: "16"
+    diskSizeGB: 10
+    ipAllowList: []

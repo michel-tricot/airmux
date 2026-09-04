@@ -1,0 +1,39 @@
+worker_processes auto;
+pid /tmp/airllm-nginx.pid;
+error_log /dev/stderr warn;
+events { worker_connections 1024; }
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+  access_log /dev/stdout;
+  client_body_temp_path /tmp/airllm-client;
+  proxy_temp_path /tmp/airllm-proxy;
+  fastcgi_temp_path /tmp/airllm-fastcgi;
+  uwsgi_temp_path /tmp/airllm-uwsgi;
+  scgi_temp_path /tmp/airllm-scgi;
+  resolver ${NGINX_RESOLVER} valid=5s ipv6=off;
+  server {
+    listen 8080;
+    root /usr/share/nginx/html;
+    client_max_body_size 32m;
+    set $control_plane "${CONTROL_PLANE_UPSTREAM}";
+    set $data_plane "${DATA_PLANE_UPSTREAM}";
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};
+    location = /healthz { return 200 'ok'; }
+    location = /readyz { proxy_pass http://$data_plane; }
+    location /api/ { proxy_pass http://$control_plane; }
+    location /inf/ {
+      proxy_pass http://$data_plane;
+      proxy_http_version 1.1;
+      proxy_buffering off;
+      proxy_read_timeout 300s;
+    }
+    location / { try_files $uri /index.html; }
+  }
+}

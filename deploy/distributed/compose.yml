@@ -1,0 +1,97 @@
+name: airllm-distributed
+
+x-provider-keys: &provider-keys
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+x-control-plane: &control-plane
+  build:
+    context: ../..
+    target: control-plane
+  environment:
+    <<: *provider-keys
+    DATABASE_URL: ${DATABASE_URL:?Set an external Postgres URL}
+    GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:?Set the shared pool key}
+    GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+    FORWARDED_ALLOW_IPS: "*"
+  volumes:
+    - ./control-plane.example.yml:/app/deploy/docker/control-plane.yml:ro
+  init: true
+
+x-data-plane: &data-plane
+  build:
+    context: ../..
+    target: data-plane
+  environment:
+    <<: *provider-keys
+    GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
+    GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:?Set the shared pool key}
+  init: true
+  depends_on:
+    control-plane:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz')"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+  networks:
+    default:
+      aliases: [data-plane]
+  stop_grace_period: 40s
+  restart: unless-stopped
+
+services:
+  migrate:
+    <<: *control-plane
+    command: ["sh", "-ec", "airllmcp migrate --config /app/deploy/docker/control-plane.yml && airllmcp taxonomy --config /app/deploy/docker/control-plane.yml --file /app/taxonomy/taxonomy.yml"]
+
+  control-plane:
+    <<: *control-plane
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  data-plane-1:
+    <<: *data-plane
+    volumes:
+      - ./data-plane.example.yml:/app/deploy/docker/data-plane.yml:ro
+      - gateway-1:/state/data-plane
+
+  data-plane-2:
+    <<: *data-plane
+    volumes:
+      - ./data-plane.example.yml:/app/deploy/docker/data-plane.yml:ro
+      - gateway-2:/state/data-plane
+
+  console:
+    build:
+      context: ../..
+      target: console
+    environment:
+      GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "${AIRLLM_PORT:-8080}:8080"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+      data-plane-1:
+        condition: service_started
+      data-plane-2:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  gateway-1:
+  gateway-2:
