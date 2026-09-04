@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-airllm = "cli.main:app"
+airllm = "cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

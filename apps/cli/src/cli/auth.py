@@ -55,6 +55,7 @@ HTTP_GONE = 410
 
 CSRF = {"X-Requested-With": "airllm-cli"}
 DATA_PLANE_PERMISSIONS = ["bundles.read", "usage.ingest", "data-planes.heartbeat"]
+DEFAULT_GATEWAY_URL = "http://localhost:8080"
 
 
 def _client_name() -> str:
@@ -79,19 +80,18 @@ def _step(done: str) -> None:
     console.print(f"  [green]✓[/green] {done}")
 
 
-def resolve_urls(control_plane_url: str, console_url: str) -> tuple[str, str]:
-    """The control plane and the console, for the commands that print where the console lives."""
-    return resolve_control_plane_url(control_plane_url), console_url or DEFAULT_CONSOLE_URL
-
-
-def resolve_login_urls(url: str, control_plane_url: str, console_url: str) -> tuple[str, str]:
-    if url and (control_plane_url or console_url):
-        msg = "--url cannot be combined with --control-plane-url or --console-url"
+def resolve_deployment_urls(url: str, control_plane_url: str, console_url: str, gateway_url: str) -> tuple[str, str, str]:
+    if url and any((control_plane_url, console_url, gateway_url)):
+        msg = "--url cannot be combined with --control-plane-url, --console-url, or --gateway-url"
         raise typer.BadParameter(msg)
     if url:
         normalized = url.rstrip("/")
-        return normalized, normalized
-    return resolve_urls(control_plane_url, console_url)
+        return normalized, normalized, normalized
+    return (
+        resolve_control_plane_url(control_plane_url).rstrip("/"),
+        (console_url or DEFAULT_CONSOLE_URL).rstrip("/"),
+        (gateway_url or DEFAULT_GATEWAY_URL).rstrip("/"),
+    )
 
 
 class ProviderKey(NamedTuple):
@@ -329,21 +329,22 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
 
 @app.command(rich_help_panel=SETUP)
 def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
-    control_plane_url: str = "",
+    url: str = typer.Option("", "--url", help="URL serving the control plane, web console, and gateway"),
+    control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
     email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
     org: str = typer.Option("", help="Organization name; defaults to your email name"),
-    gateway_url: str = typer.Option("http://localhost:8080", help="Gateway URL, used in the example at the end"),
+    gateway_url: str = typer.Option("", help="Gateway URL, for split development deployments"),
     openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
-    console_url: str = typer.Option("", help="Web console URL, printed at the end"),
+    console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
 ) -> None:
     """Set up or resume an instance and verify a new API key through the gateway."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url, console_url = resolve_urls(control_plane_url, console_url)
+    control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
     console.print("[bold]airllm quickstart[/bold]")
-    with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
+    with httpx.Client(base_url=control_plane_url, timeout=10.0, headers=CSRF) as c:
         claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
         _login_or_signup(c, claimed, email, password)
         organization = _personal_org(c, email, org)
@@ -355,9 +356,9 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             org_name,
             Profile(
                 scope="org",
-                control_plane_url=url,
+                control_plane_url=control_plane_url,
                 console_url=console_url,
-                gateway_url=gateway_url.rstrip("/"),
+                gateway_url=gateway_url,
                 org_id=str(org_id),
                 org_name=str(org_name),
                 token=str(token),
@@ -412,8 +413,7 @@ def login(
     """Sign in through your browser. Creates an account and organization if you do not have one."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    control_plane_url, console_url = resolve_login_urls(url, control_plane_url, console_url)
-    gateway_url = (gateway_url or url or "http://localhost:8080").rstrip("/")
+    control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
     client_name = _client_name()
     existing_access_key = _existing_access_key(control_plane_url)
     with httpx.Client(base_url=control_plane_url, timeout=10.0) as c:

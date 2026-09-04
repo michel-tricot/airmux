@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import stat
+import sys
 
 import pytest
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
-from cli.main import app
+from cli.main import app, main
 from cli.profiles import (
     CliConfig,
+    InvalidConfigError,
     Profile,
     config_path,
     load_active_profile,
@@ -27,8 +29,27 @@ def test_profile_config_rejects_invalid_known_fields(tmp_path, monkeypatch):
     path = tmp_path / "config.toml"
     monkeypatch.setenv("GW_CLI_CONFIG", str(path))
     path.write_text('[profiles.acme]\nscope = "instance"\ntoken = 7\n', encoding="utf-8")
-    with pytest.raises(ValidationError):
+    with pytest.raises(InvalidConfigError, match=r"profiles\.acme\.token: Input should be a valid string") as raised:
         load_config()
+    assert "token = 7" not in str(raised.value)
+
+
+def test_cli_reports_invalid_config_without_a_traceback_or_secrets(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "config.toml"
+    monkeypatch.setenv("GW_CLI_CONFIG", str(path))
+    path.write_text('[profiles.acme]\ntoken = "secret-token"\n', encoding="utf-8")
+
+    monkeypatch.setattr(sys, "argv", ["airllm", "status"])
+    with pytest.raises(SystemExit) as raised:
+        main()
+    output = capsys.readouterr()
+
+    assert raised.value.code == 1
+    assert str(path) in output.err
+    assert "profiles.acme.scope: Field required" in output.err
+    assert "Fix or move this file, then retry" in output.err
+    assert "Traceback" not in output.err
+    assert "secret-token" not in output.err
 
 
 @pytest.mark.parametrize(
@@ -69,7 +90,7 @@ def test_config_rejects_unknown_settings(tmp_path, monkeypatch):
     path = tmp_path / "config.toml"
     monkeypatch.setenv("GW_CLI_CONFIG", str(path))
     path.write_text('[settings]\ncolor = "never"\n', encoding="utf-8")
-    with pytest.raises(ValidationError):
+    with pytest.raises(InvalidConfigError, match="settings: Extra inputs are not permitted"):
         load_config()
 
 

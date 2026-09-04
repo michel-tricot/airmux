@@ -78,7 +78,13 @@ if tool == "flyctl":
         finish(f"FlyV1 token-{app}")
     if args and args[0] == "deploy":
         state["deploys"].append(option("--app"))
+        state.setdefault("deploy_tokens", []).append(os.environ.get("FLY_API_TOKEN"))
         finish()
+
+if tool == "curl":
+    url = args[-1]
+    state.setdefault("curl_requests", []).append({"url": url, "args": args})
+    finish("401" if url.endswith("/inf/v1/chat/completions") else "200")
 
 if tool == "gh":
     if args[:2] == ["repo", "view"]:
@@ -111,8 +117,59 @@ def test_fly_workflow_uses_node_24_checkout():
     workflow_path = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "deploy-fly.yml"
     workflow = workflow_path.read_text(encoding="utf-8")
 
-    assert workflow.count("uses: actions/checkout@v6") == 2
+    assert workflow.count("uses: actions/checkout@v6") == 1
     assert "uses: actions/checkout@v4" not in workflow
+    assert "./deploy/fly/deploy.sh" in workflow
+    assert "./deploy/fly/smoke.sh" in workflow
+    assert "flyctl deploy" not in workflow
+
+
+def test_fly_deploy_uses_each_apps_scoped_token(tmp_path):
+    repo = Path(__file__).resolve().parents[3]
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps({"deploys": []}), encoding="utf-8")
+    flyctl = tmp_path / "flyctl"
+    flyctl.write_text(FAKE_CLI, encoding="utf-8")
+    flyctl.chmod(0o755)
+    env = {
+        **os.environ,
+        "BOOTSTRAP_TEST_STATE": str(state_path),
+        "FLYCTL": str(flyctl),
+        "FLY_BACKEND_APP": "acme-backend",
+        "FLY_CONSOLE_APP": "acme-frontend",
+        "FLY_BACKEND_API_TOKEN": "backend-token",
+        "FLY_CONSOLE_API_TOKEN": "console-token",
+    }
+
+    subprocess.run([repo / "deploy" / "fly" / "deploy.sh"], cwd=repo, env=env, check=True, capture_output=True, text=True)  # noqa: S603 trusted repository script
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["deploys"] == ["acme-backend", "acme-frontend"]
+    assert state["deploy_tokens"] == ["backend-token", "console-token"]
+
+
+def test_fly_smoke_checks_every_public_service(tmp_path):
+    repo = Path(__file__).resolve().parents[3]
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps({}), encoding="utf-8")
+    curl = tmp_path / "curl"
+    curl.write_text(FAKE_CLI, encoding="utf-8")
+    curl.chmod(0o755)
+    env = {**os.environ, "BOOTSTRAP_TEST_STATE": str(state_path), "CURL": str(curl), "AIRLLM_PUBLIC_URL": "https://airllm.example.com"}
+
+    result = subprocess.run(  # noqa: S603 trusted repository script
+        [repo / "deploy" / "fly" / "smoke.sh"], cwd=repo, env=env, check=True, capture_output=True, text=True
+    )
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert [request["url"] for request in state["curl_requests"]] == [
+        "https://airllm.example.com/",
+        "https://airllm.example.com/api/v1/instance/oss/claim",
+        "https://airllm.example.com/inf/v1/chat/completions",
+    ]
+    assert "Console: 200" in result.stdout
+    assert "Control plane: 200" in result.stdout
+    assert "Gateway: 401" in result.stdout
 
 
 def test_fly_bootstrap_derives_names_and_is_idempotent(tmp_path):

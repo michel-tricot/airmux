@@ -8,11 +8,12 @@ from uuid import UUID, uuid4
 
 import httpx
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from api_models import InferenceKeyMintedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
 from cli import auth
-from cli.auth import DEFAULT_CONSOLE_URL, ProviderKey, configured_model, resolve_login_urls, resolve_urls, seed_provider_credentials
+from cli.auth import DEFAULT_CONSOLE_URL, DEFAULT_GATEWAY_URL, ProviderKey, configured_model, resolve_deployment_urls, seed_provider_credentials
 from cli.client import LOCAL_CONTROL_PLANE_URL, resolve_control_plane_url
 from cli.common import invocation
 from cli.main import app
@@ -133,25 +134,32 @@ def test_the_console_does_not_move_with_dev():
     """One console port everywhere, so the flag has nothing to switch."""
     invocation.dev = True
 
-    assert resolve_urls("", "") == (LOCAL_CONTROL_PLANE_URL, DEFAULT_CONSOLE_URL)
+    assert resolve_deployment_urls("", "", "", "") == (LOCAL_CONTROL_PLANE_URL, DEFAULT_CONSOLE_URL, DEFAULT_GATEWAY_URL)
 
 
 @pytest.mark.usefixtures("_no_ambient_config")
 def test_explicit_urls_win_over_everything():
     invocation.dev = True
 
-    assert resolve_urls("https://cp.example.com", "https://console.example.com") == (
+    assert resolve_deployment_urls("", "https://cp.example.com", "https://console.example.com", "https://gateway.example.com") == (
         "https://cp.example.com",
         "https://console.example.com",
+        "https://gateway.example.com",
     )
 
 
 @pytest.mark.usefixtures("_no_ambient_config")
-def test_login_url_uses_one_origin_for_the_control_plane_and_console():
-    assert resolve_login_urls("https://airllm.example.com/", "", "") == (
+def test_one_url_uses_one_origin_for_every_service():
+    assert resolve_deployment_urls("https://airllm.example.com/", "", "", "") == (
+        "https://airllm.example.com",
         "https://airllm.example.com",
         "https://airllm.example.com",
     )
+
+
+def test_one_url_cannot_be_combined_with_split_service_urls():
+    with pytest.raises(typer.BadParameter, match="--url cannot be combined"):
+        resolve_deployment_urls("https://airllm.example.com", "", "", "https://gateway.example.com")
 
 
 def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
@@ -268,7 +276,7 @@ class QuickstartContext:
         return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": {"claimed": self.claimed}})
 
 
-def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error: str = ""):
+def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error: str = "", urls: list[str] | None = None):
     context = QuickstartContext(claimed)
     login_calls = []
     saved = {}
@@ -317,17 +325,26 @@ def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error:
     monkeypatch.setattr(auth, "verify_gateway", verify)
     result = runner.invoke(
         app,
-        [
-            "quickstart",
-            "--email",
-            "owner@example.com",
-            "--password",
-            "password123",
-            "--gateway-url",
-            "https://gateway.example.com/",
-        ],
+        ["quickstart", "--email", "owner@example.com", "--password", "password123", *(urls or ["--gateway-url", "https://gateway.example.com/"])],
     )
     return result, login_calls, saved, verified
+
+
+def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+
+    result, _login_calls, saved, verified = _quickstart(
+        monkeypatch,
+        claimed=True,
+        model="anthropic/claude-test",
+        urls=["--url", "https://airllm.example.com/"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert saved["values"].control_plane_url == "https://airllm.example.com"
+    assert saved["values"].console_url == "https://airllm.example.com"
+    assert saved["values"].gateway_url == "https://airllm.example.com"
+    assert verified == [("https://airllm.example.com", "inference-token", "anthropic/claude-test")]
 
 
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
@@ -338,7 +355,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     assert result.exit_code == 0, result.output
     assert login_calls == [(True, "owner@example.com", "password123")]
     assert saved["values"].gateway_url == "https://gateway.example.com"
-    assert verified == [("https://gateway.example.com/", "inference-token", "anthropic/claude-test")]
+    assert verified == [("https://gateway.example.com", "inference-token", "anthropic/claude-test")]
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout
     assert "Verified anthropic/claude-test" in result.stdout
@@ -372,4 +389,4 @@ def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeyp
     assert "inference-token" in result.stdout
     assert "provider rejected key" in result.stdout
     assert "Ready." not in result.stdout
-    assert verified == [("https://gateway.example.com/", "inference-token", "anthropic/claude-test")]
+    assert verified == [("https://gateway.example.com", "inference-token", "anthropic/claude-test")]

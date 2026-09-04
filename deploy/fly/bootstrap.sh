@@ -252,4 +252,4 @@ cd "$REPO_ROOT"
 echo
 echo "airllm is deployed at $AIRLLM_PUBLIC_URL"
 echo "Run quickstart once to create the first account and connect the data plane:"
-echo "uv run airllm quickstart --control-plane-url $AIRLLM_PUBLIC_URL --console-url $AIRLLM_PUBLIC_URL --gateway-url $AIRLLM_PUBLIC_URL"
+echo "uv run airllm quickstart --url $AIRLLM_PUBLIC_URL"

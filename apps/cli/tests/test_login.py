@@ -13,7 +13,7 @@ runner = CliRunner()
 ORG_ID = "019c0000-0000-7000-8000-000000000001"
 
 
-@pytest.mark.parametrize("split_option", ["--control-plane-url", "--console-url"])
+@pytest.mark.parametrize("split_option", ["--control-plane-url", "--console-url", "--gateway-url"])
 def test_login_url_is_exclusive_with_split_urls(split_option):
     result = runner.invoke(app, ["login", "--url", "https://airllm.example.com", split_option, "https://other.example.com"])
 
@@ -22,6 +22,7 @@ def test_login_url_is_exclusive_with_split_urls(split_option):
     assert "--url cannot be combined" in output
     assert "--control-plane-url" in output
     assert "--console-url" in output
+    assert "--gateway-url" in output
 
 
 @pytest.mark.parametrize(
