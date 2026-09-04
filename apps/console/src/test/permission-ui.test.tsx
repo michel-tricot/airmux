@@ -1,11 +1,12 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
-const ORG_MEMBER_PERMISSIONS = ['organizations.read', 'workspaces.create', 'catalog.read'];
-const WORKSPACE_MEMBER_PERMISSIONS = [
+const ORG_MEMBER_PERMISSIONS: Api.Permission[] = ['organizations.read', 'workspaces.create', 'catalog.read'];
+const WORKSPACE_MEMBER_PERMISSIONS: Api.Permission[] = [
   ...ORG_MEMBER_PERMISSIONS,
   'workspaces.read',
   'members.read',
@@ -21,11 +22,13 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
-function installPermissionHandler(workspacePermissions: string[]) {
+function installPermissionHandler(workspacePermissions: Api.Permission[]) {
   server.use(
     http.get('/api/v1/auth/permissions', ({ request }) => {
       const workspaceRef = new URL(request.url).searchParams.get('workspace_ref');
-      return HttpResponse.json({ permissions: workspaceRef ? workspacePermissions : ORG_MEMBER_PERMISSIONS });
+      return HttpResponse.json<{ data: Api.MyPermissionsOut }>({
+        data: { permissions: workspaceRef ? workspacePermissions : ORG_MEMBER_PERMISSIONS },
+      });
     }),
   );
 }
@@ -36,7 +39,9 @@ describe('permission-aware organization console', () => {
   it('blocks direct model-catalog navigation before requesting the catalog', async () => {
     const taxonomy = vi.fn(() => new HttpResponse(null, { status: 403 }));
     server.use(
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['organizations.read'] } }),
+      ),
       http.get('/api/v1/orgs/:orgId/taxonomy', taxonomy),
     );
 
@@ -52,17 +57,19 @@ describe('permission-aware organization console', () => {
     server.use(
       http.get('/api/v1/orgs/:orgId/users', orgMembers),
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/members', () =>
-        HttpResponse.json([
-          {
-            user_id: 'user-1',
-            workspace_id: WORKSPACES[0].id,
-            email: 'dev@example.com',
-            name: 'Dev',
-            service_account: false,
-            role: 'member',
-            status: 'member',
-          },
-        ]),
+        HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({
+          data: [
+            {
+              user_id: 'user-1',
+              workspace_id: WORKSPACES[0].id,
+              email: 'dev@example.com',
+              name: 'Dev',
+              service_account: false,
+              role: 'member',
+              status: 'member',
+            },
+          ],
+        }),
       ),
     );
 
@@ -79,22 +86,50 @@ describe('permission-aware organization console', () => {
     installPermissionHandler(WORKSPACE_MEMBER_PERMISSIONS);
     server.use(
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () =>
-        HttpResponse.json({ providers: [{ id: 'provider-1', name: 'openai', icon: null }], models: [] }),
+        HttpResponse.json<{ data: Api.TaxonomyOut }>({
+          data: {
+            providers: [
+              {
+                id: 'provider-1',
+                name: 'openai',
+                icon: '',
+                kind: 'openai_compatible',
+                base_url: 'https://provider.test',
+                param_aliases: {},
+                accepted_params: null,
+                params_closed: false,
+                created_at: '2026-01-01T00:00:00Z',
+                updated_at: '2026-01-01T00:00:00Z',
+                deleted_at: null,
+              },
+            ],
+            models: [],
+          },
+        }),
       ),
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
-        HttpResponse.json([
-          {
-            id: 'credential-1',
-            org_id: ORG.id,
-            workspace_id: WORKSPACES[0].id,
-            provider_name: 'openai',
-            name: 'default',
-            fingerprint: 'abcd',
-            priority: 100,
-            enabled: true,
-            status: 'unknown',
-          },
-        ]),
+        HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
+          data: [
+            {
+              id: 'credential-1',
+              provider_id: 'provider-1',
+              version: 1,
+              status_at: null,
+              scope: 'workspace',
+              created_at: '2026-01-01T00:00:00Z',
+              updated_at: '2026-01-01T00:00:00Z',
+              deleted_at: null,
+              org_id: ORG.id,
+              workspace_id: WORKSPACES[0].id,
+              provider_name: 'openai',
+              name: 'default',
+              fingerprint: 'abcd',
+              priority: 100,
+              enabled: true,
+              status: 'unknown',
+            },
+          ],
+        }),
       ),
     );
 
@@ -121,17 +156,22 @@ describe('permission-aware organization console', () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () =>
-        HttpResponse.json([
-          {
-            id: 'key-1',
-            workspace_id: WORKSPACES[0].id,
-            user_id: 'user-1',
-            label: 'viewer-key',
-            prefix: 'sk-inf-test',
-            revoked: false,
-            created_at: '2026-01-01T00:00:00Z',
-          },
-        ]),
+        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({
+          data: [
+            {
+              id: 'key-1',
+              org_id: ORG.id,
+              updated_at: '2026-01-01T00:00:00Z',
+              deleted_at: null,
+              workspace_id: WORKSPACES[0].id,
+              user_id: 'user-1',
+              label: 'viewer-key',
+              prefix: 'sk-inf-test',
+              revoked: false,
+              created_at: '2026-01-01T00:00:00Z',
+            },
+          ],
+        }),
       ),
     );
 

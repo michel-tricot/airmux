@@ -7,10 +7,8 @@ import {
   AudioLines,
   Boxes,
   Building2,
-  CircleHelp,
   FileText,
   Image as ImageIcon,
-  Minus,
   Type as TextIcon,
   Video,
   Wrench,
@@ -57,20 +55,17 @@ function capabilityVariant(capability: string): 'default' | 'warning' | 'success
   return 'secondary';
 }
 
-function ModalityIcon({ modality }: { modality: string }) {
+type Modality = ModelOut['input_modalities'][number] | ModelOut['output_modalities'][number];
+
+function ModalityIcon({ modality }: { modality: Modality }) {
   const Icon =
     modality === 'image' ? ImageIcon : modality === 'audio' ? AudioLines : modality === 'video' ? Video : modality === 'pdf' ? FileText : TextIcon;
   return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
 }
 
-function ModalityMarker({ direction, modality }: { direction: 'Input' | 'Output'; modality: string | null | undefined }) {
-  const label =
-    modality === null
-      ? `${direction} modalities unknown`
-      : modality === undefined
-        ? `No ${direction.toLowerCase()} modalities`
-        : `${direction} modality: ${modality}`;
-  const tooltip = modality == null ? label : `${direction}: ${modality.charAt(0).toLocaleUpperCase()}${modality.slice(1)}`;
+function ModalityMarker({ direction, modality }: { direction: 'Input' | 'Output'; modality: Modality }) {
+  const label = `${direction} modality: ${modality}`;
+  const tooltip = `${direction}: ${modality.charAt(0).toLocaleUpperCase()}${modality.slice(1)}`;
 
   return (
     <Tooltip delayDuration={150}>
@@ -81,20 +76,10 @@ function ModalityMarker({ direction, modality }: { direction: 'Input' | 'Output'
           aria-label={label}
           className={cn(
             'h-6 w-6 rounded-sm',
-            modality == null
-              ? 'text-muted-foreground'
-              : direction === 'Input'
-                ? 'text-success hover:bg-success/10 hover:text-success'
-                : 'text-primary hover:text-primary',
+            direction === 'Input' ? 'text-success hover:bg-success/10 hover:text-success' : 'text-primary hover:text-primary',
           )}
         >
-          {modality === null ? (
-            <CircleHelp aria-hidden="true" className="h-3.5 w-3.5" />
-          ) : modality === undefined ? (
-            <Minus aria-hidden="true" className="h-3.5 w-3.5" />
-          ) : (
-            <ModalityIcon modality={modality} />
-          )}
+          <ModalityIcon modality={modality} />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
@@ -102,12 +87,11 @@ function ModalityMarker({ direction, modality }: { direction: 'Input' | 'Output'
   );
 }
 
-function ModalityGroup({ direction, modalities }: { direction: 'Input' | 'Output'; modalities: string[] | null }) {
-  const markers: Array<string | null | undefined> = modalities === null ? [null] : modalities.length === 0 ? [undefined] : modalities;
+function ModalityGroup({ direction, modalities }: { direction: 'Input' | 'Output'; modalities: Modality[] }) {
   return (
     <div aria-label={`${direction} modalities`} className="flex items-center gap-0.5">
-      {markers.map((modality) => (
-        <ModalityMarker key={modality === null ? 'unknown' : (modality ?? 'none')} direction={direction} modality={modality} />
+      {modalities.map((modality) => (
+        <ModalityMarker key={modality} direction={direction} modality={modality} />
       ))}
     </div>
   );
@@ -173,7 +157,7 @@ function compareModels(left: CatalogModel, right: CatalogModel, key: SortKey, di
 function supportsModality(model: ModelOut, value: string): boolean {
   const [direction, modality] = value.split(':');
   const modalities = direction === 'input' ? model.input_modalities : model.output_modalities;
-  return modalities?.some((candidate) => candidate === modality) ?? false;
+  return modalities.some((candidate) => candidate === modality);
 }
 
 function SortableHeader({

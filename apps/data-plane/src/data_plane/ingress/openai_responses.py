@@ -135,7 +135,7 @@ class _ResponseItem:
 
     def body(self, status: str) -> dict[str, Any]:
         if self.kind == "message":
-            content = [] if status == "in_progress" else [{"type": "output_text", "text": self.text, "annotations": []}]
+            content = [] if status == "in_progress" else [fmt.output_text(self.text)]
             return {"type": "message", "id": self.item_id, "role": "assistant", "status": status, "content": content}
         if self.kind == "reasoning":
             summary = [] if not self.text else [{"type": "summary_text", "text": self.text}]

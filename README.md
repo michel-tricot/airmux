@@ -225,6 +225,15 @@ uv run lint-imports
 uv run pytest -n auto
 ~~~
 
+Control-plane unit and architecture tests run without Postgres or Docker. Database-backed tests live separately under `tests/integration`:
+
+~~~bash
+uv run pytest apps/control-plane/tests/unit
+uv run pytest apps/control-plane/tests/integration -n auto
+~~~
+
+Ingress tests separate parsing, dialect resolution, response rendering, stream rendering, and request-path integration. Shared adapter behavior uses registry-parameterized cases. Console tests are grouped by feature, with HTTP fixtures typed against the generated client and wrapped in the API response envelope.
+
 Changes to request handling should also pass the black-box scenarios:
 
 ~~~bash

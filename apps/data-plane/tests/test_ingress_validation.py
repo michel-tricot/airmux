@@ -72,7 +72,6 @@ def test_malformed_message_content_is_rejected(dialect, content):
     assert rejection.value.code == "invalid_request"
 
 
-@pytest.mark.parametrize("dialect", REGISTRY)
 @pytest.mark.parametrize(
     ("error", "code"),
     [
@@ -80,13 +79,13 @@ def test_malformed_message_content_is_rejected(dialect, content):
         (ValueError("unsupported_feature: ordinary validation"), "invalid_request"),
     ],
 )
-def test_error_classification_does_not_depend_on_message_text(dialect, error, code, monkeypatch):
+def test_error_classification_does_not_depend_on_message_text(error, code, monkeypatch):
     def reject(body):
         raise error
 
-    monkeypatch.setattr(REGISTRY[dialect], "parse", reject)
+    monkeypatch.setattr(REGISTRY["canonical"], "parse", reject)
     with pytest.raises(RequestRejectedError) as rejection:
-        _parse(request_body(dialect), REGISTRY[dialect])
+        _parse(request_body("canonical"), REGISTRY["canonical"])
     assert rejection.value.code == code
     assert rejection.value.message == str(error)
 

@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from pg import ADMIN_URL_ENV, TEMPLATE_DB, db_name_for, drop_database, url_for
+from pg import ADMIN_URL_ENV, TEMPLATE_DB, url_for
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -33,6 +33,10 @@ _container_key: pytest.StashKey[DockerContainer] = pytest.StashKey()
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    integration = Path(__file__).parent / "integration"
+    selected = [Path(argument.split("::", 1)[0]).resolve() for argument in config.args]
+    if not any(path == integration or path in integration.parents or integration in path.parents for path in selected):
+        return
     if hasattr(config, "workerinput") or ADMIN_URL_ENV in os.environ:
         return
     os.environ[ADMIN_URL_ENV] = _start_server(config)
@@ -102,9 +106,3 @@ def _build_template() -> None:
     config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
     config.set_main_option("sqlalchemy.url", url_for(TEMPLATE_DB))
     command.upgrade(config, "head")
-
-
-@pytest.fixture(autouse=True)
-def _test_database(tmp_path: Path):
-    yield
-    drop_database(db_name_for(tmp_path))

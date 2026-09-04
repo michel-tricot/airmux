@@ -411,6 +411,10 @@ def response_metadata(metadata: ResponseMetadata) -> dict[str, Any]:
     }
 
 
+def output_text(text: str) -> dict[str, Any]:
+    return {"type": "output_text", "text": text, "annotations": [], "logprobs": []}
+
+
 def json_response(metadata: ResponseMetadata, parts: Sequence[CanonicalAssistantPart], finish: str | None, usage: CanonicalUsage) -> dict[str, Any]:
     output: list[dict[str, Any]] = []
     for index, part in enumerate(parts):
@@ -421,7 +425,7 @@ def json_response(metadata: ResponseMetadata, parts: Sequence[CanonicalAssistant
                     "id": f"msg_{index}",
                     "role": "assistant",
                     "status": "completed",
-                    "content": [{"type": "output_text", "text": part.text, "annotations": []}],
+                    "content": [output_text(part.text)],
                 }
             )
         elif isinstance(part, CanonicalReasoningPart):

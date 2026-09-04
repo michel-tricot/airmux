@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ function withPendingRequest(expectedCode: string) {
     http.get('/api/v1/auth/cli/request', ({ request }) => {
       const code = new URL(request.url).searchParams.get('code');
       if (code !== expectedCode) return new HttpResponse(null, { status: 404 });
-      return HttpResponse.json(REQUEST);
+      return HttpResponse.json<{ data: Api.CliAuthRequestOut }>({ data: REQUEST });
     }),
   );
 }
@@ -31,7 +32,7 @@ describe('CLI device sign-in approval', () => {
   it('shows the login page first when visiting /cli unauthenticated', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
     );
     renderAt('/cli?code=ABCD-1234');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -54,7 +55,7 @@ describe('CLI device sign-in approval', () => {
     server.use(
       http.post('/api/v1/auth/cli/approve', async ({ request }) => {
         approveBody = await request.json();
-        return HttpResponse.json({ ok: true });
+        return HttpResponse.json<{ data: Api.CliAuthApprovedOut }>({ data: { status: 'approved', client_name: 'test-cli' } });
       }),
     );
     const user = userEvent.setup();
@@ -65,12 +66,16 @@ describe('CLI device sign-in approval', () => {
   });
 
   it('allows an instance admin to approve instance access', async () => {
-    server.use(http.get('/api/v1/auth/cli/request', () => HttpResponse.json({ ...REQUEST, can_approve_instance: true })));
+    server.use(
+      http.get('/api/v1/auth/cli/request', () =>
+        HttpResponse.json<{ data: Api.CliAuthRequestOut }>({ data: { ...REQUEST, can_approve_instance: true } }),
+      ),
+    );
     let approveBody: unknown = null;
     server.use(
       http.post('/api/v1/auth/cli/approve', async ({ request }) => {
         approveBody = await request.json();
-        return HttpResponse.json({ ok: true });
+        return HttpResponse.json<{ data: Api.CliAuthApprovedOut }>({ data: { status: 'approved', client_name: 'test-cli' } });
       }),
     );
     const user = userEvent.setup();
@@ -94,7 +99,7 @@ describe('CLI device sign-in approval', () => {
     server.use(
       http.get('/api/v1/auth/cli/request', ({ request }) => {
         const code = new URL(request.url).searchParams.get('code');
-        if (code === 'FRESH-CODE') return HttpResponse.json(REQUEST);
+        if (code === 'FRESH-CODE') return HttpResponse.json<{ data: Api.CliAuthRequestOut }>({ data: REQUEST });
         return new HttpResponse(null, { status: 410 });
       }),
     );

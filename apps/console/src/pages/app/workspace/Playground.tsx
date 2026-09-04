@@ -59,10 +59,11 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
               size="sm"
               className="min-w-20 justify-center gap-1.5 leading-none"
               onClick={() => void copy()}
-              aria-label={copied ? 'Copied cURL' : 'Copy cURL'}
+              disabled={status === 'copying'}
+              aria-label={status === 'copying' ? 'Copying cURL' : copied ? 'Copied cURL' : 'Copy cURL'}
             >
               {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-              <span className="inline-flex h-full items-center leading-none">{copied ? 'Copied' : 'Copy'}</span>
+              <span className="inline-flex h-full items-center leading-none">{status === 'copying' ? 'Copying' : copied ? 'Copied' : 'Copy'}</span>
             </Button>
           </div>
           <pre

@@ -63,14 +63,20 @@ function OneTimeValueDialogContent({
               value={value}
               className="h-7 min-w-0 px-2 font-mono text-muted-foreground"
             />
-            <Button onClick={() => void copy()} variant="secondary" className="h-7 shrink-0 gap-2 px-3" aria-label={copied ? 'Copied' : copyLabel}>
+            <Button
+              onClick={() => void copy()}
+              disabled={status === 'copying'}
+              variant="secondary"
+              className="h-7 shrink-0 gap-2 px-3"
+              aria-label={status === 'copying' ? 'Copying' : copied ? 'Copied' : copyLabel}
+            >
               {copied ? (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-success" /> Copied
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4" /> {copyLabel}
+                  <Copy className="h-4 w-4" /> {status === 'copying' ? 'Copying' : copyLabel}
                 </>
               )}
             </Button>
