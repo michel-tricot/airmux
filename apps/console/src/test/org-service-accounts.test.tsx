@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -14,17 +15,19 @@ describe('organization service accounts', () => {
   it('creates an admin service account with a show-once management key', async () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     const now = '2026-08-18T12:00:00Z';
-    let members: Array<Record<string, unknown>> = [];
+    let members: Api.OrgMemberOut[] = [];
     let submitted: unknown;
     let replacementSubmitted: unknown;
     let deletedUserId: string | undefined;
     server.use(
       http.get('/api/v1/auth/permissions', () =>
-        HttpResponse.json({
-          permissions: ['members.read', 'members.manage', 'access-keys.issue', 'access-keys.revoke', 'workspaces.read', 'workspaces.create'],
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({
+          data: {
+            permissions: ['members.read', 'members.manage', 'access-keys.issue', 'access-keys.revoke', 'workspaces.read', 'workspaces.create'],
+          },
         }),
       ),
-      http.get('/api/v1/orgs/:orgId/users', () => HttpResponse.json(members)),
+      http.get('/api/v1/orgs/:orgId/users', () => HttpResponse.json<{ data: Api.OrgMemberOut[] }>({ data: members })),
       http.post('/api/v1/orgs/:orgId/service-accounts', async ({ request }) => {
         submitted = await request.json();
         const serviceAccount = {
@@ -50,18 +53,48 @@ describe('organization service accounts', () => {
             managed: true,
           },
         ];
-        return HttpResponse.json({
-          service_account: serviceAccount,
-          membership: { user_id: serviceAccount.id, org_id: ORG.id, role: 'admin', status: 'member' },
-          access_key: {
-            id: 'access-key-1',
-            user_id: serviceAccount.id,
+        return HttpResponse.json<{ data: Api.OrgServiceAccountMintedOut }>({
+          data: {
+            service_account: serviceAccount,
+            membership: { user_id: serviceAccount.id, org_id: ORG.id, role: 'admin', status: 'member' },
+            access_key: {
+              id: 'access-key-1',
+              user_id: serviceAccount.id,
+              org_id: ORG.id,
+              workspace_id: null,
+              parent_id: null,
+              prefix: 'sk-cp-secre',
+              permissions: ['workspaces.create', 'workspaces.read'],
+              label: 'deployment-management',
+              expires_at: null,
+              revoked_at: null,
+              created_at: now,
+              updated_at: now,
+              deleted_at: null,
+              scope: { level: 'org', org_id: ORG.id, workspace_id: null },
+              status: 'active',
+              token: 'sk-cp-show-once-secret',
+            },
+          },
+        });
+      }),
+      http.delete('/api/v1/orgs/:orgId/service-accounts/:userId', ({ params }) => {
+        deletedUserId = String(params.userId);
+        members = [];
+        return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: deletedUserId, deleted_at: now } });
+      }),
+      http.post('/api/v1/orgs/:orgId/access-keys', async ({ request }) => {
+        replacementSubmitted = await request.json();
+        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({
+          data: {
+            id: 'access-key-2',
+            user_id: 'service-account-1',
             org_id: ORG.id,
             workspace_id: null,
             parent_id: null,
-            prefix: 'sk-cp-secre',
-            permissions: ['workspaces.create', 'workspaces.read'],
-            label: 'deployment-management',
+            prefix: 'sk-cp-repla',
+            permissions: ['workspaces.read'],
+            label: 'replacement-management',
             expires_at: null,
             revoked_at: null,
             created_at: now,
@@ -69,34 +102,8 @@ describe('organization service accounts', () => {
             deleted_at: null,
             scope: { level: 'org', org_id: ORG.id, workspace_id: null },
             status: 'active',
-            token: 'sk-cp-show-once-secret',
+            token: 'sk-cp-replacement-show-once',
           },
-        });
-      }),
-      http.delete('/api/v1/orgs/:orgId/service-accounts/:userId', ({ params }) => {
-        deletedUserId = String(params.userId);
-        members = [];
-        return HttpResponse.json({ id: deletedUserId });
-      }),
-      http.post('/api/v1/orgs/:orgId/access-keys', async ({ request }) => {
-        replacementSubmitted = await request.json();
-        return HttpResponse.json({
-          id: 'access-key-2',
-          user_id: 'service-account-1',
-          org_id: ORG.id,
-          workspace_id: null,
-          parent_id: null,
-          prefix: 'sk-cp-repla',
-          permissions: ['workspaces.read'],
-          label: 'replacement-management',
-          expires_at: null,
-          revoked_at: null,
-          created_at: now,
-          updated_at: now,
-          deleted_at: null,
-          scope: { level: 'org', org_id: ORG.id, workspace_id: null },
-          status: 'active',
-          token: 'sk-cp-replacement-show-once',
         });
       }),
     );

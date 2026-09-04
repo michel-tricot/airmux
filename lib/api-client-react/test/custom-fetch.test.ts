@@ -28,6 +28,16 @@ afterEach(() => {
 });
 
 describe('customFetch', () => {
+  it.each([{ body: null }, { body: [] }, { body: { id: 'item-1' } }, { body: { data: [], extra: true } }])(
+    'rejects a malformed success envelope: $body',
+    async ({ body }) => {
+      fetchMock.mockResolvedValue(jsonResponse(body));
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(customFetch('/api/v1/items')).rejects.toThrow('Expected a response envelope containing only data');
+    },
+  );
+
   it('unwraps a successful response envelope', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ data: { id: 'item-1' } }));
     vi.stubGlobal('fetch', fetchMock);

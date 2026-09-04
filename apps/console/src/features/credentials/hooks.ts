@@ -11,17 +11,15 @@ import {
   useGetWorkspaceTaxonomy,
   getListInstanceProviderCredentialsQueryKey,
   getListWorkspaceProviderCredentialsQueryKey,
-  getGetInstanceTaxonomyQueryKey,
-  getGetWorkspaceTaxonomyQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
 
 export function useInstanceProviderCredentials({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceProviderCredentials({ query: { enabled, queryKey: getListInstanceProviderCredentialsQueryKey() } });
+  return useListInstanceProviderCredentials({ query: { enabled } });
 }
 
 export function useInstanceProviders({ enabled = true }: EnabledQueryOptions = {}) {
-  return useGetInstanceTaxonomy({ query: { enabled, queryKey: getGetInstanceTaxonomyQueryKey() } });
+  return useGetInstanceTaxonomy({ query: { enabled } });
 }
 
 export function useAddInstanceCredentialMutation() {
@@ -36,12 +34,12 @@ export function useAddInstanceCredentialMutation() {
 
 export function useProviderCredentials(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListWorkspaceProviderCredentials(orgId, workspaceRef, {
-    query: { enabled, queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) },
+    query: { enabled },
   });
 }
 
 export function useProviders(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useGetWorkspaceTaxonomy(orgId, workspaceRef, { query: { enabled, queryKey: getGetWorkspaceTaxonomyQueryKey(orgId, workspaceRef) } });
+  return useGetWorkspaceTaxonomy(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useAddCredentialMutation(orgId: string, workspaceRef: string) {

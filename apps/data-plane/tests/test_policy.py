@@ -50,7 +50,7 @@ def test_catalog_model_allowed():
 
 def test_unknown_model_denied_404():
     decision = evaluate(make_request("nope"), KEY, snap(BUNDLE))
-    assert decision == Deny(reason="unknown_model", status=404)
+    assert decision == Deny(code="unknown_model", status=404)
 
 
 def test_model_without_provider_is_rejected_at_bundle_admission():
@@ -90,7 +90,7 @@ def test_request_is_denied_before_egress_when_the_model_lacks_a_required_capabil
         tools=[CanonicalToolDef(name="lookup")],
     )
 
-    assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_feature: tools", status=400)
+    assert evaluate(request, KEY, snap(bundle)) == Deny(code="unsupported_feature", message="tools", status=400)
 
 
 def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality():
@@ -101,4 +101,4 @@ def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality(
         messages=[CanonicalUserMessage(content=[CanonicalImagePart(url="https://example.com/image.png")])],
     )
 
-    assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_input_modality: image", status=400)
+    assert evaluate(request, KEY, snap(bundle)) == Deny(code="unsupported_input_modality", message="image", status=400)

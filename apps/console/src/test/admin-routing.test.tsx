@@ -1,3 +1,4 @@
+import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -6,18 +7,19 @@ import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
-const USER = {
+const USER: Api.UserOut = {
   id: 'user-1',
   email: 'admin@example.com',
   name: 'Admin',
   instance_role: 'owner',
   service_account: false,
+  managing_org_id: null,
   created_at: now,
   updated_at: now,
   deleted_at: null,
   orgs: [ORG.id],
 };
-const ACCESS_KEY = {
+const ACCESS_KEY: Api.AccessKeyOut = {
   id: 'access-key-1',
   user_id: USER.id,
   org_id: null,
@@ -34,7 +36,7 @@ const ACCESS_KEY = {
   updated_at: now,
   deleted_at: null,
 };
-const PROVIDER = {
+const PROVIDER: Api.ProviderOut = {
   id: 'provider-1',
   name: 'openai',
   kind: 'openai_compatible',
@@ -47,7 +49,7 @@ const PROVIDER = {
   updated_at: now,
   deleted_at: null,
 };
-const PROVIDER_CREDENTIAL = {
+const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   id: 'provider-credential-1',
   org_id: null,
   workspace_id: null,
@@ -69,35 +71,46 @@ const PROVIDER_CREDENTIAL = {
 function installAdminHandlers() {
   server.use(
     http.get('/api/v1/auth/me', () =>
-      HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs }),
+      HttpResponse.json<{ data: Api.MeOut }>({
+        data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs },
+      }),
     ),
-    http.get('/api/v1/orgs', () => HttpResponse.json([ORG])),
-    http.get('/api/v1/orgs/:orgId', () => HttpResponse.json(ORG)),
-    http.get('/api/v1/users', () => HttpResponse.json([USER])),
-    http.get('/api/v1/users/:userId', () => HttpResponse.json(USER)),
-    http.get('/api/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
-    http.get('/api/v1/instance/taxonomy', () => HttpResponse.json({ providers: [PROVIDER], models: [] })),
-    http.get('/api/v1/instance/provider-credentials', () => HttpResponse.json([PROVIDER_CREDENTIAL])),
+    http.get('/api/v1/orgs', () => HttpResponse.json<{ data: Api.OrgOut[] }>({ data: [ORG] })),
+    http.get('/api/v1/orgs/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
+    http.get('/api/v1/users', () => HttpResponse.json<{ data: Api.UserOut[] }>({ data: [USER] })),
+    http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
+    http.get('/api/v1/instance/access-keys', () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: [ACCESS_KEY] })),
+    http.get('/api/v1/instance/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [PROVIDER], models: [] } })),
+    http.get('/api/v1/instance/provider-credentials', () =>
+      HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({ data: [PROVIDER_CREDENTIAL] }),
+    ),
     http.get('/api/v1/instance/data-planes', () =>
-      HttpResponse.json([
-        {
-          instance_id: 'data-plane-1',
-          version: '0.1.0',
-          bundle_id: null,
-          address: '127.0.0.1',
-          status: 'online',
-          first_seen: now,
-          last_seen: now,
-        },
-      ]),
+      HttpResponse.json<{ data: Api.DataPlaneInstanceOut[] }>({
+        data: [
+          {
+            instance_id: 'data-plane-1',
+            org_id: null,
+            version: '0.1.0',
+            bundle_id: null,
+            address: '127.0.0.1',
+            status: 'online',
+            first_seen: now,
+            last_seen: now,
+          },
+        ],
+      }),
     ),
     http.get('/api/v1/instance/activity', () =>
-      HttpResponse.json([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
+      HttpResponse.json<{ data: Api.ActivityOut[] }>({
+        data: [{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }],
+      }),
     ),
     http.get('/api/v1/orgs/:orgId/users', () =>
-      HttpResponse.json([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }]),
+      HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
+        data: [{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }],
+      }),
     ),
-    http.get('/api/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
+    http.get('/api/v1/orgs/:orgId/workspaces', () => HttpResponse.json<{ data: Api.WorkspaceOut[] }>({ data: WORKSPACES })),
   );
 }
 
@@ -128,14 +141,14 @@ describe('instance administration routes', () => {
     server.use(
       http.post('/api/v1/instance/provider-credentials', async ({ request }) => {
         submitted = await request.json();
-        return HttpResponse.json({ ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 });
+        return HttpResponse.json<{ data: Api.ProviderCredentialOut }>({ data: { ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 } });
       }),
       http.get('/api/v1/instance/provider-credentials', () =>
-        HttpResponse.json(
-          submitted
+        HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
+          data: submitted
             ? [PROVIDER_CREDENTIAL, { ...PROVIDER_CREDENTIAL, id: 'provider-credential-2', name: 'backup', priority: 200 }]
             : [PROVIDER_CREDENTIAL],
-        ),
+        }),
       ),
     );
     const user = userEvent.setup();
@@ -169,11 +182,13 @@ describe('instance administration routes', () => {
   it('counts only active access keys on the dashboard', async () => {
     server.use(
       http.get('/api/v1/instance/access-keys', () =>
-        HttpResponse.json([
-          ACCESS_KEY,
-          { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },
-          { ...ACCESS_KEY, id: 'access-key-3', status: 'revoked', revoked_at: now },
-        ]),
+        HttpResponse.json<{ data: Api.AccessKeyOut[] }>({
+          data: [
+            ACCESS_KEY,
+            { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },
+            { ...ACCESS_KEY, id: 'access-key-3', status: 'revoked', revoked_at: now },
+          ],
+        }),
       ),
     );
     renderAt('/instance');
@@ -187,7 +202,9 @@ describe('instance administration routes', () => {
     server.use(
       http.post('/api/v1/instance/access-keys', async ({ request }) => {
         submitted = await request.json();
-        return HttpResponse.json({ ...ACCESS_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' });
+        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({
+          data: { ...ACCESS_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' },
+        });
       }),
     );
     const user = userEvent.setup();
@@ -213,7 +230,9 @@ describe('instance administration routes', () => {
   });
 
   it('prevents key submission without access-key issuance permission', async () => {
-    server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['access-keys.read'] })));
+    server.use(
+      http.get('/api/v1/auth/permissions', () => HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['access-keys.read'] } })),
+    );
     renderAt('/instance/keys');
 
     expect(await screen.findByRole('heading', { name: 'Access Keys' })).toBeInTheDocument();
@@ -223,24 +242,28 @@ describe('instance administration routes', () => {
   it('keeps instance auditors read-only', async () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs }),
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs },
+        }),
       ),
       http.get('/api/v1/auth/permissions', () =>
-        HttpResponse.json({
-          permissions: [
-            'organizations.read',
-            'principals.read',
-            'members.read',
-            'workspaces.read',
-            'catalog.read',
-            'provider-credentials.read',
-            'inference-keys.read',
-            'bundles.read',
-            'usage.read',
-            'data-planes.read',
-            'audit.read',
-            'access-keys.read',
-          ],
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({
+          data: {
+            permissions: [
+              'organizations.read',
+              'principals.read',
+              'members.read',
+              'workspaces.read',
+              'catalog.read',
+              'provider-credentials.read',
+              'inference-keys.read',
+              'bundles.read',
+              'usage.read',
+              'data-planes.read',
+              'audit.read',
+              'access-keys.read',
+            ],
+          },
         }),
       ),
     );
@@ -253,9 +276,13 @@ describe('instance administration routes', () => {
   it('lets instance auditors inspect provider key status without creating keys', async () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs }),
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs },
+        }),
       ),
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['catalog.read', 'provider-credentials.read'] })),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['catalog.read', 'provider-credentials.read'] } }),
+      ),
     );
     renderAt('/instance/provider-keys');
 
@@ -271,9 +298,13 @@ describe('instance administration routes', () => {
     const activity = vi.fn(() => new HttpResponse(null, { status: 403 }));
     server.use(
       http.get('/api/v1/auth/me', () =>
-        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'data_plane', orgs: USER.orgs }),
+        HttpResponse.json<{ data: Api.MeOut }>({
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'data_plane', orgs: USER.orgs },
+        }),
       ),
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['bundles.read', 'usage.ingest', 'data-planes.heartbeat'] })),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['bundles.read', 'usage.ingest', 'data-planes.heartbeat'] } }),
+      ),
       http.get('/api/v1/orgs', organizations),
       http.get('/api/v1/users', users),
       http.get('/api/v1/instance/access-keys', keys),
@@ -303,7 +334,7 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/auth/permissions', ({ request }) => {
         const scoped = new URL(request.url).searchParams.has('org_id');
-        return HttpResponse.json({ permissions: scoped ? [] : ['organizations.read'] });
+        return HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: scoped ? [] : ['organizations.read'] } });
       }),
       http.get('/api/v1/orgs/:orgId', organization),
     );

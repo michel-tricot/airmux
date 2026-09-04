@@ -224,7 +224,7 @@ class CanonicalRequest(BaseModel):
 
     model: str
     messages: list[CanonicalMessage] = Field(min_length=1)
-    stream: bool = False
+    stream: bool = Field(default=False, strict=True)
     max_tokens: int | None = Field(default=None, ge=1)
     temperature: float | None = Field(default=None, ge=0)
     top_p: float | None = Field(default=None, gt=0, le=1)
@@ -234,7 +234,7 @@ class CanonicalRequest(BaseModel):
     tool_choice: CanonicalToolChoice | None = None
     response_format: CanonicalResponseFormat | None = None
     reasoning: CanonicalReasoningConfig | None = None
-    parallel_tool_calls: bool | None = None
+    parallel_tool_calls: bool | None = Field(default=None, strict=True)
 
     @property
     def extra(self) -> dict[str, Any]:

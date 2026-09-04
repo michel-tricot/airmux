@@ -1,8 +1,9 @@
 import { useRef } from 'react';
 import { Alert, AlertDescription, Modal, Button, Label } from '@/components/ui/elements';
-import { Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { InputGroup, InputGroupInput } from '@/components/ui/input-group';
 import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
+import { CopyButton, CopyFeedback } from '@/components/shared/copy-control';
 
 type OneTimeValueDialogProps = {
   open: boolean;
@@ -28,21 +29,10 @@ function OneTimeValueDialogContent({
   warning,
   label,
   copyLabel,
-  copyErrorMessage = 'Automatic copy was blocked. Press Command+C or Ctrl+C to copy the selected value.',
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  value: string;
-  title: string;
-  warning: string;
-  label: string;
-  copyLabel: string;
-  copyErrorMessage?: string;
-}) {
+  copyErrorMessage,
+}: Omit<OneTimeValueDialogProps, 'value'> & { value: string }) {
   const valueInput = useRef<HTMLInputElement>(null);
-  const { copy, status } = useClipboardCopy(value, valueInput);
-  const copied = status === 'copied';
-  const copyError = status === 'manual';
+  const clipboard = useClipboardCopy(value, valueInput);
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={title}>
@@ -63,23 +53,9 @@ function OneTimeValueDialogContent({
               value={value}
               className="h-7 min-w-0 px-2 font-mono text-muted-foreground"
             />
-            <Button onClick={() => void copy()} variant="secondary" className="h-7 shrink-0 gap-2 px-3" aria-label={copied ? 'Copied' : copyLabel}>
-              {copied ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-success" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" /> {copyLabel}
-                </>
-              )}
-            </Button>
+            <CopyButton {...clipboard} label={copyLabel} className="h-7 px-3" />
           </InputGroup>
-          {copyError && (
-            <p role="alert" className="text-sm text-destructive">
-              {copyErrorMessage}
-            </p>
-          )}
+          <CopyFeedback status={clipboard.status} errorMessage={copyErrorMessage} />
         </div>
 
         <div className="flex justify-end pt-4">
