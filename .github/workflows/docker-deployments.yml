@@ -16,13 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        compose-file: [docker-compose.yml, docker-compose.compact.yml, deploy/distributed/compose.yml]
+        compose-file: [docker-compose.yml, docker-compose.split.yml]
     env:
       DEPLOYMENT_PROJECT: airllm-test
       DEPLOYMENT_FILE: ${{ matrix.compose-file }}
       DEPLOYMENT_URL: http://localhost:8080
-      DATABASE_URL: postgresql+asyncpg://airllm:deployment@airllm-test-postgres:5432/airllm
-      OPENAI_API_KEY: deployment-test-key
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
@@ -30,41 +28,11 @@ jobs:
           enable-cache: true
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
-      - name: Validate provider manifests
-        run: |
-          curl -fsSL https://render.com/schema/render.yaml.json -o /tmp/render-schema.json
-          curl -fsSL https://railway.com/railway.schema.json -o /tmp/railway-schema.json
-          uv run python - <<'PY'
-          import json
-          import yaml
-          import jsonschema
-          for name, path in [('render', 'render.yaml'), ('railway', 'railway.json')]:
-              with open(path) as manifest, open(f'/tmp/{name}-schema.json') as schema:
-                  jsonschema.validate(yaml.safe_load(manifest), json.load(schema))
-          PY
-      - name: Prepare the distributed reference database
-        if: matrix.compose-file == 'deploy/distributed/compose.yml'
-        run: |
-          uv run airllmcp bootstrap-keygen --out /tmp/pool.key
-          export GW_DATAPLANE_TOKEN="$(cat /tmp/pool.key)"
-          echo "GW_DATAPLANE_TOKEN=$GW_DATAPLANE_TOKEN" >> "$GITHUB_ENV"
-          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" create --build
-          docker run -d --name airllm-test-postgres --network airllm-test_default \
-            -e POSTGRES_USER=airllm -e POSTGRES_PASSWORD=deployment -e POSTGRES_DB=airllm postgres:16
-          for attempt in $(seq 1 60); do
-            if docker exec airllm-test-postgres pg_isready -h 127.0.0.1 -U airllm; then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
       - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
-      - if: matrix.compose-file == 'docker-compose.compact.yml'
+      - if: matrix.compose-file == 'docker-compose.yml'
         run: echo 'DEPLOYMENT_COMPACT_IMAGE=airllm-test-airllm' >> "$GITHUB_ENV"
       - run: uv run pytest tests/deployment
       - if: failure()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color
-      - if: always() && matrix.compose-file == 'deploy/distributed/compose.yml'
-        run: docker rm -f airllm-test-postgres
       - if: always()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" down -v

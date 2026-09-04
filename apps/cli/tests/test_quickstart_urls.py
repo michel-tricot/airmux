@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
 import httpx
 import pytest
 import typer
+import yaml
 from typer.testing import CliRunner
 
 from api_models import InferenceKeyMintedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
@@ -201,6 +203,21 @@ def test_quickstart_keeps_an_existing_provider_credential(monkeypatch):
     assert result[0].provider == "openai"
     assert result[0].source == "already configured"
     assert client.posts == []
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        provider["provider_id"]
+        for provider in yaml.safe_load((Path(__file__).resolve().parents[3] / "taxonomy/taxonomy.yml").read_text())["providers"]
+    ],
+)
+def test_quickstart_reads_environment_keys_for_every_catalog_provider(monkeypatch, name):
+    variable = f"{name.upper()}_API_KEY"
+    monkeypatch.setenv(variable, f"test-{name}-key")
+    monkeypatch.setattr("cli.auth.sys.stdin.isatty", lambda: False)
+
+    assert auth._provider_key(name, {}) == (f"test-{name}-key", f"found in {variable}")
 
 
 def test_quickstart_reports_an_existing_disabled_provider_credential(monkeypatch):

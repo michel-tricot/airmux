@@ -1,15 +1,5 @@
 name: airllm
 
-x-control-plane: &control-plane
-  build:
-    context: .
-    target: control-plane
-  environment:
-    DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
-    GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-    FORWARDED_ALLOW_IPS: "*"
-  init: true
-
 services:
   postgres:
     image: postgres:16
@@ -20,79 +10,37 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U airllm -d airllm"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "airllm"]
       interval: 5s
       timeout: 3s
       retries: 20
     restart: unless-stopped
 
-  initialize:
-    <<: *control-plane
-    command: ["sh", "-ec", "airllmcp migrate --config /app/deploy/docker/migrate.yml && /app/deploy/docker/initialize.sh"]
-    volumes:
-      - runtime-credentials:/state/runtime
-      - provider-secrets:/state/secrets
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  control-plane:
-    <<: *control-plane
-    volumes:
-      - runtime-credentials:/state/runtime:ro
-      - provider-secrets:/state/secrets
-    depends_on:
-      initialize:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    restart: unless-stopped
-
-  data-plane:
+  airllm:
     build:
       context: .
-      target: data-plane
-    init: true
-    volumes:
-      - runtime-credentials:/state/runtime:ro
-      - provider-secrets:/state/secrets:ro
-      - gateway-state:/state/data-plane
-    depends_on:
-      initialize:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz')"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    stop_grace_period: 40s
-    restart: unless-stopped
-
-  console:
-    build:
-      context: .
-      target: console
+      target: all-in-one
+    env_file:
+      - path: .env
+        required: false
     environment:
+      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
       GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
     ports:
       - "${AIRLLM_PORT:-8080}:8080"
+    volumes:
+      - state:/state
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/v1/instance/oss/claim')"]
       interval: 5s
       timeout: 3s
-      retries: 20
-    depends_on:
-      control-plane:
-        condition: service_healthy
-      data-plane:
-        condition: service_started
+      retries: 30
+    stop_grace_period: 40s
     restart: unless-stopped
 
 volumes:
-  runtime-credentials:
-  provider-secrets:
-  gateway-state:
+  state:
   pgdata:

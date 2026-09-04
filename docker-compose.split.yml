@@ -1,0 +1,93 @@
+name: airllm
+
+x-provider-env: &provider-env
+  - path: .env
+    required: false
+
+x-gateway: &gateway
+  build:
+    context: .
+    target: data-plane
+  env_file: *provider-env
+  init: true
+  depends_on:
+    control-plane:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz')"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+  networks:
+    default:
+      aliases: [data-plane]
+  stop_grace_period: 40s
+  restart: unless-stopped
+
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+
+  control-plane:
+    build:
+      context: .
+      target: control-plane
+    env_file: *provider-env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
+      GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - runtime-credentials:/state/runtime
+      - provider-secrets:/state/secrets
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  data-plane-1:
+    <<: *gateway
+    volumes:
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets:ro
+      - gateway-1:/state/data-plane
+
+  data-plane-2:
+    <<: *gateway
+    volumes:
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets:ro
+      - gateway-2:/state/data-plane
+
+  console:
+    build:
+      context: .
+      target: console
+    environment:
+      GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "${AIRLLM_PORT:-8080}:8080"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  runtime-credentials:
+  provider-secrets:
+  gateway-1:
+  gateway-2:

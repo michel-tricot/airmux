@@ -104,7 +104,7 @@ def test_the_shipped_config_serves_the_checkout_and_the_stack(tmp_path, monkeypa
 
 
 def test_container_config_uses_shared_credentials_and_separate_secret_storage(tmp_path, monkeypatch):
-    source = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "control-plane.yml"
+    source = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "airllm.yml"
     container_config = tmp_path / "control-plane.yml"
     container_config.write_text(source.read_text().replace("/state/", f"{tmp_path}/"))
     cache_dir = tmp_path / "runtime"

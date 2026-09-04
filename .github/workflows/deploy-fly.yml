@@ -18,7 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: ./deploy/fly/deploy.sh
+      - run: >-
+          flyctl deploy --config deploy/fly/fly.toml --app "$FLY_APP"
+          --primary-region "${FLY_REGION:-sjc}" --remote-only --ha=false
+          --env "GW_CONSOLE_URL=${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - run: ./deploy/smoke.sh
+      - run: AIRLLM_PUBLIC_URL="${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}" ./deploy/smoke.sh

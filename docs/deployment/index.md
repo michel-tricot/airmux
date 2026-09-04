@@ -1,62 +1,58 @@
 # Deploy AirLLM
 
-AirLLM supports a compact installation and separate services. Both serve the console at `/`, the
-management API at `/api/v1`, and inference at `/inf/v1` on one public origin.
+The default deployment runs the console and both planes in one application container, with
+Postgres alongside it. Start here unless you need to deploy or scale the planes independently.
 
-## Choose a platform
+| Platform | Configuration |
+| --- | --- |
+| [Docker](docker.md) | `docker-compose.yml` |
+| [Fly.io](fly.md) | `deploy/fly/fly.toml` |
+| [Railway](railway.md) | `railway.json` |
+| [Render](render.md) | `render.yaml` Blueprint and deploy button |
+| [DigitalOcean](digitalocean.md) | Docker Compose with a Caddy overlay |
+| [Separate services](scaling.md) | `docker-compose.split.yml`, including two gateways |
 
-| Platform | Included configuration | Persistent storage | Setup |
-| --- | --- | --- | --- |
-| [Docker](docker.md) | Split and compact Compose files | Docker volumes and Postgres | One Compose command |
-| [Fly.io](fly.md) | One app, one Machine, Managed Postgres | `/state` Fly volume | Bootstrap script |
-| [Railway](railway.md) | `railway.json` for one application service | `/state` volume and Postgres service | Connect repository and configure resources |
-| [Render](render.md) | `render.yaml` Blueprint | `/state` disk and managed Postgres | Deploy to Render button |
-| [DigitalOcean](digitalocean.md) | Droplet Compose stack with Caddy | Droplet volumes and Postgres | Docker Droplet plus Compose |
-| [Separate services](scaling.md) | Two-gateway Compose reference | One volume per gateway, external Postgres | Operator-managed infrastructure |
+## Configure the application
 
-Fly, Railway, and Render host the same `all-in-one` Docker target. DigitalOcean runs that target
-behind Caddy. Each compact installation has one application instance and a separate database.
-Start with this layout if you want the fewest moving parts. Use the separate targets when you need
-to size or deploy the planes independently.
+The same Docker image runs on every platform. Each platform guide connects these three things:
+
+| Setting | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string |
+| `GW_CONSOLE_URL` | Public origin, such as `https://llm.example.com` |
+| Persistent volume at `/state` | Gateway identity, cached bundles, pending usage, and credential files |
+
+The application listens on port 8080. It initializes the database, catalog, and gateway
+authentication during startup. The console, management API, and inference API share one origin.
 
 ## First setup
 
-Open the public URL immediately after deployment. The first signup becomes the instance owner.
-Create an organization and workspace, add a provider credential, and mint an inference key. On a
-public host, claim the instance before sharing its URL or restrict ingress during setup.
+From a repository checkout on your computer, install the CLI with
+`uv sync --all-packages --frozen`. Copy `.env.example` to `.env` and fill in your provider keys,
+then run:
 
-The deployment prepares migrations, the catalog, and gateway authentication. You do not need to
-generate provider keys or owner credentials in the platform dashboard.
+```sh
+uv run airllm quickstart --url https://your-airllm-domain
+```
 
-Verify with [the quickstart request](../../README.md#quickstart), using a configured provider and
-model. Then configure backups and monitoring from the [operations guide](operations.md).
+Claim a new public installation immediately: the first account becomes its owner.
+`quickstart` creates or resumes that account, an organization, and a workspace. It imports
+missing provider keys from your local `.env` using `<PROVIDER>_API_KEY` for every catalog provider.
+Existing credentials remain intact. Save the inference key it prints; **Ready** means a real
+request succeeded through the deployed gateway.
 
-## Deploy buttons
+You can also complete setup in the console. Provider credentials added through either interface
+are stored in the installation's secret store; setting a platform environment variable alone
+does not register a provider credential.
 
-[Deploy to Render](https://render.com/deploy?repo=https://github.com/michel-tricot/airllm) consumes
-the root Blueprint. The Blueprint requires paid compute and persistent storage; review the
-resources before confirming creation.
+## Keep your data
 
-Railway deploy buttons require a published Railway template ID. The repository includes service
-configuration and [template publication instructions](railway.md#publish-a-deploy-template), but
-does not invent a template URL before a template has been published in a Railway account.
+Retain both Postgres and `/state` on redeployment, and back them up together. The state volume
+contains plaintext provider credential files as well as pending usage. Restrict backup access.
 
-Fly provides a bootstrap command. DigitalOcean uses a Docker Marketplace Droplet and the checked-in
-Compose stack. These are documented setup flows rather than AirLLM marketplace listings.
+The combined image runs one gateway and owns one state volume. Use [separate services](scaling.md)
+for multiple gateways, each with its own identity and usage outbox. Updates to the combined
+application can briefly interrupt traffic.
 
-## Storage and scaling
-
-Compact state includes gateway authentication, provider secrets, cached bundles, the instance ID,
-and the usage outbox. Keep `/state` across deployments. Back up the database and state together.
-Application disks alone do not back up Postgres.
-
-Never start two gateways against the same state directory or SQLite outbox. A compact installation
-is a single-instance deployment; a disk snapshot or clone is not a second gateway identity. The
-[scaling guide](scaling.md) covers separate gateway state and shared provider-credential resolution.
-
-## Validation scope
-
-Repository deployment tests run real containers and HTTP requests against a deterministic local
-provider. They cover onboarding, inference, streaming, usage delivery, and restart behavior. Cloud
-manifests are checked against provider documentation and schemas where available. Account-specific
-provisioning, quotas, DNS, and platform routing still need a smoke check after deployment.
+Cloud manifests are validated locally; account provisioning and public routing require a check
+on the target platform. After deploying, `quickstart` verifies inference through its public URL.

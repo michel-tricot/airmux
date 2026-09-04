@@ -5,7 +5,6 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "/app/deploy/docker/entrypoint.sh /app/deploy/docker/start-managed.sh",
     "healthcheckPath": "/api/v1/instance/oss/claim",
     "healthcheckTimeout": 180,
     "numReplicas": 1,

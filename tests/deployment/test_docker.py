@@ -40,9 +40,8 @@ def deployment():
     compose_file = os.environ["DEPLOYMENT_FILE"]
     url = os.environ["DEPLOYMENT_URL"]
     compose = ("compose", "-p", project, "-f", compose_file)
-    compact = compose_file.endswith("compact.yml")
-    distributed = "distributed" in compose_file
-    gateways = ("airllm",) if compact else ("data-plane-1", "data-plane-2") if distributed else ("data-plane",)
+    compact = compose_file == "docker-compose.yml"
+    gateways = ("airllm",) if compact else ("data-plane-1", "data-plane-2")
     gateway = gateways[0]
     container = docker(*compose, "ps", "-q", gateway)
     image = docker("inspect", "--format", "{{.Config.Image}}", container)
@@ -84,10 +83,35 @@ def assert_unprivileged(compose, gateway):
     assert all(server.split()[1] in {"airllm", "10001"} for server in servers), processes
 
 
-def test_onboarding_inference_streaming_and_persistence(deployment):
+def assert_quickstart(tmp_path):
+    (tmp_path / ".env").write_text("DEPLOYMENT_API_KEY=deployment-test-key\n")
+    result = subprocess.run(  # noqa: S603 test CLI with isolated credentials and profile
+        [
+            str(ROOT / ".venv/bin/airllm"),
+            "quickstart",
+            "--url",
+            os.environ["DEPLOYMENT_URL"],
+            "--email",
+            "owner@deployment.test",
+            "--password",
+            "deployment-password",
+        ],
+        cwd=tmp_path,
+        env={"PATH": os.environ["PATH"], "GW_CLI_CONFIG": str(tmp_path / "profile.toml")},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Ready." in result.stdout
+    assert "DEPLOYMENT_API_KEY" in result.stdout
+    assert (tmp_path / "profile.toml").exists()
+
+
+def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     client, compose, gateways, compact = deployment
     gateway = gateways[0]
-    provider = "openai" if len(gateways) == 2 else "deployment"
+    provider = "deployment"
     assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": False}
     assert "<!doctype html>" in client.get("/org").text.lower()
     owner = payload(client.post("/api/v1/auth/signup", json={"email": "owner@deployment.test", "name": "Owner", "password": "deployment-password"}))
@@ -123,6 +147,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment):
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
     assert_unprivileged(compose, gateway)
+    assert_quickstart(tmp_path)
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
     if not compact:

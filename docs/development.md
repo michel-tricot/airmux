@@ -9,6 +9,7 @@ Python and JavaScript workspaces each have a committed lockfile.
 uv sync --all-packages --frozen
 bun install --frozen-lockfile
 uv run pre-commit install
+cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
 uv run airllmcp bootstrap-keygen
 uv run airllmcp migrate
@@ -27,9 +28,14 @@ Start these in separate terminals:
 | Gateway | `uv run airllmdp serve --config airllm.yml` | `http://127.0.0.1:8080` |
 | Console | `bun run dev` | `http://127.0.0.1:5000` |
 
-Open the console at `127.0.0.1:5000` to sign up, add a provider credential, and create an inference
-key. Use the same hostname throughout a session. Vite forwards `/api` and `/inf` to the backends.
-Use `uv run airllm quickstart --url http://127.0.0.1:5000` for interactive CLI setup instead.
+Add provider keys to `.env`, then complete setup through the running Vite server:
+
+```sh
+uv run airllm quickstart --url http://127.0.0.1:5000
+```
+
+Open http://127.0.0.1:5000 for the console. Use the same hostname throughout a session.
+Vite forwards `/api` and `/inf` to the backends.
 
 `airllm.yml` configures source development. It reads `DATABASE_URL` and `GW_CONSOLE_URL` when set;
 otherwise it uses the addresses above. `.env` is loaded automatically. Provider credentials for
@@ -93,7 +99,7 @@ bun run format:check
 bun run lint
 bun run typecheck
 bun run coverage
-bun run build
+bun run --filter '@workspace/gateway-console' build
 ```
 
 Deployment checks exercise fresh Docker installations, streaming, outage behavior, and persistent
@@ -108,7 +114,7 @@ After changing an API or canonical schema:
 ./scripts/export-openapi.sh
 ./scripts/generate-api-models.sh
 ./scripts/export-completion-schemas.sh
-bun run codegen
+bun run --cwd lib/api-spec codegen
 ```
 
 Commit generated changes with their source. Do not edit generated models or clients by hand.

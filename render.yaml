@@ -7,7 +7,7 @@ services:
     numInstances: 1
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: /app/deploy/docker/start-managed.sh
+    dockerCommand: sh -ec 'export GW_CONSOLE_URL="${GW_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh'
     healthCheckPath: /api/v1/instance/oss/claim
     autoDeployTrigger: "off"
     disk:

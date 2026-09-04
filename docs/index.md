@@ -1,23 +1,11 @@
 # AirLLM documentation
 
-Start with the [quickstart](../README.md#quickstart) to run the console and gateway locally.
+Run the [quickstart](../README.md#quickstart) to start AirLLM and verify your first inference request.
 
-## Deploy AirLLM
-
-- [Choose a deployment](deployment/index.md)
-- [Docker Compose](deployment/docker.md)
-- [Fly.io](deployment/fly.md)
-- [Railway](deployment/railway.md)
-- [Render](deployment/render.md)
-- [DigitalOcean](deployment/digitalocean.md)
-- [Separate services and gateway replicas](deployment/scaling.md)
-- [Operations and troubleshooting](deployment/operations.md)
-
-## Work on AirLLM
-
-- [Development setup and checks](development.md)
-- [Runnable client examples](../examples)
-- [Data-plane architecture](../notes/design/DATAPLANE.md)
-- [Roles and authority](../notes/design/AUTHORITY.md)
-- [Provider credential isolation](../notes/design/BYOK.md)
-- [Development conventions](../AGENTS.md)
+- [Deploy AirLLM](deployment/index.md): Docker, Fly.io, Railway, Render, and DigitalOcean
+- [Separate services](deployment/scaling.md): independent control plane and gateway replicas
+- [Develop locally](development.md): source setup, checks, and generated clients
+- [Client examples](../examples): SDKs, streaming, and tools
+- [Data-plane design](../notes/design/DATAPLANE.md): routing, adapters, and metering
+- [Authority model](../notes/design/AUTHORITY.md): roles and tenant boundaries
+- [Provider credentials](../notes/design/BYOK.md): credential resolution and isolation

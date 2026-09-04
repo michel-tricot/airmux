@@ -269,18 +269,22 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
             time.sleep(0.5)
         else:
             return "gateway did not become ready"
-        try:
-            response = gateway.post(
-                "/inf/v1/chat/completions",
-                headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
-                    "stream": False,
-                },
-            )
-        except httpx.HTTPError as error:
-            return str(error)
+        for _ in range(20):
+            try:
+                response = gateway.post(
+                    "/inf/v1/chat/completions",
+                    headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
+                    json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
+                        "stream": False,
+                    },
+                )
+            except httpx.HTTPError as error:
+                return str(error)
+            if response.status_code != httpx.codes.UNAUTHORIZED or _gateway_error(response) != "invalid_token":
+                break
+            time.sleep(0.5)
     return "" if response.is_success else f"HTTP {response.status_code}: {_gateway_error(response)}"
 
 

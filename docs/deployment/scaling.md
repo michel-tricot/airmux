@@ -1,48 +1,45 @@
-# Distributed deployment
+# Separate services and gateway replicas
 
-The files in [`deploy/distributed`](../../deploy/distributed) provide strict configurations for separately deployed planes and a two-gateway
-Compose reference. The reference runs on one Docker host; it demonstrates replica identity,
-independent state, and network-only configuration sharing. Multi-host scheduling and availability
-remain the responsibility of your orchestrator.
-
-## Start the reference
-
-Provision an empty external Postgres database reachable from the containers. Generate a pool key
-once with `uv run airllmcp bootstrap-keygen --out /path/to/pool.key`. Store it in your platform's
-secret manager and inject it as `GW_DATAPLANE_TOKEN` into the control plane and every gateway.
-Use the same token on every restart; bootstrap rejects a replacement token after initialization.
-
-From the repository root, with `DATABASE_URL`, `GW_DATAPLANE_TOKEN`, and at least one of
-`OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in the environment:
+Use the split layout when you need to restart or size the control plane and gateways independently:
 
 ```sh
-docker compose -f deploy/distributed/compose.yml up -d --build --wait
+docker compose -f docker-compose.split.yml up -d --build --wait
+uv run airllm quickstart --url http://localhost:8080
 ```
 
-Set `AIRLLM_PUBLIC_URL` and `AIRLLM_PORT` when the public origin differs from http://localhost:8080.
-Create the owner and tenant in the console and register the same provider credential value that
-the environment holds. This example uses the existing environment secret store: one value per
-provider, shared across tenants. Add other provider environment variables to both planes together.
-Rotations require updating and restarting every service that reads that value.
+Provider setup and the public URL work exactly as in the [quickstart](../../README.md#quickstart).
+This runs Postgres, the console proxy, one control plane, and two gateways on one Docker host.
+The proxy distributes inference requests between the gateways.
 
-For per-tenant provider keys, use a network-accessible secret store in both plane configurations.
-The existing `insecure_database` store is a prototype option and stores values as plaintext in
-Postgres; it is not an encrypted vault. A production secret-manager adapter is separate work.
-Secret values remain outside bundles. Ordinary management database reads never enter the inference path.
+## State
 
-## State and routing
+| Volume | Ownership |
+| --- | --- |
+| `pgdata` | Postgres |
+| `runtime-credentials` | Control plane writes the pool key; gateways read it |
+| `provider-secrets` | Control plane writes provider credentials; gateways read them |
+| `gateway-1`, `gateway-2` | Each gateway owns its identity, cached bundles, and usage outbox |
 
-`data-plane-1` and `data-plane-2` each mount their own named volume at `/state/data-plane`. Each
-volume holds a persistent instance ID, bundle cache, and SQLite outbox. They share only the pool
-credential and provider key values. Restart a replica with the same volume, and drain pending events
-before permanently deleting it. Anonymous ephemeral volumes are unsuitable for durable usage tracking.
+The gateways keep serving cached configuration while the control plane is unavailable and
+export queued usage when it returns. Restart each gateway with its original volume. Every
+additional gateway needs a new volume; cloning a running gateway's identity or sharing its
+SQLite outbox is invalid.
 
-The two gateways share the `data-plane` network alias. nginx re-resolves that name and routes
-requests across the returned addresses. For a multi-host installation, point the proxy at a service
-address supplied by your orchestrator and route to replicas passing `/readyz`; preserve SSE and
-forward the public scheme. The control plane must be reachable via HTTPS or a protected private network.
+The default and split layouts are separate installation choices. Switching Compose files does
+not migrate application state. For an existing installation, move its credential directories to
+the shared volumes and its gateway state to exactly one gateway while the application is stopped.
+Retain the database and make a backup before moving state.
 
-The example keeps one control plane. Before adding control-plane replicas, coordinate migration
-and catalog jobs, inject the same bootstrap token, and use the same external database and secret
-store. Run release jobs once, then roll the service containers. Scaling the gateway does not require
-scaling the control plane alongside it.
+## Other infrastructure
+
+The Dockerfile exposes `control-plane`, `data-plane`, and `console` targets as well as
+the default `all-in-one` target. Both planes load [the shared configuration](../../deploy/docker/airllm.yml).
+The split control plane initializes the database and catalog on startup.
+
+To deploy across hosts, supply shared credential storage that both planes can access, a reachable
+Postgres database, and one persistent state directory per gateway. The checked-in split example
+uses local shared volumes; it is not a multi-host deployment. Set
+`GW_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address, and protect that connection.
+
+Keep one control plane with this startup configuration. Multiple control-plane replicas also
+need coordinated migration/catalog initialization and shared credential storage.

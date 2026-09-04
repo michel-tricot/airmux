@@ -1,3 +1,13 @@
+control_plane:
+  database:
+    url: ${env:DATABASE_URL}
+  bootstrap:
+    token: ${file:/state/runtime/dataplane.key}
+  console_url: ${env:GW_CONSOLE_URL}
+  secrets:
+    kind: file
+    root: /state/secrets
+
 data_plane:
   bundle:
     kind: remote

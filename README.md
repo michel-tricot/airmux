@@ -1,72 +1,69 @@
 # AirLLM
 
-One gateway for your LLM applications, across providers. AirLLM connects OpenAI and Anthropic
-clients to multiple model providers, with a console for organizations, workspaces, provider
-credentials, inference keys, and usage.
+One gateway for your LLM applications, across providers. Use OpenAI and Anthropic clients with
+OpenAI, Anthropic, Groq, Fireworks, Together, and other compatible providers. AirLLM handles
+routing, scoped provider credentials, inference keys, and usage tracking.
 
-[Documentation](docs/index.md) · [Deployment guides](docs/deployment/index.md) · [Development](docs/development.md)
+[Deployment guides](docs/deployment/index.md) · [Development](docs/development.md) · [Examples](examples)
 
 ## Quickstart
 
-Install Docker with Compose, then run:
+You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/), and a provider API key.
 
 ```sh
 git clone https://github.com/michel-tricot/airllm.git
 cd airllm
+cp .env.example .env
+uv sync --all-packages --frozen
+```
+
+Add at least one provider key to `.env`, then run:
+
+```sh
 docker compose up -d --build --wait
+uv run airllm quickstart --url http://localhost:8080
 ```
 
-Open **[localhost:8080](http://localhost:8080)**. Create your account, an organization, and a
-workspace. Add a provider API key and create an inference key. The first account owns the instance;
-claim it before making a new installation publicly accessible.
+`quickstart` creates or resumes your owner account, organization, and workspace. It imports
+missing provider credentials from `.env`, preserves existing credentials, and prints a new
+`AIRLLM_API_KEY` and a working curl command. It reports **Ready** after completing a real
+inference request, which uses your provider's API quota.
 
-AirLLM initializes its database, model catalog, and gateway credentials automatically. Only port
-8080 is public. The console, management API, and inference API share this origin.
+Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
+`DEEPSEEK_API_KEY`, or `XAI_API_KEY`. See [.env.example](.env.example) for the full list.
+You can also manage provider credentials in the console, scoped to an organization or workspace.
 
-Send a request using the inference key you created:
+Open **[localhost:8080](http://localhost:8080)** for the console. The console, management API,
+and inference API share that address. Docker runs one AirLLM container plus Postgres; database
+initialization and gateway authentication happen automatically.
+
+`docker compose down` stops the stack and preserves its data. Adding `-v` deletes its volumes.
+
+## Gateway only
+
+For a local gateway without Postgres or the console, use the standalone configuration:
 
 ```sh
-export AIRLLM_API_KEY='your-inference-key'
-curl http://localhost:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $AIRLLM_API_KEY" \
+export OPENAI_API_KEY='your-provider-key'
+uv run airllmdp serve --config airllm.standalone.yml
+```
+
+In another terminal:
+
+```sh
+curl http://127.0.0.1:8080/inf/v1/chat/completions \
+  -H 'Authorization: Bearer sk-inf-standalone-dev' \
   -H 'Content-Type: application/json' \
-  -H 'x-airllm-dialect: openai_native' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello"}]} '
+  -d '{"model":"gpt-5-nano","messages":[{"role":"user","content":"Say hello"}]}'
 ```
 
-Use a model from the console's catalog whose provider credential you added. Requests consume your
-provider's API quota. Configuration changes reach gateways automatically, usually within five seconds.
+Edit [bundle.standalone.yml](bundle.standalone.yml) to change routing. Standalone mode reloads
+that bundle, reads provider keys from the environment, and discards usage events. Its built-in
+inference key is for local development. Stop the Docker stack first if it occupies port 8080.
 
-Stop with `docker compose down`. Your data stays in Docker volumes. Adding `-v` deletes that data.
+## Connect your SDK
 
-### One application container
-
-The default layout runs the console, control plane, and gateway separately, plus Postgres. For
-one application container plus Postgres, use:
-
-```sh
-docker compose -f docker-compose.compact.yml up -d --build --wait
-```
-
-Choose one layout per installation. Both use port 8080 by default, and their state volumes are
-separate. The [Docker guide](docs/deployment/docker.md) covers ports, TLS, storage, and upgrades.
-
-### Deploy to a cloud
-
-| Platform | Deployment |
-| --- | --- |
-| [Fly.io](docs/deployment/fly.md) | One Fly app and Machine, persistent volume, Managed Postgres |
-| [Railway](docs/deployment/railway.md) | One application service, volume, and Postgres |
-| [Render](docs/deployment/render.md) | Blueprint with one web service, disk, and Postgres |
-| [DigitalOcean](docs/deployment/digitalocean.md) | Docker Droplet with Compose and automatic HTTPS |
-| [Your own infrastructure](docs/deployment/scaling.md) | Separate services and gateway replicas with independent state |
-
-See the [deployment documentation](docs/deployment/index.md) for setup, deploy-button availability,
-and platform constraints. All compact deployments use the same image.
-
-## Connect an SDK
-
-For the OpenAI Python SDK, change the base URL and API key:
+Use the inference key printed by `quickstart`. For the OpenAI Python SDK:
 
 ```python
 import os
@@ -83,7 +80,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-Anthropic clients can call the same model through their native API:
+Anthropic clients can call the same model:
 
 ```python
 import os
@@ -102,59 +99,34 @@ message = client.messages.create(
 print(message.content[0].text)
 ```
 
-See [examples](examples) for streaming, tools, and other integrations.
+Choose a catalog model whose provider credential you configured. See [examples](examples) for
+streaming, tools, and other integrations.
 
-## Develop locally
+## Deploy
 
-Install Python 3.13+, [uv](https://docs.astral.sh/uv/), [Bun](https://bun.sh/), and Docker.
-From the repository root:
+| Platform | Setup |
+| --- | --- |
+| [Docker](docs/deployment/docker.md) | One AirLLM container and Postgres |
+| [Fly.io](docs/deployment/fly.md) | One app and Machine, plus Managed Postgres |
+| [Railway](docs/deployment/railway.md) | Repository service, volume, and Postgres |
+| [Render](docs/deployment/render.md) | Deploy button with a checked-in Blueprint |
+| [DigitalOcean](docs/deployment/digitalocean.md) | Docker Droplet with automatic HTTPS |
 
-```sh
-uv sync --all-packages --frozen
-bun install --frozen-lockfile
-docker compose -f docker-compose.dev.yml up -d --wait
-uv run airllmcp bootstrap-keygen
-uv run airllmcp migrate
-uv run airllmcp taxonomy --file taxonomy/taxonomy.yml
-```
+All use the same image. For independent services and multiple gateways, use
+[docker-compose.split.yml](docs/deployment/scaling.md).
 
-Generate the bootstrap key only on the first setup. Start each process in a separate terminal:
+## Develop
 
-```sh
-uv run airllmcp serve --dev
-```
+The [development guide](docs/development.md) covers source setup, hot reload, tests, and generated
+clients. Docker Compose runs the packaged application; source development runs the Python
+services and Vite separately.
 
-```sh
-uv run airllmdp serve --config airllm.yml
-```
+The control plane manages configuration in Postgres and publishes bundles to gateways. Gateways
+route from their local bundle, stream provider responses, and persist usage for later export.
+Separately deployed gateways keep serving during control-plane outages.
 
-```sh
-bun run dev
-```
+Read the [data-plane design](notes/design/DATAPLANE.md), [authority model](notes/design/AUTHORITY.md),
+and [credential design](notes/design/BYOK.md). Follow [AGENTS.md](AGENTS.md) when contributing.
 
-Open **[127.0.0.1:5000](http://127.0.0.1:5000)** and complete setup. The Vite development server
-proxies both APIs. Production Docker uses port 8080; source development uses 5000 for the console,
-8000 for the control plane, and 8080 for the gateway.
-
-The [development guide](docs/development.md) covers tests, generated clients, standalone mode,
-configuration, and resetting local state.
-
-## Architecture
-
-The control plane owns management data in Postgres and publishes bundles to the data plane. Each
-gateway authenticates and routes from its local bundle, streams provider responses, and exports
-usage from a durable local outbox. Cached configuration lets it continue serving during control-plane
-outages. Provider credentials resolve through the configured secret store.
-
-One canonical request model connects caller dialects and provider families. Policy and metering
-are shared across those translations. See the [data-plane design](notes/design/DATAPLANE.md),
-[authority model](notes/design/AUTHORITY.md), and [credential design](notes/design/BYOK.md).
-
-## Contribute
-
-Read [AGENTS.md](AGENTS.md) for repository conventions. Open an
-[issue](https://github.com/michel-tricot/airllm/issues) for larger changes, and include behavioral
-tests and verification with pull requests.
-
-AirLLM is pre-1.0. APIs, configuration, and migrations can change before the first stable release.
+AirLLM is pre-1.0. APIs, configuration, and migrations may change before the first stable release.
 Licensed under the [Elastic License 2.0](LICENSE).

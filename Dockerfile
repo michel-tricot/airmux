@@ -29,17 +29,17 @@ RUN groupadd --system --gid 10001 airllm && useradd --system --uid 10001 --gid a
 COPY --from=python-build /app /app
 COPY deploy/docker /app/deploy/docker
 COPY taxonomy/taxonomy.yml /app/taxonomy/taxonomy.yml
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 GW_CONFIG=/app/deploy/docker/airllm.yml
 WORKDIR /state
 USER 10001:10001
 
 FROM runtime AS control-plane
 EXPOSE 8000
-CMD ["airllmcp", "serve", "--host", "0.0.0.0", "--port", "8000", "--config", "/app/deploy/docker/control-plane.yml"]
+CMD ["/app/deploy/docker/start.sh", "control-plane"]
 
 FROM runtime AS data-plane
 EXPOSE 8081
-CMD ["airllmdp", "serve", "--host", "0.0.0.0", "--port", "8081", "--config", "/app/deploy/docker/data-plane.yml"]
+CMD ["/app/deploy/docker/start.sh", "data-plane"]
 
 FROM nginx:stable-bookworm AS console
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-b
     && rm -rf /var/lib/apt/lists/*
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
 ENV CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
-    GW_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 GW_CONSOLE_URL=http://localhost:8080 FORWARDED_ALLOW_IPS=127.0.0.1
+    GW_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 EXPOSE 8080
 ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
-CMD ["/app/deploy/docker/start-all.sh"]
+CMD ["/app/deploy/docker/start.sh"]

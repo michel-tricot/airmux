@@ -1,38 +1,20 @@
 # Render
 
-The root [`render.yaml`](../../render.yaml) Blueprint creates one Docker web service, a 1 GB
-application disk at `/state`, and managed Postgres. The selected compute plans are paid resources.
-Review the Blueprint and Render's displayed cost before creating them.
-
 [Deploy to Render](https://render.com/deploy?repo=https://github.com/michel-tricot/airllm)
 
-## Deploy
+The [render.yaml](../../render.yaml) Blueprint creates one Docker web service, a persistent
+disk at `/state`, and managed Postgres. It uses paid compute and storage; Render displays the
+cost before creation.
 
-Use the button, or fork the repository and choose **New > Blueprint** in Render. Connect the fork
-and select its root `render.yaml`. Keep the service and database in the same region.
+Use the button, or select **New > Blueprint** and connect your fork of the repository.
+The Blueprint supplies the internal database URL and sets the public origin from
+`RENDER_EXTERNAL_URL`. No provider keys are required to start the application.
 
-Render provides the private database connection through `DATABASE_URL`. AirLLM reads
-`RENDER_EXTERNAL_URL` as the public origin, so no application hostname needs to be guessed before
-Render allocates it. The service listens on port 8080.
+Complete [first setup](index.md#first-setup) using the generated URL.
+For a custom domain, set `GW_CONSOLE_URL` to its HTTPS origin and redeploy.
 
-The start command runs migrations, initializes the catalog and pool key, then starts both planes
-and the console. Persistent state is prepared on the mounted disk, and servers run as UID 10001.
-Startup health checks call the management API, which does not require an owner account yet.
+Deploy updates manually from Render, retaining the database and disk. Migrations run during
+startup. Keep one application instance; [Render persistent disks](https://render.com/docs/disks)
+require downtime during replacement and do not support horizontal scaling.
 
-Open the allocated URL and complete [first setup](index.md#first-setup). When using a custom domain,
-set `GW_CONSOLE_URL` to its full HTTPS origin and redeploy.
-
-## Updates
-
-Automatic application deploys are disabled in the Blueprint. After reviewing a release, deploy it
-manually from Render, retaining the existing database and disk. Migrations run during startup,
-when the disk is available. A failed migration stops startup.
-
-Use one application instance. Render services with attached disks have scaling and deployment
-restrictions, including brief downtime during replacement. Back up the disk and database separately.
-See [Render persistent disks](https://render.com/docs/disks).
-
-The database has an empty external IP allowlist; the application uses Render's internal network.
-For more about the fields and validation, see the
-[Blueprint reference](https://render.com/docs/blueprint-spec). The deploy-button flow is described
-in [Render's button documentation](https://render.com/docs/deploy-to-render).
+See the [Blueprint reference](https://render.com/docs/blueprint-spec) for the manifest fields.
