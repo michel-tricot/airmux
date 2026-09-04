@@ -5,12 +5,12 @@ Postgres alongside it. Start here unless you need to deploy or scale the planes 
 
 | Platform | Configuration |
 | --- | --- |
-| [Docker](docker.md) | `docker-compose.yml` |
-| [Fly.io](fly.md) | `deploy/fly/fly.toml` |
-| [Railway](railway.md) | `railway.json` |
-| [Render](render.md) | `render.yaml` Blueprint and deploy button |
-| [DigitalOcean](digitalocean.md) | Docker Compose with a Caddy overlay |
-| [Separate services](scaling.md) | `docker-compose.split.yml`, including two gateways |
+| [Docker](/docs/deployment/docker) | `docker-compose.yml` |
+| [Fly.io](/docs/deployment/fly) | `deploy/fly/fly.toml` |
+| [Railway](/docs/deployment/railway) | `railway.json` |
+| [Render](/docs/deployment/render) | `render.yaml` Blueprint and deploy button |
+| [DigitalOcean](/docs/deployment/digitalocean) | Docker Compose with a Caddy overlay |
+| [Separate services](/docs/deployment/scaling) | `docker-compose.split.yml`, including two gateways |
 
 ## Configure the application
 
@@ -50,7 +50,7 @@ does not register a provider credential.
 Retain both Postgres and `/state` on redeployment, and back them up together. The state volume
 contains plaintext provider credential files as well as pending usage. Restrict backup access.
 
-The combined image runs one gateway and owns one state volume. Use [separate services](scaling.md)
+The combined image runs one gateway and owns one state volume. Use [separate services](/docs/deployment/scaling)
 for multiple gateways, each with its own identity and usage outbox. Updates to the combined
 application can briefly interrupt traffic.
 

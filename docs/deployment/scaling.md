@@ -7,7 +7,7 @@ docker compose -f docker-compose.split.yml up -d --build --wait
 uv run airllm quickstart --url http://localhost:8080
 ```
 
-Provider setup and the public URL work exactly as in the [quickstart](../../README.md#quickstart).
+Provider setup and the public URL work exactly as in the [quickstart](https://github.com/michel-tricot/airllm/blob/main/README.md#quickstart).
 This runs Postgres, the console proxy, one control plane, and two gateways on one Docker host.
 The proxy distributes inference requests between the gateways.
 
@@ -33,7 +33,7 @@ Retain the database and make a backup before moving state.
 ## Other infrastructure
 
 The Dockerfile exposes `control-plane`, `data-plane`, and `console` targets as well as
-the default `all-in-one` target. Both planes load [the shared configuration](../../deploy/docker/airllm.yml).
+the default `all-in-one` target. Both planes load [the shared configuration](https://github.com/michel-tricot/airllm/blob/main/deploy/docker/airllm.yml).
 The split control plane initializes the database and catalog on startup.
 
 To deploy across hosts, supply shared credential storage that both planes can access, a reachable

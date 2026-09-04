@@ -23,7 +23,7 @@ docker compose -f docker-compose.yml -f deploy/digitalocean/compose.yml up -d --
 ```
 
 Caddy obtains a certificate once DNS and ports 80/443 are reachable. AirLLM's port 8080 stays
-private. Complete [first setup](index.md#first-setup) from your computer using
+private. Complete [first setup](/docs/deployment/index#first-setup) from your computer using
 `https://llm.example.com`.
 
 ## Update

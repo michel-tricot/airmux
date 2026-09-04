@@ -1,7 +1,7 @@
 # Railway
 
 Deploy one AirLLM service and one Postgres service. The root
-[railway.json](../../railway.json) builds the Dockerfile and configures its health check.
+[railway.json](https://github.com/michel-tricot/airllm/blob/main/railway.json) builds the Dockerfile and configures its health check.
 
 1. Create a Railway project and add a Postgres service named `Postgres`
 2. Add AirLLM from your repository fork, using the repository root
@@ -18,7 +18,7 @@ Deploy one AirLLM service and one Postgres service. The root
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | `40` |
 
 Use the image's default start command. It prepares the root-owned volume, then runs the
-application as UID 10001. Complete [first setup](index.md#first-setup) using the generated domain.
+application as UID 10001. Complete [first setup](/docs/deployment/index#first-setup) using the generated domain.
 For a custom domain, set `GW_CONSOLE_URL` to its HTTPS origin.
 
 Redeploy the same service and retain its database and volume. Use one application instance;

@@ -7,7 +7,7 @@ docker compose up -d --build --wait
 uv run airllm quickstart --url http://localhost:8080
 ```
 
-Install the CLI and add provider keys to `.env` as shown in the [quickstart](../../README.md#quickstart).
+Install the CLI and add provider keys to `.env` as shown in the [quickstart](https://github.com/michel-tricot/airllm/blob/main/README.md#quickstart).
 The default stack has two containers: AirLLM and Postgres. Open http://localhost:8080 for the console.
 
 ## Ports and HTTPS
@@ -19,7 +19,7 @@ AIRLLM_PORT=9000 AIRLLM_PUBLIC_URL=http://localhost:9000 docker compose up -d --
 ```
 
 For a public deployment, terminate HTTPS at your ingress and set `AIRLLM_PUBLIC_URL` to its
-HTTPS origin. The [DigitalOcean guide](digitalocean.md) supplies a Caddy overlay for this.
+HTTPS origin. The [DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for this.
 
 ## State and updates
 
@@ -36,7 +36,7 @@ Changing `POSTGRES_PASSWORD` after initialization does not rotate the database's
 
 ## Separate services
 
-[docker-compose.split.yml](scaling.md) runs the console, control plane, and two gateways
+[docker-compose.split.yml](/docs/deployment/scaling) runs the console, control plane, and two gateways
 independently. Both layouts use the same Dockerfile and runtime configuration.
 
 ## Verification

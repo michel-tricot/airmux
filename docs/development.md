@@ -103,7 +103,7 @@ bun run --filter '@workspace/gateway-console' build
 ```
 
 Deployment checks exercise fresh Docker installations, streaming, outage behavior, and persistent
-state. See [Docker verification](deployment/docker.md#verification). Their HTTP upstream is a local
+state. See [Docker verification](/docs/deployment/docker#verification). Their HTTP upstream is a local
 test service, so they need no paid provider credentials.
 
 ## Generated APIs

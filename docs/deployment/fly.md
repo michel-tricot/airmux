@@ -1,7 +1,7 @@
 # Fly.io
 
 AirLLM runs in **one Fly app on one Machine**, with a persistent volume and Managed Postgres.
-The only Fly deployment file is [fly.toml](../../deploy/fly/fly.toml).
+The only Fly deployment file is [fly.toml](https://github.com/michel-tricot/airllm/blob/main/deploy/fly/fly.toml).
 
 ## Deploy
 
@@ -33,12 +33,12 @@ Keep Managed Postgres in its default session pooling mode. Fly documents the poo
 connections in [Connect your client](https://fly.io/docs/mpg/client-configuration/).
 Startup uses the direct URL for migrations and the pooled URL for the application.
 
-Complete [first setup](index.md#first-setup) at `https://my-airllm.fly.dev`.
+Complete [first setup](/docs/deployment/index#first-setup) at `https://my-airllm.fly.dev`.
 
 ## Update
 
 Repeat the deploy command with the same app name and origin. Keep `--ha=false`: this layout
-owns one `/state` volume and runs one gateway. Use [separate services](scaling.md) for replicas.
+owns one `/state` volume and runs one gateway. Use [separate services](/docs/deployment/scaling) for replicas.
 
 For GitHub Actions, set `FLY_API_TOKEN` as a secret and `FLY_APP` as a variable in the
 `production` environment, then run the `deploy-fly` workflow. Optional `FLY_REGION` and
