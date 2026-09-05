@@ -20,7 +20,7 @@ In `.env`, add `AIRLLM_DOMAIN=llm.example.com` with your domain. Set both `POSTG
 
 ```sh
 docker compose -f docker-compose.yml -f deploy/digitalocean/compose.yml up -d --build --wait
-docker compose -f docker-compose.yml -f deploy/digitalocean/compose.yml run --rm setup
+docker compose -f docker-compose.yml -f deploy/digitalocean/compose.yml run --rm -it setup
 ```
 
 Caddy obtains a certificate once DNS and ports 80/443 are reachable. AirLLM's port 8080 stays
