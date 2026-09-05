@@ -64,4 +64,4 @@ ENV CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
     GW_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 EXPOSE 8080
 ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
-CMD ["/app/deploy/docker/start.sh"]
+CMD ["/app/deploy/docker/start.sh", "all-in-one"]

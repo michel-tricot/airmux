@@ -75,12 +75,23 @@ def service_action(compose, action, service):
     docker(action, container)
 
 
-def assert_unprivileged(compose, gateway):
-    container = docker(*compose, "ps", "-q", gateway)
+def assert_unprivileged(compose, service, expected):
+    container = docker(*compose, "ps", "-q", service)
     processes = docker("top", container, "-eo", "pid,user,args")
     servers = [process for process in processes.splitlines()[1:] if any(name in process for name in ("airllmcp", "airllmdp", "nginx:"))]
     assert servers
     assert all(server.split()[1] in {"airllm", "10001"} for server in servers), processes
+    assert all(sum(command in server for server in servers) == 1 for command in expected), processes
+
+
+def assert_process_layout(compose, gateways, compact):
+    if compact:
+        assert_unprivileged(compose, gateways[0], ("airllmcp serve", "airllmdp serve", "nginx: master"))
+        return
+    assert_unprivileged(compose, "control-plane", ("airllmcp serve",))
+    for gateway in gateways:
+        assert_unprivileged(compose, gateway, ("airllmdp serve",))
+    assert_unprivileged(compose, "console", ("nginx: master",))
 
 
 def assert_quickstart(compose, compact):
@@ -144,7 +155,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     eventually(lambda: len(payload(client.get("/api/v1/instance/data-planes"))) == len(gateways))
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
-    assert_unprivileged(compose, gateway)
+    assert_process_layout(compose, gateways, compact)
     assert_quickstart(compose, compact)
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
