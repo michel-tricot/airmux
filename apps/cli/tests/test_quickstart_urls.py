@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
 import httpx
 import pytest
 import typer
+import yaml
 from typer.testing import CliRunner
 
 from api_models import InferenceKeyMintedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
@@ -95,8 +97,8 @@ def _plain_invocation():
 @pytest.fixture
 def _no_ambient_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
 
 @pytest.mark.usefixtures("_no_ambient_config")
@@ -117,8 +119,8 @@ def test_an_explicit_url_beats_dev():
 def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
     """A development run must not be redirected by whatever org the machine last logged into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     from cli.profiles import Profile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
 
     upsert_profile("prod", Profile(scope="instance", control_plane_url="https://prod.example.com", token="t"))
@@ -166,8 +168,8 @@ def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
     """airllm.yml configures the servers, not the CLI. Reading it would point a run at whatever
     checkout it happened to start in rather than at the deployment the user signed into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     (tmp_path / "airllm.yml").write_text("data_plane:\n  control_plane:\n    url: http://somewhere.else:9999\n", encoding="utf-8")
 
     assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
@@ -201,6 +203,21 @@ def test_quickstart_keeps_an_existing_provider_credential(monkeypatch):
     assert result[0].provider == "openai"
     assert result[0].source == "already configured"
     assert client.posts == []
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        provider["provider_id"]
+        for provider in yaml.safe_load((Path(__file__).resolve().parents[3] / "taxonomy/taxonomy.yml").read_text())["providers"]
+    ],
+)
+def test_quickstart_reads_environment_keys_for_every_catalog_provider(monkeypatch, name):
+    variable = f"{name.upper()}_API_KEY"
+    monkeypatch.setenv(variable, f"test-{name}-key")
+    monkeypatch.setattr("cli.auth.sys.stdin.isatty", lambda: False)
+
+    assert auth._provider_key(name, {}) == (f"test-{name}-key", f"found in {variable}")
 
 
 def test_quickstart_reports_an_existing_disabled_provider_credential(monkeypatch):
@@ -276,13 +293,24 @@ class QuickstartContext:
         return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": {"claimed": self.claimed}})
 
 
-def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error: str = "", urls: list[str] | None = None):
+def _quickstart(
+    monkeypatch,
+    *,
+    claimed: bool,
+    model: str | None,
+    gateway_error: str = "",
+    urls: list[str] | None = None,
+):
     context = QuickstartContext(claimed)
     login_calls = []
     saved = {}
     verified = []
     monkeypatch.setattr(httpx, "Client", lambda **_kwargs: context)
-    monkeypatch.setattr(auth, "_login_or_signup", lambda _client, is_claimed, email, password: login_calls.append((is_claimed, email, password)))
+    monkeypatch.setattr(
+        auth,
+        "_login_or_signup",
+        lambda _client, is_claimed, email, password, token: login_calls.append((is_claimed, email, password, token)),
+    )
     monkeypatch.setattr(
         auth,
         "_personal_org",
@@ -324,13 +352,20 @@ def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error:
     monkeypatch.setattr(auth, "verify_gateway", verify)
     result = runner.invoke(
         app,
-        ["quickstart", "--email", "owner@example.com", "--password", "password123", *(urls or ["--gateway-url", "https://gateway.example.com/"])],
+        [
+            "quickstart",
+            "--email",
+            "owner@example.com",
+            "--password",
+            "password123",
+            *(urls or ["--gateway-url", "https://gateway.example.com/"]),
+        ],
     )
     return result, login_calls, saved, verified
 
 
 def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, saved, verified = _quickstart(
         monkeypatch,
@@ -347,12 +382,12 @@ def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
 
 
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, login_calls, saved, verified = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
 
     assert result.exit_code == 0, result.output
-    assert login_calls == [(True, "owner@example.com", "password123")]
+    assert login_calls == [(True, "owner@example.com", "password123", "")]
     assert saved["values"].gateway_url == "https://gateway.example.com"
     assert verified == [("https://gateway.example.com", "inference-token", "anthropic/claude-test")]
     assert "inference-token" in result.stdout
@@ -363,7 +398,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
 
 
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(monkeypatch, claimed=False, model=None)
 
@@ -374,8 +409,27 @@ def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(
     assert verified == []
 
 
+def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tmp_path):
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
+
+    result, login_calls, _saved, _verified = _quickstart(
+        monkeypatch,
+        claimed=False,
+        model=None,
+        urls=[
+            "--claim-token",
+            "a-secure-instance-claim-token-123456",
+            "--gateway-url",
+            "https://gateway.example.com/",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert login_calls == [(False, "owner@example.com", "password123", "a-secure-instance-claim-token-123456")]
+
+
 def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(
         monkeypatch,

@@ -38,8 +38,8 @@ See `.env.example`. Key variables:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `GW_ACCESS_KEY` | Bearer for control-plane APIs |
-| `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
+| `AIRLLM_ACCESS_KEY` | Bearer for control-plane APIs |
+| `AIRLLM_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRLLM_API_KEY` | Caller inference key |
 
 `uv run airllmcp bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.

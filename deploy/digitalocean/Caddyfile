@@ -1,0 +1,5 @@
+{$AIRLLM_DOMAIN} {
+	reverse_proxy airllm:8080 {
+		flush_interval -1
+	}
+}

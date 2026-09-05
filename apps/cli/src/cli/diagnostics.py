@@ -59,7 +59,7 @@ def _profile_rows() -> list[dict[str, object]]:
 
 def resolve_gateway_url(override: str = "") -> str:
     profile = load_active_profile()
-    return override or os.environ.get("GW_GATEWAY_URL") or (profile.gateway_url if profile is not None else None) or "http://localhost:8080"
+    return override or os.environ.get("AIRLLM_GATEWAY_URL") or (profile.gateway_url if profile is not None else None) or "http://localhost:8080"
 
 
 @profiles_app.command("list")
@@ -95,14 +95,16 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
     config = load_config()
     profile = active_profile(config)
+    organization = os.environ.get("AIRLLM_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else "")
+    authentication = "environment" if os.environ.get("AIRLLM_ACCESS_KEY") else "profile" if profile is not None and profile.token else "none"
     rows = [
         {
             "profile": config.active or "none",
             "control_plane": resolve_control_plane_url(),
             "gateway": resolve_gateway_url(),
-            "organization": os.environ.get("GW_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else ""),
+            "organization": organization,
             "workspace": (profile.workspace_name or profile.workspace) if profile is not None and profile.scope == "org" else "",
-            "authentication": "environment" if os.environ.get("GW_ACCESS_KEY") else "profile" if profile is not None and profile.token else "none",
+            "authentication": authentication,
         }
     ]
     print_rows("status", rows, STATUS_COLS, fmt)
@@ -125,7 +127,7 @@ def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict[str
 
 def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, str]]:
     profile = load_active_profile()
-    token = os.environ.get("GW_ACCESS_KEY") or (profile.token if profile is not None else None)
+    token = os.environ.get("AIRLLM_ACCESS_KEY") or (profile.token if profile is not None else None)
     path = config_path()
     if path.exists():
         private = stat.S_IMODE(path.stat().st_mode) == PRIVATE_FILE_MODE
@@ -147,7 +149,7 @@ def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, 
 @app.command(rich_help_panel=SETUP)
 def doctor(
     control_plane_url: str = typer.Option("", help="Control plane URL; defaults to the active context"),
-    gateway_url: str = typer.Option("", help="Gateway URL; defaults to GW_GATEWAY_URL or the active context"),
+    gateway_url: str = typer.Option("", help="Gateway URL; defaults to AIRLLM_GATEWAY_URL or the active context"),
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """Check local credentials, control-plane access, and gateway readiness."""

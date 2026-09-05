@@ -13,14 +13,14 @@ jobs:
     environment: production
     env:
       AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
-      FLY_BACKEND_APP: ${{ vars.FLY_BACKEND_APP }}
-      FLY_CONSOLE_APP: ${{ vars.FLY_CONSOLE_APP }}
-      FLY_REGION: ${{ vars.FLY_REGION }}
+      FLY_APP: ${{ vars.FLY_APP }}
     steps:
       - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: ./deploy/fly/deploy.sh
+      - run: >-
+          flyctl deploy --config deploy/fly/fly.toml --app "$FLY_APP"
+          --remote-only --ha=false
+          --env "AIRLLM_CONSOLE_URL=${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}"
         env:
-          FLY_BACKEND_API_TOKEN: ${{ secrets.FLY_BACKEND_API_TOKEN }}
-          FLY_CONSOLE_API_TOKEN: ${{ secrets.FLY_CONSOLE_API_TOKEN }}
-      - run: ./deploy/fly/smoke.sh
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - run: AIRLLM_PUBLIC_URL="${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}" ./deploy/smoke.sh

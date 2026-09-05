@@ -1,99 +1,56 @@
-# The provider keys both planes resolve credentials from, named once so they cannot drift apart:
-# the control plane accepts a credential only for a key it can already see, and the data plane
-# spends it. One entry per provider in taxonomy.yml; unset ones simply have no credential.
-x-provider-keys: &provider-keys
-  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-  XAI_API_KEY: ${XAI_API_KEY:-}
-  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-  MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
-  GROQ_API_KEY: ${GROQ_API_KEY:-}
-
 services:
   postgres:
     image: postgres:16
-    profiles: ["backend"]
     environment:
       POSTGRES_USER: airllm
-      POSTGRES_PASSWORD: airllm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airllm}
       POSTGRES_DB: airllm
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airllm"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "airllm"]
       interval: 5s
-      start_period: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
 
-  control-plane:
-    build: .
-    profiles: ["backend"]
-    # The one checked-in airllm.yml serves the checkout and this stack: the working directory is the shared
-    # /state volume, so its relative refs land here, and the values that differ come in as variables below.
-    command: >
-      sh -c '
-        umask 077;
-        mkdir -p /state/.airllm;
-        if [ -n "$$GW_DATAPLANE_TOKEN" ]; then
-          printf %s "$$GW_DATAPLANE_TOKEN" > /state/.airllm/dataplane.key;
-        else
-          [ -f /state/.airllm/dataplane.key ] || airllmcp bootstrap-keygen;
-        fi;
-        airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
+  airllm:
+    image: ${AIRLLM_IMAGE:-airllm:local}
+    build:
+      context: .
+      target: all-in-one
     environment:
-      <<: *provider-keys
-      DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
-      GW_CONSOLE_URL: http://localhost:5000
-      GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
+      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
+      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
+    ports:
+      - "${AIRLLM_PORT:-8080}:8080"
     volumes:
       - state:/state
-      - ./airllm.yml:/state/airllm.yml:ro
-      - ./taxonomy/taxonomy.yml:/state/taxonomy.yml:ro
-    ports:
-      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
       interval: 5s
-      start_period: 10s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 40s
+    restart: unless-stopped
 
-  data-plane:
-    profiles: ["backend"]
-    build: .
-    command: airllmdp serve --host 0.0.0.0 --port 8080
+  setup:
+    profiles: [setup]
+    image: ${AIRLLM_IMAGE:-airllm:local}
+    env_file:
+      - path: .env
+        required: false
     environment:
-      <<: *provider-keys
-      GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AIRLLM_CLI_CONFIG: /state/cli.toml
+    command: ["airllm", "quickstart", "--url", "http://airllm:8080"]
     volumes:
       - state:/state
-      - ./airllm.yml:/state/airllm.yml:ro
-    ports:
-      - "8080:8080"
     depends_on:
-      control-plane:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/readyz')"]
-      interval: 5s
-      start_period: 15s
-
-  console:
-    build:
-      context: .
-      dockerfile: apps/console/Dockerfile
-    profiles: ["frontend"]
-    ports:
-      - "5000:80"
-    depends_on:
-      control-plane:
-        condition: service_healthy
-      data-plane:
+      airllm:
         condition: service_healthy
 
 volumes:

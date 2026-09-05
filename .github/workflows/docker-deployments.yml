@@ -1,0 +1,38 @@
+name: docker-deployments
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-deployments-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compose-file: [docker-compose.yml, docker-compose.split.yml]
+    env:
+      DEPLOYMENT_PROJECT: airllm-test
+      DEPLOYMENT_FILE: ${{ matrix.compose-file }}
+      DEPLOYMENT_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
+      - if: matrix.compose-file == 'docker-compose.yml'
+        run: echo 'DEPLOYMENT_COMPACT_IMAGE=airllm:local' >> "$GITHUB_ENV"
+      - run: uv run pytest tests/deployment
+      - if: failure()
+        run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color
+      - if: always()
+        run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" down -v

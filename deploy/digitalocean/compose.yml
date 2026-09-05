@@ -1,0 +1,27 @@
+services:
+  airllm:
+    ports: !reset []
+    environment:
+      AIRLLM_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
+      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:?Set a random claim token}
+
+  caddy:
+    image: caddy:2
+    environment:
+      AIRLLM_DOMAIN: ${AIRLLM_DOMAIN:?Set the public domain}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/digitalocean/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy-config:/config
+    depends_on:
+      airllm:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  certificates:
+  caddy-config:

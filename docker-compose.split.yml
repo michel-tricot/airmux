@@ -1,0 +1,107 @@
+x-gateway: &gateway
+  image: ${AIRLLM_DATA_PLANE_IMAGE:-airllm-data-plane:local}
+  init: true
+  depends_on:
+    control-plane:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz')"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+  networks:
+    default:
+      aliases: [data-plane]
+  stop_grace_period: 40s
+  restart: unless-stopped
+
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+    volumes:
+      - split-pgdata:/var/lib/postgresql/data
+
+  control-plane:
+    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
+    build:
+      context: .
+      target: control-plane
+    environment:
+      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
+      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - runtime-credentials:/state/runtime
+      - provider-secrets:/state/secrets
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  setup:
+    profiles: [setup]
+    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AIRLLM_CLI_CONFIG: /state/cli.toml
+    command: ["airllm", "quickstart", "--url", "http://console:8080"]
+    volumes:
+      - cli-state:/state
+    depends_on:
+      console:
+        condition: service_healthy
+
+  data-plane-1:
+    <<: *gateway
+    build:
+      context: .
+      target: data-plane
+    volumes:
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets:ro
+      - gateway-1:/state/data-plane
+
+  data-plane-2:
+    <<: *gateway
+    volumes:
+      - runtime-credentials:/state/runtime:ro
+      - provider-secrets:/state/secrets:ro
+      - gateway-2:/state/data-plane
+
+  console:
+    image: ${AIRLLM_CONSOLE_IMAGE:-airllm-console:local}
+    build:
+      context: .
+      target: console
+    environment:
+      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "${AIRLLM_PORT:-8080}:8080"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  split-pgdata:
+  runtime-credentials:
+  provider-secrets:
+  gateway-1:
+  gateway-2:
+  cli-state:

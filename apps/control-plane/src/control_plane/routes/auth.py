@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from hmac import compare_digest
+from typing import Annotated, Literal
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contract import PLAYGROUND_COOKIE
@@ -129,15 +130,35 @@ async def login(body: LoginIn, request: Request, response: Response) -> Envelope
 
 
 @router.post("/signup", tags=["Auth"], dependencies=[public()])
-async def signup(body: SignupIn, request: Request, response: Response) -> Envelope[MeOut]:
+async def signup(
+    body: SignupIn,
+    request: Request,
+    response: Response,
+    claim_token: Annotated[
+        str | None,
+        Header(
+            alias="X-AirLLM-Claim-Token",
+            min_length=32,
+            max_length=1024,
+            description="Secret used only to create the first owner of a new deployment",
+        ),
+    ] = None,
+) -> Envelope[MeOut]:
     """Create a human account and start a browser session.
 
     The first human account on a new deployment becomes the instance owner. Later accounts require
     an organization membership or instance role before they can access managed resources.
+    A configured claim token is required only while creating the first account.
     """
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
-    instance_role = InstanceRole.owner if await User.claims_the_instance() else None
+    claims_instance = await User.claims_the_instance()
+    expected = request.app.state.settings.claim_token
+    if claims_instance and expected is not None:
+        supplied = claim_token or ""
+        if not compare_digest(supplied, expected.get_secret_value()):
+            raise HTTPException(status_code=403, detail="The instance claim token is missing or invalid")
+    instance_role = InstanceRole.owner if claims_instance else None
     user = User(email=body.email, name=body.name or body.email, instance_role=instance_role, service_account=False)
     await set_actor(user.id)
     await user.save()

@@ -178,7 +178,7 @@ def configured_model(client: httpx.Client) -> str | None:
     return models[0] if models else None
 
 
-def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str) -> None:
+def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str, claim_token: str) -> None:
     if claimed:
         account = _payload_or_die(client.post("/api/v1/auth/login", json={"email": email, "password": password}), "sign in", MeOut)
         if account.instance_role is None or account.instance_role.root != "owner":
@@ -186,7 +186,8 @@ def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: 
             raise typer.Exit(1)
         _step(f"Signed in as [bold]{email}[/bold]")
         return
-    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up", MeOut)
+    headers = {"X-AirLLM-Claim-Token": claim_token} if claim_token else None
+    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}, headers=headers), "sign up", MeOut)
     _step(f"Account [bold]{email}[/bold]")
 
 
@@ -269,18 +270,22 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
             time.sleep(0.5)
         else:
             return "gateway did not become ready"
-        try:
-            response = gateway.post(
-                "/inf/v1/chat/completions",
-                headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
-                    "stream": False,
-                },
-            )
-        except httpx.HTTPError as error:
-            return str(error)
+        for _ in range(20):
+            try:
+                response = gateway.post(
+                    "/inf/v1/chat/completions",
+                    headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
+                    json={
+                        "model": model,
+                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
+                        "stream": False,
+                    },
+                )
+            except httpx.HTTPError as error:
+                return str(error)
+            if response.status_code != httpx.codes.UNAUTHORIZED or _gateway_error(response) != "invalid_token":
+                break
+            time.sleep(0.5)
     return "" if response.is_success else f"HTTP {response.status_code}: {_gateway_error(response)}"
 
 
@@ -305,6 +310,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
+    claim_token: str = typer.Option("", help="Secret required to claim a new public installation"),
 ) -> None:
     """Set up or resume an instance and verify a new API key through the gateway."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
@@ -313,7 +319,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=control_plane_url, timeout=10.0, headers=CSRF) as c:
         claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
-        _login_or_signup(c, claimed, email, password)
+        _login_or_signup(c, claimed, email, password, claim_token or os.environ.get("AIRLLM_CLAIM_TOKEN", ""))
         organization = _personal_org(c, email, org)
         org_id, org_name = organization.id, organization.name
         token = _organization_access_key(c, str(org_id))
@@ -432,8 +438,8 @@ def login(
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
     """Switch to another organization."""
-    if os.environ.get("GW_ACCESS_KEY"):
-        console.print("[yellow]GW_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
+    if os.environ.get("AIRLLM_ACCESS_KEY"):
+        console.print("[yellow]AIRLLM_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in config.profiles:
         set_active(name)

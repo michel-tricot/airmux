@@ -27,7 +27,7 @@ runner = CliRunner()
 
 def test_profile_config_rejects_invalid_known_fields(tmp_path, monkeypatch):
     path = tmp_path / "config.toml"
-    monkeypatch.setenv("GW_CLI_CONFIG", str(path))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(path))
     path.write_text('[profiles.acme]\nscope = "instance"\ntoken = 7\n', encoding="utf-8")
     with pytest.raises(InvalidConfigError, match=r"profiles\.acme\.token: Input should be a valid string") as raised:
         load_config()
@@ -36,7 +36,7 @@ def test_profile_config_rejects_invalid_known_fields(tmp_path, monkeypatch):
 
 def test_cli_reports_invalid_config_without_a_traceback_or_secrets(tmp_path, monkeypatch, capsys):
     path = tmp_path / "config.toml"
-    monkeypatch.setenv("GW_CLI_CONFIG", str(path))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(path))
     path.write_text('[profiles.acme]\ntoken = "secret-token"\n', encoding="utf-8")
 
     monkeypatch.setattr(sys, "argv", ["airllm", "status"])
@@ -66,7 +66,7 @@ def test_profile_states_are_structural(profile):
 
 
 def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     assert load_config() == CliConfig()
     assert load_active_profile() is None
 
@@ -88,14 +88,14 @@ def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
 
 def test_config_rejects_unknown_settings(tmp_path, monkeypatch):
     path = tmp_path / "config.toml"
-    monkeypatch.setenv("GW_CLI_CONFIG", str(path))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(path))
     path.write_text('[settings]\ncolor = "never"\n', encoding="utf-8")
     with pytest.raises(InvalidConfigError, match="settings: Extra inputs are not permitted"):
         load_config()
 
 
 def test_url_profile_updates_the_same_name_on_the_same_deployment(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     first = {
         "control_plane_url": "https://airllm.example.com",
         "scope": "org",
@@ -111,7 +111,7 @@ def test_url_profile_updates_the_same_name_on_the_same_deployment(tmp_path, monk
 
 
 def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     local = {"control_plane_url": "http://127.0.0.1:8000", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "local"}
     fly = {"control_plane_url": "https://airllm-example.fly.dev", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "fly"}
 
@@ -127,7 +127,7 @@ def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monk
 
 
 def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     organization = {
         "control_plane_url": "https://airllm.example.com",
         "scope": "org",
@@ -147,14 +147,14 @@ def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_pa
 
 
 def test_profile_selection_rejects_an_unknown_name(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     with pytest.raises(KeyError):
         set_active("missing")
 
 
 def test_removing_the_active_profile_selects_the_next_profile(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile("acme", Profile(scope="instance", token="first"))
     upsert_profile("beta", Profile(scope="instance", token="second"))
 
@@ -167,7 +167,7 @@ def test_removing_the_active_profile_selects_the_next_profile(tmp_path, monkeypa
 
 
 def test_profile_commands_are_discoverable_and_never_print_tokens(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
         Profile(

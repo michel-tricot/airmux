@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
 
+from control_plane.config import DatabaseConfig, Settings
 from control_plane.models import User, set_actor
 
 PASSWORD = "correct horse battery"
@@ -24,6 +25,38 @@ def test_the_first_human_claims_the_instance(tmp_path):
         assert founder.json()["data"]["instance_role"] == "owner"
 
         assert c.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is True
+
+
+def test_a_configured_claim_token_protects_the_first_owner(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    cp.app.state.settings = Settings(
+        database=DatabaseConfig(url=cp.db_url),
+        secrets=cp.app.state.settings.secrets,
+        claim_token="a-secure-instance-claim-token-123456",
+    )
+    with TestClient(cp.app) as c:
+        missing = _signup(c, "attacker@example.com")
+        wrong = c.post(
+            "/api/v1/auth/signup",
+            json={"email": "attacker@example.com", "name": "attacker@example.com", "password": PASSWORD},
+            headers={"X-AirLLM-Claim-Token": "a-different-secure-claim-token-123"},
+        )
+        founder = c.post(
+            "/api/v1/auth/signup",
+            json={"email": "founder@example.com", "name": "founder@example.com", "password": PASSWORD},
+            headers={"X-AirLLM-Claim-Token": "a-secure-instance-claim-token-123456"},
+        )
+
+        assert missing.status_code == 403
+        assert wrong.status_code == 403
+        assert c.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is True
+        assert founder.status_code == 200
+        assert founder.json()["data"]["instance_role"] == "owner"
+
+        c.post("/api/v1/auth/logout", headers={"X-Requested-With": "XMLHttpRequest"})
+        later = _signup(c, "later@example.com")
+        assert later.status_code == 200
+        assert later.json()["data"]["instance_role"] is None
 
 
 def test_later_signups_are_ordinary_accounts(tmp_path):

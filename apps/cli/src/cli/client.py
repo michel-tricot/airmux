@@ -34,7 +34,7 @@ def resolve_control_plane_url(override: str = "") -> str:
         return override
     if invocation.dev:
         return LOCAL_CONTROL_PLANE_URL
-    if url := os.environ.get("GW_CONTROL_PLANE_URL"):
+    if url := os.environ.get("AIRLLM_CONTROL_PLANE_URL"):
         return url
     profile = load_active_profile()
     if profile and profile.control_plane_url:
@@ -50,20 +50,20 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
     profile = load_active_profile()
-    environment_token = os.environ.get("GW_ACCESS_KEY")
+    environment_token = os.environ.get("AIRLLM_ACCESS_KEY")
     selected_token = token or environment_token or (profile.token if profile is not None else None)
     if not selected_token:
-        console.print("[red]No access key available. Run [bold]airllm login[/bold] or set GW_ACCESS_KEY.[/red]")
+        console.print("[red]No access key available. Run [bold]airllm login[/bold] or set AIRLLM_ACCESS_KEY.[/red]")
         raise typer.Exit(1)
     return _bearer_client(str(selected_token), control_plane_url)
 
 
 def resolve_org_id(override: str = "") -> str:
     profile = load_active_profile()
-    selected_org = override or os.environ.get("GW_ORG_ID") or (profile.org_id if profile is not None and profile.scope == "org" else None)
+    selected_org = override or os.environ.get("AIRLLM_ORG_ID") or (profile.org_id if profile is not None and profile.scope == "org" else None)
     if selected_org:
         return str(selected_org)
-    console.print("[red]No organization selected. Pass --org, set GW_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
+    console.print("[red]No organization selected. Pass --org, set AIRLLM_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
     raise typer.Exit(1)
 
 

@@ -48,7 +48,7 @@ def _table(title: str, headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]
 
 def _database_url(config: str) -> str:
     """Load the database alone for commands that do not need full application settings."""
-    os.environ["GW_CONFIG"] = config
+    os.environ["AIRLLM_CONFIG"] = config
     return database_url()
 
 
@@ -67,7 +67,7 @@ def bootstrap_keygen(out: str = typer.Option(".airllm/dataplane.key", "--out", h
 
 @app.command()
 def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: str = "airllm.yml") -> None:
-    os.environ["GW_CONFIG"] = config
+    os.environ["AIRLLM_CONFIG"] = config
     if dev:
         run_migrations()
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)

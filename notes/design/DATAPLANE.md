@@ -285,7 +285,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`airllmdp serve` sets `GW_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`airllmdp serve` sets `AIRLLM_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -351,7 +351,7 @@ data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
-      url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
@@ -392,13 +392,13 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `GW_CONFIG`, defaulting to `airllm.yml`.
+The config loader reads the `data_plane` section from `AIRLLM_CONFIG`, defaulting to `airllm.yml`.
 Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
 `:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`airllmdp serve --dev` sets `GW_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`airllmdp serve --dev` sets `AIRLLM_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state

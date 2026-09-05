@@ -31,7 +31,7 @@ def test_login_url_is_exclusive_with_split_urls(split_option):
 )
 @respx.mock
 def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, monkeypatch, stored_url, expected_authorization):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     upsert_profile(
         "old",
@@ -88,7 +88,7 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
 
 @respx.mock
 def test_login_saves_instance_access_without_an_organization(tmp_path, monkeypatch):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     respx.post("https://cp.example/api/v1/auth/cli/start").mock(
         return_value=httpx.Response(

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useSignup, useClaim, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
@@ -12,6 +12,7 @@ const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
   name: z.string(),
   password: z.string().min(1, 'Password is required'),
+  claimToken: z.string(),
 });
 
 const signupSchema = loginSchema.extend({
@@ -43,8 +44,9 @@ export default function Login({
 
   const form = useForm<Credentials>({
     resolver: zodResolver(mode === 'signup' ? signupSchema : loginSchema),
-    defaultValues: { email: initialEmail, name: '', password: '' },
+    defaultValues: { email: initialEmail, name: '', password: '', claimToken: '' },
   });
+  const claimToken = useWatch({ control: form.control, name: 'claimToken' });
 
   const onSuccess = (me: MeOut) => queryClient.setQueryData(getMeQueryKey(), me);
   const login = useLogin({
@@ -53,6 +55,7 @@ export default function Login({
     },
   });
   const signup = useSignup({
+    request: claimToken ? { headers: { 'X-AirLLM-Claim-Token': claimToken } } : undefined,
     mutation: {
       onSuccess,
       meta: { silentError: true },
@@ -101,7 +104,7 @@ export default function Login({
                 : mode === 'login'
                   ? 'Sign in with your account credentials.'
                   : claim?.claimed === false
-                    ? 'The first account becomes the administrator.'
+                    ? 'Enter the deployment claim token for a public installation. Local Docker does not require one.'
                     : 'You can join or create an organization after signing up.')}
           </p>
         </div>
@@ -134,19 +137,36 @@ export default function Login({
             ) : (
               <>
                 {mode === 'signup' && (
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Jane Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Jane Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    {claim?.claimed === false && (
+                      <FormField
+                        control={form.control}
+                        name="claimToken"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Instance claim token</FormLabel>
+                            <FormControl>
+                              <Input type="password" autoComplete="off" placeholder="AIRLLM_CLAIM_TOKEN" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
+                  </>
                 )}
 
                 <FormField

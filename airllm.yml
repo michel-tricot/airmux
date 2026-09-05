@@ -10,7 +10,7 @@ control_plane:
   bootstrap:
     # Generate once with: uv run airllmcp bootstrap-keygen
     token: ${file:${var:cache_dir}/dataplane.key}
-  console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
+  console_url: ${env:AIRLLM_CONSOLE_URL:-http://127.0.0.1:5000}
   secrets:
     # One file per credential under root, owner-readable only. Both planes must name the same
     # store, because the control plane writes what the data plane reads, so root has to be a
@@ -23,7 +23,7 @@ data_plane:
   bundle:
     kind: remote # or local, with path pointing at a hand-written bundle file
     control_plane: &control_plane
-      url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       # Authorized by the control plane before it reports healthy
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
