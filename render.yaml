@@ -8,7 +8,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     dockerCommand: sh -ec 'export GW_CONSOLE_URL="${GW_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh'
-    healthCheckPath: /api/v1/instance/oss/claim
+    healthCheckPath: /healthz
     autoDeployTrigger: "off"
     disk:
       name: airllm-state
@@ -21,6 +21,8 @@ services:
         fromDatabase:
           name: airllm-postgres
           property: connectionString
+      - key: AIRLLM_CLAIM_TOKEN
+        sync: false
 
 databases:
   - name: airllm-postgres

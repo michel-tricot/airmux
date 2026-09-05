@@ -3,6 +3,7 @@ services:
     ports: !reset []
     environment:
       GW_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
+      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:?Set a random claim token}
 
   caddy:
     image: caddy:2

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 import uuid
 
 import pytest
@@ -31,3 +32,26 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
         assert result.value.returncode == 23
     finally:
         docker("volume", "rm", volume)
+
+
+def test_console_accepts_flys_ipv6_resolver():
+    image = os.environ.get("DEPLOYMENT_COMPACT_IMAGE")
+    if image is None:
+        pytest.skip("set DEPLOYMENT_COMPACT_IMAGE to a built all-in-one image")
+    container = docker(
+        "run",
+        "--detach",
+        "--rm",
+        "--env",
+        "NGINX_RESOLVER=fdaa::3",
+        "--env",
+        "GW_CONSOLE_URL=https://airllm.example.com",
+        "--entrypoint",
+        "/app/deploy/docker/start-console.sh",
+        image,
+    )
+    try:
+        time.sleep(1)
+        assert docker("inspect", "--format", "{{.State.Running}}", container) == "true"
+    finally:
+        docker("rm", "-f", container)

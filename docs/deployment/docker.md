@@ -4,11 +4,12 @@ Run from the repository root with Docker Compose 2.24.4 or newer:
 
 ```sh
 docker compose up -d --build --wait
-uv run airllm quickstart --url http://localhost:8080
+docker compose run --rm setup
 ```
 
-Install the CLI and add provider keys to `.env` as shown in the [quickstart](https://github.com/michel-tricot/airllm/blob/main/README.md#quickstart).
-The default stack has two containers: AirLLM and Postgres. Open http://localhost:8080 for the console.
+Add provider keys to `.env` as shown in the [quickstart](/docs#quickstart). The default stack keeps
+two containers running: AirLLM and Postgres. `setup` is a one-shot container that receives `.env`,
+stores provider keys through the API, and exits. Open http://localhost:8080 for the console.
 
 ## Ports and HTTPS
 
@@ -19,7 +20,9 @@ AIRLLM_PORT=9000 AIRLLM_PUBLIC_URL=http://localhost:9000 docker compose up -d --
 ```
 
 For a public deployment, terminate HTTPS at your ingress and set `AIRLLM_PUBLIC_URL` to its
-HTTPS origin. The [DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for this.
+HTTPS origin. Generate `AIRLLM_CLAIM_TOKEN` with `openssl rand -hex 24` before starting the stack.
+The application refuses to expose an unclaimed public installation without it. The
+[DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for HTTPS.
 
 ## State and updates
 
@@ -47,7 +50,8 @@ streaming, usage export, restarts, and gateway state. To reproduce against a fre
 ```sh
 AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
   docker compose -p airllm-test up -d --build --wait
-DEPLOYMENT_PROJECT=airllm-test DEPLOYMENT_FILE=docker-compose.yml \
+AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
+  DEPLOYMENT_PROJECT=airllm-test DEPLOYMENT_FILE=docker-compose.yml \
   DEPLOYMENT_URL=http://localhost:18080 \
   uv run pytest tests/deployment
 ```

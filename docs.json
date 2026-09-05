@@ -17,7 +17,6 @@
           "docs/deployment/index",
           "docs/deployment/docker",
           "docs/deployment/fly",
-          "docs/deployment/railway",
           "docs/deployment/render",
           "docs/deployment/digitalocean",
           "docs/deployment/scaling"
@@ -26,6 +25,10 @@
       {
         "group": "Development",
         "pages": ["docs/development"]
+      },
+      {
+        "group": "Technical design",
+        "pages": ["notes/design/DATAPLANE", "notes/design/AUTHORITY", "notes/design/BYOK"]
       }
     ]
   }

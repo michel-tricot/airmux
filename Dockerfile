@@ -8,16 +8,21 @@ COPY apps/cli/pyproject.toml apps/cli/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
 COPY apps/data-plane/pyproject.toml apps/data-plane/
 RUN uv sync --only-group backend --frozen --no-install-workspace
-COPY lib lib
-COPY apps/cli apps/cli
-COPY apps/control-plane apps/control-plane
-COPY apps/data-plane apps/data-plane
+COPY lib/api-models lib/api-models
+COPY lib/contract lib/contract
+COPY apps/cli/src apps/cli/src
+COPY apps/control-plane/alembic.ini apps/control-plane/
+COPY apps/control-plane/migrations apps/control-plane/migrations
+COPY apps/control-plane/src apps/control-plane/src
+COPY apps/data-plane/src apps/data-plane/src
 RUN uv sync --only-group backend --frozen
 
 FROM oven/bun:1 AS console-build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.json tsconfig.base.json ./
-COPY lib lib
+COPY lib/api-client-react lib/api-client-react
+COPY lib/api-spec lib/api-spec
+COPY lib/api-zod lib/api-zod
 COPY apps/console apps/console
 RUN bun install --frozen-lockfile
 RUN bun run --filter '@workspace/gateway-console' build

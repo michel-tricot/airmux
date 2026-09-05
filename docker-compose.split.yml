@@ -1,14 +1,5 @@
-name: airllm
-
-x-provider-env: &provider-env
-  - path: .env
-    required: false
-
 x-gateway: &gateway
-  build:
-    context: .
-    target: data-plane
-  env_file: *provider-env
+  image: ${AIRLLM_DATA_PLANE_IMAGE:-airllm-data-plane:local}
   init: true
   depends_on:
     control-plane:
@@ -29,15 +20,18 @@ services:
     extends:
       file: docker-compose.yml
       service: postgres
+    volumes:
+      - split-pgdata:/var/lib/postgresql/data
 
   control-plane:
+    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
     build:
       context: .
       target: control-plane
-    env_file: *provider-env
     environment:
       DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
       GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - runtime-credentials:/state/runtime
@@ -53,8 +47,26 @@ services:
       retries: 30
     restart: unless-stopped
 
+  setup:
+    profiles: [setup]
+    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GW_CLI_CONFIG: /state/cli.toml
+    command: ["airllm", "quickstart", "--url", "http://console:8080"]
+    volumes:
+      - cli-state:/state
+    depends_on:
+      console:
+        condition: service_healthy
+
   data-plane-1:
     <<: *gateway
+    build:
+      context: .
+      target: data-plane
     volumes:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro
@@ -68,6 +80,7 @@ services:
       - gateway-2:/state/data-plane
 
   console:
+    image: ${AIRLLM_CONSOLE_IMAGE:-airllm-console:local}
     build:
       context: .
       target: console
@@ -86,8 +99,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  split-pgdata:
   runtime-credentials:
   provider-secrets:
   gateway-1:
   gateway-2:
+  cli-state:

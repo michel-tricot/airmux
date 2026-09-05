@@ -8,24 +8,23 @@ routing, scoped provider credentials, inference keys, and usage tracking.
 
 ## Quickstart
 
-You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/), and a provider API key.
+You need Docker with Compose 2.24.4+ and a provider API key.
 
 ```sh
 git clone https://github.com/michel-tricot/airllm.git
 cd airllm
 cp .env.example .env
-uv sync --all-packages --frozen
 ```
 
 Add at least one provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
-uv run airllm quickstart --url http://localhost:8080
+docker compose run --rm setup
 ```
 
-`quickstart` creates or resumes your owner account, organization, and workspace. It imports
-missing provider credentials from `.env`, preserves existing credentials, and prints a new
+The one-shot `setup` container runs `airllm quickstart`. It creates or resumes your owner account,
+organization, and workspace, imports missing provider credentials from `.env`, and prints a new
 `AIRLLM_API_KEY` and a working curl command. It reports **Ready** after completing a real
 inference request, which uses your provider's API quota.
 
@@ -34,8 +33,8 @@ Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
 You can also manage provider credentials in the console, scoped to an organization or workspace.
 
 Open **[localhost:8080](http://localhost:8080)** for the console. The console, management API,
-and inference API share that address. Docker runs one AirLLM container plus Postgres; database
-initialization and gateway authentication happen automatically.
+and inference API share that address. Docker keeps two services running: AirLLM and Postgres.
+Provider keys enter only the one-shot setup container and are stored through the management API.
 
 `docker compose down` stops the stack and preserves its data. Adding `-v` deletes its volumes.
 
@@ -45,7 +44,7 @@ For a local gateway without Postgres or the console, use the standalone configur
 
 ```sh
 export OPENAI_API_KEY='your-provider-key'
-uv run airllmdp serve --config airllm.standalone.yml
+uv run --package data-plane --no-dev --frozen airllmdp serve --config airllm.standalone.yml
 ```
 
 In another terminal:
@@ -114,7 +113,6 @@ streaming, tools, and other integrations.
 | --- | --- |
 | [Docker](docs/deployment/docker.md) | One AirLLM container and Postgres |
 | [Fly.io](docs/deployment/fly.md) | One app and Machine, plus Managed Postgres |
-| [Railway](docs/deployment/railway.md) | Repository service, volume, and Postgres |
 | [Render](docs/deployment/render.md) | Deploy button with a checked-in Blueprint |
 | [DigitalOcean](docs/deployment/digitalocean.md) | Docker Droplet with automatic HTTPS |
 

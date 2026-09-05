@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 NGINX_RESOLVER=${NGINX_RESOLVER:-$(awk '$1 == "nameserver" { print $2; exit }' /etc/resolv.conf)}
+case "$NGINX_RESOLVER" in
+  \[*\]) ;;
+  *:*) NGINX_RESOLVER="[$NGINX_RESOLVER]" ;;
+esac
 PUBLIC_SCHEME=${GW_CONSOLE_URL%%:*}
 case "$PUBLIC_SCHEME" in
   http|https) ;;

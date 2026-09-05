@@ -293,13 +293,24 @@ class QuickstartContext:
         return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": {"claimed": self.claimed}})
 
 
-def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error: str = "", urls: list[str] | None = None):
+def _quickstart(
+    monkeypatch,
+    *,
+    claimed: bool,
+    model: str | None,
+    gateway_error: str = "",
+    urls: list[str] | None = None,
+):
     context = QuickstartContext(claimed)
     login_calls = []
     saved = {}
     verified = []
     monkeypatch.setattr(httpx, "Client", lambda **_kwargs: context)
-    monkeypatch.setattr(auth, "_login_or_signup", lambda _client, is_claimed, email, password: login_calls.append((is_claimed, email, password)))
+    monkeypatch.setattr(
+        auth,
+        "_login_or_signup",
+        lambda _client, is_claimed, email, password, token: login_calls.append((is_claimed, email, password, token)),
+    )
     monkeypatch.setattr(
         auth,
         "_personal_org",
@@ -341,7 +352,14 @@ def _quickstart(monkeypatch, *, claimed: bool, model: str | None, gateway_error:
     monkeypatch.setattr(auth, "verify_gateway", verify)
     result = runner.invoke(
         app,
-        ["quickstart", "--email", "owner@example.com", "--password", "password123", *(urls or ["--gateway-url", "https://gateway.example.com/"])],
+        [
+            "quickstart",
+            "--email",
+            "owner@example.com",
+            "--password",
+            "password123",
+            *(urls or ["--gateway-url", "https://gateway.example.com/"]),
+        ],
     )
     return result, login_calls, saved, verified
 
@@ -369,7 +387,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     result, login_calls, saved, verified = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
 
     assert result.exit_code == 0, result.output
-    assert login_calls == [(True, "owner@example.com", "password123")]
+    assert login_calls == [(True, "owner@example.com", "password123", "")]
     assert saved["values"].gateway_url == "https://gateway.example.com"
     assert verified == [("https://gateway.example.com", "inference-token", "anthropic/claude-test")]
     assert "inference-token" in result.stdout
@@ -389,6 +407,25 @@ def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(
     assert "Setup is incomplete" in result.stdout
     assert "Ready." not in result.stdout
     assert verified == []
+
+
+def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tmp_path):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+
+    result, login_calls, _saved, _verified = _quickstart(
+        monkeypatch,
+        claimed=False,
+        model=None,
+        urls=[
+            "--claim-token",
+            "a-secure-instance-claim-token-123456",
+            "--gateway-url",
+            "https://gateway.example.com/",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert login_calls == [(False, "owner@example.com", "password123", "a-secure-instance-claim-token-123456")]
 
 
 def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeypatch, tmp_path):

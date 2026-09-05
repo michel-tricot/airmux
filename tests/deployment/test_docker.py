@@ -83,29 +83,27 @@ def assert_unprivileged(compose, gateway):
     assert all(server.split()[1] in {"airllm", "10001"} for server in servers), processes
 
 
-def assert_quickstart(tmp_path):
-    (tmp_path / ".env").write_text("DEPLOYMENT_API_KEY=deployment-test-key\n")
-    result = subprocess.run(  # noqa: S603 test CLI with isolated credentials and profile
-        [
-            str(ROOT / ".venv/bin/airllm"),
-            "quickstart",
-            "--url",
-            os.environ["DEPLOYMENT_URL"],
-            "--email",
-            "owner@deployment.test",
-            "--password",
-            "deployment-password",
-        ],
-        cwd=tmp_path,
-        env={"PATH": os.environ["PATH"], "GW_CLI_CONFIG": str(tmp_path / "profile.toml")},
-        capture_output=True,
-        text=True,
-        check=False,
+def assert_quickstart(compose, compact):
+    service_url = "http://airllm:8080" if compact else "http://console:8080"
+    output = docker(
+        *compose,
+        "run",
+        "--rm",
+        "--no-TTY",
+        "--env",
+        "DEPLOYMENT_API_KEY=deployment-test-key",
+        "setup",
+        "airllm",
+        "quickstart",
+        "--url",
+        service_url,
+        "--email",
+        "owner@deployment.test",
+        "--password",
+        "deployment-password",
     )
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "Ready." in result.stdout
-    assert "DEPLOYMENT_API_KEY" in result.stdout
-    assert (tmp_path / "profile.toml").exists()
+    assert "Ready." in output
+    assert "DEPLOYMENT_API_KEY" in output
 
 
 def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
@@ -147,7 +145,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
     assert_unprivileged(compose, gateway)
-    assert_quickstart(tmp_path)
+    assert_quickstart(compose, compact)
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
     if not compact:

@@ -14,13 +14,12 @@ jobs:
     env:
       AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
       FLY_APP: ${{ vars.FLY_APP }}
-      FLY_REGION: ${{ vars.FLY_REGION }}
     steps:
       - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: >-
           flyctl deploy --config deploy/fly/fly.toml --app "$FLY_APP"
-          --primary-region "${FLY_REGION:-sjc}" --remote-only --ha=false
+          --remote-only --ha=false
           --env "GW_CONSOLE_URL=${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

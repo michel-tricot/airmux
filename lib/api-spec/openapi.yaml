@@ -396,15 +396,30 @@ paths:
 
         an organization membership or instance role before they can access managed resources.
 
+        A configured claim token is required only while creating the first account.
+
 
         Authentication: none.'
       operationId: signup
+      parameters:
+      - name: X-AirLLM-Claim-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 32
+            maxLength: 1024
+          - type: 'null'
+          description: Secret used only to create the first owner of a new deployment
+          title: X-Airllm-Claim-Token
+        description: Secret used only to create the first owner of a new deployment
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/SignupIn'
-        required: true
       responses:
         '200':
           description: Successful Response

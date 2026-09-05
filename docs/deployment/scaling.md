@@ -3,11 +3,11 @@
 Use the split layout when you need to restart or size the control plane and gateways independently:
 
 ```sh
-docker compose -f docker-compose.split.yml up -d --build --wait
-uv run airllm quickstart --url http://localhost:8080
+docker compose -p airllm-split -f docker-compose.split.yml up -d --build --wait
+docker compose -p airllm-split -f docker-compose.split.yml run --rm setup
 ```
 
-Provider setup and the public URL work exactly as in the [quickstart](https://github.com/michel-tricot/airllm/blob/main/README.md#quickstart).
+Provider setup and the public URL work exactly as in the [quickstart](/docs#quickstart).
 This runs Postgres, the console proxy, one control plane, and two gateways on one Docker host.
 The proxy distributes inference requests between the gateways.
 
@@ -25,15 +25,15 @@ export queued usage when it returns. Restart each gateway with its original volu
 additional gateway needs a new volume; cloning a running gateway's identity or sharing its
 SQLite outbox is invalid.
 
-The default and split layouts are separate installation choices. Switching Compose files does
-not migrate application state. For an existing installation, move its credential directories to
-the shared volumes and its gateway state to exactly one gateway while the application is stopped.
-Retain the database and make a backup before moving state.
+The default and split layouts use different database and application volumes. Keep the explicit
+`airllm-split` project name in every command. Migrating an existing installation requires a database
+dump plus a stopped copy of `/state/runtime`, `/state/secrets`, and one gateway's `/state/data-plane`.
+Restore them into the corresponding split volumes before the first split startup.
 
 ## Other infrastructure
 
 The Dockerfile exposes `control-plane`, `data-plane`, and `console` targets as well as
-the default `all-in-one` target. Both planes load [the shared configuration](https://github.com/michel-tricot/airllm/blob/main/deploy/docker/airllm.yml).
+the default `all-in-one` target. Both planes load the shared `deploy/docker/airllm.yml` configuration.
 The split control plane initializes the database and catalog on startup.
 
 To deploy across hosts, supply shared credential storage that both planes can access, a reachable
