@@ -97,8 +97,8 @@ def _plain_invocation():
 @pytest.fixture
 def _no_ambient_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
 
 @pytest.mark.usefixtures("_no_ambient_config")
@@ -119,8 +119,8 @@ def test_an_explicit_url_beats_dev():
 def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
     """A development run must not be redirected by whatever org the machine last logged into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     from cli.profiles import Profile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
 
     upsert_profile("prod", Profile(scope="instance", control_plane_url="https://prod.example.com", token="t"))
@@ -168,8 +168,8 @@ def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
     """airllm.yml configures the servers, not the CLI. Reading it would point a run at whatever
     checkout it happened to start in rather than at the deployment the user signed into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRLLM_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     (tmp_path / "airllm.yml").write_text("data_plane:\n  control_plane:\n    url: http://somewhere.else:9999\n", encoding="utf-8")
 
     assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
@@ -365,7 +365,7 @@ def _quickstart(
 
 
 def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, saved, verified = _quickstart(
         monkeypatch,
@@ -382,7 +382,7 @@ def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
 
 
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, login_calls, saved, verified = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
 
@@ -398,7 +398,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
 
 
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(monkeypatch, claimed=False, model=None)
 
@@ -410,7 +410,7 @@ def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(
 
 
 def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, login_calls, _saved, _verified = _quickstart(
         monkeypatch,
@@ -429,7 +429,7 @@ def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tm
 
 
 def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeypatch, tmp_path):
-    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(
         monkeypatch,

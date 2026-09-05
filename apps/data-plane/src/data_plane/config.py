@@ -40,4 +40,4 @@ class Config(BaseModel):
 
 def load_config() -> Config:
     section = load_config_section("data_plane")
-    return Config.model_validate({**section, "dev": os.environ.get("GW_DEV") == "1"})
+    return Config.model_validate({**section, "dev": os.environ.get("AIRLLM_DEV") == "1"})

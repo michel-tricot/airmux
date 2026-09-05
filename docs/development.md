@@ -37,11 +37,11 @@ uv run airllm quickstart --url http://127.0.0.1:5000
 Open http://127.0.0.1:5000 for the console. Use the same hostname throughout a session.
 Vite forwards `/api` and `/inf` to the backends.
 
-`airllm.yml` configures source development. It reads `DATABASE_URL` and `GW_CONSOLE_URL` when set;
+`airllm.yml` configures source development. It reads `DATABASE_URL` and `AIRLLM_CONSOLE_URL` when set;
 otherwise it uses the addresses above. `.env` is loaded automatically. Provider credentials for
 this managed stack are added through the console or CLI and stored under `.airllm/secrets`.
 
-To change ports, keep `GW_CONSOLE_URL`, the servers' `--port` arguments, and Vite's `PORT`,
+To change ports, keep `AIRLLM_CONSOLE_URL`, the servers' `--port` arguments, and Vite's `PORT`,
 `CONTROL_PLANE_URL`, and `DATA_PLANE_URL` consistent. Stop the production Docker stack if its
 published port 8080 conflicts with the source gateway.
 

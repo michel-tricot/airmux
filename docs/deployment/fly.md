@@ -30,7 +30,7 @@ flyctl secrets set --app my-airllm --stage \
   DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE' \
   AIRLLM_CLAIM_TOKEN='PASTE_THE_RANDOM_VALUE'
 flyctl deploy --config deploy/fly/fly.toml --app my-airllm --ha=false \
-  --env GW_CONSOLE_URL=https://my-airllm.fly.dev
+  --env AIRLLM_CONSOLE_URL=https://my-airllm.fly.dev
 ```
 
 Put the same `AIRLLM_CLAIM_TOKEN` in your local `.env`; quickstart sends it only while creating the

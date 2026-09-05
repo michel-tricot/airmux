@@ -16,7 +16,7 @@ DEFAULT_DATABASE_URL = "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm
 """The local database, for a checkout where the host sets no DATABASE_URL."""
 
 DEFAULT_CONSOLE_URL = "http://127.0.0.1:5000"
-"""Where the console is served in a checkout; compose sets GW_CONSOLE_URL to the port nginx publishes."""
+"""Where the console is served in a checkout; compose sets AIRLLM_CONSOLE_URL to the port nginx publishes."""
 
 MIN_CLAIM_TOKEN_LENGTH = 32
 
@@ -94,6 +94,6 @@ def database_url() -> str:
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
-    """Load settings from an explicit config path, falling back to GW_CONFIG for the serve/migrate contexts that pass it via env."""
+    """Load settings from an explicit config path, falling back to AIRLLM_CONFIG for the serve/migrate contexts that pass it via env."""
     section = load_config_section("control_plane", config_path)
     return Settings.model_validate(section)

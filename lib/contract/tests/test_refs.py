@@ -85,7 +85,7 @@ def test_gw_config_selects_the_file(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     path = tmp_path / "other.yml"
     path.write_text("app:\n  a: 1\n", encoding="utf-8")
-    monkeypatch.setenv("GW_CONFIG", str(path))
+    monkeypatch.setenv("AIRLLM_CONFIG", str(path))
     assert load_config_section("app") == {"a": 1}
 
 

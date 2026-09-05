@@ -438,8 +438,8 @@ def login(
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
     """Switch to another organization."""
-    if os.environ.get("GW_ACCESS_KEY"):
-        console.print("[yellow]GW_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
+    if os.environ.get("AIRLLM_ACCESS_KEY"):
+        console.print("[yellow]AIRLLM_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in config.profiles:
         set_active(name)

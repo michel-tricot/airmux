@@ -39,7 +39,7 @@ The split control plane initializes the database and catalog on startup.
 To deploy across hosts, supply shared credential storage that both planes can access, a reachable
 Postgres database, and one persistent state directory per gateway. The checked-in split example
 uses local shared volumes; it is not a multi-host deployment. Set
-`GW_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address, and protect that connection.
+`AIRLLM_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address, and protect that connection.
 
 Keep one control plane with this startup configuration. Multiple control-plane replicas also
 need coordinated migration/catalog initialization and shared credential storage.

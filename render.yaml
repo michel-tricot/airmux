@@ -7,7 +7,7 @@ services:
     numInstances: 1
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: sh -ec 'export GW_CONSOLE_URL="${GW_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh all-in-one'
+    dockerCommand: sh -ec 'export AIRLLM_CONSOLE_URL="${AIRLLM_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh all-in-one'
     healthCheckPath: /healthz
     autoDeployTrigger: "off"
     disk:

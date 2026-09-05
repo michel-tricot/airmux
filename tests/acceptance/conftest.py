@@ -243,9 +243,9 @@ class Stack:
         self._write_taxonomy()
         self.env = {
             **os.environ,
-            "GW_CONFIG": str(self.config_path),
+            "AIRLLM_CONFIG": str(self.config_path),
             "OPENAI_API_KEY": "sk-stub",
-            "GW_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
+            "AIRLLM_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
         }
 
     def _bootstrap(self) -> None:
@@ -279,8 +279,8 @@ class Stack:
 
         secrets = {
             "AIRLLM_API_KEY": caller["token"],
-            "GW_ACCESS_KEY": access_key["token"],
-            "GW_DATAPLANE_TOKEN": self.env["GW_DATAPLANE_TOKEN"],
+            "AIRLLM_ACCESS_KEY": access_key["token"],
+            "AIRLLM_DATAPLANE_TOKEN": self.env["AIRLLM_DATAPLANE_TOKEN"],
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
         self.env = {**self.env, **secrets}
@@ -344,7 +344,7 @@ class Stack:
         secrets_store = (
             {"kind": "file", "root": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
         )
-        control_plane_link = {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN"}
+        control_plane_link = {"url": self.cp_url, "token": "env:AIRLLM_DATAPLANE_TOKEN"}
         outbox_config = (
             {"kind": "devnull"}
             if outbox_kind == "devnull"
@@ -358,7 +358,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
-                "bootstrap": {"token": "env:GW_DATAPLANE_TOKEN"},
+                "bootstrap": {"token": "env:AIRLLM_DATAPLANE_TOKEN"},
                 "secrets": secrets_store,
             },
             "data_plane": {
@@ -381,8 +381,8 @@ class Stack:
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_API_KEY")
         assert token, "bootstrap did not mint a caller api key"
-        assert secrets.get("GW_ACCESS_KEY"), "bootstrap did not mint an access key"
-        assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
+        assert secrets.get("AIRLLM_ACCESS_KEY"), "bootstrap did not mint an access key"
+        assert secrets.get("AIRLLM_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
         self.caller_api_key = token
 
     # processes ------------------------------------------------------------
@@ -443,7 +443,7 @@ class Stack:
         while True:
             response = httpx.get(
                 f"{self.cp_url}/api/v1/orgs/{self.org_id}/events",
-                headers={"authorization": f"Bearer {self.env['GW_ACCESS_KEY']}"},
+                headers={"authorization": f"Bearer {self.env['AIRLLM_ACCESS_KEY']}"},
                 params=page_query,
                 timeout=10.0,
             )

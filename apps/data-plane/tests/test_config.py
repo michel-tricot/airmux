@@ -13,7 +13,7 @@ from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, l
 @pytest.fixture
 def clean_env(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for var in ("GW_CONFIG", "GW_DEV", "GW_DATAPLANE_CONTROL_PLANE_URL"):
+    for var in ("AIRLLM_CONFIG", "AIRLLM_DEV", "AIRLLM_DATAPLANE_CONTROL_PLANE_URL"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
 
@@ -28,7 +28,7 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
     (clean_env / ".airllm").mkdir()
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
-    monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
+    monkeypatch.setenv("AIRLLM_DATAPLANE_TOKEN", "dp-token")
     config = load_config()
     assert isinstance(config.bundle, RemoteBundleConfig)
     assert config.bundle.control_plane.url == "http://127.0.0.1:8000"
@@ -74,7 +74,7 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
     (clean_env / ".airllm").mkdir()
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
-    monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
+    monkeypatch.setenv("AIRLLM_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
 
     bundle = load_config().bundle
     assert isinstance(bundle, RemoteBundleConfig)
@@ -181,8 +181,8 @@ def test_container_config_separates_gateway_state_from_shared_credentials(tmp_pa
     (tmp_path / "runtime").mkdir()
     (tmp_path / "runtime/dataplane.key").write_text("data-plane-token")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
-    monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", control_plane_url)
+    monkeypatch.setenv("AIRLLM_CONFIG", str(tmp_path / "airllm.yml"))
+    monkeypatch.setenv("AIRLLM_DATAPLANE_CONTROL_PLANE_URL", control_plane_url)
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     config = load_config()

@@ -18,7 +18,7 @@ The same Docker image runs on every platform. Each platform guide connects these
 | Setting | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string |
-| `GW_CONSOLE_URL` | Public origin, such as `https://llm.example.com` |
+| `AIRLLM_CONSOLE_URL` | Public origin, such as `https://llm.example.com` |
 | `AIRLLM_CLAIM_TOKEN` | Random secret that authorizes the first owner account |
 | Persistent volume at `/state` | Gateway identity, cached bundles, pending usage, and credential files |
 

@@ -21,7 +21,7 @@ services:
       target: all-in-one
     environment:
       DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
-      GW_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
       AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
     ports:
       - "${AIRLLM_PORT:-8080}:8080"
@@ -45,7 +45,7 @@ services:
       - path: .env
         required: false
     environment:
-      GW_CLI_CONFIG: /state/cli.toml
+      AIRLLM_CLI_CONFIG: /state/cli.toml
     command: ["airllm", "quickstart", "--url", "http://airllm:8080"]
     volumes:
       - state:/state

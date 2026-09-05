@@ -49,7 +49,7 @@ class InvalidConfigError(ValueError):
 
 
 def config_path() -> Path:
-    if override := os.environ.get("GW_CLI_CONFIG"):
+    if override := os.environ.get("AIRLLM_CLI_CONFIG"):
         return Path(override)
     return Path.home() / ".airllm" / "config.toml"
 

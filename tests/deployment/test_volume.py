@@ -45,10 +45,11 @@ def test_console_accepts_flys_ipv6_resolver():
         "--env",
         "NGINX_RESOLVER=fdaa::3",
         "--env",
-        "GW_CONSOLE_URL=https://airllm.example.com",
+        "AIRLLM_CONSOLE_URL=https://airllm.example.com",
         "--entrypoint",
-        "/app/deploy/docker/start-console.sh",
+        "/app/deploy/docker/start.sh",
         image,
+        "console",
     )
     try:
         time.sleep(1)

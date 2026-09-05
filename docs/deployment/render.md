@@ -12,7 +12,7 @@ requests `AIRLLM_CLAIM_TOKEN`, and put the same value in your local `.env`. Prov
 until quickstart stores them through the management API.
 
 Complete [first setup](/docs/deployment/index#first-setup) using the generated URL.
-For a custom domain, set `GW_CONSOLE_URL` to its HTTPS origin and redeploy.
+For a custom domain, set `AIRLLM_CONSOLE_URL` to its HTTPS origin and redeploy.
 
 Deploy updates manually from Render, retaining the database and disk. Migrations run during
 startup. Keep one application instance; [Render persistent disks](https://render.com/docs/disks)
