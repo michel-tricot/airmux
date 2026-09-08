@@ -4,7 +4,7 @@ Use the split layout when you need to restart or size the control plane and gate
 
 ```sh
 docker compose -p airllm-split -f docker-compose.split.yml up -d --build --wait
-docker compose -p airllm-split -f docker-compose.split.yml run --rm setup
+docker compose -p airllm-split -f docker-compose.split.yml run --rm -it setup
 ```
 
 Provider setup and the public URL work exactly as in the [quickstart](/docs#quickstart).

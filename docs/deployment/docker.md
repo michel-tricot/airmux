@@ -4,12 +4,13 @@ Run from the repository root with Docker Compose 2.24.4 or newer:
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm setup
+docker compose run --rm -it setup
 ```
 
 Add provider keys to `.env` as shown in the [quickstart](/docs#quickstart). The default stack keeps
 two containers running: AirLLM and Postgres. `setup` is a one-shot container that receives `.env`,
-stores provider keys through the API, and exits. Open http://localhost:8080 for the console.
+stores provider keys through the API, and exits. The `-it` flags keep input attached and allocate
+the terminal used by the account and password prompts. Open http://localhost:8080 for the console.
 
 ## Ports and HTTPS
 

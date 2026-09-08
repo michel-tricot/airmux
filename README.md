@@ -20,13 +20,14 @@ Add at least one provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm setup
+docker compose run --rm -it setup
 ```
 
 The one-shot `setup` container runs `airllm quickstart`. It creates or resumes your owner account,
 organization, and workspace, imports missing provider credentials from `.env`, and prints a new
 `AIRLLM_API_KEY` and a working curl command. It reports **Ready** after completing a real
-inference request, which uses your provider's API quota.
+inference request, which uses your provider's API quota. Keep `-it`: setup prompts for account
+credentials, and the password prompt requires an attached terminal.
 
 Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
 `DEEPSEEK_API_KEY`, or `XAI_API_KEY`. See [.env.example](.env.example) for the full list.

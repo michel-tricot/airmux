@@ -14,7 +14,7 @@ Add one provider key to `.env`, such as `OPENAI_API_KEY`, then run:
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm setup
+docker compose run --rm -it setup
 ```
 
 Setup creates the owner account, organization, workspace, and inference key. It stores the provider
