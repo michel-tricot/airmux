@@ -46,27 +46,6 @@ services:
       retries: 30
     restart: unless-stopped
 
-  setup:
-    profiles: [setup]
-    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      AIRLLM_CLI_CONFIG: /state/cli.toml
-    command:
-      - airllm
-      - quickstart
-      - --url
-      - ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      - --connect-url
-      - http://console:8080
-    volumes:
-      - cli-state:/state
-    depends_on:
-      console:
-        condition: service_healthy
-
   data-plane-1:
     <<: *gateway
     build:
@@ -109,4 +88,3 @@ volumes:
   provider-secrets:
   gateway-1:
   gateway-2:
-  cli-state:

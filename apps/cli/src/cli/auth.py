@@ -301,7 +301,6 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
 @app.command(rich_help_panel=SETUP)
 def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     url: str = typer.Option("", "--url", help="URL serving the control plane, web console, and gateway"),
-    connect_url: str = typer.Option("", help="URL used only by quickstart to reach the deployment from its current network"),
     control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
     email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
@@ -315,9 +314,8 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
-    quickstart_url = (connect_url or control_plane_url).rstrip("/")
     console.print("[bold]airllm quickstart[/bold]")
-    with httpx.Client(base_url=quickstart_url, timeout=10.0, headers=CSRF) as c:
+    with httpx.Client(base_url=control_plane_url, timeout=10.0, headers=CSRF) as c:
         claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
         _login_or_signup(c, claimed, email, password)
         organization = _personal_org(c, email, org)
@@ -360,7 +358,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         console.print("\n[red]Setup is incomplete: no model has a configured provider credential.[/red]")
         console.print("Enable or add a provider key, then run [bold]airllm quickstart[/bold] again.")
         raise typer.Exit(1)
-    error = verify_gateway((connect_url or gateway_url).rstrip("/"), key.token, model)
+    error = verify_gateway(gateway_url, key.token, model)
     if error:
         console.print(f"\n[red]Setup is incomplete: the gateway request failed: {error}[/red]")
         console.print("Run [bold]airllm doctor[/bold] after resolving the reported gateway issue.")

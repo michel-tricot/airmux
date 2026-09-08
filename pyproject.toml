@@ -15,7 +15,7 @@ control-plane = { workspace = true }
 data-plane = { workspace = true }
 
 [dependency-groups]
-backend = ["cli", "control-plane", "data-plane"]
+backend = ["control-plane", "data-plane"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",

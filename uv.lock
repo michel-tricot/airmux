@@ -46,7 +46,6 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 backend = [
-    { name = "cli" },
     { name = "control-plane" },
     { name = "data-plane" },
 ]
@@ -71,7 +70,6 @@ dev = [
 
 [package.metadata.requires-dev]
 backend = [
-    { name = "cli", editable = "apps/cli" },
     { name = "control-plane", editable = "apps/control-plane" },
     { name = "data-plane", editable = "apps/data-plane" },
 ]

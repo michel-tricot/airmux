@@ -4,15 +4,6 @@ services:
     environment:
       AIRLLM_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
 
-  setup:
-    command:
-      - airllm
-      - quickstart
-      - --url
-      - https://${AIRLLM_DOMAIN:?Set the public domain}
-      - --connect-url
-      - http://airllm:8080
-
   caddy:
     image: caddy:2
     environment:

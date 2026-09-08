@@ -16,9 +16,10 @@ def test_runtime_image_installs_backend_dependency_group():
     dockerfile = root / "Dockerfile"
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     content = dockerfile.read_text(encoding="utf-8")
-    assert set(project["dependency-groups"]["backend"]) == {"cli", "control-plane", "data-plane"}
+    assert set(project["dependency-groups"]["backend"]) == {"control-plane", "data-plane"}
     assert content.count("uv sync --only-group backend --frozen") == 2
     assert "--no-install-package" not in content
+    assert "apps/cli" not in content
 
 
 def test_console_health_checks_the_control_plane():
@@ -34,12 +35,9 @@ def test_default_deployment_is_one_application_and_postgres():
     compose = yaml.safe_load((root / "docker-compose.yml").read_text())
     services = compose["services"]
     assert "name" not in compose
-    assert set(services) == {"airllm", "postgres", "setup"}
+    assert set(services) == {"airllm", "postgres"}
     assert services["airllm"]["build"]["target"] == "all-in-one"
-    assert services["airllm"]["image"] == services["setup"]["image"]
     assert "env_file" not in services["airllm"]
-    assert services["setup"]["profiles"] == ["setup"]
-    assert services["setup"]["env_file"]
 
 
 def test_split_gateways_have_independent_state_and_no_provider_environment():
@@ -54,8 +52,6 @@ def test_split_gateways_have_independent_state_and_no_provider_environment():
     assert "env_file" not in first
     assert "env_file" not in second
     assert "env_file" not in services["control-plane"]
-    assert services["setup"]["env_file"]
-    assert services["control-plane"]["image"] == services["setup"]["image"]
     assert first["image"] == second["image"]
     assert "build" in first
     assert "build" not in second
@@ -76,22 +72,12 @@ def test_compose_layouts_do_not_share_database_volumes():
     assert split["services"]["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
 
 
-def test_setup_connects_privately_and_reports_the_public_url():
+def test_compose_layouts_do_not_define_a_setup_service():
     root = Path(__file__).resolve().parents[4]
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
     digitalocean = (root / "deploy" / "digitalocean" / "compose.yml").read_text()
 
-    assert compact["services"]["setup"]["command"][-4:] == [
-        "--url",
-        "${AIRLLM_PUBLIC_URL:-http://localhost:8080}",
-        "--connect-url",
-        "http://airllm:8080",
-    ]
-    assert split["services"]["setup"]["command"][-4:] == [
-        "--url",
-        "${AIRLLM_PUBLIC_URL:-http://localhost:8080}",
-        "--connect-url",
-        "http://console:8080",
-    ]
-    assert "      - https://${AIRLLM_DOMAIN:?Set the public domain}\n      - --connect-url\n      - http://airllm:8080" in digitalocean
+    assert "setup" not in compact["services"]
+    assert "setup" not in split["services"]
+    assert "\n  setup:" not in digitalocean

@@ -2,7 +2,9 @@
 
 # Quickstart
 
-Install Docker with Compose 2.24.4 or newer, clone the repository, and prepare the environment:
+Install Docker with Compose 2.24.4 or newer and
+[uv](https://docs.astral.sh/uv/getting-started/installation/), then clone the repository and prepare
+the environment:
 
 ```sh
 git clone https://github.com/michel-tricot/airllm.git
@@ -14,11 +16,11 @@ Add one provider key to `.env`, such as `OPENAI_API_KEY`, then run:
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm -it setup
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
 ```
 
-Setup creates the owner account, organization, workspace, and inference key. It stores the provider
-credential in AirLLM and sends a real inference request before reporting **Ready**. Open
+`quickstart` creates the owner account, organization, workspace, and inference key. It stores the
+provider credential in AirLLM and sends a real inference request before reporting **Ready**. Open
 [localhost:8080](http://localhost:8080) for the console.
 
 `docker compose down` stops AirLLM without deleting data. `docker compose down -v` deletes the

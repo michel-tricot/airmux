@@ -35,7 +35,7 @@ Keep Managed Postgres in its default session pooling mode. Fly documents the poo
 connections in [Connect your client](https://fly.io/docs/mpg/client-configuration/).
 Startup uses the direct URL for migrations and the pooled URL for the application.
 
-Complete [first setup](/docs/deployment/index#first-setup) at `https://my-airllm.fly.dev` as soon as
+Complete [instance claim](/docs/deployment/index#claim-the-instance) at `https://my-airllm.fly.dev` as soon as
 the app becomes reachable. Until the first account is created, anyone who can reach the sign-up
 page can become the instance owner.
 

@@ -1,33 +1,36 @@
 # Docker
 
-Run from the repository root with Docker Compose 2.24.4 or newer:
+Run from the repository root with Docker Compose 2.24.4 or newer and
+[uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm -it setup
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
 ```
 
-Add provider keys to `.env` as shown in the [quickstart](/docs#quickstart). The default stack keeps
-two containers running: AirLLM and Postgres. `setup` is a one-shot container that receives `.env`,
-stores provider keys through the API, and exits. The `-it` flags keep input attached and allocate
-the terminal used by the account and password prompts. Open http://localhost:8080 for the console.
+Add provider keys to `.env` as shown in the [quickstart](/docs#quickstart). The CLI reads them from
+the repository checkout and stores them through the API. The default stack keeps two containers
+running: AirLLM and Postgres. Open http://localhost:8080 for the console.
 
 ## Ports and HTTPS
 
-To use a different port, set both values in `.env` so `up` and the later `setup` command use the
-same public origin:
+To use a different port, set both values in `.env`:
 
 ```sh
 AIRLLM_PORT=9000
 AIRLLM_PUBLIC_URL=http://localhost:9000
 ```
 
-Then run the two Compose commands from the quickstart. Setup reaches AirLLM over the private Docker
-network but saves and prints `AIRLLM_PUBLIC_URL` for clients outside Docker.
+Start Docker, then pass the same public URL to the CLI:
+
+```sh
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:9000
+```
 
 For a public deployment, terminate HTTPS at your ingress and set `AIRLLM_PUBLIC_URL` to its
-HTTPS origin. Run setup immediately after the application starts: until the first account is
-created, anyone who can reach the sign-up page can claim the instance owner role. The
+HTTPS origin. Create the first account in the web app or run `quickstart` against that origin as
+soon as the application starts. Until then, anyone who can reach the sign-up page can claim the
+instance owner role. The
 [DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for HTTPS.
 
 ## State and updates

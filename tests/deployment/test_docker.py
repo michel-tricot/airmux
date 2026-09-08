@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -94,31 +95,35 @@ def assert_process_layout(compose, gateways, compact):
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
-def assert_quickstart(compose, compact, public_url):
-    service_url = "http://airllm:8080" if compact else "http://console:8080"
-    output = docker(
-        *compose,
-        "run",
-        "--rm",
-        "--no-TTY",
-        "--env",
-        "DEPLOYMENT_API_KEY=deployment-test-key",
-        "setup",
-        "airllm",
-        "quickstart",
-        "--url",
-        public_url,
-        "--connect-url",
-        service_url,
-        "--email",
-        "owner@deployment.test",
-        "--password",
-        "deployment-password",
-    )
+def assert_quickstart(public_url, config_path):
+    uv = shutil.which("uv")
+    assert uv is not None
+    output = subprocess.run(  # noqa: S603 controlled project CLI test command
+        [
+            uv,
+            "run",
+            "--package",
+            "cli",
+            "--no-dev",
+            "--frozen",
+            "airllm",
+            "quickstart",
+            "--url",
+            public_url,
+            "--email",
+            "owner@deployment.test",
+            "--password",
+            "deployment-password",
+        ],
+        cwd=ROOT,
+        env={**os.environ, "AIRLLM_CLI_CONFIG": str(config_path), "DEPLOYMENT_API_KEY": "deployment-test-key"},
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     assert "Ready." in output
     assert "DEPLOYMENT_API_KEY" in output
     assert f"curl {public_url}/inf/v1/chat/completions" in output
-    assert service_url not in output
 
 
 def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
@@ -160,7 +165,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
     assert_process_layout(compose, gateways, compact)
-    assert_quickstart(compose, compact, str(client.base_url).rstrip("/"))
+    assert_quickstart(str(client.base_url).rstrip("/"), tmp_path / "cli.toml")
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
     if not compact:

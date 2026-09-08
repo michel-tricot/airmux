@@ -10,7 +10,7 @@ The Blueprint supplies the internal database URL and sets the public origin from
 `RENDER_EXTERNAL_URL`. Provider keys stay local until quickstart stores them through the
 management API.
 
-Complete [first setup](/docs/deployment/index#first-setup) using the generated URL as soon as the
+Complete [instance claim](/docs/deployment/index#claim-the-instance) using the generated URL as soon as the
 service becomes reachable. Until the first account is created, anyone who can reach the sign-up
 page can become the instance owner.
 For a custom domain, set `AIRLLM_CONSOLE_URL` to its HTTPS origin and redeploy.

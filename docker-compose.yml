@@ -37,27 +37,6 @@ services:
     stop_grace_period: 40s
     restart: unless-stopped
 
-  setup:
-    profiles: [setup]
-    image: ${AIRLLM_IMAGE:-airllm:local}
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      AIRLLM_CLI_CONFIG: /state/cli.toml
-    command:
-      - airllm
-      - quickstart
-      - --url
-      - ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      - --connect-url
-      - http://airllm:8080
-    volumes:
-      - state:/state
-    depends_on:
-      airllm:
-        condition: service_healthy
-
 volumes:
   state:
   pgdata:

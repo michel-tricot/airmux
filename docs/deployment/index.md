@@ -24,13 +24,13 @@ The same Docker image runs on every platform. Each platform guide connects these
 The application listens on port 8080. It initializes the database, catalog, and gateway
 authentication during startup. The console, management API, and inference API share one origin.
 
-## First setup
+## Claim the instance
 
 Claim a new instance as soon as it becomes reachable. Open its web app and create the first account,
 or run the CLI command below. The first human account becomes the instance owner. Until that account
 exists, anyone who can reach the sign-up page can claim the instance.
 
-For CLI setup, add the provider keys you want AirLLM to store to your local `.env`. From a repository
+For the CLI, add the provider keys you want AirLLM to store to your local `.env`. From a repository
 checkout with Python 3.13+ and uv, run:
 
 ```sh
