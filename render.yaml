@@ -21,8 +21,6 @@ services:
         fromDatabase:
           name: airllm-postgres
           property: connectionString
-      - key: AIRLLM_CLAIM_TOKEN
-        sync: false
 
 databases:
   - name: airllm-postgres

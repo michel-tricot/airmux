@@ -115,7 +115,6 @@ def test_container_config_uses_shared_credentials_and_separate_secret_storage(tm
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@db.internal:5432/app")
     monkeypatch.setenv("AIRLLM_CONSOLE_URL", "https://console.example.com")
-    monkeypatch.setenv("AIRLLM_CLAIM_TOKEN", "a-secure-instance-claim-token-123456")
 
     settings = load_settings(container_config)
 
@@ -123,19 +122,12 @@ def test_container_config_uses_shared_credentials_and_separate_secret_storage(tm
     assert settings.console_url == "https://console.example.com"
     assert settings.secrets == FileStoreConfig(root=tmp_path / "secrets")
     assert settings.bootstrap == DataPlaneBootstrap(token=token)
-    assert settings.claim_token is not None
-    assert settings.claim_token.get_secret_value() == "a-secure-instance-claim-token-123456"
 
 
-def test_a_public_console_requires_a_strong_claim_token():
-    with pytest.raises(ValidationError, match="claim token"):
-        Settings(console_url="https://airllm.example.com")
-    with pytest.raises(ValidationError, match="at least 32"):
-        Settings(console_url="https://airllm.example.com", claim_token="too-short")
+def test_a_public_console_does_not_require_an_extra_secret():
+    settings = Settings(console_url="https://airllm.example.com")
 
-    settings = Settings(console_url="https://airllm.example.com", claim_token="a-secure-instance-claim-token-123456")
-
-    assert "a-secure-instance-claim-token-123456" not in repr(settings)
+    assert settings.console_url == "https://airllm.example.com"
 
 
 def test_supplied_bootstrap_token_is_validated_and_redacted():

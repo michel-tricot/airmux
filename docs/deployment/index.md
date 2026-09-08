@@ -19,23 +19,24 @@ The same Docker image runs on every platform. Each platform guide connects these
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string |
 | `AIRLLM_CONSOLE_URL` | Public origin, such as `https://llm.example.com` |
-| `AIRLLM_CLAIM_TOKEN` | Random secret that authorizes the first owner account |
 | Persistent volume at `/state` | Gateway identity, cached bundles, pending usage, and credential files |
 
 The application listens on port 8080. It initializes the database, catalog, and gateway
 authentication during startup. The console, management API, and inference API share one origin.
-A public origin will not start without a claim token of at least 32 characters.
 
 ## First setup
 
-Keep the same claim token in your local `.env` that you configured on the platform, and add the
-provider keys you want AirLLM to store. From a repository checkout with Python 3.13+ and uv, run:
+Claim a new instance as soon as it becomes reachable. Open its web app and create the first account,
+or run the CLI command below. The first human account becomes the instance owner. Until that account
+exists, anyone who can reach the sign-up page can claim the instance.
+
+For CLI setup, add the provider keys you want AirLLM to store to your local `.env`. From a repository
+checkout with Python 3.13+ and uv, run:
 
 ```sh
 uv run --package cli --no-dev --frozen airllm quickstart --url https://your-airllm-domain
 ```
 
-The claim token prevents anyone else from taking the owner account while the public service starts.
 `quickstart` creates or resumes that account, an organization, and a workspace. It imports
 missing provider keys from your local `.env` using `<PROVIDER>_API_KEY` for every catalog provider.
 Existing credentials remain intact. Save the inference key it prints; **Ready** means a real

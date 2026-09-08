@@ -26,8 +26,8 @@ Then run the two Compose commands from the quickstart. Setup reaches AirLLM over
 network but saves and prints `AIRLLM_PUBLIC_URL` for clients outside Docker.
 
 For a public deployment, terminate HTTPS at your ingress and set `AIRLLM_PUBLIC_URL` to its
-HTTPS origin. Generate `AIRLLM_CLAIM_TOKEN` with `openssl rand -hex 24` before starting the stack.
-The application refuses to expose an unclaimed public installation without it. The
+HTTPS origin. Run setup immediately after the application starts: until the first account is
+created, anyone who can reach the sign-up page can claim the instance owner role. The
 [DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for HTTPS.
 
 ## State and updates

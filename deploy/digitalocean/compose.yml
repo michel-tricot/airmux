@@ -3,7 +3,6 @@ services:
     ports: !reset []
     environment:
       AIRLLM_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
-      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:?Set a random claim token}
 
   setup:
     command:

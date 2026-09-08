@@ -25,22 +25,19 @@ Attachment sets `DATABASE_URL`. Copy the direct connection URL from the database
 **Connect** tab and save it for migrations:
 
 ```sh
-openssl rand -hex 24
 flyctl secrets set --app my-airllm --stage \
-  DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE' \
-  AIRLLM_CLAIM_TOKEN='PASTE_THE_RANDOM_VALUE'
+  DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE'
 flyctl deploy --config deploy/fly/fly.toml --app my-airllm --ha=false \
   --env AIRLLM_CONSOLE_URL=https://my-airllm.fly.dev
 ```
-
-Put the same `AIRLLM_CLAIM_TOKEN` in your local `.env`; quickstart sends it only while creating the
-first owner.
 
 Keep Managed Postgres in its default session pooling mode. Fly documents the pooled and direct
 connections in [Connect your client](https://fly.io/docs/mpg/client-configuration/).
 Startup uses the direct URL for migrations and the pooled URL for the application.
 
-Complete [first setup](/docs/deployment/index#first-setup) at `https://my-airllm.fly.dev`.
+Complete [first setup](/docs/deployment/index#first-setup) at `https://my-airllm.fly.dev` as soon as
+the app becomes reachable. Until the first account is created, anyone who can reach the sign-up
+page can become the instance owner.
 
 ## Update
 

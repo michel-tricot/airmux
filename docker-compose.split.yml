@@ -31,7 +31,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
       AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - runtime-credentials:/state/runtime

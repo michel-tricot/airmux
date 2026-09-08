@@ -178,7 +178,7 @@ def configured_model(client: httpx.Client) -> str | None:
     return models[0] if models else None
 
 
-def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str, claim_token: str) -> None:
+def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str) -> None:
     if claimed:
         account = _payload_or_die(client.post("/api/v1/auth/login", json={"email": email, "password": password}), "sign in", MeOut)
         if account.instance_role is None or account.instance_role.root != "owner":
@@ -186,8 +186,7 @@ def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: 
             raise typer.Exit(1)
         _step(f"Signed in as [bold]{email}[/bold]")
         return
-    headers = {"X-AirLLM-Claim-Token": claim_token} if claim_token else None
-    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}, headers=headers), "sign up", MeOut)
+    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up", MeOut)
     _step(f"Account [bold]{email}[/bold]")
 
 
@@ -311,7 +310,6 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
-    claim_token: str = typer.Option("", help="Secret required to claim a new public installation"),
 ) -> None:
     """Set up or resume an instance and verify a new API key through the gateway."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
@@ -321,7 +319,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=quickstart_url, timeout=10.0, headers=CSRF) as c:
         claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
-        _login_or_signup(c, claimed, email, password, claim_token or os.environ.get("AIRLLM_CLAIM_TOKEN", ""))
+        _login_or_signup(c, claimed, email, password)
         organization = _personal_org(c, email, org)
         org_id, org_name = organization.id, organization.name
         token = _organization_access_key(c, str(org_id))
