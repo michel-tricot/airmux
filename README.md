@@ -8,7 +8,7 @@ routing, scoped provider credentials, inference keys, and usage tracking.
 
 ## Quickstart
 
-You need Docker with Compose 2.24.4+ and a provider API key.
+You need Docker with Compose 2.24.4+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a provider API key.
 
 ```sh
 git clone https://github.com/michel-tricot/airllm.git
@@ -20,14 +20,12 @@ Add at least one provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
-docker compose run --rm -it setup
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
 ```
 
-The one-shot `setup` container runs `airllm quickstart`. It creates or resumes your owner account,
-organization, and workspace, imports missing provider credentials from `.env`, and prints a new
-`AIRLLM_API_KEY` and a working curl command. It reports **Ready** after completing a real
-inference request, which uses your provider's API quota. Keep `-it`: setup prompts for account
-credentials, and the password prompt requires an attached terminal.
+`quickstart` creates or resumes your owner account, organization, and workspace, imports missing
+provider credentials from `.env`, and prints a new `AIRLLM_API_KEY` and a working curl command.
+It reports **Ready** after completing a real inference request, which uses your provider's API quota.
 
 Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
 `DEEPSEEK_API_KEY`, or `XAI_API_KEY`. See [.env.example](.env.example) for the full list.
@@ -35,7 +33,8 @@ You can also manage provider credentials in the console, scoped to an organizati
 
 Open **[localhost:8080](http://localhost:8080)** for the console. The console, management API,
 and inference API share that address. Docker keeps two services running: AirLLM and Postgres.
-Provider keys enter only the one-shot setup container and are stored through the management API.
+The local CLI sends provider keys through the management API; the application containers do not
+receive your `.env` file.
 
 `docker compose down` stops the stack and preserves its data. Adding `-v` deletes its volumes.
 

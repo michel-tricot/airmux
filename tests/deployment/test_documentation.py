@@ -6,12 +6,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_docker_setup_commands_force_an_interactive_terminal():
-    commands = [
-        command
-        for document in (ROOT / "README.md", *(ROOT / "docs").rglob("*.md"))
-        for command in re.findall(r"^docker compose .*\brun\b.*\bsetup$", document.read_text(), re.MULTILINE)
-    ]
+def test_quickstart_runs_the_project_cli_against_the_public_url():
+    documents = "\n".join(document.read_text() for document in (ROOT / "README.md", *(ROOT / "docs").rglob("*.md")))
+    commands = re.findall(r"^uv run --package cli --no-dev --frozen airllm quickstart --url \S+$", documents, re.MULTILINE)
 
     assert commands
-    assert all("-it" in command.split() for command in commands), commands
+    assert "docker compose run" not in documents
+    assert "--connect-url" not in documents

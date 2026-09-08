@@ -889,7 +889,6 @@ export const getSignupUrl = () => {
  *
  * The first human account on a new deployment becomes the instance owner. Later accounts require
  * an organization membership or instance role before they can access managed resources.
- * A configured claim token is required only while creating the first account.
  *
  * Authentication: none.
  * @summary Sign Up

@@ -22,7 +22,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
       AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:-}
     ports:
       - "${AIRLLM_PORT:-8080}:8080"
     volumes:
@@ -37,21 +36,6 @@ services:
       retries: 30
     stop_grace_period: 40s
     restart: unless-stopped
-
-  setup:
-    profiles: [setup]
-    image: ${AIRLLM_IMAGE:-airllm:local}
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      AIRLLM_CLI_CONFIG: /state/cli.toml
-    command: ["airllm", "quickstart", "--url", "http://airllm:8080"]
-    volumes:
-      - state:/state
-    depends_on:
-      airllm:
-        condition: service_healthy
 
 volumes:
   state:

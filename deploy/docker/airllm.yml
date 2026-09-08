@@ -4,7 +4,6 @@ control_plane:
   bootstrap:
     token: ${file:/state/runtime/dataplane.key}
   console_url: ${env:AIRLLM_CONSOLE_URL}
-  claim_token: ${env:AIRLLM_CLAIM_TOKEN}
   secrets:
     kind: file
     root: /state/secrets

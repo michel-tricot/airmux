@@ -141,17 +141,15 @@ describe('sign-in gate', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
 
-  it('sends the claim token when creating the first account', async () => {
-    let receivedToken: string | null = null;
+  it('creates the first account directly', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false } })),
-      http.post('/api/v1/auth/signup', ({ request }) => {
-        receivedToken = request.headers.get('X-AirLLM-Claim-Token');
-        return HttpResponse.json<{ data: Api.MeOut }>({
+      http.post('/api/v1/auth/signup', () =>
+        HttpResponse.json<{ data: Api.MeOut }>({
           data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', orgs: [] },
-        });
-      }),
+        }),
+      ),
     );
     const user = userEvent.setup();
     renderAt('/');
@@ -160,10 +158,9 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Email'), 'owner@example.com');
     await user.type(screen.getByLabelText('Name'), 'Owner');
     await user.type(screen.getByLabelText('Password'), 'secure-password');
-    await user.type(screen.getByLabelText('Instance claim token'), 'a-secure-instance-claim-token-123456');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(receivedToken).toBe('a-secure-instance-claim-token-123456'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
 
   it.each(['unknown account', 'incorrect password'])('keeps the sign-in error visible for an %s', async () => {

@@ -308,20 +308,10 @@ export const LoginResponse = zod.object({
  *
  * The first human account on a new deployment becomes the instance owner. Later accounts require
  * an organization membership or instance role before they can access managed resources.
- * A configured claim token is required only while creating the first account.
  *
  * Authentication: none.
  * @summary Sign Up
  */
-export const signupHeaderXAirLLMClaimTokenOneMin = 32;
-export const signupHeaderXAirLLMClaimTokenOneMax = 1024;
-
-
-
-export const SignupHeader = zod.object({
-  "X-AirLLM-Claim-Token": zod.union([zod.string().min(signupHeaderXAirLLMClaimTokenOneMin).max(signupHeaderXAirLLMClaimTokenOneMax),zod.null()]).optional().describe('Secret used only to create the first owner of a new deployment')
-})
-
 export const signupBodyEmailMin = 3;
 export const signupBodyEmailMax = 320;
 

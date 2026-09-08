@@ -31,7 +31,7 @@ Start these in separate terminals:
 Add provider keys to `.env`, then complete setup through the running Vite server:
 
 ```sh
-uv run airllm quickstart --url http://127.0.0.1:5000
+uv run --package cli airllm quickstart --url http://127.0.0.1:5000
 ```
 
 Open http://127.0.0.1:5000 for the console. Use the same hostname throughout a session.

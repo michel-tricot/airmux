@@ -4,10 +4,10 @@ Use the split layout when you need to restart or size the control plane and gate
 
 ```sh
 docker compose -p airllm-split -f docker-compose.split.yml up -d --build --wait
-docker compose -p airllm-split -f docker-compose.split.yml run --rm -it setup
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
 ```
 
-Provider setup and the public URL work exactly as in the [quickstart](/docs#quickstart).
+The CLI reads provider keys from the repository `.env` and connects through the published URL.
 This runs Postgres, the console proxy, one control plane, and two gateways on one Docker host.
 The proxy distributes inference requests between the gateways.
 
