@@ -74,3 +74,24 @@ def test_compose_layouts_do_not_share_database_volumes():
 
     assert compact["services"]["postgres"]["volumes"] == ["pgdata:/var/lib/postgresql/data"]
     assert split["services"]["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
+
+
+def test_setup_connects_privately_and_reports_the_public_url():
+    root = Path(__file__).resolve().parents[4]
+    compact = yaml.safe_load((root / "docker-compose.yml").read_text())
+    split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
+    digitalocean = (root / "deploy" / "digitalocean" / "compose.yml").read_text()
+
+    assert compact["services"]["setup"]["command"][-4:] == [
+        "--url",
+        "${AIRLLM_PUBLIC_URL:-http://localhost:8080}",
+        "--connect-url",
+        "http://airllm:8080",
+    ]
+    assert split["services"]["setup"]["command"][-4:] == [
+        "--url",
+        "${AIRLLM_PUBLIC_URL:-http://localhost:8080}",
+        "--connect-url",
+        "http://console:8080",
+    ]
+    assert "      - https://${AIRLLM_DOMAIN:?Set the public domain}\n      - --connect-url\n      - http://airllm:8080" in digitalocean

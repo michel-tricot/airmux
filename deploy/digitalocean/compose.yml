@@ -5,6 +5,15 @@ services:
       AIRLLM_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
       AIRLLM_CLAIM_TOKEN: ${AIRLLM_CLAIM_TOKEN:?Set a random claim token}
 
+  setup:
+    command:
+      - airllm
+      - quickstart
+      - --url
+      - https://${AIRLLM_DOMAIN:?Set the public domain}
+      - --connect-url
+      - http://airllm:8080
+
   caddy:
     image: caddy:2
     environment:

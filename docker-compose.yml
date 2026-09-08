@@ -46,7 +46,13 @@ services:
         required: false
     environment:
       AIRLLM_CLI_CONFIG: /state/cli.toml
-    command: ["airllm", "quickstart", "--url", "http://airllm:8080"]
+    command:
+      - airllm
+      - quickstart
+      - --url
+      - ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      - --connect-url
+      - http://airllm:8080
     volumes:
       - state:/state
     depends_on:

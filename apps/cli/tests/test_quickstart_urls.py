@@ -302,10 +302,16 @@ def _quickstart(
     urls: list[str] | None = None,
 ):
     context = QuickstartContext(claimed)
+    connected = []
     login_calls = []
     saved = {}
     verified = []
-    monkeypatch.setattr(httpx, "Client", lambda **_kwargs: context)
+
+    def client(**kwargs):
+        connected.append(kwargs["base_url"])
+        return context
+
+    monkeypatch.setattr(httpx, "Client", client)
     monkeypatch.setattr(
         auth,
         "_login_or_signup",
@@ -361,13 +367,13 @@ def _quickstart(
             *(urls or ["--gateway-url", "https://gateway.example.com/"]),
         ],
     )
-    return result, login_calls, saved, verified
+    return result, login_calls, saved, verified, connected
 
 
 def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    result, _login_calls, saved, verified = _quickstart(
+    result, _login_calls, saved, verified, _connected = _quickstart(
         monkeypatch,
         claimed=True,
         model="anthropic/claude-test",
@@ -381,10 +387,30 @@ def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
     assert verified == [("https://airllm.example.com", "inference-token", "anthropic/claude-test")]
 
 
+def test_quickstart_uses_a_connection_url_without_saving_or_printing_it(monkeypatch, tmp_path):
+    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
+
+    result, _login_calls, saved, verified, connected = _quickstart(
+        monkeypatch,
+        claimed=True,
+        model="anthropic/claude-test",
+        urls=["--url", "http://localhost:8080", "--connect-url", "http://airllm:8080"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert connected == ["http://airllm:8080"]
+    assert saved["values"].control_plane_url == "http://localhost:8080"
+    assert saved["values"].console_url == "http://localhost:8080"
+    assert saved["values"].gateway_url == "http://localhost:8080"
+    assert verified == [("http://airllm:8080", "inference-token", "anthropic/claude-test")]
+    assert "curl http://localhost:8080/inf/v1/chat/completions" in result.stdout
+    assert "http://airllm:8080" not in result.stdout
+
+
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    result, login_calls, saved, verified = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
+    result, login_calls, saved, verified, _connected = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
 
     assert result.exit_code == 0, result.output
     assert login_calls == [(True, "owner@example.com", "password123", "")]
@@ -400,7 +426,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    result, _login_calls, _saved, verified = _quickstart(monkeypatch, claimed=False, model=None)
+    result, _login_calls, _saved, verified, _connected = _quickstart(monkeypatch, claimed=False, model=None)
 
     assert result.exit_code == 1
     assert "inference-token" in result.stdout
@@ -412,7 +438,7 @@ def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(
 def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    result, login_calls, _saved, _verified = _quickstart(
+    result, login_calls, _saved, _verified, _connected = _quickstart(
         monkeypatch,
         claimed=False,
         model=None,
@@ -431,7 +457,7 @@ def test_quickstart_passes_the_claim_token_only_to_account_setup(monkeypatch, tm
 def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    result, _login_calls, _saved, verified = _quickstart(
+    result, _login_calls, _saved, verified, _connected = _quickstart(
         monkeypatch,
         claimed=True,
         model="anthropic/claude-test",

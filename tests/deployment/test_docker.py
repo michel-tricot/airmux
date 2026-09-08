@@ -94,7 +94,7 @@ def assert_process_layout(compose, gateways, compact):
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
-def assert_quickstart(compose, compact):
+def assert_quickstart(compose, compact, public_url):
     service_url = "http://airllm:8080" if compact else "http://console:8080"
     output = docker(
         *compose,
@@ -107,6 +107,8 @@ def assert_quickstart(compose, compact):
         "airllm",
         "quickstart",
         "--url",
+        public_url,
+        "--connect-url",
         service_url,
         "--email",
         "owner@deployment.test",
@@ -115,6 +117,8 @@ def assert_quickstart(compose, compact):
     )
     assert "Ready." in output
     assert "DEPLOYMENT_API_KEY" in output
+    assert f"curl {public_url}/inf/v1/chat/completions" in output
+    assert service_url not in output
 
 
 def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
@@ -156,7 +160,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
     assert_process_layout(compose, gateways, compact)
-    assert_quickstart(compose, compact)
+    assert_quickstart(compose, compact, str(client.base_url).rstrip("/"))
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
     if not compact:

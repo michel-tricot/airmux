@@ -14,11 +14,16 @@ the terminal used by the account and password prompts. Open http://localhost:808
 
 ## Ports and HTTPS
 
-To use a different port, set both the port and public origin:
+To use a different port, set both values in `.env` so `up` and the later `setup` command use the
+same public origin:
 
 ```sh
-AIRLLM_PORT=9000 AIRLLM_PUBLIC_URL=http://localhost:9000 docker compose up -d --build --wait
+AIRLLM_PORT=9000
+AIRLLM_PUBLIC_URL=http://localhost:9000
 ```
+
+Then run the two Compose commands from the quickstart. Setup reaches AirLLM over the private Docker
+network but saves and prints `AIRLLM_PUBLIC_URL` for clients outside Docker.
 
 For a public deployment, terminate HTTPS at your ingress and set `AIRLLM_PUBLIC_URL` to its
 HTTPS origin. Generate `AIRLLM_CLAIM_TOKEN` with `openssl rand -hex 24` before starting the stack.
