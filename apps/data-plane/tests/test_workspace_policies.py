@@ -47,9 +47,12 @@ def policy(action, *, match=None, workspace=WORKSPACE, target=None):
     )
 
 
-def snapshot(policies, *, credentials=None):
+def snapshot(policies, *, credentials=None, models=None, provider=PROVIDER):
     _, key = make_key()
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=credentials or [make_credential(org=None)]))
+    bundle = make_bundle(
+        keys=[key],
+        catalog=Catalog(providers=[provider], models=models or [MODEL], credentials=credentials or [make_credential(org=None)]),
+    )
     return key, BundleSnapshot.from_bundle(bundle.model_copy(update={"policies": tuple(policies)}))
 
 
@@ -97,6 +100,95 @@ def test_policy_index_preserves_workspace_evaluation_order():
 def test_budget_does_not_enforce_yet():
     key, snap = snapshot([policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared"})])
     assert isinstance(evaluate(request(), key, snap), Allow)
+
+
+def test_strict_parameters_rejects_a_parameter_the_model_would_drop():
+    model = MODEL.model_copy(update={"parameter_support": {"temperature": "unsupported"}})
+    key, snap = snapshot([policy({"kind": "strict_parameters"})], models=[model])
+
+    result = evaluate(request().model_copy(update={"temperature": 0.5}), key, snap)
+
+    assert isinstance(result, Deny)
+    assert "temperature" in result.message
+
+
+def test_strict_parameters_rejects_an_unknown_parameter_for_a_closed_provider():
+    provider = PROVIDER.model_copy(update={"params_closed": True})
+    key, snap = snapshot([policy({"kind": "strict_parameters"})], provider=provider)
+
+    result = evaluate(CanonicalRequest.model_validate({**request().model_dump(), "unknown_option": True}), key, snap)
+
+    assert isinstance(result, Deny)
+    assert "unknown_option" in result.message
+
+
+@pytest.mark.parametrize(
+    ("action", "allowed"),
+    [
+        ({"kind": "price_limit", "max_input_price_per_mtok": "1", "max_output_price_per_mtok": "2"}, True),
+        ({"kind": "price_limit", "max_input_price_per_mtok": "0.99", "max_output_price_per_mtok": "2"}, False),
+        ({"kind": "price_limit", "max_input_price_per_mtok": "1", "max_output_price_per_mtok": "1.99"}, False),
+    ],
+)
+def test_price_limit_checks_input_and_output_catalog_rates(action, allowed):
+    key, snap = snapshot([policy(action)])
+
+    assert isinstance(evaluate(request(), key, snap), Allow if allowed else Deny)
+
+
+def test_request_limits_rejects_excessive_requested_output_tokens():
+    key, snap = snapshot([policy({"kind": "request_limits", "max_output_tokens": 500})])
+
+    assert isinstance(evaluate(request(), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 500}), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
+
+
+def test_credential_access_selects_the_most_specific_allowed_scope():
+    workspace_credential = make_credential(name="workspace", workspace=WORKSPACE)
+    org_credential = make_credential(name="org")
+    platform_credential = make_credential(name="platform", org=None)
+    key, snap = snapshot(
+        [policy({"kind": "credential_access", "scopes": ["org", "platform"]})],
+        credentials=[workspace_credential, org_credential, platform_credential],
+    )
+
+    result = evaluate(request(), key, snap)
+
+    assert isinstance(result, Allow)
+    assert result.candidates == (org_credential,)
+
+
+def test_credential_access_denies_when_no_allowed_scope_has_credentials():
+    key, snap = snapshot(
+        [policy({"kind": "credential_access", "scopes": ["workspace"]})],
+        credentials=[make_credential(name="org")],
+    )
+
+    assert isinstance(evaluate(request(), key, snap), Deny)
+
+
+def test_price_limit_applies_to_fallback_models():
+    backup = MODEL.model_copy(update={"model_id": "backup", "input_price_per_mtok": 5.0})
+    policies = [
+        policy({"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}),
+        policy({"kind": "price_limit", "max_input_price_per_mtok": "2", "max_output_price_per_mtok": "3"}),
+    ]
+    key, snap = snapshot(policies, models=[MODEL, backup])
+
+    plan = plan_routes(request(), key, snap)
+
+    assert isinstance(plan, RoutePlan)
+    assert plan.backups == ()
+
+
+def test_credential_access_policies_intersect_with_byok():
+    key, snap = snapshot(
+        [policy({"kind": "byok"}), policy({"kind": "credential_access", "scopes": ["platform"]})],
+        credentials=[make_credential(name="org"), make_credential(name="platform", org=None)],
+    )
+
+    assert isinstance(evaluate(request(), key, snap), Deny)
 
 
 def test_request_match_combines_model_stream_and_capabilities():

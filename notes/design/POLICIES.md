@@ -53,12 +53,24 @@ The same matched restrictions apply to every backup, so changing the route canno
 | `models` | `names` | Allows only listed catalog model names |
 | `providers` | `names` | Allows only listed provider names |
 | `deny` | `message` | Rejects matching requests with a configured explanation |
+| `strict_parameters` | None | Rejects a route when reconciliation would drop a supplied parameter |
+| `price_limit` | input and output USD per million token ceilings | Rejects catalog models whose rates exceed either ceiling |
+| `request_limits` | maximum requested output tokens | Rejects requests above the configured output bound |
+| `credential_access` | allowed credential scopes | Filters credentials to workspace, organization, or platform scopes before tier selection |
 | `fallback` | `models`, `on`, `max_attempts`, `timeout_ms` | Supplies an ordered, bounded backup plan |
 | `budget` | `period`, `amount_usd`, `sharing` | Stores intent only; does not track or enforce spending |
 
 Budget periods are `day` and `month`. Sharing is `shared` or `per_key`. Amounts use decimal USD,
 not floating-point arithmetic. Enabling a budget policy does not activate a spending limit. The
 console explains that enforcement is not available yet.
+
+Price limits compare the static input and output rates published in the bundle. They do not predict
+or cap the total cost of one request. Strict parameter support covers parameters reconciliation
+would otherwise drop; model capability and input-modality checks remain unconditional route checks.
+
+Credential access policies compose by intersection. After filtering, the evaluator selects the
+most specific populated allowed tier in workspace, organization, platform order. Exhausting or
+rejecting credentials in that selected tier does not fall through to a broader tier.
 
 ## Fallback semantics
 

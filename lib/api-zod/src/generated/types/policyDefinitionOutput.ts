@@ -15,14 +15,18 @@ import type { AllowedModels } from './allowedModels';
 import type { AllowedProviders } from './allowedProviders';
 import type { AllRequests } from './allRequests';
 import type { BudgetOutput } from './budgetOutput';
+import type { CredentialAccess } from './credentialAccess';
 import type { DenyRequest } from './denyRequest';
 import type { Fallback } from './fallback';
+import type { PriceLimitOutput } from './priceLimitOutput';
+import type { RequestLimits } from './requestLimits';
 import type { RequestMatch } from './requestMatch';
 import type { RequireByok } from './requireByok';
 import type { SelectedKeys } from './selectedKeys';
+import type { StrictParameters } from './strictParameters';
 
 export interface PolicyDefinitionOutput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
 }

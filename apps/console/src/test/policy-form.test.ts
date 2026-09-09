@@ -36,4 +36,34 @@ describe('workspace policy configuration', () => {
     expect(payload.definition.action).not.toHaveProperty('enforcement');
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Budget', kind: 'budget', amount: '-1' }).success).toBe(false);
   });
+
+  it('builds strict parameter, price, request, and credential restrictions', () => {
+    expect(policyPayload({ ...policyDefaults, name: 'Strict', kind: 'strict_parameters' }).definition.action).toEqual({
+      kind: 'strict_parameters',
+    });
+    expect(
+      policyPayload({
+        ...policyDefaults,
+        name: 'Price',
+        kind: 'price_limit',
+        maxInputPrice: '1.25',
+        maxOutputPrice: '5',
+      }).definition.action,
+    ).toEqual({ kind: 'price_limit', max_input_price_per_mtok: '1.25', max_output_price_per_mtok: '5' });
+    expect(policyPayload({ ...policyDefaults, name: 'Tokens', kind: 'request_limits', maxOutputTokens: 2048 }).definition.action).toEqual({
+      kind: 'request_limits',
+      max_output_tokens: 2048,
+    });
+    expect(
+      policyPayload({ ...policyDefaults, name: 'Credentials', kind: 'credential_access', credentialScopes: ['workspace', 'org'] }).definition.action,
+    ).toEqual({ kind: 'credential_access', scopes: ['workspace', 'org'] });
+  });
+
+  it('rejects invalid price, request, and credential restrictions', () => {
+    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Price', kind: 'price_limit', maxInputPrice: '-1' }).success).toBe(false);
+    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Tokens', kind: 'request_limits', maxOutputTokens: 0 }).success).toBe(false);
+    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Credentials', kind: 'credential_access', credentialScopes: [] }).success).toBe(
+      false,
+    );
+  });
 });

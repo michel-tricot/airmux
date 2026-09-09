@@ -9,7 +9,7 @@
     "groups": [
       {
         "group": "Getting started",
-        "pages": ["docs/index"]
+        "pages": ["docs/index", "docs/policies"]
       },
       {
         "group": "Deployment",

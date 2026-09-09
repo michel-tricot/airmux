@@ -55,6 +55,14 @@ function actionSummary(policy: PolicyOut): string {
       return `Providers: ${action.names.join(', ')}`;
     case 'deny':
       return action.message;
+    case 'strict_parameters':
+      return 'Require parameter support';
+    case 'price_limit':
+      return `Price ≤ $${action.max_input_price_per_mtok} input / $${action.max_output_price_per_mtok} output per 1M tokens`;
+    case 'request_limits':
+      return `Output ≤ ${action.max_output_tokens.toLocaleString()} tokens`;
+    case 'credential_access':
+      return `Credentials: ${action.scopes.join(', ')}`;
     case 'fallback':
       return `Fallback: ${action.models.join(' → ')}`;
     case 'budget':

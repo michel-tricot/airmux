@@ -4743,6 +4743,29 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
+    CredentialAccess:
+      properties:
+        kind:
+          type: string
+          const: credential_access
+          title: Kind
+        scopes:
+          items:
+            type: string
+            enum:
+            - platform
+            - org
+            - workspace
+          type: array
+          maxItems: 3
+          minItems: 1
+          title: Scopes
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - scopes
+      title: CredentialAccess
     CredentialEntry:
       properties:
         ref:
@@ -6722,6 +6745,10 @@ components:
           - $ref: '#/components/schemas/AllowedModels'
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Input'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
           - $ref: '#/components/schemas/Budget-Input'
           title: Action
@@ -6730,10 +6757,14 @@ components:
             mapping:
               budget: '#/components/schemas/Budget-Input'
               byok: '#/components/schemas/RequireByok'
+              credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Input'
               providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
       additionalProperties: false
       type: object
       required:
@@ -6769,6 +6800,10 @@ components:
           - $ref: '#/components/schemas/AllowedModels'
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Output'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
           - $ref: '#/components/schemas/Budget-Output'
           title: Action
@@ -6777,10 +6812,14 @@ components:
             mapping:
               budget: '#/components/schemas/Budget-Output'
               byok: '#/components/schemas/RequireByok'
+              credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Output'
               providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
       additionalProperties: false
       type: object
       required:
@@ -6917,6 +6956,54 @@ components:
       additionalProperties: false
       type: object
       title: PolicyUpdate
+    PriceLimit-Input:
+      properties:
+        kind:
+          type: string
+          const: price_limit
+          title: Kind
+        max_input_price_per_mtok:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          title: Max Input Price Per Mtok
+        max_output_price_per_mtok:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          title: Max Output Price Per Mtok
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - max_input_price_per_mtok
+      - max_output_price_per_mtok
+      title: PriceLimit
+    PriceLimit-Output:
+      properties:
+        kind:
+          type: string
+          const: price_limit
+          title: Kind
+        max_input_price_per_mtok:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          title: Max Input Price Per Mtok
+        max_output_price_per_mtok:
+          type: string
+          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          title: Max Output Price Per Mtok
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - max_input_price_per_mtok
+      - max_output_price_per_mtok
+      title: PriceLimit
     ProviderCredentialIn:
       properties:
         provider:
@@ -7242,6 +7329,22 @@ components:
       - updated_at
       - deleted_at
       title: ProviderOut
+    RequestLimits:
+      properties:
+        kind:
+          type: string
+          const: request_limits
+          title: Kind
+        max_output_tokens:
+          type: integer
+          minimum: 1.0
+          title: Max Output Tokens
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - max_output_tokens
+      title: RequestLimits
     RequestMatch:
       properties:
         kind:
@@ -7575,6 +7678,17 @@ components:
       - email
       - password
       title: SignupIn
+    StrictParameters:
+      properties:
+        kind:
+          type: string
+          const: strict_parameters
+          title: Kind
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      title: StrictParameters
     TaxonomyApplyOut:
       properties:
         dry_run:

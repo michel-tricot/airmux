@@ -219,6 +219,17 @@ class CliAuthStartOut(BaseModel):
     expires_in_seconds: Annotated[int, Field(title="Expires In Seconds")]
 
 
+class CredentialAccess(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["credential_access"], Field(title="Kind")]
+    scopes: Annotated[
+        list[Literal["platform", "org", "workspace"]],
+        Field(max_length=3, min_length=1, title="Scopes"),
+    ]
+
+
 class DataPlaneInstanceOut(BaseModel):
     instance_id: Annotated[UUID, Field(title="Instance Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")]
@@ -1074,6 +1085,77 @@ class Priority(RootModel[int]):
     ]
 
 
+class MaxInputPricePerMtok(RootModel[float]):
+    root: Annotated[float, Field(ge=0.0, title="Max Input Price Per Mtok")]
+
+
+class MaxInputPricePerMtok1(RootModel[str]):
+    model_config = ConfigDict(
+        regex_engine="python-re",
+    )
+    root: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Max Input Price Per Mtok",
+        ),
+    ]
+
+
+class MaxOutputPricePerMtok(RootModel[float]):
+    root: Annotated[float, Field(ge=0.0, title="Max Output Price Per Mtok")]
+
+
+class MaxOutputPricePerMtok1(RootModel[str]):
+    model_config = ConfigDict(
+        regex_engine="python-re",
+    )
+    root: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Max Output Price Per Mtok",
+        ),
+    ]
+
+
+class PriceLimitInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["price_limit"], Field(title="Kind")]
+    max_input_price_per_mtok: Annotated[
+        MaxInputPricePerMtok | MaxInputPricePerMtok1,
+        Field(title="Max Input Price Per Mtok"),
+    ]
+    max_output_price_per_mtok: Annotated[
+        MaxOutputPricePerMtok | MaxOutputPricePerMtok1,
+        Field(title="Max Output Price Per Mtok"),
+    ]
+
+
+class PriceLimitOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        regex_engine="python-re",
+    )
+    kind: Annotated[Literal["price_limit"], Field(title="Kind")]
+    max_input_price_per_mtok: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Max Input Price Per Mtok",
+        ),
+    ]
+    max_output_price_per_mtok: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Max Output Price Per Mtok",
+        ),
+    ]
+
+
 class ProviderCredentialIn(BaseModel):
     """
     A provider API key and the metadata used to select it.
@@ -1295,6 +1377,14 @@ class ProviderOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class RequestLimits(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["request_limits"], Field(title="Kind")]
+    max_output_tokens: Annotated[int, Field(ge=1, title="Max Output Tokens")]
 
 
 class RequestMatch(BaseModel):
@@ -1532,6 +1622,13 @@ class SignupIn(BaseModel):
             title="Password",
         ),
     ]
+
+
+class StrictParameters(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["strict_parameters"], Field(title="Kind")]
 
 
 class TaxonomyChangeCounts(BaseModel):
@@ -1970,7 +2067,16 @@ class PolicyDefinitionInput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput,
+        RequireByok
+        | AllowedModels
+        | AllowedProviders
+        | DenyRequest
+        | StrictParameters
+        | PriceLimitInput
+        | RequestLimits
+        | CredentialAccess
+        | Fallback
+        | BudgetInput,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -1982,7 +2088,16 @@ class PolicyDefinitionOutput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput,
+        RequireByok
+        | AllowedModels
+        | AllowedProviders
+        | DenyRequest
+        | StrictParameters
+        | PriceLimitOutput
+        | RequestLimits
+        | CredentialAccess
+        | Fallback
+        | BudgetOutput,
         Field(discriminator="kind", title="Action"),
     ]
 

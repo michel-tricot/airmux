@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from contract.events import CredentialScope
+
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
@@ -80,6 +82,34 @@ class DenyRequest(_PolicyModel):
     message: PolicyName
 
 
+class StrictParameters(_PolicyModel):
+    kind: Literal["strict_parameters"]
+
+
+class PriceLimit(_PolicyModel):
+    kind: Literal["price_limit"]
+    max_input_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
+    max_output_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
+
+
+class RequestLimits(_PolicyModel):
+    kind: Literal["request_limits"]
+    max_output_tokens: int = Field(ge=1)
+
+
+class CredentialAccess(_PolicyModel):
+    kind: Literal["credential_access"]
+    scopes: tuple[CredentialScope, ...] = Field(min_length=1, max_length=3)
+
+    @field_validator("scopes")
+    @classmethod
+    def unique_scopes(cls, scopes: tuple[CredentialScope, ...]) -> tuple[CredentialScope, ...]:
+        if len(scopes) != len(set(scopes)):
+            msg = "Credential scopes must be unique"
+            raise ValueError(msg)
+        return scopes
+
+
 class Fallback(_PolicyModel):
     kind: Literal["fallback"]
     models: tuple[PolicyIdentifier, ...] = Field(min_length=1, max_length=4)
@@ -102,7 +132,19 @@ class Budget(_PolicyModel):
     sharing: Literal["shared", "per_key"]
 
 
-PolicyAction = Annotated[RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | Budget, Field(discriminator="kind")]
+PolicyAction = Annotated[
+    RequireByok
+    | AllowedModels
+    | AllowedProviders
+    | DenyRequest
+    | StrictParameters
+    | PriceLimit
+    | RequestLimits
+    | CredentialAccess
+    | Fallback
+    | Budget,
+    Field(discriminator="kind"),
+]
 
 
 class PolicyDefinition(_PolicyModel):

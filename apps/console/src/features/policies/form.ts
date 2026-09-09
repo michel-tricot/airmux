@@ -12,9 +12,24 @@ export const policyFormSchema = z
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
     matchCapabilities: z.array(z.enum(['tools', 'reasoning', 'structured_output'])),
-    kind: z.enum(['byok', 'models', 'providers', 'deny', 'fallback', 'budget']),
+    kind: z.enum([
+      'byok',
+      'models',
+      'providers',
+      'deny',
+      'strict_parameters',
+      'price_limit',
+      'request_limits',
+      'credential_access',
+      'fallback',
+      'budget',
+    ]),
     names: z.array(z.string()),
     message: z.string(),
+    maxInputPrice: z.string(),
+    maxOutputPrice: z.string(),
+    maxOutputTokens: z.number().int().min(1),
+    credentialScopes: z.array(z.enum(['workspace', 'org', 'platform'])),
     reasons: z.array(z.enum(['rate_limited', 'upstream_unavailable', 'timeout'])),
     maxAttempts: z.number().int().min(2).max(5),
     timeoutMs: z.number().int().min(100).max(120000),
@@ -31,6 +46,11 @@ export const policyFormSchema = z
     if (values.kind === 'fallback' && values.names.length > 4) issue('names', 'Choose at most four backup models');
     if (values.kind === 'fallback' && !values.reasons.length) issue('reasons', 'Select at least one failure reason');
     if (values.kind === 'deny' && (!values.message.trim() || values.message.length > 200)) issue('message', 'Enter a message of 1 to 200 characters');
+    if (values.kind === 'price_limit') {
+      if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxInputPrice)) issue('maxInputPrice', 'Enter a non-negative USD rate');
+      if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxOutputPrice)) issue('maxOutputPrice', 'Enter a non-negative USD rate');
+    }
+    if (values.kind === 'credential_access' && !values.credentialScopes.length) issue('credentialScopes', 'Select at least one credential scope');
     if (values.kind === 'budget' && (!/^\d{1,10}(\.\d{1,6})?$/.test(values.amount) || Number(values.amount) <= 0))
       issue('amount', 'Enter a positive USD amount with at most six decimal places');
   });
@@ -50,6 +70,10 @@ export const policyDefaults: PolicyForm = {
   kind: 'byok',
   names: [],
   message: '',
+  maxInputPrice: '',
+  maxOutputPrice: '',
+  maxOutputTokens: 4096,
+  credentialScopes: ['workspace', 'org'],
   reasons: ['rate_limited', 'upstream_unavailable', 'timeout'],
   maxAttempts: 3,
   timeoutMs: 30000,
@@ -68,6 +92,18 @@ function action(values: PolicyForm): PolicyDefinitionInput['action'] {
       return { kind: 'providers', names: values.names };
     case 'deny':
       return { kind: 'deny', message: values.message };
+    case 'strict_parameters':
+      return { kind: 'strict_parameters' };
+    case 'price_limit':
+      return {
+        kind: 'price_limit',
+        max_input_price_per_mtok: values.maxInputPrice,
+        max_output_price_per_mtok: values.maxOutputPrice,
+      };
+    case 'request_limits':
+      return { kind: 'request_limits', max_output_tokens: values.maxOutputTokens };
+    case 'credential_access':
+      return { kind: 'credential_access', scopes: values.credentialScopes };
     case 'fallback':
       return { kind: 'fallback', models: values.names, on: values.reasons, max_attempts: values.maxAttempts, timeout_ms: values.timeoutMs };
     case 'budget':
@@ -114,6 +150,9 @@ export function policyForm(policy: PolicyOut): PolicyForm {
     kind: action.kind,
     names: action.kind === 'models' || action.kind === 'providers' ? action.names : action.kind === 'fallback' ? action.models : [],
     ...(action.kind === 'deny' ? { message: action.message } : {}),
+    ...(action.kind === 'price_limit' ? { maxInputPrice: action.max_input_price_per_mtok, maxOutputPrice: action.max_output_price_per_mtok } : {}),
+    ...(action.kind === 'request_limits' ? { maxOutputTokens: action.max_output_tokens } : {}),
+    ...(action.kind === 'credential_access' ? { credentialScopes: action.scopes } : {}),
     ...(action.kind === 'fallback' ? { reasons: action.on, maxAttempts: action.max_attempts, timeoutMs: action.timeout_ms } : {}),
     ...(action.kind === 'budget' ? { amount: action.amount_usd, period: action.period, sharing: action.sharing } : {}),
   };

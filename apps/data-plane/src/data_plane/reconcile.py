@@ -31,6 +31,11 @@ def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: Compiled
     return None
 
 
+def dropped_parameters(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[str, ...]:
+    tuning = (param for param in MODEL_TUNING_PARAMS if _value(request, param) is not None)
+    return tuple(sorted(param for param in (*tuning, *request.extra) if _drop_reason(request, model, profile, param) is not None))
+
+
 def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
     unsupported = {
         param for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and _value(request, param) is not None

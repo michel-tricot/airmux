@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
     from contract.policies import Fallback, PolicyAction, PolicyEntry
     from data_plane.canonical import CanonicalRequest
+    from data_plane.profiles import CompiledProfile
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,7 @@ class ActionContext:
     key: KeyEntry
     model: ModelEntry
     provider: ProviderEntry
+    profile: CompiledProfile
 
 
 @dataclass(frozen=True)

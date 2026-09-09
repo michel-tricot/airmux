@@ -9,6 +9,10 @@ const actionOptions = [
   { value: 'byok', label: 'Require BYOK' },
   { value: 'models', label: 'Allowed models' },
   { value: 'providers', label: 'Allowed providers' },
+  { value: 'strict_parameters', label: 'Require parameter support' },
+  { value: 'price_limit', label: 'Model price limit' },
+  { value: 'request_limits', label: 'Request limits' },
+  { value: 'credential_access', label: 'Credential access' },
   { value: 'deny', label: 'Deny matching requests' },
   { value: 'fallback', label: 'Model fallbacks' },
   { value: 'budget', label: 'Budget' },
@@ -23,6 +27,11 @@ const capabilityOptions = [
   { value: 'reasoning', label: 'Reasoning' },
   { value: 'structured_output', label: 'Structured output' },
 ];
+const credentialScopeOptions = [
+  { value: 'workspace', label: 'Workspace credentials' },
+  { value: 'org', label: 'Organization credentials' },
+  { value: 'platform', label: 'Platform credentials' },
+];
 
 function TextField({
   form,
@@ -31,7 +40,7 @@ function TextField({
   numeric = false,
 }: {
   form: UseFormReturn<PolicyForm>;
-  name: 'name' | 'priority' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount';
+  name: 'name' | 'priority' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
   label: string;
   numeric?: boolean;
 }) {
@@ -266,6 +275,46 @@ export function PolicyEditor({
               <p className="text-sm text-muted-foreground">
                 Only workspace or organization provider credentials may be used. Platform credentials are excluded.
               </p>
+            )}
+            {kind === 'strict_parameters' && (
+              <p className="text-sm text-muted-foreground">
+                Rejects requests when the selected model or provider would drop an unsupported parameter.
+              </p>
+            )}
+            {kind === 'price_limit' && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextField form={form} name="maxInputPrice" label="Maximum input USD / 1M tokens" />
+                  <TextField form={form} name="maxOutputPrice" label="Maximum output USD / 1M tokens" />
+                </div>
+                <p className="text-sm text-muted-foreground">Every selected primary and fallback model must stay within both catalog rates.</p>
+              </>
+            )}
+            {kind === 'request_limits' && <TextField form={form} name="maxOutputTokens" label="Maximum requested output tokens" numeric />}
+            {kind === 'credential_access' && (
+              <FormField
+                control={form.control}
+                name="credentialScopes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed credential scopes</FormLabel>
+                    <FormControl>
+                      <CheckboxDropdown
+                        aria-label="Allowed credential scopes"
+                        label="Selected scopes"
+                        allLabel="Choose scopes"
+                        values={field.value}
+                        onValuesChange={field.onChange}
+                        options={credentialScopeOptions}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      The most specific allowed scope with credentials is used: workspace, then organization, then platform.
+                    </p>
+                  </FormItem>
+                )}
+              />
             )}
             {['models', 'providers', 'fallback'].includes(kind) && (
               <FormField

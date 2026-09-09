@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
-from data_plane.credentials import candidates_for
+from data_plane.credentials import policy_candidates, preferred_candidates
 from data_plane.policies import matching_policies
 from data_plane.policy_actions import ActionContext, EvaluationState, evaluate_action
 from data_plane.requirements import required_capabilities, required_input_modalities
@@ -62,13 +62,14 @@ def evaluate_policies(
         return PolicyEvaluation(route, None, policies)
     state = EvaluationState(candidates=route.candidates)
     for policy in policies:
-        context = ActionContext(policy=policy, request=req, key=key, model=route.model, provider=route.provider)
+        context = ActionContext(policy=policy, request=req, key=key, model=route.model, provider=route.provider, profile=route.profile)
         state = evaluate_action(policy.definition.action, context, state)
         if state.denial is not None:
             return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, policies)
-    if not state.candidates:
+    candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)
+    if not candidates:
         return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, policies)
-    return PolicyEvaluation(replace(route, candidates=state.candidates), state.fallback, policies)
+    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, policies)
 
 
 def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
@@ -84,5 +85,5 @@ def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decisi
     provider = snap.provider_index.get(model.provider_id)
     if provider is None:
         return Deny(code="provider_not_configured", status=502)
-    candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
+    candidates = policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
     return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])

@@ -458,6 +458,43 @@ export interface DenyRequest {
   message: string;
 }
 
+export const StrictParametersValue = {
+  kind: 'strict_parameters',
+} as const;
+export type StrictParameters = typeof StrictParametersValue;
+
+export interface PriceLimitOutput {
+  kind: 'price_limit';
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  max_input_price_per_mtok: string;
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  max_output_price_per_mtok: string;
+}
+
+export interface RequestLimits {
+  kind: 'request_limits';
+  /** @minimum 1 */
+  max_output_tokens: number;
+}
+
+export type CredentialAccessScopesItem = typeof CredentialAccessScopesItem[keyof typeof CredentialAccessScopesItem];
+
+
+export const CredentialAccessScopesItem = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface CredentialAccess {
+  kind: 'credential_access';
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  scopes: CredentialAccessScopesItem[];
+}
+
 export type FallbackOnItem = typeof FallbackOnItem[keyof typeof FallbackOnItem];
 
 
@@ -496,7 +533,7 @@ export interface Fallback {
 export interface PolicyDefinitionOutput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
 }
 
 export interface PolicyEntry {
@@ -1224,10 +1261,16 @@ export interface PlaygroundSessionReadyOut {
   status: 'ready';
 }
 
+export interface PriceLimitInput {
+  kind: 'price_limit';
+  max_input_price_per_mtok: number | string;
+  max_output_price_per_mtok: number | string;
+}
+
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
 }
 
 export interface PolicyCreate {

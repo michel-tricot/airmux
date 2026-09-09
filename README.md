@@ -4,7 +4,7 @@ One gateway for your LLM applications, across providers. Use OpenAI and Anthropi
 OpenAI, Anthropic, Groq, Fireworks, Together, and other compatible providers. AirLLM handles
 routing, scoped provider credentials, inference keys, and usage tracking.
 
-[Deployment guides](docs/deployment/index.md) · [Development](docs/development.md) · [Examples](examples)
+[Policies](docs/policies.md) · [Deployment guides](docs/deployment/index.md) · [Development](docs/development.md) · [Examples](examples)
 
 ## Quickstart
 

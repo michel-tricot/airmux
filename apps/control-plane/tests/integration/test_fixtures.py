@@ -196,7 +196,18 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     policies = run_in_db(tmp_path, Policy.find)
     inference_keys = run_in_db(tmp_path, InferenceKey.find)
 
-    assert {policy.definition.action.kind for policy in policies} == {"byok", "models", "providers", "deny", "fallback", "budget"}
+    assert {policy.definition.action.kind for policy in policies} == {
+        "byok",
+        "models",
+        "providers",
+        "deny",
+        "strict_parameters",
+        "price_limit",
+        "request_limits",
+        "credential_access",
+        "fallback",
+        "budget",
+    }
     assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_match = next(policy for policy in policies if policy.name == "Streaming requires BYOK").definition.match

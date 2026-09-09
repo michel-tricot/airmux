@@ -36,12 +36,16 @@ from contract.policies import (
     AllowedProviders,
     AllRequests,
     Budget,
+    CredentialAccess,
     DenyRequest,
     Fallback,
     PolicyDefinition,
+    PriceLimit,
+    RequestLimits,
     RequestMatch,
     RequireByok,
     SelectedKeys,
+    StrictParameters,
 )
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
 from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
@@ -390,6 +394,24 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
             ),
         ),
     )
+    for priority, (name, action) in enumerate(
+        (
+            ("Honor every request parameter", StrictParameters(kind="strict_parameters")),
+            (
+                "Production model price ceiling",
+                PriceLimit(kind="price_limit", max_input_price_per_mtok=Decimal(100), max_output_price_per_mtok=Decimal(100)),
+            ),
+            ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=16384)),
+            ("Approved credential scopes", CredentialAccess(kind="credential_access", scopes=("workspace", "org"))),
+        ),
+        start=31,
+    ):
+        await workspace_policy(
+            production,
+            name=name,
+            priority=priority,
+            definition=PolicyDefinition(target=AllKeys(kind="all_keys"), match=AllRequests(kind="all_requests"), action=action),
+        )
     await workspace_policy(
         production,
         name="Maintenance window",
