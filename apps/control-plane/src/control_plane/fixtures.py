@@ -6,11 +6,11 @@ second set of shapes: there is no parallel schema here to drift out of step with
 
 Nothing is minted. Ids come from uuid5 over a fixture namespace and secrets are constants, so a
 bookmarked console URL, a saved login, and a token pasted into a .env survive being reseeded from
-scratch. Seeding only ever runs against an empty database: to start over, drop it and recreate it.
+scratch. Seeding only runs before any human account exists: to start over, drop the database and recreate it.
 
 The tokens here are public knowledge, which is what makes them useful and what makes them
 unacceptable outside development. `airllmcp fixtures` refuses any database that already holds
-accounts.
+human accounts.
 
 The file reads in three parts: every constant first, so the credentials and the knobs are in one
 place; then the few helpers; then apply_fixtures, which is the instance itself, written top to
@@ -84,7 +84,11 @@ ACME_MEMBER_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-member"
 ACME_PRODUCTION_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-production-viewer"
 ACME_EXPIRED_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-expired"
 
-MODELS = [("gpt-4o-mini", "openai"), ("gpt-4o", "openai"), ("claude-opus-4-5", "anthropic")]
+OPENAI_GPT_4O_MINI = "openai/gpt-4o-mini"
+OPENAI_GPT_4O = "openai/gpt-4o"
+ANTHROPIC_CLAUDE_OPUS = "anthropic/claude-opus-4-5-20251101"
+
+MODELS = [(OPENAI_GPT_4O_MINI, "openai"), (OPENAI_GPT_4O, "openai"), (ANTHROPIC_CLAUDE_OPUS, "anthropic")]
 
 ROUTED_PROVIDERS = sorted({provider for _, provider in MODELS})
 """The providers the fixture traffic and credentials name. Taxonomy owns whether they exist; these
@@ -117,8 +121,8 @@ class MissingModelsError(ValueError):
         super().__init__(f"the catalog has no {', '.join(missing)}; run `airllmcp taxonomy` to fill it before seeding")
 
 
-class NotAnEmptyDatabaseError(ValueError):
-    """The target already holds accounts, so it is somebody's database rather than a fresh one.
+class ExistingHumanAccountsError(ValueError):
+    """The target already holds human accounts, so it is somebody's database rather than a fresh one.
 
     A ValueError so a caller can report it without importing this module for the type, the way the
     admin command already treats its own refusal.
@@ -256,16 +260,17 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     is no second pass to keep in step, and dependency order is ordinary data flow: nothing can name
     an org before the line that creates it.
 
-    Seeds a fresh database only. There is no merge and no partial reset: to reseed, drop the
-    database and recreate it. That keeps this a straight line of inserts, and keeps the seeder from
-    ever deciding which of somebody's rows it is entitled to delete.
+    Seeds a database with no human accounts. Deployment service accounts may already exist because
+    the control plane creates them before becoming healthy. There is no merge and no partial reset:
+    to reseed, drop the database and recreate it. That keeps this a straight line of inserts, and
+    keeps the seeder from ever deciding which of somebody's rows it is entitled to delete.
 
     now is injected the way the compiler injects it: the seeder stays a function of its inputs, so
     a test can pin the clock and get the same series every run.
     """
-    if await User.first() is not None:
-        msg = "this is not an empty database; fixtures seed a fresh one, so drop and recreate it first"
-        raise NotAnEmptyDatabaseError(msg)
+    if await User.first(col(User.service_account).is_(False)) is not None:
+        msg = "this database already has human accounts; fixtures seed a fresh instance, so drop and recreate it first"
+        raise ExistingHumanAccountsError(msg)
 
     catalog = {provider.name: provider for provider in await Provider.find(col(Provider.name).in_(ROUTED_PROVIDERS))}
     if missing := [name for name in ROUTED_PROVIDERS if name not in catalog]:
@@ -366,7 +371,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
             match=AllRequests(kind="all_requests"),
-            action=AllowedModels(kind="models", names=("gpt-4o-mini", "gpt-4o")),
+            action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
         ),
     )
     await workspace_policy(
@@ -375,10 +380,10 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=30,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=RequestMatch(kind="request", models=("gpt-4o",)),
+            match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
             action=Fallback(
                 kind="fallback",
-                models=("claude-opus-4-5", "gpt-4o-mini"),
+                models=(ANTHROPIC_CLAUDE_OPUS, OPENAI_GPT_4O_MINI),
                 on=("rate_limited", "upstream_unavailable", "timeout"),
                 max_attempts=3,
                 timeout_ms=30000,

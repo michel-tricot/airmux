@@ -9,18 +9,19 @@ from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
 from contract import EnvStoreConfig, MemoryStoreConfig
+from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
     ACME_MEMBER_INVITE_TOKEN,
     ACME_PRODUCTION_INVITE_TOKEN,
     FIXTURE_PROVIDER_KEY,
     MODELS,
+    ExistingHumanAccountsError,
     MissingModelsError,
     MissingProvidersError,
-    NotAnEmptyDatabaseError,
     apply_fixtures,
 )
 from control_plane.main import app as cli_app
-from control_plane.models import DataPlaneInstance, InferenceKey, Model, Org, OrgInvitation, Policy, Provider, ProviderCredential, set_actor
+from control_plane.models import DataPlaneInstance, InferenceKey, Model, Org, OrgInvitation, Policy, Provider, ProviderCredential, User, set_actor
 
 runner = CliRunner()
 
@@ -62,13 +63,29 @@ def test_apply_refuses_a_database_that_already_holds_accounts(tmp_path):
     with TestClient(cp.app) as c:
         c.post("/api/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
 
-    with pytest.raises(NotAnEmptyDatabaseError):
+    with pytest.raises(ExistingHumanAccountsError):
         run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
 
     assert run_in_db(tmp_path, Org.find) == []
 
 
-def test_cli_refuses_a_database_that_is_not_empty(tmp_path):
+def test_apply_allows_the_deployment_service_account(tmp_path):
+    setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+
+    async def bootstrap():
+        await set_actor("root")
+        await User.new_service_account("deployment data plane", instance_role=InstanceRole.data_plane).save()
+
+    run_in_db(tmp_path, bootstrap)
+    run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
+
+    users = run_in_db(tmp_path, User.find)
+    assert {user.service_account for user in users} == {True, False}
+    assert {user.email for user in users if not user.service_account} == {"m@airbyte.com", "b@airbyte.com"}
+
+
+def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     with TestClient(cp.app) as c:
@@ -77,7 +94,7 @@ def test_cli_refuses_a_database_that_is_not_empty(tmp_path):
     refused = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 
     assert refused.exit_code == 1
-    assert "not an empty database" in refused.output
+    assert "already has human accounts" in refused.output
     assert run_in_db(tmp_path, Org.find) == []
 
 

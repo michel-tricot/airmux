@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 import control_plane
+from control_plane.fixtures import ROUTED_MODELS
 from control_plane.taxonomy import TaxonomySpec
 
 REPO_ROOT = Path(control_plane.__file__).resolve().parents[4]
@@ -15,6 +16,11 @@ def test_empty_taxonomy_parses_to_defaults():
     spec = TaxonomySpec.model_validate(yaml.safe_load("{}"))
     assert spec.providers == []
     assert spec.models == []
+
+
+def test_fixture_models_exist_in_the_shipped_taxonomy():
+    spec = TaxonomySpec.model_validate(yaml.safe_load((REPO_ROOT / "taxonomy" / "taxonomy.yml").read_text(encoding="utf-8")))
+    assert set(ROUTED_MODELS) <= {model.model_id for model in spec.models}
 
 
 @pytest.mark.parametrize(
