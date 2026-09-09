@@ -6,7 +6,6 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { policyDefaults, policyForm, policyFormSchema, policyPayload, type PolicyForm } from '@/features/policies/form';
 
 const actionOptions = [
-  { value: 'byok', label: 'Require BYOK' },
   { value: 'models', label: 'Allowed models' },
   { value: 'providers', label: 'Allowed providers' },
   { value: 'strict_parameters', label: 'Require parameter support' },
@@ -271,11 +270,6 @@ export function PolicyEditor({
                 </FormItem>
               )}
             />
-            {kind === 'byok' && (
-              <p className="text-sm text-muted-foreground">
-                Only workspace or organization provider credentials may be used. Platform credentials are excluded.
-              </p>
-            )}
             {kind === 'strict_parameters' && (
               <p className="text-sm text-muted-foreground">
                 Rejects requests when the selected model or provider would drop an unsupported parameter.

@@ -11,7 +11,13 @@ from control_plane.db import standalone_transaction
 from control_plane.models import Policy, set_actor
 from control_plane.models.policy import InvalidPolicyError
 
-DEFINITION = PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}})
+DEFINITION = PolicyDefinition.model_validate(
+    {
+        "target": {"kind": "all_keys"},
+        "match": {"kind": "all_requests"},
+        "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+    }
+)
 
 
 @pytest.fixture
@@ -73,7 +79,11 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
     "definition",
     [
         PolicyDefinition.model_validate(
-            {"target": {"kind": "all_keys"}, "match": {"kind": "request", "models": ["absent"]}, "action": {"kind": "byok"}}
+            {
+                "target": {"kind": "all_keys"},
+                "match": {"kind": "request", "models": ["absent"]},
+                "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+            }
         ),
         PolicyDefinition.model_validate(
             {"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["absent"]}}
@@ -101,7 +111,11 @@ def test_policy_save_validates_configuration_without_a_route(policy_workspace, d
 def test_policy_save_checks_capacity_before_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
     invalid_definition = PolicyDefinition.model_validate(
-        {"target": {"kind": "all_keys"}, "match": {"kind": "request", "models": ["absent"]}, "action": {"kind": "byok"}}
+        {
+            "target": {"kind": "all_keys"},
+            "match": {"kind": "request", "models": ["absent"]},
+            "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+        }
     )
 
     async def save():

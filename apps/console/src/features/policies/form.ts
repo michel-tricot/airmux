@@ -12,18 +12,7 @@ export const policyFormSchema = z
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
     matchCapabilities: z.array(z.enum(['tools', 'reasoning', 'structured_output'])),
-    kind: z.enum([
-      'byok',
-      'models',
-      'providers',
-      'deny',
-      'strict_parameters',
-      'price_limit',
-      'request_limits',
-      'credential_access',
-      'fallback',
-      'budget',
-    ]),
+    kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback', 'budget']),
     names: z.array(z.string()),
     message: z.string(),
     maxInputPrice: z.string(),
@@ -67,7 +56,7 @@ export const policyDefaults: PolicyForm = {
   matchModels: [],
   matchStream: 'any',
   matchCapabilities: [],
-  kind: 'byok',
+  kind: 'credential_access',
   names: [],
   message: '',
   maxInputPrice: '',
@@ -84,8 +73,6 @@ export const policyDefaults: PolicyForm = {
 
 function action(values: PolicyForm): PolicyDefinitionInput['action'] {
   switch (values.kind) {
-    case 'byok':
-      return { kind: 'byok' };
     case 'models':
       return { kind: 'models', names: values.names };
     case 'providers':

@@ -43,7 +43,6 @@ from contract.policies import (
     PriceLimit,
     RequestLimits,
     RequestMatch,
-    RequireByok,
     SelectedKeys,
     StrictParameters,
 )
@@ -362,10 +361,12 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
 
     await workspace_policy(
         production,
-        name="Streaming requires BYOK",
+        name="Streaming uses team credentials",
         priority=10,
         definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"), match=RequestMatch(kind="request", stream=True), action=RequireByok(kind="byok")
+            target=AllKeys(kind="all_keys"),
+            match=RequestMatch(kind="request", stream=True),
+            action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
         ),
     )
     await workspace_policy(
@@ -402,7 +403,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
                 PriceLimit(kind="price_limit", max_input_price_per_mtok=Decimal(100), max_output_price_per_mtok=Decimal(100)),
             ),
             ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=16384)),
-            ("Approved credential scopes", CredentialAccess(kind="credential_access", scopes=("workspace", "org"))),
         ),
         start=31,
     ):

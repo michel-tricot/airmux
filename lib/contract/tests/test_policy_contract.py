@@ -18,7 +18,9 @@ from contract.policies import Budget, PolicyDefinition, RequestMatch
 )
 def test_invalid_request_matches_are_rejected(match):
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": match, "action": {"kind": "byok"}})
+        PolicyDefinition.model_validate(
+            {"target": {"kind": "all_keys"}, "match": match, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}}
+        )
 
 
 def test_request_match_combines_typed_criteria():
@@ -26,7 +28,7 @@ def test_request_match_combines_typed_criteria():
         {
             "target": {"kind": "all_keys"},
             "match": {"kind": "request", "models": ["primary"], "stream": True, "capabilities": ["tools"]},
-            "action": {"kind": "byok"},
+            "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
         }
     )
 
@@ -36,6 +38,7 @@ def test_request_match_combines_typed_criteria():
 @pytest.mark.parametrize(
     "action",
     [
+        {"kind": "byok"},
         {"kind": "models", "names": []},
         {"kind": "providers", "names": [""]},
         {"kind": "strict_parameters", "enabled": True},
@@ -58,7 +61,11 @@ def test_selected_keys_requires_nonempty_unique_identifiers():
     for ids in ([], [""], ["key", "key"]):
         with pytest.raises(ValidationError):
             PolicyDefinition.model_validate(
-                {"target": {"kind": "selected_keys", "key_ids": ids}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}}
+                {
+                    "target": {"kind": "selected_keys", "key_ids": ids},
+                    "match": {"kind": "all_requests"},
+                    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+                }
             )
 
 

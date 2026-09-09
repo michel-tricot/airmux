@@ -6741,7 +6741,6 @@ components:
               request: '#/components/schemas/RequestMatch'
         action:
           oneOf:
-          - $ref: '#/components/schemas/RequireByok'
           - $ref: '#/components/schemas/AllowedModels'
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
@@ -6756,7 +6755,6 @@ components:
             propertyName: kind
             mapping:
               budget: '#/components/schemas/Budget-Input'
-              byok: '#/components/schemas/RequireByok'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -6796,7 +6794,6 @@ components:
               request: '#/components/schemas/RequestMatch'
         action:
           oneOf:
-          - $ref: '#/components/schemas/RequireByok'
           - $ref: '#/components/schemas/AllowedModels'
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
@@ -6811,7 +6808,6 @@ components:
             propertyName: kind
             mapping:
               budget: '#/components/schemas/Budget-Output'
-              byok: '#/components/schemas/RequireByok'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -7381,17 +7377,6 @@ components:
       required:
       - kind
       title: RequestMatch
-    RequireByok:
-      properties:
-        kind:
-          type: string
-          const: byok
-          title: Kind
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      title: RequireByok
     RoutedUsageEventV1:
       properties:
         schema_version:

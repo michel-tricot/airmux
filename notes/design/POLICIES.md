@@ -49,7 +49,6 @@ The same matched restrictions apply to every backup, so changing the route canno
 
 | Kind | Configuration | Behavior |
 | --- | --- | --- |
-| `byok` | None | Excludes platform credentials; permits the caller's organization and workspace credentials |
 | `models` | `names` | Allows only listed catalog model names |
 | `providers` | `names` | Allows only listed provider names |
 | `deny` | `message` | Rejects matching requests with a configured explanation |
@@ -76,7 +75,7 @@ rejecting credentials in that selected tier does not fall through to a broader t
 
 The original route must pass restrictions and capability checks. A policy denial, unknown
 primary model, or invalid request does not trigger fallback. Backup routes must independently
-pass capability, credential-scope, BYOK, model, and provider restrictions. Ineligible backups
+pass capability, credential-scope, model, and provider restrictions. Ineligible backups
 are skipped. Backup request matches are not reevaluated and fallback policies do not recurse.
 
 Failure reasons are `rate_limited` (429), `upstream_unavailable` (5xx or connection failure),

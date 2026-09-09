@@ -63,10 +63,6 @@ class RequestMatch(_PolicyModel):
 PolicyMatch = Annotated[AllRequests | RequestMatch, Field(discriminator="kind")]
 
 
-class RequireByok(_PolicyModel):
-    kind: Literal["byok"]
-
-
 class AllowedModels(_PolicyModel):
     kind: Literal["models"]
     names: tuple[PolicyIdentifier, ...] = Field(min_length=1, max_length=1000)
@@ -133,16 +129,7 @@ class Budget(_PolicyModel):
 
 
 PolicyAction = Annotated[
-    RequireByok
-    | AllowedModels
-    | AllowedProviders
-    | DenyRequest
-    | StrictParameters
-    | PriceLimit
-    | RequestLimits
-    | CredentialAccess
-    | Fallback
-    | Budget,
+    AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
     Field(discriminator="kind"),
 ]
 

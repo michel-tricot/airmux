@@ -62,8 +62,6 @@ function applyOrder(policies: PolicyOut[] | undefined, policyIds: string[] | nul
 function actionSummary(policy: PolicyOut): string {
   const action = policy.definition.action;
   switch (action.kind) {
-    case 'byok':
-      return 'Require BYOK';
     case 'models':
       return `Models: ${action.names.join(', ')}`;
     case 'providers':
