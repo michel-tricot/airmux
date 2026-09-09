@@ -4,7 +4,7 @@ control_plane:
   bootstrap:
     token: ${file:/state/runtime/dataplane.key}
   console_url: ${env:AIRLLM_CONSOLE_URL}
-  public_signup: ${env:AIRLLM_PUBLIC_SIGNUP:-true}
+  public_signup: ${env:AIRLLM_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
     root: /state/secrets

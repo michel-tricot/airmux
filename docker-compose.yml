@@ -22,7 +22,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
       AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      AIRLLM_PUBLIC_SIGNUP: ${AIRLLM_PUBLIC_SIGNUP:-true}
+      AIRLLM_PUBLIC_SIGNUP: ${AIRLLM_PUBLIC_SIGNUP:-false}
     ports:
       - "${AIRLLM_PORT:-8080}:8080"
     volumes:

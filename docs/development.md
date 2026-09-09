@@ -38,7 +38,7 @@ Open http://127.0.0.1:5000 for the console. Use the same hostname throughout a s
 Vite forwards `/api` and `/inf` to the backends.
 
 `airllm.yml` configures source development. It reads `DATABASE_URL`, `AIRLLM_CONSOLE_URL`, and
-`AIRLLM_PUBLIC_SIGNUP` when set; otherwise it uses the addresses above and enables public signup.
+`AIRLLM_PUBLIC_SIGNUP` when set; otherwise it uses the addresses above and disables public signup.
 `.env` is loaded automatically. Provider credentials for this managed stack are added through the
 console or CLI and stored under `.airllm/secrets`.
 
