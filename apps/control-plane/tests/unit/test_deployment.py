@@ -96,3 +96,20 @@ def test_railway_deployment_has_postgres_and_persistent_state():
     assert "replicas: 1" in railway
     assert "PORT: '8080'" in railway
     assert "AIRLLM_CONSOLE_URL" in railway
+
+
+def test_release_publishes_versioned_multi_arch_image():
+    root = Path(__file__).resolve().parents[4]
+    workflow = (root / ".github" / "workflows" / "release.yml").read_text()
+
+    assert "types: [published]" in workflow
+    assert "packages: write" in workflow
+    assert "attestations: write" in workflow
+    assert "id-token: write" in workflow
+    assert "target: all-in-one" in workflow
+    assert "platforms: linux/amd64,linux/arm64" in workflow
+    assert "type=semver,pattern={{version}}" in workflow
+    assert "type=semver,pattern={{major}}.{{minor}}" in workflow
+    assert "type=raw,value=latest,enable=${{ !github.event.release.prerelease }}" in workflow
+    assert "push-to-registry: true" in workflow
+    assert "gh release upload" in workflow

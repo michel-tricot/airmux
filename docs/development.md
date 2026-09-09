@@ -119,6 +119,16 @@ bun run --cwd lib/api-spec codegen
 
 Commit generated changes with their source. Do not edit generated models or clients by hand.
 
+## Releases
+
+Create releases from commits on `main` that passed CI. Tags use `vMAJOR.MINOR.PATCH`; append a SemVer
+prerelease suffix when needed. Publishing the GitHub release runs `.github/workflows/release.yml`,
+which publishes the AMD64 and ARM64 `all-in-one` image to `ghcr.io/michel-tricot/airllm`.
+
+Stable releases update the exact version, minor, and `latest` image tags. Prereleases publish exact
+version tags without moving stable aliases. The workflow attaches the image digest to the release
+and records the SBOM and build provenance in GHCR.
+
 ## Reset local development
 
 Stop the source processes first. The following deletes the development database and local keys,

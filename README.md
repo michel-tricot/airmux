@@ -123,6 +123,10 @@ streaming, tools, and other integrations.
 All use the same image. For independent services and multiple gateways, use
 [docker-compose.split.yml](docs/deployment/scaling.md).
 
+Published GitHub releases include AMD64 and ARM64 images at
+`ghcr.io/michel-tricot/airllm`. See the [Docker guide](docs/deployment/docker.md#release-images)
+for version tags and digest verification.
+
 ## Develop
 
 The [development guide](docs/development.md) covers source setup, hot reload, tests, and generated

@@ -66,3 +66,17 @@ AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
 ```
 
 The tests create accounts and restart services. Use a disposable installation.
+
+## Release images
+
+Publishing a GitHub release tagged `vMAJOR.MINOR.PATCH` builds the `all-in-one` image for AMD64 and
+ARM64 and publishes it to GitHub Container Registry. Run an exact release with:
+
+```sh
+AIRLLM_IMAGE=ghcr.io/michel-tricot/airllm:v0.1.0 docker compose up -d --wait
+```
+
+A stable `v0.1.0` release also publishes `0.1.0`, `0.1`, and `latest`. Prereleases publish only their
+exact version tags and never move the stable aliases. Each GitHub release includes an
+`airllm-v0.1.0-image.txt` asset containing the image name and multi-platform digest. GHCR stores the
+SBOM and build provenance with the image.
