@@ -44,6 +44,31 @@ def test_later_signups_are_ordinary_accounts(tmp_path):
         assert second.json()["data"]["instance_role"] is None
 
 
+def test_closed_signup_still_allows_the_instance_claim_then_refuses_public_accounts(tmp_path):
+    cp = setup_control_plane(tmp_path, public_signup=False)
+    with TestClient(cp.app) as c:
+        claim = c.get("/api/v1/instance/oss/claim")
+        assert claim.json()["data"] == {"claimed": False, "public_signup": False}
+
+        founder = _signup(c, "founder@example.com")
+        assert founder.status_code == 200, founder.text
+        assert founder.json()["data"]["instance_role"] == "owner"
+
+        later = _signup(c, "later@example.com")
+        assert later.status_code == 403
+        assert later.json() == {"detail": "Public signup is disabled; ask an administrator for an invitation"}
+
+
+def test_racing_signups_on_a_closed_instance_create_only_the_owner(tmp_path):
+    cp = setup_control_plane(tmp_path, public_signup=False)
+    with TestClient(cp.app) as c, ThreadPoolExecutor(max_workers=2) as pool:
+        responses = [f.result() for f in [pool.submit(_signup, c, f"racer{i}@example.com") for i in range(2)]]
+
+    assert sorted(response.status_code for response in responses) == [200, 403]
+    owner = next(response for response in responses if response.status_code == 200)
+    assert owner.json()["data"]["instance_role"] == "owner"
+
+
 def test_the_founder_reaches_the_instance_endpoints_and_others_do_not(tmp_path):
     """The point of the claim: a fresh deployment has an admin without anyone touching the database."""
     cp = setup_control_plane(tmp_path)

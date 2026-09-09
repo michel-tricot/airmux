@@ -27,10 +27,11 @@ from control_plane.deps import (
     user_scoped,
 )
 from control_plane.keys import mint_standing_access_key, verify_access_key
-from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, PlaygroundSession, User, set_actor
+from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgInvitation, OrgMembership, PlaygroundSession, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
+from control_plane.models.org_invitation import InvitationEmailMismatchError, InvitationUnavailableError
 from control_plane.passwords import DUMMY_HASH, hash_password, needs_rehash, verify_password
 from control_plane.sessions import SESSION_ABSOLUTE_TTL, SESSION_COOKIE, mint_session, verify_session
 
@@ -51,6 +52,7 @@ class SignupIn(RequestModel):
     email: str = Field(description="Email address for the new account", min_length=3, max_length=320)
     name: str = Field("", description="Display name; defaults to the email address", max_length=200)
     password: str = Field(description="Password for the new account; at least 8 characters", min_length=8, max_length=1024)
+    invitation_token: str | None = Field(default=None, description="Invitation authorizing this account signup", min_length=1, max_length=256)
 
     @field_validator("email")
     @classmethod
@@ -119,6 +121,18 @@ async def _login_user(email: str, password: str) -> User:
     return user
 
 
+async def _validate_signup_invitation(token: str, email: str) -> None:
+    invitation = await OrgInvitation.for_token(token, lock=True)
+    if invitation is None:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    try:
+        invitation.require_available_for_email(email, datetime.now(tz=UTC))
+    except InvitationEmailMismatchError as error:
+        raise HTTPException(status_code=403, detail="Invitation email does not match the account") from error
+    except InvitationUnavailableError as error:
+        raise HTTPException(status_code=410, detail="Invitation is no longer available") from error
+
+
 @router.post("/login", tags=["Auth"], dependencies=[public()])
 async def login(body: LoginIn, request: Request, response: Response) -> Envelope[MeOut]:
     """Authenticate a human user and start a browser session."""
@@ -142,6 +156,10 @@ async def signup(
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
     claims_instance = await User.claims_the_instance()
+    if body.invitation_token is not None:
+        await _validate_signup_invitation(body.invitation_token, body.email)
+    elif not request.app.state.settings.public_signup and not claims_instance:
+        raise HTTPException(status_code=403, detail="Public signup is disabled; ask an administrator for an invitation")
     instance_role = InstanceRole.owner if claims_instance else None
     user = User(email=body.email, name=body.name or body.email, instance_role=instance_role, service_account=False)
     await set_actor(user.id)

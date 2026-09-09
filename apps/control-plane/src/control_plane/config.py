@@ -53,6 +53,7 @@ class Settings(BaseModel):
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; the data plane must name the same store
 
     console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
+    public_signup: bool = False
 
 
 def database_url() -> str:

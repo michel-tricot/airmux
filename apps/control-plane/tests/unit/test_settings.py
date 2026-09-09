@@ -90,18 +90,21 @@ def test_the_shipped_config_serves_the_checkout_and_the_stack(tmp_path, monkeypa
     (tmp_path / ".airllm" / "dataplane.key").write_text(token, encoding="utf-8")
     monkeypatch.delenv("AIRLLM_CONFIG", raising=False)
 
-    for var in ("DATABASE_URL", "AIRLLM_CONSOLE_URL"):
+    for var in ("DATABASE_URL", "AIRLLM_CONSOLE_URL", "AIRLLM_PUBLIC_SIGNUP"):
         monkeypatch.delenv(var, raising=False)
     checkout = load_settings()
     assert checkout.console_url == DEFAULT_CONSOLE_URL
     assert checkout.database.url == DEFAULT_DATABASE_URL
     assert checkout.bootstrap == DataPlaneBootstrap(token=token)
+    assert checkout.public_signup is False
 
     monkeypatch.setenv("AIRLLM_CONSOLE_URL", "http://localhost:3000")
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm")
+    monkeypatch.setenv("AIRLLM_PUBLIC_SIGNUP", "true")
     stack = load_settings()
     assert stack.console_url == "http://localhost:3000"
     assert stack.database.url == "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm"
+    assert stack.public_signup is True
 
 
 def test_container_config_uses_shared_credentials_and_separate_secret_storage(tmp_path, monkeypatch):
@@ -128,6 +131,15 @@ def test_a_public_console_does_not_require_an_extra_secret():
     settings = Settings(console_url="https://airllm.example.com")
 
     assert settings.console_url == "https://airllm.example.com"
+
+
+def test_public_signup_defaults_closed_and_can_be_opened_in_config(tmp_path, monkeypatch):
+    config = tmp_path / "airllm.yml"
+    config.write_text("control_plane:\n  public_signup: true\n", encoding="utf-8")
+    monkeypatch.setenv("AIRLLM_CONFIG", str(config))
+
+    assert Settings().public_signup is False
+    assert load_settings().public_signup is True
 
 
 def test_supplied_bootstrap_token_is_validated_and_redacted():

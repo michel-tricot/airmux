@@ -65,6 +65,7 @@ export default function Invite() {
         initialEmail={invitation.email}
         initialMode="choice"
         emailReadOnly
+        invitationToken={token}
         heading={`Join ${invitation.org_name}`}
         description={`This invitation is for ${invitation.email} and grants access to ${destination}. Create a new account or sign in to an existing one.`}
       />

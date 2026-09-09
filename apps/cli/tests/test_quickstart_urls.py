@@ -290,7 +290,11 @@ class QuickstartContext:
 
     def get(self, path: str):
         assert path == "/api/v1/instance/oss/claim"
-        return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": {"claimed": self.claimed}})
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", f"http://control-plane{path}"),
+            json={"data": {"claimed": self.claimed, "public_signup": True}},
+        )
 
 
 def _quickstart(

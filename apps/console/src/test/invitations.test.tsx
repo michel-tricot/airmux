@@ -136,7 +136,7 @@ describe('organization invitations', () => {
   it('locks a signed-out recipient to the invited email', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: false } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
         HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
           data: {
@@ -166,7 +166,7 @@ describe('organization invitations', () => {
   it('keeps the invitation available after sign-in fails', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: false } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
         HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
           data: {
@@ -197,9 +197,10 @@ describe('organization invitations', () => {
   });
 
   it('creates the invited account without losing the invitation', async () => {
+    let signupBody: Api.SignupIn | undefined;
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: false } })),
       http.post('/api/v1/enroll/invitations/preview', () =>
         HttpResponse.json<{ data: Api.InvitationPreviewOut }>({
           data: {
@@ -214,11 +215,12 @@ describe('organization invitations', () => {
           },
         }),
       ),
-      http.post('/api/v1/auth/signup', () =>
-        HttpResponse.json<{ data: Api.MeOut }>({
+      http.post('/api/v1/auth/signup', async ({ request }) => {
+        signupBody = (await request.json()) as Api.SignupIn;
+        return HttpResponse.json<{ data: Api.MeOut }>({
           data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] },
-        }),
-      ),
+        });
+      }),
     );
     const user = userEvent.setup();
     renderAt('/invite#token=invite-secret');
@@ -229,6 +231,7 @@ describe('organization invitations', () => {
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('button', { name: 'Accept invitation' })).toBeInTheDocument();
+    expect(signupBody?.invitation_token).toBe('invite-secret');
     expect(screen.queryByText('This invitation link is missing its secret. Ask the sender for a new link.')).not.toBeInTheDocument();
   });
 

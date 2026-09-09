@@ -13,4 +13,5 @@
 
 export interface ClaimOut {
   claimed: boolean;
+  public_signup: boolean;
 }

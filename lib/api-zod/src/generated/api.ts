@@ -321,12 +321,15 @@ export const signupBodyNameMax = 200;
 export const signupBodyPasswordMin = 8;
 export const signupBodyPasswordMax = 1024;
 
+export const signupBodyInvitationTokenOneMax = 256;
+
 
 
 export const SignupBody = zod.object({
   "email": zod.string().min(signupBodyEmailMin).max(signupBodyEmailMax).describe('Email address for the new account'),
   "name": zod.string().max(signupBodyNameMax).default(signupBodyNameDefault).describe('Display name; defaults to the email address'),
-  "password": zod.string().min(signupBodyPasswordMin).max(signupBodyPasswordMax).describe('Password for the new account; at least 8 characters')
+  "password": zod.string().min(signupBodyPasswordMin).max(signupBodyPasswordMax).describe('Password for the new account; at least 8 characters'),
+  "invitation_token": zod.union([zod.string().min(1).max(signupBodyInvitationTokenOneMax),zod.null()]).optional().describe('Invitation authorizing this account signup')
 })
 
 export const SignupResponse = zod.object({
@@ -614,7 +617,8 @@ export const AcceptInvitationResponse = zod.object({
  * @summary Get Instance Claim Status
  */
 export const ClaimResponse = zod.object({
-  "claimed": zod.boolean()
+  "claimed": zod.boolean(),
+  "public_signup": zod.boolean()
 })
 
 

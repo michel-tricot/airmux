@@ -191,7 +191,7 @@ def make_app() -> FastAPI:
     return create_app(settings)
 
 
-def setup_control_plane(tmp_path, secrets=None) -> ControlPlane:
+def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True) -> ControlPlane:
     """Database plus a real app over it, for tests that drive the API.
 
     The secret store is in-process by default so credential writes work and a test can read the
@@ -201,6 +201,7 @@ def setup_control_plane(tmp_path, secrets=None) -> ControlPlane:
     settings = Settings(
         database=DatabaseConfig(url=url),
         secrets=secrets if secrets is not None else MemoryStoreConfig(),
+        public_signup=public_signup,
     )
     return ControlPlane(app=create_app(settings), db_url=url)
 

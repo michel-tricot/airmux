@@ -18,7 +18,7 @@ def _users(c, headers):
 def test_claim_is_public_and_flips_on_the_first_human(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
-        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": False}
+        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": False, "public_signup": True}
 
         async def make_service_account():
             sa = User.new_service_account("dp")
@@ -26,10 +26,10 @@ def test_claim_is_public_and_flips_on_the_first_human(tmp_path):
             await sa.save()
 
         run_in_db(tmp_path, make_service_account)
-        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": False}
+        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": False, "public_signup": True}
 
         assert c.post("/api/v1/auth/signup", json={"email": "first@example.com", "name": "", "password": "hunter2-hunter2"}).status_code == 200
-        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": True}
+        assert c.get("/api/v1/instance/oss/claim").json()["data"] == {"claimed": True, "public_signup": True}
 
 
 def test_human_accounts_can_only_be_created_through_signup(tmp_path):

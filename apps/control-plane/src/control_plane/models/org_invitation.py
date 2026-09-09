@@ -185,15 +185,18 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         self.revoked_at = now
         await self.save()
 
+    def require_available_for_email(self, email: str, now: datetime) -> None:
+        if self.accepted_at is not None or self.revoked_at is not None or self.expires_at <= now:
+            raise InvitationUnavailableError
+        if self.email != User.normalize_email(email):
+            raise InvitationEmailMismatchError
+
     async def accept(self, user: User, now: datetime) -> Self:
         if self.accepted_at is not None:
             if self.accepted_by_user_id == user.id and self.email == User.normalize_email(user.email):
                 return self
             raise InvitationUnavailableError
-        if self.revoked_at is not None or self.expires_at <= now:
-            raise InvitationUnavailableError
-        if self.email != User.normalize_email(user.email):
-            raise InvitationEmailMismatchError
+        self.require_available_for_email(user.email, now)
         await OrgMembership.ensure(user_id=user.id, org_id=self.org_id, role=self.org_role)
         if self.workspace_id is not None and self.workspace_role is not None:
             await WorkspaceMembership.ensure(

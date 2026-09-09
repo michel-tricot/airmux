@@ -130,7 +130,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     client, compose, gateways, compact = deployment
     gateway = gateways[0]
     provider = "deployment"
-    assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": False}
+    assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": False, "public_signup": False}
     assert "<!doctype html>" in client.get("/org").text.lower()
     owner = payload(client.post("/api/v1/auth/signup", json={"email": "owner@deployment.test", "name": "Owner", "password": "deployment-password"}))
     assert owner["instance_role"] == "owner"
@@ -178,7 +178,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     if len(gateways) == 2:
         service_action(compose, "start", gateways[1])
     eventually(lambda: client.get("/api/v1/instance/oss/claim").status_code == 200)
-    assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": True}
+    assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": True, "public_signup": False}
     eventually(lambda: {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))} == instance_ids)
     eventually(lambda: len(payload(client.get(f"{base}/events"))) >= (4 if compact else 5))
     eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))

@@ -19,6 +19,7 @@ The same Docker image runs on every platform. Each platform guide connects these
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string |
 | `AIRLLM_CONSOLE_URL` | Public origin, such as `https://llm.example.com` |
+| `AIRLLM_PUBLIC_SIGNUP` | Set to `true` to allow public account creation after the instance is claimed |
 | Persistent volume at `/state` | Gateway identity, cached bundles, pending usage, and credential files |
 
 The application listens on port 8080. It initializes the database, catalog, and gateway
@@ -29,6 +30,11 @@ authentication during startup. The console, management API, and inference API sh
 Claim a new instance as soon as it becomes reachable. Open its web app and create the first account,
 or run the CLI command below. The first human account becomes the instance owner. Until that account
 exists, anyone who can reach the sign-up page can claim the instance.
+
+Public account creation is disabled by default. This does not prevent the first account from
+claiming an unclaimed instance, and valid organization invitation links can still create an account
+for their invited email address. Set `AIRLLM_PUBLIC_SIGNUP=true` only when anyone should be able to
+create an account after the instance is claimed.
 
 For the CLI, add the provider keys you want AirLLM to store to your local `.env`. From a repository
 checkout with Python 3.13+ and uv, run:
