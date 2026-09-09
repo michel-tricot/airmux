@@ -382,7 +382,7 @@ export const Badge = ({
     <BadgePrimitive
       variant={variant === 'success' || variant === 'warning' || variant === 'mono' ? 'outline' : variant}
       className={cn(
-        'inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors',
+        'inline-flex h-5 items-center justify-center rounded border px-2 pb-0 pt-0.5 text-[10px] leading-none font-mono font-bold uppercase tracking-wider transition-colors',
         variants[variant],
         className,
       )}

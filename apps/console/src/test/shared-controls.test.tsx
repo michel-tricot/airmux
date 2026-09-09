@@ -2,8 +2,17 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { Link } from 'wouter';
-import { Button, ConfirmButton, Dropdown, Modal, Switch } from '@/components/ui/elements';
+import { Badge, Button, ConfirmButton, Dropdown, Modal, Switch } from '@/components/ui/elements';
 describe('shared controls', () => {
+  it.each(['default', 'secondary', 'destructive', 'success', 'warning', 'outline', 'mono'] as const)(
+    'uses consistent optical text alignment for %s badges',
+    (variant) => {
+      render(<Badge variant={variant}>ACTIVE</Badge>);
+
+      expect(screen.getByText('ACTIVE')).toHaveClass('h-5', 'items-center', 'justify-center', 'leading-none', 'pt-0.5', 'pb-0');
+    },
+  );
+
   it.each([
     [false, 'translate-x-1'],
     [true, 'translate-x-4.5'],
