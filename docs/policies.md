@@ -49,6 +49,95 @@ For example, this definition matches streaming requests for `openai/gpt-4o` that
 }
 ```
 
+## Common use cases
+
+### Limit output from a public feature
+
+Suppose a public summarization endpoint should never generate more than 1,024 tokens. Give that
+feature its own inference key, replace `PUBLIC_SUMMARIZER_KEY_ID` below with the key's ID, then
+create this policy:
+
+```json
+{
+  "name": "Public summaries stay short",
+  "enabled": true,
+  "priority": 10,
+  "definition": {
+    "target": {
+      "kind": "selected_keys",
+      "key_ids": ["PUBLIC_SUMMARIZER_KEY_ID"]
+    },
+    "match": { "kind": "all_requests" },
+    "action": {
+      "kind": "request_limits",
+      "max_output_tokens": 1024
+    }
+  }
+}
+```
+
+A request from another inference key is unaffected. A request from the selected key with
+`max_tokens` set to 2,000 is rejected before AirLLM contacts a provider. Pair this with a model price
+limit when you also need to restrict the catalog rates the feature can use.
+
+### Keep sensitive workloads on team-owned credentials
+
+Suppose requests that produce structured output may contain business data and must use provider
+accounts owned by your organization. This policy excludes platform credentials for those requests:
+
+```json
+{
+  "name": "Structured output uses our provider accounts",
+  "enabled": true,
+  "priority": 20,
+  "definition": {
+    "target": { "kind": "all_keys" },
+    "match": {
+      "kind": "request",
+      "capabilities": ["structured_output"]
+    },
+    "action": { "kind": "byok" }
+  }
+}
+```
+
+AirLLM first looks for a workspace credential, then an organization credential. If neither exists,
+the request is rejected rather than sent with a platform credential.
+
+### Keep a customer-facing chat model available
+
+Suppose an application normally uses `openai/gpt-4o`, but should move to another model when the
+provider is throttled or unavailable:
+
+```json
+{
+  "name": "Production chat fallback",
+  "enabled": true,
+  "priority": 30,
+  "definition": {
+    "target": { "kind": "all_keys" },
+    "match": {
+      "kind": "request",
+      "models": ["openai/gpt-4o"]
+    },
+    "action": {
+      "kind": "fallback",
+      "models": [
+        "anthropic/claude-sonnet-4-5-20250929",
+        "openai/gpt-4o-mini"
+      ],
+      "on": ["rate_limited", "upstream_unavailable"],
+      "max_attempts": 3,
+      "timeout_ms": 30000
+    }
+  }
+}
+```
+
+AirLLM tries the backups in order after a configured failure. Each route must still satisfy the
+workspace's model, provider, credential, price, and parameter policies. Invalid requests and policy
+denials never trigger a fallback.
+
 ## Require BYOK
 
 **Require BYOK** allows workspace and organization provider credentials and excludes credentials
