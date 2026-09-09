@@ -1624,6 +1624,111 @@ export const CreatePolicyResponse = zod.object({
 
 
 /**
+ * Replace the workspace policy evaluation order.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Reorder Policies
+ */
+export const ReorderPoliciesParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const ReorderPoliciesBody = zod.object({
+  "policy_ids": zod.array(zod.uuid()).describe('Every workspace policy ID, from first to last evaluation priority')
+})
+
+export const reorderPoliciesResponseDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const reorderPoliciesResponseDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const reorderPoliciesResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const reorderPoliciesResponseDefinitionMatchTwoModelsDefault = [];
+export const reorderPoliciesResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const reorderPoliciesResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const reorderPoliciesResponseDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const reorderPoliciesResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const reorderPoliciesResponseDefinitionActionTwoNamesMax = 1000;
+
+export const reorderPoliciesResponseDefinitionActionThreeNamesItemMax = 255;
+
+export const reorderPoliciesResponseDefinitionActionThreeNamesMax = 1000;
+
+export const reorderPoliciesResponseDefinitionActionFourMessageMax = 200;
+
+export const reorderPoliciesResponseDefinitionActionFiveModelsItemMax = 255;
+
+export const reorderPoliciesResponseDefinitionActionFiveModelsMax = 4;
+
+export const reorderPoliciesResponseDefinitionActionFiveOnMax = 3;
+
+export const reorderPoliciesResponseDefinitionActionFiveMaxAttemptsMin = 2;
+export const reorderPoliciesResponseDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const reorderPoliciesResponseDefinitionActionFiveTimeoutMsMin = 100;
+export const reorderPoliciesResponseDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const reorderPoliciesResponseDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const ReorderPoliciesResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "priority": zod.int(),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsMax)
+})]),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionMatchTwoModelsItemMax)).max(reorderPoliciesResponseDefinitionMatchTwoModelsMax).default(reorderPoliciesResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(reorderPoliciesResponseDefinitionMatchTwoCapabilitiesMax).default(reorderPoliciesResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionTwoNamesItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionThreeNamesItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(reorderPoliciesResponseDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionFiveModelsItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(reorderPoliciesResponseDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(reorderPoliciesResponseDefinitionActionFiveMaxAttemptsMin).max(reorderPoliciesResponseDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(reorderPoliciesResponseDefinitionActionFiveTimeoutMsMin).max(reorderPoliciesResponseDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(reorderPoliciesResponseDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+export const ReorderPoliciesResponse = zod.array(ReorderPoliciesResponseItem)
+
+
+/**
  * Update a policy without changing its workspace.
  *
  * Required permission: `policies.manage`.

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from control_plane.authz import Permission
 from control_plane.deps import WorkspaceDep, require, workspace_scope
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.policy import InvalidPolicyError, Policy, PolicyCreate, PolicyOut, PolicyUpdate
+from control_plane.models.policy import InvalidPolicyError, Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 
 router = APIRouter(prefix="/orgs/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
@@ -26,6 +26,16 @@ async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope
     )
     await _save(policy)
     return Envelope(data=PolicyOut.model_validate(policy))
+
+
+@router.put("/order", dependencies=[require(workspace_scope, Permission.policies_manage)])
+async def reorder_policies(workspace: WorkspaceDep, body: PolicyOrder) -> Envelope[list[PolicyOut]]:
+    """Replace the workspace policy evaluation order."""
+    try:
+        policies = await Policy.reorder(workspace.org_id, workspace.id, body.policy_ids)
+    except InvalidPolicyError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return Envelope(data=[PolicyOut.model_validate(policy) for policy in policies])
 
 
 @router.patch("/{policy_id}", dependencies=[require(workspace_scope, Permission.policies_manage)])

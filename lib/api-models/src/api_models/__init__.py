@@ -1037,6 +1037,19 @@ class PlaygroundSessionReadyOut(BaseModel):
     status: Annotated[Literal["ready"], Field(title="Status")]
 
 
+class PolicyOrder(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    policy_ids: Annotated[
+        list[UUID],
+        Field(
+            description="Every workspace policy ID, from first to last evaluation priority",
+            title="Policy Ids",
+        ),
+    ]
+
+
 class Name3(RootModel[str]):
     root: Annotated[
         str,

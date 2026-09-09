@@ -92,6 +92,24 @@
 @layer base {
   * {
     @apply border-border;
+    scrollbar-color: hsl(var(--primary) / 0.42) transparent;
+    scrollbar-width: thin;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-clip: content-box;
+    background-color: hsl(var(--primary) / 0.42);
+    border: 2px solid transparent;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary) / 0.68);
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
@@ -107,37 +125,5 @@
   input[type='number']::-webkit-outer-spin-button {
     margin: 0;
     appearance: none;
-  }
-}
-
-@layer utilities {
-  .permission-scrollbar {
-    scrollbar-color: hsl(var(--primary) / 0.42) transparent;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-  }
-
-  .permission-scrollbar::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .permission-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-    margin-block: 0.5rem;
-  }
-
-  .permission-scrollbar::-webkit-scrollbar-thumb {
-    background-clip: content-box;
-    background-color: hsl(var(--primary) / 0.42);
-    border: 2px solid transparent;
-    border-radius: 9999px;
-  }
-
-  .permission-scrollbar:hover {
-    scrollbar-color: hsl(var(--primary) / 0.68) transparent;
-  }
-
-  .permission-scrollbar:hover::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--primary) / 0.68);
   }
 }

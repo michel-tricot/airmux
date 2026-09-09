@@ -2325,6 +2325,61 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/order:
+    put:
+      tags:
+      - Workspace Policies
+      summary: Reorder Policies
+      description: 'Replace the workspace policy evaluation order.
+
+
+        Required permission: `policies.manage`.'
+      operationId: reorder_policies
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyOrder'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_PolicyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.manage
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}:
     patch:
       tags:
@@ -6764,6 +6819,20 @@ components:
       - priority
       - definition
       title: PolicyEntry
+    PolicyOrder:
+      properties:
+        policy_ids:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Policy Ids
+          description: Every workspace policy ID, from first to last evaluation priority
+      additionalProperties: false
+      type: object
+      required:
+      - policy_ids
+      title: PolicyOrder
     PolicyOut:
       properties:
         id:

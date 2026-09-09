@@ -61,7 +61,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
             tabIndex={-1}
             aria-label="cURL command"
             className={cn(
-              'permission-scrollbar max-h-[60vh] min-w-0 max-w-full overflow-x-hidden overflow-y-auto p-4',
+              'max-h-[60vh] min-w-0 max-w-full overflow-x-hidden overflow-y-auto p-4',
               'whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground',
             )}
           >
@@ -345,7 +345,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   return (
     <PageShell className="h-[calc(100vh-2rem)] max-w-none flex flex-col gap-0 p-0 overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
-        <aside className="permission-scrollbar w-72 shrink-0 overflow-y-auto border-r border-border bg-card/40 p-4 space-y-5">
+        <aside className="w-72 shrink-0 overflow-y-auto border-r border-border bg-card/40 p-4 space-y-5">
           <div>
             <h1 className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Playground</h1>
           </div>
@@ -371,7 +371,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               value={systemPrompt}
               onChange={(event) => updatePlayground({ systemPrompt: event.target.value })}
               placeholder="You are a helpful assistant."
-              className="permission-scrollbar h-24 resize-none text-xs"
+              className="h-24 resize-none text-xs"
             />
           </div>
 
@@ -457,7 +457,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
         </aside>
 
         <main className="flex flex-1 flex-col overflow-hidden">
-          <div className="permission-scrollbar flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 && !sending && (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-2">
@@ -508,7 +508,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                   }
                 }}
                 placeholder="Send a message... (Shift+Enter for newline)"
-                className="permission-scrollbar max-h-40 min-h-[2.75rem] flex-1 resize-none py-2.5 text-sm leading-5"
+                className="max-h-40 min-h-[2.75rem] flex-1 resize-none py-2.5 text-sm leading-5"
                 rows={1}
               />
               <div className="flex shrink-0 gap-1.5">

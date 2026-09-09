@@ -1249,6 +1249,11 @@ export interface PolicyCreate {
   definition: PolicyDefinitionInput;
 }
 
+export interface PolicyOrder {
+  /** Every workspace policy ID, from first to last evaluation priority */
+  policy_ids: string[];
+}
+
 export interface PolicyOut {
   id: string;
   org_id: string;

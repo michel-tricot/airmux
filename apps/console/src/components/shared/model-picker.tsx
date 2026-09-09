@@ -131,7 +131,7 @@ export function ModelPicker({
             className="pl-9"
           />
         </div>
-        <div id={listboxId} role="listbox" className="permission-scrollbar max-h-72 space-y-1 overflow-y-auto pr-1">
+        <div id={listboxId} role="listbox" className="max-h-72 space-y-1 overflow-y-auto pr-1">
           {visibleOptions.map((option, index) => (
             <Button
               key={option.value}

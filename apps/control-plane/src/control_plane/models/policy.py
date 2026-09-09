@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, func, text
 from sqlmodel import Field, col, select
 
@@ -22,7 +22,7 @@ from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
-from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
+from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.model import Model
 from control_plane.models.provider import Provider
@@ -76,6 +76,28 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     async def for_workspace(cls, workspace_id: UUID) -> list[Self]:
         return await cls.find(cls.workspace_id == workspace_id, order_by=(col(cls.priority), col(cls.id)))
 
+    @classmethod
+    async def reorder(cls, org_id: UUID, workspace_id: UUID, policy_ids: tuple[UUID, ...]) -> list[Self]:
+        from control_plane.models.workspace import Workspace  # noqa: PLC0415 workspace deletion also depends on Policy
+
+        session = current_session()
+        workspace = (
+            await session.execute(select(Workspace).where(col(Workspace.id) == workspace_id, col(Workspace.org_id) == org_id).with_for_update())
+        ).scalar_one_or_none()
+        if workspace is None:
+            raise NotOwnedError
+        policies = await cls.for_workspace(workspace_id)
+        if len(policy_ids) != len(policies) or set(policy_ids) != {policy.id for policy in policies}:
+            msg = "Policy order must contain every workspace policy exactly once"
+            raise InvalidPolicyError(msg)
+        policies_by_id = {policy.id: policy for policy in policies}
+        ordered = [policies_by_id[policy_id] for policy_id in policy_ids]
+        for priority, policy in enumerate(ordered):
+            policy.priority = priority
+            session.add(policy)
+        await session.flush()
+        return ordered
+
     @override
     async def save(self) -> Self:
         from control_plane.models.workspace import Workspace  # noqa: PLC0415 workspace deletion also depends on Policy
@@ -123,6 +145,18 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
 
 class InvalidPolicyError(ValueError):
     pass
+
+
+class PolicyOrder(RequestModel):
+    policy_ids: tuple[UUID, ...] = Field(description="Every workspace policy ID, from first to last evaluation priority")
+
+    @field_validator("policy_ids")
+    @classmethod
+    def unique_policy_ids(cls, policy_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if len(policy_ids) != len(set(policy_ids)):
+            msg = "Policy order cannot contain duplicate policy IDs"
+            raise ValueError(msg)
+        return policy_ids
 
 
 class PolicyCreate(RecordCreate[Policy]):
