@@ -8,6 +8,7 @@ Postgres alongside it. Start here unless you need to deploy or scale the planes 
 | [Docker](/docs/deployment/docker) | `docker-compose.yml` |
 | [Fly.io](/docs/deployment/fly) | `deploy/fly/fly.toml` |
 | [Render](/docs/deployment/render) | `render.yaml` Blueprint and deploy button |
+| [Railway](/docs/deployment/railway) | `.railway/railway.ts` project and deploy button |
 | [DigitalOcean](/docs/deployment/digitalocean) | Docker Compose with a Caddy overlay |
 | [Separate services](/docs/deployment/scaling) | `docker-compose.split.yml`, including two gateways |
 

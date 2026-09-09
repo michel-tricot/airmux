@@ -37,12 +37,13 @@
     "build": "bun run typecheck && bun run --filter '@workspace/gateway-console' build",
     "codegen": "bun run --cwd lib/api-spec codegen",
     "coverage": "bun run --filter '@workspace/gateway-console' coverage && bun run --filter '@workspace/api-client-react' coverage",
-    "format": "prettier --write apps/console/src apps/console/index.html apps/console/package.json apps/console/vite.config.ts apps/console/vitest.config.ts lib/api-client-react/src/custom-fetch.ts lib/api-client-react/src/index.ts lib/api-client-react/test lib/api-client-react/package.json lib/api-client-react/vitest.config.ts eslint.config.js package.json .github/workflows/ci.yml",
-    "format:check": "prettier --check apps/console/src apps/console/index.html apps/console/package.json apps/console/vite.config.ts apps/console/vitest.config.ts lib/api-client-react/src/custom-fetch.ts lib/api-client-react/src/index.ts lib/api-client-react/test lib/api-client-react/package.json lib/api-client-react/vitest.config.ts eslint.config.js package.json .github/workflows/ci.yml",
+    "format": "prettier --write apps/console/src apps/console/index.html apps/console/package.json apps/console/vite.config.ts apps/console/vitest.config.ts lib/api-client-react/src/custom-fetch.ts lib/api-client-react/src/index.ts lib/api-client-react/test lib/api-client-react/package.json lib/api-client-react/vitest.config.ts eslint.config.js package.json .github/workflows/ci.yml .railway/railway.ts",
+    "format:check": "prettier --check apps/console/src apps/console/index.html apps/console/package.json apps/console/vite.config.ts apps/console/vitest.config.ts lib/api-client-react/src/custom-fetch.ts lib/api-client-react/src/index.ts lib/api-client-react/test lib/api-client-react/package.json lib/api-client-react/vitest.config.ts eslint.config.js package.json .github/workflows/ci.yml .railway/railway.ts",
     "lint": "eslint apps/console/src apps/console/vite.config.ts apps/console/vitest.config.ts lib/api-client-react/src/custom-fetch.ts lib/api-client-react/test lib/api-client-react/vitest.config.ts",
     "test": "bun run --filter '@workspace/gateway-console' test && bun run --filter '@workspace/api-client-react' test",
     "typecheck:libs": "tsc --build",
-    "typecheck": "bun run typecheck:libs && bun run --filter '@workspace/gateway-console' typecheck"
+    "typecheck:railway": "tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 .railway/railway.ts",
+    "typecheck": "bun run typecheck:libs && bun run --filter '@workspace/gateway-console' typecheck && bun run typecheck:railway"
   },
   "private": true,
   "overrides": {
@@ -60,6 +61,7 @@
     "globals": "17.11.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
+    "railway": "^3.11.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "8.67.0"
   },

@@ -81,3 +81,18 @@ def test_compose_layouts_do_not_define_a_setup_service():
     assert "setup" not in compact["services"]
     assert "setup" not in split["services"]
     assert "\n  setup:" not in digitalocean
+
+
+def test_railway_deployment_has_postgres_and_persistent_state():
+    root = Path(__file__).resolve().parents[4]
+    railway = (root / ".railway" / "railway.ts").read_text()
+
+    assert "postgres('postgres')" in railway
+    assert "volume('airllm-state'" in railway
+    assert "region: 'iad'" in railway
+    assert "'/state': state" in railway
+    assert "DATABASE_URL: database.env.DATABASE_URL" in railway
+    assert "healthcheck: '/healthz'" in railway
+    assert "replicas: 1" in railway
+    assert "PORT: '8080'" in railway
+    assert "AIRLLM_CONSOLE_URL" in railway

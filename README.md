@@ -109,11 +109,15 @@ streaming, tools, and other integrations.
 
 ## Deploy
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/michel-tricot/airllm)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/UJEw1v)
+
 | Platform | Setup |
 | --- | --- |
 | [Docker](docs/deployment/docker.md) | One AirLLM container and Postgres |
 | [Fly.io](docs/deployment/fly.md) | One app and Machine, plus Managed Postgres |
 | [Render](docs/deployment/render.md) | Deploy button with a checked-in Blueprint |
+| [Railway](docs/deployment/railway.md) | Deploy button with checked-in project configuration |
 | [DigitalOcean](docs/deployment/digitalocean.md) | Docker Droplet with automatic HTTPS |
 
 All use the same image. For independent services and multiple gateways, use
