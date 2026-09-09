@@ -10,12 +10,14 @@ from cli.auth import verify_gateway
     ("responses", "expected"),
     [
         ([(401, "invalid_token"), (200, "")], ""),
+        ([(402, "credential_unavailable"), (200, "")], ""),
         ([(401, "invalid_token")] * 20, "HTTP 401: invalid_token"),
+        ([(402, "credential_unavailable")] * 20, "HTTP 402: credential_unavailable"),
         ([(502, "provider_error")], "HTTP 502: provider_error"),
         ([(401, "provider_auth")], "HTTP 401: provider_auth"),
     ],
 )
-def test_verification_waits_for_a_new_key_but_does_not_retry_provider_requests(monkeypatch, responses, expected):
+def test_verification_waits_for_bundle_inputs_but_does_not_retry_provider_requests(monkeypatch, responses, expected):
     pending = iter(responses)
 
     def respond(request: httpx.Request) -> httpx.Response:

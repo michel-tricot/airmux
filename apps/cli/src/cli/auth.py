@@ -282,7 +282,10 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
                 )
             except httpx.HTTPError as error:
                 return str(error)
-            if response.status_code != httpx.codes.UNAUTHORIZED or _gateway_error(response) != "invalid_token":
+            if (response.status_code, _gateway_error(response)) not in {
+                (httpx.codes.UNAUTHORIZED, "invalid_token"),
+                (httpx.codes.PAYMENT_REQUIRED, "credential_unavailable"),
+            }:
                 break
             time.sleep(0.5)
     return "" if response.is_success else f"HTTP {response.status_code}: {_gateway_error(response)}"
