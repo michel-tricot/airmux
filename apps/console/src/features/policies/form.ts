@@ -1,13 +1,9 @@
 import { z } from 'zod';
-import type { PolicyCreate, PolicyDefinitionInput, PolicyOut } from '@workspace/api-client-react';
+import type { PolicyCreate, PolicyOut, PolicyRuleInput, PolicyRuleOutput } from '@workspace/api-client-react';
 
-export const policyFormSchema = z
+const policyRuleFormSchema = z
   .object({
-    name: z.string().trim().min(1).max(200),
-    enabled: z.boolean(),
-    priority: z.number().int().min(0).max(10000),
-    target: z.enum(['all_keys', 'selected_keys']),
-    keyIds: z.array(z.string()),
+    ruleId: z.string().uuid().optional(),
     match: z.enum(['all_requests', 'request']),
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
@@ -28,7 +24,6 @@ export const policyFormSchema = z
   })
   .superRefine((values, context) => {
     const issue = (field: string, message: string) => context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
-    if (values.target === 'selected_keys' && !values.keyIds.length) issue('keyIds', 'Select at least one inference key');
     if (values.match === 'request' && !values.matchModels.length && values.matchStream === 'any' && !values.matchCapabilities.length)
       issue('match', 'Choose at least one request criterion');
     if (['models', 'providers', 'fallback'].includes(values.kind) && !values.names.length) issue('names', 'Select at least one option');
@@ -44,14 +39,24 @@ export const policyFormSchema = z
       issue('amount', 'Enter a positive USD amount with at most six decimal places');
   });
 
+export const policyFormSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    enabled: z.boolean(),
+    priority: z.number().int().min(0).max(10000),
+    target: z.enum(['all_keys', 'selected_keys']),
+    keyIds: z.array(z.string()),
+    rules: z.array(policyRuleFormSchema).min(1).max(100),
+  })
+  .superRefine((values, context) => {
+    if (values.target === 'selected_keys' && !values.keyIds.length)
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['keyIds'], message: 'Select at least one inference key' });
+  });
+
+export type PolicyRuleForm = z.infer<typeof policyRuleFormSchema>;
 export type PolicyForm = z.infer<typeof policyFormSchema>;
 
-export const policyDefaults: PolicyForm = {
-  name: '',
-  enabled: true,
-  priority: 100,
-  target: 'all_keys',
-  keyIds: [],
+export const policyRuleDefaults: PolicyRuleForm = {
   match: 'all_requests',
   matchModels: [],
   matchStream: 'any',
@@ -71,7 +76,16 @@ export const policyDefaults: PolicyForm = {
   sharing: 'shared',
 };
 
-function action(values: PolicyForm): PolicyDefinitionInput['action'] {
+export const policyDefaults: PolicyForm = {
+  name: '',
+  enabled: true,
+  priority: 100,
+  target: 'all_keys',
+  keyIds: [],
+  rules: [{ ...policyRuleDefaults }],
+};
+
+function action(values: PolicyRuleForm): PolicyRuleInput['action'] {
   switch (values.kind) {
     case 'models':
       return { kind: 'models', names: values.names };
@@ -98,8 +112,8 @@ function action(values: PolicyForm): PolicyDefinitionInput['action'] {
   }
 }
 
-export function policyPayload(values: PolicyForm): PolicyCreate {
-  const match: PolicyDefinitionInput['match'] =
+function rulePayload(values: PolicyRuleForm): PolicyRuleInput {
+  const match: PolicyRuleInput['match'] =
     values.match === 'all_requests'
       ? { kind: 'all_requests' }
       : {
@@ -108,27 +122,26 @@ export function policyPayload(values: PolicyForm): PolicyCreate {
           capabilities: values.matchCapabilities,
           ...(values.matchStream === 'any' ? {} : { stream: values.matchStream === 'streaming' }),
         };
+  return { ...(values.ruleId ? { id: values.ruleId } : {}), match, action: action(values) };
+}
+
+export function policyPayload(values: PolicyForm): PolicyCreate {
   return {
     name: values.name,
     enabled: values.enabled,
     priority: values.priority,
     definition: {
       target: values.target === 'all_keys' ? { kind: 'all_keys' } : { kind: 'selected_keys', key_ids: values.keyIds },
-      match,
-      action: action(values),
+      rules: values.rules.map(rulePayload),
     },
   };
 }
 
-export function policyForm(policy: PolicyOut): PolicyForm {
-  const { target, match, action } = policy.definition;
+function policyRuleForm(rule: PolicyRuleOutput): PolicyRuleForm {
+  const { match, action } = rule;
   return {
-    ...policyDefaults,
-    name: policy.name,
-    enabled: policy.enabled,
-    priority: policy.priority,
-    target: target.kind,
-    keyIds: target.kind === 'selected_keys' ? target.key_ids : [],
+    ...policyRuleDefaults,
+    ruleId: rule.id,
     match: match.kind,
     matchModels: match.kind === 'request' ? (match.models ?? []) : [],
     matchStream:
@@ -142,5 +155,18 @@ export function policyForm(policy: PolicyOut): PolicyForm {
     ...(action.kind === 'credential_access' ? { credentialScopes: action.scopes } : {}),
     ...(action.kind === 'fallback' ? { reasons: action.on, maxAttempts: action.max_attempts, timeoutMs: action.timeout_ms } : {}),
     ...(action.kind === 'budget' ? { amount: action.amount_usd, period: action.period, sharing: action.sharing } : {}),
+  };
+}
+
+export function policyForm(policy: PolicyOut): PolicyForm {
+  const { target, rules } = policy.definition;
+  return {
+    ...policyDefaults,
+    name: policy.name,
+    enabled: policy.enabled,
+    priority: policy.priority,
+    target: target.kind,
+    keyIds: target.kind === 'selected_keys' ? target.key_ids : [],
+    rules: rules.map(policyRuleForm),
   };
 }

@@ -9,8 +9,10 @@ from control_plane.authz import Permission
 
 DEFINITION = {
     "target": {"kind": "all_keys"},
-    "match": {"kind": "all_requests"},
-    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+    "rules": [
+        {"match": {"kind": "all_requests"}, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}},
+        {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 4096}},
+    ],
 }
 
 
@@ -32,10 +34,23 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         assert created.status_code == 200, created.text
         policy = created.json()["data"]
         assert policy["workspace_id"] == str(workspace)
+        assert len(policy["definition"]["rules"]) == 2
+        assert len({rule["id"] for rule in policy["definition"]["rules"]}) == 2
         assert [item["id"] for item in client.get(path, headers=headers).json()["data"]] == [policy["id"]]
         sibling_path = f"/api/v1/orgs/{org}/workspaces/{sibling}/policies/{policy['id']}"
         assert client.patch(sibling_path, headers=headers, json={"enabled": False}).status_code == 404
-        invalid = {**body, "definition": {**body["definition"], "match": {"kind": "request"}}}
+        invalid = {
+            **body,
+            "definition": {
+                **body["definition"],
+                "rules": [
+                    {
+                        "match": {"kind": "request"},
+                        "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+                    }
+                ],
+            },
+        }
         assert client.post(path, headers=headers, json=invalid).status_code == 422
         assert client.patch(f"{path}/{policy['id']}", headers=headers, json={"name": None}).status_code == 422
         assert client.patch(f"{path}/{policy['id']}", headers=headers, json={"enabled": False}).json()["data"]["enabled"] is False
@@ -112,8 +127,8 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         path = f"/api/v1/orgs/{org}/workspaces/{workspace}/policies"
         definitions = [
             {**DEFINITION, "target": {"kind": "selected_keys", "key_ids": [caller["id"]]}},
-            {**DEFINITION, "action": {"kind": "models", "names": ["absent"]}},
-            {**DEFINITION, "action": {"kind": "providers", "names": ["absent"]}},
+            {**DEFINITION, "rules": [{"match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["absent"]}}]},
+            {**DEFINITION, "rules": [{"match": {"kind": "all_requests"}, "action": {"kind": "providers", "names": ["absent"]}}]},
         ]
         for definition in definitions:
             response = client.post(path, headers=headers, json={"name": "Invalid", "definition": definition})

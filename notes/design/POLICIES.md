@@ -6,10 +6,11 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 
 ## Contract and execution
 
-Each policy has a name, priority, target, typed request match, and one typed action. Separate
-policies compose restrictions: every matching restriction must pass. Lower priorities run first;
-policy UUID breaks ties. Priority cannot override a restriction. The first matching fallback
-policy supplies the ordered backup list.
+Each policy has a name, priority, target, and an ordered nonempty collection of rules. Each rule has
+a stable UUID, typed request match, and one typed action. Rules compose within and across policies:
+every matching restriction must pass. Lower policy priorities run first; policy UUID breaks ties,
+then rules run in their listed order. Priority cannot override a restriction. The first matching
+fallback rule supplies the ordered backup list.
 
 The control plane validates request matches and references when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
@@ -40,8 +41,8 @@ match. Empty request matches and duplicate values are invalid.
 | `capabilities` | list of capabilities | Request must require every listed capability |
 
 Capabilities are `tools`, `reasoning`, and `structured_output`; streaming has its own criterion.
-A workspace may have at most 100 active policies; management writes serialize on the workspace
-to enforce this bound.
+A workspace may have at most 100 active rules across its enabled policies; management writes
+serialize on the workspace to enforce this bound.
 Bundle admission independently checks it. Matches are evaluated once against the original request.
 The same matched restrictions apply to every backup, so changing the route cannot escape a guardrail.
 
@@ -113,14 +114,18 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "priority": 100,
   "definition": {
     "target": { "kind": "all_keys" },
-    "match": { "kind": "request", "models": ["primary-model"] },
-    "action": {
-      "kind": "fallback",
-      "models": ["backup-model", "second-backup"],
-      "on": ["rate_limited", "upstream_unavailable", "timeout"],
-      "max_attempts": 3,
-      "timeout_ms": 30000
-    }
+    "rules": [
+      {
+        "match": { "kind": "request", "models": ["primary-model"] },
+        "action": {
+          "kind": "fallback",
+          "models": ["backup-model", "second-backup"],
+          "on": ["rate_limited", "upstream_unavailable", "timeout"],
+          "max_attempts": 3,
+          "timeout_ms": 30000
+        }
+      }
+    ]
   }
 }
 ```
@@ -128,7 +133,8 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
 Names must exist in the catalog. To target specific keys, replace `target` with
 `{"kind": "selected_keys", "key_ids": ["inference-key-uuid"]}`.
 PATCH replaces `definition` as a whole; omitted fields are unchanged and explicit nulls are
-rejected. CLI commands use the same generated request and response types:
+rejected. Existing rule IDs must be preserved when their identity should survive replacement. CLI
+commands use the same generated request and response types:
 
 ```sh
 airllm policies list -w production -f json

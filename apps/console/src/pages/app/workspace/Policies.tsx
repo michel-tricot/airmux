@@ -3,7 +3,7 @@ import { closestCenter, DndContext, type DragEndEvent, DragOverlay, PointerSenso
 import { type AnimateLayoutChanges, arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Pencil, Trash2 } from 'lucide-react';
-import type { PolicyOut } from '@workspace/api-client-react';
+import type { PolicyOut, PolicyRuleOutput } from '@workspace/api-client-react';
 import { Badge, Button, ConfirmButton, TableCell, TableRow } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { ErrorState } from '@/components/shared/states';
@@ -59,8 +59,8 @@ function applyOrder(policies: PolicyOut[] | undefined, policyIds: string[] | nul
     : policies;
 }
 
-function actionSummary(policy: PolicyOut): string {
-  const action = policy.definition.action;
+function actionSummary(rule: PolicyRuleOutput): string {
+  const { action } = rule;
   switch (action.kind) {
     case 'models':
       return `Models: ${action.names.join(', ')}`;
@@ -83,8 +83,8 @@ function actionSummary(policy: PolicyOut): string {
   }
 }
 
-function matchSummary(policy: PolicyOut): string {
-  const match = policy.definition.match;
+function matchSummary(rule: PolicyRuleOutput): string {
+  const { match } = rule;
   if (match.kind === 'all_requests') return 'Every request';
   const criteria = [
     match.models?.length ? `Models: ${match.models.join(', ')}` : '',
@@ -196,11 +196,26 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                 cell: (policy) => (
                   <div>
                     <span>{policy.name}</span>
-                    <p className="text-xs text-muted-foreground">When: {matchSummary(policy)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {policy.definition.rules.length} {policy.definition.rules.length === 1 ? 'rule' : 'rules'}
+                    </p>
                   </div>
                 ),
               },
-              { key: 'action', header: 'Action', cell: actionSummary },
+              {
+                key: 'rules',
+                header: 'Rules',
+                cell: (policy) => (
+                  <div className="space-y-2">
+                    {policy.definition.rules.map((rule) => (
+                      <div key={rule.id}>
+                        <span>{actionSummary(rule)}</span>
+                        <p className="text-xs text-muted-foreground">When: {matchSummary(rule)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
               {
                 key: 'target',
                 header: 'Applies to',
@@ -214,7 +229,11 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                 header: 'Status',
                 cell: (policy) => (
                   <Badge variant={policy.enabled ? 'success' : 'secondary'}>
-                    {!policy.enabled ? 'Disabled' : policy.definition.action.kind === 'budget' ? 'Not enforced' : 'Enabled'}
+                    {!policy.enabled
+                      ? 'Disabled'
+                      : policy.definition.rules.every((rule) => rule.action.kind === 'budget')
+                        ? 'Not enforced'
+                        : 'Enabled'}
                   </Badge>
                 ),
               },

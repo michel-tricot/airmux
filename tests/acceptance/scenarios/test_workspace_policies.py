@@ -31,8 +31,7 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
                     "name": "Only the other model",
                     "definition": {
                         "target": {"kind": "all_keys"},
-                        "match": {"kind": "all_requests"},
-                        "action": {"kind": "models", "names": ["quirk"]},
+                        "rules": [{"match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["quirk"]}}],
                     },
                 },
             )
@@ -54,8 +53,12 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
                     "name": "Budget preview",
                     "definition": {
                         "target": {"kind": "all_keys"},
-                        "match": {"kind": "all_requests"},
-                        "action": {"kind": "budget", "period": "day", "amount_usd": "0.000001", "sharing": "shared"},
+                        "rules": [
+                            {
+                                "match": {"kind": "all_requests"},
+                                "action": {"kind": "budget", "period": "day", "amount_usd": "0.000001", "sharing": "shared"},
+                            }
+                        ],
                     },
                 },
             )
@@ -85,8 +88,18 @@ def test_fallback_runs_through_real_gateway_and_stays_inside_restrictions(stack:
                     "name": "Use the backup on unavailable",
                     "definition": {
                         "target": {"kind": "all_keys"},
-                        "match": {"kind": "all_requests"},
-                        "action": {"kind": "fallback", "models": ["quirk"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 10000},
+                        "rules": [
+                            {
+                                "match": {"kind": "all_requests"},
+                                "action": {
+                                    "kind": "fallback",
+                                    "models": ["quirk"],
+                                    "on": ["upstream_unavailable"],
+                                    "max_attempts": 2,
+                                    "timeout_ms": 10000,
+                                },
+                            }
+                        ],
                     },
                 },
             )
@@ -108,8 +121,7 @@ def test_fallback_runs_through_real_gateway_and_stays_inside_restrictions(stack:
                     "name": "Forbid the backup provider",
                     "definition": {
                         "target": {"kind": "all_keys"},
-                        "match": {"kind": "request", "models": [MODEL]},
-                        "action": {"kind": "providers", "names": ["stub"]},
+                        "rules": [{"match": {"kind": "request", "models": [MODEL]}, "action": {"kind": "providers", "names": ["stub"]}}],
                     },
                 },
             )

@@ -1388,7 +1388,7 @@ class RequestLimits(BaseModel):
     max_output_tokens: Annotated[int, Field(ge=1, title="Max Output Tokens")]
 
 
-class RequestMatch(BaseModel):
+class RequestMatchInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
@@ -1402,6 +1402,19 @@ class RequestMatch(BaseModel):
         list[Literal["tools", "reasoning", "structured_output"]] | None,
         Field(max_length=3, title="Capabilities"),
     ] = []
+
+
+class RequestMatchOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["request"], Field(title="Kind")]
+    models: Annotated[list[Model], Field(max_length=1000, title="Models")]
+    stream: Annotated[bool | None, Field(title="Stream")]
+    capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]],
+        Field(max_length=3, title="Capabilities"),
+    ]
 
 
 class RoutedUsageEventV1(BaseModel):
@@ -2073,12 +2086,12 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
-class PolicyDefinitionInput(BaseModel):
+class PolicyRuleInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
-    match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
+    id: Annotated[UUID | None, Field(title="Id")] = None
+    match: Annotated[AllRequests | RequestMatchInput, Field(discriminator="kind", title="Match")]
     action: Annotated[
         AllowedModels
         | AllowedProviders
@@ -2093,12 +2106,12 @@ class PolicyDefinitionInput(BaseModel):
     ]
 
 
-class PolicyDefinitionOutput(BaseModel):
+class PolicyRuleOutput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
-    match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
+    id: Annotated[UUID, Field(title="Id")]
+    match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
     action: Annotated[
         AllowedModels
         | AllowedProviders
@@ -2111,61 +2124,6 @@ class PolicyDefinitionOutput(BaseModel):
         | BudgetOutput,
         Field(discriminator="kind", title="Action"),
     ]
-
-
-class PolicyEntry(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    id: Annotated[UUID, Field(title="Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
-    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
-    definition: PolicyDefinitionOutput
-
-
-class PolicyOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(title="Name")]
-    enabled: Annotated[bool, Field(title="Enabled")]
-    priority: Annotated[int, Field(title="Priority")]
-    definition: PolicyDefinitionOutput
-    created_at: Annotated[AwareDatetime, Field(title="Created At")]
-    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-
-
-class PolicyUpdate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    name: Annotated[
-        Name3 | None,
-        Field(
-            description="Replacement display name; omit to leave unchanged",
-            title="Name",
-        ),
-    ] = None
-    enabled: Annotated[
-        bool | None,
-        Field(
-            description="Enable or disable this policy; omit to leave unchanged",
-            title="Enabled",
-        ),
-    ] = None
-    priority: Annotated[
-        Priority | None,
-        Field(
-            description="Replacement priority, with lower numbers first; omit to leave unchanged",
-            title="Priority",
-        ),
-    ] = None
-    definition: Annotated[
-        PolicyDefinitionInput | None,
-        Field(description="Replace the complete target, request match, and action; omit to leave unchanged"),
-    ] = None
 
 
 class Scope(BaseModel):
@@ -2262,10 +2220,6 @@ class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
 
 
-class EnvelopePolicyOut(BaseModel):
-    data: PolicyOut
-
-
 class EnvelopeTaxonomyApplyOut(BaseModel):
     data: TaxonomyApplyOut
 
@@ -2282,10 +2236,6 @@ class EnvelopeListOrgMemberOut(BaseModel):
     data: Annotated[list[OrgMemberOut], Field(title="Data")]
 
 
-class EnvelopeListPolicyOut(BaseModel):
-    data: Annotated[list[PolicyOut], Field(title="Data")]
-
-
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
 
@@ -2294,6 +2244,107 @@ class OrgServiceAccountMintedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     access_key: AccessKeyMintedOut
+
+
+class PolicyDefinitionInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
+    rules: Annotated[list[PolicyRuleInput], Field(max_length=100, min_length=1, title="Rules")]
+
+
+class PolicyDefinitionOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
+    rules: Annotated[list[PolicyRuleOutput], Field(max_length=100, min_length=1, title="Rules")]
+
+
+class PolicyEntry(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[UUID, Field(title="Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
+    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
+    definition: PolicyDefinitionOutput
+
+
+class PolicyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(title="Name")]
+    enabled: Annotated[bool, Field(title="Enabled")]
+    priority: Annotated[int, Field(title="Priority")]
+    definition: PolicyDefinitionOutput
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class PolicyUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        Name3 | None,
+        Field(
+            description="Replacement display name; omit to leave unchanged",
+            title="Name",
+        ),
+    ] = None
+    enabled: Annotated[
+        bool | None,
+        Field(
+            description="Enable or disable this policy; omit to leave unchanged",
+            title="Enabled",
+        ),
+    ] = None
+    priority: Annotated[
+        Priority | None,
+        Field(
+            description="Replacement priority, with lower numbers first; omit to leave unchanged",
+            title="Priority",
+        ),
+    ] = None
+    definition: Annotated[
+        PolicyDefinitionInput | None,
+        Field(description="Replace the complete target and ordered rules; omit to leave unchanged"),
+    ] = None
+
+
+class BundleV1(BaseModel):
+    """
+    A complete, versioned policy snapshot for one organization's model traffic.
+    """
+
+    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+    keys: Annotated[list[KeyEntry], Field(title="Keys")]
+    catalog: Catalog
+    policies: Annotated[list[PolicyEntry], Field(title="Policies")]
+
+
+class EnvelopeBundleV1(BaseModel):
+    data: BundleV1
+
+
+class EnvelopeOrgServiceAccountMintedOut(BaseModel):
+    data: OrgServiceAccountMintedOut
+
+
+class EnvelopePolicyOut(BaseModel):
+    data: PolicyOut
+
+
+class EnvelopeListPolicyOut(BaseModel):
+    data: Annotated[list[PolicyOut], Field(title="Data")]
 
 
 class PolicyCreate(BaseModel):
@@ -2327,27 +2378,5 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinitionInput,
-        Field(description="Inference key target, typed request match, and action. Budgets are not yet enforced"),
+        Field(description="Inference key target and ordered rules. Budgets are not yet enforced"),
     ]
-
-
-class BundleV1(BaseModel):
-    """
-    A complete, versioned policy snapshot for one organization's model traffic.
-    """
-
-    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
-    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-    keys: Annotated[list[KeyEntry], Field(title="Keys")]
-    catalog: Catalog
-    policies: Annotated[list[PolicyEntry], Field(title="Policies")]
-
-
-class EnvelopeBundleV1(BaseModel):
-    data: BundleV1
-
-
-class EnvelopeOrgServiceAccountMintedOut(BaseModel):
-    data: OrgServiceAccountMintedOut

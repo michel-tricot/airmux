@@ -4,13 +4,16 @@ Workspace policies control which inference requests AirLLM accepts, which models
 may use, and when it retries with a fallback model. Open **Policies** from a workspace in the
 console to create, edit, reorder, enable, or disable them.
 
-Every policy has three parts:
+Every policy has two levels:
 
 - **Applies to** selects every inference key in the workspace or a fixed set of keys
-- **Applies when** matches every request or requests with selected models, capabilities, or streaming mode
-- **Action** defines the restriction or fallback behavior
+- **Rules** is an ordered collection of request matches and actions
 
-All matching restrictions must pass. Lower priority numbers run first. Reordering policies in the
+Each rule's **Applies when** matches every request or requests with selected models, capabilities,
+or streaming mode. Its **Action** defines the restriction or fallback behavior.
+
+All matching rules across all targeted policies compose, and every matching restriction must pass.
+Rules run in their listed order. Lower policy priority numbers run first. Reordering policies in the
 console updates their priorities. Priority affects evaluation order, but it cannot make a request
 bypass another matching restriction. The first matching fallback policy supplies the fallback plan.
 
@@ -39,16 +42,20 @@ For example, this definition matches streaming requests for `openai/gpt-4o` that
 ```json
 {
   "target": { "kind": "all_keys" },
-  "match": {
-    "kind": "request",
-    "models": ["openai/gpt-4o"],
-    "stream": true,
-    "capabilities": ["tools"]
-  },
-  "action": {
-    "kind": "credential_access",
-    "scopes": ["workspace", "org"]
-  }
+  "rules": [
+    {
+      "match": {
+        "kind": "request",
+        "models": ["openai/gpt-4o"],
+        "stream": true,
+        "capabilities": ["tools"]
+      },
+      "action": {
+        "kind": "credential_access",
+        "scopes": ["workspace", "org"]
+      }
+    }
+  ]
 }
 ```
 
@@ -70,11 +77,15 @@ create this policy:
       "kind": "selected_keys",
       "key_ids": ["PUBLIC_SUMMARIZER_KEY_ID"]
     },
-    "match": { "kind": "all_requests" },
-    "action": {
-      "kind": "request_limits",
-      "max_output_tokens": 1024
-    }
+    "rules": [
+      {
+        "match": { "kind": "all_requests" },
+        "action": {
+          "kind": "request_limits",
+          "max_output_tokens": 1024
+        }
+      }
+    ]
   }
 }
 ```
@@ -95,14 +106,18 @@ accounts owned by your organization. This policy excludes platform credentials f
   "priority": 20,
   "definition": {
     "target": { "kind": "all_keys" },
-    "match": {
-      "kind": "request",
-      "capabilities": ["structured_output"]
-    },
-    "action": {
-      "kind": "credential_access",
-      "scopes": ["workspace", "org"]
-    }
+    "rules": [
+      {
+        "match": {
+          "kind": "request",
+          "capabilities": ["structured_output"]
+        },
+        "action": {
+          "kind": "credential_access",
+          "scopes": ["workspace", "org"]
+        }
+      }
+    ]
   }
 }
 ```
@@ -122,20 +137,24 @@ provider is throttled or unavailable:
   "priority": 30,
   "definition": {
     "target": { "kind": "all_keys" },
-    "match": {
-      "kind": "request",
-      "models": ["openai/gpt-4o"]
-    },
-    "action": {
-      "kind": "fallback",
-      "models": [
-        "anthropic/claude-sonnet-4-5-20250929",
-        "openai/gpt-4o-mini"
-      ],
-      "on": ["rate_limited", "upstream_unavailable"],
-      "max_attempts": 3,
-      "timeout_ms": 30000
-    }
+    "rules": [
+      {
+        "match": {
+          "kind": "request",
+          "models": ["openai/gpt-4o"]
+        },
+        "action": {
+          "kind": "fallback",
+          "models": [
+            "anthropic/claude-sonnet-4-5-20250929",
+            "openai/gpt-4o-mini"
+          ],
+          "on": ["rate_limited", "upstream_unavailable"],
+          "max_attempts": 3,
+          "timeout_ms": 30000
+        }
+      }
+    ]
   }
 }
 ```
@@ -313,18 +332,30 @@ ceiling for all workspace keys:
   "priority": 20,
   "definition": {
     "target": { "kind": "all_keys" },
-    "match": { "kind": "all_requests" },
-    "action": {
-      "kind": "price_limit",
-      "max_input_price_per_mtok": "2.50",
-      "max_output_price_per_mtok": "10.00"
-    }
+    "rules": [
+      {
+        "match": { "kind": "all_requests" },
+        "action": {
+          "kind": "price_limit",
+          "max_input_price_per_mtok": "2.50",
+          "max_output_price_per_mtok": "10.00"
+        }
+      },
+      {
+        "match": { "kind": "all_requests" },
+        "action": {
+          "kind": "models",
+          "names": ["openai/gpt-4o", "openai/gpt-4o-mini"]
+        }
+      }
+    ]
   }
 }
 ```
 
-Create separate policies for separate restrictions. For example, combine the price policy above
-with an **Allowed models** policy instead of trying to place both actions in one definition.
+The example keeps the shared key target in one place while independently matching and applying its
+price and model rules. Rule IDs are minted when omitted and returned by the API. Preserve those IDs
+when replacing an existing policy definition.
 
 The CLI accepts the same JSON shape:
 

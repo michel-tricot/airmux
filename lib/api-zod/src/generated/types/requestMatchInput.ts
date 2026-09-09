@@ -10,15 +10,17 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { AllKeys } from './allKeys';
-import type { PolicyRuleOutput } from './policyRuleOutput';
-import type { SelectedKeys } from './selectedKeys';
+import type { RequestMatchInputCapabilitiesItem } from './requestMatchInputCapabilitiesItem';
 
-export interface PolicyDefinitionOutput {
-  target: AllKeys | SelectedKeys;
+export interface RequestMatchInput {
+  kind: 'request';
   /**
-     * @minItems 1
-     * @maxItems 100
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
      */
-  rules: PolicyRuleOutput[];
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchInputCapabilitiesItem[];
 }

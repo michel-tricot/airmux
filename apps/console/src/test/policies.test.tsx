@@ -17,8 +17,7 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
     priority,
     definition: {
       target: { kind: 'all_keys' },
-      match: { kind: 'all_requests' },
-      action: { kind: 'deny', message: `${name} denied` },
+      rules: [{ id: `rule-${id}`, match: { kind: 'all_requests' }, action: { kind: 'deny', message: `${name} denied` } }],
     },
     created_at: now,
     updated_at: now,
@@ -98,11 +97,7 @@ describe('workspace policies', () => {
 
     await dragBelowNext(firstHandle);
 
-    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
-      'SecondWhen: Every request',
-      'FirstWhen: Every request',
-      'ThirdWhen: Every request',
-    ]);
+    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual(['Second1 rule', 'First1 rule', 'Third1 rule']);
     expect(policyRows().map((row) => within(row).getAllByRole('cell')[4].textContent)).toEqual(['0', '1', '2']);
     await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
     await waitFor(() => expect(reorderCompleted).toBe(true));
@@ -122,17 +117,9 @@ describe('workspace policies', () => {
     renderPolicies();
 
     await dragBelowNext(await screen.findByRole('button', { name: 'Reorder First' }));
-    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
-      'SecondWhen: Every request',
-      'FirstWhen: Every request',
-      'ThirdWhen: Every request',
-    ]);
+    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual(['Second1 rule', 'First1 rule', 'Third1 rule']);
     await waitFor(() =>
-      expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
-        'FirstWhen: Every request',
-        'SecondWhen: Every request',
-        'ThirdWhen: Every request',
-      ]),
+      expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual(['First1 rule', 'Second1 rule', 'Third1 rule']),
     );
   });
 

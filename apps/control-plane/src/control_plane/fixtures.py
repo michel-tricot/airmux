@@ -40,6 +40,7 @@ from contract.policies import (
     DenyRequest,
     Fallback,
     PolicyDefinition,
+    PolicyRule,
     PriceLimit,
     RequestLimits,
     RequestMatch,
@@ -365,8 +366,12 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=10,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=RequestMatch(kind="request", stream=True),
-            action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
+            rules=(
+                PolicyRule(
+                    match=RequestMatch(kind="request", stream=True),
+                    action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
+                ),
+            ),
         ),
     )
     await workspace_policy(
@@ -375,8 +380,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=20,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
+            rules=(
+                PolicyRule(match=AllRequests(kind="all_requests"), action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O))),
+            ),
         ),
     )
     await workspace_policy(
@@ -385,13 +391,17 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=30,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
-            action=Fallback(
-                kind="fallback",
-                models=(ANTHROPIC_CLAUDE_OPUS, OPENAI_GPT_4O_MINI),
-                on=("rate_limited", "upstream_unavailable", "timeout"),
-                max_attempts=3,
-                timeout_ms=30000,
+            rules=(
+                PolicyRule(
+                    match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
+                    action=Fallback(
+                        kind="fallback",
+                        models=(ANTHROPIC_CLAUDE_OPUS, OPENAI_GPT_4O_MINI),
+                        on=("rate_limited", "upstream_unavailable", "timeout"),
+                        max_attempts=3,
+                        timeout_ms=30000,
+                    ),
+                ),
             ),
         ),
     )
@@ -410,7 +420,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
             production,
             name=name,
             priority=priority,
-            definition=PolicyDefinition(target=AllKeys(kind="all_keys"), match=AllRequests(kind="all_requests"), action=action),
+            definition=PolicyDefinition(target=AllKeys(kind="all_keys"), rules=(PolicyRule(match=AllRequests(kind="all_requests"), action=action),)),
         )
     await workspace_policy(
         production,
@@ -419,8 +429,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         enabled=False,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
+            rules=(
+                PolicyRule(match=AllRequests(kind="all_requests"), action=DenyRequest(kind="deny", message="Inference is temporarily unavailable")),
+            ),
         ),
     )
     await workspace_policy(
@@ -429,8 +440,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=10,
         definition=PolicyDefinition(
             target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
-            match=AllRequests(kind="all_requests"),
-            action=AllowedProviders(kind="providers", names=("openai",)),
+            rules=(PolicyRule(match=AllRequests(kind="all_requests"), action=AllowedProviders(kind="providers", names=("openai",))),),
         ),
     )
     await workspace_policy(
@@ -439,8 +449,12 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=10,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
+            rules=(
+                PolicyRule(
+                    match=AllRequests(kind="all_requests"),
+                    action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
+                ),
+            ),
         ),
     )
 

@@ -7,16 +7,17 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from contract.events import CredentialScope
+from contract.ids import uuid7
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
 RequestCapability = Literal["tools", "reasoning", "structured_output"]
-MAX_WORKSPACE_POLICIES = 100
+MAX_WORKSPACE_RULES = 100
 
 
 class _PolicyModel(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False, json_schema_serialization_defaults_required=True)
 
 
 class AllKeys(_PolicyModel):
@@ -134,10 +135,23 @@ PolicyAction = Annotated[
 ]
 
 
-class PolicyDefinition(_PolicyModel):
-    target: PolicyTarget
+class PolicyRule(_PolicyModel):
+    id: UUID = Field(default_factory=uuid7)
     match: PolicyMatch
     action: PolicyAction
+
+
+class PolicyDefinition(_PolicyModel):
+    target: PolicyTarget
+    rules: tuple[PolicyRule, ...] = Field(min_length=1, max_length=MAX_WORKSPACE_RULES)
+
+    @field_validator("rules")
+    @classmethod
+    def unique_rule_ids(cls, rules: tuple[PolicyRule, ...]) -> tuple[PolicyRule, ...]:
+        if len({rule.id for rule in rules}) != len(rules):
+            msg = "Policy rule IDs must be unique"
+            raise ValueError(msg)
+        return rules
 
 
 class PolicyEntry(_PolicyModel):

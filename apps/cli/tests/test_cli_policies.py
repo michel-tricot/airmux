@@ -22,8 +22,16 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     monkeypatch.setenv("AIRLLM_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "target": {"kind": "all_keys"},
-        "match": {"kind": "all_requests"},
-        "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
+        "rules": [
+            {
+                "match": {"kind": "all_requests"},
+                "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
+            }
+        ],
+    }
+    response_definition = {
+        **definition,
+        "rules": [{"id": str(uuid4()), **definition["rules"][0]}],
     }
     policy = {
         "id": policy_id,
@@ -32,7 +40,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
         "name": "Budget",
         "enabled": True,
         "priority": 100,
-        "definition": definition,
+        "definition": response_definition,
         "created_at": "2026-09-08T00:00:00Z",
         "updated_at": "2026-09-08T00:00:00Z",
         "deleted_at": None,
@@ -52,7 +60,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     respx.patch(f"http://cp.test/api/v1/orgs/{org_id}/workspaces/production/policies/{policy_id}").mock(side_effect=update)
     created = runner.invoke(app, ["policies", "create", str(path), "-w", "production", "-f", "json"])
     assert created.exit_code == 0, created.output
-    assert json.loads(created.stdout)[0]["definition"] == definition
+    assert json.loads(created.stdout)[0]["definition"] == response_definition
     path.write_text('{"enabled": false}', encoding="utf-8")
     updated = runner.invoke(app, ["policies", "update", policy_id, str(path), "-w", "production", "-f", "json"])
     assert updated.exit_code == 0, updated.output

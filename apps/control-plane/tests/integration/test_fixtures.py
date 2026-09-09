@@ -196,7 +196,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     policies = run_in_db(tmp_path, Policy.find)
     inference_keys = run_in_db(tmp_path, InferenceKey.find)
 
-    assert {policy.definition.action.kind for policy in policies} == {
+    assert {rule.action.kind for policy in policies for rule in policy.definition.rules} == {
         "models",
         "providers",
         "deny",
@@ -209,7 +209,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     }
     assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
-    streaming_match = next(policy for policy in policies if policy.name == "Streaming uses team credentials").definition.match
+    streaming_match = next(policy for policy in policies if policy.name == "Streaming uses team credentials").definition.rules[0].match
     assert streaming_match.kind == "request"
     assert streaming_match.stream is True
     ci_key = next(key for key in inference_keys if key.label == "ci")

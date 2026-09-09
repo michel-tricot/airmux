@@ -11,10 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
+export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
 
 
-export const RequestMatchCapabilitiesItem = {
+export const RequestMatchOutputCapabilitiesItem = {
   tools: 'tools',
   reasoning: 'reasoning',
   structured_output: 'structured_output',

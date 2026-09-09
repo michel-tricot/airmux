@@ -6714,7 +6714,7 @@ components:
           default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition-Input'
-          description: Inference key target, typed request match, and action. Budgets are not yet enforced
+          description: Inference key target and ordered rules. Budgets are not yet enforced
       additionalProperties: false
       type: object
       required:
@@ -6733,46 +6733,18 @@ components:
             mapping:
               all_keys: '#/components/schemas/AllKeys'
               selected_keys: '#/components/schemas/SelectedKeys'
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch'
-        action:
-          oneOf:
-          - $ref: '#/components/schemas/AllowedModels'
-          - $ref: '#/components/schemas/AllowedProviders'
-          - $ref: '#/components/schemas/DenyRequest'
-          - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Input'
-          - $ref: '#/components/schemas/RequestLimits'
-          - $ref: '#/components/schemas/CredentialAccess'
-          - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Input'
-          title: Action
-          discriminator:
-            propertyName: kind
-            mapping:
-              budget: '#/components/schemas/Budget-Input'
-              credential_access: '#/components/schemas/CredentialAccess'
-              deny: '#/components/schemas/DenyRequest'
-              fallback: '#/components/schemas/Fallback'
-              models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Input'
-              providers: '#/components/schemas/AllowedProviders'
-              request_limits: '#/components/schemas/RequestLimits'
-              strict_parameters: '#/components/schemas/StrictParameters'
+        rules:
+          items:
+            $ref: '#/components/schemas/PolicyRule-Input'
+          type: array
+          maxItems: 100
+          minItems: 1
+          title: Rules
       additionalProperties: false
       type: object
       required:
       - target
-      - match
-      - action
+      - rules
       title: PolicyDefinition
     PolicyDefinition-Output:
       properties:
@@ -6786,46 +6758,18 @@ components:
             mapping:
               all_keys: '#/components/schemas/AllKeys'
               selected_keys: '#/components/schemas/SelectedKeys'
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch'
-        action:
-          oneOf:
-          - $ref: '#/components/schemas/AllowedModels'
-          - $ref: '#/components/schemas/AllowedProviders'
-          - $ref: '#/components/schemas/DenyRequest'
-          - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Output'
-          - $ref: '#/components/schemas/RequestLimits'
-          - $ref: '#/components/schemas/CredentialAccess'
-          - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Output'
-          title: Action
-          discriminator:
-            propertyName: kind
-            mapping:
-              budget: '#/components/schemas/Budget-Output'
-              credential_access: '#/components/schemas/CredentialAccess'
-              deny: '#/components/schemas/DenyRequest'
-              fallback: '#/components/schemas/Fallback'
-              models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Output'
-              providers: '#/components/schemas/AllowedProviders'
-              request_limits: '#/components/schemas/RequestLimits'
-              strict_parameters: '#/components/schemas/StrictParameters'
+        rules:
+          items:
+            $ref: '#/components/schemas/PolicyRule-Output'
+          type: array
+          maxItems: 100
+          minItems: 1
+          title: Rules
       additionalProperties: false
       type: object
       required:
       - target
-      - match
-      - action
+      - rules
       title: PolicyDefinition
     PolicyEntry:
       properties:
@@ -6924,6 +6868,99 @@ components:
       - updated_at
       - deleted_at
       title: PolicyOut
+    PolicyRule-Input:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Input'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Input'
+        action:
+          oneOf:
+          - $ref: '#/components/schemas/AllowedModels'
+          - $ref: '#/components/schemas/AllowedProviders'
+          - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Input'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
+          - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget-Input'
+          title: Action
+          discriminator:
+            propertyName: kind
+            mapping:
+              budget: '#/components/schemas/Budget-Input'
+              credential_access: '#/components/schemas/CredentialAccess'
+              deny: '#/components/schemas/DenyRequest'
+              fallback: '#/components/schemas/Fallback'
+              models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Input'
+              providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
+      additionalProperties: false
+      type: object
+      required:
+      - match
+      - action
+      title: PolicyRule
+    PolicyRule-Output:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        action:
+          oneOf:
+          - $ref: '#/components/schemas/AllowedModels'
+          - $ref: '#/components/schemas/AllowedProviders'
+          - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Output'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
+          - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget-Output'
+          title: Action
+          discriminator:
+            propertyName: kind
+            mapping:
+              budget: '#/components/schemas/Budget-Output'
+              credential_access: '#/components/schemas/CredentialAccess'
+              deny: '#/components/schemas/DenyRequest'
+              fallback: '#/components/schemas/Fallback'
+              models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Output'
+              providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - match
+      - action
+      title: PolicyRule
     PolicyUpdate:
       properties:
         name:
@@ -6952,7 +6989,7 @@ components:
           anyOf:
           - $ref: '#/components/schemas/PolicyDefinition-Input'
           - type: 'null'
-          description: Replace the complete target, request match, and action; omit to leave unchanged
+          description: Replace the complete target and ordered rules; omit to leave unchanged
       additionalProperties: false
       type: object
       title: PolicyUpdate
@@ -7345,7 +7382,7 @@ components:
       - kind
       - max_output_tokens
       title: RequestLimits
-    RequestMatch:
+    RequestMatch-Input:
       properties:
         kind:
           type: string
@@ -7380,6 +7417,45 @@ components:
       type: object
       required:
       - kind
+      title: RequestMatch
+    RequestMatch-Output:
+      properties:
+        kind:
+          type: string
+          const: request
+          title: Kind
+        models:
+          items:
+            type: string
+            maxLength: 255
+            minLength: 1
+          type: array
+          maxItems: 1000
+          title: Models
+          default: []
+        stream:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Stream
+        capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          maxItems: 3
+          title: Capabilities
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - models
+      - stream
+      - capabilities
       title: RequestMatch
     RoutedUsageEventV1:
       properties:

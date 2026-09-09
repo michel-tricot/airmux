@@ -422,26 +422,26 @@ export interface SelectedKeys {
   key_ids: string[];
 }
 
-export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
+export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
 
 
-export const RequestMatchCapabilitiesItem = {
+export const RequestMatchOutputCapabilitiesItem = {
   tools: 'tools',
   reasoning: 'reasoning',
   structured_output: 'structured_output',
 } as const;
 
-export interface RequestMatch {
+export interface RequestMatchOutput {
   kind: 'request';
   /**
      * @maxItems 1000
      * @items.minLength 1
      * @items.maxLength 255
      */
-  models?: string[];
-  stream?: boolean | null;
+  models: string[];
+  stream: boolean | null;
   /** @maxItems 3 */
-  capabilities?: RequestMatchCapabilitiesItem[];
+  capabilities: RequestMatchOutputCapabilitiesItem[];
 }
 
 export interface DenyRequest {
@@ -525,10 +525,19 @@ export interface Fallback {
   timeout_ms: number;
 }
 
+export interface PolicyRuleOutput {
+  id: string;
+  match: AllRequests | RequestMatchOutput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+}
+
 export interface PolicyDefinitionOutput {
   target: AllKeys | SelectedKeys;
-  match: AllRequests | RequestMatch;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  rules: PolicyRuleOutput[];
 }
 
 export interface PolicyEntry {
@@ -1257,16 +1266,47 @@ export interface PlaygroundSessionReadyOut {
   status: 'ready';
 }
 
+export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
+
+
+export const RequestMatchInputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatchInput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchInputCapabilitiesItem[];
+}
+
 export interface PriceLimitInput {
   kind: 'price_limit';
   max_input_price_per_mtok: number | string;
   max_output_price_per_mtok: number | string;
 }
 
+export interface PolicyRuleInput {
+  id?: string;
+  match: AllRequests | RequestMatchInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+}
+
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
-  match: AllRequests | RequestMatch;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  rules: PolicyRuleInput[];
 }
 
 export interface PolicyCreate {
@@ -1284,7 +1324,7 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target, typed request match, and action. Budgets are not yet enforced */
+  /** Inference key target and ordered rules. Budgets are not yet enforced */
   definition: PolicyDefinitionInput;
 }
 
@@ -1313,7 +1353,7 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target, request match, and action; omit to leave unchanged */
+  /** Replace the complete target and ordered rules; omit to leave unchanged */
   definition?: PolicyDefinitionInput | null;
 }
 

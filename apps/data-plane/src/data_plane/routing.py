@@ -30,9 +30,7 @@ def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapsh
     if fallback is None:
         return RoutePlan(primary, (), (), len(primary.candidates), None)
     decisions = (
-        evaluate(request.model_copy(update={"model": model}), key, snapshot, evaluation.policies)
-        for model in fallback.models
-        if model != request.model
+        evaluate(request.model_copy(update={"model": model}), key, snapshot, evaluation.rules) for model in fallback.models if model != request.model
     )
     backups = tuple(decision for decision in decisions if isinstance(decision, Allow))
     return RoutePlan(primary, backups, fallback.on, fallback.max_attempts, fallback.timeout_ms)

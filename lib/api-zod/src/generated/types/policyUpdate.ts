@@ -19,6 +19,6 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target, request match, and action; omit to leave unchanged */
+  /** Replace the complete target and ordered rules; omit to leave unchanged */
   definition?: PolicyDefinitionInput | null;
 }

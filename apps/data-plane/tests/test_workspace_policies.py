@@ -41,8 +41,18 @@ def policy(action, *, match=None, workspace=WORKSPACE, target=None):
         name="test",
         priority=100,
         definition=PolicyDefinition.model_validate(
-            {"target": target or {"kind": "all_keys"}, "match": match or {"kind": "all_requests"}, "action": action}
+            {"target": target or {"kind": "all_keys"}, "rules": [{"match": match or {"kind": "all_requests"}, "action": action}]}
         ),
+    )
+
+
+def policy_with_rules(rules, *, workspace=WORKSPACE, target=None):
+    return PolicyEntry(
+        id=uuid7(),
+        workspace_id=workspace,
+        name="test",
+        priority=100,
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rules": rules}),
     )
 
 
@@ -210,6 +220,32 @@ def test_request_match_combines_model_stream_and_capabilities():
 def test_restrictions_intersect_regardless_of_priority():
     key, snap = snapshot([policy({"kind": "models", "names": [MODEL.model_id]}), policy({"kind": "models", "names": ["other"]})])
     assert isinstance(evaluate(request(), key, snap), Deny)
+
+
+def test_rules_in_one_policy_compose_for_the_targeted_keys():
+    entry = policy_with_rules(
+        [
+            {"match": {"kind": "all_requests"}, "action": {"kind": "models", "names": [MODEL.model_id]}},
+            {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 500}},
+        ]
+    )
+    key, snap = snapshot([entry])
+
+    assert isinstance(evaluate(request(), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
+
+
+def test_each_rule_matches_the_original_request_independently():
+    entry = policy_with_rules(
+        [
+            {"match": {"kind": "request", "stream": True}, "action": {"kind": "models", "names": ["other"]}},
+            {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 500}},
+        ]
+    )
+    key, snap = snapshot([entry])
+
+    assert isinstance(evaluate(request(), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
 
 
 def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():

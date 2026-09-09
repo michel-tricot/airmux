@@ -10,15 +10,12 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { AllKeys } from './allKeys';
-import type { PolicyRuleOutput } from './policyRuleOutput';
-import type { SelectedKeys } from './selectedKeys';
 
-export interface PolicyDefinitionOutput {
-  target: AllKeys | SelectedKeys;
-  /**
-     * @minItems 1
-     * @maxItems 100
-     */
-  rules: PolicyRuleOutput[];
-}
+export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
+
+
+export const RequestMatchInputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;

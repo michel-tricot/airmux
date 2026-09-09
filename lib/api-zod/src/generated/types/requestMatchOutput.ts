@@ -10,17 +10,17 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { RequestMatchCapabilitiesItem } from './requestMatchCapabilitiesItem';
+import type { RequestMatchOutputCapabilitiesItem } from './requestMatchOutputCapabilitiesItem';
 
-export interface RequestMatch {
+export interface RequestMatchOutput {
   kind: 'request';
   /**
      * @maxItems 1000
      * @items.minLength 1
      * @items.maxLength 255
      */
-  models?: string[];
-  stream?: boolean | null;
+  models: string[];
+  stream: boolean | null;
   /** @maxItems 3 */
-  capabilities?: RequestMatchCapabilitiesItem[];
+  capabilities: RequestMatchOutputCapabilitiesItem[];
 }
