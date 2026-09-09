@@ -10,14 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { BudgetPlaceholderOutputPeriod } from './budgetPlaceholderOutputPeriod';
-import type { BudgetPlaceholderOutputSharing } from './budgetPlaceholderOutputSharing';
 
-export interface BudgetPlaceholderOutput {
-  kind: 'budget';
-  enforcement: 'placeholder';
-  period: BudgetPlaceholderOutputPeriod;
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
-  amount_usd: string;
-  sharing: BudgetPlaceholderOutputSharing;
-}
+export type BudgetInputPeriod = typeof BudgetInputPeriod[keyof typeof BudgetInputPeriod];
+
+
+export const BudgetInputPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;

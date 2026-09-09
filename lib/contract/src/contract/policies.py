@@ -96,15 +96,14 @@ class Fallback(_PolicyModel):
         return self
 
 
-class BudgetPlaceholder(_PolicyModel):
+class Budget(_PolicyModel):
     kind: Literal["budget"]
-    enforcement: Literal["placeholder"]
     period: Literal["day", "month"]
     amount_usd: Decimal = Field(gt=0, max_digits=16, decimal_places=6)
     sharing: Literal["shared", "per_key"]
 
 
-PolicyAction = Annotated[RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholder, Field(discriminator="kind")]
+PolicyAction = Annotated[RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | Budget, Field(discriminator="kind")]
 
 
 class PolicyDefinition(_PolicyModel):

@@ -2275,7 +2275,7 @@ paths:
       tags:
       - Workspace Policies
       summary: Create Policy
-      description: 'Create a workspace inference policy; budget actions are placeholders only.
+      description: 'Create a workspace inference policy; budgets are recorded but not yet enforced.
 
 
         Required permission: `policies.manage`.'
@@ -4332,16 +4332,12 @@ components:
       - kind
       - names
       title: AllowedProviders
-    BudgetPlaceholder-Input:
+    Budget-Input:
       properties:
         kind:
           type: string
           const: budget
           title: Kind
-        enforcement:
-          type: string
-          const: placeholder
-          title: Enforcement
         period:
           type: string
           enum:
@@ -4365,21 +4361,16 @@ components:
       type: object
       required:
       - kind
-      - enforcement
       - period
       - amount_usd
       - sharing
-      title: BudgetPlaceholder
-    BudgetPlaceholder-Output:
+      title: Budget
+    Budget-Output:
       properties:
         kind:
           type: string
           const: budget
           title: Kind
-        enforcement:
-          type: string
-          const: placeholder
-          title: Enforcement
         period:
           type: string
           enum:
@@ -4400,11 +4391,10 @@ components:
       type: object
       required:
       - kind
-      - enforcement
       - period
       - amount_usd
       - sharing
-      title: BudgetPlaceholder
+      title: Budget
     BundleManifest:
       properties:
         bundles:
@@ -6631,7 +6621,7 @@ components:
           default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition-Input'
-          description: Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders
+          description: Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced
       additionalProperties: false
       type: object
       required:
@@ -6662,12 +6652,12 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/BudgetPlaceholder-Input'
+          - $ref: '#/components/schemas/Budget-Input'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/BudgetPlaceholder-Input'
+              budget: '#/components/schemas/Budget-Input'
               byok: '#/components/schemas/RequireByok'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -6704,12 +6694,12 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/BudgetPlaceholder-Output'
+          - $ref: '#/components/schemas/Budget-Output'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/BudgetPlaceholder-Output'
+              budget: '#/components/schemas/Budget-Output'
               byok: '#/components/schemas/RequireByok'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'

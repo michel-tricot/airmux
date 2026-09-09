@@ -196,53 +196,51 @@ export interface AllowedProviders {
   names: string[];
 }
 
-export type BudgetPlaceholderInputPeriod = typeof BudgetPlaceholderInputPeriod[keyof typeof BudgetPlaceholderInputPeriod];
+export type BudgetInputPeriod = typeof BudgetInputPeriod[keyof typeof BudgetInputPeriod];
 
 
-export const BudgetPlaceholderInputPeriod = {
+export const BudgetInputPeriod = {
   day: 'day',
   month: 'month',
 } as const;
 
-export type BudgetPlaceholderInputSharing = typeof BudgetPlaceholderInputSharing[keyof typeof BudgetPlaceholderInputSharing];
+export type BudgetInputSharing = typeof BudgetInputSharing[keyof typeof BudgetInputSharing];
 
 
-export const BudgetPlaceholderInputSharing = {
+export const BudgetInputSharing = {
   shared: 'shared',
   per_key: 'per_key',
 } as const;
 
-export interface BudgetPlaceholderInput {
+export interface BudgetInput {
   kind: 'budget';
-  enforcement: 'placeholder';
-  period: BudgetPlaceholderInputPeriod;
+  period: BudgetInputPeriod;
   amount_usd: number | string;
-  sharing: BudgetPlaceholderInputSharing;
+  sharing: BudgetInputSharing;
 }
 
-export type BudgetPlaceholderOutputPeriod = typeof BudgetPlaceholderOutputPeriod[keyof typeof BudgetPlaceholderOutputPeriod];
+export type BudgetOutputPeriod = typeof BudgetOutputPeriod[keyof typeof BudgetOutputPeriod];
 
 
-export const BudgetPlaceholderOutputPeriod = {
+export const BudgetOutputPeriod = {
   day: 'day',
   month: 'month',
 } as const;
 
-export type BudgetPlaceholderOutputSharing = typeof BudgetPlaceholderOutputSharing[keyof typeof BudgetPlaceholderOutputSharing];
+export type BudgetOutputSharing = typeof BudgetOutputSharing[keyof typeof BudgetOutputSharing];
 
 
-export const BudgetPlaceholderOutputSharing = {
+export const BudgetOutputSharing = {
   shared: 'shared',
   per_key: 'per_key',
 } as const;
 
-export interface BudgetPlaceholderOutput {
+export interface BudgetOutput {
   kind: 'budget';
-  enforcement: 'placeholder';
-  period: BudgetPlaceholderOutputPeriod;
+  period: BudgetOutputPeriod;
   /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
   amount_usd: string;
-  sharing: BudgetPlaceholderOutputSharing;
+  sharing: BudgetOutputSharing;
 }
 
 /**
@@ -475,7 +473,7 @@ export interface PolicyDefinitionOutput {
      * @maxLength 2048
      */
   condition: string;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderOutput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput;
 }
 
 export interface PolicyEntry {
@@ -1210,7 +1208,7 @@ export interface PolicyDefinitionInput {
      * @maxLength 2048
      */
   condition: string;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderInput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput;
 }
 
 export interface PolicyCreate {
@@ -1228,7 +1226,7 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders */
+  /** Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced */
   definition: PolicyDefinitionInput;
 }
 

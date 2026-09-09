@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract.policies import PolicyDefinition, compile_condition
+from contract.policies import Budget, PolicyDefinition, compile_condition
 
 
 @pytest.mark.parametrize("condition", ["unknown == 1", "42", "request_stream + 1", "[1, 2].exists(x, x > 0)"])
@@ -24,7 +24,7 @@ def test_condition_is_compiled_and_evaluated_against_explicit_facts():
         {"kind": "models", "names": []},
         {"kind": "providers", "names": [""]},
         {"kind": "fallback", "models": ["backup"], "on": [], "max_attempts": 2, "timeout_ms": 1000},
-        {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared", "enforcement": "enforced"},
+        {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared", "enforcement": "placeholder"},
         {"kind": "execute", "code": "anything"},
     ],
 )
@@ -37,3 +37,11 @@ def test_selected_keys_requires_nonempty_unique_identifiers():
     for ids in ([], [""], ["key", "key"]):
         with pytest.raises(ValidationError):
             PolicyDefinition.model_validate({"target": {"kind": "selected_keys", "key_ids": ids}, "condition": "true", "action": {"kind": "byok"}})
+
+
+def test_budget_has_no_enforcement_mode_until_enforcement_exists():
+    definition = PolicyDefinition.model_validate(
+        {"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"}}
+    )
+
+    assert isinstance(definition.action, Budget)

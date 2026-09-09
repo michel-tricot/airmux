@@ -1407,7 +1407,6 @@ export const ListPoliciesResponseItem = zod.object({
   "timeout_ms": zod.int().min(listPoliciesResponseDefinitionActionFiveTimeoutMsMin).max(listPoliciesResponseDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.string().regex(listPoliciesResponseDefinitionActionSixAmountUsdRegExp),
   "sharing": zod.enum(['shared', 'per_key'])
@@ -1421,7 +1420,7 @@ export const ListPoliciesResponse = zod.array(ListPoliciesResponseItem)
 
 
 /**
- * Create a workspace inference policy; budget actions are placeholders only.
+ * Create a workspace inference policy; budgets are recorded but not yet enforced.
  *
  * Required permission: `policies.manage`.
  * @summary Create Policy
@@ -1502,12 +1501,11 @@ export const CreatePolicyBody = zod.object({
   "timeout_ms": zod.int().min(createPolicyBodyDefinitionActionFiveTimeoutMsMin).max(createPolicyBodyDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.union([zod.number().gt(createPolicyBodyDefinitionActionSixAmountUsdOneExclusiveMin),zod.string().regex(createPolicyBodyDefinitionActionSixAmountUsdTwoRegExp)]),
   "sharing": zod.enum(['shared', 'per_key'])
 })])
-}).describe('Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders')
+}).describe('Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced')
 })
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
@@ -1575,7 +1573,6 @@ export const CreatePolicyResponse = zod.object({
   "timeout_ms": zod.int().min(createPolicyResponseDefinitionActionFiveTimeoutMsMin).max(createPolicyResponseDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.string().regex(createPolicyResponseDefinitionActionSixAmountUsdRegExp),
   "sharing": zod.enum(['shared', 'per_key'])
@@ -1668,7 +1665,6 @@ export const UpdatePolicyBody = zod.object({
   "timeout_ms": zod.int().min(updatePolicyBodyDefinitionOneActionFiveTimeoutMsMin).max(updatePolicyBodyDefinitionOneActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.union([zod.number().gt(updatePolicyBodyDefinitionOneActionSixAmountUsdOneExclusiveMin),zod.string().regex(updatePolicyBodyDefinitionOneActionSixAmountUsdTwoRegExp)]),
   "sharing": zod.enum(['shared', 'per_key'])
@@ -1741,7 +1737,6 @@ export const UpdatePolicyResponse = zod.object({
   "timeout_ms": zod.int().min(updatePolicyResponseDefinitionActionFiveTimeoutMsMin).max(updatePolicyResponseDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.string().regex(updatePolicyResponseDefinitionActionSixAmountUsdRegExp),
   "sharing": zod.enum(['shared', 'per_key'])
@@ -2617,7 +2612,6 @@ export const GetBundleResponse = zod.object({
   "timeout_ms": zod.int().min(getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMin).max(getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.string().regex(getBundleResponsePoliciesItemDefinitionActionSixAmountUsdRegExp),
   "sharing": zod.enum(['shared', 'per_key'])
@@ -2765,7 +2759,6 @@ export const BundleLatestResponse = zod.object({
   "timeout_ms": zod.int().min(bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMin).max(bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMax)
 }),zod.object({
   "kind": zod.literal("budget"),
-  "enforcement": zod.literal("placeholder"),
   "period": zod.enum(['day', 'month']),
   "amount_usd": zod.string().regex(bundleLatestResponsePoliciesItemDefinitionActionSixAmountUsdRegExp),
   "sharing": zod.enum(['shared', 'per_key'])

@@ -22,6 +22,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 from datetime import timedelta
+from decimal import Decimal
 from random import Random
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
@@ -29,15 +30,29 @@ from uuid import UUID, uuid5
 from sqlmodel import col
 
 from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
+from contract.policies import (
+    AllKeys,
+    AllowedModels,
+    AllowedProviders,
+    Budget,
+    DenyRequest,
+    Fallback,
+    PolicyDefinition,
+    RequireByok,
+    SelectedKeys,
+)
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
 from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
 from control_plane.models import (
     AccessKey,
     AuthIdentity,
+    DataPlaneInstance,
     InferenceKey,
+    Model,
     Org,
     OrgInvitation,
     OrgMembership,
+    Policy,
     Provider,
     ProviderCredential,
     UsageEvent,
@@ -75,6 +90,8 @@ are looked up, never created, so a fixture instance cannot drift from the catalo
 
 FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
+ROUTED_MODELS = sorted({model for model, _ in MODELS})
+
 
 STATUSES: tuple[UsageStatus, ...] = (*("ok",) * 9, "upstream_error")
 
@@ -89,6 +106,11 @@ class MissingProvidersError(ValueError):
     empty-database refusal is one, so the command reports it without importing this module.
     """
 
+    def __init__(self, missing: list[str]) -> None:
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `airllmcp taxonomy` to fill it before seeding")
+
+
+class MissingModelsError(ValueError):
     def __init__(self, missing: list[str]) -> None:
         super().__init__(f"the catalog has no {', '.join(missing)}; run `airllmcp taxonomy` to fill it before seeding")
 
@@ -167,6 +189,25 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     return await credential.save()
 
 
+async def workspace_policy(
+    workspace: Workspace,
+    *,
+    name: str,
+    priority: int,
+    definition: PolicyDefinition,
+    enabled: bool = True,
+) -> Policy:
+    return await Policy(
+        id=fixture_id(f"policy:{workspace.name}:{name}"),
+        org_id=workspace.org_id,
+        workspace_id=workspace.id,
+        name=name,
+        enabled=enabled,
+        priority=priority,
+        definition=definition,
+    ).save()
+
+
 async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
     """Recorded traffic for one workspace: random numbers spread over the last USAGE_DAYS.
 
@@ -227,6 +268,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     catalog = {provider.name: provider for provider in await Provider.find(col(Provider.name).in_(ROUTED_PROVIDERS))}
     if missing := [name for name in ROUTED_PROVIDERS if name not in catalog]:
         raise MissingProvidersError(missing)
+    catalog_models = {model.name for model in await Model.find(col(Model.name).in_(ROUTED_MODELS))}
+    if missing := [name for name in ROUTED_MODELS if name not in catalog_models]:
+        raise MissingModelsError(missing)
 
     await set_actor("root")
 
@@ -246,6 +290,22 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     production = await Workspace(id=fixture_id("workspace:acme:production"), org_id=acme.id, name="Production", slug="production").save()
     staging = await Workspace(id=fixture_id("workspace:acme:staging"), org_id=acme.id, name="Staging", slug="staging").save()
     default = await Workspace(id=fixture_id("workspace:solo:default"), org_id=solo.id, name="Default", slug="default").save()
+
+    await DataPlaneInstance(
+        instance_id=fixture_id("data-plane:global"),
+        version="fixture-global",
+        address="https://global.fixture.invalid",
+        first_seen=now - timedelta(days=30),
+        last_seen=now - timedelta(seconds=30),
+    ).save()
+    await DataPlaneInstance(
+        instance_id=fixture_id("data-plane:acme"),
+        org_id=acme.id,
+        version="fixture-dedicated",
+        address="https://acme.fixture.invalid",
+        first_seen=now - timedelta(days=14),
+        last_seen=now - timedelta(hours=2),
+    ).save()
 
     await WorkspaceMembership(user_id=michel.id, workspace_id=production.id, org_id=acme.id, role=WorkspaceRole.admin).save()
     await WorkspaceMembership(user_id=dana.id, workspace_id=production.id, org_id=acme.id, role=WorkspaceRole.member).save()
@@ -288,6 +348,70 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     ci = await inference_key(ACME_STAGING_TOKEN, staging, michel, label="ci").save()
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
     await inference_key(ACME_RETIRED_TOKEN, production, dana, label="batch-jobs", revoked=True).save()
+
+    await workspace_policy(
+        production,
+        name="Streaming requires BYOK",
+        priority=10,
+        definition=PolicyDefinition(target=AllKeys(kind="all_keys"), condition="request_stream", action=RequireByok(kind="byok")),
+    )
+    await workspace_policy(
+        production,
+        name="Approved production models",
+        priority=20,
+        definition=PolicyDefinition(
+            target=AllKeys(kind="all_keys"),
+            condition="true",
+            action=AllowedModels(kind="models", names=("gpt-4o-mini", "gpt-4o")),
+        ),
+    )
+    await workspace_policy(
+        production,
+        name="GPT-4o fallback",
+        priority=30,
+        definition=PolicyDefinition(
+            target=AllKeys(kind="all_keys"),
+            condition='request_model == "gpt-4o"',
+            action=Fallback(
+                kind="fallback",
+                models=("claude-opus-4-5", "gpt-4o-mini"),
+                on=("rate_limited", "upstream_unavailable", "timeout"),
+                max_attempts=3,
+                timeout_ms=30000,
+            ),
+        ),
+    )
+    await workspace_policy(
+        production,
+        name="Maintenance window",
+        priority=40,
+        enabled=False,
+        definition=PolicyDefinition(
+            target=AllKeys(kind="all_keys"),
+            condition="true",
+            action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
+        ),
+    )
+    await workspace_policy(
+        staging,
+        name="CI provider allowlist",
+        priority=10,
+        definition=PolicyDefinition(
+            target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
+            condition="true",
+            action=AllowedProviders(kind="providers", names=("openai",)),
+        ),
+    )
+    await workspace_policy(
+        default,
+        name="Monthly shared budget",
+        priority=10,
+        definition=PolicyDefinition(
+            target=AllKeys(kind="all_keys"),
+            condition="true",
+            action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
+        ),
+    )
 
     await AccessKey(
         id=fixture_id("access-key:acme"),

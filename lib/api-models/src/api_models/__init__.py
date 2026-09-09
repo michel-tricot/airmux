@@ -80,24 +80,22 @@ class AmountUsd1(RootModel[str]):
     ]
 
 
-class BudgetPlaceholderInput(BaseModel):
+class BudgetInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     kind: Annotated[Literal["budget"], Field(title="Kind")]
-    enforcement: Annotated[Literal["placeholder"], Field(title="Enforcement")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
     amount_usd: Annotated[AmountUsd | AmountUsd1, Field(title="Amount Usd")]
     sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
 
 
-class BudgetPlaceholderOutput(BaseModel):
+class BudgetOutput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         regex_engine="python-re",
     )
     kind: Annotated[Literal["budget"], Field(title="Kind")]
-    enforcement: Annotated[Literal["placeholder"], Field(title="Enforcement")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
     amount_usd: Annotated[
         str,
@@ -1936,7 +1934,7 @@ class PolicyDefinitionInput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
     action: Annotated[
-        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderInput,
+        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -1948,7 +1946,7 @@ class PolicyDefinitionOutput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
     action: Annotated[
-        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderOutput,
+        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2167,7 +2165,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinitionInput,
-        Field(description="Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders"),
+        Field(description="Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced"),
     ]
 
 

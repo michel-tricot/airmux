@@ -4809,7 +4809,7 @@ export const getCreatePolicyUrl = (orgId: string,
 }
 
 /**
- * Create a workspace inference policy; budget actions are placeholders only.
+ * Create a workspace inference policy; budgets are recorded but not yet enforced.
  *
  * Required permission: `policies.manage`.
  * @summary Create Policy

@@ -17,9 +17,10 @@ describe('workspace policy configuration', () => {
     });
   });
 
-  it('always marks budgets as non-enforcing placeholders', () => {
+  it('builds a budget without an enforcement mode', () => {
     const payload = policyPayload({ ...policyDefaults, name: 'Budget', kind: 'budget', amount: '10.25' });
-    expect(payload.definition.action).toMatchObject({ kind: 'budget', enforcement: 'placeholder', amount_usd: '10.25' });
+    expect(payload.definition.action).toMatchObject({ kind: 'budget', amount_usd: '10.25' });
+    expect(payload.definition.action).not.toHaveProperty('enforcement');
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Budget', kind: 'budget', amount: '-1' }).success).toBe(false);
   });
 });

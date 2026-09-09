@@ -63,7 +63,7 @@ access_keys_app = typer.Typer(help="Keys for control-plane access at instance, o
 providers_app = typer.Typer(help="Upstream LLM providers")
 provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
-policies_app = typer.Typer(help="Workspace inference restrictions, fallbacks, and budget placeholders")
+policies_app = typer.Typer(help="Workspace inference restrictions, fallbacks, and budgets")
 taxonomy_app = typer.Typer(help="Apply the instance provider and model catalog")
 bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")

@@ -93,10 +93,8 @@ def test_policy_index_preserves_workspace_evaluation_order():
 
 
 @pytest.mark.parametrize("condition", ["true", "1 / 0 > 0"])
-def test_budget_placeholder_does_not_enforce(condition):
-    key, snap = snapshot(
-        [policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared", "enforcement": "placeholder"}, condition=condition)]
-    )
+def test_budget_does_not_enforce_yet(condition):
+    key, snap = snapshot([policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared"}, condition=condition)])
     assert isinstance(evaluate(request(), key, snap), Allow)
 
 

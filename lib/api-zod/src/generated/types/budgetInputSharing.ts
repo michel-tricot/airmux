@@ -11,10 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BudgetPlaceholderInputSharing = typeof BudgetPlaceholderInputSharing[keyof typeof BudgetPlaceholderInputSharing];
+export type BudgetInputSharing = typeof BudgetInputSharing[keyof typeof BudgetInputSharing];
 
 
-export const BudgetPlaceholderInputSharing = {
+export const BudgetInputSharing = {
   shared: 'shared',
   per_key: 'per_key',
 } as const;

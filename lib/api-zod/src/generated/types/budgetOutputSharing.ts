@@ -11,10 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BudgetPlaceholderInputPeriod = typeof BudgetPlaceholderInputPeriod[keyof typeof BudgetPlaceholderInputPeriod];
+export type BudgetOutputSharing = typeof BudgetOutputSharing[keyof typeof BudgetOutputSharing];
 
 
-export const BudgetPlaceholderInputPeriod = {
-  day: 'day',
-  month: 'month',
+export const BudgetOutputSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
 } as const;

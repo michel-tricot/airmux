@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from cel_expr_python import cel
 
-from contract.policies import MAX_WORKSPACE_POLICIES, BudgetPlaceholder, PolicyEntry, SelectedKeys, compile_condition, condition_environment
+from contract.policies import MAX_WORKSPACE_POLICIES, Budget, PolicyEntry, SelectedKeys, compile_condition, condition_environment
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -61,7 +61,8 @@ def matching_policies(request: CanonicalRequest, key: KeyEntry, index: PolicyInd
 
 
 def _matches(entry: CompiledPolicy, key: KeyEntry, context: cel.Activation) -> bool:
-    if isinstance(entry.policy.definition.action, BudgetPlaceholder):
+    # FIXME: Enforce budgets after spend reservation and multi-instance accounting semantics are defined
+    if isinstance(entry.policy.definition.action, Budget):
         return False
     if entry.selected_key_ids is not None and key.key_id not in entry.selected_key_ids:
         return False

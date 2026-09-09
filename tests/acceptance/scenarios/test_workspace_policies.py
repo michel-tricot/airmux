@@ -51,7 +51,7 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
                     "definition": {
                         "target": {"kind": "all_keys"},
                         "condition": "1 / 0 > 0",
-                        "action": {"kind": "budget", "period": "day", "amount_usd": "0.000001", "sharing": "shared", "enforcement": "placeholder"},
+                        "action": {"kind": "budget", "period": "day", "amount_usd": "0.000001", "sharing": "shared"},
                     },
                 },
             )
@@ -60,7 +60,7 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
         assert enabled["enabled"] is True
         assert _poll(lambda: stack.request().status_code == 403, 30)
         _payload(admin.delete(f"{path}/{policy['id']}"))
-        assert _poll(lambda: stack.request().status_code == 200, 30), "deletion did not publish, or the budget placeholder enforced"
+        assert _poll(lambda: stack.request().status_code == 200, 30), "deletion did not publish, or the budget policy enforced"
 
 
 @pytest.mark.parametrize("stream", [False, True])

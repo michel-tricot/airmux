@@ -131,7 +131,7 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders")
+    definition: PolicyDefinition = Field(description="Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced")
 
     @field_validator("definition")
     @classmethod

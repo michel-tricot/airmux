@@ -63,7 +63,7 @@ function action(values: PolicyForm): PolicyDefinitionInput['action'] {
     case 'fallback':
       return { kind: 'fallback', models: values.names, on: values.reasons, max_attempts: values.maxAttempts, timeout_ms: values.timeoutMs };
     case 'budget':
-      return { kind: 'budget', enforcement: 'placeholder', period: values.period, amount_usd: values.amount, sharing: values.sharing };
+      return { kind: 'budget', period: values.period, amount_usd: values.amount, sharing: values.sharing };
   }
 }
 

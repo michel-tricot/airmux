@@ -11,7 +11,7 @@ const actionOptions = [
   { value: 'providers', label: 'Allowed providers' },
   { value: 'deny', label: 'Deny matching requests' },
   { value: 'fallback', label: 'Model fallbacks' },
-  { value: 'budget', label: 'Budget placeholder' },
+  { value: 'budget', label: 'Budget' },
 ];
 const failureOptions = [
   { value: 'rate_limited', label: 'Rate limited (429)' },
@@ -236,7 +236,7 @@ export function PolicyEditor({
             {kind === 'budget' && (
               <>
                 <Alert>
-                  <AlertDescription>Placeholder only. This setting does not track spending or block requests.</AlertDescription>
+                  <AlertDescription>Budget enforcement is not available yet. This setting does not track spending or block requests.</AlertDescription>
                 </Alert>
                 <TextField form={form} name="amount" label="Estimated spend limit (USD)" />
                 <FormField

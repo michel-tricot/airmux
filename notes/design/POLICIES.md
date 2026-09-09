@@ -63,12 +63,12 @@ apply to every backup, so changing the route cannot escape a conditional guardra
 | `providers` | `names` | Allows only listed provider names |
 | `deny` | `message` | Rejects matching requests with a configured explanation |
 | `fallback` | `models`, `on`, `max_attempts`, `timeout_ms` | Supplies an ordered, bounded backup plan |
-| `budget` | `enforcement: placeholder`, `period`, `amount_usd`, `sharing` | Stores intent only; does not track or enforce spending |
+| `budget` | `period`, `amount_usd`, `sharing` | Stores intent only; does not track or enforce spending |
 
 Budget periods are `day` and `month`. Sharing is `shared` or `per_key`. Amounts use decimal USD,
 not floating-point arithmetic. Even a budget condition that would fail at runtime cannot affect
-requests. Enabling a budget policy does not activate a spending limit. The console labels it
-as a placeholder and the API requires the explicit placeholder enforcement value.
+requests. Enabling a budget policy does not activate a spending limit. The console explains that
+enforcement is not available yet.
 
 ## Fallback semantics
 

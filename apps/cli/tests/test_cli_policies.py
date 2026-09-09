@@ -23,7 +23,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     definition = {
         "target": {"kind": "all_keys"},
         "condition": "true",
-        "action": {"kind": "budget", "enforcement": "placeholder", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
+        "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
     }
     policy = {
         "id": policy_id,

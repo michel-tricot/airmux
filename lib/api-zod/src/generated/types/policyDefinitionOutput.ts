@@ -13,7 +13,7 @@
 import type { AllKeys } from './allKeys';
 import type { AllowedModels } from './allowedModels';
 import type { AllowedProviders } from './allowedProviders';
-import type { BudgetPlaceholderOutput } from './budgetPlaceholderOutput';
+import type { BudgetOutput } from './budgetOutput';
 import type { DenyRequest } from './denyRequest';
 import type { Fallback } from './fallback';
 import type { RequireByok } from './requireByok';
@@ -26,5 +26,5 @@ export interface PolicyDefinitionOutput {
      * @maxLength 2048
      */
   condition: string;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderOutput;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput;
 }
