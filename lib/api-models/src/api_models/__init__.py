@@ -43,6 +43,13 @@ class AllKeys(BaseModel):
     kind: Annotated[Literal["all_keys"], Field(title="Kind")]
 
 
+class AllRequests(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["all_requests"], Field(title="Kind")]
+
+
 class Name(RootModel[str]):
     root: Annotated[str, Field(max_length=255, min_length=1)]
 
@@ -1277,6 +1284,22 @@ class ProviderOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
+class RequestMatch(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["request"], Field(title="Kind")]
+    models: Annotated[
+        list[Model] | None,
+        Field(max_length=1000, title="Models", validate_default=True),
+    ] = []
+    stream: Annotated[bool | None, Field(title="Stream")] = None
+    capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]] | None,
+        Field(max_length=3, title="Capabilities"),
+    ] = []
+
+
 class RequireByok(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1932,7 +1955,7 @@ class PolicyDefinitionInput(BaseModel):
         extra="forbid",
     )
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
-    condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
+    match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
         RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput,
         Field(discriminator="kind", title="Action"),
@@ -1944,7 +1967,7 @@ class PolicyDefinitionOutput(BaseModel):
         extra="forbid",
     )
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
-    condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
+    match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
         RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput,
         Field(discriminator="kind", title="Action"),
@@ -2002,7 +2025,7 @@ class PolicyUpdate(BaseModel):
     ] = None
     definition: Annotated[
         PolicyDefinitionInput | None,
-        Field(description="Replace the complete target, CEL condition, and action; omit to leave unchanged"),
+        Field(description="Replace the complete target, request match, and action; omit to leave unchanged"),
     ] = None
 
 
@@ -2165,7 +2188,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinitionInput,
-        Field(description="Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced"),
+        Field(description="Inference key target, typed request match, and action. Budgets are not yet enforced"),
     ]
 
 

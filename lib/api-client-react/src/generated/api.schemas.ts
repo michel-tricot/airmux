@@ -174,6 +174,11 @@ export const AllKeysValue = {
 } as const;
 export type AllKeys = typeof AllKeysValue;
 
+export const AllRequestsValue = {
+  kind: 'all_requests',
+} as const;
+export type AllRequests = typeof AllRequestsValue;
+
 export interface AllowedModels {
   kind: 'models';
   /**
@@ -417,6 +422,28 @@ export interface SelectedKeys {
   key_ids: string[];
 }
 
+export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
+
+
+export const RequestMatchCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatch {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchCapabilitiesItem[];
+}
+
 export const RequireByokValue = {
   kind: 'byok',
 } as const;
@@ -468,11 +495,7 @@ export interface Fallback {
 
 export interface PolicyDefinitionOutput {
   target: AllKeys | SelectedKeys;
-  /**
-     * @minLength 1
-     * @maxLength 2048
-     */
-  condition: string;
+  match: AllRequests | RequestMatch;
   action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetOutput;
 }
 
@@ -1203,11 +1226,7 @@ export interface PlaygroundSessionReadyOut {
 
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
-  /**
-     * @minLength 1
-     * @maxLength 2048
-     */
-  condition: string;
+  match: AllRequests | RequestMatch;
   action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput;
 }
 
@@ -1226,7 +1245,7 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced */
+  /** Inference key target, typed request match, and action. Budgets are not yet enforced */
   definition: PolicyDefinitionInput;
 }
 
@@ -1250,7 +1269,7 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target, CEL condition, and action; omit to leave unchanged */
+  /** Replace the complete target, request match, and action; omit to leave unchanged */
   definition?: PolicyDefinitionInput | null;
 }
 

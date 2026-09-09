@@ -3,19 +3,34 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract.policies import Budget, PolicyDefinition, compile_condition
+from contract.policies import Budget, PolicyDefinition, RequestMatch
 
 
-@pytest.mark.parametrize("condition", ["unknown == 1", "42", "request_stream + 1", "[1, 2].exists(x, x > 0)"])
-def test_invalid_conditions_are_rejected(condition):
-    with pytest.raises(ValueError, match=r"policy condition|Policy conditions"):
-        compile_condition(condition)
+@pytest.mark.parametrize(
+    "match",
+    [
+        {"kind": "request"},
+        {"kind": "request", "models": ["primary", "primary"]},
+        {"kind": "request", "capabilities": ["tools", "tools"]},
+        {"kind": "request", "capabilities": ["unknown"]},
+        {"kind": "cel", "expression": "true"},
+    ],
+)
+def test_invalid_request_matches_are_rejected(match):
+    with pytest.raises(ValidationError):
+        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": match, "action": {"kind": "byok"}})
 
 
-def test_condition_is_compiled_and_evaluated_against_explicit_facts():
-    condition = compile_condition('request_model == "primary" && !request_stream')
-    assert condition.eval(data={"request_model": "primary", "request_stream": False}).value() is True
-    assert condition.eval(data={"request_model": "backup", "request_stream": False}).value() is False
+def test_request_match_combines_typed_criteria():
+    definition = PolicyDefinition.model_validate(
+        {
+            "target": {"kind": "all_keys"},
+            "match": {"kind": "request", "models": ["primary"], "stream": True, "capabilities": ["tools"]},
+            "action": {"kind": "byok"},
+        }
+    )
+
+    assert isinstance(definition.match, RequestMatch)
 
 
 @pytest.mark.parametrize(
@@ -30,18 +45,24 @@ def test_condition_is_compiled_and_evaluated_against_explicit_facts():
 )
 def test_actions_reject_invalid_states(action):
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "condition": "true", "action": action})
+        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": action})
 
 
 def test_selected_keys_requires_nonempty_unique_identifiers():
     for ids in ([], [""], ["key", "key"]):
         with pytest.raises(ValidationError):
-            PolicyDefinition.model_validate({"target": {"kind": "selected_keys", "key_ids": ids}, "condition": "true", "action": {"kind": "byok"}})
+            PolicyDefinition.model_validate(
+                {"target": {"kind": "selected_keys", "key_ids": ids}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}}
+            )
 
 
 def test_budget_has_no_enforcement_mode_until_enforcement_exists():
     definition = PolicyDefinition.model_validate(
-        {"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"}}
+        {
+            "target": {"kind": "all_keys"},
+            "match": {"kind": "all_requests"},
+            "action": {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"},
+        }
     )
 
     assert isinstance(definition.action, Budget)

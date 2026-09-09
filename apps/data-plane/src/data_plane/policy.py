@@ -3,12 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
-from contract.policies import AllowedModels, AllowedProviders, DenyRequest, PolicyEntry, RequireByok
 from data_plane.credentials import candidates_for
 from data_plane.policies import matching_policies
+from data_plane.policy_actions import ActionContext, EvaluationState, evaluate_action
+from data_plane.requirements import required_capabilities, required_input_modalities
 
 if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
+    from contract.policies import Fallback, PolicyEntry
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
     from data_plane.profiles import CompiledProfile
@@ -31,7 +33,6 @@ class Deny:
         "provider_not_configured",
         "credential_unavailable",
         "policy_denied",
-        "policy_error",
     ]
     status: int
     message: str = ""
@@ -40,51 +41,34 @@ class Deny:
 type Decision = Allow | Deny
 
 
-def required_capabilities(req: CanonicalRequest) -> frozenset[str]:
-    part_capabilities = {"reasoning": "reasoning", "tool_call": "tools", "tool_result": "tools"}
-    capabilities = {capability for message in req.messages for part in message.content if (capability := part_capabilities.get(part.type))}
-    if req.stream:
-        capabilities.add("streaming")
-    if req.tools or req.tool_choice is not None:
-        capabilities.add("tools")
-    if req.reasoning is not None:
-        capabilities.add("reasoning")
-    if req.response_format is not None and req.response_format.type != "text":
-        capabilities.add("structured_output")
-    return frozenset(capabilities)
-
-
-def required_input_modalities(req: CanonicalRequest) -> frozenset[str]:
-    part_modalities = {"image": "image", "document": "pdf"}
-    return frozenset(modality for message in req.messages for part in message.content if (modality := part_modalities.get(part.type)))
+@dataclass(frozen=True)
+class PolicyEvaluation:
+    decision: Decision
+    fallback: Fallback | None
+    policies: tuple[PolicyEntry, ...]
 
 
 def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None) -> Decision:
-    """Return eligible credentials; cooldown-aware selection belongs to the request executor."""
-    try:
-        policies = matching_policies(req, key, snap.policy_index) if policies is None else policies
-    except (ValueError, RuntimeError):
-        return Deny(code="policy_error", status=403, message="A policy condition could not be evaluated")
+    return evaluate_policies(req, key, snap, policies).decision
+
+
+def evaluate_policies(
+    req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None
+) -> PolicyEvaluation:
+    """Return eligible credentials and fallback; cooldown-aware selection belongs to the request executor."""
+    policies = matching_policies(req, key, snap.policy_index) if policies is None else policies
     route = _route(req, key, snap)
     if isinstance(route, Deny):
-        return route
-    candidates = route.candidates
+        return PolicyEvaluation(route, None, policies)
+    state = EvaluationState(candidates=route.candidates)
     for policy in policies:
-        action = policy.definition.action
-        denied = (
-            isinstance(action, DenyRequest)
-            or (isinstance(action, AllowedModels) and route.model.model_id not in action.names)
-            or (isinstance(action, AllowedProviders) and route.provider.provider_id not in action.names)
-        )
-        if isinstance(action, RequireByok):
-            candidates = tuple(entry for entry in candidates if entry.ref.org_id == key.org_id)
-            denied = not candidates
-        if denied:
-            message = action.message if isinstance(action, DenyRequest) else f"Blocked by policy {policy.name} ({policy.id})"
-            return Deny(code="policy_denied", status=403, message=message)
-    if not candidates:
-        return Deny(code="credential_unavailable", status=402)
-    return replace(route, candidates=candidates)
+        context = ActionContext(policy=policy, request=req, key=key, model=route.model, provider=route.provider)
+        state = evaluate_action(policy.definition.action, context, state)
+        if state.denial is not None:
+            return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, policies)
+    if not state.candidates:
+        return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, policies)
+    return PolicyEvaluation(replace(route, candidates=state.candidates), state.fallback, policies)
 
 
 def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:

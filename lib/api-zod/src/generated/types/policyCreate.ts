@@ -27,6 +27,6 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced */
+  /** Inference key target, typed request match, and action. Budgets are not yet enforced */
   definition: PolicyDefinitionInput;
 }

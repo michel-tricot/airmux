@@ -6,9 +6,12 @@ export const policyFormSchema = z
     name: z.string().trim().min(1).max(200),
     enabled: z.boolean(),
     priority: z.number().int().min(0).max(10000),
-    condition: z.string().trim().min(1).max(2048),
     target: z.enum(['all_keys', 'selected_keys']),
     keyIds: z.array(z.string()),
+    match: z.enum(['all_requests', 'request']),
+    matchModels: z.array(z.string()),
+    matchStream: z.enum(['any', 'streaming', 'non_streaming']),
+    matchCapabilities: z.array(z.enum(['tools', 'reasoning', 'structured_output'])),
     kind: z.enum(['byok', 'models', 'providers', 'deny', 'fallback', 'budget']),
     names: z.array(z.string()),
     message: z.string(),
@@ -22,6 +25,8 @@ export const policyFormSchema = z
   .superRefine((values, context) => {
     const issue = (field: string, message: string) => context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
     if (values.target === 'selected_keys' && !values.keyIds.length) issue('keyIds', 'Select at least one inference key');
+    if (values.match === 'request' && !values.matchModels.length && values.matchStream === 'any' && !values.matchCapabilities.length)
+      issue('match', 'Choose at least one request criterion');
     if (['models', 'providers', 'fallback'].includes(values.kind) && !values.names.length) issue('names', 'Select at least one option');
     if (values.kind === 'fallback' && values.names.length > 4) issue('names', 'Choose at most four backup models');
     if (values.kind === 'fallback' && !values.reasons.length) issue('reasons', 'Select at least one failure reason');
@@ -36,9 +41,12 @@ export const policyDefaults: PolicyForm = {
   name: '',
   enabled: true,
   priority: 100,
-  condition: 'true',
   target: 'all_keys',
   keyIds: [],
+  match: 'all_requests',
+  matchModels: [],
+  matchStream: 'any',
+  matchCapabilities: [],
   kind: 'byok',
   names: [],
   message: '',
@@ -68,28 +76,41 @@ function action(values: PolicyForm): PolicyDefinitionInput['action'] {
 }
 
 export function policyPayload(values: PolicyForm): PolicyCreate {
+  const match: PolicyDefinitionInput['match'] =
+    values.match === 'all_requests'
+      ? { kind: 'all_requests' }
+      : {
+          kind: 'request',
+          models: values.matchModels,
+          capabilities: values.matchCapabilities,
+          ...(values.matchStream === 'any' ? {} : { stream: values.matchStream === 'streaming' }),
+        };
   return {
     name: values.name,
     enabled: values.enabled,
     priority: values.priority,
     definition: {
       target: values.target === 'all_keys' ? { kind: 'all_keys' } : { kind: 'selected_keys', key_ids: values.keyIds },
-      condition: values.condition,
+      match,
       action: action(values),
     },
   };
 }
 
 export function policyForm(policy: PolicyOut): PolicyForm {
-  const { target, condition, action } = policy.definition;
+  const { target, match, action } = policy.definition;
   return {
     ...policyDefaults,
     name: policy.name,
     enabled: policy.enabled,
     priority: policy.priority,
-    condition,
     target: target.kind,
     keyIds: target.kind === 'selected_keys' ? target.key_ids : [],
+    match: match.kind,
+    matchModels: match.kind === 'request' ? (match.models ?? []) : [],
+    matchStream:
+      match.kind !== 'request' || match.stream === undefined || match.stream === null ? 'any' : match.stream ? 'streaming' : 'non_streaming',
+    matchCapabilities: match.kind === 'request' ? (match.capabilities ?? []) : [],
     kind: action.kind,
     names: action.kind === 'models' || action.kind === 'providers' ? action.names : action.kind === 'fallback' ? action.models : [],
     ...(action.kind === 'deny' ? { message: action.message } : {}),

@@ -5,23 +5,24 @@ from itertools import groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from cel_expr_python import cel
-
-from contract.policies import MAX_WORKSPACE_POLICIES, Budget, PolicyEntry, SelectedKeys, compile_condition, condition_environment
+from contract.policies import MAX_WORKSPACE_POLICIES, PolicyEntry, RequestMatch, SelectedKeys
+from data_plane.policy_actions import require_evaluator
+from data_plane.requirements import required_capabilities
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from uuid import UUID
 
-    from contract import KeyEntry
+    from contract import Capability, KeyEntry
     from data_plane.canonical import CanonicalRequest
 
 
 @dataclass(frozen=True)
 class CompiledPolicy:
     policy: PolicyEntry
-    condition: cel.Expression
     selected_key_ids: frozenset[str] | None
+    models: frozenset[str]
+    capabilities: frozenset[Capability]
 
 
 type PolicyIndex = Mapping[UUID, tuple[CompiledPolicy, ...]]
@@ -36,13 +37,18 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
     if any(len(entries) > MAX_WORKSPACE_POLICIES for _, entries in grouped):
         msg = "A workspace may contain at most 100 active policies"
         raise ValueError(msg)
+    for policy in policies:
+        require_evaluator(policy.definition.action)
     return MappingProxyType(
         {
             workspace_id: tuple(
                 CompiledPolicy(
-                    policy,
-                    compile_condition(policy.definition.condition),
-                    frozenset(policy.definition.target.key_ids) if isinstance(policy.definition.target, SelectedKeys) else None,
+                    policy=policy,
+                    selected_key_ids=(frozenset(policy.definition.target.key_ids) if isinstance(policy.definition.target, SelectedKeys) else None),
+                    models=frozenset(policy.definition.match.models) if isinstance(policy.definition.match, RequestMatch) else frozenset(),
+                    capabilities=(
+                        frozenset(policy.definition.match.capabilities) if isinstance(policy.definition.match, RequestMatch) else frozenset()
+                    ),
                 )
                 for policy in entries
             )
@@ -55,19 +61,16 @@ def matching_policies(request: CanonicalRequest, key: KeyEntry, index: PolicyInd
     candidates = index.get(key.workspace_id, ())
     if not candidates:
         return ()
-    facts = {"request_model": request.model, "request_stream": request.stream, "key_id": key.key_id, "workspace_id": str(key.workspace_id)}
-    context = condition_environment().Activation(facts)
-    return tuple(entry.policy for entry in candidates if _matches(entry, key, context))
+    capabilities = required_capabilities(request)
+    return tuple(entry.policy for entry in candidates if _matches(entry, request, key, capabilities))
 
 
-def _matches(entry: CompiledPolicy, key: KeyEntry, context: cel.Activation) -> bool:
-    # FIXME: Enforce budgets after spend reservation and multi-instance accounting semantics are defined
-    if isinstance(entry.policy.definition.action, Budget):
-        return False
+def _matches(entry: CompiledPolicy, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[Capability]) -> bool:
     if entry.selected_key_ids is not None and key.key_id not in entry.selected_key_ids:
         return False
-    result = entry.condition.eval(context)
-    if result.type() != cel.Type.BOOL:
-        msg = f"Policy {entry.policy.name} could not be evaluated"
-        raise ValueError(msg)
-    return result.plain_value() is True
+    match = entry.policy.definition.match
+    if not isinstance(match, RequestMatch):
+        return True
+    model_matches = not entry.models or request.model in entry.models
+    stream_matches = match.stream is None or request.stream is match.stream
+    return model_matches and stream_matches and entry.capabilities <= capabilities

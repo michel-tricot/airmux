@@ -22,7 +22,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     monkeypatch.setenv("AIRLLM_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "target": {"kind": "all_keys"},
-        "condition": "true",
+        "match": {"kind": "all_requests"},
         "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
     }
     policy = {

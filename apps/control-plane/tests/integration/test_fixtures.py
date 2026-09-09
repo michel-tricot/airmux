@@ -171,7 +171,7 @@ def test_invitation_fixtures_include_org_and_workspace_share_links(tmp_path):
     assert next(invitation for invitation in invitations if invitation.email == "expired.invite@example.com").status(NOW) == "expired"
 
 
-def test_policy_fixtures_cover_actions_targets_conditions_and_states(tmp_path):
+def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_path):
     setup_control_plane(tmp_path)
     seed_catalog(tmp_path)
 
@@ -182,7 +182,9 @@ def test_policy_fixtures_cover_actions_targets_conditions_and_states(tmp_path):
     assert {policy.definition.action.kind for policy in policies} == {"byok", "models", "providers", "deny", "fallback", "budget"}
     assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
-    assert next(policy for policy in policies if policy.name == "Streaming requires BYOK").definition.condition == "request_stream"
+    streaming_match = next(policy for policy in policies if policy.name == "Streaming requires BYOK").definition.match
+    assert streaming_match.kind == "request"
+    assert streaming_match.stream is True
     ci_key = next(key for key in inference_keys if key.label == "ci")
     ci_policy = next(policy for policy in policies if policy.name == "CI provider allowlist")
     assert ci_policy.definition.target.kind == "selected_keys"

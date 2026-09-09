@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
-from pydantic import field_validator, model_validator
+from pydantic import model_validator
 from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, func, text
 from sqlmodel import Field, col, select
 
@@ -15,8 +15,8 @@ from contract.policies import (
     Fallback,
     PolicyDefinition,
     PolicyEntry,
+    RequestMatch,
     SelectedKeys,
-    compile_condition,
 )
 from control_plane.db import current_session
 from control_plane.models.audit import audited
@@ -87,10 +87,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             return await super().save()
 
     async def _validate_configuration(self) -> None:
-        try:
-            compile_condition(self.definition.condition)
-        except ValueError as error:
-            raise InvalidPolicyError(str(error)) from error
         target = self.definition.target
         if isinstance(target, SelectedKeys):
             keys = await InferenceKey.find(InferenceKey.workspace_id == self.workspace_id)
@@ -98,10 +94,12 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
                 msg = "Selected inference keys must belong to this workspace"
                 raise InvalidPolicyError(msg)
         action = self.definition.action
-        if isinstance(action, AllowedModels | Fallback):
-            names = action.names if isinstance(action, AllowedModels) else action.models
-            models = await Model.find(col(Model.name).in_(names))
-            if set(names) != {model.name for model in models}:
+        matched_models = self.definition.match.models if isinstance(self.definition.match, RequestMatch) else ()
+        action_models = action.names if isinstance(action, AllowedModels) else action.models if isinstance(action, Fallback) else ()
+        model_names = {*matched_models, *action_models}
+        if model_names:
+            models = await Model.find(col(Model.name).in_(model_names))
+            if model_names != {model.name for model in models}:
                 msg = "Policy models must exist in the catalog"
                 raise InvalidPolicyError(msg)
         if isinstance(action, AllowedProviders):
@@ -131,13 +129,7 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced")
-
-    @field_validator("definition")
-    @classmethod
-    def valid_condition(cls, definition: PolicyDefinition) -> PolicyDefinition:
-        compile_condition(definition.condition)
-        return definition
+    definition: PolicyDefinition = Field(description="Inference key target, typed request match, and action. Budgets are not yet enforced")
 
 
 class PolicyUpdate(RecordUpdate[Policy]):
@@ -145,7 +137,7 @@ class PolicyUpdate(RecordUpdate[Policy]):
     enabled: bool | None = Field(default=None, description="Enable or disable this policy; omit to leave unchanged")
     priority: int | None = Field(default=None, ge=0, le=10000, description="Replacement priority, with lower numbers first; omit to leave unchanged")
     definition: PolicyDefinition | None = Field(
-        default=None, description="Replace the complete target, CEL condition, and action; omit to leave unchanged"
+        default=None, description="Replace the complete target, request match, and action; omit to leave unchanged"
     )
 
     @model_validator(mode="after")
@@ -153,8 +145,6 @@ class PolicyUpdate(RecordUpdate[Policy]):
         if any(getattr(self, field) is None for field in self.model_fields_set):
             msg = "Policy fields cannot be null"
             raise ValueError(msg)
-        if self.definition is not None:
-            compile_condition(self.definition.condition)
         return self
 
 

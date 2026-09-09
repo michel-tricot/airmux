@@ -17,6 +17,19 @@ describe('workspace policy configuration', () => {
     });
   });
 
+  it('builds a typed request match', () => {
+    const payload = policyPayload({
+      ...policyDefaults,
+      name: 'Tools',
+      match: 'request',
+      matchModels: ['gpt-4o'],
+      matchStream: 'streaming',
+      matchCapabilities: ['tools'],
+    });
+    expect(payload.definition.match).toEqual({ kind: 'request', models: ['gpt-4o'], stream: true, capabilities: ['tools'] });
+    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Empty', match: 'request' }).success).toBe(false);
+  });
+
   it('builds a budget without an enforcement mode', () => {
     const payload = policyPayload({ ...policyDefaults, name: 'Budget', kind: 'budget', amount: '10.25' });
     expect(payload.definition.action).toMatchObject({ kind: 'budget', amount_usd: '10.25' });

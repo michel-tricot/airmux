@@ -6,7 +6,7 @@ from helpers import make_org, make_workspace, setup_control_plane
 
 from control_plane.authz import Permission
 
-DEFINITION = {"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "byok"}}
+DEFINITION = {"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}}
 
 
 def test_workspace_policy_crud_validation_and_isolation(tmp_path):
@@ -21,7 +21,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
             "name": "Require BYOK",
             "enabled": True,
             "priority": 100,
-            "definition": {"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "byok"}},
+            "definition": DEFINITION,
         }
         created = client.post(path, headers=headers, json=body)
         assert created.status_code == 200, created.text
@@ -30,7 +30,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         assert [item["id"] for item in client.get(path, headers=headers).json()["data"]] == [policy["id"]]
         sibling_path = f"/api/v1/orgs/{org}/workspaces/{sibling}/policies/{policy['id']}"
         assert client.patch(sibling_path, headers=headers, json={"enabled": False}).status_code == 404
-        invalid = {**body, "definition": {**body["definition"], "condition": "undeclared == true"}}
+        invalid = {**body, "definition": {**body["definition"], "match": {"kind": "request"}}}
         assert client.post(path, headers=headers, json=invalid).status_code == 422
         assert client.patch(f"{path}/{policy['id']}", headers=headers, json={"name": None}).status_code == 422
         assert client.patch(f"{path}/{policy['id']}", headers=headers, json={"enabled": False}).json()["data"]["enabled"] is False

@@ -11,7 +11,7 @@ from control_plane.db import standalone_transaction
 from control_plane.models import Policy, set_actor
 from control_plane.models.policy import InvalidPolicyError
 
-DEFINITION = PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "byok"}})
+DEFINITION = PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}})
 
 
 @pytest.fixture
@@ -72,8 +72,12 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
 @pytest.mark.parametrize(
     "definition",
     [
-        DEFINITION.model_copy(update={"condition": "unknown_variable"}),
-        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "condition": "true", "action": {"kind": "models", "names": ["absent"]}}),
+        PolicyDefinition.model_validate(
+            {"target": {"kind": "all_keys"}, "match": {"kind": "request", "models": ["absent"]}, "action": {"kind": "byok"}}
+        ),
+        PolicyDefinition.model_validate(
+            {"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["absent"]}}
+        ),
     ],
 )
 def test_policy_save_validates_configuration_without_a_route(policy_workspace, definition):

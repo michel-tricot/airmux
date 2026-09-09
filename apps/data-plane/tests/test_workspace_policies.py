@@ -35,13 +35,15 @@ def request():
     return CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "hi"}])
 
 
-def policy(action, *, condition="true", workspace=WORKSPACE, target=None):
+def policy(action, *, match=None, workspace=WORKSPACE, target=None):
     return PolicyEntry(
         id=uuid7(),
         workspace_id=workspace,
         name="test",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "condition": condition, "action": action}),
+        definition=PolicyDefinition.model_validate(
+            {"target": target or {"kind": "all_keys"}, "match": match or {"kind": "all_requests"}, "action": action}
+        ),
     )
 
 
@@ -65,9 +67,9 @@ def test_byok_accepts_org_credentials():
 
 
 @pytest.mark.parametrize(
-    "options", [{"workspace": uuid7()}, {"condition": "request_stream"}, {"target": {"kind": "selected_keys", "key_ids": ["other"]}}]
+    "options", [{"workspace": uuid7()}, {"match": {"kind": "request", "stream": True}}, {"target": {"kind": "selected_keys", "key_ids": ["other"]}}]
 )
-def test_only_matching_workspace_keys_and_conditions_are_restricted(options):
+def test_only_matching_workspace_keys_and_requests_are_restricted(options):
     key, snap = snapshot([policy({"kind": "byok"}, **options)])
     assert isinstance(evaluate(request(), key, snap), Allow)
 
@@ -92,17 +94,17 @@ def test_policy_index_preserves_workspace_evaluation_order():
     assert tuple(compiled.policy.id for compiled in snap.policy_index[other_workspace]) == (other.id,)
 
 
-@pytest.mark.parametrize("condition", ["true", "1 / 0 > 0"])
-def test_budget_does_not_enforce_yet(condition):
-    key, snap = snapshot([policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared"}, condition=condition)])
+def test_budget_does_not_enforce_yet():
+    key, snap = snapshot([policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared"})])
     assert isinstance(evaluate(request(), key, snap), Allow)
 
 
-def test_runtime_condition_errors_fail_closed():
-    key, snap = snapshot([policy({"kind": "byok"}, condition="1 / 0 > 0")])
-    result = plan_routes(request(), key, snap)
-    assert isinstance(result, Deny)
-    assert result.code == "policy_error"
+def test_request_match_combines_model_stream_and_capabilities():
+    match = {"kind": "request", "models": [MODEL.model_id], "stream": False, "capabilities": ["tools"]}
+    key, snap = snapshot([policy({"kind": "models", "names": ["other"]}, match=match)])
+
+    assert isinstance(evaluate(request(), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"tools": [{"name": "lookup", "input_schema": {"type": "object"}}]}), key, snap), Deny)
 
 
 def test_restrictions_intersect_regardless_of_priority():
@@ -121,18 +123,14 @@ def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
     assert plan.backups == ()
 
 
-@pytest.mark.parametrize("invalid", ["duplicate", "over_limit", "condition"])
+@pytest.mark.parametrize("invalid", ["duplicate", "over_limit"])
 def test_invalid_policies_rejected_before_bundle_admission(invalid):
     entry = policy({"kind": "byok"})
     if invalid == "duplicate":
         entries = [entry, entry]
     elif invalid == "over_limit":
         entries = [entry.model_copy(update={"id": uuid7()}) for _ in range(101)]
-    else:
-        entries = [policy({"kind": "byok"}, condition="unknown")]
-    with pytest.raises(
-        ValueError, match={"duplicate": "Duplicate policy", "over_limit": "at most 100", "condition": "Invalid policy condition"}[invalid]
-    ):
+    with pytest.raises(ValueError, match={"duplicate": "Duplicate policy", "over_limit": "at most 100"}[invalid]):
         snapshot(entries)
 
 
@@ -144,7 +142,7 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     policies = [policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})]
     if restricted:
-        policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, condition=f'request_model == "{MODEL.model_id}"'))
+        policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, match={"kind": "request", "models": [MODEL.model_id]}))
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": tuple(policies)})]))
 

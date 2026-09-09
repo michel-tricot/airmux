@@ -18,6 +18,11 @@ const failureOptions = [
   { value: 'upstream_unavailable', label: 'Upstream unavailable (5xx or connection failure)' },
   { value: 'timeout', label: 'Upstream timeout' },
 ];
+const capabilityOptions = [
+  { value: 'tools', label: 'Tools' },
+  { value: 'reasoning', label: 'Reasoning' },
+  { value: 'structured_output', label: 'Structured output' },
+];
 
 function TextField({
   form,
@@ -26,7 +31,7 @@ function TextField({
   numeric = false,
 }: {
   form: UseFormReturn<PolicyForm>;
-  name: 'name' | 'condition' | 'priority' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount';
+  name: 'name' | 'priority' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount';
   label: string;
   numeric?: boolean;
 }) {
@@ -82,6 +87,7 @@ export function PolicyEditor({
     >
       {(form) => {
         const kind = form.watch('kind');
+        const match = form.watch('match');
         const names = form.watch('names');
         const options =
           kind === 'providers'
@@ -147,6 +153,93 @@ export function PolicyEditor({
                   </FormItem>
                 )}
               />
+            )}
+            <FormField
+              control={form.control}
+              name="match"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Applies when</FormLabel>
+                  <FormControl>
+                    <Dropdown
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      aria-label="Applies when"
+                      options={[
+                        { value: 'all_requests', label: 'Every request' },
+                        { value: 'request', label: 'Request matches' },
+                      ]}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {match === 'request' && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="matchModels"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Requested models</FormLabel>
+                      <FormControl>
+                        <CheckboxDropdown
+                          aria-label="Requested models"
+                          label="Any model"
+                          allLabel="Choose models"
+                          values={field.value}
+                          onValuesChange={field.onChange}
+                          options={catalog.models.map((model) => ({ value: model.name, label: model.name }))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="matchStream"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Response mode</FormLabel>
+                      <FormControl>
+                        <Dropdown
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          aria-label="Response mode"
+                          options={[
+                            { value: 'any', label: 'Streaming or non-streaming' },
+                            { value: 'streaming', label: 'Streaming only' },
+                            { value: 'non_streaming', label: 'Non-streaming only' },
+                          ]}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="matchCapabilities"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Request capabilities</FormLabel>
+                      <FormControl>
+                        <CheckboxDropdown
+                          aria-label="Request capabilities"
+                          label="Any capabilities"
+                          allLabel="Choose capabilities"
+                          values={field.value}
+                          onValuesChange={field.onChange}
+                          options={capabilityOptions}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <p className="text-sm text-muted-foreground">All selected request criteria must match.</p>
+              </>
             )}
             <FormField
               control={form.control}
@@ -236,7 +329,9 @@ export function PolicyEditor({
             {kind === 'budget' && (
               <>
                 <Alert>
-                  <AlertDescription>Budget enforcement is not available yet. This setting does not track spending or block requests.</AlertDescription>
+                  <AlertDescription>
+                    Budget enforcement is not available yet. This setting does not track spending or block requests.
+                  </AlertDescription>
                 </Alert>
                 <TextField form={form} name="amount" label="Estimated spend limit (USD)" />
                 <FormField
@@ -281,10 +376,6 @@ export function PolicyEditor({
                 />
               </>
             )}
-            <TextField form={form} name="condition" label="When (CEL condition)" />
-            <p className="text-sm text-muted-foreground">
-              Use true for every request. Available facts: request_model, request_stream, key_id, workspace_id. Example: request_stream == true
-            </p>
             <TextField form={form} name="priority" label="Priority (lower runs first)" numeric />
           </>
         );

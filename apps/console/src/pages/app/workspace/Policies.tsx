@@ -32,6 +32,17 @@ function actionSummary(policy: PolicyOut): string {
   }
 }
 
+function matchSummary(policy: PolicyOut): string {
+  const match = policy.definition.match;
+  if (match.kind === 'all_requests') return 'Every request';
+  const criteria = [
+    match.models?.length ? `Models: ${match.models.join(', ')}` : '',
+    match.stream === true ? 'Streaming' : match.stream === false ? 'Non-streaming' : '',
+    match.capabilities?.length ? `Uses: ${match.capabilities.join(', ')}` : '',
+  ];
+  return criteria.filter(Boolean).join(' · ');
+}
+
 export default function WorkspacePolicies() {
   const orgId = useRequiredOrgId();
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -87,7 +98,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
             cell: (policy) => (
               <div>
                 <span>{policy.name}</span>
-                <p className="break-all font-mono text-xs text-muted-foreground">When: {policy.definition.condition}</p>
+                <p className="text-xs text-muted-foreground">When: {matchSummary(policy)}</p>
               </div>
             ),
           },
@@ -104,7 +115,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
             header: 'Status',
             cell: (policy) => (
               <Badge variant={policy.enabled ? 'success' : 'secondary'}>
-                {!policy.enabled ? 'Disabled' : policy.definition.action.kind === 'budget' ? 'Placeholder' : 'Enabled'}
+                {!policy.enabled ? 'Disabled' : policy.definition.action.kind === 'budget' ? 'Not enforced' : 'Enabled'}
               </Badge>
             ),
           },

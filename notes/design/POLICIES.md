@@ -6,53 +6,44 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 
 ## Contract and execution
 
-Each policy has a name, priority, target, boolean CEL condition, and one typed action. Separate
+Each policy has a name, priority, target, typed request match, and one typed action. Separate
 policies compose restrictions: every matching restriction must pass. Lower priorities run first;
 policy UUID breaks ties. Priority cannot override a restriction. The first matching fallback
 policy supplies the ordered backup list.
 
-The control plane validates conditions and references when saving. Its existing transaction
+The control plane validates request matches and references when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
-conditions when admitting a bundle, indexes them by workspace, and keeps the previous bundle if
+matches when admitting a bundle, indexes them by workspace, and keeps the previous bundle if
 admission fails. In-flight requests use their original snapshot. Changes take effect after the
 gateway adopts the published bundle, not synchronously with the management response.
 
 `@bundle_input` marks models and columns whose changes require bundle republication. Its scope
 identifies affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
-workspace row lock, condition/reference validation, active-policy capacity check, and flush.
+workspace row lock, match/reference validation, active-policy capacity check, and flush.
 Autoflush is suppressed until validation finishes, and capacity is counted directly in the
 database so previously loaded policy objects cannot hide a concurrent activation. Callers do
 not acquire a separate lock or invoke validation themselves.
 
 Evaluation uses the canonical request. It is synchronous, deterministic, and has no database,
 network, clock, or secret-store access. Credential resolution and upstream execution remain
-outside evaluation. CEL cannot select credentials, issue requests, or mutate state.
+outside evaluation. Request matching cannot select credentials, issue requests, or mutate state.
 
-## Conditions
+## Request matching
 
-Conditions are compiled with `cel-expr-python==0.1.3`, the native CEL implementation's Python
-binding. This dependency is pinned and hidden behind the contract's condition compiler. Its
-wheel availability is a deployment constraint: the locked Python 3.13/3.14 releases include
-macOS and glibc Linux x86-64/ARM64, but not musl Linux.
+A policy either matches every request or supplies request criteria. Every supplied criterion must
+match. Empty request matches and duplicate values are invalid.
 
-Available variables:
-
-| Variable | Type | Meaning |
+| Criterion | Type | Meaning |
 | --- | --- | --- |
-| `request_model` | string | Original caller-requested catalog model name |
-| `request_stream` | bool | Whether the caller requested streaming |
-| `key_id` | string | Authenticated inference key or playground session identifier |
-| `workspace_id` | string | Authenticated workspace UUID |
+| `models` | list of catalog model names | Original caller-requested model must be listed |
+| `stream` | boolean | Caller must request the configured response mode |
+| `capabilities` | list of capabilities | Request must require every listed capability |
 
-For example, `request_model.startsWith("gpt-") && !request_stream`.
-Use `true` for an unconditional policy. Conditions are limited to 2,048 characters and must
-type-check to a boolean. Comprehension macros (`all`, `exists`, `exists_one`, `map`, `filter`)
-are disabled. A workspace may have at most 100 active policies; management writes serialize on
-the workspace to enforce this bound. Bundle admission independently checks it.
-
-An evaluation error in an enforcing policy denies the request with `policy_error`. All
-conditions are evaluated once against the original request. The same matched restrictions
-apply to every backup, so changing the route cannot escape a conditional guardrail.
+Capabilities are `tools`, `reasoning`, and `structured_output`; streaming has its own criterion.
+A workspace may have at most 100 active policies; management writes serialize on the workspace
+to enforce this bound.
+Bundle admission independently checks it. Matches are evaluated once against the original request.
+The same matched restrictions apply to every backup, so changing the route cannot escape a guardrail.
 
 ## Actions
 
@@ -66,16 +57,15 @@ apply to every backup, so changing the route cannot escape a conditional guardra
 | `budget` | `period`, `amount_usd`, `sharing` | Stores intent only; does not track or enforce spending |
 
 Budget periods are `day` and `month`. Sharing is `shared` or `per_key`. Amounts use decimal USD,
-not floating-point arithmetic. Even a budget condition that would fail at runtime cannot affect
-requests. Enabling a budget policy does not activate a spending limit. The console explains that
-enforcement is not available yet.
+not floating-point arithmetic. Enabling a budget policy does not activate a spending limit. The
+console explains that enforcement is not available yet.
 
 ## Fallback semantics
 
 The original route must pass restrictions and capability checks. A policy denial, unknown
 primary model, or invalid request does not trigger fallback. Backup routes must independently
 pass capability, credential-scope, BYOK, model, and provider restrictions. Ineligible backups
-are skipped. Backup conditions are not reevaluated and fallback policies do not recurse.
+are skipped. Backup request matches are not reevaluated and fallback policies do not recurse.
 
 Failure reasons are `rate_limited` (429), `upstream_unavailable` (5xx or connection failure),
 and `timeout` (upstream HTTP timeout). Credential retries on 401, 403, and 429 remain available
@@ -112,7 +102,7 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "priority": 100,
   "definition": {
     "target": { "kind": "all_keys" },
-    "condition": "request_model == 'primary-model'",
+    "match": { "kind": "request", "models": ["primary-model"] },
     "action": {
       "kind": "fallback",
       "models": ["backup-model", "second-backup"],
@@ -139,22 +129,21 @@ airllm policies delete POLICY_ID -w production
 ## Performance and extension
 
 Local CPython 3.13.7 ARM64 measurement: 10,000 warm `plan_routes` calls after 1,000 warmups,
-with matching `request_model.startsWith("gpt") && !request_stream` model restrictions and one
-credential. Compilation, network traffic, and concurrent load are excluded.
+with matching typed model and non-streaming request criteria, model restrictions, and one
+credential. Bundle index construction, network traffic, and concurrent load are excluded.
 
 | Policies | Median | p99 |
 | --- | --- | --- |
-| 0 | 2.88 us | 3.75 us |
-| 10 | 23.38 us | 31.21 us |
-| 50 | 92.92 us | 140.33 us |
-| 100 | 189.50 us | 278.67 us |
+| 0 | 3.21 us | 4.29 us |
+| 10 | 10.88 us | 14.38 us |
+| 50 | 42.29 us | 60.04 us |
+| 100 | 82.75 us | 117.42 us |
 
-These are development measurements, not service guarantees. More expensive expressions and
-longer lists need their own benchmarks.
+These are development measurements, not service guarantees. Longer lists need their own benchmarks.
 
-To extend the system, add a strict action variant to `PolicyAction`, validate its configuration,
-and implement its pure decision or executor behavior. Add UI support, regenerate clients, and
-test both normal enforcement and interaction with fallback. Keep CEL limited to matching.
+To extend the system, add a strict action variant to `PolicyAction`, then add its evaluator module
+under `data_plane.policy_actions`. Evaluator modules register themselves and are discovered without
+editing a dispatcher. Add UI support, regenerate clients, and test both normal enforcement and interaction with fallback.
 Real budgets will require atomic reservation and reconciliation outside `evaluate()`, with
 explicit concurrency, period-boundary, failure, and multi-instance semantics before enforcement
 can be enabled.

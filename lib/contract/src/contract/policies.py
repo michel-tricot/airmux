@@ -1,41 +1,16 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from functools import cache
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from cel_expr_python import cel
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
+RequestCapability = Literal["tools", "reasoning", "structured_output"]
 MAX_WORKSPACE_POLICIES = 100
-MAX_CONDITION_LENGTH = 2048
-
-
-@cache
-def condition_environment() -> cel.Env:
-    return cel.NewEnv(
-        config=cel.NewEnvConfigFromYaml("stdlib:\n  exclude_macros: [all, exists, exists_one, map, filter]\n"),
-        variables={"request_model": cel.Type.STRING, "request_stream": cel.Type.BOOL, "key_id": cel.Type.STRING, "workspace_id": cel.Type.STRING},
-    )
-
-
-def compile_condition(condition: str) -> cel.Expression:
-    if not 1 <= len(condition) <= MAX_CONDITION_LENGTH:
-        msg = "Policy conditions must contain between 1 and 2048 characters"
-        raise ValueError(msg)
-    try:
-        expression = condition_environment().compile(condition)
-    except (ValueError, RuntimeError) as error:
-        msg = f"Invalid policy condition: {error}"
-        raise ValueError(msg) from error
-    if expression.return_type() != cel.Type.BOOL:
-        msg = "Policy conditions must return a boolean"
-        raise ValueError(msg)
-    return expression
 
 
 class _PolicyModel(BaseModel):
@@ -60,6 +35,30 @@ class SelectedKeys(_PolicyModel):
 
 
 PolicyTarget = Annotated[AllKeys | SelectedKeys, Field(discriminator="kind")]
+
+
+class AllRequests(_PolicyModel):
+    kind: Literal["all_requests"]
+
+
+class RequestMatch(_PolicyModel):
+    kind: Literal["request"]
+    models: tuple[PolicyIdentifier, ...] = Field(default=(), max_length=1000)
+    stream: bool | None = Field(default=None, strict=True)
+    capabilities: tuple[RequestCapability, ...] = Field(default=(), max_length=3)
+
+    @model_validator(mode="after")
+    def valid_criteria(self) -> Self:
+        if not self.models and self.stream is None and not self.capabilities:
+            msg = "A request match must contain at least one criterion"
+            raise ValueError(msg)
+        if len(self.models) != len(set(self.models)) or len(self.capabilities) != len(set(self.capabilities)):
+            msg = "Request match models and capabilities must be unique"
+            raise ValueError(msg)
+        return self
+
+
+PolicyMatch = Annotated[AllRequests | RequestMatch, Field(discriminator="kind")]
 
 
 class RequireByok(_PolicyModel):
@@ -108,7 +107,7 @@ PolicyAction = Annotated[RequireByok | AllowedModels | AllowedProviders | DenyRe
 
 class PolicyDefinition(_PolicyModel):
     target: PolicyTarget
-    condition: str = Field(min_length=1, max_length=2048)
+    match: PolicyMatch
     action: PolicyAction
 
 

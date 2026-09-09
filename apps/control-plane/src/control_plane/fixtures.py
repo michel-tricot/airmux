@@ -34,10 +34,12 @@ from contract.policies import (
     AllKeys,
     AllowedModels,
     AllowedProviders,
+    AllRequests,
     Budget,
     DenyRequest,
     Fallback,
     PolicyDefinition,
+    RequestMatch,
     RequireByok,
     SelectedKeys,
 )
@@ -353,7 +355,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         production,
         name="Streaming requires BYOK",
         priority=10,
-        definition=PolicyDefinition(target=AllKeys(kind="all_keys"), condition="request_stream", action=RequireByok(kind="byok")),
+        definition=PolicyDefinition(
+            target=AllKeys(kind="all_keys"), match=RequestMatch(kind="request", stream=True), action=RequireByok(kind="byok")
+        ),
     )
     await workspace_policy(
         production,
@@ -361,7 +365,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=20,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            condition="true",
+            match=AllRequests(kind="all_requests"),
             action=AllowedModels(kind="models", names=("gpt-4o-mini", "gpt-4o")),
         ),
     )
@@ -371,7 +375,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=30,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            condition='request_model == "gpt-4o"',
+            match=RequestMatch(kind="request", models=("gpt-4o",)),
             action=Fallback(
                 kind="fallback",
                 models=("claude-opus-4-5", "gpt-4o-mini"),
@@ -388,7 +392,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         enabled=False,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            condition="true",
+            match=AllRequests(kind="all_requests"),
             action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
         ),
     )
@@ -398,7 +402,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=10,
         definition=PolicyDefinition(
             target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
-            condition="true",
+            match=AllRequests(kind="all_requests"),
             action=AllowedProviders(kind="providers", names=("openai",)),
         ),
     )
@@ -408,7 +412,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         priority=10,
         definition=PolicyDefinition(
             target=AllKeys(kind="all_keys"),
-            condition="true",
+            match=AllRequests(kind="all_requests"),
             action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
         ),
     )

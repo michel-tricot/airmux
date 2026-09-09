@@ -13,18 +13,16 @@
 import type { AllKeys } from './allKeys';
 import type { AllowedModels } from './allowedModels';
 import type { AllowedProviders } from './allowedProviders';
+import type { AllRequests } from './allRequests';
 import type { BudgetInput } from './budgetInput';
 import type { DenyRequest } from './denyRequest';
 import type { Fallback } from './fallback';
+import type { RequestMatch } from './requestMatch';
 import type { RequireByok } from './requireByok';
 import type { SelectedKeys } from './selectedKeys';
 
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
-  /**
-     * @minLength 1
-     * @maxLength 2048
-     */
-  condition: string;
+  match: AllRequests | RequestMatch;
   action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetInput;
 }

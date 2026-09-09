@@ -1346,7 +1346,13 @@ export const listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const listPoliciesResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const listPoliciesResponseDefinitionConditionMax = 2048;
+export const listPoliciesResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const listPoliciesResponseDefinitionMatchTwoModelsDefault = [];
+export const listPoliciesResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const listPoliciesResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const listPoliciesResponseDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const listPoliciesResponseDefinitionActionTwoNamesItemMax = 255;
 
@@ -1387,7 +1393,14 @@ export const ListPoliciesResponseItem = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(listPoliciesResponseDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionMatchTwoModelsItemMax)).max(listPoliciesResponseDefinitionMatchTwoModelsMax).default(listPoliciesResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(listPoliciesResponseDefinitionMatchTwoCapabilitiesMax).default(listPoliciesResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -1441,7 +1454,13 @@ export const createPolicyBodyDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const createPolicyBodyDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const createPolicyBodyDefinitionConditionMax = 2048;
+export const createPolicyBodyDefinitionMatchTwoModelsItemMax = 255;
+
+export const createPolicyBodyDefinitionMatchTwoModelsDefault = [];
+export const createPolicyBodyDefinitionMatchTwoModelsMax = 1000;
+
+export const createPolicyBodyDefinitionMatchTwoCapabilitiesDefault = [];
+export const createPolicyBodyDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const createPolicyBodyDefinitionActionTwoNamesItemMax = 255;
 
@@ -1481,7 +1500,14 @@ export const CreatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(createPolicyBodyDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionMatchTwoModelsItemMax)).max(createPolicyBodyDefinitionMatchTwoModelsMax).default(createPolicyBodyDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createPolicyBodyDefinitionMatchTwoCapabilitiesMax).default(createPolicyBodyDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -1505,14 +1531,20 @@ export const CreatePolicyBody = zod.object({
   "amount_usd": zod.union([zod.number().gt(createPolicyBodyDefinitionActionSixAmountUsdOneExclusiveMin),zod.string().regex(createPolicyBodyDefinitionActionSixAmountUsdTwoRegExp)]),
   "sharing": zod.enum(['shared', 'per_key'])
 })])
-}).describe('Inference key target, boolean CEL condition, and typed action. Budgets are not yet enforced')
+}).describe('Inference key target, typed request match, and action. Budgets are not yet enforced')
 })
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const createPolicyResponseDefinitionConditionMax = 2048;
+export const createPolicyResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const createPolicyResponseDefinitionMatchTwoModelsDefault = [];
+export const createPolicyResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const createPolicyResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const createPolicyResponseDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const createPolicyResponseDefinitionActionTwoNamesItemMax = 255;
 
@@ -1553,7 +1585,14 @@ export const CreatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(createPolicyResponseDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionMatchTwoModelsItemMax)).max(createPolicyResponseDefinitionMatchTwoModelsMax).default(createPolicyResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createPolicyResponseDefinitionMatchTwoCapabilitiesMax).default(createPolicyResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -1605,7 +1644,13 @@ export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax = 255;
 
 export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax = 1000;
 
-export const updatePolicyBodyDefinitionOneConditionMax = 2048;
+export const updatePolicyBodyDefinitionOneMatchTwoModelsItemMax = 255;
+
+export const updatePolicyBodyDefinitionOneMatchTwoModelsDefault = [];
+export const updatePolicyBodyDefinitionOneMatchTwoModelsMax = 1000;
+
+export const updatePolicyBodyDefinitionOneMatchTwoCapabilitiesDefault = [];
+export const updatePolicyBodyDefinitionOneMatchTwoCapabilitiesMax = 3;
 
 export const updatePolicyBodyDefinitionOneActionTwoNamesItemMax = 255;
 
@@ -1645,7 +1690,14 @@ export const UpdatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(updatePolicyBodyDefinitionOneConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneMatchTwoModelsItemMax)).max(updatePolicyBodyDefinitionOneMatchTwoModelsMax).default(updatePolicyBodyDefinitionOneMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updatePolicyBodyDefinitionOneMatchTwoCapabilitiesMax).default(updatePolicyBodyDefinitionOneMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -1669,14 +1721,20 @@ export const UpdatePolicyBody = zod.object({
   "amount_usd": zod.union([zod.number().gt(updatePolicyBodyDefinitionOneActionSixAmountUsdOneExclusiveMin),zod.string().regex(updatePolicyBodyDefinitionOneActionSixAmountUsdTwoRegExp)]),
   "sharing": zod.enum(['shared', 'per_key'])
 })])
-}),zod.null()]).optional().describe('Replace the complete target, CEL condition, and action; omit to leave unchanged')
+}),zod.null()]).optional().describe('Replace the complete target, request match, and action; omit to leave unchanged')
 })
 
 export const updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const updatePolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const updatePolicyResponseDefinitionConditionMax = 2048;
+export const updatePolicyResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const updatePolicyResponseDefinitionMatchTwoModelsDefault = [];
+export const updatePolicyResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const updatePolicyResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const updatePolicyResponseDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const updatePolicyResponseDefinitionActionTwoNamesItemMax = 255;
 
@@ -1717,7 +1775,14 @@ export const UpdatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(updatePolicyResponseDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionMatchTwoModelsItemMax)).max(updatePolicyResponseDefinitionMatchTwoModelsMax).default(updatePolicyResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updatePolicyResponseDefinitionMatchTwoCapabilitiesMax).default(updatePolicyResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -2503,7 +2568,13 @@ export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 255
 
 export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const getBundleResponsePoliciesItemDefinitionConditionMax = 2048;
+export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsItemMax = 255;
+
+export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsDefault = [];
+export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsMax = 1000;
+
+export const getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault = [];
+export const getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const getBundleResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
 
@@ -2592,7 +2663,14 @@ export const GetBundleResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionMatchTwoModelsItemMax)).max(getBundleResponsePoliciesItemDefinitionMatchTwoModelsMax).default(getBundleResponsePoliciesItemDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax).default(getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
@@ -2650,7 +2728,13 @@ export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 
 
 export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const bundleLatestResponsePoliciesItemDefinitionConditionMax = 2048;
+export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsItemMax = 255;
+
+export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsDefault = [];
+export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsMax = 1000;
+
+export const bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault = [];
+export const bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax = 3;
 
 export const bundleLatestResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
 
@@ -2739,7 +2823,14 @@ export const BundleLatestResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "condition": zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionConditionMax),
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsItemMax)).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsMax).default(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax).default(bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault)
+})]),
   "action": zod.union([zod.object({
   "kind": zod.literal("byok")
 }),zod.object({
