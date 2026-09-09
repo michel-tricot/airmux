@@ -8,7 +8,6 @@ import pytest
 import respx
 from conftest import (
     MODEL,
-    ORG,
     PLATFORM_CREDENTIAL,
     PROVIDER,
     TEXT_LOG,
@@ -56,7 +55,14 @@ def snapshot(policies, *, credentials=None, models=None, provider=PROVIDER):
     return key, BundleSnapshot.from_bundle(bundle.model_copy(update={"policies": tuple(policies)}))
 
 
-@pytest.mark.parametrize("action", [{"kind": "byok"}, {"kind": "models", "names": ["other"]}, {"kind": "providers", "names": ["other"]}])
+@pytest.mark.parametrize(
+    "action",
+    [
+        {"kind": "credential_access", "scopes": ["workspace", "org"]},
+        {"kind": "models", "names": ["other"]},
+        {"kind": "providers", "names": ["other"]},
+    ],
+)
 def test_restrictions_deny_before_upstream(action):
     key, snap = snapshot([policy(action)])
     result = evaluate(request(), key, snap)
@@ -64,22 +70,20 @@ def test_restrictions_deny_before_upstream(action):
     assert result.code == "policy_denied"
 
 
-def test_byok_accepts_org_credentials():
-    key, snap = snapshot([policy({"kind": "byok"})], credentials=[make_credential(org=ORG)])
-    assert isinstance(evaluate(request(), key, snap), Allow)
-
-
 @pytest.mark.parametrize(
     "options", [{"workspace": uuid7()}, {"match": {"kind": "request", "stream": True}}, {"target": {"kind": "selected_keys", "key_ids": ["other"]}}]
 )
 def test_only_matching_workspace_keys_and_requests_are_restricted(options):
-    key, snap = snapshot([policy({"kind": "byok"}, **options)])
+    key, snap = snapshot([policy({"kind": "credential_access", "scopes": ["workspace", "org"]}, **options)])
     assert isinstance(evaluate(request(), key, snap), Allow)
 
 
 def test_selected_key_targets_are_compiled_for_constant_time_membership():
     selected_key_ids = frozenset(str(uuid7()) for _ in range(1000))
-    entry = policy({"kind": "byok"}, target={"kind": "selected_keys", "key_ids": sorted(selected_key_ids)})
+    entry = policy(
+        {"kind": "credential_access", "scopes": ["workspace", "org"]},
+        target={"kind": "selected_keys", "key_ids": sorted(selected_key_ids)},
+    )
     _, snap = snapshot([entry])
 
     assert snap.policy_index[WORKSPACE][0].selected_key_ids == selected_key_ids
@@ -87,9 +91,10 @@ def test_selected_key_targets_are_compiled_for_constant_time_membership():
 
 def test_policy_index_preserves_workspace_evaluation_order():
     other_workspace = uuid7()
-    later = policy({"kind": "byok"}).model_copy(update={"priority": 20})
-    first = policy({"kind": "byok"}).model_copy(update={"priority": 10})
-    other = policy({"kind": "byok"}, workspace=other_workspace)
+    action = {"kind": "credential_access", "scopes": ["workspace", "org"]}
+    later = policy(action).model_copy(update={"priority": 20})
+    first = policy(action).model_copy(update={"priority": 10})
+    other = policy(action, workspace=other_workspace)
 
     _, snap = snapshot([later, other, first])
 
@@ -182,9 +187,12 @@ def test_price_limit_applies_to_fallback_models():
     assert plan.backups == ()
 
 
-def test_credential_access_policies_intersect_with_byok():
+def test_credential_access_policies_intersect():
     key, snap = snapshot(
-        [policy({"kind": "byok"}), policy({"kind": "credential_access", "scopes": ["platform"]})],
+        [
+            policy({"kind": "credential_access", "scopes": ["workspace", "org"]}),
+            policy({"kind": "credential_access", "scopes": ["platform"]}),
+        ],
         credentials=[make_credential(name="org"), make_credential(name="platform", org=None)],
     )
 
@@ -217,7 +225,7 @@ def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
 
 @pytest.mark.parametrize("invalid", ["duplicate", "over_limit"])
 def test_invalid_policies_rejected_before_bundle_admission(invalid):
-    entry = policy({"kind": "byok"})
+    entry = policy({"kind": "credential_access", "scopes": ["workspace", "org"]})
     if invalid == "duplicate":
         entries = [entry, entry]
     elif invalid == "over_limit":

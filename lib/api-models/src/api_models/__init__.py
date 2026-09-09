@@ -1404,13 +1404,6 @@ class RequestMatch(BaseModel):
     ] = []
 
 
-class RequireByok(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Annotated[Literal["byok"], Field(title="Kind")]
-
-
 class RoutedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2087,8 +2080,7 @@ class PolicyDefinitionInput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        RequireByok
-        | AllowedModels
+        AllowedModels
         | AllowedProviders
         | DenyRequest
         | StrictParameters
@@ -2108,8 +2100,7 @@ class PolicyDefinitionOutput(BaseModel):
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
     match: Annotated[AllRequests | RequestMatch, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        RequireByok
-        | AllowedModels
+        AllowedModels
         | AllowedProviders
         | DenyRequest
         | StrictParameters

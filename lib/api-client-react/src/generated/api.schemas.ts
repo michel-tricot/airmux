@@ -444,11 +444,6 @@ export interface RequestMatch {
   capabilities?: RequestMatchCapabilitiesItem[];
 }
 
-export const RequireByokValue = {
-  kind: 'byok',
-} as const;
-export type RequireByok = typeof RequireByokValue;
-
 export interface DenyRequest {
   kind: 'deny';
   /**
@@ -533,7 +528,7 @@ export interface Fallback {
 export interface PolicyDefinitionOutput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
 }
 
 export interface PolicyEntry {
@@ -1271,7 +1266,7 @@ export interface PriceLimitInput {
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
 }
 
 export interface PolicyCreate {

@@ -21,12 +21,11 @@ import type { Fallback } from './fallback';
 import type { PriceLimitInput } from './priceLimitInput';
 import type { RequestLimits } from './requestLimits';
 import type { RequestMatch } from './requestMatch';
-import type { RequireByok } from './requireByok';
 import type { SelectedKeys } from './selectedKeys';
 import type { StrictParameters } from './strictParameters';
 
 export interface PolicyDefinitionInput {
   target: AllKeys | SelectedKeys;
   match: AllRequests | RequestMatch;
-  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
 }

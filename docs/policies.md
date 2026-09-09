@@ -45,7 +45,10 @@ For example, this definition matches streaming requests for `openai/gpt-4o` that
     "stream": true,
     "capabilities": ["tools"]
   },
-  "action": { "kind": "byok" }
+  "action": {
+    "kind": "credential_access",
+    "scopes": ["workspace", "org"]
+  }
 }
 ```
 
@@ -96,7 +99,10 @@ accounts owned by your organization. This policy excludes platform credentials f
       "kind": "request",
       "capabilities": ["structured_output"]
     },
-    "action": { "kind": "byok" }
+    "action": {
+      "kind": "credential_access",
+      "scopes": ["workspace", "org"]
+    }
   }
 }
 ```
@@ -138,18 +144,22 @@ AirLLM tries the backups in order after a configured failure. Each route must st
 workspace's model, provider, credential, price, and parameter policies. Invalid requests and policy
 denials never trigger a fallback.
 
-## Require BYOK
+## Credential access
 
-**Require BYOK** allows workspace and organization provider credentials and excludes credentials
-configured by the AirLLM platform operator. Use it when a team must pay providers through its own
-accounts.
+**Credential access** controls which credential scopes a matching request may use. Available scopes
+are `workspace`, `org`, and `platform`. To require credentials managed by the team, allow workspace
+and organization credentials while excluding platform credentials:
 
 ```json
-{ "kind": "byok" }
+{
+  "kind": "credential_access",
+  "scopes": ["workspace", "org"]
+}
 ```
 
-AirLLM still prefers the most specific credential tier: workspace, then organization. If credentials
-in the selected tier fail or are exhausted, the request does not fall through to a broader tier.
+Multiple credential policies compose by intersection. After filtering, AirLLM selects the most
+specific populated allowed tier in workspace, organization, platform order. If that tier's
+credentials fail or are exhausted, it does not fall through to a broader tier.
 
 ## Allowed models
 
@@ -221,25 +231,6 @@ It does not predict or cap the total cost of a request.
 
 A request with a larger explicit output limit is rejected before an upstream request starts. A
 request that omits its output limit is allowed because the gateway does not invent a caller limit.
-
-## Credential access
-
-**Credential access** controls which credential scopes a matching request may use. Available scopes
-are `workspace`, `org`, and `platform`.
-
-```json
-{
-  "kind": "credential_access",
-  "scopes": ["workspace", "org"]
-}
-```
-
-Multiple credential policies compose by intersection. After filtering, AirLLM selects the most
-specific populated allowed tier in workspace, organization, platform order. If that tier's
-credentials fail or are exhausted, it does not fall through to a broader tier.
-
-Use **Require BYOK** for the common workspace-or-organization rule. Use **Credential access** when
-you need an exact set, such as organization credentials only or platform credentials only.
 
 ## Deny matching requests
 

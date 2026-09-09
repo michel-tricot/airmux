@@ -7,7 +7,11 @@ from helpers import make_org, make_workspace, setup_control_plane
 from contract import BundleV1
 from control_plane.authz import Permission
 
-DEFINITION = {"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": {"kind": "byok"}}
+DEFINITION = {
+    "target": {"kind": "all_keys"},
+    "match": {"kind": "all_requests"},
+    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+}
 
 
 def test_workspace_policy_crud_validation_and_isolation(tmp_path):
@@ -19,7 +23,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         sibling = make_workspace(client, headers, "staging")
         path = f"/api/v1/orgs/{org}/workspaces/{workspace}/policies"
         body = {
-            "name": "Require BYOK",
+            "name": "Team credentials only",
             "enabled": True,
             "priority": 100,
             "definition": DEFINITION,
@@ -55,7 +59,7 @@ def test_workspace_policy_permissions(tmp_path, role):
             == 200
         )
         path = f"/api/v1/orgs/{org}/workspaces/{workspace}/policies"
-        created = client.post(path, headers=headers, json={"name": "BYOK", "definition": DEFINITION}).json()["data"]
+        created = client.post(path, headers=headers, json={"name": "Team credentials", "definition": DEFINITION}).json()["data"]
         session_headers = {"X-Requested-With": "fetch"}
         assert client.get(path, headers=session_headers).status_code == 200
         expected = 200 if role == "admin" else 403

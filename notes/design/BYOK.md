@@ -22,7 +22,7 @@ console/CLI --plaintext--> control plane --put--> SECRET STORE <--get-- data pla
                                 +----------------------+
 ```
 
-Tier selection is fixed in v1 (policy is [deferred](#deferred-to-the-next-version)):
+Credential-access policies may narrow the eligible tiers before the fixed selection order applies:
 
 - **Empty tier cascades**: the most specific tier holding any enabled credential wins
 - **Exhausted tier does not cascade**: once a tier is chosen, a 401 or 429 there never moves the
@@ -32,8 +32,8 @@ The second rule is the one that matters: a broken workspace key must never silen
 spend onto the platform account. The first keeps platform credentials and `airllm quickstart`
 working, which deny-on-empty would break.
 
-Known v1 limitation: an org cannot require BYOK, so a workspace with no credential falls to the
-platform key. That lever is a policy field in the next version.
+A policy with `credential_access` scopes `workspace` and `org` requires team-managed credentials;
+requests cannot fall through to a platform key.
 
 ## The store facade
 

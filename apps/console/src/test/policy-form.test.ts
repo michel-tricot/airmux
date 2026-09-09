@@ -60,6 +60,7 @@ describe('workspace policy configuration', () => {
   });
 
   it('rejects invalid price, request, and credential restrictions', () => {
+    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Legacy', kind: 'byok' }).success).toBe(false);
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Price', kind: 'price_limit', maxInputPrice: '-1' }).success).toBe(false);
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Tokens', kind: 'request_limits', maxOutputTokens: 0 }).success).toBe(false);
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Credentials', kind: 'credential_access', credentialScopes: [] }).success).toBe(
