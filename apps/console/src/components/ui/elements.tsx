@@ -119,7 +119,7 @@ export const Switch = forwardRef<
     <span
       className={cn(
         'pointer-events-none block h-3.5 w-3.5 translate-x-1 rounded-full bg-white shadow transition-transform',
-        checked && 'translate-x-4',
+        checked && 'translate-x-4.5',
       )}
     />
   </button>
@@ -433,7 +433,7 @@ export const Modal = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent
       className={cn(
-        'w-[calc(100%-2rem)] gap-6 border-border bg-card text-card-foreground shadow-2xl shadow-black/50 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-top-[50%]',
+        'w-[calc(100%-2rem)] grid-cols-1 gap-6 border-border bg-card text-card-foreground shadow-2xl shadow-black/50 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-top-[50%]',
         contentClassName,
       )}
     >

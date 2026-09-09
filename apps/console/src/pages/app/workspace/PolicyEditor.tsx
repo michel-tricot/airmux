@@ -114,12 +114,15 @@ export function PolicyEditor({
                       onValueChange={field.onChange}
                       aria-label="Applies to"
                       options={[
-                        { value: 'all_keys', label: 'All keys, including future keys and playground sessions' },
+                        { value: 'all_keys', label: 'All keys' },
                         { value: 'selected_keys', label: 'Selected inference keys' },
                       ]}
                     />
                   </FormControl>
                   <FormMessage />
+                  {field.value === 'all_keys' && (
+                    <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>
+                  )}
                 </FormItem>
               )}
             />
