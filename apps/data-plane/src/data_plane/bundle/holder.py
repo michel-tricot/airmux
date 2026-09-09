@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Self
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
 from data_plane.egress import REGISTRY
+from data_plane.policies import PolicyIndex, compile_policies
 from data_plane.profiles import index_profiles
 
 if TYPE_CHECKING:
@@ -34,6 +35,7 @@ class BundleSnapshot:
     provider_index: Mapping[str, ProviderEntry]
     credential_index: CredentialIndex
     profile_index: Mapping[str, CompiledProfile]
+    policy_index: PolicyIndex
 
     @classmethod
     def from_bundle(cls, bundle: BundleV1) -> Self:
@@ -49,6 +51,7 @@ class BundleSnapshot:
             provider_index=MappingProxyType(provider_index),
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(index_profiles(bundle)),
+            policy_index=compile_policies(bundle.policies),
         )
 
 

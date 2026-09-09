@@ -1,5 +1,6 @@
 import { lazy, type ComponentType } from 'react';
-import { Database, FlaskConical, KeyRound, LayoutGrid, Settings, type LucideIcon } from 'lucide-react';
+import { Database, FlaskConical, KeyRound, LayoutGrid, Settings, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { policyAccess } from '@/features/policies/policy';
 import { allOf, anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { catalogAccess } from '@/features/catalog/policy';
 import { providerCredentialAccess } from '@/features/credentials/policy';
@@ -12,6 +13,7 @@ const Overview = lazy(() => import('./Overview'));
 const Playground = lazy(() => import('./Playground'));
 const ApiKeys = lazy(() => import('./ApiKeys'));
 const Byok = lazy(() => import('./Byok'));
+const Policies = lazy(() => import('./Policies'));
 const SettingsPage = lazy(() => import('./Settings'));
 
 interface WorkspaceRouteDefinition {
@@ -33,6 +35,7 @@ export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
   },
   { suffix: '/keys', label: 'Inference Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: ApiKeys },
   { suffix: '/byok', label: 'BYOK', icon: Database, access: providerCredentialAccess.workspace.read, component: Byok },
+  { suffix: '/policies', label: 'Policies', icon: ShieldCheck, access: policyAccess.read, component: Policies },
   {
     suffix: '/settings',
     label: 'Settings',

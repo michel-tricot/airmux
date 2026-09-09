@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
+from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
@@ -99,6 +100,7 @@ class BundleV1(BaseModel):
     issued_at: datetime
     keys: list[KeyEntry]
     catalog: Catalog
+    policies: tuple[PolicyEntry, ...]
 
 
 class BundleManifestEntry(BaseModel):

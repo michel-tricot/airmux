@@ -9,6 +9,7 @@ from sqlalchemy import UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
+from control_plane.db import current_session
 from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
@@ -19,6 +20,7 @@ from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpda
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.playground_session import PlaygroundSession
+from control_plane.models.policy import Policy
 from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.user import User
 from control_plane.models.workspace_membership import WorkspaceMembership
@@ -124,6 +126,9 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
         return await cls.find(cls.org_id == org_id, or_(instance_access, org_access, workspace_access), order_by=col(cls.name))
 
+    async def lock_policy_changes(self) -> None:
+        await current_session().execute(select(Workspace).where(col(Workspace.id) == self.id).with_for_update())
+
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the workspace with the rows scoped to it: its inference keys, its members, and the
         provider credentials it brought.
@@ -135,6 +140,8 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         """
         await ProviderCredential.delete_scoped(store, ProviderCredential.workspace_id == self.id)
         await AccessKey.delete_scoped(AccessKey.workspace_id == self.id)
+        for policy in await Policy.for_workspace(self.id):
+            await policy.delete()
         for key in await InferenceKey.find(InferenceKey.workspace_id == self.id):
             await key.delete()
         for playground_session in await PlaygroundSession.find(PlaygroundSession.workspace_id == self.id):

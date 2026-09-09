@@ -35,6 +35,8 @@ class Permission(StrEnum):
     provider_credentials_manage = "provider-credentials.manage"
     inference_keys_read = "inference-keys.read"
     inference_keys_manage = "inference-keys.manage"
+    policies_read = "policies.read"
+    policies_manage = "policies.manage"
     playground_execute = "playground.execute"
     bundles_read = "bundles.read"
     bundles_publish = "bundles.publish"
@@ -77,6 +79,7 @@ READ_PERMISSIONS = frozenset(
         Permission.catalog_read,
         Permission.provider_credentials_read,
         Permission.inference_keys_read,
+        Permission.policies_read,
         Permission.bundles_read,
         Permission.usage_read,
         Permission.data_planes_read,
@@ -114,6 +117,8 @@ ORG_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.policies_read,
+            Permission.policies_manage,
             Permission.playground_execute,
             Permission.bundles_read,
             Permission.bundles_publish,
@@ -139,6 +144,8 @@ ORG_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.policies_read,
+            Permission.policies_manage,
             Permission.playground_execute,
             Permission.bundles_read,
             Permission.bundles_publish,
@@ -171,6 +178,8 @@ WORKSPACE_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.policies_read,
+            Permission.policies_manage,
             Permission.playground_execute,
             Permission.usage_read,
             Permission.access_keys_read,
@@ -180,6 +189,7 @@ WORKSPACE_ROLE_PERMISSIONS = {
     ),
     WorkspaceRole.member: frozenset(
         {
+            Permission.policies_read,
             Permission.workspaces_read,
             Permission.members_read,
             Permission.catalog_read,
@@ -192,6 +202,7 @@ WORKSPACE_ROLE_PERMISSIONS = {
     ),
     WorkspaceRole.viewer: frozenset(
         {
+            Permission.policies_read,
             Permission.workspaces_read,
             Permission.members_read,
             Permission.catalog_read,

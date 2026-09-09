@@ -152,7 +152,7 @@ async def test_malformed_stream_event_becomes_sse_error(metering, http_client):
     assert _event(outbox).status == "upstream_error"
 
 
-async def test_error_body_read_failure_closes_upstream_and_maps(monkeypatch, metering, http_client):
+async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatch, metering, http_client):
     ctx, outbox = metering
 
     class FakeResp:
@@ -179,7 +179,6 @@ async def test_error_body_read_failure_closes_upstream_and_maps(monkeypatch, met
             return cm
 
     monkeypatch.setattr(http_client, "stream", FakeClient().stream)
-    response = await _open_stream(ctx, REQUEST, outbox, http_client)
+    with pytest.raises(httpx.ReadError, match="connection reset"):
+        await _open_stream(ctx, REQUEST, outbox, http_client)
     assert cm.exited
-    assert response.status_code == 502
-    assert _event(outbox).status == "upstream_error"

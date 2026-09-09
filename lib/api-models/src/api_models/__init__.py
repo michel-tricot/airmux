@@ -36,6 +36,79 @@ class ActivityOut(BaseModel):
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
 
 
+class AllKeys(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["all_keys"], Field(title="Kind")]
+
+
+class Name(RootModel[str]):
+    root: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class AllowedModels(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["models"], Field(title="Kind")]
+    names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
+
+
+class AllowedProviders(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["providers"], Field(title="Kind")]
+    names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
+
+
+class AmountUsd(RootModel[float]):
+    root: Annotated[float, Field(gt=0.0, title="Amount Usd")]
+
+
+class AmountUsd1(RootModel[str]):
+    model_config = ConfigDict(
+        regex_engine="python-re",
+    )
+    root: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Amount Usd",
+        ),
+    ]
+
+
+class BudgetPlaceholderInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["budget"], Field(title="Kind")]
+    enforcement: Annotated[Literal["placeholder"], Field(title="Enforcement")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    amount_usd: Annotated[AmountUsd | AmountUsd1, Field(title="Amount Usd")]
+    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
+
+
+class BudgetPlaceholderOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        regex_engine="python-re",
+    )
+    kind: Annotated[Literal["budget"], Field(title="Kind")]
+    enforcement: Annotated[Literal["placeholder"], Field(title="Enforcement")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    amount_usd: Annotated[
+        str,
+        Field(
+            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
+            title="Amount Usd",
+        ),
+    ]
+    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
+
+
 class BundleManifestEntry(BaseModel):
     """
     The immutable identity of one organization bundle available to a data plane.
@@ -274,6 +347,14 @@ class DeniedUsageEventV1(BaseModel):
     ] = None
 
 
+class DenyRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["deny"], Field(title="Kind")]
+    message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
+
+
 class EnvelopeAccessKeyRevokedOut(BaseModel):
     data: AccessKeyRevokedOut
 
@@ -325,6 +406,24 @@ class EnvelopeListDataPlaneInstanceOut(BaseModel):
 class EventsIngestedOut(BaseModel):
     received: Annotated[int, Field(title="Received")]
     ingested: Annotated[int, Field(title="Ingested")]
+
+
+class Model(RootModel[str]):
+    root: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class Fallback(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["fallback"], Field(title="Kind")]
+    models: Annotated[list[Model], Field(max_length=4, min_length=1, title="Models")]
+    on: Annotated[
+        list[Literal["rate_limited", "upstream_unavailable", "timeout"]],
+        Field(max_length=3, min_length=1, title="On"),
+    ]
+    max_attempts: Annotated[int, Field(ge=2, le=5, title="Max Attempts")]
+    timeout_ms: Annotated[int, Field(ge=100, le=120000, title="Timeout Ms")]
 
 
 class HeartbeatOut(BaseModel):
@@ -800,7 +899,7 @@ class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
     root: Annotated[Literal["owner", "admin", "member", "data_plane"], Field(title="OrgRole")]
 
 
-class Name(RootModel[str]):
+class Name2(RootModel[str]):
     root: Annotated[
         str,
         Field(
@@ -816,7 +915,7 @@ class OrgUpdate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    name: Annotated[Name | None, Field(description="Replacement organization name", title="Name")] = None
+    name: Annotated[Name2 | None, Field(description="Replacement organization name", title="Name")] = None
 
 
 class PasswordChangeIn(BaseModel):
@@ -869,6 +968,8 @@ class Permission(
             "provider-credentials.manage",
             "inference-keys.read",
             "inference-keys.manage",
+            "policies.read",
+            "policies.manage",
             "playground.execute",
             "bundles.read",
             "bundles.publish",
@@ -903,6 +1004,8 @@ class Permission(
             "provider-credentials.manage",
             "inference-keys.read",
             "inference-keys.manage",
+            "policies.read",
+            "policies.manage",
             "playground.execute",
             "bundles.read",
             "bundles.publish",
@@ -927,6 +1030,30 @@ class PlaygroundSessionReadyOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
     status: Annotated[Literal["ready"], Field(title="Status")]
+
+
+class Name3(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Replacement display name; omit to leave unchanged",
+            max_length=200,
+            min_length=1,
+            title="Name",
+        ),
+    ]
+
+
+class Priority(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Replacement priority, with lower numbers first; omit to leave unchanged",
+            ge=0,
+            le=10000,
+            title="Priority",
+        ),
+    ]
 
 
 class ProviderCredentialIn(BaseModel):
@@ -996,7 +1123,7 @@ class ProviderCredentialOut(BaseModel):
     scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
 
 
-class Priority(RootModel[int]):
+class Priority1(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -1013,7 +1140,7 @@ class ProviderCredentialUpdate(BaseModel):
         extra="forbid",
     )
     priority: Annotated[
-        Priority | None,
+        Priority1 | None,
         Field(
             description="Replacement selection priority; lower values are tried first",
             title="Priority",
@@ -1150,6 +1277,13 @@ class ProviderOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class RequireByok(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["byok"], Field(title="Kind")]
 
 
 class RoutedUsageEventV1(BaseModel):
@@ -1301,6 +1435,18 @@ class SecretRef(BaseModel):
     secret_id: Annotated[UUID, Field(title="Secret Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")] = None
     workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
+
+
+class KeyId(RootModel[str]):
+    root: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class SelectedKeys(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["selected_keys"], Field(title="Kind")]
+    key_ids: Annotated[list[KeyId], Field(max_length=1000, min_length=1, title="Key Ids")]
 
 
 class ServiceAccountIn(BaseModel):
@@ -1493,7 +1639,7 @@ class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
     root: Annotated[Literal["admin", "member", "viewer"], Field(title="WorkspaceRole")]
 
 
-class Name1(RootModel[str]):
+class Name4(RootModel[str]):
     root: Annotated[
         str,
         Field(
@@ -1509,7 +1655,7 @@ class WorkspaceUpdate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    name: Annotated[Name1 | None, Field(description="Replacement workspace name", title="Name")] = None
+    name: Annotated[Name4 | None, Field(description="Replacement workspace name", title="Name")] = None
 
 
 class AccessKeyGrantIn(BaseModel):
@@ -1783,6 +1929,85 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
+class PolicyDefinitionInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
+    condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
+    action: Annotated[
+        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderInput,
+        Field(discriminator="kind", title="Action"),
+    ]
+
+
+class PolicyDefinitionOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
+    condition: Annotated[str, Field(max_length=2048, min_length=1, title="Condition")]
+    action: Annotated[
+        RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderOutput,
+        Field(discriminator="kind", title="Action"),
+    ]
+
+
+class PolicyEntry(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[UUID, Field(title="Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
+    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
+    definition: PolicyDefinitionOutput
+
+
+class PolicyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(title="Name")]
+    enabled: Annotated[bool, Field(title="Enabled")]
+    priority: Annotated[int, Field(title="Priority")]
+    definition: PolicyDefinitionOutput
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class PolicyUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        Name3 | None,
+        Field(
+            description="Replacement display name; omit to leave unchanged",
+            title="Name",
+        ),
+    ] = None
+    enabled: Annotated[
+        bool | None,
+        Field(
+            description="Enable or disable this policy; omit to leave unchanged",
+            title="Enabled",
+        ),
+    ] = None
+    priority: Annotated[
+        Priority | None,
+        Field(
+            description="Replacement priority, with lower numbers first; omit to leave unchanged",
+            title="Priority",
+        ),
+    ] = None
+    definition: Annotated[
+        PolicyDefinitionInput | None,
+        Field(description="Replace the complete target, CEL condition, and action; omit to leave unchanged"),
+    ] = None
+
+
 class Scope(BaseModel):
     level: ScopeLevel
     org_id: Annotated[UUID | None, Field(title="Org Id")] = None
@@ -1877,6 +2102,10 @@ class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
 
 
+class EnvelopePolicyOut(BaseModel):
+    data: PolicyOut
+
+
 class EnvelopeTaxonomyApplyOut(BaseModel):
     data: TaxonomyApplyOut
 
@@ -1893,6 +2122,10 @@ class EnvelopeListOrgMemberOut(BaseModel):
     data: Annotated[list[OrgMemberOut], Field(title="Data")]
 
 
+class EnvelopeListPolicyOut(BaseModel):
+    data: Annotated[list[PolicyOut], Field(title="Data")]
+
+
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
 
@@ -1901,6 +2134,41 @@ class OrgServiceAccountMintedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     access_key: AccessKeyMintedOut
+
+
+class PolicyCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="Display name for the workspace policy",
+            max_length=200,
+            min_length=1,
+            title="Name",
+        ),
+    ]
+    enabled: Annotated[
+        bool | None,
+        Field(
+            description="Whether gateways apply this policy after receiving the updated configuration",
+            title="Enabled",
+        ),
+    ] = True
+    priority: Annotated[
+        int | None,
+        Field(
+            description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply",
+            ge=0,
+            le=10000,
+            title="Priority",
+        ),
+    ] = 100
+    definition: Annotated[
+        PolicyDefinitionInput,
+        Field(description="Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders"),
+    ]
 
 
 class BundleV1(BaseModel):
@@ -1914,6 +2182,7 @@ class BundleV1(BaseModel):
     issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
     keys: Annotated[list[KeyEntry], Field(title="Keys")]
     catalog: Catalog
+    policies: Annotated[list[PolicyEntry], Field(title="Policies")]
 
 
 class EnvelopeBundleV1(BaseModel):

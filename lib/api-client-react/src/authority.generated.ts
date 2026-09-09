@@ -298,6 +298,38 @@ export const operationAuthority = {
       },
     ],
   },
+  listPolicies: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.read"],
+      },
+    ],
+  },
+  createPolicy: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.manage"],
+      },
+    ],
+  },
+  updatePolicy: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.manage"],
+      },
+    ],
+  },
+  deletePolicy: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.manage"],
+      },
+    ],
+  },
   listInstanceProviderCredentials: {
     checks: [
       {

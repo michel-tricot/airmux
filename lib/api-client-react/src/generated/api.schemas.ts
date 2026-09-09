@@ -32,6 +32,8 @@ export const Permission = {
   'provider-credentialsmanage': 'provider-credentials.manage',
   'inference-keysread': 'inference-keys.read',
   'inference-keysmanage': 'inference-keys.manage',
+  policiesread: 'policies.read',
+  policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
   bundlespublish: 'bundles.publish',
@@ -165,6 +167,82 @@ export interface ActivityOut {
   action: string;
   user_id: string;
   occurred_at: string;
+}
+
+export const AllKeysValue = {
+  kind: 'all_keys',
+} as const;
+export type AllKeys = typeof AllKeysValue;
+
+export interface AllowedModels {
+  kind: 'models';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  names: string[];
+}
+
+export interface AllowedProviders {
+  kind: 'providers';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  names: string[];
+}
+
+export type BudgetPlaceholderInputPeriod = typeof BudgetPlaceholderInputPeriod[keyof typeof BudgetPlaceholderInputPeriod];
+
+
+export const BudgetPlaceholderInputPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetPlaceholderInputSharing = typeof BudgetPlaceholderInputSharing[keyof typeof BudgetPlaceholderInputSharing];
+
+
+export const BudgetPlaceholderInputSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface BudgetPlaceholderInput {
+  kind: 'budget';
+  enforcement: 'placeholder';
+  period: BudgetPlaceholderInputPeriod;
+  amount_usd: number | string;
+  sharing: BudgetPlaceholderInputSharing;
+}
+
+export type BudgetPlaceholderOutputPeriod = typeof BudgetPlaceholderOutputPeriod[keyof typeof BudgetPlaceholderOutputPeriod];
+
+
+export const BudgetPlaceholderOutputPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetPlaceholderOutputSharing = typeof BudgetPlaceholderOutputSharing[keyof typeof BudgetPlaceholderOutputSharing];
+
+
+export const BudgetPlaceholderOutputSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface BudgetPlaceholderOutput {
+  kind: 'budget';
+  enforcement: 'placeholder';
+  period: BudgetPlaceholderOutputPeriod;
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  amount_usd: string;
+  sharing: BudgetPlaceholderOutputSharing;
 }
 
 /**
@@ -330,6 +408,92 @@ export interface Catalog {
   credentials?: CredentialEntry[];
 }
 
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
+export const RequireByokValue = {
+  kind: 'byok',
+} as const;
+export type RequireByok = typeof RequireByokValue;
+
+export interface DenyRequest {
+  kind: 'deny';
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  message: string;
+}
+
+export type FallbackOnItem = typeof FallbackOnItem[keyof typeof FallbackOnItem];
+
+
+export const FallbackOnItem = {
+  rate_limited: 'rate_limited',
+  upstream_unavailable: 'upstream_unavailable',
+  timeout: 'timeout',
+} as const;
+
+export interface Fallback {
+  kind: 'fallback';
+  /**
+     * @minItems 1
+     * @maxItems 4
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models: string[];
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  on: FallbackOnItem[];
+  /**
+     * @minimum 2
+     * @maximum 5
+     */
+  max_attempts: number;
+  /**
+     * @minimum 100
+     * @maximum 120000
+     */
+  timeout_ms: number;
+}
+
+export interface PolicyDefinitionOutput {
+  target: AllKeys | SelectedKeys;
+  /**
+     * @minLength 1
+     * @maxLength 2048
+     */
+  condition: string;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderOutput;
+}
+
+export interface PolicyEntry {
+  id: string;
+  workspace_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  priority: number;
+  definition: PolicyDefinitionOutput;
+}
+
 /**
  * A complete, versioned policy snapshot for one organization's model traffic.
  */
@@ -340,6 +504,7 @@ export interface BundleV1 {
   issued_at: string;
   keys: KeyEntry[];
   catalog: Catalog;
+  policies: PolicyEntry[];
 }
 
 export interface ClaimOut {
@@ -1036,6 +1201,59 @@ export interface PlaygroundSessionReadyOut {
   id: string;
   expires_at: string;
   status: 'ready';
+}
+
+export interface PolicyDefinitionInput {
+  target: AllKeys | SelectedKeys;
+  /**
+     * @minLength 1
+     * @maxLength 2048
+     */
+  condition: string;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | Fallback | BudgetPlaceholderInput;
+}
+
+export interface PolicyCreate {
+  /**
+     * Display name for the workspace policy
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** Whether gateways apply this policy after receiving the updated configuration */
+  enabled?: boolean;
+  /**
+     * Lower numbers run first; policy ID breaks ties. All matching restrictions apply
+     * @minimum 0
+     * @maximum 10000
+     */
+  priority?: number;
+  /** Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders */
+  definition: PolicyDefinitionInput;
+}
+
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface PolicyUpdate {
+  /** Replacement display name; omit to leave unchanged */
+  name?: string | null;
+  /** Enable or disable this policy; omit to leave unchanged */
+  enabled?: boolean | null;
+  /** Replacement priority, with lower numbers first; omit to leave unchanged */
+  priority?: number | null;
+  /** Replace the complete target, CEL condition, and action; omit to leave unchanged */
+  definition?: PolicyDefinitionInput | null;
 }
 
 /**

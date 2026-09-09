@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
+from contract.policies import AllowedModels, AllowedProviders, DenyRequest, PolicyEntry, RequireByok
 from data_plane.credentials import candidates_for
+from data_plane.policies import matching_policies
 
 if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
@@ -22,7 +24,15 @@ class Allow:
 
 @dataclass(frozen=True)
 class Deny:
-    code: Literal["unknown_model", "unsupported_input_modality", "unsupported_feature", "provider_not_configured", "credential_unavailable"]
+    code: Literal[
+        "unknown_model",
+        "unsupported_input_modality",
+        "unsupported_feature",
+        "provider_not_configured",
+        "credential_unavailable",
+        "policy_denied",
+        "policy_error",
+    ]
     status: int
     message: str = ""
 
@@ -49,8 +59,35 @@ def required_input_modalities(req: CanonicalRequest) -> frozenset[str]:
     return frozenset(modality for message in req.messages for part in message.content if (modality := part_modalities.get(part.type)))
 
 
-def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
+def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None) -> Decision:
     """Return eligible credentials; cooldown-aware selection belongs to the request executor."""
+    try:
+        policies = matching_policies(req, key, snap.policy_index) if policies is None else policies
+    except (ValueError, RuntimeError):
+        return Deny(code="policy_error", status=403, message="A policy condition could not be evaluated")
+    route = _route(req, key, snap)
+    if isinstance(route, Deny):
+        return route
+    candidates = route.candidates
+    for policy in policies:
+        action = policy.definition.action
+        denied = (
+            isinstance(action, DenyRequest)
+            or (isinstance(action, AllowedModels) and route.model.model_id not in action.names)
+            or (isinstance(action, AllowedProviders) and route.provider.provider_id not in action.names)
+        )
+        if isinstance(action, RequireByok):
+            candidates = tuple(entry for entry in candidates if entry.ref.org_id == key.org_id)
+            denied = not candidates
+        if denied:
+            message = action.message if isinstance(action, DenyRequest) else f"Blocked by policy {policy.name} ({policy.id})"
+            return Deny(code="policy_denied", status=403, message=message)
+    if not candidates:
+        return Deny(code="credential_unavailable", status=402)
+    return replace(route, candidates=candidates)
+
+
+def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
     model = snap.model_index.get(req.model)
     if model is None:
         return Deny(code="unknown_model", status=404)
@@ -64,6 +101,4 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Deci
     if provider is None:
         return Deny(code="provider_not_configured", status=502)
     candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
-    if not candidates:
-        return Deny(code="credential_unavailable", status=402)
     return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])

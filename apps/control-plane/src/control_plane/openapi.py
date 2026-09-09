@@ -94,6 +94,7 @@ API_TAGS = [
         "description": "Inspect the provider and model catalog available to an organization",
     },
     {"name": "Workspace Settings", "x-displayName": "Settings", "description": "View, update, and delete one workspace"},
+    {"name": "Workspace Policies", "x-displayName": "Policies", "description": "Manage workspace inference restrictions and fallbacks"},
     {
         "name": "Workspace Members",
         "x-displayName": "Members",
@@ -171,6 +172,7 @@ TAG_GROUPS = [
         "name": "Workspace",
         "tags": [
             "Workspace Settings",
+            "Workspace Policies",
             "Workspace Members",
             "Workspace Access Keys",
             "Workspace Playground",

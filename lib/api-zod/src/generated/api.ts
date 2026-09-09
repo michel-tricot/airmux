@@ -30,7 +30,7 @@ export const ListInstanceAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -60,7 +60,7 @@ export const createInstanceAccessKeyBodyLabelMax = 80;
 
 export const CreateInstanceAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createInstanceAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
 })
@@ -72,7 +72,7 @@ export const CreateInstanceAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -110,7 +110,7 @@ export const ListOrgAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -144,7 +144,7 @@ export const createOrgAccessKeyBodyLabelMax = 80;
 
 export const CreateOrgAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createOrgAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
 })
@@ -156,7 +156,7 @@ export const CreateOrgAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -195,7 +195,7 @@ export const ListWorkspaceAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -230,7 +230,7 @@ export const createWorkspaceAccessKeyBodyLabelMax = 80;
 
 export const CreateWorkspaceAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createWorkspaceAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
 })
@@ -242,7 +242,7 @@ export const CreateWorkspaceAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -377,7 +377,7 @@ export const MyPermissionsQueryParams = zod.object({
 })
 
 export const MyPermissionsResponse = zod.object({
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).describe('Permissions the credential can exercise at the requested scope')
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).describe('Permissions the credential can exercise at the requested scope')
 })
 
 
@@ -1332,6 +1332,446 @@ export const RevokeInferenceKeyResponse = zod.object({
 
 
 /**
+ * List workspace inference policies in evaluation order.
+ *
+ * Required permission: `policies.read`.
+ * @summary List Policies
+ */
+export const ListPoliciesParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const listPoliciesResponseDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const listPoliciesResponseDefinitionConditionMax = 2048;
+
+export const listPoliciesResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const listPoliciesResponseDefinitionActionTwoNamesMax = 1000;
+
+export const listPoliciesResponseDefinitionActionThreeNamesItemMax = 255;
+
+export const listPoliciesResponseDefinitionActionThreeNamesMax = 1000;
+
+export const listPoliciesResponseDefinitionActionFourMessageMax = 200;
+
+export const listPoliciesResponseDefinitionActionFiveModelsItemMax = 255;
+
+export const listPoliciesResponseDefinitionActionFiveModelsMax = 4;
+
+export const listPoliciesResponseDefinitionActionFiveOnMax = 3;
+
+export const listPoliciesResponseDefinitionActionFiveMaxAttemptsMin = 2;
+export const listPoliciesResponseDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const listPoliciesResponseDefinitionActionFiveTimeoutMsMin = 100;
+export const listPoliciesResponseDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const listPoliciesResponseDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const ListPoliciesResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "priority": zod.int(),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(listPoliciesResponseDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionTwoNamesItemMax)).min(1).max(listPoliciesResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionThreeNamesItemMax)).min(1).max(listPoliciesResponseDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(listPoliciesResponseDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionFiveModelsItemMax)).min(1).max(listPoliciesResponseDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(listPoliciesResponseDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(listPoliciesResponseDefinitionActionFiveMaxAttemptsMin).max(listPoliciesResponseDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(listPoliciesResponseDefinitionActionFiveTimeoutMsMin).max(listPoliciesResponseDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(listPoliciesResponseDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+export const ListPoliciesResponse = zod.array(ListPoliciesResponseItem)
+
+
+/**
+ * Create a workspace inference policy; budget actions are placeholders only.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Create Policy
+ */
+export const CreatePolicyParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const createPolicyBodyNameMax = 200;
+
+export const createPolicyBodyEnabledDefault = true;
+export const createPolicyBodyPriorityDefault = 100;
+export const createPolicyBodyPriorityMin = 0;
+export const createPolicyBodyPriorityMax = 10000;
+
+export const createPolicyBodyDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const createPolicyBodyDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const createPolicyBodyDefinitionConditionMax = 2048;
+
+export const createPolicyBodyDefinitionActionTwoNamesItemMax = 255;
+
+export const createPolicyBodyDefinitionActionTwoNamesMax = 1000;
+
+export const createPolicyBodyDefinitionActionThreeNamesItemMax = 255;
+
+export const createPolicyBodyDefinitionActionThreeNamesMax = 1000;
+
+export const createPolicyBodyDefinitionActionFourMessageMax = 200;
+
+export const createPolicyBodyDefinitionActionFiveModelsItemMax = 255;
+
+export const createPolicyBodyDefinitionActionFiveModelsMax = 4;
+
+export const createPolicyBodyDefinitionActionFiveOnMax = 3;
+
+export const createPolicyBodyDefinitionActionFiveMaxAttemptsMin = 2;
+export const createPolicyBodyDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const createPolicyBodyDefinitionActionFiveTimeoutMsMin = 100;
+export const createPolicyBodyDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const createPolicyBodyDefinitionActionSixAmountUsdOneExclusiveMin = 0;
+
+export const createPolicyBodyDefinitionActionSixAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const CreatePolicyBody = zod.object({
+  "name": zod.string().min(1).max(createPolicyBodyNameMax).describe('Display name for the workspace policy'),
+  "enabled": zod.boolean().default(createPolicyBodyEnabledDefault).describe('Whether gateways apply this policy after receiving the updated configuration'),
+  "priority": zod.int().min(createPolicyBodyPriorityMin).max(createPolicyBodyPriorityMax).default(createPolicyBodyPriorityDefault).describe('Lower numbers run first; policy ID breaks ties. All matching restrictions apply'),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(createPolicyBodyDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionTwoNamesItemMax)).min(1).max(createPolicyBodyDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionThreeNamesItemMax)).min(1).max(createPolicyBodyDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(createPolicyBodyDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionFiveModelsItemMax)).min(1).max(createPolicyBodyDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createPolicyBodyDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(createPolicyBodyDefinitionActionFiveMaxAttemptsMin).max(createPolicyBodyDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(createPolicyBodyDefinitionActionFiveTimeoutMsMin).max(createPolicyBodyDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.union([zod.number().gt(createPolicyBodyDefinitionActionSixAmountUsdOneExclusiveMin),zod.string().regex(createPolicyBodyDefinitionActionSixAmountUsdTwoRegExp)]),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}).describe('Inference key target, boolean CEL condition, and typed action. Budget actions are placeholders')
+})
+
+export const createPolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const createPolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const createPolicyResponseDefinitionConditionMax = 2048;
+
+export const createPolicyResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const createPolicyResponseDefinitionActionTwoNamesMax = 1000;
+
+export const createPolicyResponseDefinitionActionThreeNamesItemMax = 255;
+
+export const createPolicyResponseDefinitionActionThreeNamesMax = 1000;
+
+export const createPolicyResponseDefinitionActionFourMessageMax = 200;
+
+export const createPolicyResponseDefinitionActionFiveModelsItemMax = 255;
+
+export const createPolicyResponseDefinitionActionFiveModelsMax = 4;
+
+export const createPolicyResponseDefinitionActionFiveOnMax = 3;
+
+export const createPolicyResponseDefinitionActionFiveMaxAttemptsMin = 2;
+export const createPolicyResponseDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const createPolicyResponseDefinitionActionFiveTimeoutMsMin = 100;
+export const createPolicyResponseDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const createPolicyResponseDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const CreatePolicyResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "priority": zod.int(),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(createPolicyResponseDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionTwoNamesItemMax)).min(1).max(createPolicyResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionThreeNamesItemMax)).min(1).max(createPolicyResponseDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(createPolicyResponseDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionFiveModelsItemMax)).min(1).max(createPolicyResponseDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createPolicyResponseDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(createPolicyResponseDefinitionActionFiveMaxAttemptsMin).max(createPolicyResponseDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(createPolicyResponseDefinitionActionFiveTimeoutMsMin).max(createPolicyResponseDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(createPolicyResponseDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+
+
+/**
+ * Update a policy without changing its workspace.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Update Policy
+ */
+export const UpdatePolicyParams = zod.object({
+  "policy_id": zod.uuid().describe('Policy id'),
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const updatePolicyBodyNameOneMax = 200;
+
+export const updatePolicyBodyPriorityOneMin = 0;
+export const updatePolicyBodyPriorityOneMax = 10000;
+
+export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax = 255;
+
+export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax = 1000;
+
+export const updatePolicyBodyDefinitionOneConditionMax = 2048;
+
+export const updatePolicyBodyDefinitionOneActionTwoNamesItemMax = 255;
+
+export const updatePolicyBodyDefinitionOneActionTwoNamesMax = 1000;
+
+export const updatePolicyBodyDefinitionOneActionThreeNamesItemMax = 255;
+
+export const updatePolicyBodyDefinitionOneActionThreeNamesMax = 1000;
+
+export const updatePolicyBodyDefinitionOneActionFourMessageMax = 200;
+
+export const updatePolicyBodyDefinitionOneActionFiveModelsItemMax = 255;
+
+export const updatePolicyBodyDefinitionOneActionFiveModelsMax = 4;
+
+export const updatePolicyBodyDefinitionOneActionFiveOnMax = 3;
+
+export const updatePolicyBodyDefinitionOneActionFiveMaxAttemptsMin = 2;
+export const updatePolicyBodyDefinitionOneActionFiveMaxAttemptsMax = 5;
+
+export const updatePolicyBodyDefinitionOneActionFiveTimeoutMsMin = 100;
+export const updatePolicyBodyDefinitionOneActionFiveTimeoutMsMax = 120000;
+
+export const updatePolicyBodyDefinitionOneActionSixAmountUsdOneExclusiveMin = 0;
+
+export const updatePolicyBodyDefinitionOneActionSixAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const UpdatePolicyBody = zod.object({
+  "name": zod.union([zod.string().min(1).max(updatePolicyBodyNameOneMax),zod.null()]).optional().describe('Replacement display name; omit to leave unchanged'),
+  "enabled": zod.union([zod.boolean(),zod.null()]).optional().describe('Enable or disable this policy; omit to leave unchanged'),
+  "priority": zod.union([zod.int().min(updatePolicyBodyPriorityOneMin).max(updatePolicyBodyPriorityOneMax),zod.null()]).optional().describe('Replacement priority, with lower numbers first; omit to leave unchanged'),
+  "definition": zod.union([zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(updatePolicyBodyDefinitionOneConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionTwoNamesItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionThreeNamesItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(updatePolicyBodyDefinitionOneActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionFiveModelsItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updatePolicyBodyDefinitionOneActionFiveOnMax),
+  "max_attempts": zod.int().min(updatePolicyBodyDefinitionOneActionFiveMaxAttemptsMin).max(updatePolicyBodyDefinitionOneActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(updatePolicyBodyDefinitionOneActionFiveTimeoutMsMin).max(updatePolicyBodyDefinitionOneActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.union([zod.number().gt(updatePolicyBodyDefinitionOneActionSixAmountUsdOneExclusiveMin),zod.string().regex(updatePolicyBodyDefinitionOneActionSixAmountUsdTwoRegExp)]),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),zod.null()]).optional().describe('Replace the complete target, CEL condition, and action; omit to leave unchanged')
+})
+
+export const updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const updatePolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const updatePolicyResponseDefinitionConditionMax = 2048;
+
+export const updatePolicyResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const updatePolicyResponseDefinitionActionTwoNamesMax = 1000;
+
+export const updatePolicyResponseDefinitionActionThreeNamesItemMax = 255;
+
+export const updatePolicyResponseDefinitionActionThreeNamesMax = 1000;
+
+export const updatePolicyResponseDefinitionActionFourMessageMax = 200;
+
+export const updatePolicyResponseDefinitionActionFiveModelsItemMax = 255;
+
+export const updatePolicyResponseDefinitionActionFiveModelsMax = 4;
+
+export const updatePolicyResponseDefinitionActionFiveOnMax = 3;
+
+export const updatePolicyResponseDefinitionActionFiveMaxAttemptsMin = 2;
+export const updatePolicyResponseDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const updatePolicyResponseDefinitionActionFiveTimeoutMsMin = 100;
+export const updatePolicyResponseDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const updatePolicyResponseDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const UpdatePolicyResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "priority": zod.int(),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(updatePolicyResponseDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionTwoNamesItemMax)).min(1).max(updatePolicyResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionThreeNamesItemMax)).min(1).max(updatePolicyResponseDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(updatePolicyResponseDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionFiveModelsItemMax)).min(1).max(updatePolicyResponseDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updatePolicyResponseDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(updatePolicyResponseDefinitionActionFiveMaxAttemptsMin).max(updatePolicyResponseDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(updatePolicyResponseDefinitionActionFiveTimeoutMsMin).max(updatePolicyResponseDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(updatePolicyResponseDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+
+
+/**
+ * Delete a workspace policy and publish the new configuration.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Delete Policy
+ */
+export const DeletePolicyParams = zod.object({
+  "policy_id": zod.uuid().describe('Policy id'),
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const DeletePolicyResponse = zod.object({
+  "id": zod.uuid(),
+  "deleted_at": zod.coerce.date()
+})
+
+
+/**
  * List provider credentials owned by the instance.
  *
  * Required permission: `provider-credentials.read`.
@@ -1793,7 +2233,7 @@ export const CreateOrgServiceAccountBody = zod.object({
   "name": zod.string().min(1).max(createOrgServiceAccountBodyNameMax).describe('Display name for the service account'),
   "access_key": zod.object({
   "label": zod.string().min(1).max(createOrgServiceAccountBodyAccessKeyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 }).describe('Initial organization-scoped management key to issue for the service account')
 })
@@ -1824,7 +2264,7 @@ export const CreateOrgServiceAccountResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -2059,6 +2499,40 @@ export const getBundleResponseCatalogModelsItemInputModalitiesMax = 5;
 
 export const getBundleResponseCatalogModelsItemOutputModalitiesMax = 5;
 
+export const getBundleResponsePoliciesItemNameMax = 200;
+
+export const getBundleResponsePoliciesItemPriorityMin = 0;
+export const getBundleResponsePoliciesItemPriorityMax = 10000;
+
+export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const getBundleResponsePoliciesItemDefinitionConditionMax = 2048;
+
+export const getBundleResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
+
+export const getBundleResponsePoliciesItemDefinitionActionTwoNamesMax = 1000;
+
+export const getBundleResponsePoliciesItemDefinitionActionThreeNamesItemMax = 255;
+
+export const getBundleResponsePoliciesItemDefinitionActionThreeNamesMax = 1000;
+
+export const getBundleResponsePoliciesItemDefinitionActionFourMessageMax = 200;
+
+export const getBundleResponsePoliciesItemDefinitionActionFiveModelsItemMax = 255;
+
+export const getBundleResponsePoliciesItemDefinitionActionFiveModelsMax = 4;
+
+export const getBundleResponsePoliciesItemDefinitionActionFiveOnMax = 3;
+
+export const getBundleResponsePoliciesItemDefinitionActionFiveMaxAttemptsMin = 2;
+export const getBundleResponsePoliciesItemDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMin = 100;
+export const getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const getBundleResponsePoliciesItemDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const GetBundleResponse = zod.object({
@@ -2110,7 +2584,46 @@ export const GetBundleResponse = zod.object({
   "priority": zod.int(),
   "version": zod.int()
 }).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
-}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
+}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.'),
+  "policies": zod.array(zod.object({
+  "id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string().min(1).max(getBundleResponsePoliciesItemNameMax),
+  "priority": zod.int().min(getBundleResponsePoliciesItemPriorityMin).max(getBundleResponsePoliciesItemPriorityMax),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionTwoNamesItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionThreeNamesItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionFiveModelsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(getBundleResponsePoliciesItemDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(getBundleResponsePoliciesItemDefinitionActionFiveMaxAttemptsMin).max(getBundleResponsePoliciesItemDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMin).max(getBundleResponsePoliciesItemDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(getBundleResponsePoliciesItemDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+})
+}))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
 
 
@@ -2134,6 +2647,40 @@ export const bundleLatestResponseCatalogModelsItemInputModalitiesMax = 5;
 
 export const bundleLatestResponseCatalogModelsItemOutputModalitiesMax = 5;
 
+export const bundleLatestResponsePoliciesItemNameMax = 200;
+
+export const bundleLatestResponsePoliciesItemPriorityMin = 0;
+export const bundleLatestResponsePoliciesItemPriorityMax = 10000;
+
+export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 255;
+
+export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
+
+export const bundleLatestResponsePoliciesItemDefinitionConditionMax = 2048;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionTwoNamesMax = 1000;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionThreeNamesItemMax = 255;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionThreeNamesMax = 1000;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFourMessageMax = 200;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveModelsItemMax = 255;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveModelsMax = 4;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveOnMax = 3;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveMaxAttemptsMin = 2;
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveMaxAttemptsMax = 5;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMin = 100;
+export const bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMax = 120000;
+
+export const bundleLatestResponsePoliciesItemDefinitionActionSixAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const BundleLatestResponse = zod.object({
@@ -2185,7 +2732,46 @@ export const BundleLatestResponse = zod.object({
   "priority": zod.int(),
   "version": zod.int()
 }).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
-}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
+}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.'),
+  "policies": zod.array(zod.object({
+  "id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string().min(1).max(bundleLatestResponsePoliciesItemNameMax),
+  "priority": zod.int().min(bundleLatestResponsePoliciesItemPriorityMin).max(bundleLatestResponsePoliciesItemPriorityMax),
+  "definition": zod.object({
+  "target": zod.union([zod.object({
+  "kind": zod.literal("all_keys")
+}),zod.object({
+  "kind": zod.literal("selected_keys"),
+  "key_ids": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
+})]),
+  "condition": zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionConditionMax),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("byok")
+}),zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionTwoNamesItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionThreeNamesItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionThreeNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionFourMessageMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionFiveModelsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionFiveModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionFiveOnMax),
+  "max_attempts": zod.int().min(bundleLatestResponsePoliciesItemDefinitionActionFiveMaxAttemptsMin).max(bundleLatestResponsePoliciesItemDefinitionActionFiveMaxAttemptsMax),
+  "timeout_ms": zod.int().min(bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMin).max(bundleLatestResponsePoliciesItemDefinitionActionFiveTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "enforcement": zod.literal("placeholder"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(bundleLatestResponsePoliciesItemDefinitionActionSixAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+})
+}))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
 
 
