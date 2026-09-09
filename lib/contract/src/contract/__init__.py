@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 from contract.bundle import (
-    MODALITIES,
     BundleManifest,
     BundleManifestEntry,
     BundleV1,
-    Capability,
     Catalog,
     CredentialEntry,
     KeyEntry,
-    Modality,
     ModelEntry,
-    ParameterSupport,
     ProviderEntry,
 )
 from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
@@ -25,6 +21,7 @@ from contract.events import (
     UsageStatus,
 )
 from contract.ids import uuid7
+from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
     EnvSecretStore,

@@ -85,6 +85,7 @@ def make_bundle(keys=(), catalog=None, org=ORG):
         org_id=org,
         issued_at=NOW,
         keys=list(keys),
+        policies=(),
         catalog=catalog or Catalog(providers=[], models=[]),
     )
 

@@ -54,6 +54,7 @@ TOMBSTONED = (
     "org_invitation",
     "org_membership",
     "playground_session",
+    "policy",
     "provider",
     "provider_credential",
     "user",
@@ -69,6 +70,7 @@ AUDITED = (
     ("org_invitation", ("id",)),
     ("org_membership", ("user_id", "org_id")),
     ("playground_session", ("id",)),
+    ("policy", ("id",)),
     ("provider", ("id",)),
     ("provider_credential", ("id",)),
     ("user", ("id",)),
@@ -527,6 +529,38 @@ def upgrade() -> None:
         sa.Column("value", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("address"),
     )
+    op.create_table(
+        "policy",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=200), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("definition", sa.JSON(), nullable=False),
+        sa.ForeignKeyConstraint(["org_id"], ["org.id"]),
+        sa.ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
+        sa.CheckConstraint("priority >= 0 AND priority <= 10000", name="policy_priority_valid"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index("policy_workspace_priority_id_idx", "policy", ["workspace_id", "priority", "id"], unique=False)
+    op.create_index(
+        "policy_active_workspace_id_idx",
+        "policy",
+        ["workspace_id", "id"],
+        unique=False,
+        postgresql_where=sa.text("enabled"),
+    )
+    op.create_index(
+        "policy_active_org_id_idx",
+        "policy",
+        ["org_id", "id"],
+        unique=False,
+        postgresql_where=sa.text("enabled"),
+    )
     for table in TOMBSTONED:
         for statement in touch_trigger_ddl_v1(table):
             op.execute(statement)
@@ -543,6 +577,10 @@ def downgrade() -> None:
         for statement in touch_trigger_drop_ddl_v1(table):
             op.execute(statement)
     op.drop_table("insecure_vault_secret")
+    op.drop_index("policy_active_org_id_idx", table_name="policy")
+    op.drop_index("policy_active_workspace_id_idx", table_name="policy")
+    op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
+    op.drop_table("policy")
     op.drop_table("playground_session")
     op.drop_table("runtime_configuration")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")

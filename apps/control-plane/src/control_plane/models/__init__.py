@@ -16,9 +16,10 @@ from control_plane.models.org import Org
 from control_plane.models.org_invitation import OrgInvitation
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.playground_session import PlaygroundSession
+from control_plane.models.policy import Policy
 from control_plane.models.provider import Provider
 from control_plane.models.provider_credential import ProviderCredential
-from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configured
+from control_plane.models.runtime_configuration import RuntimeConfiguration, bundle_input
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
 from control_plane.models.workspace import Workspace
@@ -42,6 +43,7 @@ __all__ = [
     "OrgMembership",
     "OrgOwned",
     "PlaygroundSession",
+    "Policy",
     "Provider",
     "ProviderCredential",
     "Record",
@@ -52,6 +54,6 @@ __all__ = [
     "Workspace",
     "WorkspaceMembership",
     "audited",
-    "runtime_configured",
+    "bundle_input",
     "set_actor",
 ]

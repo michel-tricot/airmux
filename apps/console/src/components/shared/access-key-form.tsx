@@ -40,7 +40,7 @@ export function PermissionChecklist({
   if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue access keys at this scope.</p>;
   return (
     <>
-      <div className="permission-scrollbar max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
+      <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
         {groupPermissions(availablePermissions).map(([resource, permissions]) => (
           <div key={resource} className="space-y-1">
             <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>

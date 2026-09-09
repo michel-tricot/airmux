@@ -119,7 +119,7 @@ export const Switch = forwardRef<
     <span
       className={cn(
         'pointer-events-none block h-3.5 w-3.5 translate-x-1 rounded-full bg-white shadow transition-transform',
-        checked && 'translate-x-4',
+        checked && 'translate-x-4.5',
       )}
     />
   </button>
@@ -382,7 +382,7 @@ export const Badge = ({
     <BadgePrimitive
       variant={variant === 'success' || variant === 'warning' || variant === 'mono' ? 'outline' : variant}
       className={cn(
-        'inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors',
+        'inline-flex h-5 items-center justify-center rounded border px-2 pb-0 pt-0.5 text-[10px] leading-none font-mono font-bold uppercase tracking-wider transition-colors',
         variants[variant],
         className,
       )}
@@ -433,7 +433,7 @@ export const Modal = ({
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent
       className={cn(
-        'w-[calc(100%-2rem)] gap-6 border-border bg-card text-card-foreground shadow-2xl shadow-black/50 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-top-[50%]',
+        'w-[calc(100%-2rem)] grid-cols-1 gap-6 border-border bg-card text-card-foreground shadow-2xl shadow-black/50 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-top-[50%]',
         contentClassName,
       )}
     >

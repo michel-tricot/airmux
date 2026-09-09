@@ -133,6 +133,14 @@ class _StubHandler(BaseHTTPRequestHandler):
         messages = request.get("messages")
         message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
         prompt = message.get("content")
+        if prompt == "fallback-primary-unavailable" and request.get("model") == MODEL:
+            body = json.dumps({"error": {"message": "primary unavailable"}}).encode("utf-8")
+            self.send_response(503)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if prompt == "rate-limited":
             body = json.dumps({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}).encode("utf-8")
             self.send_response(429)

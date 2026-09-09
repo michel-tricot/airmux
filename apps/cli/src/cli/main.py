@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from cli import auth, commands, diagnostics, resources  # noqa: F401 importing registers the commands on the shared app
+from cli import auth, commands, diagnostics, policies, resources  # noqa: F401 importing registers the commands on the shared app
 from cli.common import app
 from cli.profiles import InvalidConfigError
 

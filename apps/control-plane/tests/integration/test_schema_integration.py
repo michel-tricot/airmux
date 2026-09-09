@@ -110,6 +110,18 @@ def test_migrations_produce_the_model_schema(pg_db):
     assert diff == []
 
 
+def test_policy_access_paths_are_indexed_in_models_and_migrations(pg_db):
+    expected = {
+        "policy_active_org_id_idx",
+        "policy_active_workspace_id_idx",
+        "policy_workspace_priority_id_idx",
+    }
+    assert {index.name for index in SQLModel.metadata.tables["policy"].indexes} >= expected
+    url = _migrated_url(pg_db)
+    migrated = _run_sync(url, lambda conn: {index["name"] for index in inspect(conn).get_indexes("policy")})
+    assert migrated >= expected
+
+
 def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db):
     expected = {
         ("org", "slug"),

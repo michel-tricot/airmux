@@ -32,6 +32,8 @@ export const Permission = {
   'provider-credentialsmanage': 'provider-credentials.manage',
   'inference-keysread': 'inference-keys.read',
   'inference-keysmanage': 'inference-keys.manage',
+  policiesread: 'policies.read',
+  policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
   bundlespublish: 'bundles.publish',
@@ -165,6 +167,85 @@ export interface ActivityOut {
   action: string;
   user_id: string;
   occurred_at: string;
+}
+
+export const AllKeysValue = {
+  kind: 'all_keys',
+} as const;
+export type AllKeys = typeof AllKeysValue;
+
+export const AllRequestsValue = {
+  kind: 'all_requests',
+} as const;
+export type AllRequests = typeof AllRequestsValue;
+
+export interface AllowedModels {
+  kind: 'models';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  names: string[];
+}
+
+export interface AllowedProviders {
+  kind: 'providers';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  names: string[];
+}
+
+export type BudgetInputPeriod = typeof BudgetInputPeriod[keyof typeof BudgetInputPeriod];
+
+
+export const BudgetInputPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetInputSharing = typeof BudgetInputSharing[keyof typeof BudgetInputSharing];
+
+
+export const BudgetInputSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface BudgetInput {
+  kind: 'budget';
+  period: BudgetInputPeriod;
+  amount_usd: number | string;
+  sharing: BudgetInputSharing;
+}
+
+export type BudgetOutputPeriod = typeof BudgetOutputPeriod[keyof typeof BudgetOutputPeriod];
+
+
+export const BudgetOutputPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetOutputSharing = typeof BudgetOutputSharing[keyof typeof BudgetOutputSharing];
+
+
+export const BudgetOutputSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface BudgetOutput {
+  kind: 'budget';
+  period: BudgetOutputPeriod;
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  amount_usd: string;
+  sharing: BudgetOutputSharing;
 }
 
 /**
@@ -330,6 +411,147 @@ export interface Catalog {
   credentials?: CredentialEntry[];
 }
 
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
+export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
+
+
+export const RequestMatchCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatch {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchCapabilitiesItem[];
+}
+
+export const RequireByokValue = {
+  kind: 'byok',
+} as const;
+export type RequireByok = typeof RequireByokValue;
+
+export interface DenyRequest {
+  kind: 'deny';
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  message: string;
+}
+
+export const StrictParametersValue = {
+  kind: 'strict_parameters',
+} as const;
+export type StrictParameters = typeof StrictParametersValue;
+
+export interface PriceLimitOutput {
+  kind: 'price_limit';
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  max_input_price_per_mtok: string;
+  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  max_output_price_per_mtok: string;
+}
+
+export interface RequestLimits {
+  kind: 'request_limits';
+  /** @minimum 1 */
+  max_output_tokens: number;
+}
+
+export type CredentialAccessScopesItem = typeof CredentialAccessScopesItem[keyof typeof CredentialAccessScopesItem];
+
+
+export const CredentialAccessScopesItem = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface CredentialAccess {
+  kind: 'credential_access';
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  scopes: CredentialAccessScopesItem[];
+}
+
+export type FallbackOnItem = typeof FallbackOnItem[keyof typeof FallbackOnItem];
+
+
+export const FallbackOnItem = {
+  rate_limited: 'rate_limited',
+  upstream_unavailable: 'upstream_unavailable',
+  timeout: 'timeout',
+} as const;
+
+export interface Fallback {
+  kind: 'fallback';
+  /**
+     * @minItems 1
+     * @maxItems 4
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models: string[];
+  /**
+     * @minItems 1
+     * @maxItems 3
+     */
+  on: FallbackOnItem[];
+  /**
+     * @minimum 2
+     * @maximum 5
+     */
+  max_attempts: number;
+  /**
+     * @minimum 100
+     * @maximum 120000
+     */
+  timeout_ms: number;
+}
+
+export interface PolicyDefinitionOutput {
+  target: AllKeys | SelectedKeys;
+  match: AllRequests | RequestMatch;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+}
+
+export interface PolicyEntry {
+  id: string;
+  workspace_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minimum 0
+     * @maximum 10000
+     */
+  priority: number;
+  definition: PolicyDefinitionOutput;
+}
+
 /**
  * A complete, versioned policy snapshot for one organization's model traffic.
  */
@@ -340,6 +562,7 @@ export interface BundleV1 {
   issued_at: string;
   keys: KeyEntry[];
   catalog: Catalog;
+  policies: PolicyEntry[];
 }
 
 export interface ClaimOut {
@@ -1036,6 +1259,66 @@ export interface PlaygroundSessionReadyOut {
   id: string;
   expires_at: string;
   status: 'ready';
+}
+
+export interface PriceLimitInput {
+  kind: 'price_limit';
+  max_input_price_per_mtok: number | string;
+  max_output_price_per_mtok: number | string;
+}
+
+export interface PolicyDefinitionInput {
+  target: AllKeys | SelectedKeys;
+  match: AllRequests | RequestMatch;
+  action: RequireByok | AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+}
+
+export interface PolicyCreate {
+  /**
+     * Display name for the workspace policy
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** Whether gateways apply this policy after receiving the updated configuration */
+  enabled?: boolean;
+  /**
+     * Lower numbers run first; policy ID breaks ties. All matching restrictions apply
+     * @minimum 0
+     * @maximum 10000
+     */
+  priority?: number;
+  /** Inference key target, typed request match, and action. Budgets are not yet enforced */
+  definition: PolicyDefinitionInput;
+}
+
+export interface PolicyOrder {
+  /** Every workspace policy ID, from first to last evaluation priority */
+  policy_ids: string[];
+}
+
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface PolicyUpdate {
+  /** Replacement display name; omit to leave unchanged */
+  name?: string | null;
+  /** Enable or disable this policy; omit to leave unchanged */
+  enabled?: boolean | null;
+  /** Replacement priority, with lower numbers first; omit to leave unchanged */
+  priority?: number | null;
+  /** Replace the complete target, request match, and action; omit to leave unchanged */
+  definition?: PolicyDefinitionInput | null;
 }
 
 /**

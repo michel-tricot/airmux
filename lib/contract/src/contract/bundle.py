@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, cast, get_args
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
+from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
-
-ParameterSupport = Literal["supported", "unsupported"]
-Modality = Literal["text", "image", "audio", "video", "pdf"]
-MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
-Capability = Literal["streaming", "tools", "reasoning", "structured_output"]
 
 
 class KeyEntry(BaseModel):
@@ -99,6 +96,7 @@ class BundleV1(BaseModel):
     issued_at: datetime
     keys: list[KeyEntry]
     catalog: Catalog
+    policies: tuple[PolicyEntry, ...]
 
 
 class BundleManifestEntry(BaseModel):

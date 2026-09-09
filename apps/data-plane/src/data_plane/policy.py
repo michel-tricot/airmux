@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
-from data_plane.credentials import candidates_for
+from data_plane.credentials import policy_candidates, preferred_candidates
+from data_plane.policies import matching_policies
+from data_plane.policy_actions import ActionContext, EvaluationState, evaluate_action
+from data_plane.requirements import required_capabilities, required_input_modalities
 
 if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
+    from contract.policies import Fallback, PolicyEntry
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
     from data_plane.profiles import CompiledProfile
@@ -22,7 +26,14 @@ class Allow:
 
 @dataclass(frozen=True)
 class Deny:
-    code: Literal["unknown_model", "unsupported_input_modality", "unsupported_feature", "provider_not_configured", "credential_unavailable"]
+    code: Literal[
+        "unknown_model",
+        "unsupported_input_modality",
+        "unsupported_feature",
+        "provider_not_configured",
+        "credential_unavailable",
+        "policy_denied",
+    ]
     status: int
     message: str = ""
 
@@ -30,27 +41,38 @@ class Deny:
 type Decision = Allow | Deny
 
 
-def required_capabilities(req: CanonicalRequest) -> frozenset[str]:
-    part_capabilities = {"reasoning": "reasoning", "tool_call": "tools", "tool_result": "tools"}
-    capabilities = {capability for message in req.messages for part in message.content if (capability := part_capabilities.get(part.type))}
-    if req.stream:
-        capabilities.add("streaming")
-    if req.tools or req.tool_choice is not None:
-        capabilities.add("tools")
-    if req.reasoning is not None:
-        capabilities.add("reasoning")
-    if req.response_format is not None and req.response_format.type != "text":
-        capabilities.add("structured_output")
-    return frozenset(capabilities)
+@dataclass(frozen=True)
+class PolicyEvaluation:
+    decision: Decision
+    fallback: Fallback | None
+    policies: tuple[PolicyEntry, ...]
 
 
-def required_input_modalities(req: CanonicalRequest) -> frozenset[str]:
-    part_modalities = {"image": "image", "document": "pdf"}
-    return frozenset(modality for message in req.messages for part in message.content if (modality := part_modalities.get(part.type)))
+def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None) -> Decision:
+    return evaluate_policies(req, key, snap, policies).decision
 
 
-def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
-    """Return eligible credentials; cooldown-aware selection belongs to the request executor."""
+def evaluate_policies(
+    req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None
+) -> PolicyEvaluation:
+    """Return eligible credentials and fallback; cooldown-aware selection belongs to the request executor."""
+    policies = matching_policies(req, key, snap.policy_index) if policies is None else policies
+    route = _route(req, key, snap)
+    if isinstance(route, Deny):
+        return PolicyEvaluation(route, None, policies)
+    state = EvaluationState(candidates=route.candidates)
+    for policy in policies:
+        context = ActionContext(policy=policy, request=req, key=key, model=route.model, provider=route.provider, profile=route.profile)
+        state = evaluate_action(policy.definition.action, context, state)
+        if state.denial is not None:
+            return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, policies)
+    candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)
+    if not candidates:
+        return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, policies)
+    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, policies)
+
+
+def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
     model = snap.model_index.get(req.model)
     if model is None:
         return Deny(code="unknown_model", status=404)
@@ -63,7 +85,5 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Deci
     provider = snap.provider_index.get(model.provider_id)
     if provider is None:
         return Deny(code="provider_not_configured", status=502)
-    candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
-    if not candidates:
-        return Deny(code="credential_unavailable", status=402)
+    candidates = policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
     return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])

@@ -25,8 +25,9 @@ from data_plane.errors import UnsupportedFeatureError
 from data_plane.ingress import CANONICAL, UnknownDialectError, resolve
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metering import RequestStart, record_denied, record_usage, status_for_error, status_for_upstream
-from data_plane.policy import Allow, Deny, evaluate
+from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
+from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret
+    from contract.policies import FallbackReason
     from data_plane.bundle.holder import BundleHolder, BundleSnapshot
     from data_plane.credentials import CredentialResolver
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
@@ -194,10 +196,7 @@ class StreamSession:
 
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
-            try:
-                response = await _open_response(stack, self.http_client, upstream)
-            except httpx.HTTPError as error:
-                return self.ingress.render_error(_record_upstream_error(self.adapter, self.ctx, error, self.request, self.outbox))
+            response = await _open_response(stack, self.http_client, upstream)
             stream_state = self.adapter.new_stream_state(self.ctx)
             handoff = stack.pop_all()
 
@@ -241,6 +240,13 @@ class StreamSession:
 
 
 @dataclass(frozen=True)
+class AttemptFailure:
+    response: Response
+    reason: FallbackReason | None
+    retry_credential: bool
+
+
+@dataclass(frozen=True)
 class RequestExecution:
     """Everything fixed after authentication and parsing for one request."""
 
@@ -253,8 +259,8 @@ class RequestExecution:
     start: RequestStart
 
     async def run(self) -> Response:
-        decision = evaluate(self.request, self.key, self.snapshot)
-        if isinstance(decision, Deny):
+        plan = plan_routes(self.request, self.key, self.snapshot)
+        if isinstance(plan, Deny):
             record_denied(
                 self.runtime.outbox,
                 self.key,
@@ -262,61 +268,82 @@ class RequestExecution:
                 self.request,
                 self.start,
             )
-            raise RequestRejectedError(decision.status, decision.code, decision.message)
+            raise RequestRejectedError(plan.status, plan.code, plan.message)
+        try:
+            async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
+                return await self._execute(plan)
+        except TimeoutError as error:
+            raise RequestRejectedError(504, "fallback_deadline_exceeded", "The fallback time limit was reached") from error
 
-        egress_kind = decision.model.egress_kind or decision.provider.kind
-        request, reconcile_adjustments = reconcile(self.request, decision.model, decision.profile)
-        adjustments = [*self.parse_adjustments, *reconcile_adjustments]
-        candidates = self.runtime.credentials.available(decision.candidates)
-        if not candidates:
-            raise RequestRejectedError(429, "credential_rate_limited")
-        last_retryable: Response | None = None
-        for entry in candidates:
-            credential = await _resolve_credential(entry, self.runtime.credentials)
-            if credential is None:
-                continue
-            adapter = REGISTRY[egress_kind](decision.provider, credential)
-            ctx = self._ctx(decision, entry)
-            upstream = _transform(adapter, request, decision.model)
-            try:
-                if request.stream:
-                    session = StreamSession(
-                        adapter=adapter,
-                        ingress=self.ingress,
-                        ctx=ctx,
-                        request=request,
-                        adjustments=tuple(adjustments),
-                        outbox=self.runtime.outbox,
-                        http_client=self.runtime.http_client,
-                    )
-                    return await session.open(upstream)
-                response = await self.runtime.http_client.request(
-                    upstream.method,
-                    upstream.url,
-                    headers=upstream.headers,
-                    content=upstream.body,
-                )
-            except UpstreamResponseError as error:
-                last_retryable = self._upstream_failure(adapter, ctx, entry, error, request)
-                continue
-            except httpx.HTTPError as error:
-                return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
-            if response.is_error:
-                error = UpstreamResponseError(response.status_code, response.content)
-                if status_for_upstream(error.status) in {"credential_rejected", "rate_limited"}:
-                    last_retryable = self._upstream_failure(adapter, ctx, entry, error, request)
+    async def _execute(self, plan: RoutePlan) -> Response:
+        attempts = 0
+        failure: AttemptFailure | None = None
+        for decision in (plan.primary, *plan.backups):
+            for entry in self.runtime.credentials.available(decision.candidates):
+                if attempts >= plan.max_attempts:
+                    break
+                credential = await _resolve_credential(entry, self.runtime.credentials)
+                if credential is None:
                     continue
-                return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
-            try:
-                final = adapter.transform_response(response.content, ctx)
-                final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
-            except UpstreamProtocolError as error:
-                return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
-            record_usage(self.runtime.outbox, ctx, final, status="ok", request=request)
-            return self.ingress.render_response(final)
-        if last_retryable is not None:
-            return last_retryable
+                attempts += 1
+                outcome = await self._attempt(decision, entry, credential)
+                if isinstance(outcome, Response):
+                    return outcome
+                failure = outcome
+                if not failure.retry_credential:
+                    break
+            if failure is None:
+                raise RequestRejectedError(502, "credential_missing")
+            if failure.reason not in plan.retry_on or attempts >= plan.max_attempts:
+                return failure.response
+        if failure is not None:
+            return failure.response
         raise RequestRejectedError(502, "credential_missing")
+
+    async def _attempt(self, decision: Allow, entry: CredentialEntry, credential: Secret) -> Response | AttemptFailure:
+        egress_kind = decision.model.egress_kind or decision.provider.kind
+        routed_request = self.request.model_copy(update={"model": decision.model.model_id})
+        request, reconcile_adjustments = reconcile(routed_request, decision.model, decision.profile)
+        adjustments = [*self.parse_adjustments, *reconcile_adjustments]
+        adapter = REGISTRY[egress_kind](decision.provider, credential)
+        ctx = self._ctx(decision, entry)
+        upstream = _transform(adapter, request, decision.model)
+        try:
+            if request.stream:
+                session = StreamSession(
+                    adapter=adapter,
+                    ingress=self.ingress,
+                    ctx=ctx,
+                    request=request,
+                    adjustments=tuple(adjustments),
+                    outbox=self.runtime.outbox,
+                    http_client=self.runtime.http_client,
+                )
+                return await session.open(upstream)
+            response = await self.runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+            _check_upstream(response)
+            final = adapter.transform_response(response.content, ctx)
+        except UpstreamResponseError as error:
+            rendered = self._upstream_failure(adapter, ctx, entry, error, request)
+            reason: FallbackReason | None = (
+                "rate_limited"
+                if error.status == httpx.codes.TOO_MANY_REQUESTS
+                else "upstream_unavailable"
+                if error.status >= httpx.codes.INTERNAL_SERVER_ERROR
+                else None
+            )
+            return AttemptFailure(rendered, reason, error.status in {httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN, httpx.codes.TOO_MANY_REQUESTS})
+        except httpx.HTTPError as error:
+            rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
+            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx.TimeoutException) else "upstream_unavailable", False)
+        except UpstreamProtocolError as error:
+            return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
+        except asyncio.CancelledError:
+            record_usage(self.runtime.outbox, ctx, _empty_response(ctx), status="cancelled", request=request)
+            raise
+        final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
+        record_usage(self.runtime.outbox, ctx, final, status="ok", request=request)
+        return self.ingress.render_response(final)
 
     def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
         return Ctx(
@@ -347,6 +374,11 @@ class RequestExecution:
         elif status == "rate_limited":
             self.runtime.credentials.rate_limit(entry)
         return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
+
+
+def _check_upstream(response: httpx.Response) -> None:
+    if response.is_error:
+        raise UpstreamResponseError(response.status_code, response.content)
 
 
 async def _resolve_credential(entry: CredentialEntry, resolver: CredentialResolver) -> Secret | None:

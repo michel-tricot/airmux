@@ -28,6 +28,7 @@ database and application state.
 
 # Guides
 
+- [Configure workspace policies](/docs/policies): request restrictions, credential rules, and model fallbacks
 - [Deploy AirLLM](/docs/deployment/index): Docker, Fly.io, Render, and DigitalOcean
 - [Separate services](/docs/deployment/scaling): independent control plane and gateway replicas
 - [Develop locally](/docs/development): source setup, checks, and generated clients

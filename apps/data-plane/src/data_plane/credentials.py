@@ -43,17 +43,15 @@ def index_credentials(bundle: BundleV1) -> CredentialIndex:
     return {key: tuple(sorted(entries, key=lambda e: (e.priority, e.ref.name))) for key, entries in grouped.items()}
 
 
-def candidates_for(index: CredentialIndex, workspace_id: UUID, org_id: UUID, provider: str) -> tuple[CredentialEntry, ...]:
-    """The most specific tier holding anything: workspace, else org, else platform.
+def policy_candidates(index: CredentialIndex, workspace_id: UUID, org_id: UUID, provider: str) -> tuple[CredentialEntry, ...]:
+    return tuple(entry for owner in (workspace_id, org_id, None) for entry in index.get((owner, provider), ()))
 
-    Empty tiers cascade so a workspace that brought no key of its own still serves. A tier that has
-    credentials is the tier, even if every one of them turns out to be broken: falling through on
-    failure would move an org's spend onto the platform account without anyone asking.
-    """
+
+def preferred_candidates(entries: tuple[CredentialEntry, ...], workspace_id: UUID, org_id: UUID) -> tuple[CredentialEntry, ...]:
     for owner in (workspace_id, org_id, None):
-        found = index.get((owner, provider))
-        if found:
-            return found
+        candidates = tuple(entry for entry in entries if (entry.ref.workspace_id or entry.ref.org_id) == owner)
+        if candidates:
+            return candidates
     return ()
 
 

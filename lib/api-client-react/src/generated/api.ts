@@ -96,6 +96,10 @@ import type {
   PasswordChangedOut,
   PlaygroundSessionEndedOut,
   PlaygroundSessionReadyOut,
+  PolicyCreate,
+  PolicyOrder,
+  PolicyOut,
+  PolicyUpdate,
   ProviderCredentialIn,
   ProviderCredentialOut,
   ProviderCredentialUpdate,
@@ -4682,6 +4686,429 @@ export const useRevokeInferenceKey = <TError = ErrorType<void | HTTPValidationEr
         TContext
       > => {
       return useMutation(getRevokeInferenceKeyMutationOptions(options), queryClient);
+    }
+
+export const getListPoliciesUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies`
+}
+
+/**
+ * List workspace inference policies in evaluation order.
+ *
+ * Required permission: `policies.read`.
+ * @summary List Policies
+ */
+export const listPolicies = async (orgId: string,
+    workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<PolicyOut[]> => {
+
+  return customFetch<PolicyOut[]>(getListPoliciesUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPoliciesQueryKey = (orgId: string,
+    workspaceRef: string,) => {
+    return [
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies`
+    ] as const;
+    }
+
+
+export const getListPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPoliciesQueryKey(orgId,workspaceRef);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPolicies>>> = ({ signal }) => listPolicies(orgId,workspaceRef, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof listPolicies>>>
+export type ListPoliciesQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListPolicies<TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPolicies>>,
+          TError,
+          Awaited<ReturnType<typeof listPolicies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPolicies<TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPolicies>>,
+          TError,
+          Awaited<ReturnType<typeof listPolicies>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPolicies<TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Policies
+ */
+
+export function useListPolicies<TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPoliciesQueryOptions(orgId,workspaceRef,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePolicyUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies`
+}
+
+/**
+ * Create a workspace inference policy; budgets are recorded but not yet enforced.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Create Policy
+ */
+export const createPolicy = async (orgId: string,
+    workspaceRef: string,
+    policyCreate: PolicyCreate, options?: Parameters<typeof customFetch>[1]): Promise<PolicyOut> => {
+
+  return customFetch<PolicyOut>(getCreatePolicyUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyCreate)
+  }
+);}
+
+
+
+
+
+export const getCreatePolicyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyCreate>}, TContext> => {
+
+const mutationKey = ['createPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPolicy>>, {orgId: string;workspaceRef: string;data: BodyType<PolicyCreate>}> = (props) => {
+          const {orgId,workspaceRef,data} = props ?? {};
+
+          return  createPolicy(orgId,workspaceRef,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePolicyMutationResult = NonNullable<Awaited<ReturnType<typeof createPolicy>>>
+    export type CreatePolicyMutationBody = BodyType<PolicyCreate>
+    export type CreatePolicyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Create Policy
+ */
+export const useCreatePolicy = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createPolicy>>,
+        TError,
+        {orgId: string;workspaceRef: string;data: BodyType<PolicyCreate>},
+        TContext
+      > => {
+      return useMutation(getCreatePolicyMutationOptions(options), queryClient);
+    }
+
+export const getReorderPoliciesUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies/order`
+}
+
+/**
+ * Replace the workspace policy evaluation order.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Reorder Policies
+ */
+export const reorderPolicies = async (orgId: string,
+    workspaceRef: string,
+    policyOrder: PolicyOrder, options?: Parameters<typeof customFetch>[1]): Promise<PolicyOut[]> => {
+
+  return customFetch<PolicyOut[]>(getReorderPoliciesUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyOrder)
+  }
+);}
+
+
+
+
+
+export const getReorderPoliciesMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext> => {
+
+const mutationKey = ['reorderPolicies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderPolicies>>, {orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}> = (props) => {
+          const {orgId,workspaceRef,data} = props ?? {};
+
+          return  reorderPolicies(orgId,workspaceRef,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderPoliciesMutationResult = NonNullable<Awaited<ReturnType<typeof reorderPolicies>>>
+    export type ReorderPoliciesMutationBody = BodyType<PolicyOrder>
+    export type ReorderPoliciesMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Reorder Policies
+ */
+export const useReorderPolicies = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reorderPolicies>>,
+        TError,
+        {orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>},
+        TContext
+      > => {
+      return useMutation(getReorderPoliciesMutationOptions(options), queryClient);
+    }
+
+export const getUpdatePolicyUrl = (orgId: string,
+    workspaceRef: string,
+    policyId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies/${policyId}`
+}
+
+/**
+ * Update a policy without changing its workspace.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Update Policy
+ */
+export const updatePolicy = async (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    policyUpdate: PolicyUpdate, options?: Parameters<typeof customFetch>[1]): Promise<PolicyOut> => {
+
+  return customFetch<PolicyOut>(getUpdatePolicyUrl(orgId,workspaceRef,policyId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePolicyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string;data: BodyType<PolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string;data: BodyType<PolicyUpdate>}, TContext> => {
+
+const mutationKey = ['updatePolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePolicy>>, {orgId: string;workspaceRef: string;policyId: string;data: BodyType<PolicyUpdate>}> = (props) => {
+          const {orgId,workspaceRef,policyId,data} = props ?? {};
+
+          return  updatePolicy(orgId,workspaceRef,policyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updatePolicy>>>
+    export type UpdatePolicyMutationBody = BodyType<PolicyUpdate>
+    export type UpdatePolicyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Update Policy
+ */
+export const useUpdatePolicy = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string;data: BodyType<PolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updatePolicy>>,
+        TError,
+        {orgId: string;workspaceRef: string;policyId: string;data: BodyType<PolicyUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePolicyMutationOptions(options), queryClient);
+    }
+
+export const getDeletePolicyUrl = (orgId: string,
+    workspaceRef: string,
+    policyId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/policies/${policyId}`
+}
+
+/**
+ * Delete a workspace policy and publish the new configuration.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Delete Policy
+ */
+export const deletePolicy = async (orgId: string,
+    workspaceRef: string,
+    policyId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
+
+  return customFetch<DeletedOutUUID>(getDeletePolicyUrl(orgId,workspaceRef,policyId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeletePolicyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string}, TContext> => {
+
+const mutationKey = ['deletePolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePolicy>>, {orgId: string;workspaceRef: string;policyId: string}> = (props) => {
+          const {orgId,workspaceRef,policyId} = props ?? {};
+
+          return  deletePolicy(orgId,workspaceRef,policyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePolicyMutationResult = NonNullable<Awaited<ReturnType<typeof deletePolicy>>>
+
+    export type DeletePolicyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Delete Policy
+ */
+export const useDeletePolicy = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePolicy>>, TError,{orgId: string;workspaceRef: string;policyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deletePolicy>>,
+        TError,
+        {orgId: string;workspaceRef: string;policyId: string},
+        TContext
+      > => {
+      return useMutation(getDeletePolicyMutationOptions(options), queryClient);
     }
 
 export const getListInstanceProviderCredentialsUrl = () => {

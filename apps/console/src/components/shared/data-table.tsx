@@ -1,4 +1,4 @@
-import { type AriaAttributes, type ReactNode } from 'react';
+import { Fragment, type AriaAttributes, type ReactNode } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/elements';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 
@@ -22,6 +22,7 @@ interface DataTableProps<T> {
   rows: T[] | undefined;
   rowKey: (row: T) => string;
   rowClassName?: string;
+  renderRow?: (row: T, cells: ReactNode[]) => ReactNode;
   isLoading?: boolean;
   isError?: boolean;
   error?: unknown;
@@ -39,6 +40,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   rowClassName,
+  renderRow,
   isLoading,
   isError,
   error,
@@ -74,15 +76,14 @@ export function DataTable<T>({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row) => (
-          <TableRow key={rowKey(row)} className={rowClassName}>
-            {columns.map((col) => (
-              <TableCell key={col.key} className={col.cellClassName}>
-                {col.cell(row)}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
+        {rows.map((row) => {
+          const cells = columns.map((col) => (
+            <TableCell key={col.key} className={col.cellClassName}>
+              {col.cell(row)}
+            </TableCell>
+          ));
+          return <Fragment key={rowKey(row)}>{renderRow ? renderRow(row, cells) : <TableRow className={rowClassName}>{cells}</TableRow>}</Fragment>;
+        })}
       </TableBody>
     </Table>
   );
