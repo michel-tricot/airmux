@@ -1,16 +1,7 @@
 import { type ReactNode, useState } from 'react';
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { closestCenter, DndContext, type DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { PolicyOut } from '@workspace/api-client-react';
 import { Badge, Button, ConfirmButton, TableCell, TableRow } from '@/components/ui/elements';
@@ -28,9 +19,13 @@ import { cn } from '@/lib/utils';
 import { PolicyEditor } from './PolicyEditor';
 
 function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; disabled: boolean; children: ReactNode }) {
-  const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({ id: policy.id, disabled });
+  const { isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({ id: policy.id, disabled });
   return (
-    <TableRow ref={setNodeRef} className={cn(isDragging && 'bg-primary/10 opacity-70')}>
+    <TableRow
+      ref={setNodeRef}
+      className={cn(isDragging && 'bg-primary/10 opacity-70')}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
       <TableCell className="w-12">
         <Button
           size="icon"
@@ -39,7 +34,6 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
           disabled={disabled}
           aria-label={`Reorder ${policy.name}`}
           className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
-          {...attributes}
           {...listeners}
         >
           <GripVertical className="h-4 w-4" />
@@ -101,7 +95,6 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setDraggedPolicyId(null);
@@ -134,11 +127,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
       />
       {canManage && keys.isError && <ErrorState error={keys.error} resource="inference keys" onRetry={() => keys.refetch()} />}
       {canManage && catalog.isError && <ErrorState error={catalog.error} resource="model catalog" onRetry={() => catalog.refetch()} />}
-      {canManage && policyIds.length > 1 && (
-        <p className="text-xs text-muted-foreground">
-          Drag policies to change their evaluation order. Keyboard users can press Space on a handle, then use the arrow keys.
-        </p>
-      )}
+      {canManage && policyIds.length > 1 && <p className="text-xs text-muted-foreground">Drag policies to change their evaluation order.</p>}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

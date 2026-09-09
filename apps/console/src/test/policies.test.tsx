@@ -42,7 +42,7 @@ function policyRows() {
 beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
 
 describe('workspace policies', () => {
-  it('reorders policies with the keyboard and saves the complete order', async () => {
+  it('shifts rows while dragging and saves the complete order', async () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       const policyNames = ['First', 'Second', 'Third'];
       const index = policyNames.findIndex((name) => this.closest('tr')?.textContent?.includes(name));
@@ -75,9 +75,17 @@ describe('workspace policies', () => {
     const firstHandle = await screen.findByRole('button', { name: 'Reorder First' });
     firstHandle.focus();
     fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
-    await waitFor(() => expect(firstHandle.closest('tr')).toHaveClass('opacity-70'));
     fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' });
     fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
+    expect(firstHandle.closest('tr')).not.toHaveClass('opacity-70');
+    expect(submittedOrder).toBeUndefined();
+
+    fireEvent.pointerDown(firstHandle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
+    fireEvent.pointerMove(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
+    await waitFor(() => expect(firstHandle.closest('tr')).toHaveClass('opacity-70'));
+    fireEvent.pointerMove(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
+    await waitFor(() => expect(policyRows()[1].style.transform).toContain('translate3d'));
+    fireEvent.pointerUp(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
 
     await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
     await waitFor(() =>
