@@ -96,7 +96,7 @@ describe('sign-in gate', () => {
   it('shows the login page to unauthenticated users', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
     );
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe('sign-in gate', () => {
   it('shows a service error when the session endpoint is unavailable', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 503 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
     );
     renderAt('/org');
     expect(await screen.findByRole('alert')).toHaveTextContent('Control plane unreachable');
@@ -118,7 +118,7 @@ describe('sign-in gate', () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
       http.post('/api/v1/auth/login', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
           data: {
@@ -144,7 +144,7 @@ describe('sign-in gate', () => {
   it('creates the first account directly', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false, public_signup: false } })),
       http.post('/api/v1/auth/signup', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
           data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', orgs: [] },
@@ -163,10 +163,24 @@ describe('sign-in gate', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
 
+  it('explains that public signup is closed and directs visitors to an administrator', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: false } })),
+    );
+    renderAt('/');
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    const restriction = await screen.findByRole('alert');
+    expect(restriction).toHaveTextContent('Account creation is restricted');
+    expect(restriction).toHaveTextContent('Contact an instance administrator for an invitation');
+    expect(screen.queryByRole('button', { name: 'No account? Sign up' })).not.toBeInTheDocument();
+  });
+
   it.each(['unknown account', 'incorrect password'])('keeps the sign-in error visible for an %s', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
       http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
     );
     const user = userEvent.setup();
@@ -195,7 +209,7 @@ describe('sign-in gate', () => {
         signedIn = false;
         return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: 'session-1', deleted_at: now } });
       }),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
     );
     const user = userEvent.setup();
     renderAt('/org');

@@ -567,6 +567,7 @@ export interface BundleV1 {
 
 export interface ClaimOut {
   claimed: boolean;
+  public_signup: boolean;
 }
 
 /**
@@ -1612,6 +1613,8 @@ export interface SignupIn {
      * @maxLength 1024
      */
   password: string;
+  /** Invitation authorizing this account signup */
+  invitation_token?: string | null;
 }
 
 export interface TaxonomyChangeCounts {

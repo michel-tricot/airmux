@@ -111,6 +111,52 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
         assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
 
 
+def test_valid_invitation_allows_signup_when_public_signup_is_closed(tmp_path):
+    cp = setup_control_plane(tmp_path, public_signup=False)
+    with _client(cp) as client:
+        org_id = make_org(client, cp.headers(), "Acme")
+        token = _token(_issue(client, cp, org_id)["url"])
+
+        signup = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "INVITEE@example.com", "name": "Invitee", "password": PASSWORD, "invitation_token": token},
+        )
+
+        assert signup.status_code == 200, signup.text
+        assert signup.json()["data"]["email"] == "invitee@example.com"
+        assert signup.json()["data"]["orgs"] == []
+        assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
+
+
+def test_closed_signup_rejects_invalid_unavailable_and_mismatched_invitations(tmp_path):
+    cp = setup_control_plane(tmp_path, public_signup=False)
+    with _client(cp) as client:
+        org_id = make_org(client, cp.headers(), "Acme")
+        minted = _issue(client, cp, org_id)
+        token = _token(minted["url"])
+
+        invalid = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "invitee@example.com", "name": "Invitee", "password": PASSWORD, "invitation_token": "invite_invalid"},
+        )
+        mismatch = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "someone-else@example.com", "name": "Other", "password": PASSWORD, "invitation_token": token},
+        )
+        client.post(
+            f"/api/v1/orgs/{org_id}/invitations/{minted['invitation']['id']}/revoke",
+            headers=cp.headers(org_id),
+        )
+        revoked = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "invitee@example.com", "name": "Invitee", "password": PASSWORD, "invitation_token": token},
+        )
+
+        assert invalid.status_code == 404
+        assert mismatch.status_code == 403
+        assert revoked.status_code == 410
+
+
 def test_new_account_sees_its_pending_invitations_in_enrollment(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as client:

@@ -27,12 +27,14 @@ export default function Login({
   initialEmail = '',
   initialMode = 'login',
   emailReadOnly = false,
+  invitationToken,
   heading,
   description,
 }: {
   initialEmail?: string;
   initialMode?: InitialLoginMode;
   emailReadOnly?: boolean;
+  invitationToken?: string;
   heading?: string;
   description?: string;
 } = {}) {
@@ -59,13 +61,18 @@ export default function Login({
     },
   });
   const pending = login.isPending || signup.isPending;
+  const publicSignupClosed = claim?.claimed === true && claim.public_signup === false;
+  const signupAvailable = invitationToken !== undefined || claim?.claimed === false || claim?.public_signup === true;
 
   const submit = form.handleSubmit(async (values) => {
     setSubmissionError(null);
     form.clearErrors('password');
     try {
       if (mode === 'login') await login.mutateAsync({ data: { email: values.email, password: values.password } });
-      else await signup.mutateAsync({ data: { email: values.email, name: values.name, password: values.password } });
+      else
+        await signup.mutateAsync({
+          data: { email: values.email, name: values.name, password: values.password, invitation_token: invitationToken },
+        });
     } catch {
       if (mode === 'login') {
         setSubmissionError('Sign in failed. Check your email and password.');
@@ -182,10 +189,19 @@ export default function Login({
           </form>
         </Form>
 
-        {mode !== 'choice' && (
+        {mode !== 'choice' && signupAvailable && (
           <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground" onClick={switchMode}>
             {mode === 'login' ? 'No account? Sign up' : 'Already have an account? Sign in'}
           </Button>
+        )}
+
+        {mode === 'login' && publicSignupClosed && invitationToken === undefined && (
+          <Alert className="mt-4">
+            <div>
+              <AlertTitle>Account creation is restricted</AlertTitle>
+              <AlertDescription>Contact an instance administrator for an invitation.</AlertDescription>
+            </div>
+          </Alert>
         )}
       </Card>
     </div>

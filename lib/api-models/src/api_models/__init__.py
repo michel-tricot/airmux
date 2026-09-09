@@ -132,6 +132,7 @@ class BundleOut(BaseModel):
 
 class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
+    public_signup: Annotated[bool, Field(title="Public Signup")]
 
 
 class CliAuthApproveIn(BaseModel):
@@ -1592,6 +1593,18 @@ class ServiceAccountIn(BaseModel):
     ] = None
 
 
+class InvitationToken(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Invitation authorizing this account signup",
+            max_length=256,
+            min_length=1,
+            title="Invitation Token",
+        ),
+    ]
+
+
 class SignupIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1622,6 +1635,13 @@ class SignupIn(BaseModel):
             title="Password",
         ),
     ]
+    invitation_token: Annotated[
+        InvitationToken | None,
+        Field(
+            description="Invitation authorizing this account signup",
+            title="Invitation Token",
+        ),
+    ] = None
 
 
 class StrictParameters(BaseModel):

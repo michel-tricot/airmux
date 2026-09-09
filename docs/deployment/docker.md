@@ -33,6 +33,9 @@ soon as the application starts. Until then, anyone who can reach the sign-up pag
 instance owner role. The
 [DigitalOcean guide](/docs/deployment/digitalocean) supplies a Caddy overlay for HTTPS.
 
+After the instance is claimed, add `AIRLLM_PUBLIC_SIGNUP=false` to `.env` and recreate the AirLLM
+container to require an administrator-issued invitation for new accounts.
+
 ## State and updates
 
 The `pgdata` volume holds Postgres. The `state` volume holds application credentials, gateway

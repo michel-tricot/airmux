@@ -32,7 +32,7 @@ describe('CLI device sign-in approval', () => {
   it('shows the login page first when visiting /cli unauthenticated', async () => {
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true } })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
     );
     renderAt('/cli?code=ABCD-1234');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();

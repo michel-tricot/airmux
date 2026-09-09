@@ -38,6 +38,7 @@ def test_default_deployment_is_one_application_and_postgres():
     assert set(services) == {"airllm", "postgres"}
     assert services["airllm"]["build"]["target"] == "all-in-one"
     assert "env_file" not in services["airllm"]
+    assert services["airllm"]["environment"]["AIRLLM_PUBLIC_SIGNUP"] == "${AIRLLM_PUBLIC_SIGNUP:-true}"
 
 
 def test_split_gateways_have_independent_state_and_no_provider_environment():
@@ -61,6 +62,7 @@ def test_split_gateways_have_independent_state_and_no_provider_environment():
     assert "DATABASE_URL" not in first.get("environment", {})
     assert "DATABASE_URL" not in second.get("environment", {})
     assert services["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
+    assert services["control-plane"]["environment"]["AIRLLM_PUBLIC_SIGNUP"] == "${AIRLLM_PUBLIC_SIGNUP:-true}"
 
 
 def test_compose_layouts_do_not_share_database_volumes():

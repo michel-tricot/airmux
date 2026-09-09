@@ -29,4 +29,6 @@ export interface SignupIn {
      * @maxLength 1024
      */
   password: string;
+  /** Invitation authorizing this account signup */
+  invitation_token?: string | null;
 }
