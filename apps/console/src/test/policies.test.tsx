@@ -39,34 +39,50 @@ function policyRows() {
     .filter((row) => row.parentElement?.tagName === 'TBODY');
 }
 
+function mockPolicyRowLayout() {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    const row = this.closest('tr');
+    const index = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : 0;
+    const top = Math.max(index, 0) * 48;
+    return {
+      x: 0,
+      y: top,
+      top,
+      left: 0,
+      right: 800,
+      bottom: top + 48,
+      width: 800,
+      height: 48,
+      toJSON: () => ({}),
+    };
+  });
+}
+
+async function dragBelowNext(handle: HTMLElement) {
+  fireEvent.pointerDown(handle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
+  fireEvent.pointerMove(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
+  await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
+  fireEvent.pointerMove(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
+  await waitFor(() => expect(policyRows()[1].style.transform).toContain('translate3d'));
+  fireEvent.pointerUp(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
+}
+
 beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
 
 describe('workspace policies', () => {
   it('shifts rows while dragging and saves the complete order', async () => {
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      const policyNames = ['First', 'Second', 'Third'];
-      const index = policyNames.findIndex((name) => this.closest('tr')?.textContent?.includes(name));
-      const top = Math.max(index, 0) * 48;
-      return {
-        x: 0,
-        y: top,
-        top,
-        left: 0,
-        right: 800,
-        bottom: top + 48,
-        width: 800,
-        height: 48,
-        toJSON: () => ({}),
-      };
-    });
+    mockPolicyRowLayout();
     let policies = initialPolicies;
     let submittedOrder: string[] | undefined;
+    let reorderCompleted = false;
     server.use(
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies })),
       http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
         submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
+        await new Promise((resolve) => setTimeout(resolve, 250));
         const policiesById = new Map(policies.map((item) => [item.id, item]));
         policies = submittedOrder.map((id, priority) => ({ ...policiesById.get(id)!, priority }));
+        reorderCompleted = true;
         return HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies });
       }),
     );
@@ -80,18 +96,41 @@ describe('workspace policies', () => {
     expect(firstHandle.closest('tr')).not.toHaveClass('opacity-70');
     expect(submittedOrder).toBeUndefined();
 
-    fireEvent.pointerDown(firstHandle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
-    fireEvent.pointerMove(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
-    await waitFor(() => expect(firstHandle.closest('tr')).toHaveClass('opacity-70'));
-    fireEvent.pointerMove(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
-    await waitFor(() => expect(policyRows()[1].style.transform).toContain('translate3d'));
-    fireEvent.pointerUp(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
+    await dragBelowNext(firstHandle);
 
+    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
+      'SecondWhen: Every request',
+      'FirstWhen: Every request',
+      'ThirdWhen: Every request',
+    ]);
+    expect(policyRows().map((row) => within(row).getAllByRole('cell')[4].textContent)).toEqual(['0', '1', '2']);
     await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
+    await waitFor(() => expect(reorderCompleted).toBe(true));
+  });
+
+  it('restores the prior order when saving fails', async () => {
+    mockPolicyRowLayout();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+      http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return HttpResponse.json({ detail: 'failed' }, { status: 500 });
+      }),
+    );
+    renderPolicies();
+
+    await dragBelowNext(await screen.findByRole('button', { name: 'Reorder First' }));
+    expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
+      'SecondWhen: Every request',
+      'FirstWhen: Every request',
+      'ThirdWhen: Every request',
+    ]);
     await waitFor(() =>
       expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual([
-        'SecondWhen: Every request',
         'FirstWhen: Every request',
+        'SecondWhen: Every request',
         'ThirdWhen: Every request',
       ]),
     );

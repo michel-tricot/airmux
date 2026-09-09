@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { closestCenter, DndContext, type DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { type AnimateLayoutChanges, arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { PolicyOut } from '@workspace/api-client-react';
@@ -18,8 +18,14 @@ import { policyAccess } from '@/features/policies/policy';
 import { cn } from '@/lib/utils';
 import { PolicyEditor } from './PolicyEditor';
 
+const preventPostDropAnimation: AnimateLayoutChanges = () => false;
+
 function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; disabled: boolean; children: ReactNode }) {
-  const { isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({ id: policy.id, disabled });
+  const { isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({
+    id: policy.id,
+    disabled,
+    animateLayoutChanges: preventPostDropAnimation,
+  });
   return (
     <TableRow
       ref={setNodeRef}
@@ -42,6 +48,15 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
       {children}
     </TableRow>
   );
+}
+
+function applyOrder(policies: PolicyOut[] | undefined, policyIds: string[] | null): PolicyOut[] | undefined {
+  if (!policies || !policyIds) return policies;
+  const policiesById = new Map(policies.map((policy) => [policy.id, policy]));
+  const orderedPolicies = policyIds.map((policyId) => policiesById.get(policyId));
+  return orderedPolicies.every((policy): policy is PolicyOut => policy !== undefined)
+    ? orderedPolicies.map((policy, priority) => ({ ...policy, priority }))
+    : policies;
 }
 
 function actionSummary(policy: PolicyOut): string {
@@ -97,8 +112,10 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const [editing, setEditing] = useState<PolicyOut | null>(null);
   const [open, setOpen] = useState(false);
   const [draggedPolicyId, setDraggedPolicyId] = useState<string | null>(null);
+  const [pendingPolicyIds, setPendingPolicyIds] = useState<string[] | null>(null);
   const ready = keys.data !== undefined && catalog.data !== undefined;
-  const policyIds = policies.data?.map((policy) => policy.id) ?? [];
+  const displayedPolicies = applyOrder(policies.data, pendingPolicyIds);
+  const policyIds = displayedPolicies?.map((policy) => policy.id) ?? [];
   const reorderDisabled = reorder.isPending || policyIds.length < 2;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -110,7 +127,9 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
     const from = policyIds.indexOf(String(active.id));
     const to = policyIds.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
-    reorder.mutate({ orgId, workspaceRef, data: { policy_ids: arrayMove(policyIds, from, to) } });
+    const nextPolicyIds = arrayMove(policyIds, from, to);
+    setPendingPolicyIds(nextPolicyIds);
+    reorder.mutate({ orgId, workspaceRef, data: { policy_ids: nextPolicyIds } }, { onSettled: () => setPendingPolicyIds(null) });
   };
 
   return (
@@ -145,7 +164,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
       >
         <SortableContext items={policyIds} strategy={verticalListSortingStrategy}>
           <DataTable
-            rows={policies.data}
+            rows={displayedPolicies}
             rowKey={(policy) => policy.id}
             isLoading={policies.isLoading}
             isError={policies.isError}

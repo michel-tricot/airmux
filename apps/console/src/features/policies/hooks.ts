@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getListPoliciesQueryKey,
-  type PolicyOut,
   useCreatePolicy,
   useDeletePolicy,
   useListPolicies,
@@ -22,22 +21,6 @@ export function usePolicyMutations(orgId: string, workspaceRef: string) {
   };
   const reorder = useReorderPolicies({
     mutation: {
-      onMutate: async ({ data }) => {
-        await queryClient.cancelQueries({ queryKey });
-        const previous = queryClient.getQueryData<PolicyOut[]>(queryKey);
-        if (previous) {
-          const policiesById = new Map(previous.map((policy) => [policy.id, policy]));
-          const orderedPolicies = data.policy_ids.map((policyId) => policiesById.get(policyId));
-          if (orderedPolicies.every((policy): policy is PolicyOut => policy !== undefined)) {
-            queryClient.setQueryData<PolicyOut[]>(
-              queryKey,
-              orderedPolicies.map((policy, priority) => ({ ...policy, priority })),
-            );
-          }
-        }
-        return { previous };
-      },
-      onError: (_error, _variables, context) => queryClient.setQueryData(queryKey, context?.previous),
       onSuccess: (orderedPolicies) => queryClient.setQueryData(queryKey, orderedPolicies),
       onSettled: () => queryClient.invalidateQueries({ queryKey }),
       meta: { errorMessage: 'The policy order could not be saved. Try reordering the policies again.' },
