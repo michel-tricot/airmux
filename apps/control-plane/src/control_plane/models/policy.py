@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
 from pydantic import field_validator, model_validator
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, TypeDecorator
-from sqlmodel import Field, col
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, TypeDecorator, func
+from sqlmodel import Field, col, select
 
 from contract.policies import (
     MAX_WORKSPACE_POLICIES,
@@ -18,6 +18,7 @@ from contract.policies import (
     SelectedKeys,
     compile_condition,
 )
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
@@ -25,7 +26,7 @@ from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpda
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.model import Model
 from control_plane.models.provider import Provider
-from control_plane.models.runtime_configuration import runtime_configured
+from control_plane.models.runtime_configuration import bundle_input
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Dialect
@@ -45,7 +46,7 @@ class PolicyDefinitionType(TypeDecorator[PolicyDefinition]):
 
 
 @audited
-@runtime_configured(scope="org", columns=("org_id", "workspace_id", "name", "enabled", "priority", "definition"))
+@bundle_input(scope="org", columns=("org_id", "workspace_id", "name", "enabled", "priority", "definition"))
 class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
@@ -72,7 +73,21 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     async def for_workspace(cls, workspace_id: UUID) -> list[Self]:
         return await cls.find(cls.workspace_id == workspace_id, order_by=(col(cls.priority), col(cls.id)))
 
-    async def validate_configuration(self) -> None:
+    @override
+    async def save(self) -> Self:
+        from control_plane.models.workspace import Workspace  # noqa: PLC0415 workspace deletion also depends on Policy
+
+        session = current_session()
+        with session.no_autoflush:
+            await session.execute(select(Workspace.id).where(col(Workspace.id) == self.workspace_id).with_for_update())
+            await self._validate_configuration()
+            return await super().save()
+
+    async def _validate_configuration(self) -> None:
+        try:
+            compile_condition(self.definition.condition)
+        except ValueError as error:
+            raise InvalidPolicyError(str(error)) from error
         target = self.definition.target
         if isinstance(target, SelectedKeys):
             keys = await InferenceKey.find(InferenceKey.workspace_id == self.workspace_id)
@@ -91,10 +106,15 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             if set(action.names) != {provider.name for provider in providers}:
                 msg = "Policy providers must exist in the catalog"
                 raise InvalidPolicyError(msg)
-        policies = await self.for_workspace(self.workspace_id)
-        if self.enabled and sum(policy.enabled and policy.id != self.id for policy in policies) >= MAX_WORKSPACE_POLICIES:
-            msg = "A workspace may contain at most 100 active policies"
-            raise InvalidPolicyError(msg)
+        if self.enabled:
+            active_policies = (
+                select(func.count())
+                .select_from(Policy)
+                .where(col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id)
+            )
+            if (await current_session().execute(active_policies)).scalar_one() >= MAX_WORKSPACE_POLICIES:
+                msg = "A workspace may contain at most 100 active policies"
+                raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)

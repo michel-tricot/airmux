@@ -21,7 +21,6 @@ async def list_policies(workspace: WorkspaceDep) -> Envelope[list[PolicyOut]]:
 @router.post("", dependencies=[require(workspace_scope, Permission.policies_manage)])
 async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope[PolicyOut]:
     """Create a workspace inference policy; budget actions are placeholders only."""
-    await workspace.lock_policy_changes()
     policy = Policy(
         org_id=workspace.org_id, workspace_id=workspace.id, name=body.name, enabled=body.enabled, priority=body.priority, definition=body.definition
     )
@@ -32,7 +31,6 @@ async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope
 @router.patch("/{policy_id}", dependencies=[require(workspace_scope, Permission.policies_manage)])
 async def update_policy(workspace: WorkspaceDep, policy_id: UUID, body: PolicyUpdate) -> Envelope[PolicyOut]:
     """Update a policy without changing its workspace."""
-    await workspace.lock_policy_changes()
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
     if body.name is not None:
         policy.name = body.name
@@ -56,7 +54,6 @@ async def delete_policy(workspace: WorkspaceDep, policy_id: UUID) -> Envelope[De
 
 async def _save(policy: Policy) -> None:
     try:
-        await policy.validate_configuration()
+        await policy.save()
     except InvalidPolicyError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    await policy.save()

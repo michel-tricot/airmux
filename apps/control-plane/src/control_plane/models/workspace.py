@@ -9,7 +9,6 @@ from sqlalchemy import UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.db import current_session
 from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
@@ -125,9 +124,6 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
             .exists()
         )
         return await cls.find(cls.org_id == org_id, or_(instance_access, org_access, workspace_access), order_by=col(cls.name))
-
-    async def lock_policy_changes(self) -> None:
-        await current_session().execute(select(Workspace).where(col(Workspace.id) == self.id).with_for_update())
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the workspace with the rows scoped to it: its inference keys, its members, and the

@@ -17,6 +17,13 @@ conditions when admitting a bundle, indexes them by workspace, and keeps the pre
 admission fails. In-flight requests use their original snapshot. Changes take effect after the
 gateway adopts the published bundle, not synchronously with the management response.
 
+`@bundle_input` marks models and columns whose changes require bundle republication. Its scope
+identifies affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
+workspace row lock, condition/reference validation, active-policy capacity check, and flush.
+Autoflush is suppressed until validation finishes, and capacity is counted directly in the
+database so previously loaded policy objects cannot hide a concurrent activation. Callers do
+not acquire a separate lock or invoke validation themselves.
+
 Evaluation uses the canonical request. It is synchronous, deterministic, and has no database,
 network, clock, or secret-store access. Credential resolution and upstream execution remain
 outside evaluation. CEL cannot select credentials, issue requests, or mutate state.

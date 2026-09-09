@@ -47,7 +47,7 @@ class RuntimeConfigurationChanges:
         return self.global_scope or bool(self.org_ids)
 
 
-def runtime_configured[T: Record](*, scope: RuntimeConfigurationScope, columns: tuple[str, ...]) -> Callable[[type[T]], type[T]]:
+def bundle_input[T: Record](*, scope: RuntimeConfigurationScope, columns: tuple[str, ...]) -> Callable[[type[T]], type[T]]:
     def register(cls: type[T]) -> type[T]:
         _RUNTIME_CONFIGURATION_INPUTS[cls] = RuntimeConfigurationInput(model=cls, scope=scope, columns=columns)
         return cls
