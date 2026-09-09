@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from cel_expr_python import cel
 
-from contract.policies import MAX_WORKSPACE_POLICIES, AllKeys, BudgetPlaceholder, PolicyEntry, compile_condition, condition_environment
+from contract.policies import MAX_WORKSPACE_POLICIES, BudgetPlaceholder, PolicyEntry, SelectedKeys, compile_condition, condition_environment
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 class CompiledPolicy:
     policy: PolicyEntry
     condition: cel.Expression
+    selected_key_ids: frozenset[str] | None
 
 
 type PolicyIndex = Mapping[UUID, tuple[CompiledPolicy, ...]]
@@ -29,14 +31,24 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
     if len({policy.id for policy in policies}) != len(policies):
         msg = "Duplicate policy id"
         raise ValueError(msg)
-    workspaces = frozenset(policy.workspace_id for policy in policies)
-    if any(sum(policy.workspace_id == workspace for policy in policies) > MAX_WORKSPACE_POLICIES for workspace in workspaces):
+    ordered = sorted(policies, key=lambda policy: (policy.workspace_id, policy.priority, policy.id))
+    grouped = tuple((workspace_id, tuple(entries)) for workspace_id, entries in groupby(ordered, key=lambda policy: policy.workspace_id))
+    if any(len(entries) > MAX_WORKSPACE_POLICIES for _, entries in grouped):
         msg = "A workspace may contain at most 100 active policies"
         raise ValueError(msg)
-    compiled = tuple(
-        CompiledPolicy(policy, compile_condition(policy.definition.condition)) for policy in sorted(policies, key=lambda p: (p.priority, p.id))
+    return MappingProxyType(
+        {
+            workspace_id: tuple(
+                CompiledPolicy(
+                    policy,
+                    compile_condition(policy.definition.condition),
+                    frozenset(policy.definition.target.key_ids) if isinstance(policy.definition.target, SelectedKeys) else None,
+                )
+                for policy in entries
+            )
+            for workspace_id, entries in grouped
+        }
     )
-    return MappingProxyType({workspace: tuple(entry for entry in compiled if entry.policy.workspace_id == workspace) for workspace in workspaces})
 
 
 def matching_policies(request: CanonicalRequest, key: KeyEntry, index: PolicyIndex) -> tuple[PolicyEntry, ...]:
@@ -51,8 +63,7 @@ def matching_policies(request: CanonicalRequest, key: KeyEntry, index: PolicyInd
 def _matches(entry: CompiledPolicy, key: KeyEntry, context: cel.Activation) -> bool:
     if isinstance(entry.policy.definition.action, BudgetPlaceholder):
         return False
-    target = entry.policy.definition.target
-    if not isinstance(target, AllKeys) and key.key_id not in target.key_ids:
+    if entry.selected_key_ids is not None and key.key_id not in entry.selected_key_ids:
         return False
     result = entry.condition.eval(context)
     if result.type() != cel.Type.BOOL:

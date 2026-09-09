@@ -72,6 +72,26 @@ def test_only_matching_workspace_keys_and_conditions_are_restricted(options):
     assert isinstance(evaluate(request(), key, snap), Allow)
 
 
+def test_selected_key_targets_are_compiled_for_constant_time_membership():
+    selected_key_ids = frozenset(str(uuid7()) for _ in range(1000))
+    entry = policy({"kind": "byok"}, target={"kind": "selected_keys", "key_ids": sorted(selected_key_ids)})
+    _, snap = snapshot([entry])
+
+    assert snap.policy_index[WORKSPACE][0].selected_key_ids == selected_key_ids
+
+
+def test_policy_index_preserves_workspace_evaluation_order():
+    other_workspace = uuid7()
+    later = policy({"kind": "byok"}).model_copy(update={"priority": 20})
+    first = policy({"kind": "byok"}).model_copy(update={"priority": 10})
+    other = policy({"kind": "byok"}, workspace=other_workspace)
+
+    _, snap = snapshot([later, other, first])
+
+    assert tuple(compiled.policy.id for compiled in snap.policy_index[WORKSPACE]) == (first.id, later.id)
+    assert tuple(compiled.policy.id for compiled in snap.policy_index[other_workspace]) == (other.id,)
+
+
 @pytest.mark.parametrize("condition", ["true", "1 / 0 > 0"])
 def test_budget_placeholder_does_not_enforce(condition):
     key, snap = snapshot(

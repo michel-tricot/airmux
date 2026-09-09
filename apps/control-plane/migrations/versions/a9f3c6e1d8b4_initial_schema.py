@@ -546,6 +546,21 @@ def upgrade() -> None:
         sa.CheckConstraint("priority >= 0 AND priority <= 10000", name="policy_priority_valid"),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index("policy_workspace_priority_id_idx", "policy", ["workspace_id", "priority", "id"], unique=False)
+    op.create_index(
+        "policy_active_workspace_id_idx",
+        "policy",
+        ["workspace_id", "id"],
+        unique=False,
+        postgresql_where=sa.text("enabled"),
+    )
+    op.create_index(
+        "policy_active_org_id_idx",
+        "policy",
+        ["org_id", "id"],
+        unique=False,
+        postgresql_where=sa.text("enabled"),
+    )
     for table in TOMBSTONED:
         for statement in touch_trigger_ddl_v1(table):
             op.execute(statement)
@@ -562,6 +577,9 @@ def downgrade() -> None:
         for statement in touch_trigger_drop_ddl_v1(table):
             op.execute(statement)
     op.drop_table("insecure_vault_secret")
+    op.drop_index("policy_active_org_id_idx", table_name="policy")
+    op.drop_index("policy_active_workspace_id_idx", table_name="policy")
+    op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
     op.drop_table("policy")
     op.drop_table("playground_session")
     op.drop_table("runtime_configuration")

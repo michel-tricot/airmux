@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
 from pydantic import field_validator, model_validator
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, TypeDecorator, func
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, func, text
 from sqlmodel import Field, col, select
 
 from contract.policies import (
@@ -51,6 +51,9 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
         CheckConstraint("priority >= 0 AND priority <= 10000", name="policy_priority_valid"),
+        Index("policy_workspace_priority_id_idx", "workspace_id", "priority", "id"),
+        Index("policy_active_workspace_id_idx", "workspace_id", "id", postgresql_where=text("enabled")),
+        Index("policy_active_org_id_idx", "org_id", "id", postgresql_where=text("enabled")),
     )
 
     org_id: UUID = Field(foreign_key="org.id")
