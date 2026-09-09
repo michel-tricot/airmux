@@ -154,7 +154,11 @@ describe('sign-in gate', () => {
     const user = userEvent.setup();
     renderAt('/');
 
-    await user.click(await screen.findByRole('button', { name: 'No account? Sign up' }));
+    expect(await screen.findByRole('heading', { name: 'Create administrator account' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('This first account will have instance administrator access');
+    expect(screen.queryByRole('button', { name: 'No account? Sign up' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Already have an account? Sign in' })).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Email'), 'owner@example.com');
     await user.type(screen.getByLabelText('Name'), 'Owner');
     await user.type(screen.getByLabelText('Password'), 'secure-password');

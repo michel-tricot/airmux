@@ -42,9 +42,11 @@ export default function Login({
   const [mode, setMode] = useState<InitialLoginMode>(initialMode);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const { data: claim } = useClaim();
+  const unclaimedInstance = claim?.claimed === false;
+  const activeMode = unclaimedInstance ? 'signup' : mode;
 
   const form = useForm<Credentials>({
-    resolver: zodResolver(mode === 'signup' ? signupSchema : loginSchema),
+    resolver: zodResolver(activeMode === 'signup' ? signupSchema : loginSchema),
     defaultValues: { email: initialEmail, name: '', password: '' },
   });
 
@@ -62,19 +64,19 @@ export default function Login({
   });
   const pending = login.isPending || signup.isPending;
   const publicSignupClosed = claim?.claimed === true && claim.public_signup === false;
-  const signupAvailable = invitationToken !== undefined || claim?.claimed === false || claim?.public_signup === true;
+  const signupAvailable = invitationToken !== undefined || claim?.public_signup === true;
 
   const submit = form.handleSubmit(async (values) => {
     setSubmissionError(null);
     form.clearErrors('password');
     try {
-      if (mode === 'login') await login.mutateAsync({ data: { email: values.email, password: values.password } });
+      if (activeMode === 'login') await login.mutateAsync({ data: { email: values.email, password: values.password } });
       else
         await signup.mutateAsync({
           data: { email: values.email, name: values.name, password: values.password, invitation_token: invitationToken },
         });
     } catch {
-      if (mode === 'login') {
+      if (activeMode === 'login') {
         setSubmissionError('Sign in failed. Check your email and password.');
         form.setError('password', { type: 'server', message: 'Incorrect email or password' });
       } else {
@@ -99,22 +101,38 @@ export default function Login({
             <TerminalSquare className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
-            {heading ?? (mode === 'choice' ? 'Continue' : mode === 'login' ? 'Sign in' : 'Create an account')}
+            {heading ??
+              (unclaimedInstance
+                ? 'Create administrator account'
+                : activeMode === 'choice'
+                  ? 'Continue'
+                  : activeMode === 'login'
+                    ? 'Sign in'
+                    : 'Create an account')}
           </h1>
           <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
             {description ??
-              (mode === 'choice'
-                ? 'Choose whether to create an account or sign in.'
-                : mode === 'login'
-                  ? 'Sign in with your account credentials.'
-                  : claim?.claimed === false
-                    ? 'The first account becomes the instance owner.'
+              (unclaimedInstance
+                ? 'Create the first account to claim this instance.'
+                : activeMode === 'choice'
+                  ? 'Choose whether to create an account or sign in.'
+                  : activeMode === 'login'
+                    ? 'Sign in with your account credentials.'
                     : 'You can join or create an organization after signing up.')}
           </p>
         </div>
 
+        {unclaimedInstance && (
+          <Alert className="mb-4">
+            <div>
+              <AlertTitle>Claiming this instance</AlertTitle>
+              <AlertDescription>This first account will have instance administrator access.</AlertDescription>
+            </div>
+          </Alert>
+        )}
+
         <Form {...form}>
-          <form onSubmit={mode === 'choice' ? (event) => event.preventDefault() : submit} noValidate className="space-y-4">
+          <form onSubmit={activeMode === 'choice' ? (event) => event.preventDefault() : submit} noValidate className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -129,7 +147,7 @@ export default function Login({
               )}
             />
 
-            {mode === 'choice' ? (
+            {activeMode === 'choice' ? (
               <div className="space-y-3 pt-2">
                 <Button className="w-full" onClick={() => setMode('signup')}>
                   Create account
@@ -140,7 +158,7 @@ export default function Login({
               </div>
             ) : (
               <>
-                {mode === 'signup' && (
+                {activeMode === 'signup' && (
                   <>
                     <FormField
                       control={form.control}
@@ -165,7 +183,7 @@ export default function Login({
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} {...field} />
+                        <Input type="password" autoComplete={activeMode === 'login' ? 'current-password' : 'new-password'} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -175,21 +193,27 @@ export default function Login({
                 {submissionError && (
                   <Alert variant="destructive">
                     <div>
-                      <AlertTitle>{mode === 'login' ? 'Couldn’t sign in' : 'Couldn’t create account'}</AlertTitle>
+                      <AlertTitle>{activeMode === 'login' ? 'Couldn’t sign in' : 'Couldn’t create account'}</AlertTitle>
                       <AlertDescription>{submissionError}</AlertDescription>
                     </div>
                   </Alert>
                 )}
 
                 <Button type="submit" className="w-full" disabled={pending}>
-                  {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
+                  {pending
+                    ? activeMode === 'login'
+                      ? 'Signing in...'
+                      : 'Creating account...'
+                    : activeMode === 'login'
+                      ? 'Sign in'
+                      : 'Create account'}
                 </Button>
               </>
             )}
           </form>
         </Form>
 
-        {mode !== 'choice' && signupAvailable && (
+        {!unclaimedInstance && mode !== 'choice' && signupAvailable && (
           <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground" onClick={switchMode}>
             {mode === 'login' ? 'No account? Sign up' : 'Already have an account? Sign in'}
           </Button>
