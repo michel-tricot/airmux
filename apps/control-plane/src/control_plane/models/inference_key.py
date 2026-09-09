@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKeyConstraint
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, OrgOwned, Tombstonable
+from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.runtime_configuration import bundle_input
@@ -33,6 +33,13 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
     api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id", "user_id", "revoked", "label", "prefix"})
+
+    @classmethod
+    async def in_workspace(cls, org_id: UUID, workspace_id: UUID, key_id: UUID) -> Self:
+        key = await cls.owned_by(org_id, key_id)
+        if key.workspace_id != workspace_id:
+            raise NotOwnedError
+        return key
 
 
 class InferenceKeyIn(RequestModel):

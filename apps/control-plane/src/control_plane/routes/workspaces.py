@@ -237,9 +237,7 @@ async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[Inferenc
 )
 async def revoke_inference_key(workspace: WorkspaceDep, key_id: UUID) -> Envelope[InferenceKeyRevokedOut]:
     """Revoke an inference key in a workspace."""
-    key = await InferenceKey.owned_by(workspace.org_id, key_id)
-    if key.workspace_id != workspace.id:
-        raise HTTPException(status_code=404, detail="Inference key not found in this workspace")
+    key = await InferenceKey.in_workspace(workspace.org_id, workspace.id, key_id)
     key.revoked = True
     await key.save()
     return Envelope(data=InferenceKeyRevokedOut(id=key_id, status="revoked"))

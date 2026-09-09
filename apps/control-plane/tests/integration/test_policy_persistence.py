@@ -96,3 +96,20 @@ def test_policy_save_validates_configuration_without_a_route(policy_workspace, d
             return await Policy.for_workspace(workspace_id)
 
     assert asyncio.run(persisted()) == []
+
+
+def test_policy_save_checks_capacity_before_references(policy_workspace):
+    cp, org_id, workspace_id = policy_workspace
+    invalid_definition = PolicyDefinition.model_validate(
+        {"target": {"kind": "all_keys"}, "match": {"kind": "request", "models": ["absent"]}, "action": {"kind": "byok"}}
+    )
+
+    async def save():
+        async with standalone_transaction(cp.db_url):
+            await set_actor("root")
+            for position in range(MAX_WORKSPACE_POLICIES):
+                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=DEFINITION).save()
+            with pytest.raises(InvalidPolicyError, match=f"at most {MAX_WORKSPACE_POLICIES} active policies"):
+                await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
+
+    asyncio.run(save())

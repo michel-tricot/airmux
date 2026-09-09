@@ -87,6 +87,15 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             return await super().save()
 
     async def _validate_configuration(self) -> None:
+        if self.enabled:
+            active_policies = (
+                select(func.count())
+                .select_from(Policy)
+                .where(col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id)
+            )
+            if (await current_session().execute(active_policies)).scalar_one() >= MAX_WORKSPACE_POLICIES:
+                msg = f"A workspace may contain at most {MAX_WORKSPACE_POLICIES} active policies"
+                raise InvalidPolicyError(msg)
         target = self.definition.target
         if isinstance(target, SelectedKeys):
             keys = await InferenceKey.find(InferenceKey.workspace_id == self.workspace_id)
@@ -106,15 +115,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             providers = await Provider.find(col(Provider.name).in_(action.names))
             if set(action.names) != {provider.name for provider in providers}:
                 msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        if self.enabled:
-            active_policies = (
-                select(func.count())
-                .select_from(Policy)
-                .where(col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id)
-            )
-            if (await current_session().execute(active_policies)).scalar_one() >= MAX_WORKSPACE_POLICIES:
-                msg = "A workspace may contain at most 100 active policies"
                 raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
