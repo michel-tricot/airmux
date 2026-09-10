@@ -164,6 +164,7 @@ describe('workspace policies', () => {
     fireEvent.pointerMove(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
     await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
     expect(handle.closest('tr')?.style.transform).toMatch(/^translate3d\(0px, /);
+    expect(handle.closest('tr')?.style.transform).not.toContain('scale');
     expect(screen.getAllByText('First')).toHaveLength(1);
     fireEvent.pointerUp(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
   });

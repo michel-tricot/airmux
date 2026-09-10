@@ -48,7 +48,7 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
     <TableRow
       ref={setNodeRef}
       className={cn('h-16', isDragging && 'bg-primary/10 opacity-70')}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
     >
       <TableCell className="w-12">
         <Button
