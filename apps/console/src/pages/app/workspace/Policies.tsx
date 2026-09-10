@@ -22,6 +22,7 @@ import {
 import { DataTable } from '@/components/shared/data-table';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -46,7 +47,7 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
   return (
     <TableRow
       ref={setNodeRef}
-      className={cn(isDragging && 'bg-primary/10 opacity-70')}
+      className={cn('h-16', isDragging && 'bg-primary/10 opacity-70')}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
       <TableCell className="w-12">
@@ -64,6 +65,39 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
       </TableCell>
       {children}
     </TableRow>
+  );
+}
+
+function RulesSummary({ policy, ruleById }: { policy: PolicyOut; ruleById: Map<string, RuleOut> }) {
+  const rules = policy.definition.rule_ids.map((ruleId) => ruleById.get(ruleId));
+  const names = rules.map((rule) => rule?.name ?? 'Unavailable rule');
+  const summary = `${names[0]}${names.length > 1 ? ` +${names.length - 1} more` : ''}`;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="outline"
+          tabIndex={0}
+          aria-label={`${names.length} ${names.length === 1 ? 'rule' : 'rules'}: ${names.join(', ')}`}
+          className="max-w-72 cursor-help normal-case tracking-normal focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <span className="truncate">{summary}</span>
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
+        <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rules, in order</div>
+        <ol className="space-y-2">
+          {rules.map((rule, index) => (
+            <li key={policy.definition.rule_ids[index]}>
+              <p className="text-sm font-medium">
+                {index + 1}. {rule?.name ?? 'Unavailable rule'}
+              </p>
+              {rule && <p className="text-xs text-muted-foreground">{actionSummary(rule)}</p>}
+            </li>
+          ))}
+        </ol>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -266,6 +300,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                     resource="policies"
                     onRetry={() => void policies.refetch()}
                     empty="No policies configured. Inference uses the workspace's available models and credentials."
+                    rowClassName="h-16"
                     renderRow={
                       canManage
                         ? (policy, cells) => (
@@ -282,9 +317,10 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                       {
                         key: 'name',
                         header: 'Policy',
+                        cellClassName: 'w-56 max-w-56',
                         cell: (policy) => (
-                          <div>
-                            <span>{policy.name}</span>
+                          <div className="min-w-0">
+                            <span className="block truncate">{policy.name}</span>
                             <p className="text-xs text-muted-foreground">
                               {policy.definition.rule_ids.length} {policy.definition.rule_ids.length === 1 ? 'rule' : 'rules'}
                             </p>
@@ -294,19 +330,8 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                       {
                         key: 'rules',
                         header: 'Rules',
-                        cell: (policy) => (
-                          <div className="space-y-2">
-                            {policy.definition.rule_ids.map((ruleId) => {
-                              const rule = ruleById.get(ruleId);
-                              return (
-                                <div key={ruleId}>
-                                  <span>{rule?.name ?? 'Unavailable rule'}</span>
-                                  {rule && <p className="text-xs text-muted-foreground">{actionSummary(rule)}</p>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ),
+                        cellClassName: 'w-72 max-w-72',
+                        cell: (policy) => <RulesSummary policy={policy} ruleById={ruleById} />,
                       },
                       {
                         key: 'target',

@@ -101,6 +101,31 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'First rule is used by policies' })).toBeDisabled();
   });
 
+  it('keeps policy rows compact and reveals ordered rule details in a tooltip', async () => {
+    const user = userEvent.setup();
+    const multiRulePolicy = {
+      ...policy('policy-1', 'Production', 0),
+      definition: { target: { kind: 'all_keys' } as const, rule_ids: initialRules.map((item) => item.id) },
+    };
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [multiRulePolicy] }),
+      ),
+    );
+    renderPolicies();
+
+    const summary = await screen.findByLabelText('3 rules: First rule, Second rule, Third rule');
+    expect(summary).toHaveTextContent('First rule +2 more');
+    expect(summary.closest('tr')).toHaveClass('h-16');
+
+    await user.hover(summary);
+    expect(await screen.findByText('Rules, in order')).toBeVisible();
+    expect(screen.getByText('First denied')).toBeVisible();
+    expect(screen.getByText('Second denied')).toBeVisible();
+    expect(screen.getByText('Third denied')).toBeVisible();
+  });
+
   it('shifts rows while dragging and saves the complete order', async () => {
     mockPolicyRowLayout();
     let policies = initialPolicies;

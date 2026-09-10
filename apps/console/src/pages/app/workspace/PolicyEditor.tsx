@@ -64,48 +64,25 @@ function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; 
       />
       <FormField
         control={form.control}
-        name="target"
+        name="keyIds"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Applies to</FormLabel>
             <FormControl>
-              <Dropdown
-                value={field.value}
-                onValueChange={field.onChange}
+              <CheckboxDropdown
                 aria-label="Applies to"
-                options={[
-                  { value: 'all_keys', label: 'All keys' },
-                  { value: 'selected_keys', label: 'Selected inference keys' },
-                ]}
+                label="Selected keys"
+                allLabel="All keys"
+                values={field.value}
+                onValuesChange={field.onChange}
+                options={keys.map((key) => ({ value: key.id, label: `${key.label}${key.revoked ? ' (revoked)' : ''}` }))}
               />
             </FormControl>
             <FormMessage />
-            {field.value === 'all_keys' && <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>}
+            {field.value.length === 0 && <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>}
           </FormItem>
         )}
       />
-      {form.watch('target') === 'selected_keys' && (
-        <FormField
-          control={form.control}
-          name="keyIds"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Inference keys</FormLabel>
-              <FormControl>
-                <CheckboxDropdown
-                  aria-label="Inference keys"
-                  label="Selected keys"
-                  allLabel="Choose keys"
-                  values={field.value}
-                  onValuesChange={field.onChange}
-                  options={keys.map((key) => ({ value: key.id, label: `${key.label}${key.revoked ? ' (revoked)' : ''}` }))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
       <FormField
         control={form.control}
         name="ruleIds"

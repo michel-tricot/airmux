@@ -11,9 +11,13 @@ describe('workspace policy configuration', () => {
     expect(payload.definition.rule_ids).toEqual([secondRuleId, firstRuleId]);
   });
 
-  it('requires a rule and keys for a selected-key policy', () => {
+  it('requires a rule and treats an empty key selection as all keys', () => {
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Empty' }).success).toBe(false);
-    expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Test', ruleIds: [firstRuleId], target: 'selected_keys' }).success).toBe(false);
+    expect(policyPayload({ ...policyDefaults, name: 'All keys', ruleIds: [firstRuleId] }).definition.target).toEqual({ kind: 'all_keys' });
+    expect(policyPayload({ ...policyDefaults, name: 'One key', keyIds: ['key-1'], ruleIds: [firstRuleId] }).definition.target).toEqual({
+      kind: 'selected_keys',
+      key_ids: ['key-1'],
+    });
   });
 
   it('rejects duplicate rule references', () => {
