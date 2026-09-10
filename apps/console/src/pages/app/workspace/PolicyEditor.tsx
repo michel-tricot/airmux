@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { InferenceKeyOut, PolicyCreate, PolicyOut, RuleOut } from '@workspace/api-client-react';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -42,11 +42,9 @@ function TextField({
 function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; keys: InferenceKeyOut[]; rules: RuleOut[] }) {
   const selectedRuleIds = form.watch('ruleIds');
   const availableRules = rules.filter((rule) => !selectedRuleIds.includes(rule.id));
-  const move = (index: number, offset: number) => {
-    const nextRuleIds = [...selectedRuleIds];
-    [nextRuleIds[index], nextRuleIds[index + offset]] = [nextRuleIds[index + offset], nextRuleIds[index]];
-    form.setValue('ruleIds', nextRuleIds, { shouldDirty: true, shouldValidate: true });
-  };
+  const selectedRules = selectedRuleIds
+    .map((ruleId) => ({ ruleId, rule: rules.find((candidate) => candidate.id === ruleId) }))
+    .sort((left, right) => (left.rule?.name ?? '').localeCompare(right.rule?.name ?? ''));
   return (
     <>
       <TextField form={form} name="name" label="Policy name" />
@@ -88,54 +86,31 @@ function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; 
         name="ruleIds"
         render={() => (
           <FormItem>
-            <FormLabel>Rules, in evaluation order</FormLabel>
+            <FormLabel>Rules</FormLabel>
             <div className="space-y-2">
-              {selectedRuleIds.map((ruleId, index) => {
-                const rule = rules.find((candidate) => candidate.id === ruleId);
-                return (
-                  <div key={ruleId} className="flex items-center gap-2 rounded border border-border bg-background/40 px-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
-                      {rule && <p className="truncate text-xs text-muted-foreground">{actionSummary(rule)}</p>}
-                    </div>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      disabled={index === 0}
-                      aria-label={`Move ${rule?.name ?? 'rule'} up`}
-                      onClick={() => move(index, -1)}
-                    >
-                      <ArrowUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      disabled={index === selectedRuleIds.length - 1}
-                      aria-label={`Move ${rule?.name ?? 'rule'} down`}
-                      onClick={() => move(index, 1)}
-                    >
-                      <ArrowDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Remove ${rule?.name ?? 'rule'}`}
-                      onClick={() =>
-                        form.setValue(
-                          'ruleIds',
-                          selectedRuleIds.filter((id) => id !== ruleId),
-                          { shouldDirty: true, shouldValidate: true },
-                        )
-                      }
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              {selectedRules.map(({ ruleId, rule }) => (
+                <div key={ruleId} className="flex items-center gap-2 rounded border border-border bg-background/40 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
+                    {rule && <p className="truncate text-xs text-muted-foreground">{actionSummary(rule)}</p>}
                   </div>
-                );
-              })}
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove ${rule?.name ?? 'rule'}`}
+                    onClick={() =>
+                      form.setValue(
+                        'ruleIds',
+                        selectedRuleIds.filter((id) => id !== ruleId),
+                        { shouldDirty: true, shouldValidate: true },
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
             <Dropdown
               value=""
@@ -177,7 +152,7 @@ export function PolicyEditor({
       open={open}
       onOpenChange={onOpenChange}
       title={policy ? 'Edit policy' : 'Create policy'}
-      description="Choose which keys this policy covers, then attach reusable rules in evaluation order."
+      description="Choose which keys this policy covers, then attach reusable rules."
       schema={policyFormSchema}
       defaultValues={policy ? policyForm(policy) : policyDefaults}
       onSubmit={(values) => onSubmit(policyPayload(values))}

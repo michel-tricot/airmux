@@ -101,7 +101,7 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'First rule is used by policies' })).toBeDisabled();
   });
 
-  it('keeps policy rows compact and reveals ordered rule details in a tooltip', async () => {
+  it('keeps policy rows compact and reveals rule details in a tooltip', async () => {
     const user = userEvent.setup();
     const multiRulePolicy = {
       ...policy('policy-1', 'Production', 0),
@@ -118,12 +118,35 @@ describe('workspace policies', () => {
     const summary = await screen.findByLabelText('3 rules: First rule, Second rule, Third rule');
     expect(summary).toHaveTextContent('First rule +2 more');
     expect(summary.closest('tr')).toHaveClass('h-16');
+    expect(summary).not.toHaveClass('cursor-help');
 
     await user.hover(summary);
-    expect(await screen.findByText('Rules, in order')).toBeVisible();
-    expect(screen.getByText('First denied')).toBeVisible();
+    expect(await screen.findByText('Rules')).toBeVisible();
+    expect(await screen.findByText('First denied')).toBeVisible();
     expect(screen.getByText('Second denied')).toBeVisible();
     expect(screen.getByText('Third denied')).toBeVisible();
+  });
+
+  it('closes rule tooltips while reordering policies', async () => {
+    const user = userEvent.setup();
+    mockPolicyRowLayout();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+    );
+    renderPolicies();
+
+    const summary = await screen.findByLabelText('1 rule: First rule');
+    const handle = screen.getByRole('button', { name: 'Reorder First' });
+    fireEvent.pointerDown(handle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
+    fireEvent.pointerMove(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
+    await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
+    await user.hover(summary);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(screen.queryByText('First denied')).not.toBeInTheDocument();
+    fireEvent.pointerUp(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
   });
 
   it('shifts rows while dragging and saves the complete order', async () => {

@@ -48,6 +48,8 @@ it('attaches and removes reusable rules', async () => {
   render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule]} />);
   await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
   await user.click(screen.getByRole('option', { name: 'Safe credentials' }));
+  expect(screen.getByText('Rules')).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Move Safe credentials/ })).not.toBeInTheDocument();
   expect(screen.getByText('Credentials: workspace')).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Remove Safe credentials' }));
   expect(screen.queryByText('Credentials: workspace')).not.toBeInTheDocument();

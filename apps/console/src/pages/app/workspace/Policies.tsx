@@ -68,34 +68,36 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
   );
 }
 
-function RulesSummary({ policy, ruleById }: { policy: PolicyOut; ruleById: Map<string, RuleOut> }) {
-  const rules = policy.definition.rule_ids.map((ruleId) => ruleById.get(ruleId));
-  const names = rules.map((rule) => rule?.name ?? 'Unavailable rule');
+function RulesSummary({ policy, ruleById, dragging }: { policy: PolicyOut; ruleById: Map<string, RuleOut>; dragging: boolean }) {
+  const rules = policy.definition.rule_ids
+    .map((ruleId) => ({ ruleId, rule: ruleById.get(ruleId) }))
+    .sort((left, right) => (left.rule?.name ?? '').localeCompare(right.rule?.name ?? ''));
+  const names = rules.map(({ rule }) => rule?.name ?? 'Unavailable rule');
   const summary = `${names[0]}${names.length > 1 ? ` +${names.length - 1} more` : ''}`;
+  const trigger = (
+    <Badge
+      variant="outline"
+      tabIndex={0}
+      aria-label={`${names.length} ${names.length === 1 ? 'rule' : 'rules'}: ${names.join(', ')}`}
+      className="max-w-72 normal-case tracking-normal focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <span className="truncate">{summary}</span>
+    </Badge>
+  );
+  if (dragging) return trigger;
   return (
     <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <Badge
-          variant="outline"
-          tabIndex={0}
-          aria-label={`${names.length} ${names.length === 1 ? 'rule' : 'rules'}: ${names.join(', ')}`}
-          className="max-w-72 cursor-help normal-case tracking-normal focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <span className="truncate">{summary}</span>
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
-        <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rules, in order</div>
-        <ol className="space-y-2">
-          {rules.map((rule, index) => (
-            <li key={policy.definition.rule_ids[index]}>
-              <p className="text-sm font-medium">
-                {index + 1}. {rule?.name ?? 'Unavailable rule'}
-              </p>
+      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+      <TooltipContent side="bottom" className="pointer-events-none max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
+        <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rules</div>
+        <ul className="space-y-2">
+          {rules.map(({ ruleId, rule }) => (
+            <li key={ruleId}>
+              <p className="text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
               {rule && <p className="text-xs text-muted-foreground">{actionSummary(rule)}</p>}
             </li>
           ))}
-        </ol>
+        </ul>
       </TooltipContent>
     </Tooltip>
   );
@@ -331,7 +333,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                         key: 'rules',
                         header: 'Rules',
                         cellClassName: 'w-72 max-w-72',
-                        cell: (policy) => <RulesSummary policy={policy} ruleById={ruleById} />,
+                        cell: (policy) => <RulesSummary policy={policy} ruleById={ruleById} dragging={draggedPolicyId !== null} />,
                       },
                       {
                         key: 'target',
