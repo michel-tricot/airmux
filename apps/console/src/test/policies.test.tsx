@@ -149,6 +149,25 @@ describe('workspace policies', () => {
     fireEvent.pointerUp(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
   });
 
+  it('keeps the dragged policy row on the table axis', async () => {
+    mockPolicyRowLayout();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+    );
+    renderPolicies();
+
+    const handle = await screen.findByRole('button', { name: 'Reorder First' });
+    fireEvent.pointerDown(handle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
+    fireEvent.pointerMove(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
+    await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
+    expect(handle.closest('tr')?.style.transform).toMatch(/^translate3d\(0px, /);
+    expect(screen.getAllByText('First')).toHaveLength(1);
+    fireEvent.pointerUp(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
+  });
+
   it('shifts rows while dragging and saves the complete order', async () => {
     mockPolicyRowLayout();
     let policies = initialPolicies;

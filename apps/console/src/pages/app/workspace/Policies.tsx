@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { closestCenter, DndContext, type DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { closestCenter, DndContext, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { type AnimateLayoutChanges, arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Library, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -398,13 +398,6 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                     ]}
                   />
                 </SortableContext>
-                <DragOverlay dropAnimation={null}>
-                  {draggedPolicyId && (
-                    <div className="rounded border border-primary/40 bg-card px-4 py-3 text-sm font-medium text-card-foreground shadow-lg shadow-primary/10">
-                      {policies.data?.find((policy) => policy.id === draggedPolicyId)?.name}
-                    </div>
-                  )}
-                </DragOverlay>
               </DndContext>
             </CardContent>
           </Card>
