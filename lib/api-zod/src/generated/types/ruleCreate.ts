@@ -10,15 +10,15 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { AllKeys } from './allKeys';
-import type { PolicyRuleOutput } from './policyRuleOutput';
-import type { SelectedKeys } from './selectedKeys';
+import type { RuleDefinitionInput } from './ruleDefinitionInput';
 
-export interface PolicyDefinitionOutput {
-  target: AllKeys | SelectedKeys;
+export interface RuleCreate {
   /**
-     * @minItems 1
-     * @maxItems 100
+     * Display name for the reusable workspace rule
+     * @minLength 1
+     * @maxLength 200
      */
-  rules: PolicyRuleOutput[];
+  name: string;
+  /** Request match and action shared by every policy that references this rule */
+  definition: RuleDefinitionInput;
 }

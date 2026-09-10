@@ -10,9 +10,9 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinition } from './policyDefinition';
+import type { RuleDefinitionOutput } from './ruleDefinitionOutput';
 
-export interface PolicyEntry {
+export interface RuleEntry {
   id: string;
   workspace_id: string;
   /**
@@ -20,10 +20,5 @@ export interface PolicyEntry {
      * @maxLength 200
      */
   name: string;
-  /**
-     * @minimum 0
-     * @maximum 10000
-     */
-  priority: number;
-  definition: PolicyDefinition;
+  definition: RuleDefinitionOutput;
 }

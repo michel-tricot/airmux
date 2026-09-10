@@ -70,7 +70,7 @@ def evaluate_policies(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot
             provider=route.provider,
             profile=route.profile,
         )
-        state = evaluate_action(compiled.rule.action, context, state)
+        state = evaluate_action(compiled.rule.definition.action, context, state)
         if state.denial is not None:
             return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, rules)
     candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)

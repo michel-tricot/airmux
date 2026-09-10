@@ -16,7 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
-from contract.policies import PolicyEntry
+from contract.policies import PolicyEntry, RuleEntry
 from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
 from data_plane.tasks import run_periodic
@@ -48,6 +48,7 @@ class LocalBundleSpec(BaseModel):
     keys: list[str] = Field(min_length=1)
     providers: list[ProviderEntry]
     models: list[ModelEntry]
+    rules: tuple[RuleEntry, ...] = ()
     policies: tuple[PolicyEntry, ...] = ()
 
 
@@ -77,6 +78,7 @@ def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
         org_id=LOCAL_ORG,
         issued_at=now,
         keys=keys,
+        rules=spec.rules,
         policies=spec.policies,
         catalog=Catalog(providers=spec.providers, models=spec.models, credentials=credentials),
     )

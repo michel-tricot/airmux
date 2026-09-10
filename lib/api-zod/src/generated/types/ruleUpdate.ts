@@ -10,15 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { AllKeys } from './allKeys';
-import type { PolicyRuleInput } from './policyRuleInput';
-import type { SelectedKeys } from './selectedKeys';
+import type { RuleDefinitionInput } from './ruleDefinitionInput';
 
-export interface PolicyDefinitionInput {
-  target: AllKeys | SelectedKeys;
-  /**
-     * @minItems 1
-     * @maxItems 100
-     */
-  rules: PolicyRuleInput[];
+export interface RuleUpdate {
+  /** Replacement display name; omit to leave unchanged */
+  name?: string | null;
+  /** Replacement request match and action; omit to leave unchanged */
+  definition?: RuleDefinitionInput | null;
 }

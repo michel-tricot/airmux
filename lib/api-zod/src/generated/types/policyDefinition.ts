@@ -10,20 +10,14 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinition } from './policyDefinition';
+import type { AllKeys } from './allKeys';
+import type { SelectedKeys } from './selectedKeys';
 
-export interface PolicyEntry {
-  id: string;
-  workspace_id: string;
+export interface PolicyDefinition {
+  target: AllKeys | SelectedKeys;
   /**
-     * @minLength 1
-     * @maxLength 200
+     * @minItems 1
+     * @maxItems 100
      */
-  name: string;
-  /**
-     * @minimum 0
-     * @maximum 10000
-     */
-  priority: number;
-  definition: PolicyDefinition;
+  rule_ids: string[];
 }

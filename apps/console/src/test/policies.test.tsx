@@ -1,11 +1,25 @@
 import type * as Api from '@workspace/api-client-react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
+
+function rule(id: string, name: string): Api.RuleOut {
+  return {
+    id: `rule-${id}`,
+    org_id: ORG.id,
+    workspace_id: WORKSPACES[0].id,
+    name: `${name} rule`,
+    definition: { match: { kind: 'all_requests' }, action: { kind: 'deny', message: `${name} denied` } },
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  };
+}
 
 function policy(id: string, name: string, priority: number): Api.PolicyOut {
   return {
@@ -17,7 +31,7 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
     priority,
     definition: {
       target: { kind: 'all_keys' },
-      rules: [{ id: `rule-${id}`, match: { kind: 'all_requests' }, action: { kind: 'deny', message: `${name} denied` } }],
+      rule_ids: [`rule-${id}`],
     },
     created_at: now,
     updated_at: now,
@@ -26,6 +40,7 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
 }
 
 const initialPolicies = [policy('policy-1', 'First', 0), policy('policy-2', 'Second', 1), policy('policy-3', 'Third', 2)];
+const initialRules = [rule('policy-1', 'First'), rule('policy-2', 'Second'), rule('policy-3', 'Third')];
 
 function renderPolicies() {
   window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/policies`);
@@ -69,12 +84,30 @@ async function dragBelowNext(handle: HTMLElement) {
 beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
 
 describe('workspace policies', () => {
+  it('shows reusable rules and their policy usage in a focused library', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+    );
+    renderPolicies();
+
+    await user.click(await screen.findByRole('tab', { name: 'Rule library' }));
+
+    expect(screen.getByText('First rule')).toBeVisible();
+    expect(screen.getAllByText('1 policy')).toHaveLength(3);
+    expect(screen.getByRole('button', { name: 'First rule is used by policies' })).toBeDisabled();
+  });
+
   it('shifts rows while dragging and saves the complete order', async () => {
     mockPolicyRowLayout();
     let policies = initialPolicies;
     let submittedOrder: string[] | undefined;
     let reorderCompleted = false;
     server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies })),
       http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
         submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
@@ -106,6 +139,7 @@ describe('workspace policies', () => {
   it('restores the prior order when saving fails', async () => {
     mockPolicyRowLayout();
     server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
@@ -125,6 +159,7 @@ describe('workspace policies', () => {
 
   it('does not show reorder controls to a policy viewer', async () => {
     server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['organizations.read', 'workspaces.read', 'policies.read'] } }),
       ),

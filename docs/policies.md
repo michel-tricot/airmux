@@ -4,13 +4,16 @@ Workspace policies control which inference requests AirLLM accepts, which models
 may use, and when it retries with a fallback model. Open **Policies** from a workspace in the
 console to create, edit, reorder, enable, or disable them.
 
-Every policy has two levels:
+Policy management has two reusable levels:
 
 - **Applies to** selects every inference key in the workspace or a fixed set of keys
-- **Rules** is an ordered collection of request matches and actions
+- **Shared rules** each own a request match and action
+- **Policies** reference an ordered collection of shared rules
 
 Each rule's **Applies when** matches every request or requests with selected models, capabilities,
-or streaming mode. Its **Action** defines the restriction or fallback behavior.
+or streaming mode. Its **Action** defines the restriction or fallback behavior. A rule can be used by
+multiple policies. Editing it updates every policy that references it, and a referenced rule cannot
+be deleted.
 
 All matching rules across all targeted policies compose, and every matching restriction must pass.
 Rules run in their listed order. Lower policy priority numbers run first. Reordering policies in the
@@ -37,27 +40,27 @@ The request matcher can select one or more of these criteria:
 When a matcher contains several criteria, all of them must match. Matching always uses the original
 request. A fallback attempt cannot escape a restriction by changing the model.
 
-For example, this definition matches streaming requests for `openai/gpt-4o` that use tools:
+For example, create this shared rule to match streaming requests for `openai/gpt-4o` that use tools:
 
 ```json
 {
-  "target": { "kind": "all_keys" },
-  "rules": [
-    {
-      "match": {
+  "name": "Team credentials for streaming tools",
+  "definition": {
+    "match": {
         "kind": "request",
         "models": ["openai/gpt-4o"],
         "stream": true,
         "capabilities": ["tools"]
-      },
-      "action": {
+    },
+    "action": {
         "kind": "credential_access",
         "scopes": ["workspace", "org"]
-      }
     }
-  ]
+  }
 }
 ```
+
+Then attach its returned ID to one or more policies with `"rule_ids": ["RULE_ID"]`.
 
 ## Common use cases
 
@@ -77,15 +80,7 @@ create this policy:
       "kind": "selected_keys",
       "key_ids": ["PUBLIC_SUMMARIZER_KEY_ID"]
     },
-    "rules": [
-      {
-        "match": { "kind": "all_requests" },
-        "action": {
-          "kind": "request_limits",
-          "max_output_tokens": 1024
-        }
-      }
-    ]
+    "rule_ids": ["PUBLIC_OUTPUT_LIMIT_RULE_ID"]
   }
 }
 ```
@@ -106,18 +101,7 @@ accounts owned by your organization. This policy excludes platform credentials f
   "priority": 20,
   "definition": {
     "target": { "kind": "all_keys" },
-    "rules": [
-      {
-        "match": {
-          "kind": "request",
-          "capabilities": ["structured_output"]
-        },
-        "action": {
-          "kind": "credential_access",
-          "scopes": ["workspace", "org"]
-        }
-      }
-    ]
+    "rule_ids": ["TEAM_CREDENTIAL_RULE_ID"]
   }
 }
 ```
@@ -137,24 +121,7 @@ provider is throttled or unavailable:
   "priority": 30,
   "definition": {
     "target": { "kind": "all_keys" },
-    "rules": [
-      {
-        "match": {
-          "kind": "request",
-          "models": ["openai/gpt-4o"]
-        },
-        "action": {
-          "kind": "fallback",
-          "models": [
-            "anthropic/claude-sonnet-4-5-20250929",
-            "openai/gpt-4o-mini"
-          ],
-          "on": ["rate_limited", "upstream_unavailable"],
-          "max_attempts": 3,
-          "timeout_ms": 30000
-        }
-      }
-    ]
+    "rule_ids": ["PRODUCTION_FALLBACK_RULE_ID"]
   }
 }
 ```
@@ -321,46 +288,43 @@ Budget enforcement is not implemented yet. Saving or enabling this policy does n
 
 ## Complete API example
 
-The policy API is available at
-`/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`. This request creates a production price
-ceiling for all workspace keys:
+The rule API is available at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`. Create each
+reusable restriction first:
 
 ```json
 {
   "name": "Approved production pricing",
-  "enabled": true,
-  "priority": 20,
   "definition": {
-    "target": { "kind": "all_keys" },
-    "rules": [
-      {
-        "match": { "kind": "all_requests" },
-        "action": {
-          "kind": "price_limit",
-          "max_input_price_per_mtok": "2.50",
-          "max_output_price_per_mtok": "10.00"
-        }
-      },
-      {
-        "match": { "kind": "all_requests" },
-        "action": {
-          "kind": "models",
-          "names": ["openai/gpt-4o", "openai/gpt-4o-mini"]
-        }
-      }
-    ]
+    "match": { "kind": "all_requests" },
+    "action": {
+      "kind": "price_limit",
+      "max_input_price_per_mtok": "2.50",
+      "max_output_price_per_mtok": "10.00"
+    }
   }
 }
 ```
 
-The example keeps the shared key target in one place while independently matching and applying its
-price and model rules. Rule IDs are minted when omitted and returned by the API. Preserve those IDs
-when replacing an existing policy definition.
+The policy API is available at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`. Attach the
+returned rule IDs in evaluation order:
+
+```json
+{
+  "name": "Approved production routing",
+  "enabled": true,
+  "priority": 20,
+  "definition": {
+    "target": { "kind": "all_keys" },
+    "rule_ids": ["PRICE_LIMIT_RULE_ID", "APPROVED_MODELS_RULE_ID"]
+  }
+}
+```
 
 The CLI accepts the same JSON shape:
 
 ```sh
 airllm policies list -w production -f table
+airllm rules create rule.json -w production
 airllm policies create policy.json -w production
 airllm policies update POLICY_ID changes.json -w production
 airllm policies delete POLICY_ID -w production

@@ -10,7 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinitionInput } from './policyDefinitionInput';
+import type { PolicyDefinition } from './policyDefinition';
 
 export interface PolicyCreate {
   /**
@@ -28,5 +28,5 @@ export interface PolicyCreate {
      */
   priority?: number;
   /** Inference key target and ordered rules. Budgets are not yet enforced */
-  definition: PolicyDefinitionInput;
+  definition: PolicyDefinition;
 }

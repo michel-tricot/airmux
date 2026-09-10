@@ -1,27 +1,28 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
 
-from contract.policies import MAX_WORKSPACE_RULES, PolicyDefinition
+from contract import uuid7
+from contract.policies import MAX_WORKSPACE_RULES, PolicyDefinition, RuleDefinition
 from control_plane.db import standalone_transaction
-from control_plane.models import Policy, set_actor
+from control_plane.models import Policy, Rule, set_actor
 from control_plane.models.policy import InvalidPolicyError
 
-DEFINITION = PolicyDefinition.model_validate(
-    {
-        "target": {"kind": "all_keys"},
-        "rules": [
-            {
-                "match": {"kind": "all_requests"},
-                "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
-            }
-        ],
-    }
+if TYPE_CHECKING:
+    from uuid import UUID
+
+RULE_DEFINITION = RuleDefinition.model_validate(
+    {"match": {"kind": "all_requests"}, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}}
 )
+
+
+def definition(rule_id: UUID) -> PolicyDefinition:
+    return PolicyDefinition(target={"kind": "all_keys"}, rule_ids=(rule_id,))
 
 
 @pytest.fixture
@@ -40,10 +41,12 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
     async def compete():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
+            shared_rule = await Rule(org_id=org_id, workspace_id=workspace_id, name="Shared", definition=RULE_DEFINITION).save()
+            policy_definition = definition(shared_rule.id)
             for position in range(MAX_WORKSPACE_RULES - 1):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=DEFINITION).save()
+                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=policy_definition).save()
             disabled = tuple(
-                Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=DEFINITION)
+                Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=policy_definition)
                 for position in range(2)
             )
             for policy in disabled:
@@ -58,7 +61,7 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
                     policies = await Policy.for_workspace(workspace_id)
                     await ready.wait()
                     policy = (
-                        Policy(org_id=org_id, workspace_id=workspace_id, name=f"new-{position}", definition=DEFINITION)
+                        Policy(org_id=org_id, workspace_id=workspace_id, name=f"new-{position}", definition=policy_definition)
                         if operation == "create"
                         else next(policy for policy in policies if policy.id == disabled[position].id)
                     )
@@ -74,40 +77,19 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
         async with standalone_transaction(cp.db_url):
             policies = await Policy.for_workspace(workspace_id)
         assert sorted(results) == [False, True]
-        assert sum(len(policy.definition.rules) for policy in policies if policy.enabled) == MAX_WORKSPACE_RULES
+        assert sum(len(policy.definition.rule_ids) for policy in policies if policy.enabled) == MAX_WORKSPACE_RULES
 
     asyncio.run(compete())
 
 
-@pytest.mark.parametrize(
-    "definition",
-    [
-        PolicyDefinition.model_validate(
-            {
-                "target": {"kind": "all_keys"},
-                "rules": [
-                    {
-                        "match": {"kind": "request", "models": ["absent"]},
-                        "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
-                    }
-                ],
-            }
-        ),
-        PolicyDefinition.model_validate(
-            {
-                "target": {"kind": "all_keys"},
-                "rules": [{"match": {"kind": "all_requests"}, "action": {"kind": "models", "names": ["absent"]}}],
-            }
-        ),
-    ],
-)
-def test_policy_save_validates_configuration_without_a_route(policy_workspace, definition):
+def test_policy_save_rejects_an_unknown_rule(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
+    invalid_definition = definition(uuid7())
 
     async def save():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
-            await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=definition).save()
+            await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
 
     with pytest.raises(InvalidPolicyError):
         asyncio.run(save())
@@ -121,23 +103,15 @@ def test_policy_save_validates_configuration_without_a_route(policy_workspace, d
 
 def test_policy_save_checks_capacity_before_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
-    invalid_definition = PolicyDefinition.model_validate(
-        {
-            "target": {"kind": "all_keys"},
-            "rules": [
-                {
-                    "match": {"kind": "request", "models": ["absent"]},
-                    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
-                }
-            ],
-        }
-    )
+    invalid_definition = definition(uuid7())
 
     async def save():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
+            shared_rule = await Rule(org_id=org_id, workspace_id=workspace_id, name="Shared", definition=RULE_DEFINITION).save()
+            valid_definition = definition(shared_rule.id)
             for position in range(MAX_WORKSPACE_RULES):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=DEFINITION).save()
+                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=valid_definition).save()
             with pytest.raises(InvalidPolicyError, match=f"at most {MAX_WORKSPACE_RULES} active policy rules"):
                 await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
 

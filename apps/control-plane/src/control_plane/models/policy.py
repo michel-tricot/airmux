@@ -10,12 +10,8 @@ from sqlmodel import Field, col, select
 
 from contract.policies import (
     MAX_WORKSPACE_RULES,
-    AllowedModels,
-    AllowedProviders,
-    Fallback,
     PolicyDefinition,
     PolicyEntry,
-    RequestMatch,
     SelectedKeys,
 )
 from control_plane.db import current_session
@@ -24,8 +20,6 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
-from control_plane.models.model import Model
-from control_plane.models.provider import Provider
 from control_plane.models.runtime_configuration import bundle_input
 
 if TYPE_CHECKING:
@@ -114,7 +108,7 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
                 col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
             )
             policies = (await current_session().execute(active_policies)).scalars()
-            if sum(len(policy.definition.rules) for policy in policies) + len(self.definition.rules) > MAX_WORKSPACE_RULES:
+            if sum(len(policy.definition.rule_ids) for policy in policies) + len(self.definition.rule_ids) > MAX_WORKSPACE_RULES:
                 msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
                 raise InvalidPolicyError(msg)
         target = self.definition.target
@@ -123,26 +117,12 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             if set(target.key_ids) - {str(key.id) for key in keys}:
                 msg = "Selected inference keys must belong to this workspace"
                 raise InvalidPolicyError(msg)
-        matched_models = {model for rule in self.definition.rules if isinstance(rule.match, RequestMatch) for model in rule.match.models}
-        action_models = {
-            model
-            for rule in self.definition.rules
-            for model in (
-                rule.action.names if isinstance(rule.action, AllowedModels) else rule.action.models if isinstance(rule.action, Fallback) else ()
-            )
-        }
-        model_names = matched_models | action_models
-        if model_names:
-            models = await Model.find(col(Model.name).in_(model_names))
-            if model_names != {model.name for model in models}:
-                msg = "Policy models must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        provider_names = {name for rule in self.definition.rules if isinstance(rule.action, AllowedProviders) for name in rule.action.names}
-        if provider_names:
-            providers = await Provider.find(col(Provider.name).in_(provider_names))
-            if provider_names != {provider.name for provider in providers}:
-                msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
+        from control_plane.models.rule import Rule  # noqa: PLC0415 policies reference reusable rules
+
+        rules = await Rule.find(col(Rule.id).in_(self.definition.rule_ids))
+        if set(self.definition.rule_ids) != {rule.id for rule in rules} or any(rule.workspace_id != self.workspace_id for rule in rules):
+            msg = "Policy rules must belong to this workspace"
+            raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)

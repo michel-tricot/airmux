@@ -104,7 +104,11 @@ admins/owners can manage policies. Workspace members and viewers can read them. 
 need `policies.read` or `policies.manage` within their existing authority scope. Every write is
 covered by database audit triggers.
 
-The API resource is `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
+Rules are workspace resources at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`. Policies
+reference those rules by ID, so a single live rule can be reused across policies. Updating the rule
+changes every use in the next bundle. Deletion returns 409 while any policy references it.
+
+The policy API is `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
 create, patch, and delete. Successful responses use the standard envelope. Create example:
 
 ```json
@@ -114,18 +118,7 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "priority": 100,
   "definition": {
     "target": { "kind": "all_keys" },
-    "rules": [
-      {
-        "match": { "kind": "request", "models": ["primary-model"] },
-        "action": {
-          "kind": "fallback",
-          "models": ["backup-model", "second-backup"],
-          "on": ["rate_limited", "upstream_unavailable", "timeout"],
-          "max_attempts": 3,
-          "timeout_ms": 30000
-        }
-      }
-    ]
+    "rule_ids": ["fallback-rule-uuid"]
   }
 }
 ```
@@ -133,11 +126,11 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
 Names must exist in the catalog. To target specific keys, replace `target` with
 `{"kind": "selected_keys", "key_ids": ["inference-key-uuid"]}`.
 PATCH replaces `definition` as a whole; omitted fields are unchanged and explicit nulls are
-rejected. Existing rule IDs must be preserved when their identity should survive replacement. CLI
-commands use the same generated request and response types:
+rejected. CLI commands use the same generated request and response types:
 
 ```sh
 airllm policies list -w production -f json
+airllm rules create rule.json -w production
 airllm policies create policy.json -w production
 airllm policies update POLICY_ID changes.json -w production
 airllm policies delete POLICY_ID -w production

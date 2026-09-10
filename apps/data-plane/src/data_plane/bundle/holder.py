@@ -51,7 +51,7 @@ class BundleSnapshot:
             provider_index=MappingProxyType(provider_index),
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(index_profiles(bundle)),
-            policy_index=compile_policies(bundle.policies),
+            policy_index=compile_policies(bundle.policies, bundle.rules),
         )
 
 

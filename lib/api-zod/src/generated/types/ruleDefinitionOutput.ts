@@ -13,17 +13,16 @@
 import type { AllowedModels } from './allowedModels';
 import type { AllowedProviders } from './allowedProviders';
 import type { AllRequests } from './allRequests';
-import type { BudgetInput } from './budgetInput';
+import type { BudgetOutput } from './budgetOutput';
 import type { CredentialAccess } from './credentialAccess';
 import type { DenyRequest } from './denyRequest';
 import type { Fallback } from './fallback';
-import type { PriceLimitInput } from './priceLimitInput';
+import type { PriceLimitOutput } from './priceLimitOutput';
 import type { RequestLimits } from './requestLimits';
-import type { RequestMatchInput } from './requestMatchInput';
+import type { RequestMatchOutput } from './requestMatchOutput';
 import type { StrictParameters } from './strictParameters';
 
-export interface PolicyRuleInput {
-  id?: string;
-  match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+export interface RuleDefinitionOutput {
+  match: AllRequests | RequestMatchOutput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
 }

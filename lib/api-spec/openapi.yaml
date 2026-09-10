@@ -2222,6 +2222,228 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules:
+    get:
+      tags:
+      - Workspace Rules
+      summary: List Rules
+      description: 'List reusable inference rules in a workspace.
+
+
+        Required permission: `policies.read`.'
+      operationId: list_rules
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_RuleOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.read
+    post:
+      tags:
+      - Workspace Rules
+      summary: Create Rule
+      description: 'Create a reusable workspace rule.
+
+
+        Required permission: `policies.manage`.'
+      operationId: create_rule
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RuleOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.manage
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}:
+    patch:
+      tags:
+      - Workspace Rules
+      summary: Update Rule
+      description: 'Update a rule everywhere it is referenced.
+
+
+        Required permission: `policies.manage`.'
+      operationId: update_rule
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
+        description: Rule id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RuleOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.manage
+    delete:
+      tags:
+      - Workspace Rules
+      summary: Delete Rule
+      description: 'Delete an unused workspace rule.
+
+
+        Required permission: `policies.manage`.'
+      operationId: delete_rule
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
+        description: Rule id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.manage
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies:
     get:
       tags:
@@ -4539,6 +4761,11 @@ components:
           title: Keys
         catalog:
           $ref: '#/components/schemas/Catalog'
+        rules:
+          items:
+            $ref: '#/components/schemas/RuleEntry'
+          type: array
+          title: Rules
         policies:
           items:
             $ref: '#/components/schemas/PolicyEntry'
@@ -4551,6 +4778,7 @@ components:
       - issued_at
       - keys
       - catalog
+      - rules
       - policies
       title: BundleV1
       description: A complete, versioned policy snapshot for one organization's model traffic.
@@ -5315,6 +5543,14 @@ components:
       required:
       - data
       title: Envelope[ProviderOut]
+    Envelope_RuleOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/RuleOut'
+      type: object
+      required:
+      - data
+      title: Envelope[RuleOut]
     Envelope_TaxonomyApplyOut_:
       properties:
         data:
@@ -5465,6 +5701,17 @@ components:
       required:
       - data
       title: Envelope[list[ProviderCredentialOut]]
+    Envelope_list_RuleOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/RuleOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[RuleOut]]
     Envelope_list_UsageEventOut__:
       properties:
         data:
@@ -6713,7 +6960,7 @@ components:
           description: Lower numbers run first; policy ID breaks ties. All matching restrictions apply
           default: 100
         definition:
-          $ref: '#/components/schemas/PolicyDefinition-Input'
+          $ref: '#/components/schemas/PolicyDefinition'
           description: Inference key target and ordered rules. Budgets are not yet enforced
       additionalProperties: false
       type: object
@@ -6721,7 +6968,7 @@ components:
       - name
       - definition
       title: PolicyCreate
-    PolicyDefinition-Input:
+    PolicyDefinition:
       properties:
         target:
           oneOf:
@@ -6733,43 +6980,19 @@ components:
             mapping:
               all_keys: '#/components/schemas/AllKeys'
               selected_keys: '#/components/schemas/SelectedKeys'
-        rules:
+        rule_ids:
           items:
-            $ref: '#/components/schemas/PolicyRule-Input'
+            type: string
+            format: uuid
           type: array
           maxItems: 100
           minItems: 1
-          title: Rules
+          title: Rule Ids
       additionalProperties: false
       type: object
       required:
       - target
-      - rules
-      title: PolicyDefinition
-    PolicyDefinition-Output:
-      properties:
-        target:
-          oneOf:
-          - $ref: '#/components/schemas/AllKeys'
-          - $ref: '#/components/schemas/SelectedKeys'
-          title: Target
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_keys: '#/components/schemas/AllKeys'
-              selected_keys: '#/components/schemas/SelectedKeys'
-        rules:
-          items:
-            $ref: '#/components/schemas/PolicyRule-Output'
-          type: array
-          maxItems: 100
-          minItems: 1
-          title: Rules
-      additionalProperties: false
-      type: object
-      required:
-      - target
-      - rules
+      - rule_ids
       title: PolicyDefinition
     PolicyEntry:
       properties:
@@ -6792,7 +7015,7 @@ components:
           minimum: 0.0
           title: Priority
         definition:
-          $ref: '#/components/schemas/PolicyDefinition-Output'
+          $ref: '#/components/schemas/PolicyDefinition'
       additionalProperties: false
       type: object
       required:
@@ -6840,7 +7063,7 @@ components:
           type: integer
           title: Priority
         definition:
-          $ref: '#/components/schemas/PolicyDefinition-Output'
+          $ref: '#/components/schemas/PolicyDefinition'
         created_at:
           type: string
           format: date-time
@@ -6868,99 +7091,6 @@ components:
       - updated_at
       - deleted_at
       title: PolicyOut
-    PolicyRule-Input:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch-Input'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch-Input'
-        action:
-          oneOf:
-          - $ref: '#/components/schemas/AllowedModels'
-          - $ref: '#/components/schemas/AllowedProviders'
-          - $ref: '#/components/schemas/DenyRequest'
-          - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Input'
-          - $ref: '#/components/schemas/RequestLimits'
-          - $ref: '#/components/schemas/CredentialAccess'
-          - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Input'
-          title: Action
-          discriminator:
-            propertyName: kind
-            mapping:
-              budget: '#/components/schemas/Budget-Input'
-              credential_access: '#/components/schemas/CredentialAccess'
-              deny: '#/components/schemas/DenyRequest'
-              fallback: '#/components/schemas/Fallback'
-              models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Input'
-              providers: '#/components/schemas/AllowedProviders'
-              request_limits: '#/components/schemas/RequestLimits'
-              strict_parameters: '#/components/schemas/StrictParameters'
-      additionalProperties: false
-      type: object
-      required:
-      - match
-      - action
-      title: PolicyRule
-    PolicyRule-Output:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch-Output'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch-Output'
-        action:
-          oneOf:
-          - $ref: '#/components/schemas/AllowedModels'
-          - $ref: '#/components/schemas/AllowedProviders'
-          - $ref: '#/components/schemas/DenyRequest'
-          - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Output'
-          - $ref: '#/components/schemas/RequestLimits'
-          - $ref: '#/components/schemas/CredentialAccess'
-          - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Output'
-          title: Action
-          discriminator:
-            propertyName: kind
-            mapping:
-              budget: '#/components/schemas/Budget-Output'
-              credential_access: '#/components/schemas/CredentialAccess'
-              deny: '#/components/schemas/DenyRequest'
-              fallback: '#/components/schemas/Fallback'
-              models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Output'
-              providers: '#/components/schemas/AllowedProviders'
-              request_limits: '#/components/schemas/RequestLimits'
-              strict_parameters: '#/components/schemas/StrictParameters'
-      additionalProperties: false
-      type: object
-      required:
-      - id
-      - match
-      - action
-      title: PolicyRule
     PolicyUpdate:
       properties:
         name:
@@ -6987,7 +7117,7 @@ components:
           description: Replacement priority, with lower numbers first; omit to leave unchanged
         definition:
           anyOf:
-          - $ref: '#/components/schemas/PolicyDefinition-Input'
+          - $ref: '#/components/schemas/PolicyDefinition'
           - type: 'null'
           description: Replace the complete target and ordered rules; omit to leave unchanged
       additionalProperties: false
@@ -7611,6 +7741,194 @@ components:
       - credential_id
       - credential_scope
       title: RoutedUsageEventV1
+    RuleCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Display name for the reusable workspace rule
+        definition:
+          $ref: '#/components/schemas/RuleDefinition-Input'
+          description: Request match and action shared by every policy that references this rule
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - definition
+      title: RuleCreate
+    RuleDefinition-Input:
+      properties:
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Input'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Input'
+        action:
+          oneOf:
+          - $ref: '#/components/schemas/AllowedModels'
+          - $ref: '#/components/schemas/AllowedProviders'
+          - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Input'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
+          - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget-Input'
+          title: Action
+          discriminator:
+            propertyName: kind
+            mapping:
+              budget: '#/components/schemas/Budget-Input'
+              credential_access: '#/components/schemas/CredentialAccess'
+              deny: '#/components/schemas/DenyRequest'
+              fallback: '#/components/schemas/Fallback'
+              models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Input'
+              providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
+      additionalProperties: false
+      type: object
+      required:
+      - match
+      - action
+      title: RuleDefinition
+    RuleDefinition-Output:
+      properties:
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        action:
+          oneOf:
+          - $ref: '#/components/schemas/AllowedModels'
+          - $ref: '#/components/schemas/AllowedProviders'
+          - $ref: '#/components/schemas/DenyRequest'
+          - $ref: '#/components/schemas/StrictParameters'
+          - $ref: '#/components/schemas/PriceLimit-Output'
+          - $ref: '#/components/schemas/RequestLimits'
+          - $ref: '#/components/schemas/CredentialAccess'
+          - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget-Output'
+          title: Action
+          discriminator:
+            propertyName: kind
+            mapping:
+              budget: '#/components/schemas/Budget-Output'
+              credential_access: '#/components/schemas/CredentialAccess'
+              deny: '#/components/schemas/DenyRequest'
+              fallback: '#/components/schemas/Fallback'
+              models: '#/components/schemas/AllowedModels'
+              price_limit: '#/components/schemas/PriceLimit-Output'
+              providers: '#/components/schemas/AllowedProviders'
+              request_limits: '#/components/schemas/RequestLimits'
+              strict_parameters: '#/components/schemas/StrictParameters'
+      additionalProperties: false
+      type: object
+      required:
+      - match
+      - action
+      title: RuleDefinition
+    RuleEntry:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+        definition:
+          $ref: '#/components/schemas/RuleDefinition-Output'
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - workspace_id
+      - name
+      - definition
+      title: RuleEntry
+    RuleOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        name:
+          type: string
+          title: Name
+        definition:
+          $ref: '#/components/schemas/RuleDefinition-Output'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - org_id
+      - workspace_id
+      - name
+      - definition
+      - created_at
+      - updated_at
+      - deleted_at
+      title: RuleOut
+    RuleUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+          description: Replacement display name; omit to leave unchanged
+        definition:
+          anyOf:
+          - $ref: '#/components/schemas/RuleDefinition-Input'
+          - type: 'null'
+          description: Replacement request match and action; omit to leave unchanged
+      additionalProperties: false
+      type: object
+      title: RuleUpdate
     Scope:
       properties:
         level:
@@ -8271,6 +8589,9 @@ tags:
 - name: Workspace Settings
   description: View, update, and delete one workspace
   x-displayName: Settings
+- name: Workspace Rules
+  description: Manage reusable workspace inference rules
+  x-displayName: Rules
 - name: Workspace Policies
   description: Manage workspace inference restrictions and fallbacks
   x-displayName: Policies
@@ -8329,6 +8650,7 @@ x-tagGroups:
 - name: Workspace
   tags:
   - Workspace Settings
+  - Workspace Rules
   - Workspace Policies
   - Workspace Members
   - Workspace Access Keys

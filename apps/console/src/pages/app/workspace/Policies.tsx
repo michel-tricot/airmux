@@ -2,9 +2,23 @@ import { type ReactNode, useState } from 'react';
 import { closestCenter, DndContext, type DragEndEvent, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { type AnimateLayoutChanges, arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Pencil, Trash2 } from 'lucide-react';
-import type { PolicyOut, PolicyRuleOutput } from '@workspace/api-client-react';
-import { Badge, Button, ConfirmButton, TableCell, TableRow } from '@/components/ui/elements';
+import { GripVertical, Library, Pencil, Plus, Trash2 } from 'lucide-react';
+import type { PolicyOut, RuleOut } from '@workspace/api-client-react';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  ConfirmButton,
+  TableCell,
+  TableRow,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
@@ -15,8 +29,11 @@ import { useInferenceKeys } from '@/features/keys/hooks';
 import { useProviders } from '@/features/credentials/hooks';
 import { usePolicies, usePolicyMutations } from '@/features/policies/hooks';
 import { policyAccess } from '@/features/policies/policy';
+import { useRuleMutations, useRules } from '@/features/rules/hooks';
+import { actionSummary, matchSummary } from '@/features/rules/presentation';
 import { cn } from '@/lib/utils';
 import { PolicyEditor } from './PolicyEditor';
+import { RuleEditor } from './RuleEditor';
 
 const preventPostDropAnimation: AnimateLayoutChanges = () => false;
 
@@ -59,41 +76,6 @@ function applyOrder(policies: PolicyOut[] | undefined, policyIds: string[] | nul
     : policies;
 }
 
-function actionSummary(rule: PolicyRuleOutput): string {
-  const { action } = rule;
-  switch (action.kind) {
-    case 'models':
-      return `Models: ${action.names.join(', ')}`;
-    case 'providers':
-      return `Providers: ${action.names.join(', ')}`;
-    case 'deny':
-      return action.message;
-    case 'strict_parameters':
-      return 'Require parameter support';
-    case 'price_limit':
-      return `Price ≤ $${action.max_input_price_per_mtok} input / $${action.max_output_price_per_mtok} output per 1M tokens`;
-    case 'request_limits':
-      return `Output ≤ ${action.max_output_tokens.toLocaleString()} tokens`;
-    case 'credential_access':
-      return `Credentials: ${action.scopes.join(', ')}`;
-    case 'fallback':
-      return `Fallback: ${action.models.join(' → ')}`;
-    case 'budget':
-      return `$${action.amount_usd} / ${action.period} · not enforced`;
-  }
-}
-
-function matchSummary(rule: PolicyRuleOutput): string {
-  const { match } = rule;
-  if (match.kind === 'all_requests') return 'Every request';
-  const criteria = [
-    match.models?.length ? `Models: ${match.models.join(', ')}` : '',
-    match.stream === true ? 'Streaming' : match.stream === false ? 'Non-streaming' : '',
-    match.capabilities?.length ? `Uses: ${match.capabilities.join(', ')}` : '',
-  ];
-  return criteria.filter(Boolean).join(' · ');
-}
-
 export default function WorkspacePolicies() {
   const orgId = useRequiredOrgId();
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -102,196 +84,331 @@ export default function WorkspacePolicies() {
 
 function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
   const authorization = useAuthorization('workspace');
+  const canRead = authorization.can(policyAccess.read);
   const canManage = authorization.can(policyAccess.manage);
-  const policies = usePolicies(orgId, workspaceRef, authorization.can(policyAccess.read));
+  const policies = usePolicies(orgId, workspaceRef, canRead);
+  const rules = useRules(orgId, workspaceRef, canRead);
   const keys = useInferenceKeys(orgId, workspaceRef, { enabled: canManage });
   const catalog = useProviders(orgId, workspaceRef, { enabled: canManage });
-  const { create, update, remove, reorder } = usePolicyMutations(orgId, workspaceRef);
-  const [editing, setEditing] = useState<PolicyOut | null>(null);
-  const [open, setOpen] = useState(false);
+  const policyMutations = usePolicyMutations(orgId, workspaceRef);
+  const ruleMutations = useRuleMutations(orgId, workspaceRef);
+  const [editingPolicy, setEditingPolicy] = useState<PolicyOut | null>(null);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<RuleOut | null>(null);
+  const [ruleOpen, setRuleOpen] = useState(false);
   const [draggedPolicyId, setDraggedPolicyId] = useState<string | null>(null);
   const [pendingPolicyIds, setPendingPolicyIds] = useState<string[] | null>(null);
-  const ready = keys.data !== undefined && catalog.data !== undefined;
+  const ready = keys.data !== undefined && catalog.data !== undefined && rules.data !== undefined;
   const displayedPolicies = applyOrder(policies.data, pendingPolicyIds);
   const policyIds = displayedPolicies?.map((policy) => policy.id) ?? [];
-  const reorderDisabled = reorder.isPending || policyIds.length < 2;
+  const reorderDisabled = policyMutations.reorder.isPending || policyIds.length < 2;
+  const ruleById = new Map(rules.data?.map((rule) => [rule.id, rule]));
+  const usageByRuleId = new Map<string, number>();
+  for (const policy of policies.data ?? [])
+    for (const ruleId of policy.definition.rule_ids) usageByRuleId.set(ruleId, (usageByRuleId.get(ruleId) ?? 0) + 1);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setDraggedPolicyId(null);
-    if (!over || active.id === over.id || reorder.isPending) return;
+    if (!over || active.id === over.id || policyMutations.reorder.isPending) return;
     const from = policyIds.indexOf(String(active.id));
     const to = policyIds.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
     const nextPolicyIds = arrayMove(policyIds, from, to);
     setPendingPolicyIds(nextPolicyIds);
-    reorder.mutate({ orgId, workspaceRef, data: { policy_ids: nextPolicyIds } }, { onSettled: () => setPendingPolicyIds(null) });
+    policyMutations.reorder.mutate({ orgId, workspaceRef, data: { policy_ids: nextPolicyIds } }, { onSettled: () => setPendingPolicyIds(null) });
   };
 
   return (
     <PageShell>
       <PageHeader
         title="Policies"
-        description="Restrict inference and configure model fallbacks for this workspace. All matching restrictions apply."
+        description="Build reusable rules once, then attach them to policies that target sets of inference keys."
         actions={
           canManage && (
-            <Button
-              disabled={!ready}
-              onClick={() => {
-                setEditing(null);
-                setOpen(true);
-              }}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Create policy
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={catalog.data === undefined}
+                onClick={() => {
+                  setEditingRule(null);
+                  setRuleOpen(true);
+                }}
+              >
+                <Library className="mr-1 h-4 w-4" />
+                Create rule
+              </Button>
+              <Button
+                disabled={!ready || !rules.data?.length}
+                onClick={() => {
+                  setEditingPolicy(null);
+                  setPolicyOpen(true);
+                }}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Create policy
+              </Button>
+            </div>
           )
         }
       />
       {canManage && keys.isError && <ErrorState error={keys.error} resource="inference keys" onRetry={() => keys.refetch()} />}
       {canManage && catalog.isError && <ErrorState error={catalog.error} resource="model catalog" onRetry={() => catalog.refetch()} />}
-      {canManage && policyIds.length > 1 && <p className="text-xs text-muted-foreground">Drag policies to change their evaluation order.</p>}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={({ active }) => setDraggedPolicyId(String(active.id))}
-        onDragCancel={() => setDraggedPolicyId(null)}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={policyIds} strategy={verticalListSortingStrategy}>
-          <DataTable
-            rows={displayedPolicies}
-            rowKey={(policy) => policy.id}
-            isLoading={policies.isLoading}
-            isError={policies.isError}
-            error={policies.error}
-            resource="policies"
-            onRetry={() => void policies.refetch()}
-            empty="No policies configured. Inference uses the workspace's available models and credentials."
-            renderRow={
-              canManage
-                ? (policy, cells) => (
-                    <SortablePolicyRow policy={policy} disabled={reorderDisabled}>
-                      {cells.slice(1)}
-                    </SortablePolicyRow>
-                  )
-                : undefined
-            }
-            columns={[
-              ...(canManage
-                ? [
-                    {
-                      key: 'reorder',
-                      header: <span className="sr-only">Order</span>,
-                      headClassName: 'w-12',
-                      cell: () => null,
-                    },
-                  ]
-                : []),
-              {
-                key: 'name',
-                header: 'Policy',
-                cell: (policy) => (
-                  <div>
-                    <span>{policy.name}</span>
-                    <p className="text-xs text-muted-foreground">
-                      {policy.definition.rules.length} {policy.definition.rules.length === 1 ? 'rule' : 'rules'}
-                    </p>
-                  </div>
-                ),
-              },
-              {
-                key: 'rules',
-                header: 'Rules',
-                cell: (policy) => (
-                  <div className="space-y-2">
-                    {policy.definition.rules.map((rule) => (
-                      <div key={rule.id}>
-                        <span>{actionSummary(rule)}</span>
+      <Tabs defaultValue="policies">
+        <TabsList className="mb-4">
+          <TabsTrigger value="policies">Policies</TabsTrigger>
+          <TabsTrigger value="rules">Rule library</TabsTrigger>
+        </TabsList>
+        <TabsContent value="rules" className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shared rules</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Define a restriction once and use it in any number of policies. Editing it updates every use.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                rows={rules.data}
+                rowKey={(rule) => rule.id}
+                isLoading={rules.isLoading}
+                isError={rules.isError}
+                error={rules.error}
+                resource="rules"
+                onRetry={() => void rules.refetch()}
+                empty="No shared rules yet. Create a rule before creating a policy."
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Rule',
+                    cell: (rule) => (
+                      <div>
+                        <span>{rule.name}</span>
                         <p className="text-xs text-muted-foreground">When: {matchSummary(rule)}</p>
                       </div>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                key: 'target',
-                header: 'Applies to',
-                headClassName: 'min-w-28 whitespace-nowrap',
-                cell: (policy) =>
-                  policy.definition.target.kind === 'all_keys' ? 'All keys' : `${policy.definition.target.key_ids.length} selected keys`,
-              },
-              { key: 'priority', header: 'Priority', cell: (policy) => policy.priority },
-              {
-                key: 'status',
-                header: 'Status',
-                cell: (policy) => (
-                  <Badge variant={policy.enabled ? 'success' : 'secondary'}>
-                    {!policy.enabled
-                      ? 'Disabled'
-                      : policy.definition.rules.every((rule) => rule.action.kind === 'budget')
-                        ? 'Not enforced'
-                        : 'Enabled'}
-                  </Badge>
-                ),
-              },
-              ...(canManage
-                ? [
-                    {
-                      key: 'actions',
-                      header: 'Actions',
-                      cell: (policy: PolicyOut) => (
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={!ready}
-                            aria-label={`Edit ${policy.name}`}
-                            onClick={() => {
-                              setEditing(policy);
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <ConfirmButton
-                            title={`Delete ${policy.name}?`}
-                            description="This policy will stop applying when gateways adopt the updated configuration."
-                            confirmLabel="Delete policy"
-                            pending={remove.isPending}
-                            aria-label={`Delete ${policy.name}`}
-                            onConfirm={() => remove.mutateAsync({ orgId, workspaceRef, policyId: policy.id })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </ConfirmButton>
-                        </div>
-                      ),
+                    ),
+                  },
+                  { key: 'action', header: 'Action', cell: actionSummary },
+                  {
+                    key: 'usage',
+                    header: 'Used by',
+                    cell: (rule) => {
+                      const usage = usageByRuleId.get(rule.id) ?? 0;
+                      return `${usage} ${usage === 1 ? 'policy' : 'policies'}`;
                     },
-                  ]
-                : []),
-            ]}
-          />
-        </SortableContext>
-        <DragOverlay dropAnimation={null}>
-          {draggedPolicyId && (
-            <div className="rounded border border-primary/40 bg-card px-4 py-3 text-sm font-medium text-card-foreground shadow-lg shadow-primary/10">
-              {policies.data?.find((policy) => policy.id === draggedPolicyId)?.name}
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
-      {canManage && keys.data && catalog.data && (
+                  },
+                  ...(canManage
+                    ? [
+                        {
+                          key: 'actions',
+                          header: 'Actions',
+                          cell: (rule: RuleOut) => {
+                            const usage = usageByRuleId.get(rule.id) ?? 0;
+                            return (
+                              <div className="flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  disabled={!ready}
+                                  aria-label={`Edit ${rule.name}`}
+                                  onClick={() => {
+                                    setEditingRule(rule);
+                                    setRuleOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <ConfirmButton
+                                  title={`Delete ${rule.name}?`}
+                                  description="Unused rules can be deleted permanently."
+                                  confirmLabel="Delete rule"
+                                  disabled={usage > 0}
+                                  pending={ruleMutations.remove.isPending}
+                                  aria-label={usage > 0 ? `${rule.name} is used by policies` : `Delete ${rule.name}`}
+                                  onConfirm={() => ruleMutations.remove.mutateAsync({ orgId, workspaceRef, ruleId: rule.id })}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </ConfirmButton>
+                              </div>
+                            );
+                          },
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="policies" className="mt-0">
+          <Card>
+            <CardHeader>
+              <CardTitle>Policies</CardTitle>
+              {canManage && policyIds.length > 1 && <p className="text-sm text-muted-foreground">Drag policies to change their evaluation order.</p>}
+            </CardHeader>
+            <CardContent>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={({ active }) => setDraggedPolicyId(String(active.id))}
+                onDragCancel={() => setDraggedPolicyId(null)}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={policyIds} strategy={verticalListSortingStrategy}>
+                  <DataTable
+                    rows={displayedPolicies}
+                    rowKey={(policy) => policy.id}
+                    isLoading={policies.isLoading}
+                    isError={policies.isError}
+                    error={policies.error}
+                    resource="policies"
+                    onRetry={() => void policies.refetch()}
+                    empty="No policies configured. Inference uses the workspace's available models and credentials."
+                    renderRow={
+                      canManage
+                        ? (policy, cells) => (
+                            <SortablePolicyRow policy={policy} disabled={reorderDisabled}>
+                              {cells.slice(1)}
+                            </SortablePolicyRow>
+                          )
+                        : undefined
+                    }
+                    columns={[
+                      ...(canManage
+                        ? [{ key: 'reorder', header: <span className="sr-only">Order</span>, headClassName: 'w-12', cell: () => null }]
+                        : []),
+                      {
+                        key: 'name',
+                        header: 'Policy',
+                        cell: (policy) => (
+                          <div>
+                            <span>{policy.name}</span>
+                            <p className="text-xs text-muted-foreground">
+                              {policy.definition.rule_ids.length} {policy.definition.rule_ids.length === 1 ? 'rule' : 'rules'}
+                            </p>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'rules',
+                        header: 'Rules',
+                        cell: (policy) => (
+                          <div className="space-y-2">
+                            {policy.definition.rule_ids.map((ruleId) => {
+                              const rule = ruleById.get(ruleId);
+                              return (
+                                <div key={ruleId}>
+                                  <span>{rule?.name ?? 'Unavailable rule'}</span>
+                                  {rule && <p className="text-xs text-muted-foreground">{actionSummary(rule)}</p>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'target',
+                        header: 'Applies to',
+                        headClassName: 'min-w-28 whitespace-nowrap',
+                        cell: (policy) =>
+                          policy.definition.target.kind === 'all_keys' ? 'All keys' : `${policy.definition.target.key_ids.length} selected keys`,
+                      },
+                      { key: 'priority', header: 'Priority', cell: (policy) => policy.priority },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (policy) => {
+                          const attachedRules = policy.definition.rule_ids
+                            .map((id) => ruleById.get(id))
+                            .filter((rule): rule is RuleOut => rule !== undefined);
+                          return (
+                            <Badge variant={policy.enabled ? 'success' : 'secondary'}>
+                              {!policy.enabled
+                                ? 'Disabled'
+                                : attachedRules.length > 0 && attachedRules.every((rule) => rule.definition.action.kind === 'budget')
+                                  ? 'Not enforced'
+                                  : 'Enabled'}
+                            </Badge>
+                          );
+                        },
+                      },
+                      ...(canManage
+                        ? [
+                            {
+                              key: 'actions',
+                              header: 'Actions',
+                              cell: (policy: PolicyOut) => (
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    disabled={!ready}
+                                    aria-label={`Edit ${policy.name}`}
+                                    onClick={() => {
+                                      setEditingPolicy(policy);
+                                      setPolicyOpen(true);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <ConfirmButton
+                                    title={`Delete ${policy.name}?`}
+                                    description="This policy will stop applying when gateways adopt the updated configuration."
+                                    confirmLabel="Delete policy"
+                                    pending={policyMutations.remove.isPending}
+                                    aria-label={`Delete ${policy.name}`}
+                                    onConfirm={() => policyMutations.remove.mutateAsync({ orgId, workspaceRef, policyId: policy.id })}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </ConfirmButton>
+                                </div>
+                              ),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </SortableContext>
+                <DragOverlay dropAnimation={null}>
+                  {draggedPolicyId && (
+                    <div className="rounded border border-primary/40 bg-card px-4 py-3 text-sm font-medium text-card-foreground shadow-lg shadow-primary/10">
+                      {policies.data?.find((policy) => policy.id === draggedPolicyId)?.name}
+                    </div>
+                  )}
+                </DragOverlay>
+              </DndContext>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      {canManage && keys.data && rules.data && (
         <PolicyEditor
-          policy={editing}
-          open={open}
-          onOpenChange={setOpen}
+          policy={editingPolicy}
+          open={policyOpen}
+          onOpenChange={setPolicyOpen}
           keys={keys.data}
-          catalog={catalog.data}
-          pending={create.isPending || update.isPending}
+          rules={rules.data}
+          pending={policyMutations.create.isPending || policyMutations.update.isPending}
           onSubmit={(data) =>
-            editing ? update.mutateAsync({ orgId, workspaceRef, policyId: editing.id, data }) : create.mutateAsync({ orgId, workspaceRef, data })
+            editingPolicy
+              ? policyMutations.update.mutateAsync({ orgId, workspaceRef, policyId: editingPolicy.id, data })
+              : policyMutations.create.mutateAsync({ orgId, workspaceRef, data })
+          }
+        />
+      )}
+      {canManage && catalog.data && (
+        <RuleEditor
+          rule={editingRule}
+          open={ruleOpen}
+          onOpenChange={setRuleOpen}
+          catalog={catalog.data}
+          pending={ruleMutations.create.isPending || ruleMutations.update.isPending}
+          onSubmit={(data) =>
+            editingRule
+              ? ruleMutations.update.mutateAsync({ orgId, workspaceRef, ruleId: editingRule.id, data })
+              : ruleMutations.create.mutateAsync({ orgId, workspaceRef, data })
           }
         />
       )}

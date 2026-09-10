@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import TYPE_CHECKING
 
 import httpx
 import pytest
@@ -22,7 +23,10 @@ from conftest import (
 from starlette.testclient import TestClient
 
 from contract import Catalog, uuid7
-from contract.policies import PolicyDefinition, PolicyEntry
+
+if TYPE_CHECKING:
+    from uuid import UUID
+from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition, RuleEntry
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
@@ -34,26 +38,44 @@ def request():
     return CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "hi"}])
 
 
+RULES: dict[UUID, RuleEntry] = {}
+
+
+def rule(action, *, match=None, workspace=WORKSPACE, name="test"):
+    entry = RuleEntry(
+        id=uuid7(),
+        workspace_id=workspace,
+        name=name,
+        definition=RuleDefinition.model_validate({"match": match or {"kind": "all_requests"}, "action": action}),
+    )
+    RULES[entry.id] = entry
+    return entry
+
+
 def policy(action, *, match=None, workspace=WORKSPACE, target=None):
+    policy_rule = rule(action, match=match, workspace=workspace)
     return PolicyEntry(
         id=uuid7(),
         workspace_id=workspace,
         name="test",
         priority=100,
-        definition=PolicyDefinition.model_validate(
-            {"target": target or {"kind": "all_keys"}, "rules": [{"match": match or {"kind": "all_requests"}, "action": action}]}
-        ),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rule_ids": [policy_rule.id]}),
     )
 
 
 def policy_with_rules(rules, *, workspace=WORKSPACE, target=None):
+    rule_entries = tuple(rule(item["action"], match=item["match"], workspace=workspace) for item in rules)
     return PolicyEntry(
         id=uuid7(),
         workspace_id=workspace,
         name="test",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rules": rules}),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rule_ids": [item.id for item in rule_entries]}),
     )
+
+
+def referenced_rules(policies):
+    return tuple({rule_id: RULES[rule_id] for policy in policies for rule_id in policy.definition.rule_ids}.values())
 
 
 def snapshot(policies, *, credentials=None, models=None, provider=PROVIDER):
@@ -62,7 +84,7 @@ def snapshot(policies, *, credentials=None, models=None, provider=PROVIDER):
         keys=[key],
         catalog=Catalog(providers=[provider], models=models or [MODEL], credentials=credentials or [make_credential(org=None)]),
     )
-    return key, BundleSnapshot.from_bundle(bundle.model_copy(update={"policies": tuple(policies)}))
+    return key, BundleSnapshot.from_bundle(bundle.model_copy(update={"rules": referenced_rules(policies), "policies": tuple(policies)}))
 
 
 @pytest.mark.parametrize(
@@ -235,6 +257,28 @@ def test_rules_in_one_policy_compose_for_the_targeted_keys():
     assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
 
 
+def test_one_rule_is_shared_by_multiple_policy_targets():
+    shared = rule({"kind": "request_limits", "max_output_tokens": 500}, name="Shared output limit")
+    first = PolicyEntry(
+        id=uuid7(),
+        workspace_id=WORKSPACE,
+        name="All traffic",
+        priority=10,
+        definition=PolicyDefinition(target={"kind": "all_keys"}, rule_ids=(shared.id,)),
+    )
+    second = PolicyEntry(
+        id=uuid7(),
+        workspace_id=WORKSPACE,
+        name="Selected traffic",
+        priority=20,
+        definition=PolicyDefinition(target={"kind": "selected_keys", "key_ids": ["k-dev"]}, rule_ids=(shared.id,)),
+    )
+
+    _, snap = snapshot([first, second])
+
+    assert tuple(compiled.rule.id for compiled in snap.policy_index[WORKSPACE]) == (shared.id, shared.id)
+
+
 def test_each_rule_matches_the_original_request_independently():
     entry = policy_with_rules(
         [
@@ -270,6 +314,23 @@ def test_invalid_policies_rejected_before_bundle_admission(invalid):
         snapshot(entries)
 
 
+@pytest.mark.parametrize("invalid", ["missing", "wrong_workspace", "duplicate"])
+def test_invalid_rule_references_are_rejected_before_bundle_admission(invalid):
+    entry = policy({"kind": "credential_access", "scopes": ["workspace", "org"]})
+    policy_rule = RULES[entry.definition.rule_ids[0]]
+    if invalid == "missing":
+        rules = ()
+    elif invalid == "wrong_workspace":
+        rules = (policy_rule.model_copy(update={"workspace_id": uuid7()}),)
+    else:
+        rules = (policy_rule, policy_rule)
+    _, key = make_key()
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=[make_credential(org=None)]))
+
+    with pytest.raises(ValueError, match={"missing": "unknown rule", "wrong_workspace": "another workspace", "duplicate": "Duplicate rule"}[invalid]):
+        BundleSnapshot.from_bundle(bundle.model_copy(update={"rules": rules, "policies": (entry,)}))
+
+
 @pytest.mark.parametrize("stream", [False, True])
 @pytest.mark.parametrize("restricted", [False, True])
 @respx.mock
@@ -280,7 +341,10 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
     if restricted:
         policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, match={"kind": "request", "models": [MODEL.model_id]}))
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
-    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": tuple(policies)})]))
+    write_cached_bundles(
+        tmp_path,
+        CachedBundles(bundles=[bundle.model_copy(update={"rules": referenced_rules(policies), "policies": tuple(policies)})]),
+    )
 
     def upstream(incoming):
         model = json.loads(incoming.content)["model"]
@@ -312,7 +376,7 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
         {"kind": "fallback", "models": ["backup", "last"], "on": ["upstream_unavailable", "timeout"], "max_attempts": 2, "timeout_ms": 100}
     )
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, *backups], credentials=[PLATFORM_CREDENTIAL]))
-    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (entry,)})]))
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"rules": referenced_rules((entry,)), "policies": (entry,)})]))
 
     async def upstream(incoming):
         if failure == "attempt_limit":

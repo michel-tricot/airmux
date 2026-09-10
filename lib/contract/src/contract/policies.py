@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from contract.events import CredentialScope
-from contract.ids import uuid7
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
@@ -135,23 +134,29 @@ PolicyAction = Annotated[
 ]
 
 
-class PolicyRule(_PolicyModel):
-    id: UUID = Field(default_factory=uuid7)
+class RuleDefinition(_PolicyModel):
     match: PolicyMatch
     action: PolicyAction
 
 
+class RuleEntry(_PolicyModel):
+    id: UUID
+    workspace_id: UUID
+    name: PolicyName
+    definition: RuleDefinition
+
+
 class PolicyDefinition(_PolicyModel):
     target: PolicyTarget
-    rules: tuple[PolicyRule, ...] = Field(min_length=1, max_length=MAX_WORKSPACE_RULES)
+    rule_ids: tuple[UUID, ...] = Field(min_length=1, max_length=MAX_WORKSPACE_RULES)
 
-    @field_validator("rules")
+    @field_validator("rule_ids")
     @classmethod
-    def unique_rule_ids(cls, rules: tuple[PolicyRule, ...]) -> tuple[PolicyRule, ...]:
-        if len({rule.id for rule in rules}) != len(rules):
-            msg = "Policy rule IDs must be unique"
+    def unique_rule_ids(cls, rule_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if len(set(rule_ids)) != len(rule_ids):
+            msg = "Policy rule references must be unique"
             raise ValueError(msg)
-        return rules
+        return rule_ids
 
 
 class PolicyEntry(_PolicyModel):
