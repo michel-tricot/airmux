@@ -134,9 +134,7 @@ export function PolicyEditor({
                     />
                   </FormControl>
                   <FormMessage />
-                  {field.value === 'all_keys' && (
-                    <p className="text-sm text-muted-foreground">Includes future API keys and playground sessions.</p>
-                  )}
+                  {field.value === 'all_keys' && <p className="text-sm text-muted-foreground">Includes future API keys and playground sessions.</p>}
                 </FormItem>
               )}
             />
