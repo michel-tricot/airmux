@@ -163,10 +163,14 @@ describe('workspace policies', () => {
     fireEvent.pointerDown(handle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
     fireEvent.pointerMove(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
     await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
+    const tableContainer = handle.closest('table')?.parentElement?.parentElement;
+    expect(tableContainer).toHaveClass('overflow-hidden');
+    expect(tableContainer?.className).toContain('[&>div]:overflow-hidden');
     expect(handle.closest('tr')?.style.transform).toMatch(/^translate3d\(0px, /);
     expect(handle.closest('tr')?.style.transform).not.toContain('scale');
     expect(screen.getAllByText('First')).toHaveLength(1);
     fireEvent.pointerUp(document, { clientX: 96, clientY: 32, isPrimary: true, pointerId: 1 });
+    await waitFor(() => expect(tableContainer).toHaveClass('overflow-auto'));
   });
 
   it('shifts rows while dragging and saves the complete order', async () => {

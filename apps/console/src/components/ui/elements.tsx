@@ -504,13 +504,18 @@ export const ConfirmButton = ({
   );
 };
 
-export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, React.ComponentPropsWithoutRef<typeof TablePrimitive>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-md border border-border bg-card/50">
-      <TablePrimitive ref={ref} className={className} {...props} />
-    </div>
-  ),
-);
+type TableProps = React.ComponentPropsWithoutRef<typeof TablePrimitive> & { clipOverflow?: boolean };
+
+export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, TableProps>(({ className, clipOverflow = false, ...props }, ref) => (
+  <div
+    className={cn(
+      'relative w-full rounded-md border border-border bg-card/50',
+      clipOverflow ? 'overflow-hidden [&>div]:overflow-hidden' : 'overflow-auto',
+    )}
+  >
+    <TablePrimitive ref={ref} className={className} {...props} />
+  </div>
+));
 Table.displayName = 'Table';
 
 export const TableHeader = forwardRef<React.ElementRef<typeof TableHeaderPrimitive>, React.ComponentPropsWithoutRef<typeof TableHeaderPrimitive>>(

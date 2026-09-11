@@ -303,6 +303,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                     onRetry={() => void policies.refetch()}
                     empty="No policies configured. Inference uses the workspace's available models and credentials."
                     rowClassName="h-16"
+                    clipOverflow={draggedPolicyId !== null}
                     renderRow={
                       canManage
                         ? (policy, cells) => (
