@@ -1,7 +1,10 @@
+import { useState } from 'react';
+import { Check, Plus } from 'lucide-react';
+import { SearchField } from '@/components/shared/search-field';
 import type { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
 import { Permission, type Permission as PermissionName } from '@workspace/api-client-react';
-import { Input } from '@/components/ui/elements';
+import { Button, Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/shared/states';
@@ -13,6 +16,42 @@ export const accessKeyFormSchema = z.object({
 });
 
 export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
+
+const resourceLabels: Record<string, string> = {
+  'access-keys': 'Management keys',
+  'inference-keys': 'Inference keys',
+  'provider-credentials': 'Provider credentials',
+  'data-planes': 'Data planes',
+  organizations: 'Organizations',
+  principals: 'Users and service accounts',
+  members: 'Members',
+  workspaces: 'Workspaces',
+  catalog: 'Model catalog',
+  policies: 'Policies',
+  playground: 'Playground',
+  bundles: 'Configuration bundles',
+  usage: 'Usage',
+  audit: 'Activity log',
+};
+
+const actionLabels: Record<string, string> = {
+  read: 'Read',
+  create: 'Create',
+  update: 'Edit',
+  delete: 'Delete',
+  manage: 'Manage',
+  execute: 'Run',
+  publish: 'Publish',
+  ingest: 'Ingest',
+  heartbeat: 'Heartbeat',
+  issue: 'Generate',
+  revoke: 'Revoke',
+};
+
+function actionLabel(permission: PermissionName) {
+  const action = permission.slice(permission.indexOf('.') + 1);
+  return actionLabels[action] ?? action;
+}
 
 export function PermissionChecklist({
   value,
@@ -33,6 +72,19 @@ export function PermissionChecklist({
   permissionsError?: unknown;
   onPermissionsRetry?: () => void;
 }) {
+  const [search, setSearch] = useState('');
+  const query = search.trim().toLowerCase();
+  const groups = groupPermissions(availablePermissions)
+    .map(([resource, permissions]) => ({
+      resource,
+      label: resourceLabels[resource] ?? resource,
+      permissions: permissions.filter((permission) =>
+        `${resourceLabels[resource] ?? resource} ${permission} ${actionLabel(permission)}`.toLowerCase().includes(query),
+      ),
+    }))
+    .filter((group) => group.permissions.length > 0);
+  const needsRemoval = value.some((permission) => !grantablePermissions.includes(permission));
+
   if (permissionsLoading) return <p className="text-xs text-muted-foreground">Loading your permissions...</p>;
   if (permissionsError) {
     return (
@@ -41,42 +93,67 @@ export function PermissionChecklist({
   }
   if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue management keys at this scope.</p>;
   return (
-    <>
-      <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
-        {groupPermissions(availablePermissions).map(([resource, permissions]) => (
-          <div key={resource} className="space-y-1">
-            <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <SearchField
+          value={search}
+          onValueChange={setSearch}
+          label="Search permissions"
+          placeholder="Find a resource or action..."
+          className="max-w-none"
+        />
+        <span aria-live="polite" className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {value.length} selected
+        </span>
+      </div>
+      <div className="h-80 max-h-[40vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
+        {groups.length === 0 && (
+          <p className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">No matching permissions</p>
+        )}
+        {groups.map(({ resource, label, permissions }) => (
+          <fieldset key={resource} aria-label={label} className="min-w-0 rounded-lg border border-border bg-muted/20 p-3">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">{label}</span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">
+                {permissions.filter((permission) => value.includes(permission)).length} / {permissions.length}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {permissions.map((permission) => {
                 const checked = value.includes(permission);
                 return (
-                  <label
+                  <Button
                     key={permission}
+                    role="checkbox"
+                    aria-label={permission}
+                    aria-checked={checked}
+                    title={permission}
+                    variant="outline"
+                    size="sm"
+                    disabled={!checked && !grantablePermissions.includes(permission)}
+                    onClick={() => onChange(checked ? value.filter((item) => item !== permission) : [...value, permission])}
                     className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-xs',
-                      checked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                      'gap-1.5 rounded-md font-sans text-xs font-medium normal-case tracking-normal transition-colors',
+                      checked
+                        ? 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/20'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    <input
-                      type="checkbox"
-                      aria-label={permission}
-                      className="size-3.5 accent-primary"
-                      checked={checked}
-                      disabled={!checked && !grantablePermissions.includes(permission)}
-                      onChange={(event) => onChange(event.target.checked ? [...value, permission] : value.filter((item) => item !== permission))}
-                    />
-                    <span className="font-mono">{permission}</span>
-                  </label>
+                    {checked ? <Check className="size-3.5" aria-hidden="true" /> : <Plus className="size-3.5 opacity-50" aria-hidden="true" />}
+                    {actionLabel(permission)}
+                  </Button>
                 );
               })}
             </div>
-          </div>
+          </fieldset>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        You can only grant permissions you currently hold. Existing permissions outside that limit must be removed before saving.
+        {needsRemoval
+          ? 'Remove permissions you no longer hold before saving.'
+          : 'Select the access this key needs. Hover over an action to see its permission name.'}
       </p>
-    </>
+    </div>
   );
 }
 
