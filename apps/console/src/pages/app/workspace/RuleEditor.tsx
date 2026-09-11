@@ -248,7 +248,7 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
               <FormMessage />
               {names.length > 0 && kind !== 'providers' && (
                 <div className="text-sm text-muted-foreground">
-                  <ModelBadges names={names} ordered={kind === 'fallback'} maxVisible={1} />
+                  <ModelBadges names={names} ordered={kind === 'fallback'} />
                 </div>
               )}
               {names.length > 0 && kind === 'providers' && <p className="break-words text-sm text-muted-foreground">{names.join(', ')}</p>}

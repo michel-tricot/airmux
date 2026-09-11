@@ -2,6 +2,7 @@ import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RuleEditor } from '@/pages/app/workspace/RuleEditor';
 import { now, taxonomyProvider } from './fixtures';
 
@@ -27,6 +28,7 @@ const model = {
   deleted_at: null,
 } satisfies Api.ModelOut;
 const secondModel = { ...model, id: 'model-2', name: 'openai/o3' } satisfies Api.ModelOut;
+const thirdModel = { ...model, id: 'model-3', name: 'openai/gpt-5' } satisfies Api.ModelOut;
 
 it('treats required route selection as a placeholder instead of a checked option', async () => {
   const user = userEvent.setup();
@@ -84,18 +86,20 @@ it('shows provider icons in provider rule choices', async () => {
   expect(screen.getByRole('menuitemcheckbox', { name: provider.name }).querySelector('svg')).toBeInTheDocument();
 });
 
-it('names a single selected backup model in the picker summary', async () => {
+it('shows two selected backup names before summarizing additional models', async () => {
   const user = userEvent.setup();
   render(
-    <RuleEditor
-      rule={null}
-      kind="fallback"
-      open
-      onOpenChange={() => {}}
-      onSubmit={async () => {}}
-      pending={false}
-      catalog={{ providers: [provider], models: [model] }}
-    />,
+    <TooltipProvider>
+      <RuleEditor
+        rule={null}
+        kind="fallback"
+        open
+        onOpenChange={() => {}}
+        onSubmit={async () => {}}
+        pending={false}
+        catalog={{ providers: [provider], models: [model, secondModel, thirdModel] }}
+      />
+    </TooltipProvider>,
   );
 
   const routes = screen.getByRole('button', { name: 'Allowed routes' });
@@ -105,6 +109,18 @@ it('names a single selected backup model in the picker summary', async () => {
 
   expect(routes).toHaveTextContent(model.name);
   expect(routes).not.toHaveTextContent('(1)');
+
+  await user.click(routes);
+  await user.click(screen.getByRole('option', { name: `${secondModel.name}, ${provider.name}` }));
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  expect(routes).toHaveTextContent(model.name);
+  expect(routes).toHaveTextContent(secondModel.name);
+  expect(routes).not.toHaveTextContent('more');
+
+  await user.click(routes);
+  await user.click(screen.getByRole('option', { name: `${thirdModel.name}, ${provider.name}` }));
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+  expect(routes).toHaveTextContent('+1 more');
 });
 
 it('shows a focused form for one rule type', () => {

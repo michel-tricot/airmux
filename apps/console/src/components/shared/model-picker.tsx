@@ -86,10 +86,12 @@ export function ModelPicker(props: ModelPickerProps) {
   const triggerLabel = multiple ? (
     props.values.length === 0 ? (
       props.emptyLabel
+    ) : props.values.length === 1 ? (
+      (firstSelected?.label ?? props.values[0])
     ) : (
       <span className="flex min-w-0 flex-1 items-center gap-2">
-        {firstSelected?.label ?? props.values[0]}
-        {props.values.length > 1 && <span className="shrink-0 text-muted-foreground">+{props.values.length - 1} more</span>}
+        <span className="truncate">{props.values.slice(0, 2).join(', ')}</span>
+        {props.values.length > 2 && <span className="shrink-0 text-muted-foreground">+{props.values.length - 2} more</span>}
       </span>
     )
   ) : (
