@@ -1,7 +1,7 @@
 import { Button, Modal } from '@/components/ui/elements';
 import { ruleTypes, type RuleKind } from '@/features/rules/types';
 
-export function RuleTypeChoices({ onSelect }: { onSelect: (kind: RuleKind) => void }) {
+export function RuleTypeChoices({ onSelect, fallbackDisabled = false }: { onSelect: (kind: RuleKind) => void; fallbackDisabled?: boolean }) {
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {ruleTypes.map((type) => (
@@ -10,6 +10,7 @@ export function RuleTypeChoices({ onSelect }: { onSelect: (kind: RuleKind) => vo
           type="button"
           variant="outline"
           aria-label={type.label}
+          disabled={fallbackDisabled && type.kind === 'fallback'}
           className="h-auto min-h-16 items-start justify-start whitespace-normal px-3 py-3 text-left normal-case tracking-normal"
           onClick={() => onSelect(type.kind)}
         >

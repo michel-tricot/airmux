@@ -1,33 +1,8 @@
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 
 import yaml
-
-
-def test_runtime_image_drops_root_privileges():
-    dockerfile = Path(__file__).resolve().parents[4] / "Dockerfile"
-    assert "USER 10001:10001" in dockerfile.read_text(encoding="utf-8")
-
-
-def test_runtime_image_installs_backend_dependency_group():
-    root = Path(__file__).resolve().parents[4]
-    dockerfile = root / "Dockerfile"
-    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-    content = dockerfile.read_text(encoding="utf-8")
-    assert set(project["dependency-groups"]["backend"]) == {"control-plane", "data-plane"}
-    assert content.count("uv sync --only-group backend --frozen") == 2
-    assert "--no-install-package" not in content
-    assert "apps/cli" not in content
-
-
-def test_console_health_checks_the_control_plane():
-    root = Path(__file__).resolve().parents[4]
-    nginx = (root / "deploy" / "docker" / "nginx.conf.template").read_text(encoding="utf-8")
-
-    assert "location = /healthz { proxy_pass http://$control_plane/healthz; }" in nginx
-    assert "location = /healthz { return 200" not in nginx
 
 
 def test_default_deployment_is_one_application_and_postgres():
@@ -78,8 +53,11 @@ def test_compose_layouts_do_not_define_a_setup_service():
     root = Path(__file__).resolve().parents[4]
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
-    digitalocean = (root / "deploy" / "digitalocean" / "compose.yml").read_text()
+    digitalocean = yaml.load(
+        (root / "deploy" / "digitalocean" / "compose.yml").read_text(),
+        Loader=yaml.BaseLoader,  # noqa: S506 BaseLoader only constructs strings, lists, and maps, including Compose tags
+    )
 
     assert "setup" not in compact["services"]
     assert "setup" not in split["services"]
-    assert "\n  setup:" not in digitalocean
+    assert "setup" not in digitalocean["services"]

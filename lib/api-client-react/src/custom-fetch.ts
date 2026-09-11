@@ -1,6 +1,4 @@
-export type CustomFetchOptions = RequestInit & {
-  responseType?: 'json' | 'text' | 'blob' | 'auto';
-};
+export type CustomFetchOptions = RequestInit;
 
 export type ErrorType<T = unknown> = ApiError<T>;
 
@@ -249,45 +247,16 @@ function unwrapEnvelope(body: unknown): unknown {
   return body.data;
 }
 
-function inferResponseType(response: Response): 'json' | 'text' | 'blob' {
-  const mediaType = getMediaType(response.headers);
-
-  if (isJsonMediaType(mediaType)) return 'json';
-  if (isTextMediaType(mediaType) || mediaType == null) return 'text';
-  return 'blob';
-}
-
-async function parseSuccessBody(
-  response: Response,
-  responseType: 'json' | 'text' | 'blob' | 'auto',
-  requestInfo: { method: string; url: string },
-): Promise<unknown> {
-  if (hasNoBody(response, requestInfo.method)) {
-    return null;
+async function parseSuccessBody(response: Response, requestInfo: { method: string; url: string }): Promise<unknown> {
+  if (hasNoBody(response, requestInfo.method) || !isJsonMediaType(getMediaType(response.headers))) {
+    throw new TypeError('Expected a JSON response envelope from the management API');
   }
-
-  const effectiveType = responseType === 'auto' ? inferResponseType(response) : responseType;
-
-  switch (effectiveType) {
-    case 'json':
-      return unwrapEnvelope(await parseJsonBody(response, requestInfo));
-
-    case 'text': {
-      const text = await response.text();
-      return text === '' ? null : text;
-    }
-
-    case 'blob':
-      if (typeof response.blob !== 'function') {
-        throw new TypeError('Blob responses are not supported in this runtime. ' + 'Use responseType "json" or "text" instead.');
-      }
-      return response.blob();
-  }
+  return unwrapEnvelope(await parseJsonBody(response, requestInfo));
 }
 
 export async function customFetch<T = unknown>(input: RequestInfo | URL, options: CustomFetchOptions = {}): Promise<T> {
   input = applyBaseUrl(input);
-  const { responseType = 'auto', headers: headersInit, ...init } = options;
+  const { headers: headersInit, ...init } = options;
 
   const method = resolveMethod(input, init.method);
 
@@ -301,7 +270,7 @@ export async function customFetch<T = unknown>(input: RequestInfo | URL, options
     headers.set('content-type', 'application/json');
   }
 
-  if (responseType === 'json' && !headers.has('accept')) {
+  if (!headers.has('accept')) {
     headers.set('accept', DEFAULT_JSON_ACCEPT);
   }
 
@@ -325,5 +294,5 @@ export async function customFetch<T = unknown>(input: RequestInfo | URL, options
     throw new ApiError(response, errorData, requestInfo);
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  return (await parseSuccessBody(response, requestInfo)) as T;
 }
