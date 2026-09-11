@@ -49,7 +49,6 @@ export function ModelPicker(props: ModelPickerProps) {
   const visibleOptions = props.options.filter((option) => option.searchText.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const highlightedIndex = Math.min(activeIndex, Math.max(visibleOptions.length - 1, 0));
   const highlightedOption = visibleOptions[highlightedIndex];
-  const firstSelected = multiple ? props.options.find((option) => option.value === props.values[0]) : undefined;
 
   useEffect(() => {
     if (open) document.getElementById(`${listboxId}-${highlightedIndex}`)?.scrollIntoView?.({ block: 'nearest' });
@@ -83,20 +82,11 @@ export function ModelPicker(props: ModelPickerProps) {
     onOpenChange(false);
   };
 
-  const triggerLabel = multiple ? (
-    props.values.length === 0 ? (
-      props.emptyLabel
-    ) : props.values.length === 1 ? (
-      (firstSelected?.label ?? props.values[0])
-    ) : (
-      <span className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate">{props.values.slice(0, 2).join(', ')}</span>
-        {props.values.length > 2 && <span className="shrink-0 text-muted-foreground">+{props.values.length - 2} more</span>}
-      </span>
-    )
-  ) : (
-    (selected?.label ?? props.placeholder ?? 'Select model')
-  );
+  const triggerLabel = multiple
+    ? props.values.length === 0
+      ? props.emptyLabel
+      : `${props.values.length} ${props.values.length === 1 ? 'model' : 'models'} selected`
+    : (selected?.label ?? props.placeholder ?? 'Select model');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

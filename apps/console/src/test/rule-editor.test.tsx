@@ -86,7 +86,7 @@ it('shows provider icons in provider rule choices', async () => {
   expect(screen.getByRole('menuitemcheckbox', { name: provider.name }).querySelector('svg')).toBeInTheDocument();
 });
 
-it('shows two selected backup names before summarizing additional models', async () => {
+it('summarizes model picker selections by count', async () => {
   const user = userEvent.setup();
   render(
     <TooltipProvider>
@@ -107,20 +107,20 @@ it('shows two selected backup names before summarizing additional models', async
   await user.click(screen.getByRole('option', { name: `${model.name}, ${provider.name}` }));
   await user.click(screen.getByRole('button', { name: 'Done' }));
 
-  expect(routes).toHaveTextContent(model.name);
-  expect(routes).not.toHaveTextContent('(1)');
+  expect(routes).toHaveTextContent('1 model selected');
+  expect(routes).not.toHaveTextContent(model.name);
 
   await user.click(routes);
   await user.click(screen.getByRole('option', { name: `${secondModel.name}, ${provider.name}` }));
   await user.click(screen.getByRole('button', { name: 'Done' }));
-  expect(routes).toHaveTextContent(model.name);
-  expect(routes).toHaveTextContent(secondModel.name);
-  expect(routes).not.toHaveTextContent('more');
+  expect(routes).toHaveTextContent('2 models selected');
+  expect(routes).not.toHaveTextContent(model.name);
+  expect(routes).not.toHaveTextContent(secondModel.name);
 
   await user.click(routes);
   await user.click(screen.getByRole('option', { name: `${thirdModel.name}, ${provider.name}` }));
   await user.click(screen.getByRole('button', { name: 'Done' }));
-  expect(routes).toHaveTextContent('+1 more');
+  expect(routes).toHaveTextContent('3 models selected');
 });
 
 it('shows a focused form for one rule type', () => {
