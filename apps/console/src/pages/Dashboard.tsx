@@ -37,7 +37,7 @@ export default function Dashboard() {
     ...(canListOrgs ? [{ label: 'Organizations', value: orgsQuery.data?.length, query: orgsQuery, icon: Building2 }] : []),
     ...(canListUsers ? [{ label: 'Users', value: usersQuery.data?.length, query: usersQuery, icon: Users }] : []),
     ...(canReadKeys
-      ? [{ label: 'API Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key }]
+      ? [{ label: 'Management Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key }]
       : []),
     ...(canReadDataPlanes
       ? [

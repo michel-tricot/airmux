@@ -7,12 +7,12 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col
 
-from control_plane.authority import access_key_parent
+from control_plane.authority import access_key_parent, ensure_access_key_permissions
 from control_plane.authz import Actor, Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import AccessKeyGrant, mint_access_key
 from control_plane.models import AccessKey, User
-from control_plane.models.access_key import AccessKeyIn, AccessKeyMintedOut, AccessKeyOut, AccessKeyRevokedOut
+from control_plane.models.access_key import AccessKeyIn, AccessKeyMintedOut, AccessKeyOut, AccessKeyPermissionsIn, AccessKeyRevokedOut
 from control_plane.models.common.wire import Envelope
 
 router = APIRouter()
@@ -132,3 +132,19 @@ async def revoke_access_key(key: AccessKeyDep) -> Envelope[AccessKeyRevokedOut]:
     revoked_at = datetime.now(tz=UTC)
     await key.revoke_with_descendants(revoked_at)
     return Envelope(data=AccessKeyRevokedOut(id=key.id, status="revoked", revoked_at=revoked_at))
+
+
+@router.put(
+    "/access-keys/{key_id}/permissions",
+    tags=["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
+    dependencies=[require(access_key_scope, Permission.access_keys_issue)],
+)
+async def update_access_key_permissions(body: AccessKeyPermissionsIn, key: AccessKeyDep, actor: ActorDep) -> Envelope[AccessKeyOut]:
+    now = datetime.now(tz=UTC)
+    if key.status(now) != "active":
+        raise HTTPException(status_code=409, detail="Only active management keys can have their permissions changed")
+    permissions = frozenset(body.permissions)
+    await ensure_access_key_permissions(actor, key, permissions, now)
+    key.permissions = sorted(permissions, key=str)
+    await key.save()
+    return Envelope(data=_out(key, now))

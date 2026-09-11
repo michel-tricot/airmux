@@ -5,7 +5,7 @@ import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeIns
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
-import { PermissionsCell } from '@/components/shared/permissions-cell';
+import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState } from '@/components/shared/states';
@@ -32,8 +32,8 @@ export default function AccessKeys() {
   return (
     <PageShell>
       <PageHeader
-        title="API Keys"
-        description="API keys grant management access limited by principal, tenant scope, and explicit permissions."
+        title="Management Keys"
+        description="Management keys grant control-plane API access limited by principal, tenant scope, and explicit permissions."
         icon={KeyRound}
         actions={
           canIssueKey && (
@@ -47,13 +47,13 @@ export default function AccessKeys() {
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
       <ApiKeysTable
-        resource="API keys"
+        resource="management keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
         isError={keysQuery.isError}
         error={keysQuery.error}
         onRetry={() => keysQuery.refetch()}
-        emptyText="No API keys generated."
+        emptyText="No management keys generated."
         extraColumns={[
           {
             key: 'principal',
@@ -82,7 +82,7 @@ export default function AccessKeys() {
           {
             key: 'permissions',
             header: 'Permissions',
-            cell: (key) => <PermissionsCell permissions={key.permissions} />,
+            cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.instance.updatePermissions)} />,
           },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
@@ -94,7 +94,7 @@ export default function AccessKeys() {
         <FormDialog
           open={createOpen}
           onOpenChange={setCreateOpen}
-          title="Generate API Key"
+          title="Generate Management Key"
           description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
           schema={accessKeyFormSchema}
           defaultValues={{ label: '', permissions: [] }}

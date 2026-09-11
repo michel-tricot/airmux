@@ -16,5 +16,5 @@ it('keeps the key target label short and explains its scope outside the dropdown
   );
 
   expect(screen.getByRole('combobox', { name: 'Applies to' })).toHaveTextContent(/^All keys$/);
-  expect(screen.getByText('Includes future API keys and playground sessions.')).toBeVisible();
+  expect(screen.getByText('Includes future inference keys and playground sessions.')).toBeVisible();
 });

@@ -67,6 +67,7 @@ def test_access_key_docs_distinguish_tenant_scopes():
         "list_workspace_access_keys": ["Workspace Access Keys"],
         "create_workspace_access_key": ["Workspace Access Keys"],
         "revoke_access_key": ["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
+        "update_access_key_permissions": ["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
     }
 
 

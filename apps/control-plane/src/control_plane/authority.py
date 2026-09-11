@@ -187,3 +187,25 @@ async def access_key_parent(
         detail = "A delegated key cannot outlive its issuer"
         raise AuthorizationError(detail)
     return parent.id
+
+
+async def ensure_access_key_permissions(actor: Actor, key: AccessKey, permissions: frozenset[Permission], now: datetime) -> None:
+    await access_key_parent(actor, key.user_id, key.scope, permissions, key.expires_at)
+    parent_id = key.parent_id
+    seen = {key.id}
+    while parent_id is not None:
+        if parent_id in seen:
+            detail = "The key has an invalid delegation chain"
+            raise AuthorizationError(detail)
+        seen.add(parent_id)
+        parent = await AccessKey.find_by_id(parent_id)
+        if parent is None or parent.status(now) != "active":
+            detail = "The parent management key is no longer active"
+            raise AuthorizationError(detail)
+        if Permission.access_keys_issue in permissions or not permissions < frozenset(parent.permissions):
+            detail = "Requested permissions exceed the parent management key's delegation limit"
+            raise AuthorizationError(detail)
+        parent_id = parent.parent_id
+    if actor.credential_kind == "access_key" and not permissions <= frozenset(key.permissions) and actor.credential_id not in seen:
+        detail = "A bearer credential cannot expand a key outside its delegation chain"
+        raise AuthorizationError(detail)

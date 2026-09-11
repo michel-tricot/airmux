@@ -29,7 +29,7 @@ export default function WorkspaceApiKeys() {
   return (
     <PageShell>
       <PageHeader
-        title="API Keys"
+        title="Inference Keys"
         description="Keys let applications send requests to the models available to this workspace."
         actions={
           canCreate && (
@@ -41,14 +41,14 @@ export default function WorkspaceApiKeys() {
       />
 
       <ApiKeysTable
-        resource="API keys"
+        resource="inference keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
         isError={keysQuery.isError}
         error={keysQuery.error}
         onRetry={() => keysQuery.refetch()}
-        emptyText="No API keys generated."
-        revokeDescription="Requests using this API key will stop working immediately. This cannot be undone."
+        emptyText="No inference keys generated."
+        revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
         onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
         revokePending={canRevoke ? revokeKey.isPending : undefined}
       />

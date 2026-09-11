@@ -108,7 +108,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               size="default"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               title="Delete Workspace"
-              description={`Deleting ${workspace.name} also deletes its API keys and memberships. Usage already recorded remains on the organization’s bill.`}
+              description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
               confirmLabel="Delete Workspace"
               pending={remove.isPending}
               onConfirm={async () => {
@@ -126,7 +126,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         <TabsList className="mb-4">
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> API Keys
+              <Key className="w-4 h-4" /> Inference Keys
             </TabsTrigger>
           )}
           {canReadMembers && (
@@ -139,7 +139,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">API Keys</h2>
+              <h2 className="text-lg font-semibold">Inference Keys</h2>
               {canCreateKeys && (
                 <Button onClick={() => setKeyOpen(true)} size="sm">
                   <Plus className="w-4 h-4 mr-1" /> Generate Key
@@ -147,14 +147,14 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               )}
             </div>
             <ApiKeysTable
-              resource="API keys"
+              resource="inference keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No API keys generated."
-              revokeDescription="Requests using this API key will stop working immediately. This cannot be undone."
+              emptyText="No inference keys generated."
+              revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
             />

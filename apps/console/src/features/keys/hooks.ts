@@ -5,6 +5,8 @@ import {
   useCreateInstanceAccessKey,
   useCreateOrgAccessKey,
   useRevokeAccessKey,
+  useUpdateAccessKeyPermissions,
+  getListWorkspaceAccessKeysQueryKey,
   useListInferenceKeys,
   useCreateInferenceKey,
   useRevokeInferenceKey,
@@ -29,7 +31,7 @@ export function useCreateInstanceAccessKeyMutation(params?: ListInstanceAccessKe
   return useCreateInstanceAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
-      meta: { errorMessage: 'We couldn’t generate the API key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t generate the management key. Please try again.' },
     },
   });
 }
@@ -39,7 +41,7 @@ export function useCreateOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   return useCreateOrgAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
-      meta: { errorMessage: 'We couldn’t generate the API key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t generate the management key. Please try again.' },
     },
   });
 }
@@ -49,7 +51,7 @@ export function useRevokeInstanceAccessKeyMutation(params?: ListInstanceAccessKe
   return useRevokeAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
-      meta: { errorMessage: 'We couldn’t revoke the API key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t revoke the management key. Please try again.' },
     },
   });
 }
@@ -59,7 +61,7 @@ export function useRevokeOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   return useRevokeAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
-      meta: { errorMessage: 'We couldn’t revoke the API key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t revoke the management key. Please try again.' },
     },
   });
 }
@@ -84,6 +86,24 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
+    },
+  });
+}
+
+export function useUpdateAccessKeyPermissionsMutation() {
+  const queryClient = useQueryClient();
+  return useUpdateAccessKeyPermissions({
+    mutation: {
+      onSuccess: async (key) => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey() }),
+          ...(key.org_id ? [queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(key.org_id) })] : []),
+          ...(key.org_id && key.workspace_id
+            ? [queryClient.invalidateQueries({ queryKey: getListWorkspaceAccessKeysQueryKey(key.org_id, key.workspace_id) })]
+            : []),
+        ]);
+      },
+      meta: { errorMessage: 'We couldn’t update the management key permissions. Please try again.' },
     },
   });
 }

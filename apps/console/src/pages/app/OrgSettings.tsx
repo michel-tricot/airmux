@@ -19,7 +19,7 @@ import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { AccessKeyFormFields, PermissionChecklist, accessKeyFormSchema } from '@/components/shared/access-key-form';
-import { PermissionsCell } from '@/components/shared/permissions-cell';
+import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -109,7 +109,7 @@ export default function AppOrgSettings() {
           </div>
         }
         categories={[
-          ...(canReadKeys ? [{ id: 'keys', label: 'API Keys' }] : []),
+          ...(canReadKeys ? [{ id: 'keys', label: 'Management Keys' }] : []),
           ...(canReadMembers || canListInvitations ? [{ id: 'members', label: 'Members' }] : []),
           ...(canReadActivity || canReadBundles ? [{ id: 'activity', label: 'Activity' }] : []),
         ]}
@@ -117,7 +117,10 @@ export default function AppOrgSettings() {
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">API Keys</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Management Keys</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Control-plane API access for managing this organization.</p>
+              </div>
               {canIssueKey && (
                 <Button
                   onClick={() => {
@@ -132,18 +135,18 @@ export default function AppOrgSettings() {
               )}
             </div>
             <ApiKeysTable
-              resource="API keys"
+              resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No API keys generated."
+              emptyText="No management keys generated."
               extraColumns={[
                 {
                   key: 'permissions',
                   header: 'Permissions',
-                  cell: (key) => <PermissionsCell permissions={key.permissions} />,
+                  cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.org.updatePermissions)} />,
                 },
                 { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
               ]}
@@ -211,7 +214,7 @@ export default function AppOrgSettings() {
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
-                                    description="The service account and all of its control-plane API keys will stop working immediately."
+                                    description="The service account and all of its control-plane management keys will stop working immediately."
                                     confirmLabel="Delete service account"
                                     pending={deleteServiceAccount.isPending}
                                     aria-label={`Delete service account ${member.name}`}
@@ -352,7 +355,7 @@ export default function AppOrgSettings() {
             setKeyOpen(open);
             if (!open) setKeyTarget(null);
           }}
-          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate API Key'}
+          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate Management Key'}
           description={
             keyTarget
               ? 'The new key is shown once and does not revoke any existing keys for this service account.'

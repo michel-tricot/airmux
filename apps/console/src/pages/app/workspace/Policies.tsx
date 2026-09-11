@@ -150,7 +150,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
           )
         }
       />
-      {canManage && keys.isError && <ErrorState error={keys.error} resource="API keys" onRetry={() => keys.refetch()} />}
+      {canManage && keys.isError && <ErrorState error={keys.error} resource="inference keys" onRetry={() => keys.refetch()} />}
       {canManage && catalog.isError && <ErrorState error={catalog.error} resource="model catalog" onRetry={() => catalog.refetch()} />}
       {canManage && policyIds.length > 1 && <p className="text-xs text-muted-foreground">Drag policies to change their evaluation order.</p>}
       <DndContext

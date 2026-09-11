@@ -354,6 +354,54 @@ paths:
       - scope: access_key_scope
         anyOf:
         - access-keys.revoke
+  /api/v1/access-keys/{key_id}/permissions:
+    put:
+      tags:
+      - Instance Access Keys
+      - Organization Access Keys
+      - Workspace Access Keys
+      summary: Update Access Key Permissions
+      operationId: update_access_key_permissions
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+        description: Access key ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessKeyPermissionsIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AccessKeyOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: access_key_scope
+        anyOf:
+        - access-keys.issue
+      description: 'Required permission: `access-keys.issue`.'
   /api/v1/auth/login:
     post:
       tags:
@@ -4078,12 +4126,6 @@ components:
   schemas:
     AccessKeyGrantIn:
       properties:
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
         permissions:
           items:
             $ref: '#/components/schemas/Permission'
@@ -4091,6 +4133,12 @@ components:
           minItems: 1
           title: Permissions
           description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
         expires_at:
           anyOf:
           - type: string
@@ -4101,17 +4149,11 @@ components:
       additionalProperties: false
       type: object
       required:
-      - label
       - permissions
+      - label
       title: AccessKeyGrantIn
     AccessKeyIn:
       properties:
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
         permissions:
           items:
             $ref: '#/components/schemas/Permission'
@@ -4119,6 +4161,12 @@ components:
           minItems: 1
           title: Permissions
           description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
         expires_at:
           anyOf:
           - type: string
@@ -4136,8 +4184,8 @@ components:
       additionalProperties: false
       type: object
       required:
-      - label
       - permissions
+      - label
       title: AccessKeyIn
     AccessKeyMintedOut:
       properties:
@@ -4327,6 +4375,20 @@ components:
       - scope
       - status
       title: AccessKeyOut
+    AccessKeyPermissionsIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      title: AccessKeyPermissionsIn
     AccessKeyRevokedOut:
       properties:
         id:
@@ -5105,6 +5167,14 @@ components:
       required:
       - data
       title: Envelope[AccessKeyMintedOut]
+    Envelope_AccessKeyOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/AccessKeyOut'
+      type: object
+      required:
+      - data
+      title: Envelope[AccessKeyOut]
     Envelope_AccessKeyRevokedOut_:
       properties:
         data:

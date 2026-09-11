@@ -157,10 +157,8 @@ class AccessKeyRevokedOut(BaseModel):
     revoked_at: datetime
 
 
-class AccessKeyGrantIn(RequestModel):
-    label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
+class AccessKeyPermissionsIn(RequestModel):
     permissions: list[Permission] = PydanticField(min_length=1, description="Explicit maximum permissions carried by the key")
-    expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
     @field_validator("permissions")
     @classmethod
@@ -169,6 +167,11 @@ class AccessKeyGrantIn(RequestModel):
             msg = "permissions must not contain duplicates"
             raise ValueError(msg)
         return sorted(permissions, key=str)
+
+
+class AccessKeyGrantIn(AccessKeyPermissionsIn):
+    label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
+    expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
     @field_validator("expires_at")
     @classmethod

@@ -49,32 +49,32 @@ export const Permission = {
 
 export interface AccessKeyGrantIn {
   /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
+  /**
      * Where this key lives, such as ci, laptop, or data-plane
      * @minLength 1
      * @maxLength 80
      */
   label: string;
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
   /** Optional expiration timestamp with a timezone */
   expires_at?: string | null;
 }
 
 export interface AccessKeyIn {
   /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
+  /**
      * Where this key lives, such as ci, laptop, or data-plane
      * @minLength 1
      * @maxLength 80
      */
   label: string;
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
   /** Optional expiration timestamp with a timezone */
   expires_at?: string | null;
   /** Principal the key authenticates; defaults to the authenticated principal */
@@ -149,6 +149,14 @@ export interface AccessKeyOut {
   deleted_at: string | null;
   scope: Scope;
   status: AccessKeyOutStatus;
+}
+
+export interface AccessKeyPermissionsIn {
+  /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
 }
 
 export interface AccessKeyRevokedOut {

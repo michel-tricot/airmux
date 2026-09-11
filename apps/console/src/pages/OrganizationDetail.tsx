@@ -1,3 +1,4 @@
+import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
 import { BundleHistory } from '@/components/shared/bundle-history';
 import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
 import { telemetryAccess } from '@/features/telemetry/policy';
@@ -139,7 +140,7 @@ export default function OrganizationDetail() {
           )}
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> API Keys
+              <Key className="w-4 h-4" /> Management Keys
             </TabsTrigger>
           )}
           {canReadMembers && (
@@ -199,16 +200,16 @@ export default function OrganizationDetail() {
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">API Keys</h2>
+              <h2 className="text-lg font-semibold">Management Keys</h2>
             </div>
             <ApiKeysTable
-              resource="API keys"
+              resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No API keys for this organization."
+              emptyText="No management keys for this organization."
               extraColumns={[
                 {
                   key: 'user',
@@ -218,6 +219,11 @@ export default function OrganizationDetail() {
                     const user = usersById.get(key.user_id);
                     return user ? <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} /> : key.user_id;
                   },
+                },
+                {
+                  key: 'permissions',
+                  header: 'Permissions',
+                  cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.org.updatePermissions)} />,
                 },
                 { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
               ]}

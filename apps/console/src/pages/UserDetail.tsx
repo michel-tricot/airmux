@@ -1,3 +1,4 @@
+import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Dropdown, Badge, ConfirmButton } from '@/components/ui/elements';
@@ -108,7 +109,7 @@ export default function UserDetail() {
               size="default"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               title="Delete User"
-              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted API keys must be cleared first."
+              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
               confirmLabel="Delete User"
               pending={deleteUser.isPending}
               onConfirm={async () => {
@@ -192,14 +193,21 @@ export default function UserDetail() {
           </h2>
 
           <ApiKeysTable
-            resource="API keys"
+            resource="management keys"
             keys={accessKeysQuery.data}
             isLoading={accessKeysQuery.isLoading}
             isError={accessKeysQuery.isError}
             error={accessKeysQuery.error}
             onRetry={() => accessKeysQuery.refetch()}
-            emptyText="This user does not own any API keys."
-            extraColumns={[{ key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> }]}
+            emptyText="This user does not own any management keys."
+            extraColumns={[
+              {
+                key: 'permissions',
+                header: 'Permissions',
+                cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.instance.updatePermissions)} />,
+              },
+              { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
+            ]}
           />
         </div>
       )}

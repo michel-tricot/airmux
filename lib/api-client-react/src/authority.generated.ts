@@ -66,6 +66,14 @@ export const operationAuthority = {
       },
     ],
   },
+  updateAccessKeyPermissions: {
+    checks: [
+      {
+        scope: "access_key_scope",
+        anyOf: ["access-keys.issue"],
+      },
+    ],
+  },
   listDataPlanes: {
     checks: [
       {

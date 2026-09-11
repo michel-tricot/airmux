@@ -50,7 +50,7 @@ export const instanceRoutes: readonly InstanceRouteDefinition[] = [
     path: '/instance/keys',
     component: AccessKeys,
     access: accessKeyAccess.instance.read,
-    navigation: { label: 'API Keys', icon: KeyRound },
+    navigation: { label: 'Management Keys', icon: KeyRound },
   },
   {
     path: '/instance/provider-keys',

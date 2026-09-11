@@ -177,7 +177,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
                 size="default"
                 className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
                 title="Delete Workspace"
-                description={`Deleting ${workspace.name} also deletes its API keys and memberships. Usage already recorded remains on the organization’s bill.`}
+                description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
                 confirmLabel="Delete Workspace"
                 pending={remove.isPending}
                 onConfirm={async () => {

@@ -33,6 +33,7 @@ import type {
   AccessKeyIn,
   AccessKeyMintedOut,
   AccessKeyOut,
+  AccessKeyPermissionsIn,
   AccessKeyRevokedOut,
   ActivityOut,
   ApplyInstanceTaxonomyParams,
@@ -805,6 +806,79 @@ export const useRevokeAccessKey = <TError = ErrorType<void | HTTPValidationError
         TContext
       > => {
       return useMutation(getRevokeAccessKeyMutationOptions(options), queryClient);
+    }
+
+export const getUpdateAccessKeyPermissionsUrl = (keyId: string,) => {
+
+
+
+
+  return `/api/v1/access-keys/${keyId}/permissions`
+}
+
+/**
+ * Required permission: `access-keys.issue`.
+ * @summary Update Access Key Permissions
+ */
+export const updateAccessKeyPermissions = async (keyId: string,
+    accessKeyPermissionsIn: AccessKeyPermissionsIn, options?: Parameters<typeof customFetch>[1]): Promise<AccessKeyOut> => {
+
+  return customFetch<AccessKeyOut>(getUpdateAccessKeyPermissionsUrl(keyId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accessKeyPermissionsIn)
+  }
+);}
+
+
+
+
+
+export const getUpdateAccessKeyPermissionsMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAccessKeyPermissions>>, TError,{keyId: string;data: BodyType<AccessKeyPermissionsIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAccessKeyPermissions>>, TError,{keyId: string;data: BodyType<AccessKeyPermissionsIn>}, TContext> => {
+
+const mutationKey = ['updateAccessKeyPermissions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAccessKeyPermissions>>, {keyId: string;data: BodyType<AccessKeyPermissionsIn>}> = (props) => {
+          const {keyId,data} = props ?? {};
+
+          return  updateAccessKeyPermissions(keyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAccessKeyPermissionsMutationResult = NonNullable<Awaited<ReturnType<typeof updateAccessKeyPermissions>>>
+    export type UpdateAccessKeyPermissionsMutationBody = BodyType<AccessKeyPermissionsIn>
+    export type UpdateAccessKeyPermissionsMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Update Access Key Permissions
+ */
+export const useUpdateAccessKeyPermissions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAccessKeyPermissions>>, TError,{keyId: string;data: BodyType<AccessKeyPermissionsIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAccessKeyPermissions>>,
+        TError,
+        {keyId: string;data: BodyType<AccessKeyPermissionsIn>},
+        TContext
+      > => {
+      return useMutation(getUpdateAccessKeyPermissionsMutationOptions(options), queryClient);
     }
 
 export const getLoginUrl = () => {

@@ -152,7 +152,7 @@ describe('permission-aware organization console', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders API keys read-only for workspace viewers', async () => {
+  it('renders inference keys read-only for workspace viewers', async () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () =>

@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
 import {
   useInstanceAccessKeys,
+  useUpdateAccessKeyPermissionsMutation,
   useOrgAccessKeys,
   useCreateInstanceAccessKeyMutation,
   useCreateInferenceKeyMutation,
@@ -148,4 +149,24 @@ describe('key cache invalidation across pages', () => {
 
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]));
   });
+});
+
+it('refreshes filtered instance and organization key lists after editing permissions', async () => {
+  let key = accessKey('editable');
+  server.use(
+    http.get('/api/v1/instance/access-keys', () => HttpResponse.json({ data: [key] })),
+    http.get(`/api/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json({ data: [key] })),
+    http.put('/api/v1/access-keys/:keyId/permissions', () => {
+      key = { ...key, permissions: ['usage.read'] };
+      return HttpResponse.json({ data: key });
+    }),
+  );
+  const instance = renderHook(() => useInstanceAccessKeys({ user_id: key.user_id }), { wrapper });
+  const org = renderHook(() => useOrgAccessKeys(ORG.id, { user_id: key.user_id }), { wrapper });
+  const update = renderHook(() => useUpdateAccessKeyPermissionsMutation(), { wrapper });
+  await waitFor(() => expect(instance.result.current.data?.[0].permissions).toEqual(['workspaces.read']));
+  await waitFor(() => expect(org.result.current.data?.[0].permissions).toEqual(['workspaces.read']));
+  await update.result.current.mutateAsync({ keyId: key.id, data: { permissions: ['usage.read'] } });
+  await waitFor(() => expect(instance.result.current.data?.[0].permissions).toEqual(['usage.read']));
+  await waitFor(() => expect(org.result.current.data?.[0].permissions).toEqual(['usage.read']));
 });

@@ -14,16 +14,16 @@ import type { Permission } from './permission';
 
 export interface AccessKeyIn {
   /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
+  /**
      * Where this key lives, such as ci, laptop, or data-plane
      * @minLength 1
      * @maxLength 80
      */
   label: string;
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
   /** Optional expiration timestamp with a timezone */
   expires_at?: Date | null;
   /** Principal the key authenticates; defaults to the authenticated principal */

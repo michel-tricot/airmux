@@ -1816,6 +1816,14 @@ class AccessKeyGrantIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    permissions: Annotated[
+        list[Permission],
+        Field(
+            description="Explicit maximum permissions carried by the key",
+            min_length=1,
+            title="Permissions",
+        ),
+    ]
     label: Annotated[
         str,
         Field(
@@ -1823,14 +1831,6 @@ class AccessKeyGrantIn(BaseModel):
             max_length=80,
             min_length=1,
             title="Label",
-        ),
-    ]
-    permissions: Annotated[
-        list[Permission],
-        Field(
-            description="Explicit maximum permissions carried by the key",
-            min_length=1,
-            title="Permissions",
         ),
     ]
     expires_at: Annotated[
@@ -1846,6 +1846,14 @@ class AccessKeyIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    permissions: Annotated[
+        list[Permission],
+        Field(
+            description="Explicit maximum permissions carried by the key",
+            min_length=1,
+            title="Permissions",
+        ),
+    ]
     label: Annotated[
         str,
         Field(
@@ -1853,14 +1861,6 @@ class AccessKeyIn(BaseModel):
             max_length=80,
             min_length=1,
             title="Label",
-        ),
-    ]
-    permissions: Annotated[
-        list[Permission],
-        Field(
-            description="Explicit maximum permissions carried by the key",
-            min_length=1,
-            title="Permissions",
         ),
     ]
     expires_at: Annotated[
@@ -1877,6 +1877,20 @@ class AccessKeyIn(BaseModel):
             title="User Id",
         ),
     ] = None
+
+
+class AccessKeyPermissionsIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    permissions: Annotated[
+        list[Permission],
+        Field(
+            description="Explicit maximum permissions carried by the key",
+            min_length=1,
+            title="Permissions",
+        ),
+    ]
 
 
 class BundleManifest(BaseModel):
@@ -2258,6 +2272,10 @@ class Catalog(BaseModel):
 
 class EnvelopeAccessKeyMintedOut(BaseModel):
     data: AccessKeyMintedOut
+
+
+class EnvelopeAccessKeyOut(BaseModel):
+    data: AccessKeyOut
 
 
 class EnvelopeMembershipOut(BaseModel):

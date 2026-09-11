@@ -18,6 +18,7 @@ export function PermissionChecklist({
   value,
   onChange,
   availablePermissions,
+  grantablePermissions = availablePermissions,
   canIssue,
   permissionsLoading,
   permissionsError,
@@ -26,6 +27,7 @@ export function PermissionChecklist({
   value: PermissionName[];
   onChange: (value: PermissionName[]) => void;
   availablePermissions: readonly PermissionName[];
+  grantablePermissions?: readonly PermissionName[];
   canIssue: boolean;
   permissionsLoading?: boolean;
   permissionsError?: unknown;
@@ -37,7 +39,7 @@ export function PermissionChecklist({
       <ErrorState error={permissionsError} resource="permissions" onRetry={onPermissionsRetry} className="rounded-md border border-border p-3" />
     );
   }
-  if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue API keys at this scope.</p>;
+  if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue management keys at this scope.</p>;
   return (
     <>
       <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
@@ -57,8 +59,10 @@ export function PermissionChecklist({
                   >
                     <input
                       type="checkbox"
+                      aria-label={permission}
                       className="size-3.5 accent-primary"
                       checked={checked}
+                      disabled={!checked && !grantablePermissions.includes(permission)}
                       onChange={(event) => onChange(event.target.checked ? [...value, permission] : value.filter((item) => item !== permission))}
                     />
                     <span className="font-mono">{permission}</span>
@@ -69,7 +73,9 @@ export function PermissionChecklist({
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
+      <p className="text-xs text-muted-foreground">
+        You can only grant permissions you currently hold. Existing permissions outside that limit must be removed before saving.
+      </p>
     </>
   );
 }

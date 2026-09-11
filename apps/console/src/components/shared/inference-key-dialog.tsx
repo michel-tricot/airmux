@@ -24,7 +24,7 @@ export function InferenceKeyDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Generate API Key"
+      title="Generate Inference Key"
       description="Keys let applications send requests to the models available to this workspace."
       schema={keyLabelSchema}
       defaultValues={{ label: '' }}

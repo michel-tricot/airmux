@@ -219,7 +219,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         open={createOpen}
         onOpenChange={setCreateOpen}
         title="New Workspace"
-        description="Workspaces group API keys and members within your organization."
+        description="Workspaces group inference keys and members within your organization."
         schema={workspaceNameSchema}
         defaultValues={{ name: '' }}
         onSubmit={async (values) => {

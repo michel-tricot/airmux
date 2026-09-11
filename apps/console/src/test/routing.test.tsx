@@ -17,7 +17,7 @@ const WS = WORKSPACES[0];
 
 const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name },
-  { suffix: '/keys', heading: 'API Keys' },
+  { suffix: '/keys', heading: 'Inference Keys' },
   { suffix: '/byok', heading: 'Provider Keys' },
   { suffix: '/settings', heading: 'Workspace Settings' },
 ];
@@ -36,7 +36,7 @@ describe('workspace section deep links', () => {
     });
     expect(await screen.findByRole('heading', { level: 1, name: 'Organization Settings' })).toBeInTheDocument();
     expect(await screen.findByRole('combobox', { name: 'Workspace' })).toBeInTheDocument();
-    expect(screen.queryByText('API Keys', { selector: 'h1' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Inference Keys', { selector: 'h1' })).not.toBeInTheDocument();
   });
 });
 
@@ -58,7 +58,7 @@ describe('organization section deep links', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Models' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
 
-    await user.click(screen.getByRole('link', { name: 'Org Settings' }));
+    await user.click(screen.getAllByRole('link', { name: 'Settings' }).find((link) => link.getAttribute('href') === '/org/settings')!);
     expect(await screen.findByRole('heading', { level: 1, name: 'Organization Settings' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
   });
@@ -84,7 +84,7 @@ describe('default workspace selection', () => {
 
   it('remembers the workspace visited via a deep link', async () => {
     renderAt(`/org/workspaces/${WORKSPACES[1].slug}/keys`);
-    await screen.findByRole('heading', { level: 1, name: 'API Keys' });
+    await screen.findByRole('heading', { level: 1, name: 'Inference Keys' });
     await waitFor(() => {
       expect(window.localStorage.getItem(`airllm_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
     });
@@ -137,7 +137,7 @@ describe('workspace route state', () => {
 function sectionLabel(suffix: string): string {
   return {
     '': 'Overview',
-    '/keys': 'API Keys',
+    '/keys': 'Inference Keys',
     '/byok': 'BYOK',
     '/settings': 'Settings',
   }[suffix]!;

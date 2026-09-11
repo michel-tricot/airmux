@@ -24,7 +24,7 @@ export const orgRoutes: readonly OrgRouteDefinition[] = [
   { path: '/org/models', label: 'Models', icon: Boxes, component: Models, access: catalogAccess.org.read },
   {
     path: '/org/settings',
-    label: 'Org Settings',
+    label: 'Settings',
     icon: Settings,
     component: OrgSettings,
     access: anyOf(

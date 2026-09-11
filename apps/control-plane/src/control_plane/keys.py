@@ -136,6 +136,10 @@ async def verify_access_key(token: str) -> Actor | None:
     now = datetime.now(tz=UTC)
     if key is None or not _live(key, now):
         return None
+    try:
+        permissions = frozenset(Permission(value) for value in key.permissions)
+    except ValueError:
+        return None
     seen = {key.id}
     parent_id = key.parent_id
     while parent_id is not None:
@@ -145,11 +149,8 @@ async def verify_access_key(token: str) -> Actor | None:
         parent = await AccessKey.find_by_id(parent_id)
         if parent is None or not _live(parent, now):
             return None
+        permissions &= frozenset(parent.permissions)
         parent_id = parent.parent_id
-    try:
-        permissions = frozenset(Permission(value) for value in key.permissions)
-    except ValueError:
-        return None
     return Actor(
         credential_id=key.id,
         principal_id=key.user_id,
