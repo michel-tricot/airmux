@@ -1,5 +1,5 @@
 import type { ManagementKeyOut } from '@workspace/api-client-react';
-import { Badge } from '@/components/ui/elements';
+import { ManagementKeyScope } from '@/components/shared/management-key-scope';
 import { KeysTable, type KeysTableProps } from '@/components/shared/keys-table';
 import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 
@@ -13,11 +13,10 @@ export function ManagementKeysTable({
       {...props}
       extraColumns={[
         ...extraColumns,
-        { key: 'scope', header: 'Scope', headClassName: 'w-24', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
+        { key: 'scope', header: 'Scope', headClassName: 'w-24', cell: (key) => <ManagementKeyScope scope={key.scope} /> },
         {
           key: 'permissions',
           header: 'Permissions',
-          headClassName: 'w-40',
           cell: (key) => <ManagementKeyPermissionsCell apiKey={key} canEdit={canEditPermissions} />,
         },
       ]}

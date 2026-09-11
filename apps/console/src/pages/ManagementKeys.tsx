@@ -68,20 +68,6 @@ export default function ManagementKeys() {
               );
             },
           },
-          {
-            key: 'target',
-            header: 'Target',
-            headClassName: 'w-20',
-            cellClassName: 'font-mono text-xs text-muted-foreground',
-            cell: (key) => {
-              const target = key.scope.workspace_id ?? key.scope.org_id;
-              return (
-                <span className="block truncate" title={target ?? undefined}>
-                  {target ? `${target.slice(0, 8)}…` : 'instance'}
-                </span>
-              );
-            },
-          },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
         onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}

@@ -57,7 +57,6 @@ export function KeysTable<T extends KeyRow>({
     {
       key: 'prefix',
       header: 'Key',
-      headClassName: 'w-24',
       cellClassName: 'font-mono text-xs text-muted-foreground',
       cell: (key) => (
         <span className="block truncate" title={key.prefix}>
