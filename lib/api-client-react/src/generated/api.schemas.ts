@@ -411,37 +411,26 @@ export interface Catalog {
   credentials?: CredentialEntry[];
 }
 
-export interface SelectedKeys {
-  kind: 'selected_keys';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  key_ids: string[];
-}
-
-export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
+export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
 
 
-export const RequestMatchCapabilitiesItem = {
+export const RequestMatchOutputCapabilitiesItem = {
   tools: 'tools',
   reasoning: 'reasoning',
   structured_output: 'structured_output',
 } as const;
 
-export interface RequestMatch {
+export interface RequestMatchOutput {
   kind: 'request';
   /**
      * @maxItems 1000
      * @items.minLength 1
      * @items.maxLength 255
      */
-  models?: string[];
-  stream?: boolean | null;
+  models: string[];
+  stream: boolean | null;
   /** @maxItems 3 */
-  capabilities?: RequestMatchCapabilitiesItem[];
+  capabilities: RequestMatchOutputCapabilitiesItem[];
 }
 
 export interface DenyRequest {
@@ -525,10 +514,41 @@ export interface Fallback {
   timeout_ms: number;
 }
 
-export interface PolicyDefinitionOutput {
-  target: AllKeys | SelectedKeys;
-  match: AllRequests | RequestMatch;
+export interface RuleDefinitionOutput {
+  match: AllRequests | RequestMatchOutput;
   action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+}
+
+export interface RuleEntry {
+  id: string;
+  workspace_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  definition: RuleDefinitionOutput;
+}
+
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
+export interface PolicyDefinition {
+  target: AllKeys | SelectedKeys;
+  /**
+     * Unordered reusable rule references; a policy may contain at most one fallback rule
+     * @minItems 1
+     * @maxItems 100
+     */
+  rule_ids: string[];
 }
 
 export interface PolicyEntry {
@@ -544,7 +564,7 @@ export interface PolicyEntry {
      * @maximum 10000
      */
   priority: number;
-  definition: PolicyDefinitionOutput;
+  definition: PolicyDefinition;
 }
 
 /**
@@ -557,6 +577,7 @@ export interface BundleV1 {
   issued_at: string;
   keys: KeyEntry[];
   catalog: Catalog;
+  rules: RuleEntry[];
   policies: PolicyEntry[];
 }
 
@@ -1257,18 +1278,6 @@ export interface PlaygroundSessionReadyOut {
   status: 'ready';
 }
 
-export interface PriceLimitInput {
-  kind: 'price_limit';
-  max_input_price_per_mtok: number | string;
-  max_output_price_per_mtok: number | string;
-}
-
-export interface PolicyDefinitionInput {
-  target: AllKeys | SelectedKeys;
-  match: AllRequests | RequestMatch;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
-}
-
 export interface PolicyCreate {
   /**
      * Display name for the workspace policy
@@ -1284,8 +1293,8 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target, typed request match, and action. Budgets are not yet enforced */
-  definition: PolicyDefinitionInput;
+  /** Inference key target and reusable rules. Budgets are not yet enforced */
+  definition: PolicyDefinition;
 }
 
 export interface PolicyOrder {
@@ -1300,7 +1309,7 @@ export interface PolicyOut {
   name: string;
   enabled: boolean;
   priority: number;
-  definition: PolicyDefinitionOutput;
+  definition: PolicyDefinition;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -1313,8 +1322,14 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target, request match, and action; omit to leave unchanged */
-  definition?: PolicyDefinitionInput | null;
+  /** Replace the complete target and reusable rules; omit to leave unchanged */
+  definition?: PolicyDefinition | null;
+}
+
+export interface PriceLimitInput {
+  kind: 'price_limit';
+  max_input_price_per_mtok: number | string;
+  max_output_price_per_mtok: number | string;
 }
 
 /**
@@ -1464,6 +1479,28 @@ export interface ProviderOut {
   deleted_at: string | null;
 }
 
+export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
+
+
+export const RequestMatchInputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatchInput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchInputCapabilitiesItem[];
+}
+
 /**
  * How the routed request ended
  */
@@ -1577,6 +1614,40 @@ export interface RoutedUsageEventV1 {
   credential_id: string;
   /** Scope of the provider credential used for the request */
   credential_scope: RoutedUsageEventV1CredentialScope;
+}
+
+export interface RuleDefinitionInput {
+  match: AllRequests | RequestMatchInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+}
+
+export interface RuleCreate {
+  /**
+     * Display name for the reusable workspace rule
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** Request match and action shared by every policy that references this rule */
+  definition: RuleDefinitionInput;
+}
+
+export interface RuleOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  definition: RuleDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface RuleUpdate {
+  /** Replacement display name; omit to leave unchanged */
+  name?: string | null;
+  /** Replacement request match and action; omit to leave unchanged */
+  definition?: RuleDefinitionInput | null;
 }
 
 export interface ServiceAccountIn {

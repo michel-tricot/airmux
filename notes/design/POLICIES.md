@@ -6,10 +6,11 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 
 ## Contract and execution
 
-Each policy has a name, priority, target, typed request match, and one typed action. Separate
-policies compose restrictions: every matching restriction must pass. Lower priorities run first;
-policy UUID breaks ties. Priority cannot override a restriction. The first matching fallback
-policy supplies the ordered backup list.
+Each policy has a name, priority, target, and an unordered nonempty collection of rules. Each rule has
+a stable UUID, typed request match, and one typed action. Rules compose within and across policies:
+every matching restriction must pass. Lower policy priorities run first, and policy UUID breaks ties.
+Priority cannot override a restriction. A policy may reference at most one fallback rule, and the
+first matching policy with one supplies the ordered backup list.
 
 The control plane validates request matches and references when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
@@ -40,8 +41,8 @@ match. Empty request matches and duplicate values are invalid.
 | `capabilities` | list of capabilities | Request must require every listed capability |
 
 Capabilities are `tools`, `reasoning`, and `structured_output`; streaming has its own criterion.
-A workspace may have at most 100 active policies; management writes serialize on the workspace
-to enforce this bound.
+A workspace may have at most 100 active rules across its enabled policies; management writes
+serialize on the workspace to enforce this bound.
 Bundle admission independently checks it. Matches are evaluated once against the original request.
 The same matched restrictions apply to every backup, so changing the route cannot escape a guardrail.
 
@@ -103,7 +104,11 @@ admins/owners can manage policies. Workspace members and viewers can read them. 
 need `policies.read` or `policies.manage` within their existing authority scope. Every write is
 covered by database audit triggers.
 
-The API resource is `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
+Rules are workspace resources at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`. Policies
+reference those rules by ID, so a single live rule can be reused across policies. Updating the rule
+changes every use in the next bundle. Deletion returns 409 while any policy references it.
+
+The policy API is `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
 create, patch, and delete. Successful responses use the standard envelope. Create example:
 
 ```json
@@ -113,14 +118,7 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "priority": 100,
   "definition": {
     "target": { "kind": "all_keys" },
-    "match": { "kind": "request", "models": ["primary-model"] },
-    "action": {
-      "kind": "fallback",
-      "models": ["backup-model", "second-backup"],
-      "on": ["rate_limited", "upstream_unavailable", "timeout"],
-      "max_attempts": 3,
-      "timeout_ms": 30000
-    }
+    "rule_ids": ["fallback-rule-uuid"]
   }
 }
 ```
@@ -132,6 +130,7 @@ rejected. CLI commands use the same generated request and response types:
 
 ```sh
 airllm policies list -w production -f json
+airllm rules create rule.json -w production
 airllm policies create policy.json -w production
 airllm policies update POLICY_ID changes.json -w production
 airllm policies delete POLICY_ID -w production

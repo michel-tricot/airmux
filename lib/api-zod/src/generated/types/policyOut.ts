@@ -10,7 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinitionOutput } from './policyDefinitionOutput';
+import type { PolicyDefinition } from './policyDefinition';
 
 export interface PolicyOut {
   id: string;
@@ -19,7 +19,7 @@ export interface PolicyOut {
   name: string;
   enabled: boolean;
   priority: number;
-  definition: PolicyDefinitionOutput;
+  definition: PolicyDefinition;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;

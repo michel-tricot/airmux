@@ -10,12 +10,17 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { RequestMatchOutputCapabilitiesItem } from './requestMatchOutputCapabilitiesItem';
 
-export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
-
-
-export const RequestMatchCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
+export interface RequestMatchOutput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models: string[];
+  stream: boolean | null;
+  /** @maxItems 3 */
+  capabilities: RequestMatchOutputCapabilitiesItem[];
+}

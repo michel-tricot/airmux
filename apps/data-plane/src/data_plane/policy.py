@@ -4,15 +4,16 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
 from data_plane.credentials import policy_candidates, preferred_candidates
-from data_plane.policies import matching_policies
+from data_plane.policies import matching_rules
 from data_plane.policy_actions import ActionContext, EvaluationState, evaluate_action
 from data_plane.requirements import required_capabilities, required_input_modalities
 
 if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
-    from contract.policies import Fallback, PolicyEntry
+    from contract.policies import Fallback
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
+    from data_plane.policies import CompiledRule
     from data_plane.profiles import CompiledProfile
 
 
@@ -45,31 +46,37 @@ type Decision = Allow | Deny
 class PolicyEvaluation:
     decision: Decision
     fallback: Fallback | None
-    policies: tuple[PolicyEntry, ...]
+    rules: tuple[CompiledRule, ...]
 
 
-def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None) -> Decision:
-    return evaluate_policies(req, key, snap, policies).decision
+def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, rules: tuple[CompiledRule, ...] | None = None) -> Decision:
+    return evaluate_policies(req, key, snap, rules).decision
 
 
-def evaluate_policies(
-    req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, policies: tuple[PolicyEntry, ...] | None = None
-) -> PolicyEvaluation:
+def evaluate_policies(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, rules: tuple[CompiledRule, ...] | None = None) -> PolicyEvaluation:
     """Return eligible credentials and fallback; cooldown-aware selection belongs to the request executor."""
-    policies = matching_policies(req, key, snap.policy_index) if policies is None else policies
+    rules = matching_rules(req, key, snap.policy_index) if rules is None else rules
     route = _route(req, key, snap)
     if isinstance(route, Deny):
-        return PolicyEvaluation(route, None, policies)
+        return PolicyEvaluation(route, None, rules)
     state = EvaluationState(candidates=route.candidates)
-    for policy in policies:
-        context = ActionContext(policy=policy, request=req, key=key, model=route.model, provider=route.provider, profile=route.profile)
-        state = evaluate_action(policy.definition.action, context, state)
+    for compiled in rules:
+        context = ActionContext(
+            policy=compiled.policy,
+            rule=compiled.rule,
+            request=req,
+            key=key,
+            model=route.model,
+            provider=route.provider,
+            profile=route.profile,
+        )
+        state = evaluate_action(compiled.rule.definition.action, context, state)
         if state.denial is not None:
-            return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, policies)
+            return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, rules)
     candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)
     if not candidates:
-        return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, policies)
-    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, policies)
+        return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, rules)
+    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, rules)
 
 
 def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:

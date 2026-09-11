@@ -16,14 +16,14 @@ runner = CliRunner()
 def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeypatch):
     org_id = str(uuid4())
     policy_id = str(uuid4())
+    rule_id = str(uuid4())
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setenv("AIRLLM_ACCESS_KEY", "sk-test-policies")
     monkeypatch.setenv("AIRLLM_ORG_ID", org_id)
     monkeypatch.setenv("AIRLLM_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "target": {"kind": "all_keys"},
-        "match": {"kind": "all_requests"},
-        "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
+        "rule_ids": [rule_id],
     }
     policy = {
         "id": policy_id,

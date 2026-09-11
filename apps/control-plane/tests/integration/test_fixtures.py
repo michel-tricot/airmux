@@ -21,7 +21,19 @@ from control_plane.fixtures import (
     apply_fixtures,
 )
 from control_plane.main import app as cli_app
-from control_plane.models import DataPlaneInstance, InferenceKey, Model, Org, OrgInvitation, Policy, Provider, ProviderCredential, User, set_actor
+from control_plane.models import (
+    DataPlaneInstance,
+    InferenceKey,
+    Model,
+    Org,
+    OrgInvitation,
+    Policy,
+    Provider,
+    ProviderCredential,
+    Rule,
+    User,
+    set_actor,
+)
 
 runner = CliRunner()
 
@@ -194,9 +206,10 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
 
     run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
     policies = run_in_db(tmp_path, Policy.find)
+    rules = run_in_db(tmp_path, Rule.find)
     inference_keys = run_in_db(tmp_path, InferenceKey.find)
 
-    assert {policy.definition.action.kind for policy in policies} == {
+    assert {rule.definition.action.kind for rule in rules} == {
         "models",
         "providers",
         "deny",
@@ -209,13 +222,16 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     }
     assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
-    streaming_match = next(policy for policy in policies if policy.name == "Streaming uses team credentials").definition.match
+    streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
+    streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match
     assert streaming_match.kind == "request"
     assert streaming_match.stream is True
     ci_key = next(key for key in inference_keys if key.label == "ci")
     ci_policy = next(policy for policy in policies if policy.name == "CI provider allowlist")
     assert ci_policy.definition.target.kind == "selected_keys"
     assert ci_policy.definition.target.key_ids == (str(ci_key.id),)
+    team_credentials = next(rule for rule in rules if rule.name == "Streaming team credentials")
+    assert sum(team_credentials.id in policy.definition.rule_ids for policy in policies) == 2
 
 
 def test_data_plane_fixtures_cover_global_and_dedicated_lifecycle_states(tmp_path):

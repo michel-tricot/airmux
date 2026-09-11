@@ -12,11 +12,11 @@ PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
 RequestCapability = Literal["tools", "reasoning", "structured_output"]
-MAX_WORKSPACE_POLICIES = 100
+MAX_WORKSPACE_RULES = 100
 
 
 class _PolicyModel(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False, json_schema_serialization_defaults_required=True)
 
 
 class AllKeys(_PolicyModel):
@@ -134,10 +134,33 @@ PolicyAction = Annotated[
 ]
 
 
-class PolicyDefinition(_PolicyModel):
-    target: PolicyTarget
+class RuleDefinition(_PolicyModel):
     match: PolicyMatch
     action: PolicyAction
+
+
+class RuleEntry(_PolicyModel):
+    id: UUID
+    workspace_id: UUID
+    name: PolicyName
+    definition: RuleDefinition
+
+
+class PolicyDefinition(_PolicyModel):
+    target: PolicyTarget
+    rule_ids: tuple[UUID, ...] = Field(
+        min_length=1,
+        max_length=MAX_WORKSPACE_RULES,
+        description="Unordered reusable rule references; a policy may contain at most one fallback rule",
+    )
+
+    @field_validator("rule_ids")
+    @classmethod
+    def unique_rule_ids(cls, rule_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if len(set(rule_ids)) != len(rule_ids):
+            msg = "Policy rule references must be unique"
+            raise ValueError(msg)
+        return tuple(sorted(rule_ids))
 
 
 class PolicyEntry(_PolicyModel):

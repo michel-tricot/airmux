@@ -10,17 +10,15 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { RequestMatchCapabilitiesItem } from './requestMatchCapabilitiesItem';
+import type { AllKeys } from './allKeys';
+import type { SelectedKeys } from './selectedKeys';
 
-export interface RequestMatch {
-  kind: 'request';
+export interface PolicyDefinition {
+  target: AllKeys | SelectedKeys;
   /**
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
+     * Unordered reusable rule references; a policy may contain at most one fallback rule
+     * @minItems 1
+     * @maxItems 100
      */
-  models?: string[];
-  stream?: boolean | null;
-  /** @maxItems 3 */
-  capabilities?: RequestMatchCapabilitiesItem[];
+  rule_ids: string[];
 }

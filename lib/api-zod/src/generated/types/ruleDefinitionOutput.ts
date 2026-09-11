@@ -10,22 +10,19 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { AllKeys } from './allKeys';
 import type { AllowedModels } from './allowedModels';
 import type { AllowedProviders } from './allowedProviders';
 import type { AllRequests } from './allRequests';
-import type { BudgetInput } from './budgetInput';
+import type { BudgetOutput } from './budgetOutput';
 import type { CredentialAccess } from './credentialAccess';
 import type { DenyRequest } from './denyRequest';
 import type { Fallback } from './fallback';
-import type { PriceLimitInput } from './priceLimitInput';
+import type { PriceLimitOutput } from './priceLimitOutput';
 import type { RequestLimits } from './requestLimits';
-import type { RequestMatch } from './requestMatch';
-import type { SelectedKeys } from './selectedKeys';
+import type { RequestMatchOutput } from './requestMatchOutput';
 import type { StrictParameters } from './strictParameters';
 
-export interface PolicyDefinitionInput {
-  target: AllKeys | SelectedKeys;
-  match: AllRequests | RequestMatch;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+export interface RuleDefinitionOutput {
+  match: AllRequests | RequestMatchOutput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
 }

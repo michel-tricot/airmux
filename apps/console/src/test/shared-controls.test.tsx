@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { Link } from 'wouter';
-import { Badge, Button, ConfirmButton, Dropdown, Modal, Switch } from '@/components/ui/elements';
+import { Badge, Button, Card, ConfirmButton, Dropdown, Modal, Switch, Table } from '@/components/ui/elements';
 describe('shared controls', () => {
   it.each(['default', 'secondary', 'destructive', 'success', 'warning', 'outline', 'mono'] as const)(
     'uses consistent optical text alignment for %s badges',
@@ -48,6 +48,17 @@ describe('shared controls', () => {
     const link = screen.getByRole('link', { name: 'Continue' });
     expect(link.closest('button')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('uses one thin border when a table is the card surface', () => {
+    render(
+      <Card data-testid="card">
+        <Table aria-label="Models" />
+      </Card>,
+    );
+
+    expect(screen.getByTestId('card')).toHaveClass('[&>[data-slot=table-surface]]:border-0');
+    expect(screen.getByRole('table', { name: 'Models' }).parentElement?.parentElement).toHaveAttribute('data-slot', 'table-surface');
   });
 
   it('uses alert-dialog semantics and stays open when confirmation fails', async () => {

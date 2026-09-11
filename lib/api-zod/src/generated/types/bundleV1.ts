@@ -13,6 +13,7 @@
 import type { Catalog } from './catalog';
 import type { KeyEntry } from './keyEntry';
 import type { PolicyEntry } from './policyEntry';
+import type { RuleEntry } from './ruleEntry';
 
 /**
  * A complete, versioned policy snapshot for one organization's model traffic.
@@ -24,5 +25,6 @@ export interface BundleV1 {
   issued_at: Date;
   keys: KeyEntry[];
   catalog: Catalog;
+  rules: RuleEntry[];
   policies: PolicyEntry[];
 }

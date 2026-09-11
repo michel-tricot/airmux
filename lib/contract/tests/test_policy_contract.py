@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from contract.policies import Budget, PolicyDefinition, RequestMatch
+from contract import uuid7
+from contract.policies import Budget, PolicyDefinition, RequestMatch, RuleDefinition
 
 
 @pytest.mark.parametrize(
@@ -18,15 +19,12 @@ from contract.policies import Budget, PolicyDefinition, RequestMatch
 )
 def test_invalid_request_matches_are_rejected(match):
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate(
-            {"target": {"kind": "all_keys"}, "match": match, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}}
-        )
+        RuleDefinition.model_validate({"match": match, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}})
 
 
 def test_request_match_combines_typed_criteria():
-    definition = PolicyDefinition.model_validate(
+    definition = RuleDefinition.model_validate(
         {
-            "target": {"kind": "all_keys"},
             "match": {"kind": "request", "models": ["primary"], "stream": True, "capabilities": ["tools"]},
             "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
         }
@@ -54,7 +52,7 @@ def test_request_match_combines_typed_criteria():
 )
 def test_actions_reject_invalid_states(action):
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": action})
+        RuleDefinition.model_validate({"match": {"kind": "all_requests"}, "action": action})
 
 
 def test_selected_keys_requires_nonempty_unique_identifiers():
@@ -63,16 +61,14 @@ def test_selected_keys_requires_nonempty_unique_identifiers():
             PolicyDefinition.model_validate(
                 {
                     "target": {"kind": "selected_keys", "key_ids": ids},
-                    "match": {"kind": "all_requests"},
-                    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+                    "rule_ids": [uuid7()],
                 }
             )
 
 
 def test_budget_has_no_enforcement_mode_until_enforcement_exists():
-    definition = PolicyDefinition.model_validate(
+    definition = RuleDefinition.model_validate(
         {
-            "target": {"kind": "all_keys"},
             "match": {"kind": "all_requests"},
             "action": {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"},
         }
@@ -91,6 +87,19 @@ def test_budget_has_no_enforcement_mode_until_enforcement_exists():
     ],
 )
 def test_new_policy_actions_have_strict_valid_contracts(action):
-    definition = PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "match": {"kind": "all_requests"}, "action": action})
+    definition = RuleDefinition.model_validate({"match": {"kind": "all_requests"}, "action": action})
 
     assert definition.action.kind == action["kind"]
+
+
+def test_policy_requires_rules_and_rejects_the_legacy_single_action_shape():
+    with pytest.raises(ValidationError):
+        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "rule_ids": []})
+    with pytest.raises(ValidationError):
+        PolicyDefinition.model_validate(
+            {
+                "target": {"kind": "all_keys"},
+                "match": {"kind": "all_requests"},
+                "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+            }
+        )
