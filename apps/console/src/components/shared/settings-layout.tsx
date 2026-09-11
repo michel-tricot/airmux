@@ -1,16 +1,24 @@
 import { useState, type ReactNode } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/elements';
 
-export function SettingsLayout({ categories, children }: { categories: ReadonlyArray<{ id: string; label: string }>; children: ReactNode }) {
+export function SettingsLayout({
+  categories,
+  header,
+  children,
+}: {
+  header: ReactNode;
+  categories: ReadonlyArray<{ id: string; label: string }>;
+  children: ReactNode;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
   const active = categories.find((category) => category.id === selected)?.id ?? categories[0]?.id;
 
   if (!active) return null;
 
   return (
-    <Tabs orientation="vertical" value={active} onValueChange={setSelected} className="grid items-start gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
-      <aside className="lg:col-start-1 lg:row-start-1 lg:sticky lg:top-6">
-        <TabsList aria-label="Settings categories" className="h-auto w-full flex-col items-stretch gap-1 bg-transparent p-0">
+    <Tabs orientation="vertical" value={active} onValueChange={setSelected} className="grid min-h-full lg:grid-cols-[13rem_minmax(0,1fr)]">
+      <aside className="border-b border-border bg-sidebar p-4 lg:border-b-0 lg:border-r">
+        <TabsList aria-label="Settings categories" className="h-auto w-full lg:sticky lg:top-4 flex-col items-stretch gap-1 bg-transparent p-0">
           {categories.map((category) => (
             <TabsTrigger
               key={category.id}
@@ -22,7 +30,12 @@ export function SettingsLayout({ categories, children }: { categories: ReadonlyA
           ))}
         </TabsList>
       </aside>
-      <div className="min-w-0 lg:col-start-2 lg:row-start-1">{children}</div>
+      <div className="min-w-0 px-4 py-6 sm:p-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          {header}
+          {children}
+        </div>
+      </div>
     </Tabs>
   );
 }

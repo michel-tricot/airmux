@@ -1,10 +1,11 @@
+import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
+import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
 import {
   useWorkspaceMembers,
   useWorkspaceMemberCandidates,
@@ -26,7 +27,6 @@ import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
-const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
 interface WorkspacePanelProps {
   orgId: string;
@@ -61,7 +61,6 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const [renameOpen, setRenameOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
   const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
   const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
@@ -109,7 +108,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               size="default"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               title="Delete Workspace"
-              description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+              description={`Deleting ${workspace.name} also deletes its API keys and memberships. Usage already recorded remains on the organization’s bill.`}
               confirmLabel="Delete Workspace"
               pending={remove.isPending}
               onConfirm={async () => {
@@ -127,7 +126,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         <TabsList className="mb-4">
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> Inference Keys
+              <Key className="w-4 h-4" /> API Keys
             </TabsTrigger>
           )}
           {canReadMembers && (
@@ -140,7 +139,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Inference Keys</h2>
+              <h2 className="text-lg font-semibold">API Keys</h2>
               {canCreateKeys && (
                 <Button onClick={() => setKeyOpen(true)} size="sm">
                   <Plus className="w-4 h-4 mr-1" /> Generate Key
@@ -148,14 +147,14 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               )}
             </div>
             <ApiKeysTable
-              resource="inference keys"
+              resource="API keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No inference keys generated."
-              revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
+              emptyText="No API keys generated."
+              revokeDescription="Requests using this API key will stop working immediately. This cannot be undone."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
             />
@@ -202,36 +201,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
       </Tabs>
 
       {canCreateKeys && (
-        <FormDialog
-          open={keyOpen}
-          onOpenChange={setKeyOpen}
-          title="Generate Inference Key"
-          description="Keys let applications send requests to the models available to this workspace."
-          schema={keyLabelSchema}
-          defaultValues={{ label: '' }}
-          onSubmit={async (values) => {
-            const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
-            setToken(minted.token);
-          }}
-          submitLabel="Generate"
-          pending={createKey.isPending}
-        >
-          {(form) => (
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. chatbot-prod" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormDialog>
+        <InferenceKeyDialog orgId={orgId} workspaceRef={workspaceRef} open={keyOpen} onOpenChange={setKeyOpen} onCreated={setToken} />
       )}
 
       {canUpdate && (

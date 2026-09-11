@@ -32,13 +32,13 @@ export default function AccessKeys() {
   return (
     <PageShell>
       <PageHeader
-        title="Access Keys"
-        description="Credentials limited by principal, tenant scope, and explicit permissions."
+        title="API Keys"
+        description="API keys grant management access limited by principal, tenant scope, and explicit permissions."
         icon={KeyRound}
         actions={
           canIssueKey && (
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" /> Mint Access Key
+              <Plus className="h-4 w-4" /> Generate Key
             </Button>
           )
         }
@@ -47,13 +47,13 @@ export default function AccessKeys() {
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
       <ApiKeysTable
-        resource="access keys"
+        resource="API keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
         isError={keysQuery.isError}
         error={keysQuery.error}
         onRetry={() => keysQuery.refetch()}
-        emptyText="No access keys have been minted."
+        emptyText="No API keys generated."
         extraColumns={[
           {
             key: 'principal',
@@ -94,7 +94,7 @@ export default function AccessKeys() {
         <FormDialog
           open={createOpen}
           onOpenChange={setCreateOpen}
-          title="Mint an instance access key"
+          title="Generate API Key"
           description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
           schema={accessKeyFormSchema}
           defaultValues={{ label: '', permissions: [] }}
@@ -102,8 +102,8 @@ export default function AccessKeys() {
             const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
             setToken(minted.token);
           }}
-          submitLabel="Mint key"
-          pendingLabel="Minting..."
+          submitLabel="Generate"
+          pendingLabel="Generating..."
           pending={createKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >

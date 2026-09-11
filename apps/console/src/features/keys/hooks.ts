@@ -29,7 +29,7 @@ export function useCreateInstanceAccessKeyMutation(params?: ListInstanceAccessKe
   return useCreateInstanceAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
-      meta: { errorMessage: 'We couldn’t generate the access key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t generate the API key. Please try again.' },
     },
   });
 }
@@ -39,7 +39,7 @@ export function useCreateOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   return useCreateOrgAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
-      meta: { errorMessage: 'We couldn’t generate the access key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t generate the API key. Please try again.' },
     },
   });
 }
@@ -49,7 +49,7 @@ export function useRevokeInstanceAccessKeyMutation(params?: ListInstanceAccessKe
   return useRevokeAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
-      meta: { errorMessage: 'We couldn’t revoke the access key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t revoke the API key. Please try again.' },
     },
   });
 }
@@ -59,7 +59,7 @@ export function useRevokeOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   return useRevokeAccessKey({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
-      meta: { errorMessage: 'We couldn’t revoke the access key. Please try again.' },
+      meta: { errorMessage: 'We couldn’t revoke the API key. Please try again.' },
     },
   });
 }

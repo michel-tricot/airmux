@@ -95,20 +95,21 @@ export default function AppOrgSettings() {
   );
 
   return (
-    <PageShell>
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-          <Settings className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage organization access, members, and activity.</p>
-        </div>
-      </div>
-
+    <PageShell className="max-w-none space-y-0 p-0 sm:p-0">
       <SettingsLayout
+        header={
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Settings className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
+              <p className="text-muted-foreground mt-1 text-sm">Manage organization access, members, and activity.</p>
+            </div>
+          </div>
+        }
         categories={[
-          ...(canReadKeys ? [{ id: 'keys', label: 'Automation keys' }] : []),
+          ...(canReadKeys ? [{ id: 'keys', label: 'API Keys' }] : []),
           ...(canReadMembers || canListInvitations ? [{ id: 'members', label: 'Members' }] : []),
           ...(canReadActivity || canReadBundles ? [{ id: 'activity', label: 'Activity' }] : []),
         ]}
@@ -116,7 +117,7 @@ export default function AppOrgSettings() {
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Automation Keys</h2>
+              <h2 className="text-lg font-semibold">API Keys</h2>
               {canIssueKey && (
                 <Button
                   onClick={() => {
@@ -131,13 +132,13 @@ export default function AppOrgSettings() {
               )}
             </div>
             <ApiKeysTable
-              resource="access keys"
+              resource="API keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No access keys generated."
+              emptyText="No API keys generated."
               extraColumns={[
                 {
                   key: 'permissions',
@@ -210,7 +211,7 @@ export default function AppOrgSettings() {
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
-                                    description="The service account and all of its control-plane access keys will stop working immediately."
+                                    description="The service account and all of its control-plane API keys will stop working immediately."
                                     confirmLabel="Delete service account"
                                     pending={deleteServiceAccount.isPending}
                                     aria-label={`Delete service account ${member.name}`}
@@ -351,7 +352,7 @@ export default function AppOrgSettings() {
             setKeyOpen(open);
             if (!open) setKeyTarget(null);
           }}
-          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Create an organization access key'}
+          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate API Key'}
           description={
             keyTarget
               ? 'The new key is shown once and does not revoke any existing keys for this service account.'

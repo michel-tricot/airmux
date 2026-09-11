@@ -129,7 +129,7 @@ describe('instance administration routes', () => {
     [`/instance/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}`, WORKSPACES[0].name],
     ['/instance/users', 'Global Users'],
     [`/instance/users/${USER.id}`, USER.name],
-    ['/instance/keys', 'Access Keys'],
+    ['/instance/keys', 'API Keys'],
     ['/instance/provider-keys', 'Provider Keys'],
   ])('renders %s', async (path, heading) => {
     renderAt(path);
@@ -179,7 +179,7 @@ describe('instance administration routes', () => {
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 
-  it('counts only active access keys on the dashboard', async () => {
+  it('counts only active API keys on the dashboard', async () => {
     server.use(
       http.get('/api/v1/instance/access-keys', () =>
         HttpResponse.json<{ data: Api.AccessKeyOut[] }>({
@@ -193,11 +193,11 @@ describe('instance administration routes', () => {
     );
     renderAt('/instance');
 
-    const heading = await screen.findByRole('heading', { name: 'Access Keys' });
+    const heading = await screen.findByRole('heading', { name: 'API Keys' });
     await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('1')).toBeInTheDocument());
   });
 
-  it('mints an access key from the permissions returned by the control plane', async () => {
+  it('mints an API key from the permissions returned by the control plane', async () => {
     let submitted: unknown;
     server.use(
       http.post('/api/v1/instance/access-keys', async ({ request }) => {
@@ -210,11 +210,11 @@ describe('instance administration routes', () => {
     const user = userEvent.setup();
     renderAt('/instance/keys');
 
-    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
+    await user.click(await screen.findByRole('button', { name: 'Generate Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Generate API Key' });
     await user.type(within(dialog).getByLabelText('Label'), 'deploy');
     await user.click(await within(dialog).findByRole('checkbox', { name: 'organizations.read' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Mint key' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
 
     await waitFor(() => expect(submitted).toEqual({ label: 'deploy', permissions: ['organizations.read'] }));
     const keyDialog = await screen.findByRole('dialog', { name: 'Key Generated Successfully' });
@@ -226,7 +226,7 @@ describe('instance administration routes', () => {
     renderAt('/instance/keys');
 
     expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
-    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
   });
 
   it('prevents key submission without access-key issuance permission', async () => {
@@ -235,8 +235,8 @@ describe('instance administration routes', () => {
     );
     renderAt('/instance/keys');
 
-    expect(await screen.findByRole('heading', { name: 'Access Keys' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'API Keys' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
   });
 
   it('keeps instance auditors read-only', async () => {
@@ -319,7 +319,7 @@ describe('instance administration routes', () => {
     const navigation = screen.getByRole('navigation', { name: 'Instance navigation' });
     expect(within(navigation).queryByRole('link', { name: 'Organizations' })).not.toBeInTheDocument();
     expect(within(navigation).queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
-    expect(within(navigation).queryByRole('link', { name: 'Access Keys' })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole('link', { name: 'API Keys' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(organizations).not.toHaveBeenCalled();
       expect(users).not.toHaveBeenCalled();

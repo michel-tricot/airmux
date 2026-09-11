@@ -139,7 +139,7 @@ export default function OrganizationDetail() {
           )}
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> Access Keys
+              <Key className="w-4 h-4" /> API Keys
             </TabsTrigger>
           )}
           {canReadMembers && (
@@ -199,16 +199,16 @@ export default function OrganizationDetail() {
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Access Keys</h2>
+              <h2 className="text-lg font-semibold">API Keys</h2>
             </div>
             <ApiKeysTable
-              resource="access keys"
+              resource="API keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No access keys for this organization."
+              emptyText="No API keys for this organization."
               extraColumns={[
                 {
                   key: 'user',

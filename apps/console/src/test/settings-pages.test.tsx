@@ -76,7 +76,7 @@ it('refreshes generated configuration history when returning to Activity', async
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Activity' }));
   expect(await screen.findByText('bundle-1')).toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: 'Automation keys' }));
+  await user.click(screen.getByRole('tab', { name: 'API Keys' }));
   bundles = [...bundles, { ...bundle, id: 'bundle-2', version: 2 }];
   await user.click(screen.getByRole('tab', { name: 'Activity' }));
   expect(await screen.findByText('bundle-2')).toBeInTheDocument();

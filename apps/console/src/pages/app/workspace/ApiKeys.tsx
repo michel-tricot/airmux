@@ -1,19 +1,15 @@
+import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
 import { useState } from 'react';
-import * as z from 'zod';
 import { useRequiredOrgId } from '@/lib/session';
-import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
-import { Button, Input } from '@/components/ui/elements';
+import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
+import { Button } from '@/components/ui/elements';
 import { Plus } from 'lucide-react';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { inferenceKeyAccess } from '@/features/keys/policy';
-
-const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
 export default function WorkspaceApiKeys() {
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -28,13 +24,12 @@ export default function WorkspaceApiKeys() {
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
 
   return (
     <PageShell>
       <PageHeader
-        title="Inference Keys"
+        title="API Keys"
         description="Keys let applications send requests to the models available to this workspace."
         actions={
           canCreate && (
@@ -46,50 +41,19 @@ export default function WorkspaceApiKeys() {
       />
 
       <ApiKeysTable
-        resource="inference keys"
+        resource="API keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
         isError={keysQuery.isError}
         error={keysQuery.error}
         onRetry={() => keysQuery.refetch()}
-        emptyText="No inference keys generated."
-        revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
+        emptyText="No API keys generated."
+        revokeDescription="Requests using this API key will stop working immediately. This cannot be undone."
         onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
         revokePending={canRevoke ? revokeKey.isPending : undefined}
       />
 
-      {canCreate && (
-        <FormDialog
-          open={keyOpen}
-          onOpenChange={setKeyOpen}
-          title="Generate Inference Key"
-          description="Keys let applications send requests to the models available to this workspace."
-          schema={keyLabelSchema}
-          defaultValues={{ label: '' }}
-          onSubmit={async (values) => {
-            const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
-            setToken(minted.token);
-          }}
-          submitLabel="Generate"
-          pending={createKey.isPending}
-        >
-          {(form) => (
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. chatbot-prod" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormDialog>
-      )}
+      {canCreate && <InferenceKeyDialog orgId={orgId} workspaceRef={workspaceRef} open={keyOpen} onOpenChange={setKeyOpen} onCreated={setToken} />}
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
     </PageShell>

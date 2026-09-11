@@ -69,10 +69,9 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const draft = name ?? workspace.name;
 
   return (
-    <PageShell>
-      <PageHeader title="Workspace Settings" description={<span className="font-mono">{workspace.slug}</span>} />
-
+    <PageShell className="max-w-none space-y-0 p-0 sm:p-0">
       <SettingsLayout
+        header={<PageHeader title="Workspace Settings" description={<span className="font-mono">{workspace.slug}</span>} />}
         categories={[
           ...(canUpdate ? [{ id: 'general', label: 'General' }] : []),
           ...(canReadMembers ? [{ id: 'members', label: 'Members' }] : []),
@@ -178,7 +177,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
                 size="default"
                 className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
                 title="Delete Workspace"
-                description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+                description={`Deleting ${workspace.name} also deletes its API keys and memberships. Usage already recorded remains on the organization’s bill.`}
                 confirmLabel="Delete Workspace"
                 pending={remove.isPending}
                 onConfirm={async () => {

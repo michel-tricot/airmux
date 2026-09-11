@@ -48,7 +48,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
       open={open}
       onOpenChange={onOpenChange}
       title="Replicate request"
-      description="Set AIRLLM_API_KEY to an inference key, then run this command from your terminal."
+      description="Set AIRLLM_API_KEY to a workspace API key, then run this command from your terminal."
       contentClassName="sm:max-w-3xl"
     >
       <div className="min-w-0 space-y-3">

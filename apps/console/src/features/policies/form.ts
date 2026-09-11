@@ -28,7 +28,7 @@ export const policyFormSchema = z
   })
   .superRefine((values, context) => {
     const issue = (field: string, message: string) => context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
-    if (values.target === 'selected_keys' && !values.keyIds.length) issue('keyIds', 'Select at least one inference key');
+    if (values.target === 'selected_keys' && !values.keyIds.length) issue('keyIds', 'Select at least one API key');
     if (values.match === 'request' && !values.matchModels.length && values.matchStream === 'any' && !values.matchCapabilities.length)
       issue('match', 'Choose at least one request criterion');
     if (['models', 'providers', 'fallback'].includes(values.kind) && !values.names.length) issue('names', 'Select at least one option');

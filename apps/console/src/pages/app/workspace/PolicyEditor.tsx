@@ -129,13 +129,13 @@ export function PolicyEditor({
                       aria-label="Applies to"
                       options={[
                         { value: 'all_keys', label: 'All keys' },
-                        { value: 'selected_keys', label: 'Selected inference keys' },
+                        { value: 'selected_keys', label: 'Selected API keys' },
                       ]}
                     />
                   </FormControl>
                   <FormMessage />
                   {field.value === 'all_keys' && (
-                    <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>
+                    <p className="text-sm text-muted-foreground">Includes future API keys and playground sessions.</p>
                   )}
                 </FormItem>
               )}
@@ -146,10 +146,10 @@ export function PolicyEditor({
                 name="keyIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Inference keys</FormLabel>
+                    <FormLabel>API keys</FormLabel>
                     <FormControl>
                       <CheckboxDropdown
-                        aria-label="Inference keys"
+                        aria-label="API keys"
                         label="Selected keys"
                         allLabel="Choose keys"
                         values={field.value}

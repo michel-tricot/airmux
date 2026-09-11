@@ -108,7 +108,7 @@ export default function UserDetail() {
               size="default"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               title="Delete User"
-              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
+              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted API keys must be cleared first."
               confirmLabel="Delete User"
               pending={deleteUser.isPending}
               onConfirm={async () => {
@@ -192,13 +192,13 @@ export default function UserDetail() {
           </h2>
 
           <ApiKeysTable
-            resource="access keys"
+            resource="API keys"
             keys={accessKeysQuery.data}
             isLoading={accessKeysQuery.isLoading}
             isError={accessKeysQuery.isError}
             error={accessKeysQuery.error}
             onRetry={() => accessKeysQuery.refetch()}
-            emptyText="This user does not own any access keys."
+            emptyText="This user does not own any API keys."
             extraColumns={[{ key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> }]}
           />
         </div>

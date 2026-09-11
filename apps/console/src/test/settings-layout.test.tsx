@@ -14,6 +14,7 @@ it('switches settings categories with the keyboard and recovers when a category 
   );
   const view = render(
     <SettingsLayout
+      header={<h1>Settings</h1>}
       categories={[
         { id: 'general', label: 'General' },
         { id: 'members', label: 'Members' },
@@ -27,6 +28,10 @@ it('switches settings categories with the keyboard and recovers when a category 
   await user.click(screen.getByRole('tab', { name: 'General' }));
   await user.keyboard('{ArrowDown}');
   expect(screen.getByRole('tabpanel')).toHaveTextContent('Member settings');
-  view.rerender(<SettingsLayout categories={[{ id: 'general', label: 'General' }]}>{content}</SettingsLayout>);
+  view.rerender(
+    <SettingsLayout header={<h1>Settings</h1>} categories={[{ id: 'general', label: 'General' }]}>
+      {content}
+    </SettingsLayout>,
+  );
   expect(screen.getByRole('tabpanel')).toHaveTextContent('General settings');
 });

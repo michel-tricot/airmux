@@ -37,7 +37,7 @@ export function PermissionChecklist({
       <ErrorState error={permissionsError} resource="permissions" onRetry={onPermissionsRetry} className="rounded-md border border-border p-3" />
     );
   }
-  if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue access keys at this scope.</p>;
+  if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue API keys at this scope.</p>;
   return (
     <>
       <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
