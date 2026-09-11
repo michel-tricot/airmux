@@ -1,6 +1,13 @@
 import { type ReactNode, useState } from 'react';
-import { closestCenter, DndContext, type DragEndEvent, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { type AnimateLayoutChanges, arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  type AnimateLayoutChanges,
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Library, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { PolicyOut, RuleOut } from '@workspace/api-client-react';
@@ -134,7 +141,8 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const [ruleOpen, setRuleOpen] = useState(false);
   const [draggedPolicyId, setDraggedPolicyId] = useState<string | null>(null);
   const [pendingPolicyIds, setPendingPolicyIds] = useState<string[] | null>(null);
-  const ready = keys.data !== undefined && catalog.data !== undefined && rules.data !== undefined;
+  const policyEditorReady = keys.data !== undefined && rules.data !== undefined;
+  const ruleEditorReady = catalog.data !== undefined;
   const displayedPolicies = applyOrder(policies.data, pendingPolicyIds);
   const policyIds = displayedPolicies?.map((policy) => policy.id) ?? [];
   const reorderDisabled = policyMutations.reorder.isPending || policyIds.length < 2;
@@ -145,6 +153,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setDraggedPolicyId(null);
@@ -167,7 +176,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                disabled={catalog.data === undefined}
+                disabled={!ruleEditorReady}
                 onClick={() => {
                   setEditingRule(null);
                   setRuleOpen(true);
@@ -177,7 +186,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                 Create rule
               </Button>
               <Button
-                disabled={!ready || !rules.data?.length}
+                disabled={!policyEditorReady || !rules.data?.length}
                 onClick={() => {
                   setEditingPolicy(null);
                   setPolicyOpen(true);
@@ -247,7 +256,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  disabled={!ready}
+                                  disabled={!ruleEditorReady}
                                   aria-label={`Edit ${rule.name}`}
                                   onClick={() => {
                                     setEditingRule(rule);
@@ -282,7 +291,9 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
           <Card>
             <CardHeader>
               <CardTitle>Policies</CardTitle>
-              {canManage && policyIds.length > 1 && <p className="text-sm text-muted-foreground">Drag policies to change their evaluation order.</p>}
+              {canManage && policyIds.length > 1 && (
+                <p className="text-sm text-muted-foreground">Drag policies or use a reorder handle to change their evaluation order.</p>
+              )}
             </CardHeader>
             <CardContent>
               <DndContext
@@ -372,7 +383,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    disabled={!ready}
+                                    disabled={!policyEditorReady}
                                     aria-label={`Edit ${policy.name}`}
                                     onClick={() => {
                                       setEditingPolicy(policy);

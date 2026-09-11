@@ -101,6 +101,39 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'First rule is used by policies' })).toBeDisabled();
   });
 
+  it('keeps policy editing available when only the model catalog is unavailable', async () => {
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+    );
+    renderPolicies();
+
+    expect(await screen.findByText('First')).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create rule' })).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Edit First' })).toBeEnabled();
+  });
+
+  it('keeps rule editing available when only inference keys are unavailable', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+    );
+    renderPolicies();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create rule' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'Create policy' })).toBeDisabled();
+    await user.click(screen.getByRole('tab', { name: 'Rule library' }));
+    expect(screen.getByRole('button', { name: 'Edit First rule' })).toBeEnabled();
+  });
+
   it('keeps policy rows compact and reveals rule details in a tooltip', async () => {
     const user = userEvent.setup();
     const multiRulePolicy = {
@@ -193,19 +226,40 @@ describe('workspace policies', () => {
     renderPolicies();
 
     const firstHandle = await screen.findByRole('button', { name: 'Reorder First' });
-    firstHandle.focus();
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
-    fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' });
-    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
-    expect(firstHandle.closest('tr')).not.toHaveClass('opacity-70');
-    expect(submittedOrder).toBeUndefined();
-
     await dragBelowNext(firstHandle);
 
     expect(policyRows().map((row) => within(row).getAllByRole('cell')[1].textContent)).toEqual(['Second1 rule', 'First1 rule', 'Third1 rule']);
     expect(policyRows().map((row) => within(row).getAllByRole('cell')[4].textContent)).toEqual(['0', '1', '2']);
     await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
     await waitFor(() => expect(reorderCompleted).toBe(true));
+  });
+
+  it('reorders policies with the keyboard', async () => {
+    mockPolicyRowLayout();
+    let submittedOrder: string[] | undefined;
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
+      ),
+      http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
+        submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
+        const policiesById = new Map(initialPolicies.map((item) => [item.id, item]));
+        return HttpResponse.json<{ data: Api.PolicyOut[] }>({
+          data: submittedOrder.map((id, priority) => ({ ...policiesById.get(id)!, priority })),
+        });
+      }),
+    );
+    renderPolicies();
+
+    const firstHandle = await screen.findByRole('button', { name: 'Reorder First' });
+    firstHandle.focus();
+    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
+    await waitFor(() => expect(firstHandle.closest('tr')).toHaveClass('opacity-70'));
+    fireEvent.keyDown(firstHandle, { key: 'ArrowDown', code: 'ArrowDown' });
+    fireEvent.keyDown(firstHandle, { key: ' ', code: 'Space' });
+
+    await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
   });
 
   it('restores the prior order when saving fails', async () => {

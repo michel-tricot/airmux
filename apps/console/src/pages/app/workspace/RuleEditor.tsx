@@ -46,6 +46,7 @@ function TextField({ form, name, label, numeric = false }: { form: UseFormReturn
             <Input
               {...field}
               type={numeric ? 'number' : 'text'}
+              stepperLabel={label}
               onChange={(event) => field.onChange(numeric ? Number(event.target.value) : event.target.value)}
             />
           </FormControl>
@@ -199,7 +200,7 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                 <CheckboxDropdown
                   aria-label="Allowed credential scopes"
                   label="Selected scopes"
-                  allLabel="Choose scopes"
+                  emptyLabel="Choose scopes"
                   values={field.value}
                   onValuesChange={field.onChange}
                   options={credentialScopeOptions}
@@ -226,7 +227,7 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                 <CheckboxDropdown
                   aria-label="Allowed routes"
                   label="Selected routes"
-                  allLabel="Choose routes"
+                  emptyLabel="Choose routes"
                   values={field.value}
                   onValuesChange={field.onChange}
                   options={routeOptions}
@@ -251,7 +252,7 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                   <CheckboxDropdown
                     aria-label="Fallback failures"
                     label="Failure reasons"
-                    allLabel="Choose failure reasons"
+                    emptyLabel="Choose failure reasons"
                     values={field.value}
                     onValuesChange={field.onChange}
                     options={failureOptions}

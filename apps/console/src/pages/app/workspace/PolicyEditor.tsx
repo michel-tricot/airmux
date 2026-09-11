@@ -29,6 +29,7 @@ function TextField({
             <Input
               {...field}
               type={numeric ? 'number' : 'text'}
+              stepperLabel={label}
               onChange={(event) => field.onChange(numeric ? Number(event.target.value) : event.target.value)}
             />
           </FormControl>
