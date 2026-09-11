@@ -6961,7 +6961,7 @@ components:
           default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition'
-          description: Inference key target and ordered rules. Budgets are not yet enforced
+          description: Inference key target and reusable rules. Budgets are not yet enforced
       additionalProperties: false
       type: object
       required:
@@ -6988,6 +6988,7 @@ components:
           maxItems: 100
           minItems: 1
           title: Rule Ids
+          description: Unordered reusable rule references; a policy may contain at most one fallback rule
       additionalProperties: false
       type: object
       required:
@@ -7119,7 +7120,7 @@ components:
           anyOf:
           - $ref: '#/components/schemas/PolicyDefinition'
           - type: 'null'
-          description: Replace the complete target and ordered rules; omit to leave unchanged
+          description: Replace the complete target and reusable rules; omit to leave unchanged
       additionalProperties: false
       type: object
       title: PolicyUpdate

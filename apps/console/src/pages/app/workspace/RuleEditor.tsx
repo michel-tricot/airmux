@@ -1,9 +1,12 @@
 import type { UseFormReturn } from 'react-hook-form';
 import type { RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
+import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { FormDialog } from '@/components/shared/form-dialog';
+import { ModelPicker } from '@/components/shared/model-picker';
 import { Alert, AlertDescription, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
+import { ModelBadges } from '@/features/rules/presentation';
 
 const actionOptions = [
   { value: 'models', label: 'Allowed models' },
@@ -34,7 +37,21 @@ const credentialScopeOptions = [
 
 type TextFieldName = 'name' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
 
-function TextField({ form, name, label, numeric = false }: { form: UseFormReturn<RuleForm>; name: TextFieldName; label: string; numeric?: boolean }) {
+function TextField({
+  form,
+  name,
+  label,
+  numeric = false,
+  min,
+  max,
+}: {
+  form: UseFormReturn<RuleForm>;
+  name: TextFieldName;
+  label: string;
+  numeric?: boolean;
+  min?: number;
+  max?: number;
+}) {
   return (
     <FormField
       control={form.control}
@@ -47,6 +64,8 @@ function TextField({ form, name, label, numeric = false }: { form: UseFormReturn
               {...field}
               type={numeric ? 'number' : 'text'}
               stepperLabel={label}
+              min={min}
+              max={max}
               onChange={(event) => field.onChange(numeric ? Number(event.target.value) : event.target.value)}
             />
           </FormControl>
@@ -61,10 +80,19 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
   const kind = form.watch('kind');
   const match = form.watch('match');
   const names = form.watch('names');
-  const routeOptions =
-    kind === 'providers'
-      ? catalog.providers.map((provider) => ({ value: provider.name, label: provider.name }))
-      : catalog.models.map((model) => ({ value: model.name, label: model.name }));
+  const providerById = new Map(catalog.providers.map((provider) => [provider.id, provider]));
+  const modelOptions = catalog.models.map((model) => {
+    const provider = providerById.get(model.provider_id);
+    return {
+      value: model.name,
+      label: <CatalogOptionLabel name={model.name} providerName={provider?.name} providerIcon={provider?.icon} />,
+      searchText: `${model.name} ${provider?.name ?? ''}`,
+    };
+  });
+  const providerOptions = catalog.providers.map((provider) => ({
+    value: provider.name,
+    label: <CatalogOptionLabel name={provider.name} providerIcon={provider.icon} />,
+  }));
   return (
     <>
       <TextField form={form} name="name" label="Rule name" />
@@ -98,13 +126,17 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
               <FormItem>
                 <FormLabel>Requested models</FormLabel>
                 <FormControl>
-                  <CheckboxDropdown
+                  <ModelPicker
+                    mode="multiple"
                     aria-label="Requested models"
                     label="Selected models"
-                    allLabel="Any model"
+                    emptyLabel="Any model"
+                    title="Select requested models"
+                    description="Search by model or provider name"
+                    searchLabel="Search requested models"
                     values={field.value}
                     onValuesChange={field.onChange}
-                    options={catalog.models.map((model) => ({ value: model.name, label: model.name }))}
+                    options={modelOptions}
                   />
                 </FormControl>
                 <FormMessage />
@@ -188,7 +220,7 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
           <p className="text-sm text-muted-foreground">Every selected primary and fallback model must stay within both catalog rates.</p>
         </>
       )}
-      {kind === 'request_limits' && <TextField form={form} name="maxOutputTokens" label="Maximum requested output tokens" numeric />}
+      {kind === 'request_limits' && <TextField form={form} name="maxOutputTokens" label="Maximum requested output tokens" numeric min={1} />}
       {kind === 'credential_access' && (
         <FormField
           control={form.control}
@@ -224,17 +256,37 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                 {kind === 'fallback' ? 'Backup models, in selection order' : kind === 'models' ? 'Allowed models' : 'Allowed providers'}
               </FormLabel>
               <FormControl>
-                <CheckboxDropdown
-                  aria-label="Allowed routes"
-                  label="Selected routes"
-                  emptyLabel="Choose routes"
-                  values={field.value}
-                  onValuesChange={field.onChange}
-                  options={routeOptions}
-                />
+                {kind === 'providers' ? (
+                  <CheckboxDropdown
+                    aria-label="Allowed routes"
+                    label="Selected routes"
+                    emptyLabel="Choose routes"
+                    values={field.value}
+                    onValuesChange={field.onChange}
+                    options={providerOptions}
+                  />
+                ) : (
+                  <ModelPicker
+                    mode="multiple"
+                    aria-label="Allowed routes"
+                    label="Selected routes"
+                    emptyLabel="Choose routes"
+                    title={kind === 'fallback' ? 'Select backup models' : 'Select allowed models'}
+                    description="Search by model or provider name"
+                    searchLabel="Search allowed routes"
+                    values={field.value}
+                    onValuesChange={field.onChange}
+                    options={modelOptions}
+                  />
+                )}
               </FormControl>
               <FormMessage />
-              {names.length > 0 && <p className="break-words text-sm text-muted-foreground">{names.join(kind === 'fallback' ? ' → ' : ', ')}</p>}
+              {names.length > 0 && kind !== 'providers' && (
+                <div className="text-sm text-muted-foreground">
+                  <ModelBadges names={names} ordered={kind === 'fallback'} maxVisible={1} />
+                </div>
+              )}
+              {names.length > 0 && kind === 'providers' && <p className="break-words text-sm text-muted-foreground">{names.join(', ')}</p>}
             </FormItem>
           )}
         />
@@ -263,8 +315,8 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
             )}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField form={form} name="maxAttempts" label="Total upstream attempts" numeric />
-            <TextField form={form} name="timeoutMs" label="Time limit (milliseconds)" numeric />
+            <TextField form={form} name="maxAttempts" label="Total upstream attempts" numeric min={2} max={5} />
+            <TextField form={form} name="timeoutMs" label="Time limit (milliseconds)" numeric min={100} max={120000} />
           </div>
           <p className="text-sm text-muted-foreground">Includes the primary call and credential retries. Every backup must pass all restrictions.</p>
         </>

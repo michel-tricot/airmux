@@ -101,6 +101,39 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'First rule is used by policies' })).toBeDisabled();
   });
 
+  it('does not treat rule usage as zero when policies are unavailable', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+    );
+    renderPolicies();
+
+    await user.click(await screen.findByRole('tab', { name: 'Rule library' }));
+
+    expect(await screen.findByText('Usage unavailable')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'First rule usage is unavailable' })).toBeDisabled();
+  });
+
+  it('presents model names with the shared catalog model style', async () => {
+    const user = userEvent.setup();
+    const modelRule: Api.RuleOut = {
+      ...rule('policy-1', 'Approved models'),
+      definition: { match: { kind: 'all_requests' }, action: { kind: 'models', names: ['openai/gpt-4o'] } },
+    };
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: [modelRule] })),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [initialPolicies[0]] }),
+      ),
+    );
+    renderPolicies();
+
+    await user.click(await screen.findByRole('tab', { name: 'Rule library' }));
+
+    expect(screen.getByText('openai/gpt-4o')).toHaveClass('font-mono');
+  });
+
   it('keeps policy editing available when only the model catalog is unavailable', async () => {
     server.use(
       http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),

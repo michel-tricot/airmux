@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, Modal
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
-import { ProviderIcon } from '@/components/ProviderIcon';
+import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { cn } from '@/lib/utils';
 import { inferenceCompletion, prepareInferenceRequest, type InferenceMessage } from '@/lib/inference';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -191,13 +191,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     return {
       value: model.name,
       searchText: `${model.name} ${provider?.name ?? ''}`,
-      label: (
-        <span className="flex min-w-0 items-center gap-2">
-          {provider?.icon && <ProviderIcon markup={provider.icon} />}
-          <span className="truncate">{model.name}</span>
-          {provider && <span className="ml-auto text-[10px] text-muted-foreground">{provider.name}</span>}
-        </span>
-      ),
+      label: <CatalogOptionLabel name={model.name} providerName={provider?.name} providerIcon={provider?.icon} />,
     };
   });
 

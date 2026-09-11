@@ -5,7 +5,7 @@ from itertools import groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from contract.policies import MAX_WORKSPACE_RULES, PolicyEntry, RequestMatch, RuleEntry, SelectedKeys
+from contract.policies import MAX_WORKSPACE_RULES, Fallback, PolicyEntry, RequestMatch, RuleEntry, SelectedKeys
 from data_plane.policy_actions import require_evaluator
 from data_plane.requirements import required_capabilities
 
@@ -43,6 +43,7 @@ def compile_policies(policies: tuple[PolicyEntry, ...], rules: tuple[RuleEntry, 
         msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
         raise ValueError(msg)
     for policy in policies:
+        fallback_rules = 0
         for rule_id in policy.definition.rule_ids:
             rule = rules_by_id.get(rule_id)
             if rule is None:
@@ -51,7 +52,12 @@ def compile_policies(policies: tuple[PolicyEntry, ...], rules: tuple[RuleEntry, 
             if rule.workspace_id != policy.workspace_id:
                 msg = f"Policy {policy.id} names rule {rule.id} from another workspace"
                 raise ValueError(msg)
+            if isinstance(rule.definition.action, Fallback):
+                fallback_rules += 1
             require_evaluator(rule.definition.action)
+        if fallback_rules > 1:
+            msg = f"Policy {policy.id} may contain at most one fallback rule"
+            raise ValueError(msg)
     return MappingProxyType(
         {
             workspace_id: tuple(

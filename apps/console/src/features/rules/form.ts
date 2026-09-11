@@ -13,11 +13,11 @@ export const ruleFormSchema = z
     message: z.string(),
     maxInputPrice: z.string(),
     maxOutputPrice: z.string(),
-    maxOutputTokens: z.number().int().min(1),
+    maxOutputTokens: z.number(),
     credentialScopes: z.array(z.enum(['workspace', 'org', 'platform'])),
     reasons: z.array(z.enum(['rate_limited', 'upstream_unavailable', 'timeout'])),
-    maxAttempts: z.number().int().min(2).max(5),
-    timeoutMs: z.number().int().min(100).max(120000),
+    maxAttempts: z.number(),
+    timeoutMs: z.number(),
     amount: z.string(),
     period: z.enum(['day', 'month']),
     sharing: z.enum(['shared', 'per_key']),
@@ -34,7 +34,15 @@ export const ruleFormSchema = z
       if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxInputPrice)) issue('maxInputPrice', 'Enter a non-negative USD rate');
       if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxOutputPrice)) issue('maxOutputPrice', 'Enter a non-negative USD rate');
     }
+    if (values.kind === 'request_limits' && (!Number.isInteger(values.maxOutputTokens) || values.maxOutputTokens < 1))
+      issue('maxOutputTokens', 'Enter a positive whole number');
     if (values.kind === 'credential_access' && !values.credentialScopes.length) issue('credentialScopes', 'Select at least one credential scope');
+    if (values.kind === 'fallback') {
+      if (!Number.isInteger(values.maxAttempts) || values.maxAttempts < 2 || values.maxAttempts > 5)
+        issue('maxAttempts', 'Enter a whole number from 2 to 5');
+      if (!Number.isInteger(values.timeoutMs) || values.timeoutMs < 100 || values.timeoutMs > 120000)
+        issue('timeoutMs', 'Enter a whole number from 100 to 120000');
+    }
     if (values.kind === 'budget' && (!/^\d{1,10}(\.\d{1,6})?$/.test(values.amount) || Number(values.amount) <= 0))
       issue('amount', 'Enter a positive USD amount with at most six decimal places');
   });

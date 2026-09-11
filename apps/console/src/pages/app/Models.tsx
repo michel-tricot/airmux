@@ -17,6 +17,7 @@ import {
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
+import { ModelBadge } from '@/components/shared/model-badge';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
 import { Badge, Button, Card, CheckboxDropdown } from '@/components/ui/elements';
@@ -49,12 +50,6 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 4,
 });
 const nameCollator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
-function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
-  if (capability === 'streaming') return 'default';
-  if (capability === 'tools') return 'warning';
-  return 'secondary';
-}
-
 type Modality = ModelOut['input_modalities'][number] | ModelOut['output_modalities'][number];
 
 function ModalityIcon({ modality }: { modality: Modality }) {
@@ -107,32 +102,6 @@ function ModalityFlow({
       <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
       <ModalityGroup direction="Output" modalities={outputModalities} />
     </div>
-  );
-}
-
-function ModelName({ name, capabilities }: Pick<ModelOut, 'name' | 'capabilities'>) {
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <Badge
-          variant="outline"
-          tabIndex={0}
-          className="font-mono focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          {name}
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
-        <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
-        <div className="flex flex-wrap gap-1.5">
-          {capabilities.map((capability) => (
-            <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-              {capability}
-            </Badge>
-          ))}
-        </div>
-      </TooltipContent>
-    </Tooltip>
   );
 }
 
@@ -262,7 +231,7 @@ export default function Models() {
       cellClassName: 'min-w-48',
       cell: ({ model }) => (
         <div className="space-y-1.5">
-          <ModelName name={model.name} capabilities={model.capabilities} />
+          <ModelBadge name={model.name} capabilities={model.capabilities} />
           <ModalityFlow input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
         </div>
       ),

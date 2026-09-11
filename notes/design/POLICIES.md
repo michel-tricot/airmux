@@ -6,11 +6,11 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 
 ## Contract and execution
 
-Each policy has a name, priority, target, and an ordered nonempty collection of rules. Each rule has
+Each policy has a name, priority, target, and an unordered nonempty collection of rules. Each rule has
 a stable UUID, typed request match, and one typed action. Rules compose within and across policies:
-every matching restriction must pass. Lower policy priorities run first; policy UUID breaks ties,
-then rules run in their listed order. Priority cannot override a restriction. The first matching
-fallback rule supplies the ordered backup list.
+every matching restriction must pass. Lower policy priorities run first, and policy UUID breaks ties.
+Priority cannot override a restriction. A policy may reference at most one fallback rule, and the
+first matching policy with one supplies the ordered backup list.
 
 The control plane validates request matches and references when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles

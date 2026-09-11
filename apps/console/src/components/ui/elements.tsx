@@ -513,6 +513,7 @@ type TableProps = React.ComponentPropsWithoutRef<typeof TablePrimitive> & { clip
 
 export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, TableProps>(({ className, clipOverflow = false, ...props }, ref) => (
   <div
+    data-slot="table-surface"
     className={cn(
       'relative w-full rounded-md border border-border bg-card/50',
       clipOverflow ? 'overflow-hidden [&>div]:overflow-hidden' : 'overflow-auto',

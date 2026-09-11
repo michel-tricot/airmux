@@ -5,33 +5,18 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { Button, CheckboxDropdown, Dropdown, Input, Switch } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { policyDefaults, policyForm, policyFormSchema, policyPayload, type PolicyForm } from '@/features/policies/form';
-import { actionSummary } from '@/features/rules/presentation';
+import { RuleActionSummary } from '@/features/rules/presentation';
 
-function TextField({
-  form,
-  name,
-  label,
-  numeric = false,
-}: {
-  form: UseFormReturn<PolicyForm>;
-  name: 'name' | 'priority';
-  label: string;
-  numeric?: boolean;
-}) {
+function TextField({ form, label }: { form: UseFormReturn<PolicyForm>; label: string }) {
   return (
     <FormField
       control={form.control}
-      name={name}
+      name="name"
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input
-              {...field}
-              type={numeric ? 'number' : 'text'}
-              stepperLabel={label}
-              onChange={(event) => field.onChange(numeric ? Number(event.target.value) : event.target.value)}
-            />
+            <Input {...field} />
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -42,13 +27,14 @@ function TextField({
 
 function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; keys: InferenceKeyOut[]; rules: RuleOut[] }) {
   const selectedRuleIds = form.watch('ruleIds');
-  const availableRules = rules.filter((rule) => !selectedRuleIds.includes(rule.id));
   const selectedRules = selectedRuleIds
     .map((ruleId) => ({ ruleId, rule: rules.find((candidate) => candidate.id === ruleId) }))
     .sort((left, right) => (left.rule?.name ?? '').localeCompare(right.rule?.name ?? ''));
+  const hasFallback = selectedRules.some(({ rule }) => rule?.definition.action.kind === 'fallback');
+  const availableRules = rules.filter((rule) => !selectedRuleIds.includes(rule.id) && (!hasFallback || rule.definition.action.kind !== 'fallback'));
   return (
     <>
-      <TextField form={form} name="name" label="Policy name" />
+      <TextField form={form} label="Policy name" />
       <FormField
         control={form.control}
         name="enabled"
@@ -93,7 +79,11 @@ function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; 
                 <div key={ruleId} className="flex items-center gap-2 rounded border border-border bg-background/40 px-3 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
-                    {rule && <p className="truncate text-xs text-muted-foreground">{actionSummary(rule)}</p>}
+                    {rule && (
+                      <div className="text-xs text-muted-foreground">
+                        <RuleActionSummary rule={rule} />
+                      </div>
+                    )}
                   </div>
                   <Button
                     type="button"
@@ -126,7 +116,6 @@ function PolicyFields({ form, keys, rules }: { form: UseFormReturn<PolicyForm>; 
           </FormItem>
         )}
       />
-      <TextField form={form} name="priority" label="Priority (lower runs first)" numeric />
     </>
   );
 }

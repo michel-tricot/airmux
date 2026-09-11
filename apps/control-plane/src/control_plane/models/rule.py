@@ -100,6 +100,22 @@ class Rule(Record, Identified, OrgOwned, Tombstonable, table=True):
             if provider_names != {provider.name for provider in providers}:
                 msg = "Rule providers must exist in the catalog"
                 raise InvalidRuleError(msg)
+        if isinstance(action, Fallback):
+            from control_plane.models.policy import Policy  # noqa: PLC0415 rules and policies validate shared fallback semantics
+
+            policies = await Policy.for_workspace(self.workspace_id)
+            other_rule_ids = {
+                rule_id
+                for policy in policies
+                if self.id in policy.definition.rule_ids
+                for rule_id in policy.definition.rule_ids
+                if rule_id != self.id
+            }
+            if other_rule_ids:
+                other_rules = await Rule.find(col(Rule.id).in_(other_rule_ids))
+                if any(isinstance(rule.definition.action, Fallback) for rule in other_rules):
+                    msg = "A policy may contain at most one fallback rule"
+                    raise InvalidRuleError(msg)
 
     def entry(self) -> RuleEntry:
         return RuleEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, definition=self.definition)

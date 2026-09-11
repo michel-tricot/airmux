@@ -1883,7 +1883,7 @@ export const ListPoliciesResponseItem = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(listPoliciesResponseDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(listPoliciesResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1929,8 +1929,8 @@ export const CreatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyBodyDefinitionRuleIdsMax)
-}).describe('Inference key target and ordered rules. Budgets are not yet enforced')
+  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyBodyDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
+}).describe('Inference key target and reusable rules. Budgets are not yet enforced')
 })
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
@@ -1955,7 +1955,7 @@ export const CreatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyResponseDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2000,7 +2000,7 @@ export const ReorderPoliciesResponseItem = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(reorderPoliciesResponseDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(reorderPoliciesResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2045,8 +2045,8 @@ export const UpdatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyBodyDefinitionOneRuleIdsMax)
-}),zod.null()]).optional().describe('Replace the complete target and ordered rules; omit to leave unchanged')
+  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyBodyDefinitionOneRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
+}),zod.null()]).optional().describe('Replace the complete target and reusable rules; omit to leave unchanged')
 })
 
 export const updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
@@ -2071,7 +2071,7 @@ export const UpdatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyResponseDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2986,7 +2986,7 @@ export const GetBundleResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(getBundleResponsePoliciesItemDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(getBundleResponsePoliciesItemDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 })
 }))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
@@ -3173,7 +3173,7 @@ export const BundleLatestResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "rule_ids": zod.array(zod.uuid()).min(1).max(bundleLatestResponsePoliciesItemDefinitionRuleIdsMax)
+  "rule_ids": zod.array(zod.uuid()).min(1).max(bundleLatestResponsePoliciesItemDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 })
 }))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')

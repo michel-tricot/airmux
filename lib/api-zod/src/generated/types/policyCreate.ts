@@ -27,6 +27,6 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target and ordered rules. Budgets are not yet enforced */
+  /** Inference key target and reusable rules. Budgets are not yet enforced */
   definition: PolicyDefinition;
 }

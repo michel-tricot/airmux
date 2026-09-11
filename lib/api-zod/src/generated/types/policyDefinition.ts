@@ -16,6 +16,7 @@ import type { SelectedKeys } from './selectedKeys';
 export interface PolicyDefinition {
   target: AllKeys | SelectedKeys;
   /**
+     * Unordered reusable rule references; a policy may contain at most one fallback rule
      * @minItems 1
      * @maxItems 100
      */

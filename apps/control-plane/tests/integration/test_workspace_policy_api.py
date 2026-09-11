@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
 
 from contract import BundleV1
 from control_plane.authz import Permission
@@ -123,6 +123,53 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         duplicate = client.put(f"{path}/order", headers=headers, json={"policy_ids": [ordered_ids[0], ordered_ids[0], ordered_ids[2]]})
         assert duplicate.status_code == 422
         assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
+
+
+def test_policy_rejects_multiple_fallback_rules(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        assert client.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
+        org = make_org(client, root, "fallback-policy")
+        headers = cp.headers(org)
+        workspace = make_workspace(client, headers, "production")
+        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        action = {"kind": "fallback", "models": [MODEL["model_id"]], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}
+        fallback_rules = [
+            client.post(
+                f"{base}/rules",
+                headers=headers,
+                json={"name": f"Fallback {index}", "definition": {"match": {"kind": "all_requests"}, "action": action}},
+            ).json()["data"]
+            for index in range(2)
+        ]
+        definition = policy_definition(fallback_rules)
+
+        assert client.post(f"{base}/policies", headers=headers, json={"name": "Ambiguous", "definition": definition}).status_code == 422
+        policy = client.post(f"{base}/policies", headers=headers, json={"name": "Valid", "definition": policy_definition(fallback_rules[:1])}).json()[
+            "data"
+        ]
+        assert client.patch(f"{base}/policies/{policy['id']}", headers=headers, json={"definition": definition}).status_code == 422
+
+        restriction = client.post(
+            f"{base}/rules",
+            headers=headers,
+            json={
+                "name": "Restriction",
+                "definition": {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1000}},
+            },
+        ).json()["data"]
+        valid_definition = policy_definition([fallback_rules[0], restriction])
+        assert client.patch(f"{base}/policies/{policy['id']}", headers=headers, json={"definition": valid_definition}).status_code == 200
+        assert (
+            client.patch(
+                f"{base}/rules/{restriction['id']}",
+                headers=headers,
+                json={"definition": {"match": {"kind": "all_requests"}, "action": action}},
+            ).status_code
+            == 422
+        )
 
 
 def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_writes(tmp_path):

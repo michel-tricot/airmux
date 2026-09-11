@@ -10,6 +10,7 @@ from sqlmodel import Field, col, select
 
 from contract.policies import (
     MAX_WORKSPACE_RULES,
+    Fallback,
     PolicyDefinition,
     PolicyEntry,
     SelectedKeys,
@@ -123,6 +124,9 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         if set(self.definition.rule_ids) != {rule.id for rule in rules} or any(rule.workspace_id != self.workspace_id for rule in rules):
             msg = "Policy rules must belong to this workspace"
             raise InvalidPolicyError(msg)
+        if sum(isinstance(rule.definition.action, Fallback) for rule in rules) > 1:
+            msg = "A policy may contain at most one fallback rule"
+            raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)
@@ -148,14 +152,14 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Inference key target and ordered rules. Budgets are not yet enforced")
+    definition: PolicyDefinition = Field(description="Inference key target and reusable rules. Budgets are not yet enforced")
 
 
 class PolicyUpdate(RecordUpdate[Policy]):
     name: str | None = Field(default=None, min_length=1, max_length=200, description="Replacement display name; omit to leave unchanged")
     enabled: bool | None = Field(default=None, description="Enable or disable this policy; omit to leave unchanged")
     priority: int | None = Field(default=None, ge=0, le=10000, description="Replacement priority, with lower numbers first; omit to leave unchanged")
-    definition: PolicyDefinition | None = Field(default=None, description="Replace the complete target and ordered rules; omit to leave unchanged")
+    definition: PolicyDefinition | None = Field(default=None, description="Replace the complete target and reusable rules; omit to leave unchanged")
 
     @model_validator(mode="after")
     def nonnull_changes(self) -> Self:

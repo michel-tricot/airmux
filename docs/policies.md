@@ -8,7 +8,7 @@ Policy management has two reusable levels:
 
 - **Applies to** selects every inference key in the workspace or a fixed set of keys
 - **Shared rules** each own a request match and action
-- **Policies** reference an ordered collection of shared rules
+- **Policies** reference an unordered collection of shared rules
 
 Each rule's **Applies when** matches every request or requests with selected models, capabilities,
 or streaming mode. Its **Action** defines the restriction or fallback behavior. A rule can be used by
@@ -16,9 +16,10 @@ multiple policies. Editing it updates every policy that references it, and a ref
 be deleted.
 
 All matching rules across all targeted policies compose, and every matching restriction must pass.
-Rules run in their listed order. Lower policy priority numbers run first. Reordering policies in the
-console updates their priorities. Priority affects evaluation order, but it cannot make a request
-bypass another matching restriction. The first matching fallback policy supplies the fallback plan.
+Rules within a policy have no precedence. Lower policy priority numbers run first, and reordering
+policies in the console updates their priorities. Priority cannot make a request bypass another
+matching restriction. A policy may contain one fallback rule, and the first matching fallback policy
+supplies the fallback plan.
 
 Policy changes take effect after the gateway adopts the workspace's updated configuration. This is
 normally quick, but it is not synchronous with saving the policy.
@@ -262,7 +263,7 @@ provider, credential, capability, or parameter restriction. Authentication failu
 model fallback by themselves.
 
 `max_attempts` counts the primary call and credential retries, with a maximum of five total attempts.
-The policy can contain up to four fallback models. `timeout_ms` covers secret resolution and all
+One policy can contain at most one fallback rule, with up to four fallback models. `timeout_ms` covers secret resolution and all
 attempts until response headers arrive. For streaming responses, it does not limit the duration of
 the stream after those headers arrive.
 
@@ -306,7 +307,7 @@ reusable restriction first:
 ```
 
 The policy API is available at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`. Attach the
-returned rule IDs in evaluation order:
+returned rule IDs. Their order does not affect evaluation:
 
 ```json
 {

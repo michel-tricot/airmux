@@ -148,7 +148,11 @@ class RuleEntry(_PolicyModel):
 
 class PolicyDefinition(_PolicyModel):
     target: PolicyTarget
-    rule_ids: tuple[UUID, ...] = Field(min_length=1, max_length=MAX_WORKSPACE_RULES)
+    rule_ids: tuple[UUID, ...] = Field(
+        min_length=1,
+        max_length=MAX_WORKSPACE_RULES,
+        description="Unordered reusable rule references; a policy may contain at most one fallback rule",
+    )
 
     @field_validator("rule_ids")
     @classmethod
@@ -156,7 +160,7 @@ class PolicyDefinition(_PolicyModel):
         if len(set(rule_ids)) != len(rule_ids):
             msg = "Policy rule references must be unique"
             raise ValueError(msg)
-        return rule_ids
+        return tuple(sorted(rule_ids))
 
 
 class PolicyEntry(_PolicyModel):

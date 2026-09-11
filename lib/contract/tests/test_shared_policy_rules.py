@@ -27,12 +27,13 @@ def test_two_policies_can_reference_one_rule():
     assert first.rule_ids == second.rule_ids == (rule.id,)
 
 
-def test_policy_rule_references_are_nonempty_ordered_and_unique():
+def test_policy_rule_references_are_nonempty_canonical_and_unique():
     first = uuid7()
     second = uuid7()
     definition = PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "rule_ids": [second, first]})
 
-    assert definition.rule_ids == (second, first)
+    assert definition.rule_ids == tuple(sorted((first, second)))
+    assert definition == PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "rule_ids": [first, second]})
     for rule_ids in ([], [first, first]):
         with pytest.raises(ValidationError):
             PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "rule_ids": rule_ids})

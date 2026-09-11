@@ -29,6 +29,18 @@ const inferenceKey: InferenceKeyOut = {
   deleted_at: null,
 };
 
+function fallbackRule(id: string, name: string): RuleOut {
+  return {
+    ...rule,
+    id,
+    name,
+    definition: {
+      match: { kind: 'all_requests' },
+      action: { kind: 'fallback', models: ['openai/gpt-test'], on: ['timeout'], max_attempts: 2, timeout_ms: 1000 },
+    },
+  };
+}
+
 it('selects all keys or individual keys from one Applies to control', async () => {
   const user = userEvent.setup();
   render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[inferenceKey]} rules={[rule]} />);
@@ -53,4 +65,34 @@ it('attaches and removes reusable rules', async () => {
   expect(screen.getByText('Credentials: workspace')).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Remove Safe credentials' }));
   expect(screen.queryByText('Credentials: workspace')).not.toBeInTheDocument();
+});
+
+it('uses policy reordering as the only priority control', () => {
+  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule]} />);
+
+  expect(screen.queryByLabelText(/Priority/)).not.toBeInTheDocument();
+});
+
+it('offers at most one fallback rule per policy', async () => {
+  const user = userEvent.setup();
+  const firstFallback = fallbackRule('01990aa3-4b4c-7000-8000-000000000003', 'Primary fallback');
+  const secondFallback = fallbackRule('01990aa3-4b4c-7000-8000-000000000004', 'Secondary fallback');
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      keys={[]}
+      rules={[firstFallback, secondFallback, rule]}
+    />,
+  );
+
+  await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
+  await user.click(screen.getByRole('option', { name: firstFallback.name }));
+  await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
+
+  expect(screen.queryByRole('option', { name: secondFallback.name })).not.toBeInTheDocument();
+  expect(screen.getByRole('option', { name: rule.name })).toBeVisible();
 });

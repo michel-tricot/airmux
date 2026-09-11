@@ -303,6 +303,24 @@ def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
     assert plan.backups == ()
 
 
+def test_one_policy_cannot_contain_multiple_fallback_rules():
+    entry = policy_with_rules(
+        [
+            {
+                "match": {"kind": "all_requests"},
+                "action": {"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000},
+            },
+            {
+                "match": {"kind": "all_requests"},
+                "action": {"kind": "fallback", "models": ["last"], "on": ["rate_limited"], "max_attempts": 2, "timeout_ms": 1000},
+            },
+        ]
+    )
+
+    with pytest.raises(ValueError, match="at most one fallback rule"):
+        snapshot([entry])
+
+
 @pytest.mark.parametrize("invalid", ["duplicate", "over_limit"])
 def test_invalid_policies_rejected_before_bundle_admission(invalid):
     entry = policy({"kind": "credential_access", "scopes": ["workspace", "org"]})

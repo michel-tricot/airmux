@@ -2091,7 +2091,15 @@ class PolicyDefinition(BaseModel):
         extra="forbid",
     )
     target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
-    rule_ids: Annotated[list[UUID], Field(max_length=100, min_length=1, title="Rule Ids")]
+    rule_ids: Annotated[
+        list[UUID],
+        Field(
+            description="Unordered reusable rule references; a policy may contain at most one fallback rule",
+            max_length=100,
+            min_length=1,
+            title="Rule Ids",
+        ),
+    ]
 
 
 class PolicyEntry(BaseModel):
@@ -2145,7 +2153,7 @@ class PolicyUpdate(BaseModel):
     ] = None
     definition: Annotated[
         PolicyDefinition | None,
-        Field(description="Replace the complete target and ordered rules; omit to leave unchanged"),
+        Field(description="Replace the complete target and reusable rules; omit to leave unchanged"),
     ] = None
 
 
@@ -2392,7 +2400,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinition,
-        Field(description="Inference key target and ordered rules. Budgets are not yet enforced"),
+        Field(description="Inference key target and reusable rules. Budgets are not yet enforced"),
     ]
 
 
