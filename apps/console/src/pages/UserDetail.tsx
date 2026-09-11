@@ -16,6 +16,7 @@ import {
 } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
@@ -27,8 +28,6 @@ import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-
-const instanceRoleSchema = z.object({ role: z.union([z.nativeEnum(InstanceRole), z.literal('none')]) });
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -51,7 +50,6 @@ export default function UserDetail() {
   const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
-  const [roleOpen, setRoleOpen] = useState(false);
   const changeRole = useChangeInstanceRoleMutation();
 
   const addMember = useAddUserToOrgMutation();
@@ -85,11 +83,24 @@ export default function UserDetail() {
         </div>
         <div className="flex items-center gap-3">
           <AccountKindBadge serviceAccount={user.service_account} />
-          <Badge variant="secondary">{user.instance_role ?? 'No instance role'}</Badge>
-          {authorization.can(userAccess.changeRole) && !user.managing_org_id && (
-            <Button variant="outline" onClick={() => setRoleOpen(true)}>
-              Change instance role
-            </Button>
+          {authorization.can(userAccess.changeRole) && !user.managing_org_id ? (
+            <RoleSelect
+              value={user.instance_role ?? 'none'}
+              label="Instance role"
+              name={user.name}
+              options={[
+                { value: 'none', label: 'No instance role' },
+                { value: 'owner', label: 'Owner' },
+                { value: 'auditor', label: 'Auditor' },
+                { value: 'data_plane', label: 'Data plane' },
+              ]}
+              pending={changeRole.isPending}
+              onSave={(role) =>
+                changeRole.mutateAsync({ userId: user.id, data: { instance_role: role === 'none' ? null : z.nativeEnum(InstanceRole).parse(role) } })
+              }
+            />
+          ) : (
+            <Badge variant="secondary">{user.instance_role ?? 'No instance role'}</Badge>
           )}
           {canDeleteUser && (
             <ConfirmButton
@@ -191,51 +202,6 @@ export default function UserDetail() {
             extraColumns={[{ key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> }]}
           />
         </div>
-      )}
-
-      {authorization.can(userAccess.changeRole) && !user.managing_org_id && (
-        <FormDialog<z.infer<typeof instanceRoleSchema>>
-          open={roleOpen}
-          onOpenChange={setRoleOpen}
-          title="Change instance role"
-          description={`Change instance-wide access for ${user.name}`}
-          schema={instanceRoleSchema}
-          defaultValues={{ role: z.nativeEnum(InstanceRole).nullable().parse(user.instance_role) ?? 'none' }}
-          onSubmit={({ role }) =>
-            changeRole.mutateAsync({
-              userId: user.id,
-              data: { instance_role: role === 'none' ? null : role },
-            })
-          }
-          submitLabel="Save role"
-          pending={changeRole.isPending}
-        >
-          {(form) => (
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Instance role</FormLabel>
-                  <FormControl>
-                    <Dropdown
-                      aria-label="Instance role"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      options={[
-                        { value: 'none', label: 'No instance role' },
-                        { value: 'owner', label: 'Owner' },
-                        { value: 'auditor', label: 'Auditor' },
-                        { value: 'data_plane', label: 'Data plane' },
-                      ]}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormDialog>
       )}
 
       {canAddMember && (

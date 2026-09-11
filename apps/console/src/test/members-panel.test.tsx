@@ -51,10 +51,9 @@ it('edits an existing member role and displays the saved role', async () => {
   }
   render(<Roster />);
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: 'Change role for Alice' }));
-  await user.click(screen.getByRole('combobox', { name: 'Role' }));
+  await user.click(screen.getByRole('combobox', { name: 'Role for Alice' }));
   await user.click(screen.getByRole('option', { name: 'Admin' }));
-  await user.click(screen.getByRole('button', { name: 'Save role' }));
+  await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  expect(screen.getByText('admin')).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Role for Alice' })).toHaveTextContent('Admin');
 });

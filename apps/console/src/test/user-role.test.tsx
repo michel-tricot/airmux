@@ -42,16 +42,14 @@ describe('instance role editing', () => {
     installUser();
     render(<App />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Change instance role' }));
-    await user.click(screen.getByRole('combobox', { name: 'Instance role' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Instance role' }));
     await user.click(screen.getByRole('option', { name: 'Auditor' }));
-    await user.click(screen.getByRole('button', { name: 'Save role' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByText('auditor')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Change instance role' }));
+    expect(screen.getByRole('combobox', { name: 'Instance role' })).toHaveTextContent('Auditor');
     await user.click(screen.getByRole('combobox', { name: 'Instance role' }));
     await user.click(screen.getByRole('option', { name: 'No instance role' }));
-    await user.click(screen.getByRole('button', { name: 'Save role' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByText('No instance role')).toBeInTheDocument();
   });
@@ -60,12 +58,29 @@ describe('instance role editing', () => {
     installUser('auditor');
     render(<App />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Change instance role' }));
-    await user.click(screen.getByRole('combobox', { name: 'Instance role' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Instance role' }));
     await user.click(screen.getByRole('option', { name: 'Owner' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    await user.click(screen.getByRole('button', { name: 'Change instance role' }));
     expect(screen.getByRole('combobox', { name: 'Instance role' })).toHaveTextContent('Auditor');
+  });
+
+  it('keeps the current role and confirmation open when saving fails', async () => {
+    installUser('owner');
+    server.use(
+      http.put('/api/v1/users/target-user/instance-role', () =>
+        HttpResponse.json({ detail: 'Cannot demote the last instance owner' }, { status: 409 }),
+      ),
+    );
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('combobox', { name: 'Instance role' }));
+    await user.click(screen.getByRole('option', { name: 'Auditor' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Change Target User from Owner to Auditor?');
+    await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
+    expect(await screen.findByText('Cannot demote the last instance owner')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('combobox', { name: 'Instance role' })).toHaveTextContent('Owner');
   });
 
   it('hides the role action when management permission is absent', async () => {
@@ -73,6 +88,6 @@ describe('instance role editing', () => {
     server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['principals.read'] } })));
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'Target User' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Change instance role' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Instance role' })).not.toBeInTheDocument();
   });
 });
