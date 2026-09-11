@@ -77,11 +77,11 @@ describe('customFetch', () => {
     expect(headers.has('x-skip')).toBe(false);
   });
 
-  it('returns null without parsing responses that cannot carry a body', async () => {
+  it('rejects success responses without the required envelope', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(customFetch('/api/v1/items', { method: 'DELETE' })).resolves.toBeNull();
+    await expect(customFetch('/api/v1/items', { method: 'DELETE' })).rejects.toThrow('Expected a JSON response');
   });
 
   it('reports malformed JSON with the raw response', async () => {
@@ -104,4 +104,10 @@ describe('customFetch', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://gateway.example/api/v1/items');
     expect(fetchMock.mock.calls[1]?.[0]).toBe('https://other.example/v1/items');
   });
+});
+
+it.each(['text/html', 'text/plain', 'application/octet-stream'])('rejects non-JSON success responses (%s)', async (contentType) => {
+  fetchMock.mockResolvedValue(new Response('<html>proxy page</html>', { headers: { 'content-type': contentType } }));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(customFetch('/api/v1/items')).rejects.toThrow('Expected a JSON response');
 });

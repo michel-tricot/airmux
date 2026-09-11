@@ -86,6 +86,7 @@ def assert_unprivileged(compose, service, expected):
 
 
 def assert_process_layout(compose, gateways, compact):
+    assert_installed_packages(compose, gateways[0])
     if compact:
         assert_unprivileged(compose, gateways[0], ("airllmcp serve", "airllmdp serve", "nginx: master"))
         return
@@ -124,6 +125,21 @@ def assert_quickstart(public_url, config_path):
     assert "Ready." in output
     assert "DEPLOYMENT_API_KEY" in output
     assert f"curl {public_url}/inf/v1/chat/completions" in output
+
+
+def assert_installed_packages(compose, gateway):
+    container = docker(*compose, "ps", "-q", gateway)
+    packages = docker(
+        "exec", container, "python", "-c", "import importlib.metadata as m; print(*(d.metadata['Name'] for d in m.distributions()))"
+    ).split()
+    assert {"control-plane", "data-plane"} <= set(packages)
+    assert "cli" not in packages
+
+
+def assert_control_plane_outage(client, compose, path, headers, request):
+    service_action(compose, "stop", "control-plane")
+    eventually(lambda: client.get("/healthz").status_code >= 500)
+    assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
 
 
 def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
@@ -165,18 +181,19 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
     assert_process_layout(compose, gateways, compact)
+
     assert_quickstart(str(client.base_url).rstrip("/"), tmp_path / "cli.toml")
     if len(gateways) == 2:
         service_action(compose, "stop", gateways[1])
     if not compact:
-        service_action(compose, "stop", "control-plane")
-        assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
+        assert_control_plane_outage(client, compose, path, headers, request)
     service_action(compose, "restart", gateway)
     eventually(lambda: client.post(path, headers=headers, json=request).status_code == 200)
     if not compact:
         service_action(compose, "start", "control-plane")
     if len(gateways) == 2:
         service_action(compose, "start", gateways[1])
+    eventually(lambda: client.get("/healthz").status_code == 200)
     eventually(lambda: client.get("/api/v1/instance/oss/claim").status_code == 200)
     assert payload(client.get("/api/v1/instance/oss/claim")) == {"claimed": True, "public_signup": False}
     eventually(lambda: {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))} == instance_ids)

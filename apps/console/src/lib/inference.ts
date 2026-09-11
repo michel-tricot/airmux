@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type InferenceMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
 export type InferenceResult = { content: string; usage?: InferenceUsage; finishReason?: string; firstTokenMs?: number; durationMs: number };
@@ -22,6 +24,7 @@ export type PreparedInferenceRequest = {
 };
 
 type ParsedEvent = {
+  closing: boolean;
   delta?: string;
   usage?: InferenceUsage;
   finishReason?: string;
@@ -31,14 +34,6 @@ const SESSION_PROPAGATION_DELAYS_MS = [250, 500, 1_000, 1_500, 2_000];
 
 function objectOf(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
-function arrayOf(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function textOf(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }
 
 function wait(delayMs: number, signal?: AbortSignal): Promise<void> {
@@ -74,22 +69,67 @@ async function responseError(response: Response): Promise<Error> {
   return new Error(`${response.status}: ${response.statusText || 'Request failed'}`);
 }
 
-function canonicalUsage(value: unknown): InferenceUsage | undefined {
-  const usage = objectOf(value);
-  if (typeof usage.input_tokens !== 'number' || typeof usage.output_tokens !== 'number') return undefined;
-  return {
-    inputTokens: usage.input_tokens,
-    outputTokens: usage.output_tokens,
-    cacheReadTokens: typeof usage.cache_read_tokens === 'number' ? usage.cache_read_tokens : 0,
-  };
-}
+const finishReasonSchema = z.enum(['stop', 'length', 'tool_calls', 'content_filter']);
+const usageSchema = z
+  .object({
+    input_tokens: z.number().int(),
+    output_tokens: z.number().int(),
+    cache_read_tokens: z.number().int(),
+    cache_write_tokens: z.number().int(),
+    estimated: z.boolean(),
+  })
+  .strict();
+const gatewaySchema = z
+  .object({
+    finish_reason: finishReasonSchema.optional(),
+    adjustments: z.array(z.object({ param: z.string(), action: z.enum(['clamped', 'emulated', 'dropped']), detail: z.string() }).strict()),
+  })
+  .strict();
+const partFields = { cache: z.literal('ephemeral').optional() };
+const responseSchema = z
+  .object({
+    id: z.string(),
+    model: z.string(),
+    content: z.array(
+      z.discriminatedUnion('type', [
+        z.object({ ...partFields, type: z.literal('text'), text: z.string() }).strict(),
+        z
+          .object({ ...partFields, type: z.literal('reasoning'), id: z.string().optional(), text: z.string(), signature: z.string().optional() })
+          .strict(),
+        z.object({ ...partFields, type: z.literal('tool_call'), id: z.string(), name: z.string(), arguments: z.string() }).strict(),
+      ]),
+    ),
+    finish_reason: finishReasonSchema.optional(),
+    usage: usageSchema,
+    gateway: gatewaySchema,
+  })
+  .strict();
+const chunkSchema = z
+  .object({
+    id: z.string(),
+    delta: z
+      .discriminatedUnion('type', [
+        z.object({ type: z.literal('text'), text: z.string() }).strict(),
+        z.object({ type: z.literal('reasoning'), id: z.string().optional(), text: z.string(), signature: z.string().optional() }).strict(),
+        z
+          .object({
+            type: z.literal('tool_call'),
+            index: z.number().int().nonnegative(),
+            id: z.string().optional(),
+            name: z.string().optional(),
+            arguments: z.string(),
+          })
+          .strict(),
+      ])
+      .optional(),
+    finish_reason: finishReasonSchema.optional(),
+    usage: usageSchema.optional(),
+    gateway: gatewaySchema.optional(),
+  })
+  .strict();
 
-function textParts(value: unknown): string {
-  return arrayOf(value)
-    .map(objectOf)
-    .filter((part) => part.type === 'text')
-    .map((part) => textOf(part.text) ?? '')
-    .join('');
+function canonicalUsage(usage: z.infer<typeof usageSchema>): InferenceUsage {
+  return { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, cacheReadTokens: usage.cache_read_tokens };
 }
 
 export function prepareInferenceRequest(options: InferenceRequestOptions): PreparedInferenceRequest {
@@ -114,11 +154,14 @@ function parseEvent(data: string): ParsedEvent {
     throw new Error('The gateway returned an invalid streaming event');
   }
   if (body.error) throw new Error(errorMessage(body) ?? 'The gateway stream failed');
-  const delta = objectOf(body.delta);
+  const parsed = chunkSchema.safeParse(body);
+  if (!parsed.success) throw new Error('The gateway returned an invalid streaming event');
+  const event = parsed.data;
   return {
-    delta: delta.type === 'text' ? textOf(delta.text) : undefined,
-    usage: canonicalUsage(body.usage),
-    finishReason: textOf(body.finish_reason),
+    closing: event.delta === undefined && event.usage !== undefined && event.gateway !== undefined,
+    delta: event.delta?.type === 'text' ? event.delta.text : undefined,
+    usage: event.usage ? canonicalUsage(event.usage) : undefined,
+    finishReason: event.finish_reason,
   };
 }
 
@@ -133,16 +176,19 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
   let finishReason: string | undefined;
   let firstTokenMs: number | undefined;
   let complete = false;
+  let closing = false;
 
   const dispatch = () => {
     if (dataLines.length === 0) return;
     const data = dataLines.join('\n');
     dataLines = [];
     if (data === '[DONE]') {
+      if (!closing) throw new Error('The gateway returned an incomplete stream');
       complete = true;
       return;
     }
     const event = parseEvent(data);
+    closing = event.closing;
     usage = event.usage ?? usage;
     finishReason = event.finishReason ?? finishReason;
     if (event.delta !== undefined) {
@@ -162,29 +208,41 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
     else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
   };
 
-  while (!complete) {
-    const { done, value } = await reader.read();
-    pending += decoder.decode(value, { stream: !done });
-    const lines = pending.split(/\r\n|\r|\n/);
-    pending = done ? '' : (lines.pop() ?? '');
-    for (const line of lines) {
-      consume(line);
-      if (complete) break;
+  try {
+    while (!complete) {
+      const { done, value } = await reader.read();
+      pending += decoder.decode(value, { stream: !done });
+      const lines = pending.split(/\r\n|\r|\n/);
+      pending = done ? '' : (lines.pop() ?? '');
+      for (const line of lines) {
+        consume(line);
+        if (complete) break;
+      }
+      if (done) {
+        if (pending) consume(pending);
+        dispatch();
+        break;
+      }
     }
-    if (done) {
-      if (pending) consume(pending);
-      dispatch();
-      break;
-    }
+    if (!complete) throw new Error('The gateway returned an incomplete stream');
+  } finally {
+    void reader.cancel().catch(() => undefined);
+    reader.releaseLock();
   }
   return { content, usage, finishReason, firstTokenMs, durationMs: performance.now() - startedAt };
 }
 
-function bufferedResult(body: Record<string, unknown>, durationMs: number): InferenceResult {
+function bufferedResult(body: unknown, durationMs: number): InferenceResult {
+  const parsed = responseSchema.safeParse(body);
+  if (!parsed.success) throw new Error('The gateway returned an invalid completion response');
+  const response = parsed.data;
   return {
-    content: textParts(body.content),
-    usage: canonicalUsage(body.usage),
-    finishReason: textOf(body.finish_reason),
+    content: response.content
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text)
+      .join(''),
+    usage: canonicalUsage(response.usage),
+    finishReason: response.finish_reason,
     durationMs,
   };
 }
@@ -211,5 +269,8 @@ export async function inferenceCompletion(options: InferenceCompletionOptions): 
   }
   if (!response.ok) throw await responseError(response);
   if (options.stream) return streamedContent(response, startedAt, options.onDelta);
-  return bufferedResult(objectOf(await response.json()), performance.now() - startedAt);
+  const body: unknown = await response.json().catch(() => {
+    throw new Error('The gateway returned an invalid completion response');
+  });
+  return bufferedResult(body, performance.now() - startedAt);
 }

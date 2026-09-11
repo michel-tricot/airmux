@@ -108,7 +108,7 @@ it('offers at most one fallback rule per policy', async () => {
   await user.click(screen.getByRole('button', { name: 'Close' }));
   await user.click(screen.getByRole('button', { name: 'Create rule' }));
 
-  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeDisabled();
 });
 
 it('searches existing shared rules before attaching one', async () => {
@@ -223,4 +223,37 @@ it('shows shared rule usage before editing from a policy', async () => {
   await waitFor(() => expect(updatedPayload?.name).toBe(updatedRule.name));
   expect(screen.getByRole('heading', { name: 'Create policy' })).toBeVisible();
   expect(screen.getByText(updatedRule.name)).toBeVisible();
+});
+
+it('prevents inline creation of a second fallback and allows it after removal', async () => {
+  const user = userEvent.setup();
+  const fallback = fallbackRule('01990aa3-4b4c-7000-8000-000000000010', 'Primary fallback');
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      keys={[]}
+      rules={[fallback]}
+      ruleComposer={{
+        catalog,
+        usageByRuleId: new Map(),
+        createPending: false,
+        updatePending: false,
+        create: async () => fallback,
+        update: async () => fallback,
+      }}
+    />,
+  );
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
+  await user.click(screen.getByRole('option', { name: /Primary fallback/ }));
+  await user.click(screen.getByRole('button', { name: 'Create rule' }));
+  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Parameter support' })).toBeEnabled();
+  await user.click(screen.getByRole('button', { name: 'Back to policy' }));
+  await user.click(screen.getByRole('button', { name: 'Remove Primary fallback' }));
+  await user.click(screen.getByRole('button', { name: 'Create rule' }));
+  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeEnabled();
 });

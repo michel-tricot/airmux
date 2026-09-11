@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { InferenceKeyOut, PolicyCreate, PolicyOut, RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
 import { SearchPicker } from '@/components/shared/search-picker';
@@ -236,6 +236,8 @@ export function PolicyEditor({
   const [ruleNotice, setRuleNotice] = useState<string | null>(null);
   const rulesById = new Map([...rules, ...ruleOverrides].map((rule) => [rule.id, rule]));
   const visibleRules = Array.from(rulesById.values());
+  const selectedRuleIds = useWatch({ control: form.control, name: 'ruleIds' });
+  const hasFallback = selectedRuleIds.some((ruleId) => rulesById.get(ruleId)?.definition.action.kind === 'fallback');
 
   const resetEditor = () => {
     form.reset(defaultValues);
@@ -332,7 +334,7 @@ export function PolicyEditor({
       )}
       {step.kind === 'choose_rule_type' && (
         <div className="space-y-4">
-          <RuleTypeChoices onSelect={(ruleKind) => setStep({ kind: 'create_rule', ruleKind })} />
+          <RuleTypeChoices fallbackDisabled={hasFallback} onSelect={(ruleKind) => setStep({ kind: 'create_rule', ruleKind })} />
           <Button type="button" variant="outline" onClick={() => setStep({ kind: 'policy' })}>
             <ArrowLeft className="mr-1 h-4 w-4" />
             Back to policy
