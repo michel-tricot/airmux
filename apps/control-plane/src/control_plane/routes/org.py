@@ -7,7 +7,7 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col
 
-from control_plane.authority import ensure_org_role_change
+from control_plane.authority import ensure_allowed, ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
 from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
@@ -15,7 +15,10 @@ from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, 
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.management_key import ManagementKeyIn
+from control_plane.models.management_key import (  # noqa: TC001 fastapi resolves endpoint body and response annotations at runtime
+    ManagementKeyGrantIn,
+    ManagementKeyMintedOut,
+)
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountIn, OrgServiceAccountMintedOut, UserOut
@@ -99,9 +102,10 @@ async def create_org_service_account(
     service_account = await User.new_service_account(body.name, managing_org_id=org_id).save()
     membership = await OrgMembership(user_id=service_account.id, org_id=org_id, role=OrgRole.admin).save()
     management_key = await issue_management_key(
-        ManagementKeyIn(user_id=service_account.id, **body.management_key.model_dump()),
+        body.management_key,
         actor,
         Scope.org(org_id),
+        principal_id=service_account.id,
     )
     return Envelope(
         data=OrgServiceAccountMintedOut(
@@ -110,6 +114,24 @@ async def create_org_service_account(
             management_key=management_key,
         )
     )
+
+
+@router.post(
+    "/service-accounts/{user_id}/management-keys",
+    tags=["Organization Service Accounts"],
+    dependencies=[require(org_scope, Permission.management_keys_issue)],
+)
+async def issue_org_service_account_management_key(
+    user_id: UUID,
+    body: ManagementKeyGrantIn,
+    org_id: OrgDep,
+    actor: ActorDep,
+) -> Envelope[ManagementKeyMintedOut]:
+    """Issue an organization-scoped management key for a service account under instance or organization control."""
+    service_account = await User.service_account_for_org(org_id, user_id)
+    if service_account.managing_org_id is None:
+        await ensure_allowed(actor, Permission.principals_manage, Scope.instance())
+    return Envelope(data=await issue_management_key(body, actor, Scope.org(org_id), principal_id=service_account.id))
 
 
 @router.delete(

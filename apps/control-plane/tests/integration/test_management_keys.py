@@ -48,6 +48,37 @@ def test_management_key_api_mints_lists_and_revokes_one_resource_type(tmp_path):
         assert next(candidate for candidate in relisted if candidate["id"] == key["id"])["status"] == "revoked"
 
 
+def test_management_key_endpoint_cannot_authenticate_as_another_principal(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app, base_url="https://testserver") as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        owner_id = client.get("/api/v1/users", headers=root).json()["data"][0]["id"]
+        admin_id = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "admin@example.com", "name": "Admin", "password": "hunter2-hunter2"},
+        ).json()["data"]["user_id"]
+        assert client.put(f"/api/v1/orgs/{org_id}/users/{admin_id}", json={"role": "admin"}, headers=root).status_code == 200
+        admin = cp.headers_for(org_id, admin_id)
+
+        impersonation = client.post(
+            f"/api/v1/orgs/{org_id}/management-keys",
+            json={"user_id": owner_id, "label": "impersonate-owner", "permissions": [Permission.members_manage]},
+            headers=admin,
+        )
+
+        assert impersonation.status_code == 422
+        self_key = client.post(
+            f"/api/v1/orgs/{org_id}/management-keys",
+            json={"label": "admin", "permissions": [Permission.members_manage]},
+            headers=admin,
+        )
+        assert self_key.status_code == 200, self_key.text
+        assert self_key.json()["data"]["user_id"] == admin_id
+        bearer = {"authorization": f"Bearer {self_key.json()['data']['token']}"}
+        assert client.put(f"/api/v1/orgs/{org_id}/users/{admin_id}", json={"role": "owner"}, headers=bearer).status_code == 403
+
+
 def test_management_key_permissions_are_required_and_validated(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:

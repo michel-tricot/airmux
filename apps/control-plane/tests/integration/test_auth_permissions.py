@@ -120,10 +120,9 @@ def test_service_account_management_key_sees_its_effective_permissions(tmp_path)
             headers=root,
         ).json()["data"]
         key = c.post(
-            "/api/v1/instance/management-keys",
+            f"/api/v1/service-accounts/{service_account['id']}/management-keys",
             json={
                 "label": "automation",
-                "user_id": service_account["id"],
                 "permissions": [Permission.organizations_read],
             },
             headers=root,

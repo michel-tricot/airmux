@@ -97,9 +97,8 @@ def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp
         created = _create(client, org_id).json()["data"]
 
         response = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
+            f"/api/v1/orgs/{org_id}/service-accounts/{created['service_account']['id']}/management-keys",
             json={
-                "user_id": created["service_account"]["id"],
                 "label": "replacement-management",
                 "permissions": [Permission.workspaces_read],
             },
@@ -112,6 +111,39 @@ def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp
         assert replacement["scope"] == {"level": "org", "org_id": str(org_id), "workspace_id": None}
         assert replacement["permissions"] == [Permission.workspaces_read]
         assert replacement["token"] != created["management_key"]["token"]
+
+
+def test_service_account_key_endpoints_reject_humans_and_the_wrong_owner(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as client:
+        first = make_org(client, root, "first")
+        second = make_org(client, root, "second")
+        admin_id = _org_admin(client, cp, first)
+        service_account = _create(client, first).json()["data"]["service_account"]
+        body = {"label": "wrong-target", "permissions": [Permission.workspaces_read]}
+
+        assert client.post(f"/api/v1/orgs/{first}/service-accounts/{admin_id}/management-keys", json=body, headers=CSRF).status_code == 404
+        wrong_org = client.post(
+            f"/api/v1/orgs/{second}/service-accounts/{service_account['id']}/management-keys",
+            json=body,
+            headers=root,
+        )
+        assert wrong_org.status_code == 404
+        assert client.post(f"/api/v1/service-accounts/{service_account['id']}/management-keys", json=body, headers=root).status_code == 404
+
+        instance_service_account = client.post("/api/v1/service-accounts", json={"name": "Global"}, headers=root).json()["data"]
+        assert (
+            client.put(
+                f"/api/v1/orgs/{first}/users/{instance_service_account['id']}",
+                json={"role": "admin"},
+                headers=root,
+            ).status_code
+            == 200
+        )
+        global_path = f"/api/v1/orgs/{first}/service-accounts/{instance_service_account['id']}/management-keys"
+        assert client.post(global_path, json=body, headers=CSRF).status_code == 403
+        assert client.post(global_path, json=body, headers=root).status_code == 200
 
 
 def test_service_account_creation_is_atomic_when_the_key_exceeds_its_role(tmp_path):

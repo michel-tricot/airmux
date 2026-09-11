@@ -7,6 +7,7 @@ import {
   useListOrgManagementKeys,
   useCreateInstanceManagementKey,
   useCreateOrgManagementKey,
+  useIssueOrgServiceAccountManagementKey,
   useRevokeManagementKey,
   useUpdateManagementKeyPermissions,
   getListWorkspaceManagementKeysQueryKey,
@@ -45,6 +46,16 @@ export function useCreateOrgManagementKeyMutation(orgId: string, params?: ListOr
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId, params) }),
       meta: { errorMessage: 'We couldn’t generate the management key. Please try again.' },
+    },
+  });
+}
+
+export function useIssueOrgServiceAccountManagementKeyMutation(orgId: string, params?: ListOrgManagementKeysParams) {
+  const queryClient = useQueryClient();
+  return useIssueOrgServiceAccountManagementKey({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId, params) }),
+      meta: { errorMessage: 'We couldn’t generate the service account management key. Please try again.' },
     },
   });
 }

@@ -5,7 +5,12 @@ import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks
 import { useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
-import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
+import {
+  useOrgManagementKeys,
+  useCreateOrgManagementKeyMutation,
+  useIssueOrgServiceAccountManagementKeyMutation,
+  useRevokeOrgManagementKeyMutation,
+} from '@/features/keys/hooks';
 import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
@@ -77,6 +82,7 @@ export default function AppOrgSettings() {
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const mintKey = useCreateOrgManagementKeyMutation(orgId);
+  const mintServiceAccountKey = useIssueOrgServiceAccountManagementKeyMutation(orgId);
   const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
@@ -207,7 +213,7 @@ export default function AppOrgSettings() {
                                     size="icon"
                                     variant="ghost"
                                     aria-label={`Generate replacement key for ${member.name}`}
-                                    disabled={mintKey.isPending}
+                                    disabled={mintServiceAccountKey.isPending}
                                     onClick={() => {
                                       setKeyTarget({ userId: member.user_id, name: member.name });
                                       setKeyOpen(true);
@@ -369,17 +375,14 @@ export default function AppOrgSettings() {
           schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
-            const minted = await mintKey.mutateAsync({
-              orgId,
-              data: {
-                ...(keyTarget ? { user_id: keyTarget.userId } : {}),
-                ...managementKeyPayload(values),
-              },
-            });
+            const data = managementKeyPayload(values);
+            const minted = keyTarget
+              ? await mintServiceAccountKey.mutateAsync({ orgId, userId: keyTarget.userId, data })
+              : await mintKey.mutateAsync({ orgId, data });
             setToken(minted.token);
           }}
           submitLabel={keyTarget ? 'Generate replacement key' : 'Generate'}
-          pending={mintKey.isPending}
+          pending={mintKey.isPending || mintServiceAccountKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (

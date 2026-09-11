@@ -69,15 +69,14 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         second = make_workspace(client, org, "second")
         viewer = make_user(tmp_path, "viewer@example.com")
         assert client.put(f"/api/v1/orgs/{org_id}/users/{viewer.id}", json={"role": "member"}, headers=org).status_code == 200
-        assert client.put(f"/api/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "viewer"}, headers=org).status_code == 200
+        assert client.put(f"/api/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "admin"}, headers=org).status_code == 200
         minted = client.post(
             f"/api/v1/orgs/{org_id}/workspaces/{first}/management-keys",
             json={
                 "label": "workspace-usage",
-                "user_id": str(viewer.id),
                 "permissions": [Permission.usage_read],
             },
-            headers=root,
+            headers=cp.headers_for(org_id, viewer.id, workspace_id=first),
         ).json()["data"]
         events = [
             {

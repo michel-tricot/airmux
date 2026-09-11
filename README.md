@@ -154,4 +154,4 @@ airllm management-keys mint \
   --permission inference-keys.manage
 ```
 
-Management endpoints use `/api/v1/instance/management-keys`, `/api/v1/orgs/{org_id}/management-keys`, and `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys`. Permission names use `management-keys.read`, `management-keys.issue`, and `management-keys.revoke`. Creating or expanding keys is bounded by the caller's authority and the key principal's permissions.
+Management-key endpoints authenticate keys as the caller. Service-account keys use the dedicated `/api/v1/service-accounts/{user_id}/management-keys` and `/api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys` endpoints. Permission names use `management-keys.read`, `management-keys.issue`, and `management-keys.revoke`. Creating or expanding keys is bounded by the caller's current authority and the key principal's permissions.

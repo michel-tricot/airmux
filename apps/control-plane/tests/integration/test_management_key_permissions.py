@@ -4,10 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
+from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 
-from control_plane.authz import OrgRole, Permission
-from control_plane.models import ManagementKey, OrgMembership, set_actor
+from control_plane.authz import Permission
+from control_plane.models import ManagementKey, set_actor
 
 
 @pytest.mark.parametrize("scope", ["instance", "org", "workspace"])
@@ -127,21 +127,20 @@ def test_reducing_parent_permissions_limits_existing_child_tokens(tmp_path):
 
 def test_permission_changes_cannot_exceed_the_key_principals_current_role(tmp_path):
     cp = setup_control_plane(tmp_path)
-    member = make_user(tmp_path, "member@example.com")
-    with TestClient(cp.app) as client:
+    with TestClient(cp.app, base_url="https://testserver") as client:
         root = cp.headers()
         org_id = make_org(client, root)
-
-        async def join():
-            await set_actor(member.id)
-            await OrgMembership(user_id=member.id, org_id=org_id, role=OrgRole.member).save()
-
-        run_in_db(tmp_path, join)
+        member_id = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "member@example.com", "name": "Member", "password": "hunter2-hunter2"},
+        ).json()["data"]["user_id"]
+        assert client.put(f"/api/v1/orgs/{org_id}/users/{member_id}", json={"role": "admin"}, headers=root).status_code == 200
         key = client.post(
             f"/api/v1/orgs/{org_id}/management-keys",
-            json={"label": "member", "user_id": str(member.id), "permissions": [Permission.organizations_read]},
-            headers=root,
+            json={"label": "member", "permissions": [Permission.organizations_read]},
+            headers={"X-Requested-With": "fetch"},
         ).json()["data"]
+        assert client.put(f"/api/v1/orgs/{org_id}/users/{member_id}", json={"role": "member"}, headers=root).status_code == 200
         response = client.put(f"/api/v1/management-keys/{key['id']}/permissions", json={"permissions": [Permission.members_manage]}, headers=root)
         assert response.status_code == 403
         assert "target principal" in response.json()["detail"]

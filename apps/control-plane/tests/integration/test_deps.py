@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_admin, make_org, make_user, run_in_db, setup_control_plane
+from helpers import make_org, run_in_db, setup_control_plane
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from sqlmodel import col
@@ -15,18 +15,16 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        user = make_user(tmp_path, "admin@example.com")
-        make_admin(tmp_path, user.id)
-        token = c.post(
+        key = c.post(
             "/api/v1/instance/management-keys",
-            json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
+            json={"label": "t", "permissions": [Permission.organizations_create]},
             headers=root,
-        ).json()["data"]["token"]
-        c.post("/api/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
+        ).json()["data"]
+        c.post("/api/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {key['token']}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))
     org_creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
-    assert org_creation.user_id == str(user.id)
+    assert org_creation.user_id == key["user_id"]
 
 
 def test_failed_commit_is_not_reported_as_success(tmp_path):

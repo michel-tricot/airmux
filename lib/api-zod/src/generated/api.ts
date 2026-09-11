@@ -61,8 +61,7 @@ export const createInstanceManagementKeyBodyLabelMax = 80;
 export const CreateInstanceManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createInstanceManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateInstanceManagementKeyResponse = zod.object({
@@ -145,8 +144,7 @@ export const createOrgManagementKeyBodyLabelMax = 80;
 export const CreateOrgManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createOrgManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateOrgManagementKeyResponse = zod.object({
@@ -231,8 +229,7 @@ export const createWorkspaceManagementKeyBodyLabelMax = 80;
 export const CreateWorkspaceManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createWorkspaceManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateWorkspaceManagementKeyResponse = zod.object({
@@ -737,6 +734,51 @@ export const CreateServiceAccountResponse = zod.object({
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
   "orgs": zod.array(zod.uuid())
+})
+
+
+/**
+ * Issue an instance-scoped management key for an instance service account.
+ *
+ * Required permissions: `principals.manage` and `management-keys.issue`.
+ * @summary Issue Instance Service Account Management Key
+ */
+export const IssueInstanceServiceAccountManagementKeyParams = zod.object({
+  "user_id": zod.uuid().describe('User or service-account ID')
+})
+
+
+export const issueInstanceServiceAccountManagementKeyBodyLabelMax = 80;
+
+
+
+export const IssueInstanceServiceAccountManagementKeyBody = zod.object({
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "label": zod.string().min(1).max(issueInstanceServiceAccountManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
+})
+
+export const IssueInstanceServiceAccountManagementKeyResponse = zod.object({
+  "id": zod.uuid(),
+  "user_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "parent_id": zod.union([zod.uuid(),zod.null()]),
+  "prefix": zod.string(),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])),
+  "label": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.object({
+  "level": zod.enum(['instance', 'org', 'workspace']),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+}),
+  "status": zod.enum(['active', 'expired', 'revoked']),
+  "token": zod.string()
 })
 
 
@@ -2669,6 +2711,52 @@ export const CreateOrgServiceAccountResponse = zod.object({
   "status": zod.enum(['active', 'expired', 'revoked']),
   "token": zod.string()
 })
+})
+
+
+/**
+ * Issue an organization-scoped management key for a service account under instance or organization control.
+ *
+ * Required permission: `management-keys.issue`.
+ * @summary Issue Org Service Account Management Key
+ */
+export const IssueOrgServiceAccountManagementKeyParams = zod.object({
+  "user_id": zod.uuid().describe('User or service-account ID'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+
+export const issueOrgServiceAccountManagementKeyBodyLabelMax = 80;
+
+
+
+export const IssueOrgServiceAccountManagementKeyBody = zod.object({
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "label": zod.string().min(1).max(issueOrgServiceAccountManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
+})
+
+export const IssueOrgServiceAccountManagementKeyResponse = zod.object({
+  "id": zod.uuid(),
+  "user_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "parent_id": zod.union([zod.uuid(),zod.null()]),
+  "prefix": zod.string(),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])),
+  "label": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.object({
+  "level": zod.enum(['instance', 'org', 'workspace']),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+}),
+  "status": zod.enum(['active', 'expired', 'revoked']),
+  "token": zod.string()
 })
 
 

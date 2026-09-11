@@ -58,3 +58,52 @@ def test_instance_flag_overrides_the_active_org_for_management_key_mint(monkeypa
     assert submitted["path"] == "/api/v1/instance/management-keys"
     assert "org_id" not in submitted["body"]
     assert "workspace_id" not in submitted["body"]
+
+
+def test_service_account_management_key_uses_the_dedicated_endpoint(monkeypatch):
+    submitted = {}
+    monkeypatch.setattr(resources, "access_client", lambda _url: Client(submitted))
+
+    result = runner.invoke(
+        app,
+        [
+            "management-keys",
+            "mint",
+            "--label",
+            "ci",
+            "--permission",
+            "bundles.read",
+            "--instance",
+            "--service-account",
+            "service-account-id",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert submitted["path"] == "/api/v1/service-accounts/service-account-id/management-keys"
+    assert "user_id" not in submitted["body"]
+
+
+def test_org_service_account_management_key_uses_the_dedicated_endpoint(monkeypatch):
+    submitted = {}
+    monkeypatch.setattr(resources, "access_client", lambda _url: Client(submitted))
+
+    result = runner.invoke(
+        app,
+        [
+            "management-keys",
+            "mint",
+            "--label",
+            "ci",
+            "--permission",
+            "bundles.read",
+            "--org",
+            "org-id",
+            "--service-account",
+            "service-account-id",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert submitted["path"] == "/api/v1/orgs/org-id/service-accounts/service-account-id/management-keys"
+    assert "user_id" not in submitted["body"]

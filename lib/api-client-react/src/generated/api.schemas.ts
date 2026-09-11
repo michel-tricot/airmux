@@ -841,24 +841,6 @@ export interface ManagementKeyGrantIn {
   expires_at?: string | null;
 }
 
-export interface ManagementKeyIn {
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
-  /**
-     * Where this key lives, such as ci, laptop, or data-plane
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /** Optional expiration timestamp with a timezone */
-  expires_at?: string | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
-}
-
 export type ManagementKeyMintedOutStatus = typeof ManagementKeyMintedOutStatus[keyof typeof ManagementKeyMintedOutStatus];
 
 

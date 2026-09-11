@@ -18,6 +18,7 @@ describe('organization service accounts', () => {
     let members: Api.OrgMemberOut[] = [];
     let submitted: unknown;
     let replacementSubmitted: unknown;
+    let replacementUserId: string | undefined;
     let deletedUserId: string | undefined;
     server.use(
       http.get('/api/v1/auth/permissions', () =>
@@ -90,7 +91,8 @@ describe('organization service accounts', () => {
         members = [];
         return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: deletedUserId, deleted_at: now } });
       }),
-      http.post('/api/v1/orgs/:orgId/management-keys', async ({ request }) => {
+      http.post('/api/v1/orgs/:orgId/service-accounts/:userId/management-keys', async ({ params, request }) => {
+        replacementUserId = String(params.userId);
         replacementSubmitted = await request.json();
         return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
           data: {
@@ -142,10 +144,10 @@ describe('organization service accounts', () => {
     await user.click(screen.getByRole('button', { name: 'Generate replacement key' }));
     expect(await screen.findByDisplayValue('sk-cp-replacement-show-once')).toBeInTheDocument();
     expect(replacementSubmitted).toEqual({
-      user_id: 'service-account-1',
       label: 'replacement-management',
       permissions: ['workspaces.read'],
     });
+    expect(replacementUserId).toBe('service-account-1');
     await user.click(screen.getByRole('button', { name: 'I have saved it' }));
 
     await user.click(screen.getByRole('button', { name: 'Delete service account Deploy Bot' }));

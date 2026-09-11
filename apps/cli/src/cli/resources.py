@@ -355,7 +355,7 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
 def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
     permission: Annotated[list[str] | None, typer.Option("--permission", "-p", help="Permission ceiling; repeat for each permission")] = None,
-    user_id: str = typer.Option("", "--user", help="Principal the key authenticates; defaults to you"),
+    service_account_id: str = typer.Option("", "--service-account", help="Service account the key authenticates; defaults to you"),
     org_id: str = typer.Option("", "--org", help="Organization scope; defaults to the active profile"),
     workspace_id: str = typer.Option("", "--workspace", help="Workspace scope; requires an organization"),
     instance: bool = typer.Option(False, "--instance", help="Use instance scope instead of the active organization"),
@@ -369,9 +369,16 @@ def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI
     if instance and (org_id or workspace_id):
         console.print("[red]--instance cannot be combined with --org or --workspace.[/red]")
         raise typer.Exit(1)
+    if service_account_id and workspace_id:
+        console.print("[red]--service-account cannot be combined with --workspace.[/red]")
+        raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
-        "/api/v1/instance/management-keys"
+        f"/api/v1/service-accounts/{service_account_id}/management-keys"
+        if instance and service_account_id
+        else f"/api/v1/orgs/{selected_org}/service-accounts/{service_account_id}/management-keys"
+        if service_account_id
+        else "/api/v1/instance/management-keys"
         if instance
         else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/management-keys"
         if workspace_id
@@ -380,7 +387,6 @@ def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI
     body = {
         "label": label,
         "permissions": permission,
-        "user_id": user_id or None,
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:

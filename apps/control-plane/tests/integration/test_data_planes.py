@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_admin, make_org, make_user, run_in_db, setup_control_plane, setup_db
+from helpers import make_org, run_in_db, setup_control_plane, setup_db
 
 from contract import BundleManifest, token_hash, uuid7
 from control_plane.app import create_app
@@ -91,14 +91,14 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        o1 = make_org(c, root, "o1")
-        user = make_user(tmp_path, "ops@example.com")
-        make_admin(tmp_path, user.id)
-        user_id = str(user.id)
+        service_account = c.post(
+            "/api/v1/service-accounts",
+            json={"name": "Data Plane", "instance_role": InstanceRole.data_plane},
+            headers=root,
+        ).json()["data"]
         minted = c.post(
-            f"/api/v1/orgs/{o1}/management-keys",
+            f"/api/v1/service-accounts/{service_account['id']}/management-keys",
             json={
-                "user_id": user_id,
                 "label": "data-plane",
                 "permissions": [Permission.data_planes_heartbeat],
             },

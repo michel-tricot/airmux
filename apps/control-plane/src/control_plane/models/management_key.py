@@ -182,7 +182,3 @@ class ManagementKeyGrantIn(ManagementKeyPermissionsIn):
             msg = "expires_at must include a timezone"
             raise ValueError(msg)
         return expires_at.astimezone(UTC)
-
-
-class ManagementKeyIn(ManagementKeyGrantIn):
-    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")

@@ -108,6 +108,20 @@ class User(Record, Identified, Tombstonable, table=True):
         return user
 
     @classmethod
+    async def service_account_for_org(cls, org_id: UUID, user_id: UUID) -> Self:
+        user = await cls.find_by_id(user_id)
+        if user is None or not user.service_account or user.managing_org_id not in {None, org_id}:
+            raise NotOwnedError
+        return user
+
+    @classmethod
+    async def instance_service_account(cls, user_id: UUID) -> Self | None:
+        user = await cls.find_by_id(user_id)
+        if user is None or not user.service_account or user.managing_org_id is not None:
+            return None
+        return user
+
+    @classmethod
     async def instance_claimed(cls) -> bool:
         """Whether any human account exists. Service accounts do not claim an instance."""
         return await cls.first(col(cls.service_account).is_(False)) is not None
