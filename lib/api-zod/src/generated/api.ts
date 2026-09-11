@@ -1400,6 +1400,521 @@ export const RevokeInferenceKeyResponse = zod.object({
 
 
 /**
+ * List reusable inference rules in a workspace.
+ *
+ * Required permission: `policies.read`.
+ * @summary List Rules
+ */
+export const ListRulesParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const listRulesResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const listRulesResponseDefinitionMatchTwoModelsDefault = [];
+export const listRulesResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const listRulesResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const listRulesResponseDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const listRulesResponseDefinitionActionOneNamesItemMax = 255;
+
+export const listRulesResponseDefinitionActionOneNamesMax = 1000;
+
+export const listRulesResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const listRulesResponseDefinitionActionTwoNamesMax = 1000;
+
+export const listRulesResponseDefinitionActionThreeMessageMax = 200;
+
+export const listRulesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const listRulesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const listRulesResponseDefinitionActionSevenScopesMax = 3;
+
+export const listRulesResponseDefinitionActionEightModelsItemMax = 255;
+
+export const listRulesResponseDefinitionActionEightModelsMax = 4;
+
+export const listRulesResponseDefinitionActionEightOnMax = 3;
+
+export const listRulesResponseDefinitionActionEightMaxAttemptsMin = 2;
+export const listRulesResponseDefinitionActionEightMaxAttemptsMax = 5;
+
+export const listRulesResponseDefinitionActionEightTimeoutMsMin = 100;
+export const listRulesResponseDefinitionActionEightTimeoutMsMax = 120000;
+
+export const listRulesResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const ListRulesResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(listRulesResponseDefinitionMatchTwoModelsItemMax)).max(listRulesResponseDefinitionMatchTwoModelsMax).default(listRulesResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(listRulesResponseDefinitionMatchTwoCapabilitiesMax).default(listRulesResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(listRulesResponseDefinitionActionOneNamesItemMax)).min(1).max(listRulesResponseDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(listRulesResponseDefinitionActionTwoNamesItemMax)).min(1).max(listRulesResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(listRulesResponseDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.string().regex(listRulesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
+  "max_output_price_per_mtok": zod.string().regex(listRulesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(listRulesResponseDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(listRulesResponseDefinitionActionEightModelsItemMax)).min(1).max(listRulesResponseDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(listRulesResponseDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(listRulesResponseDefinitionActionEightMaxAttemptsMin).max(listRulesResponseDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(listRulesResponseDefinitionActionEightTimeoutMsMin).max(listRulesResponseDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(listRulesResponseDefinitionActionNineAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+export const ListRulesResponse = zod.array(ListRulesResponseItem)
+
+
+/**
+ * Create a reusable workspace rule.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Create Rule
+ */
+export const CreateRuleParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const createRuleBodyNameMax = 200;
+
+export const createRuleBodyDefinitionMatchTwoModelsItemMax = 255;
+
+export const createRuleBodyDefinitionMatchTwoModelsDefault = [];
+export const createRuleBodyDefinitionMatchTwoModelsMax = 1000;
+
+export const createRuleBodyDefinitionMatchTwoCapabilitiesDefault = [];
+export const createRuleBodyDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const createRuleBodyDefinitionActionOneNamesItemMax = 255;
+
+export const createRuleBodyDefinitionActionOneNamesMax = 1000;
+
+export const createRuleBodyDefinitionActionTwoNamesItemMax = 255;
+
+export const createRuleBodyDefinitionActionTwoNamesMax = 1000;
+
+export const createRuleBodyDefinitionActionThreeMessageMax = 200;
+
+export const createRuleBodyDefinitionActionFiveMaxInputPricePerMtokOneMin = 0;
+
+export const createRuleBodyDefinitionActionFiveMaxInputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const createRuleBodyDefinitionActionFiveMaxOutputPricePerMtokOneMin = 0;
+
+export const createRuleBodyDefinitionActionFiveMaxOutputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const createRuleBodyDefinitionActionSevenScopesMax = 3;
+
+export const createRuleBodyDefinitionActionEightModelsItemMax = 255;
+
+export const createRuleBodyDefinitionActionEightModelsMax = 4;
+
+export const createRuleBodyDefinitionActionEightOnMax = 3;
+
+export const createRuleBodyDefinitionActionEightMaxAttemptsMin = 2;
+export const createRuleBodyDefinitionActionEightMaxAttemptsMax = 5;
+
+export const createRuleBodyDefinitionActionEightTimeoutMsMin = 100;
+export const createRuleBodyDefinitionActionEightTimeoutMsMax = 120000;
+
+export const createRuleBodyDefinitionActionNineAmountUsdOneExclusiveMin = 0;
+
+export const createRuleBodyDefinitionActionNineAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const CreateRuleBody = zod.object({
+  "name": zod.string().min(1).max(createRuleBodyNameMax).describe('Display name for the reusable workspace rule'),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(createRuleBodyDefinitionMatchTwoModelsItemMax)).max(createRuleBodyDefinitionMatchTwoModelsMax).default(createRuleBodyDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createRuleBodyDefinitionMatchTwoCapabilitiesMax).default(createRuleBodyDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(createRuleBodyDefinitionActionOneNamesItemMax)).min(1).max(createRuleBodyDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(createRuleBodyDefinitionActionTwoNamesItemMax)).min(1).max(createRuleBodyDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(createRuleBodyDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.union([zod.number().min(createRuleBodyDefinitionActionFiveMaxInputPricePerMtokOneMin),zod.string().regex(createRuleBodyDefinitionActionFiveMaxInputPricePerMtokTwoRegExp)]),
+  "max_output_price_per_mtok": zod.union([zod.number().min(createRuleBodyDefinitionActionFiveMaxOutputPricePerMtokOneMin),zod.string().regex(createRuleBodyDefinitionActionFiveMaxOutputPricePerMtokTwoRegExp)])
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(createRuleBodyDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(createRuleBodyDefinitionActionEightModelsItemMax)).min(1).max(createRuleBodyDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createRuleBodyDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(createRuleBodyDefinitionActionEightMaxAttemptsMin).max(createRuleBodyDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(createRuleBodyDefinitionActionEightTimeoutMsMin).max(createRuleBodyDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.union([zod.number().gt(createRuleBodyDefinitionActionNineAmountUsdOneExclusiveMin),zod.string().regex(createRuleBodyDefinitionActionNineAmountUsdTwoRegExp)]),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}).describe('Request match and action shared by every policy that references this rule')
+})
+
+export const createRuleResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const createRuleResponseDefinitionMatchTwoModelsDefault = [];
+export const createRuleResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const createRuleResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const createRuleResponseDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const createRuleResponseDefinitionActionOneNamesItemMax = 255;
+
+export const createRuleResponseDefinitionActionOneNamesMax = 1000;
+
+export const createRuleResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const createRuleResponseDefinitionActionTwoNamesMax = 1000;
+
+export const createRuleResponseDefinitionActionThreeMessageMax = 200;
+
+export const createRuleResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const createRuleResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const createRuleResponseDefinitionActionSevenScopesMax = 3;
+
+export const createRuleResponseDefinitionActionEightModelsItemMax = 255;
+
+export const createRuleResponseDefinitionActionEightModelsMax = 4;
+
+export const createRuleResponseDefinitionActionEightOnMax = 3;
+
+export const createRuleResponseDefinitionActionEightMaxAttemptsMin = 2;
+export const createRuleResponseDefinitionActionEightMaxAttemptsMax = 5;
+
+export const createRuleResponseDefinitionActionEightTimeoutMsMin = 100;
+export const createRuleResponseDefinitionActionEightTimeoutMsMax = 120000;
+
+export const createRuleResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const CreateRuleResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(createRuleResponseDefinitionMatchTwoModelsItemMax)).max(createRuleResponseDefinitionMatchTwoModelsMax).default(createRuleResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createRuleResponseDefinitionMatchTwoCapabilitiesMax).default(createRuleResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(createRuleResponseDefinitionActionOneNamesItemMax)).min(1).max(createRuleResponseDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(createRuleResponseDefinitionActionTwoNamesItemMax)).min(1).max(createRuleResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(createRuleResponseDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.string().regex(createRuleResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
+  "max_output_price_per_mtok": zod.string().regex(createRuleResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(createRuleResponseDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(createRuleResponseDefinitionActionEightModelsItemMax)).min(1).max(createRuleResponseDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createRuleResponseDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(createRuleResponseDefinitionActionEightMaxAttemptsMin).max(createRuleResponseDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(createRuleResponseDefinitionActionEightTimeoutMsMin).max(createRuleResponseDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(createRuleResponseDefinitionActionNineAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+
+
+/**
+ * Update a rule everywhere it is referenced.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Update Rule
+ */
+export const UpdateRuleParams = zod.object({
+  "rule_id": zod.uuid().describe('Rule id'),
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const updateRuleBodyNameOneMax = 200;
+
+export const updateRuleBodyDefinitionOneMatchTwoModelsItemMax = 255;
+
+export const updateRuleBodyDefinitionOneMatchTwoModelsDefault = [];
+export const updateRuleBodyDefinitionOneMatchTwoModelsMax = 1000;
+
+export const updateRuleBodyDefinitionOneMatchTwoCapabilitiesDefault = [];
+export const updateRuleBodyDefinitionOneMatchTwoCapabilitiesMax = 3;
+
+export const updateRuleBodyDefinitionOneActionOneNamesItemMax = 255;
+
+export const updateRuleBodyDefinitionOneActionOneNamesMax = 1000;
+
+export const updateRuleBodyDefinitionOneActionTwoNamesItemMax = 255;
+
+export const updateRuleBodyDefinitionOneActionTwoNamesMax = 1000;
+
+export const updateRuleBodyDefinitionOneActionThreeMessageMax = 200;
+
+export const updateRuleBodyDefinitionOneActionFiveMaxInputPricePerMtokOneMin = 0;
+
+export const updateRuleBodyDefinitionOneActionFiveMaxInputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const updateRuleBodyDefinitionOneActionFiveMaxOutputPricePerMtokOneMin = 0;
+
+export const updateRuleBodyDefinitionOneActionFiveMaxOutputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const updateRuleBodyDefinitionOneActionSevenScopesMax = 3;
+
+export const updateRuleBodyDefinitionOneActionEightModelsItemMax = 255;
+
+export const updateRuleBodyDefinitionOneActionEightModelsMax = 4;
+
+export const updateRuleBodyDefinitionOneActionEightOnMax = 3;
+
+export const updateRuleBodyDefinitionOneActionEightMaxAttemptsMin = 2;
+export const updateRuleBodyDefinitionOneActionEightMaxAttemptsMax = 5;
+
+export const updateRuleBodyDefinitionOneActionEightTimeoutMsMin = 100;
+export const updateRuleBodyDefinitionOneActionEightTimeoutMsMax = 120000;
+
+export const updateRuleBodyDefinitionOneActionNineAmountUsdOneExclusiveMin = 0;
+
+export const updateRuleBodyDefinitionOneActionNineAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const UpdateRuleBody = zod.object({
+  "name": zod.union([zod.string().min(1).max(updateRuleBodyNameOneMax),zod.null()]).optional().describe('Replacement display name; omit to leave unchanged'),
+  "definition": zod.union([zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(updateRuleBodyDefinitionOneMatchTwoModelsItemMax)).max(updateRuleBodyDefinitionOneMatchTwoModelsMax).default(updateRuleBodyDefinitionOneMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updateRuleBodyDefinitionOneMatchTwoCapabilitiesMax).default(updateRuleBodyDefinitionOneMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(updateRuleBodyDefinitionOneActionOneNamesItemMax)).min(1).max(updateRuleBodyDefinitionOneActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(updateRuleBodyDefinitionOneActionTwoNamesItemMax)).min(1).max(updateRuleBodyDefinitionOneActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(updateRuleBodyDefinitionOneActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.union([zod.number().min(updateRuleBodyDefinitionOneActionFiveMaxInputPricePerMtokOneMin),zod.string().regex(updateRuleBodyDefinitionOneActionFiveMaxInputPricePerMtokTwoRegExp)]),
+  "max_output_price_per_mtok": zod.union([zod.number().min(updateRuleBodyDefinitionOneActionFiveMaxOutputPricePerMtokOneMin),zod.string().regex(updateRuleBodyDefinitionOneActionFiveMaxOutputPricePerMtokTwoRegExp)])
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(updateRuleBodyDefinitionOneActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(updateRuleBodyDefinitionOneActionEightModelsItemMax)).min(1).max(updateRuleBodyDefinitionOneActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updateRuleBodyDefinitionOneActionEightOnMax),
+  "max_attempts": zod.int().min(updateRuleBodyDefinitionOneActionEightMaxAttemptsMin).max(updateRuleBodyDefinitionOneActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(updateRuleBodyDefinitionOneActionEightTimeoutMsMin).max(updateRuleBodyDefinitionOneActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.union([zod.number().gt(updateRuleBodyDefinitionOneActionNineAmountUsdOneExclusiveMin),zod.string().regex(updateRuleBodyDefinitionOneActionNineAmountUsdTwoRegExp)]),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),zod.null()]).optional().describe('Replacement request match and action; omit to leave unchanged')
+})
+
+export const updateRuleResponseDefinitionMatchTwoModelsItemMax = 255;
+
+export const updateRuleResponseDefinitionMatchTwoModelsDefault = [];
+export const updateRuleResponseDefinitionMatchTwoModelsMax = 1000;
+
+export const updateRuleResponseDefinitionMatchTwoCapabilitiesDefault = [];
+export const updateRuleResponseDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const updateRuleResponseDefinitionActionOneNamesItemMax = 255;
+
+export const updateRuleResponseDefinitionActionOneNamesMax = 1000;
+
+export const updateRuleResponseDefinitionActionTwoNamesItemMax = 255;
+
+export const updateRuleResponseDefinitionActionTwoNamesMax = 1000;
+
+export const updateRuleResponseDefinitionActionThreeMessageMax = 200;
+
+export const updateRuleResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const updateRuleResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const updateRuleResponseDefinitionActionSevenScopesMax = 3;
+
+export const updateRuleResponseDefinitionActionEightModelsItemMax = 255;
+
+export const updateRuleResponseDefinitionActionEightModelsMax = 4;
+
+export const updateRuleResponseDefinitionActionEightOnMax = 3;
+
+export const updateRuleResponseDefinitionActionEightMaxAttemptsMin = 2;
+export const updateRuleResponseDefinitionActionEightMaxAttemptsMax = 5;
+
+export const updateRuleResponseDefinitionActionEightTimeoutMsMin = 100;
+export const updateRuleResponseDefinitionActionEightTimeoutMsMax = 120000;
+
+export const updateRuleResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+
+export const UpdateRuleResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string(),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(updateRuleResponseDefinitionMatchTwoModelsItemMax)).max(updateRuleResponseDefinitionMatchTwoModelsMax).default(updateRuleResponseDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updateRuleResponseDefinitionMatchTwoCapabilitiesMax).default(updateRuleResponseDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(updateRuleResponseDefinitionActionOneNamesItemMax)).min(1).max(updateRuleResponseDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(updateRuleResponseDefinitionActionTwoNamesItemMax)).min(1).max(updateRuleResponseDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(updateRuleResponseDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.string().regex(updateRuleResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
+  "max_output_price_per_mtok": zod.string().regex(updateRuleResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(updateRuleResponseDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(updateRuleResponseDefinitionActionEightModelsItemMax)).min(1).max(updateRuleResponseDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updateRuleResponseDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(updateRuleResponseDefinitionActionEightMaxAttemptsMin).max(updateRuleResponseDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(updateRuleResponseDefinitionActionEightTimeoutMsMin).max(updateRuleResponseDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(updateRuleResponseDefinitionActionNineAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+}),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+
+
+/**
+ * Delete an unused workspace rule.
+ *
+ * Required permission: `policies.manage`.
+ * @summary Delete Rule
+ */
+export const DeleteRuleParams = zod.object({
+  "rule_id": zod.uuid().describe('Rule id'),
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const DeleteRuleResponse = zod.object({
+  "id": zod.uuid(),
+  "deleted_at": zod.coerce.date()
+})
+
+
+/**
  * List workspace inference policies in evaluation order.
  *
  * Required permission: `policies.read`.
@@ -1414,42 +1929,8 @@ export const listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const listPoliciesResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const listPoliciesResponseDefinitionMatchTwoModelsItemMax = 255;
+export const listPoliciesResponseDefinitionRuleIdsMax = 100;
 
-export const listPoliciesResponseDefinitionMatchTwoModelsDefault = [];
-export const listPoliciesResponseDefinitionMatchTwoModelsMax = 1000;
-
-export const listPoliciesResponseDefinitionMatchTwoCapabilitiesDefault = [];
-export const listPoliciesResponseDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const listPoliciesResponseDefinitionActionOneNamesItemMax = 255;
-
-export const listPoliciesResponseDefinitionActionOneNamesMax = 1000;
-
-export const listPoliciesResponseDefinitionActionTwoNamesItemMax = 255;
-
-export const listPoliciesResponseDefinitionActionTwoNamesMax = 1000;
-
-export const listPoliciesResponseDefinitionActionThreeMessageMax = 200;
-
-export const listPoliciesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const listPoliciesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const listPoliciesResponseDefinitionActionSevenScopesMax = 3;
-
-export const listPoliciesResponseDefinitionActionEightModelsItemMax = 255;
-
-export const listPoliciesResponseDefinitionActionEightModelsMax = 4;
-
-export const listPoliciesResponseDefinitionActionEightOnMax = 3;
-
-export const listPoliciesResponseDefinitionActionEightMaxAttemptsMin = 2;
-export const listPoliciesResponseDefinitionActionEightMaxAttemptsMax = 5;
-
-export const listPoliciesResponseDefinitionActionEightTimeoutMsMin = 100;
-export const listPoliciesResponseDefinitionActionEightTimeoutMsMax = 120000;
-
-export const listPoliciesResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const ListPoliciesResponseItem = zod.object({
@@ -1466,47 +1947,7 @@ export const ListPoliciesResponseItem = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(listPoliciesResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionMatchTwoModelsItemMax)).max(listPoliciesResponseDefinitionMatchTwoModelsMax).default(listPoliciesResponseDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(listPoliciesResponseDefinitionMatchTwoCapabilitiesMax).default(listPoliciesResponseDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionOneNamesItemMax)).min(1).max(listPoliciesResponseDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionTwoNamesItemMax)).min(1).max(listPoliciesResponseDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(listPoliciesResponseDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(listPoliciesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(listPoliciesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(listPoliciesResponseDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(listPoliciesResponseDefinitionActionEightModelsItemMax)).min(1).max(listPoliciesResponseDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(listPoliciesResponseDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(listPoliciesResponseDefinitionActionEightMaxAttemptsMin).max(listPoliciesResponseDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(listPoliciesResponseDefinitionActionEightTimeoutMsMin).max(listPoliciesResponseDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(listPoliciesResponseDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(listPoliciesResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1537,48 +1978,8 @@ export const createPolicyBodyDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const createPolicyBodyDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const createPolicyBodyDefinitionMatchTwoModelsItemMax = 255;
+export const createPolicyBodyDefinitionRuleIdsMax = 100;
 
-export const createPolicyBodyDefinitionMatchTwoModelsDefault = [];
-export const createPolicyBodyDefinitionMatchTwoModelsMax = 1000;
-
-export const createPolicyBodyDefinitionMatchTwoCapabilitiesDefault = [];
-export const createPolicyBodyDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const createPolicyBodyDefinitionActionOneNamesItemMax = 255;
-
-export const createPolicyBodyDefinitionActionOneNamesMax = 1000;
-
-export const createPolicyBodyDefinitionActionTwoNamesItemMax = 255;
-
-export const createPolicyBodyDefinitionActionTwoNamesMax = 1000;
-
-export const createPolicyBodyDefinitionActionThreeMessageMax = 200;
-
-export const createPolicyBodyDefinitionActionFiveMaxInputPricePerMtokOneMin = 0;
-
-export const createPolicyBodyDefinitionActionFiveMaxInputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const createPolicyBodyDefinitionActionFiveMaxOutputPricePerMtokOneMin = 0;
-
-export const createPolicyBodyDefinitionActionFiveMaxOutputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const createPolicyBodyDefinitionActionSevenScopesMax = 3;
-
-export const createPolicyBodyDefinitionActionEightModelsItemMax = 255;
-
-export const createPolicyBodyDefinitionActionEightModelsMax = 4;
-
-export const createPolicyBodyDefinitionActionEightOnMax = 3;
-
-export const createPolicyBodyDefinitionActionEightMaxAttemptsMin = 2;
-export const createPolicyBodyDefinitionActionEightMaxAttemptsMax = 5;
-
-export const createPolicyBodyDefinitionActionEightTimeoutMsMin = 100;
-export const createPolicyBodyDefinitionActionEightTimeoutMsMax = 120000;
-
-export const createPolicyBodyDefinitionActionNineAmountUsdOneExclusiveMin = 0;
-
-export const createPolicyBodyDefinitionActionNineAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const CreatePolicyBody = zod.object({
@@ -1592,90 +1993,16 @@ export const CreatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyBodyDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionMatchTwoModelsItemMax)).max(createPolicyBodyDefinitionMatchTwoModelsMax).default(createPolicyBodyDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createPolicyBodyDefinitionMatchTwoCapabilitiesMax).default(createPolicyBodyDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionOneNamesItemMax)).min(1).max(createPolicyBodyDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionTwoNamesItemMax)).min(1).max(createPolicyBodyDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(createPolicyBodyDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.union([zod.number().min(createPolicyBodyDefinitionActionFiveMaxInputPricePerMtokOneMin),zod.string().regex(createPolicyBodyDefinitionActionFiveMaxInputPricePerMtokTwoRegExp)]),
-  "max_output_price_per_mtok": zod.union([zod.number().min(createPolicyBodyDefinitionActionFiveMaxOutputPricePerMtokOneMin),zod.string().regex(createPolicyBodyDefinitionActionFiveMaxOutputPricePerMtokTwoRegExp)])
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(createPolicyBodyDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(createPolicyBodyDefinitionActionEightModelsItemMax)).min(1).max(createPolicyBodyDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createPolicyBodyDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(createPolicyBodyDefinitionActionEightMaxAttemptsMin).max(createPolicyBodyDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(createPolicyBodyDefinitionActionEightTimeoutMsMin).max(createPolicyBodyDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.union([zod.number().gt(createPolicyBodyDefinitionActionNineAmountUsdOneExclusiveMin),zod.string().regex(createPolicyBodyDefinitionActionNineAmountUsdTwoRegExp)]),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
-}).describe('Inference key target, typed request match, and action. Budgets are not yet enforced')
+  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyBodyDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
+}).describe('Inference key target and reusable rules. Budgets are not yet enforced')
 })
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const createPolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const createPolicyResponseDefinitionMatchTwoModelsItemMax = 255;
+export const createPolicyResponseDefinitionRuleIdsMax = 100;
 
-export const createPolicyResponseDefinitionMatchTwoModelsDefault = [];
-export const createPolicyResponseDefinitionMatchTwoModelsMax = 1000;
-
-export const createPolicyResponseDefinitionMatchTwoCapabilitiesDefault = [];
-export const createPolicyResponseDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const createPolicyResponseDefinitionActionOneNamesItemMax = 255;
-
-export const createPolicyResponseDefinitionActionOneNamesMax = 1000;
-
-export const createPolicyResponseDefinitionActionTwoNamesItemMax = 255;
-
-export const createPolicyResponseDefinitionActionTwoNamesMax = 1000;
-
-export const createPolicyResponseDefinitionActionThreeMessageMax = 200;
-
-export const createPolicyResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const createPolicyResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const createPolicyResponseDefinitionActionSevenScopesMax = 3;
-
-export const createPolicyResponseDefinitionActionEightModelsItemMax = 255;
-
-export const createPolicyResponseDefinitionActionEightModelsMax = 4;
-
-export const createPolicyResponseDefinitionActionEightOnMax = 3;
-
-export const createPolicyResponseDefinitionActionEightMaxAttemptsMin = 2;
-export const createPolicyResponseDefinitionActionEightMaxAttemptsMax = 5;
-
-export const createPolicyResponseDefinitionActionEightTimeoutMsMin = 100;
-export const createPolicyResponseDefinitionActionEightTimeoutMsMax = 120000;
-
-export const createPolicyResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const CreatePolicyResponse = zod.object({
@@ -1692,47 +2019,7 @@ export const CreatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(createPolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionMatchTwoModelsItemMax)).max(createPolicyResponseDefinitionMatchTwoModelsMax).default(createPolicyResponseDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(createPolicyResponseDefinitionMatchTwoCapabilitiesMax).default(createPolicyResponseDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionOneNamesItemMax)).min(1).max(createPolicyResponseDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionTwoNamesItemMax)).min(1).max(createPolicyResponseDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(createPolicyResponseDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(createPolicyResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(createPolicyResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(createPolicyResponseDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(createPolicyResponseDefinitionActionEightModelsItemMax)).min(1).max(createPolicyResponseDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(createPolicyResponseDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(createPolicyResponseDefinitionActionEightMaxAttemptsMin).max(createPolicyResponseDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(createPolicyResponseDefinitionActionEightTimeoutMsMin).max(createPolicyResponseDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(createPolicyResponseDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(createPolicyResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1759,42 +2046,8 @@ export const reorderPoliciesResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const reorderPoliciesResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const reorderPoliciesResponseDefinitionMatchTwoModelsItemMax = 255;
+export const reorderPoliciesResponseDefinitionRuleIdsMax = 100;
 
-export const reorderPoliciesResponseDefinitionMatchTwoModelsDefault = [];
-export const reorderPoliciesResponseDefinitionMatchTwoModelsMax = 1000;
-
-export const reorderPoliciesResponseDefinitionMatchTwoCapabilitiesDefault = [];
-export const reorderPoliciesResponseDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const reorderPoliciesResponseDefinitionActionOneNamesItemMax = 255;
-
-export const reorderPoliciesResponseDefinitionActionOneNamesMax = 1000;
-
-export const reorderPoliciesResponseDefinitionActionTwoNamesItemMax = 255;
-
-export const reorderPoliciesResponseDefinitionActionTwoNamesMax = 1000;
-
-export const reorderPoliciesResponseDefinitionActionThreeMessageMax = 200;
-
-export const reorderPoliciesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const reorderPoliciesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const reorderPoliciesResponseDefinitionActionSevenScopesMax = 3;
-
-export const reorderPoliciesResponseDefinitionActionEightModelsItemMax = 255;
-
-export const reorderPoliciesResponseDefinitionActionEightModelsMax = 4;
-
-export const reorderPoliciesResponseDefinitionActionEightOnMax = 3;
-
-export const reorderPoliciesResponseDefinitionActionEightMaxAttemptsMin = 2;
-export const reorderPoliciesResponseDefinitionActionEightMaxAttemptsMax = 5;
-
-export const reorderPoliciesResponseDefinitionActionEightTimeoutMsMin = 100;
-export const reorderPoliciesResponseDefinitionActionEightTimeoutMsMax = 120000;
-
-export const reorderPoliciesResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const ReorderPoliciesResponseItem = zod.object({
@@ -1811,47 +2064,7 @@ export const ReorderPoliciesResponseItem = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(reorderPoliciesResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionMatchTwoModelsItemMax)).max(reorderPoliciesResponseDefinitionMatchTwoModelsMax).default(reorderPoliciesResponseDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(reorderPoliciesResponseDefinitionMatchTwoCapabilitiesMax).default(reorderPoliciesResponseDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionOneNamesItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionTwoNamesItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(reorderPoliciesResponseDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(reorderPoliciesResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(reorderPoliciesResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(reorderPoliciesResponseDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(reorderPoliciesResponseDefinitionActionEightModelsItemMax)).min(1).max(reorderPoliciesResponseDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(reorderPoliciesResponseDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(reorderPoliciesResponseDefinitionActionEightMaxAttemptsMin).max(reorderPoliciesResponseDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(reorderPoliciesResponseDefinitionActionEightTimeoutMsMin).max(reorderPoliciesResponseDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(reorderPoliciesResponseDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(reorderPoliciesResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1881,48 +2094,8 @@ export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax = 255;
 
 export const updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax = 1000;
 
-export const updatePolicyBodyDefinitionOneMatchTwoModelsItemMax = 255;
+export const updatePolicyBodyDefinitionOneRuleIdsMax = 100;
 
-export const updatePolicyBodyDefinitionOneMatchTwoModelsDefault = [];
-export const updatePolicyBodyDefinitionOneMatchTwoModelsMax = 1000;
-
-export const updatePolicyBodyDefinitionOneMatchTwoCapabilitiesDefault = [];
-export const updatePolicyBodyDefinitionOneMatchTwoCapabilitiesMax = 3;
-
-export const updatePolicyBodyDefinitionOneActionOneNamesItemMax = 255;
-
-export const updatePolicyBodyDefinitionOneActionOneNamesMax = 1000;
-
-export const updatePolicyBodyDefinitionOneActionTwoNamesItemMax = 255;
-
-export const updatePolicyBodyDefinitionOneActionTwoNamesMax = 1000;
-
-export const updatePolicyBodyDefinitionOneActionThreeMessageMax = 200;
-
-export const updatePolicyBodyDefinitionOneActionFiveMaxInputPricePerMtokOneMin = 0;
-
-export const updatePolicyBodyDefinitionOneActionFiveMaxInputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const updatePolicyBodyDefinitionOneActionFiveMaxOutputPricePerMtokOneMin = 0;
-
-export const updatePolicyBodyDefinitionOneActionFiveMaxOutputPricePerMtokTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const updatePolicyBodyDefinitionOneActionSevenScopesMax = 3;
-
-export const updatePolicyBodyDefinitionOneActionEightModelsItemMax = 255;
-
-export const updatePolicyBodyDefinitionOneActionEightModelsMax = 4;
-
-export const updatePolicyBodyDefinitionOneActionEightOnMax = 3;
-
-export const updatePolicyBodyDefinitionOneActionEightMaxAttemptsMin = 2;
-export const updatePolicyBodyDefinitionOneActionEightMaxAttemptsMax = 5;
-
-export const updatePolicyBodyDefinitionOneActionEightTimeoutMsMin = 100;
-export const updatePolicyBodyDefinitionOneActionEightTimeoutMsMax = 120000;
-
-export const updatePolicyBodyDefinitionOneActionNineAmountUsdOneExclusiveMin = 0;
-
-export const updatePolicyBodyDefinitionOneActionNineAmountUsdTwoRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const UpdatePolicyBody = zod.object({
@@ -1936,90 +2109,16 @@ export const UpdatePolicyBody = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyBodyDefinitionOneTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneMatchTwoModelsItemMax)).max(updatePolicyBodyDefinitionOneMatchTwoModelsMax).default(updatePolicyBodyDefinitionOneMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updatePolicyBodyDefinitionOneMatchTwoCapabilitiesMax).default(updatePolicyBodyDefinitionOneMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionOneNamesItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionTwoNamesItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(updatePolicyBodyDefinitionOneActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.union([zod.number().min(updatePolicyBodyDefinitionOneActionFiveMaxInputPricePerMtokOneMin),zod.string().regex(updatePolicyBodyDefinitionOneActionFiveMaxInputPricePerMtokTwoRegExp)]),
-  "max_output_price_per_mtok": zod.union([zod.number().min(updatePolicyBodyDefinitionOneActionFiveMaxOutputPricePerMtokOneMin),zod.string().regex(updatePolicyBodyDefinitionOneActionFiveMaxOutputPricePerMtokTwoRegExp)])
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(updatePolicyBodyDefinitionOneActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(updatePolicyBodyDefinitionOneActionEightModelsItemMax)).min(1).max(updatePolicyBodyDefinitionOneActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updatePolicyBodyDefinitionOneActionEightOnMax),
-  "max_attempts": zod.int().min(updatePolicyBodyDefinitionOneActionEightMaxAttemptsMin).max(updatePolicyBodyDefinitionOneActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(updatePolicyBodyDefinitionOneActionEightTimeoutMsMin).max(updatePolicyBodyDefinitionOneActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.union([zod.number().gt(updatePolicyBodyDefinitionOneActionNineAmountUsdOneExclusiveMin),zod.string().regex(updatePolicyBodyDefinitionOneActionNineAmountUsdTwoRegExp)]),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
-}),zod.null()]).optional().describe('Replace the complete target, request match, and action; omit to leave unchanged')
+  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyBodyDefinitionOneRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
+}),zod.null()]).optional().describe('Replace the complete target and reusable rules; omit to leave unchanged')
 })
 
 export const updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax = 255;
 
 export const updatePolicyResponseDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const updatePolicyResponseDefinitionMatchTwoModelsItemMax = 255;
+export const updatePolicyResponseDefinitionRuleIdsMax = 100;
 
-export const updatePolicyResponseDefinitionMatchTwoModelsDefault = [];
-export const updatePolicyResponseDefinitionMatchTwoModelsMax = 1000;
-
-export const updatePolicyResponseDefinitionMatchTwoCapabilitiesDefault = [];
-export const updatePolicyResponseDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const updatePolicyResponseDefinitionActionOneNamesItemMax = 255;
-
-export const updatePolicyResponseDefinitionActionOneNamesMax = 1000;
-
-export const updatePolicyResponseDefinitionActionTwoNamesItemMax = 255;
-
-export const updatePolicyResponseDefinitionActionTwoNamesMax = 1000;
-
-export const updatePolicyResponseDefinitionActionThreeMessageMax = 200;
-
-export const updatePolicyResponseDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const updatePolicyResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const updatePolicyResponseDefinitionActionSevenScopesMax = 3;
-
-export const updatePolicyResponseDefinitionActionEightModelsItemMax = 255;
-
-export const updatePolicyResponseDefinitionActionEightModelsMax = 4;
-
-export const updatePolicyResponseDefinitionActionEightOnMax = 3;
-
-export const updatePolicyResponseDefinitionActionEightMaxAttemptsMin = 2;
-export const updatePolicyResponseDefinitionActionEightMaxAttemptsMax = 5;
-
-export const updatePolicyResponseDefinitionActionEightTimeoutMsMin = 100;
-export const updatePolicyResponseDefinitionActionEightTimeoutMsMax = 120000;
-
-export const updatePolicyResponseDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const UpdatePolicyResponse = zod.object({
@@ -2036,47 +2135,7 @@ export const UpdatePolicyResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsItemMax)).min(1).max(updatePolicyResponseDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionMatchTwoModelsItemMax)).max(updatePolicyResponseDefinitionMatchTwoModelsMax).default(updatePolicyResponseDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(updatePolicyResponseDefinitionMatchTwoCapabilitiesMax).default(updatePolicyResponseDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionOneNamesItemMax)).min(1).max(updatePolicyResponseDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionTwoNamesItemMax)).min(1).max(updatePolicyResponseDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(updatePolicyResponseDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(updatePolicyResponseDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(updatePolicyResponseDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(updatePolicyResponseDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(updatePolicyResponseDefinitionActionEightModelsItemMax)).min(1).max(updatePolicyResponseDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(updatePolicyResponseDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(updatePolicyResponseDefinitionActionEightMaxAttemptsMin).max(updatePolicyResponseDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(updatePolicyResponseDefinitionActionEightTimeoutMsMin).max(updatePolicyResponseDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(updatePolicyResponseDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(updatePolicyResponseDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 }),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2830,6 +2889,44 @@ export const getBundleResponseCatalogModelsItemInputModalitiesMax = 5;
 
 export const getBundleResponseCatalogModelsItemOutputModalitiesMax = 5;
 
+export const getBundleResponseRulesItemNameMax = 200;
+
+export const getBundleResponseRulesItemDefinitionMatchTwoModelsItemMax = 255;
+
+export const getBundleResponseRulesItemDefinitionMatchTwoModelsDefault = [];
+export const getBundleResponseRulesItemDefinitionMatchTwoModelsMax = 1000;
+
+export const getBundleResponseRulesItemDefinitionMatchTwoCapabilitiesDefault = [];
+export const getBundleResponseRulesItemDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const getBundleResponseRulesItemDefinitionActionOneNamesItemMax = 255;
+
+export const getBundleResponseRulesItemDefinitionActionOneNamesMax = 1000;
+
+export const getBundleResponseRulesItemDefinitionActionTwoNamesItemMax = 255;
+
+export const getBundleResponseRulesItemDefinitionActionTwoNamesMax = 1000;
+
+export const getBundleResponseRulesItemDefinitionActionThreeMessageMax = 200;
+
+export const getBundleResponseRulesItemDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const getBundleResponseRulesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const getBundleResponseRulesItemDefinitionActionSevenScopesMax = 3;
+
+export const getBundleResponseRulesItemDefinitionActionEightModelsItemMax = 255;
+
+export const getBundleResponseRulesItemDefinitionActionEightModelsMax = 4;
+
+export const getBundleResponseRulesItemDefinitionActionEightOnMax = 3;
+
+export const getBundleResponseRulesItemDefinitionActionEightMaxAttemptsMin = 2;
+export const getBundleResponseRulesItemDefinitionActionEightMaxAttemptsMax = 5;
+
+export const getBundleResponseRulesItemDefinitionActionEightTimeoutMsMin = 100;
+export const getBundleResponseRulesItemDefinitionActionEightTimeoutMsMax = 120000;
+
+export const getBundleResponseRulesItemDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 export const getBundleResponsePoliciesItemNameMax = 200;
 
 export const getBundleResponsePoliciesItemPriorityMin = 0;
@@ -2839,42 +2936,8 @@ export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 255
 
 export const getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsItemMax = 255;
+export const getBundleResponsePoliciesItemDefinitionRuleIdsMax = 100;
 
-export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsDefault = [];
-export const getBundleResponsePoliciesItemDefinitionMatchTwoModelsMax = 1000;
-
-export const getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault = [];
-export const getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const getBundleResponsePoliciesItemDefinitionActionOneNamesItemMax = 255;
-
-export const getBundleResponsePoliciesItemDefinitionActionOneNamesMax = 1000;
-
-export const getBundleResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
-
-export const getBundleResponsePoliciesItemDefinitionActionTwoNamesMax = 1000;
-
-export const getBundleResponsePoliciesItemDefinitionActionThreeMessageMax = 200;
-
-export const getBundleResponsePoliciesItemDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const getBundleResponsePoliciesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const getBundleResponsePoliciesItemDefinitionActionSevenScopesMax = 3;
-
-export const getBundleResponsePoliciesItemDefinitionActionEightModelsItemMax = 255;
-
-export const getBundleResponsePoliciesItemDefinitionActionEightModelsMax = 4;
-
-export const getBundleResponsePoliciesItemDefinitionActionEightOnMax = 3;
-
-export const getBundleResponsePoliciesItemDefinitionActionEightMaxAttemptsMin = 2;
-export const getBundleResponsePoliciesItemDefinitionActionEightMaxAttemptsMax = 5;
-
-export const getBundleResponsePoliciesItemDefinitionActionEightTimeoutMsMin = 100;
-export const getBundleResponsePoliciesItemDefinitionActionEightTimeoutMsMax = 120000;
-
-export const getBundleResponsePoliciesItemDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const GetBundleResponse = zod.object({
@@ -2927,6 +2990,54 @@ export const GetBundleResponse = zod.object({
   "version": zod.int()
 }).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
 }).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.'),
+  "rules": zod.array(zod.object({
+  "id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string().min(1).max(getBundleResponseRulesItemNameMax),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(getBundleResponseRulesItemDefinitionMatchTwoModelsItemMax)).max(getBundleResponseRulesItemDefinitionMatchTwoModelsMax).default(getBundleResponseRulesItemDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(getBundleResponseRulesItemDefinitionMatchTwoCapabilitiesMax).default(getBundleResponseRulesItemDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(getBundleResponseRulesItemDefinitionActionOneNamesItemMax)).min(1).max(getBundleResponseRulesItemDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(getBundleResponseRulesItemDefinitionActionTwoNamesItemMax)).min(1).max(getBundleResponseRulesItemDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(getBundleResponseRulesItemDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.string().regex(getBundleResponseRulesItemDefinitionActionFiveMaxInputPricePerMtokRegExp),
+  "max_output_price_per_mtok": zod.string().regex(getBundleResponseRulesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp)
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(getBundleResponseRulesItemDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(getBundleResponseRulesItemDefinitionActionEightModelsItemMax)).min(1).max(getBundleResponseRulesItemDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(getBundleResponseRulesItemDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(getBundleResponseRulesItemDefinitionActionEightMaxAttemptsMin).max(getBundleResponseRulesItemDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(getBundleResponseRulesItemDefinitionActionEightTimeoutMsMin).max(getBundleResponseRulesItemDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(getBundleResponseRulesItemDefinitionActionNineAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+})
+})),
   "policies": zod.array(zod.object({
   "id": zod.uuid(),
   "workspace_id": zod.uuid(),
@@ -2939,47 +3050,7 @@ export const GetBundleResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionMatchTwoModelsItemMax)).max(getBundleResponsePoliciesItemDefinitionMatchTwoModelsMax).default(getBundleResponsePoliciesItemDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax).default(getBundleResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionOneNamesItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionTwoNamesItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(getBundleResponsePoliciesItemDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(getBundleResponsePoliciesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(getBundleResponsePoliciesItemDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(getBundleResponsePoliciesItemDefinitionActionEightModelsItemMax)).min(1).max(getBundleResponsePoliciesItemDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(getBundleResponsePoliciesItemDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(getBundleResponsePoliciesItemDefinitionActionEightMaxAttemptsMin).max(getBundleResponsePoliciesItemDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(getBundleResponsePoliciesItemDefinitionActionEightTimeoutMsMin).max(getBundleResponsePoliciesItemDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(getBundleResponsePoliciesItemDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(getBundleResponsePoliciesItemDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 })
 }))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')
@@ -3005,6 +3076,44 @@ export const bundleLatestResponseCatalogModelsItemInputModalitiesMax = 5;
 
 export const bundleLatestResponseCatalogModelsItemOutputModalitiesMax = 5;
 
+export const bundleLatestResponseRulesItemNameMax = 200;
+
+export const bundleLatestResponseRulesItemDefinitionMatchTwoModelsItemMax = 255;
+
+export const bundleLatestResponseRulesItemDefinitionMatchTwoModelsDefault = [];
+export const bundleLatestResponseRulesItemDefinitionMatchTwoModelsMax = 1000;
+
+export const bundleLatestResponseRulesItemDefinitionMatchTwoCapabilitiesDefault = [];
+export const bundleLatestResponseRulesItemDefinitionMatchTwoCapabilitiesMax = 3;
+
+export const bundleLatestResponseRulesItemDefinitionActionOneNamesItemMax = 255;
+
+export const bundleLatestResponseRulesItemDefinitionActionOneNamesMax = 1000;
+
+export const bundleLatestResponseRulesItemDefinitionActionTwoNamesItemMax = 255;
+
+export const bundleLatestResponseRulesItemDefinitionActionTwoNamesMax = 1000;
+
+export const bundleLatestResponseRulesItemDefinitionActionThreeMessageMax = 200;
+
+export const bundleLatestResponseRulesItemDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+export const bundleLatestResponseRulesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
+
+export const bundleLatestResponseRulesItemDefinitionActionSevenScopesMax = 3;
+
+export const bundleLatestResponseRulesItemDefinitionActionEightModelsItemMax = 255;
+
+export const bundleLatestResponseRulesItemDefinitionActionEightModelsMax = 4;
+
+export const bundleLatestResponseRulesItemDefinitionActionEightOnMax = 3;
+
+export const bundleLatestResponseRulesItemDefinitionActionEightMaxAttemptsMin = 2;
+export const bundleLatestResponseRulesItemDefinitionActionEightMaxAttemptsMax = 5;
+
+export const bundleLatestResponseRulesItemDefinitionActionEightTimeoutMsMin = 100;
+export const bundleLatestResponseRulesItemDefinitionActionEightTimeoutMsMax = 120000;
+
+export const bundleLatestResponseRulesItemDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 export const bundleLatestResponsePoliciesItemNameMax = 200;
 
 export const bundleLatestResponsePoliciesItemPriorityMin = 0;
@@ -3014,42 +3123,8 @@ export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax = 
 
 export const bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax = 1000;
 
-export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsItemMax = 255;
+export const bundleLatestResponsePoliciesItemDefinitionRuleIdsMax = 100;
 
-export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsDefault = [];
-export const bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsMax = 1000;
-
-export const bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault = [];
-export const bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax = 3;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionOneNamesItemMax = 255;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionOneNamesMax = 1000;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionTwoNamesItemMax = 255;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionTwoNamesMax = 1000;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionThreeMessageMax = 200;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionFiveMaxInputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-export const bundleLatestResponsePoliciesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
-
-export const bundleLatestResponsePoliciesItemDefinitionActionSevenScopesMax = 3;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionEightModelsItemMax = 255;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionEightModelsMax = 4;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionEightOnMax = 3;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionEightMaxAttemptsMin = 2;
-export const bundleLatestResponsePoliciesItemDefinitionActionEightMaxAttemptsMax = 5;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionEightTimeoutMsMin = 100;
-export const bundleLatestResponsePoliciesItemDefinitionActionEightTimeoutMsMax = 120000;
-
-export const bundleLatestResponsePoliciesItemDefinitionActionNineAmountUsdRegExp = new RegExp('^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)');
 
 
 export const BundleLatestResponse = zod.object({
@@ -3102,6 +3177,54 @@ export const BundleLatestResponse = zod.object({
   "version": zod.int()
 }).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).optional()
 }).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.'),
+  "rules": zod.array(zod.object({
+  "id": zod.uuid(),
+  "workspace_id": zod.uuid(),
+  "name": zod.string().min(1).max(bundleLatestResponseRulesItemNameMax),
+  "definition": zod.object({
+  "match": zod.union([zod.object({
+  "kind": zod.literal("all_requests")
+}),zod.object({
+  "kind": zod.literal("request"),
+  "models": zod.array(zod.string().min(1).max(bundleLatestResponseRulesItemDefinitionMatchTwoModelsItemMax)).max(bundleLatestResponseRulesItemDefinitionMatchTwoModelsMax).default(bundleLatestResponseRulesItemDefinitionMatchTwoModelsDefault),
+  "stream": zod.union([zod.boolean(),zod.null()]),
+  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(bundleLatestResponseRulesItemDefinitionMatchTwoCapabilitiesMax).default(bundleLatestResponseRulesItemDefinitionMatchTwoCapabilitiesDefault)
+})]),
+  "action": zod.union([zod.object({
+  "kind": zod.literal("models"),
+  "names": zod.array(zod.string().min(1).max(bundleLatestResponseRulesItemDefinitionActionOneNamesItemMax)).min(1).max(bundleLatestResponseRulesItemDefinitionActionOneNamesMax)
+}),zod.object({
+  "kind": zod.literal("providers"),
+  "names": zod.array(zod.string().min(1).max(bundleLatestResponseRulesItemDefinitionActionTwoNamesItemMax)).min(1).max(bundleLatestResponseRulesItemDefinitionActionTwoNamesMax)
+}),zod.object({
+  "kind": zod.literal("deny"),
+  "message": zod.string().min(1).max(bundleLatestResponseRulesItemDefinitionActionThreeMessageMax)
+}),zod.object({
+  "kind": zod.literal("strict_parameters")
+}),zod.object({
+  "kind": zod.literal("price_limit"),
+  "max_input_price_per_mtok": zod.string().regex(bundleLatestResponseRulesItemDefinitionActionFiveMaxInputPricePerMtokRegExp),
+  "max_output_price_per_mtok": zod.string().regex(bundleLatestResponseRulesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp)
+}),zod.object({
+  "kind": zod.literal("request_limits"),
+  "max_output_tokens": zod.int().min(1)
+}),zod.object({
+  "kind": zod.literal("credential_access"),
+  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(bundleLatestResponseRulesItemDefinitionActionSevenScopesMax)
+}),zod.object({
+  "kind": zod.literal("fallback"),
+  "models": zod.array(zod.string().min(1).max(bundleLatestResponseRulesItemDefinitionActionEightModelsItemMax)).min(1).max(bundleLatestResponseRulesItemDefinitionActionEightModelsMax),
+  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(bundleLatestResponseRulesItemDefinitionActionEightOnMax),
+  "max_attempts": zod.int().min(bundleLatestResponseRulesItemDefinitionActionEightMaxAttemptsMin).max(bundleLatestResponseRulesItemDefinitionActionEightMaxAttemptsMax),
+  "timeout_ms": zod.int().min(bundleLatestResponseRulesItemDefinitionActionEightTimeoutMsMin).max(bundleLatestResponseRulesItemDefinitionActionEightTimeoutMsMax)
+}),zod.object({
+  "kind": zod.literal("budget"),
+  "period": zod.enum(['day', 'month']),
+  "amount_usd": zod.string().regex(bundleLatestResponseRulesItemDefinitionActionNineAmountUsdRegExp),
+  "sharing": zod.enum(['shared', 'per_key'])
+})])
+})
+})),
   "policies": zod.array(zod.object({
   "id": zod.uuid(),
   "workspace_id": zod.uuid(),
@@ -3114,47 +3237,7 @@ export const BundleLatestResponse = zod.object({
   "kind": zod.literal("selected_keys"),
   "key_ids": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionTargetTwoKeyIdsMax)
 })]),
-  "match": zod.union([zod.object({
-  "kind": zod.literal("all_requests")
-}),zod.object({
-  "kind": zod.literal("request"),
-  "models": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsItemMax)).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsMax).default(bundleLatestResponsePoliciesItemDefinitionMatchTwoModelsDefault),
-  "stream": zod.union([zod.boolean(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.enum(['tools', 'reasoning', 'structured_output'])).max(bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesMax).default(bundleLatestResponsePoliciesItemDefinitionMatchTwoCapabilitiesDefault)
-})]),
-  "action": zod.union([zod.object({
-  "kind": zod.literal("models"),
-  "names": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionOneNamesItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionOneNamesMax)
-}),zod.object({
-  "kind": zod.literal("providers"),
-  "names": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionTwoNamesItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionTwoNamesMax)
-}),zod.object({
-  "kind": zod.literal("deny"),
-  "message": zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionThreeMessageMax)
-}),zod.object({
-  "kind": zod.literal("strict_parameters")
-}),zod.object({
-  "kind": zod.literal("price_limit"),
-  "max_input_price_per_mtok": zod.string().regex(bundleLatestResponsePoliciesItemDefinitionActionFiveMaxInputPricePerMtokRegExp),
-  "max_output_price_per_mtok": zod.string().regex(bundleLatestResponsePoliciesItemDefinitionActionFiveMaxOutputPricePerMtokRegExp)
-}),zod.object({
-  "kind": zod.literal("request_limits"),
-  "max_output_tokens": zod.int().min(1)
-}),zod.object({
-  "kind": zod.literal("credential_access"),
-  "scopes": zod.array(zod.enum(['platform', 'org', 'workspace'])).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionSevenScopesMax)
-}),zod.object({
-  "kind": zod.literal("fallback"),
-  "models": zod.array(zod.string().min(1).max(bundleLatestResponsePoliciesItemDefinitionActionEightModelsItemMax)).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionEightModelsMax),
-  "on": zod.array(zod.enum(['rate_limited', 'upstream_unavailable', 'timeout'])).min(1).max(bundleLatestResponsePoliciesItemDefinitionActionEightOnMax),
-  "max_attempts": zod.int().min(bundleLatestResponsePoliciesItemDefinitionActionEightMaxAttemptsMin).max(bundleLatestResponsePoliciesItemDefinitionActionEightMaxAttemptsMax),
-  "timeout_ms": zod.int().min(bundleLatestResponsePoliciesItemDefinitionActionEightTimeoutMsMin).max(bundleLatestResponsePoliciesItemDefinitionActionEightTimeoutMsMax)
-}),zod.object({
-  "kind": zod.literal("budget"),
-  "period": zod.enum(['day', 'month']),
-  "amount_usd": zod.string().regex(bundleLatestResponsePoliciesItemDefinitionActionNineAmountUsdRegExp),
-  "sharing": zod.enum(['shared', 'per_key'])
-})])
+  "rule_ids": zod.array(zod.uuid()).min(1).max(bundleLatestResponsePoliciesItemDefinitionRuleIdsMax).describe('Unordered reusable rule references; a policy may contain at most one fallback rule')
 })
 }))
 }).describe('A complete, versioned policy snapshot for one organization\'s model traffic.')

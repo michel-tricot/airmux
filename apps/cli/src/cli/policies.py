@@ -30,7 +30,9 @@ def create_policy(
     """Create a policy from JSON; budgets are recorded but not yet enforced."""
     body = _configuration(configuration, PolicyCreate)
     with access_client(control_plane_url) as client:
-        response = ensure_ok(client.post(org_path(f"/workspaces/{resolve_workspace(workspace)}/policies"), json=body.model_dump(mode="json")))
+        response = ensure_ok(
+            client.post(org_path(f"/workspaces/{resolve_workspace(workspace)}/policies"), json=body.model_dump(mode="json", exclude_none=True))
+        )
     print_rows("policies", [payload(response, PolicyOut)], POLICY_COLS, fmt)
 
 

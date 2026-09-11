@@ -10,12 +10,15 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { AllKeys } from './allKeys';
+import type { SelectedKeys } from './selectedKeys';
 
-export type RequestMatchCapabilitiesItem = typeof RequestMatchCapabilitiesItem[keyof typeof RequestMatchCapabilitiesItem];
-
-
-export const RequestMatchCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
+export interface PolicyDefinition {
+  target: AllKeys | SelectedKeys;
+  /**
+     * Unordered reusable rule references; a policy may contain at most one fallback rule
+     * @minItems 1
+     * @maxItems 100
+     */
+  rule_ids: string[];
+}

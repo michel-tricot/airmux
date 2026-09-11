@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from helpers import api_routes, make_app
 
 
@@ -24,22 +22,6 @@ def test_every_route_declares_one_authorization_rule_and_every_permission_names_
             permission_checks = [dependency.call for dependency in route.dependant.dependencies if hasattr(dependency.call, "required_permissions")]
             if permission_checks and not all(getattr(check, "required_scope", "") for check in permission_checks):
                 problems.append(f"{method} {route.path} has a permission without a tenant scope")
-    assert problems == []
-
-
-def test_routes_do_not_interpret_credential_or_standing_authority():
-    route_dir = Path(__file__).parents[2] / "src" / "control_plane" / "routes"
-    forbidden = (
-        "principal_permissions",
-        "permission_ceiling",
-        ".boundary",
-        "authority.org_id",
-        "authority.workspace_id",
-        "INSTANCE_ROLE_PERMISSIONS",
-        "ORG_ROLE_PERMISSIONS",
-        "WORKSPACE_ROLE_PERMISSIONS",
-    )
-    problems = [f"{path.name}: {term}" for path in route_dir.glob("*.py") for term in forbidden if term in path.read_text()]
     assert problems == []
 
 

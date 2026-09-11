@@ -92,9 +92,9 @@ describe('playground', () => {
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
           [
-            'data: {"delta":{"type":"text","text":"hello from the gateway"}}',
+            'data: {"id":"reply","delta":{"type":"text","text":"hello from the gateway"}}',
             '',
-            'data: {"finish_reason":"stop","usage":{"input_tokens":12,"output_tokens":4,"cache_read_tokens":2}}',
+            'data: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":12,"output_tokens":4,"cache_read_tokens":2,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}',
             '',
             'data: [DONE]',
             '',
@@ -196,9 +196,12 @@ describe('playground', () => {
         }),
       ),
       http.post('/inf/v1/chat/completions', () =>
-        HttpResponse.text('data: {"finish_reason":"content_filter"}\n\ndata: [DONE]\n\n', {
-          headers: { 'content-type': 'text/event-stream' },
-        }),
+        HttpResponse.text(
+          'data: {"id":"reply","finish_reason":"content_filter","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          {
+            headers: { 'content-type': 'text/event-stream' },
+          },
+        ),
       ),
     );
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
@@ -311,9 +314,12 @@ describe('playground', () => {
       ),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.text('data: {"delta":{"type":"text","text":"ok"}}\n\ndata: {"finish_reason":"stop"}\n\ndata: [DONE]\n\n', {
-          headers: { 'content-type': 'text/event-stream' },
-        });
+        return HttpResponse.text(
+          'data: {"id":"reply","delta":{"type":"text","text":"ok"}}\n\ndata: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          {
+            headers: { 'content-type': 'text/event-stream' },
+          },
+        );
       }),
     );
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);

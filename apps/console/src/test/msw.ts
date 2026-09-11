@@ -41,6 +41,7 @@ export const server = setupServer(
     return ws ? HttpResponse.json<{ data: Api.WorkspaceOut }>({ data: ws }) : new HttpResponse(null, { status: 404 });
   }),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: [] })),
+  http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: [] })),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/members', () => HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({ data: [] })),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
     HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({ data: [] }),

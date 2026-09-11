@@ -5,17 +5,14 @@ from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
 from pydantic import field_validator, model_validator
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, func, text
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, text
 from sqlmodel import Field, col, select
 
 from contract.policies import (
-    MAX_WORKSPACE_POLICIES,
-    AllowedModels,
-    AllowedProviders,
+    MAX_WORKSPACE_RULES,
     Fallback,
     PolicyDefinition,
     PolicyEntry,
-    RequestMatch,
     SelectedKeys,
 )
 from control_plane.db import current_session
@@ -24,8 +21,6 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
-from control_plane.models.model import Model
-from control_plane.models.provider import Provider
 from control_plane.models.runtime_configuration import bundle_input
 
 if TYPE_CHECKING:
@@ -110,13 +105,12 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
 
     async def _validate_configuration(self) -> None:
         if self.enabled:
-            active_policies = (
-                select(func.count())
-                .select_from(Policy)
-                .where(col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id)
+            active_policies = select(Policy).where(
+                col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
             )
-            if (await current_session().execute(active_policies)).scalar_one() >= MAX_WORKSPACE_POLICIES:
-                msg = f"A workspace may contain at most {MAX_WORKSPACE_POLICIES} active policies"
+            policies = (await current_session().execute(active_policies)).scalars()
+            if sum(len(policy.definition.rule_ids) for policy in policies) + len(self.definition.rule_ids) > MAX_WORKSPACE_RULES:
+                msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
                 raise InvalidPolicyError(msg)
         target = self.definition.target
         if isinstance(target, SelectedKeys):
@@ -124,20 +118,15 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             if set(target.key_ids) - {str(key.id) for key in keys}:
                 msg = "Selected inference keys must belong to this workspace"
                 raise InvalidPolicyError(msg)
-        action = self.definition.action
-        matched_models = self.definition.match.models if isinstance(self.definition.match, RequestMatch) else ()
-        action_models = action.names if isinstance(action, AllowedModels) else action.models if isinstance(action, Fallback) else ()
-        model_names = {*matched_models, *action_models}
-        if model_names:
-            models = await Model.find(col(Model.name).in_(model_names))
-            if model_names != {model.name for model in models}:
-                msg = "Policy models must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        if isinstance(action, AllowedProviders):
-            providers = await Provider.find(col(Provider.name).in_(action.names))
-            if set(action.names) != {provider.name for provider in providers}:
-                msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
+        from control_plane.models.rule import Rule  # noqa: PLC0415 policies reference reusable rules
+
+        rules = await Rule.find(col(Rule.id).in_(self.definition.rule_ids))
+        if set(self.definition.rule_ids) != {rule.id for rule in rules} or any(rule.workspace_id != self.workspace_id for rule in rules):
+            msg = "Policy rules must belong to this workspace"
+            raise InvalidPolicyError(msg)
+        if sum(isinstance(rule.definition.action, Fallback) for rule in rules) > 1:
+            msg = "A policy may contain at most one fallback rule"
+            raise InvalidPolicyError(msg)
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)
@@ -163,16 +152,14 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Inference key target, typed request match, and action. Budgets are not yet enforced")
+    definition: PolicyDefinition = Field(description="Inference key target and reusable rules. Budgets are not yet enforced")
 
 
 class PolicyUpdate(RecordUpdate[Policy]):
     name: str | None = Field(default=None, min_length=1, max_length=200, description="Replacement display name; omit to leave unchanged")
     enabled: bool | None = Field(default=None, description="Enable or disable this policy; omit to leave unchanged")
     priority: int | None = Field(default=None, ge=0, le=10000, description="Replacement priority, with lower numbers first; omit to leave unchanged")
-    definition: PolicyDefinition | None = Field(
-        default=None, description="Replace the complete target, request match, and action; omit to leave unchanged"
-    )
+    definition: PolicyDefinition | None = Field(default=None, description="Replace the complete target and reusable rules; omit to leave unchanged")
 
     @model_validator(mode="after")
     def nonnull_changes(self) -> Self:

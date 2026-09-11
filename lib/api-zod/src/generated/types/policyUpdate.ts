@@ -10,7 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinitionInput } from './policyDefinitionInput';
+import type { PolicyDefinition } from './policyDefinition';
 
 export interface PolicyUpdate {
   /** Replacement display name; omit to leave unchanged */
@@ -19,6 +19,6 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target, request match, and action; omit to leave unchanged */
-  definition?: PolicyDefinitionInput | null;
+  /** Replace the complete target and reusable rules; omit to leave unchanged */
+  definition?: PolicyDefinition | null;
 }

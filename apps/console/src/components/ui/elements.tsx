@@ -295,10 +295,12 @@ export const Dropdown = ({
 );
 
 type CheckboxDropdownOption = { value: string; label: React.ReactNode };
+type CheckboxDropdownEmptyState = { allLabel: string; emptyLabel?: never } | { allLabel?: never; emptyLabel: string };
 
 export const CheckboxDropdown = ({
   label,
   allLabel,
+  emptyLabel,
   values,
   onValuesChange,
   options,
@@ -307,14 +309,13 @@ export const CheckboxDropdown = ({
   'aria-label': ariaLabel,
 }: {
   label: string;
-  allLabel: string;
   values: readonly string[];
   onValuesChange: (values: string[]) => void;
   options: CheckboxDropdownOption[];
   disabled?: boolean;
   className?: string;
   'aria-label': string;
-}) => (
+} & CheckboxDropdownEmptyState) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button
@@ -324,7 +325,7 @@ export const CheckboxDropdown = ({
         disabled={disabled}
         className={cn('h-9 w-full justify-between gap-2 px-3 text-[13px] normal-case tracking-normal', className)}
       >
-        <span className="truncate">{values.length === 0 ? allLabel : `${label} (${values.length})`}</span>
+        <span className="truncate">{values.length === 0 ? (allLabel ?? emptyLabel) : `${label} (${values.length})`}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </Button>
     </DropdownMenuTrigger>
@@ -332,20 +333,24 @@ export const CheckboxDropdown = ({
       align="start"
       className="z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto rounded border border-border bg-card p-1 text-card-foreground shadow-xl shadow-black/50"
     >
-      <DropdownMenuCheckboxItem
-        checked={values.length === 0}
-        onCheckedChange={() => onValuesChange([])}
-        onSelect={(event) => event.preventDefault()}
-        className="relative flex cursor-default select-none items-center rounded py-2 pl-8 pr-3 text-[13px] font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
-      >
-        <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
-          <DropdownMenuItemIndicator>
-            <Check className="h-3.5 w-3.5" />
-          </DropdownMenuItemIndicator>
-        </span>
-        {allLabel}
-      </DropdownMenuCheckboxItem>
-      <DropdownMenuSeparator className="my-1 h-px bg-border" />
+      {allLabel !== undefined && (
+        <>
+          <DropdownMenuCheckboxItem
+            checked={values.length === 0}
+            onCheckedChange={() => onValuesChange([])}
+            onSelect={(event) => event.preventDefault()}
+            className="relative flex cursor-default select-none items-center rounded py-2 pl-8 pr-3 text-[13px] font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
+          >
+            <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
+              <DropdownMenuItemIndicator>
+                <Check className="h-3.5 w-3.5" />
+              </DropdownMenuItemIndicator>
+            </span>
+            {allLabel}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuSeparator className="my-1 h-px bg-border" />
+        </>
+      )}
       {options.map((option) => {
         const checked = values.includes(option.value);
         return (
@@ -509,13 +514,19 @@ export const ConfirmButton = ({
   );
 };
 
-export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, React.ComponentPropsWithoutRef<typeof TablePrimitive>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-md border border-border bg-card/50">
-      <TablePrimitive ref={ref} className={className} {...props} />
-    </div>
-  ),
-);
+type TableProps = React.ComponentPropsWithoutRef<typeof TablePrimitive> & { clipOverflow?: boolean };
+
+export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, TableProps>(({ className, clipOverflow = false, ...props }, ref) => (
+  <div
+    data-slot="table-surface"
+    className={cn(
+      'relative w-full rounded-md border border-border bg-card/50',
+      clipOverflow ? 'overflow-hidden [&>div]:overflow-hidden' : 'overflow-auto',
+    )}
+  >
+    <TablePrimitive ref={ref} className={className} {...props} />
+  </div>
+));
 Table.displayName = 'Table';
 
 export const TableHeader = forwardRef<React.ElementRef<typeof TableHeaderPrimitive>, React.ComponentPropsWithoutRef<typeof TableHeaderPrimitive>>(

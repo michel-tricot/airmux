@@ -8,14 +8,14 @@ import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, Modal
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
-import { ProviderIcon } from '@/components/ProviderIcon';
+import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { cn } from '@/lib/utils';
 import { inferenceCompletion, prepareInferenceRequest, type InferenceMessage } from '@/lib/inference';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
 import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
 import { usePlaygroundState, type PlaygroundMessage, type PlaygroundRequest } from '@/features/playground/state';
-import { ModelPicker } from '@/components/shared/model-picker';
+import { SearchPicker } from '@/components/shared/search-picker';
 import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
 import { CopyButton, CopyFeedback } from '@/components/shared/copy-control';
 
@@ -192,13 +192,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     return {
       value: model.name,
       searchText: `${model.name} ${provider?.name ?? ''}`,
-      label: (
-        <span className="flex min-w-0 items-center gap-2">
-          {provider?.icon && <ProviderIcon markup={provider.icon} />}
-          <span className="truncate">{model.name}</span>
-          {provider && <span className="ml-auto text-[10px] text-muted-foreground">{provider.name}</span>}
-        </span>
-      ),
+      label: <CatalogOptionLabel name={model.name} providerName={provider?.name} providerIcon={provider?.icon} />,
     };
   });
 
@@ -353,7 +347,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
           <div className="space-y-2">
             <Label htmlFor="playground-model">Model</Label>
-            <ModelPicker
+            <SearchPicker
               id="playground-model"
               aria-label="Model"
               className="h-8 text-xs"
@@ -362,6 +356,11 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onSelectionComplete={() => composerRef.current?.focus()}
               options={modelOptions}
               placeholder="Select model"
+              title="Select model"
+              description="Search by model or provider name"
+              searchLabel="Search models"
+              searchPlaceholder="Search models..."
+              emptyMessage="No matching models"
             />
           </div>
 

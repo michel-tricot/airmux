@@ -1,7 +1,7 @@
 import type * as Api from '@workspace/api-client-react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, server } from './msw';
@@ -238,4 +238,15 @@ describe('organization models', () => {
     await user.hover(input);
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Input: Text');
   });
+});
+
+it('waits for catalog readiness when the server takes longer than one second', async () => {
+  server.use(
+    http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, async () => {
+      await delay(1200);
+      return HttpResponse.json({ data: { providers, models } });
+    }),
+  );
+  renderModels();
+  expect(await screen.findByText('anthropic/claude-sonnet-4-5')).toBeVisible();
 });

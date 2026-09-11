@@ -10,9 +10,9 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { RequestMatchCapabilitiesItem } from './requestMatchCapabilitiesItem';
+import type { RequestMatchInputCapabilitiesItem } from './requestMatchInputCapabilitiesItem';
 
-export interface RequestMatch {
+export interface RequestMatchInput {
   kind: 'request';
   /**
      * @maxItems 1000
@@ -22,5 +22,5 @@ export interface RequestMatch {
   models?: string[];
   stream?: boolean | null;
   /** @maxItems 3 */
-  capabilities?: RequestMatchCapabilitiesItem[];
+  capabilities?: RequestMatchInputCapabilitiesItem[];
 }

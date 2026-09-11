@@ -7,7 +7,7 @@ from sqlmodel import col, or_, select
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, uuid7
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, RuntimeConfiguration
+from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, Rule, RuntimeConfiguration
 from control_plane.models.policy import Policy
 from control_plane.models.runtime_configuration import runtime_configuration_changes
 
@@ -70,13 +70,15 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
     credential_rows = await ProviderCredential.find(
         or_(ProviderCredential.org_id == org_id, col(ProviderCredential.org_id).is_(None)), order_by=credential_order
     )
+    policies = await Policy.find(Policy.org_id == org_id, col(Policy.enabled).is_(True), order_by=col(Policy.id))
+    rule_ids = {rule_id for policy in policies for rule_id in policy.definition.rule_ids}
+    rules = await Rule.find(col(Rule.id).in_(rule_ids), order_by=col(Rule.id)) if rule_ids else []
     return BundleV1(
         bundle_id=bundle_id,
         org_id=org_id,
         issued_at=now,
-        policies=tuple(
-            policy.entry() for policy in await Policy.find(Policy.org_id == org_id, col(Policy.enabled).is_(True), order_by=col(Policy.id))
-        ),
+        rules=tuple(rule.entry() for rule in rules),
+        policies=tuple(policy.entry() for policy in policies),
         keys=[
             *[
                 KeyEntry(key_id=str(key.id), org_id=key.org_id, workspace_id=key.workspace_id, token_hash=key.token_hash)

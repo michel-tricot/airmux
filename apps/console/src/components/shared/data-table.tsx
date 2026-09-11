@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string;
   rowClassName?: string;
   renderRow?: (row: T, cells: ReactNode[]) => ReactNode;
+  clipOverflow?: boolean;
   isLoading?: boolean;
   isError?: boolean;
   error?: unknown;
@@ -43,6 +44,7 @@ export function DataTable<T>({
   rowKey,
   rowClassName,
   renderRow,
+  clipOverflow,
   isLoading,
   isError,
   error,
@@ -58,7 +60,7 @@ export function DataTable<T>({
   if (!rows || rows.length === 0) return <EmptyState icon={emptyIcon}>{empty}</EmptyState>;
 
   return (
-    <Table className={tableClassName}>
+    <Table className={tableClassName} clipOverflow={clipOverflow}>
       <TableHeader>
         {headerGroups && (
           <TableRow className="bg-muted/20 hover:bg-muted/20">

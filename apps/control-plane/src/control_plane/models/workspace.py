@@ -21,6 +21,7 @@ from control_plane.models.org_membership import OrgMembership
 from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.policy import Policy
 from control_plane.models.provider_credential import ProviderCredential
+from control_plane.models.rule import Rule
 from control_plane.models.user import User
 from control_plane.models.workspace_membership import WorkspaceMembership
 
@@ -138,6 +139,8 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         await ManagementKey.delete_scoped(ManagementKey.workspace_id == self.id)
         for policy in await Policy.for_workspace(self.id):
             await policy.delete()
+        for rule in await Rule.for_workspace(self.id):
+            await rule.delete()
         for key in await InferenceKey.find(InferenceKey.workspace_id == self.id):
             await key.delete()
         for playground_session in await PlaygroundSession.find(PlaygroundSession.workspace_id == self.id):

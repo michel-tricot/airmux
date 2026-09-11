@@ -39,10 +39,12 @@ from contract.policies import (
     CredentialAccess,
     DenyRequest,
     Fallback,
+    PolicyAction,
     PolicyDefinition,
     PriceLimit,
     RequestLimits,
     RequestMatch,
+    RuleDefinition,
     SelectedKeys,
     StrictParameters,
 )
@@ -60,6 +62,7 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
+    Rule,
     UsageEvent,
     User,
     Workspace,
@@ -198,12 +201,13 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     return await credential.save()
 
 
-async def workspace_policy(
+async def workspace_policy(  # noqa: PLR0913 target and rule references stay explicit in fixture call sites
     workspace: Workspace,
     *,
     name: str,
     priority: int,
-    definition: PolicyDefinition,
+    target: AllKeys | SelectedKeys,
+    rules: tuple[Rule, ...],
     enabled: bool = True,
 ) -> Policy:
     return await Policy(
@@ -213,7 +217,17 @@ async def workspace_policy(
         name=name,
         enabled=enabled,
         priority=priority,
-        definition=definition,
+        definition=PolicyDefinition(target=target, rule_ids=tuple(rule.id for rule in rules)),
+    ).save()
+
+
+async def workspace_rule(workspace: Workspace, *, name: str, match: AllRequests | RequestMatch, action: PolicyAction) -> Rule:
+    return await Rule(
+        id=fixture_id(f"rule:{workspace.name}:{name}"),
+        org_id=workspace.org_id,
+        workspace_id=workspace.id,
+        name=name,
+        definition=RuleDefinition.model_validate({"match": match, "action": action}),
     ).save()
 
 
@@ -249,7 +263,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
         ).save()
 
 
-async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
+async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa: PLR0915 fixture graph stays readable as one declared instance
     """The fixture instance, declared top to bottom and saved as it is declared.
 
     Provider credentials are the one part whose value lives outside the database. The rows are
@@ -359,41 +373,50 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
     await inference_key(ACME_RETIRED_TOKEN, production, dana, label="batch-jobs", revoked=True).save()
 
+    team_credentials = await workspace_rule(
+        production,
+        name="Streaming team credentials",
+        match=RequestMatch(kind="request", stream=True),
+        action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
+    )
     await workspace_policy(
         production,
         name="Streaming uses team credentials",
         priority=10,
-        definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"),
-            match=RequestMatch(kind="request", stream=True),
-            action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
-        ),
+        target=AllKeys(kind="all_keys"),
+        rules=(team_credentials,),
+    )
+    approved_models = await workspace_rule(
+        production,
+        name="Approved production models",
+        match=AllRequests(kind="all_requests"),
+        action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
     )
     await workspace_policy(
         production,
         name="Approved production models",
         priority=20,
-        definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
+        target=AllKeys(kind="all_keys"),
+        rules=(approved_models,),
+    )
+    fallback = await workspace_rule(
+        production,
+        name="GPT-4o fallback",
+        match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
+        action=Fallback(
+            kind="fallback",
+            models=(ANTHROPIC_CLAUDE_OPUS, OPENAI_GPT_4O_MINI),
+            on=("rate_limited", "upstream_unavailable", "timeout"),
+            max_attempts=3,
+            timeout_ms=30000,
         ),
     )
     await workspace_policy(
         production,
         name="GPT-4o fallback",
         priority=30,
-        definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"),
-            match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
-            action=Fallback(
-                kind="fallback",
-                models=(ANTHROPIC_CLAUDE_OPUS, OPENAI_GPT_4O_MINI),
-                on=("rate_limited", "upstream_unavailable", "timeout"),
-                max_attempts=3,
-                timeout_ms=30000,
-            ),
-        ),
+        target=AllKeys(kind="all_keys"),
+        rules=(fallback,),
     )
     for priority, (name, action) in enumerate(
         (
@@ -406,42 +429,58 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         ),
         start=31,
     ):
+        configured_rule = await workspace_rule(
+            production,
+            name=name,
+            match=AllRequests(kind="all_requests"),
+            action=action,
+        )
         await workspace_policy(
             production,
             name=name,
             priority=priority,
-            definition=PolicyDefinition(target=AllKeys(kind="all_keys"), match=AllRequests(kind="all_requests"), action=action),
+            target=AllKeys(kind="all_keys"),
+            rules=(configured_rule,),
         )
+    maintenance = await workspace_rule(
+        production,
+        name="Maintenance denial",
+        match=AllRequests(kind="all_requests"),
+        action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
+    )
     await workspace_policy(
         production,
         name="Maintenance window",
         priority=40,
         enabled=False,
-        definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
-        ),
+        target=AllKeys(kind="all_keys"),
+        rules=(maintenance, team_credentials),
+    )
+    ci_provider = await workspace_rule(
+        staging,
+        name="OpenAI provider only",
+        match=AllRequests(kind="all_requests"),
+        action=AllowedProviders(kind="providers", names=("openai",)),
     )
     await workspace_policy(
         staging,
         name="CI provider allowlist",
         priority=10,
-        definition=PolicyDefinition(
-            target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
-            match=AllRequests(kind="all_requests"),
-            action=AllowedProviders(kind="providers", names=("openai",)),
-        ),
+        target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
+        rules=(ci_provider,),
+    )
+    monthly_budget = await workspace_rule(
+        default,
+        name="Monthly shared budget",
+        match=AllRequests(kind="all_requests"),
+        action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
     )
     await workspace_policy(
         default,
         name="Monthly shared budget",
         priority=10,
-        definition=PolicyDefinition(
-            target=AllKeys(kind="all_keys"),
-            match=AllRequests(kind="all_requests"),
-            action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
-        ),
+        target=AllKeys(kind="all_keys"),
+        rules=(monthly_budget,),
     )
 
     await ManagementKey(

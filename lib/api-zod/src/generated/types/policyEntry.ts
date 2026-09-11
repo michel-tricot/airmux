@@ -10,7 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { PolicyDefinitionOutput } from './policyDefinitionOutput';
+import type { PolicyDefinition } from './policyDefinition';
 
 export interface PolicyEntry {
   id: string;
@@ -25,5 +25,5 @@ export interface PolicyEntry {
      * @maximum 10000
      */
   priority: number;
-  definition: PolicyDefinitionOutput;
+  definition: PolicyDefinition;
 }
