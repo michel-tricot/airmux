@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
-it('creates a workspace management key, reveals it once, and refreshes the workspace list', async () => {
+it.each(['Never', '30 days'])('creates a workspace management key with expiry %s and reveals it once', async (expiry) => {
   const workspace = WORKSPACES[0];
   let keys: Api.ManagementKeyOut[] = [];
   server.use(
@@ -18,7 +18,17 @@ it('creates a workspace management key, reveals it once, and refreshes the works
     }),
     http.post('/api/v1/orgs/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
       expect(params.workspaceRef).toBe(workspace.id);
-      expect(await request.json()).toEqual({ label: 'workspace-ci', permissions: ['workspaces.read'] });
+      const submitted = (await request.json()) as Api.ManagementKeyGrantIn;
+      expect(submitted).toEqual({
+        label: 'workspace-ci',
+        permissions: ['workspaces.read'],
+        ...(expiry === 'Never' ? {} : { expires_at: expect.any(String) }),
+      });
+      if (expiry !== 'Never') {
+        const remaining = Date.parse(submitted.expires_at!) - Date.now();
+        expect(remaining).toBeGreaterThan(30 * 86400000 - 10000);
+        expect(remaining).toBeLessThanOrEqual(30 * 86400000);
+      }
       const key: Api.ManagementKeyOut = {
         id: 'workspace-key',
         user_id: 'user-1',
@@ -49,6 +59,8 @@ it('creates a workspace management key, reveals it once, and refreshes the works
   await user.click(screen.getByRole('button', { name: 'Generate Key' }));
   const dialog = screen.getByRole('dialog', { name: 'Generate Management Key' });
   await user.type(within(dialog).getByLabelText('Label'), 'workspace-ci');
+  await user.click(within(dialog).getByRole('combobox', { name: 'Expires in' }));
+  await user.click(screen.getByRole('option', { name: expiry }));
   await user.click(within(dialog).getByRole('checkbox', { name: 'workspaces.read' }));
   await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
   expect(await screen.findByDisplayValue('workspace-management-secret')).toBeInTheDocument();

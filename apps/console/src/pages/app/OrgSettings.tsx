@@ -10,7 +10,7 @@ import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation,
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
-import { Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
+import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
 import { Plus, KeyRound, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
@@ -18,7 +18,13 @@ import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { KeysTable } from '@/components/shared/keys-table';
-import { ManagementKeyFormFields, PermissionChecklist, managementKeyFormSchema } from '@/components/shared/management-key-form';
+import {
+  ManagementKeyFormFields,
+  managementKeyPayload,
+  managementKeyExpiryOptions,
+  PermissionChecklist,
+  managementKeyFormSchema,
+} from '@/components/shared/management-key-form';
 import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
@@ -362,14 +368,13 @@ export default function AppOrgSettings() {
               : 'The key is bound to this organization and carries only the permissions you name.'
           }
           schema={managementKeyFormSchema}
-          defaultValues={{ label: '', permissions: [] }}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const minted = await mintKey.mutateAsync({
               orgId,
               data: {
                 ...(keyTarget ? { user_id: keyTarget.userId } : {}),
-                label: values.label,
-                permissions: values.permissions,
+                ...managementKeyPayload(values),
               },
             });
             setToken(minted.token);
@@ -398,11 +403,11 @@ export default function AppOrgSettings() {
           title="Create a service account"
           description="This creates an organization admin for automation and a management key shown only once."
           schema={orgServiceAccountSchema}
-          defaultValues={{ name: '', label: '', permissions: [] }}
+          defaultValues={{ name: '', label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const minted = await createServiceAccount.mutateAsync({
               orgId,
-              data: { name: values.name, management_key: { label: values.label, permissions: values.permissions } },
+              data: { name: values.name, management_key: managementKeyPayload(values) },
             });
             setToken(minted.management_key.token);
           }}
@@ -434,6 +439,19 @@ export default function AppOrgSettings() {
                     <FormLabel>Key label</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. deployment-management" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="expiry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expires in</FormLabel>
+                    <FormControl>
+                      <Dropdown value={field.value} onValueChange={field.onChange} options={managementKeyExpiryOptions} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

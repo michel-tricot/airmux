@@ -3,19 +3,36 @@ import { Check, Plus } from 'lucide-react';
 import { SearchField } from '@/components/shared/search-field';
 import type { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
-import { Permission, type Permission as PermissionName } from '@workspace/api-client-react';
-import { Button, Input } from '@/components/ui/elements';
+import { Permission, type ManagementKeyGrantIn, type Permission as PermissionName } from '@workspace/api-client-react';
+import { Button, Dropdown, Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/shared/states';
 import { groupPermissions } from '@/components/shared/permission-groups';
 
 export const managementKeyFormSchema = z.object({
+  expiry: z.enum(['7', '30', '90', '365', 'never']),
   label: z.string().min(1, 'Label is required').max(80, 'Label must be 80 characters or fewer'),
   permissions: z.array(z.nativeEnum(Permission)).min(1, 'Select at least one permission'),
 });
 
 export type ManagementKeyFormValues = z.infer<typeof managementKeyFormSchema>;
+
+export function managementKeyPayload(values: ManagementKeyFormValues, now = new Date()): ManagementKeyGrantIn {
+  return {
+    label: values.label,
+    permissions: values.permissions,
+    expires_at: values.expiry === 'never' ? undefined : new Date(now.getTime() + Number(values.expiry) * 86400000).toISOString(),
+  };
+}
+
+export const managementKeyExpiryOptions = [
+  { value: '7', label: '7 days' },
+  { value: '30', label: '30 days' },
+  { value: '90', label: '90 days' },
+  { value: '365', label: '1 year' },
+  { value: 'never', label: 'Never' },
+];
 
 const resourceLabels: Record<string, string> = {
   'management-keys': 'Management keys',
@@ -182,6 +199,19 @@ export function ManagementKeyFormFields({
             <FormLabel>Label</FormLabel>
             <FormControl>
               <Input placeholder="e.g. ci-deploy" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="expiry"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Expires in</FormLabel>
+            <FormControl>
+              <Dropdown value={field.value} onValueChange={field.onChange} options={managementKeyExpiryOptions} />
             </FormControl>
             <FormMessage />
           </FormItem>

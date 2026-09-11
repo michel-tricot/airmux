@@ -4,7 +4,7 @@ import { Badge, Button } from '@/components/ui/elements';
 import { useInstanceManagementKeys, useCreateInstanceManagementKeyMutation, useRevokeInstanceManagementKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { ManagementKeyFormFields, managementKeyFormSchema } from '@/components/shared/management-key-form';
+import { ManagementKeyFormFields, managementKeyPayload, managementKeyFormSchema } from '@/components/shared/management-key-form';
 import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { KeysTable } from '@/components/shared/keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -111,9 +111,9 @@ export default function ManagementKeys() {
           title="Generate Management Key"
           description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
           schema={managementKeyFormSchema}
-          defaultValues={{ label: '', permissions: [] }}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
-            const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
+            const minted = await createKey.mutateAsync({ data: managementKeyPayload(values) });
             setToken(minted.token);
           }}
           submitLabel="Generate"

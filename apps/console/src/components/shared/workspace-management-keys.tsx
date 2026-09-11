@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/elements';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { ManagementKeyFormFields, managementKeyFormSchema } from '@/components/shared/management-key-form';
+import { ManagementKeyFormFields, managementKeyPayload, managementKeyFormSchema } from '@/components/shared/management-key-form';
 import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { KeysTable } from '@/components/shared/keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -57,9 +57,9 @@ export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string;
           title="Generate Management Key"
           description="This key can manage only this workspace. It cannot access other workspaces or make inference requests."
           schema={managementKeyFormSchema}
-          defaultValues={{ label: '', permissions: [] }}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (data) => {
-            const key = await create.mutateAsync({ orgId, workspaceRef: workspaceId, data });
+            const key = await create.mutateAsync({ orgId, workspaceRef: workspaceId, data: managementKeyPayload(data) });
             setToken(key.token);
           }}
           submitLabel="Generate"
