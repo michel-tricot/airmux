@@ -30,7 +30,6 @@ interface MultipleModelPickerProps extends ModelPickerBaseProps {
   mode: 'multiple';
   values: readonly string[];
   onValuesChange: (values: string[]) => void;
-  label: string;
   emptyLabel: string;
   title: string;
   description: string;
@@ -50,6 +49,7 @@ export function ModelPicker(props: ModelPickerProps) {
   const visibleOptions = props.options.filter((option) => option.searchText.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const highlightedIndex = Math.min(activeIndex, Math.max(visibleOptions.length - 1, 0));
   const highlightedOption = visibleOptions[highlightedIndex];
+  const firstSelected = multiple ? props.options.find((option) => option.value === props.values[0]) : undefined;
 
   useEffect(() => {
     if (open) document.getElementById(`${listboxId}-${highlightedIndex}`)?.scrollIntoView?.({ block: 'nearest' });
@@ -83,11 +83,18 @@ export function ModelPicker(props: ModelPickerProps) {
     onOpenChange(false);
   };
 
-  const triggerLabel = multiple
-    ? props.values.length === 0
-      ? props.emptyLabel
-      : `${props.label} (${props.values.length})`
-    : (selected?.label ?? props.placeholder ?? 'Select model');
+  const triggerLabel = multiple ? (
+    props.values.length === 0 ? (
+      props.emptyLabel
+    ) : (
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        {firstSelected?.label ?? props.values[0]}
+        {props.values.length > 1 && <span className="shrink-0 text-muted-foreground">+{props.values.length - 1} more</span>}
+      </span>
+    )
+  ) : (
+    (selected?.label ?? props.placeholder ?? 'Select model')
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,7 +106,7 @@ export function ModelPicker(props: ModelPickerProps) {
           aria-label={props['aria-label']}
           disabled={props.disabled}
         >
-          <span className="min-w-0 truncate">{triggerLabel}</span>
+          <span className="flex min-w-0 flex-1 items-center overflow-hidden">{triggerLabel}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </DialogTrigger>

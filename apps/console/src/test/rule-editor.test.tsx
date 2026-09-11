@@ -86,6 +86,30 @@ it('shows provider icons in provider rule choices', async () => {
   expect(screen.getByRole('menuitemcheckbox', { name: provider.name }).querySelector('svg')).toBeInTheDocument();
 });
 
+it('names a single selected backup model in the picker summary', async () => {
+  const user = userEvent.setup();
+  render(
+    <RuleEditor
+      rule={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      catalog={{ providers: [provider], models: [model] }}
+    />,
+  );
+
+  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
+  await user.click(screen.getByRole('option', { name: 'Model fallbacks' }));
+  const routes = screen.getByRole('button', { name: 'Allowed routes' });
+  await user.click(routes);
+  await user.click(screen.getByRole('option', { name: `${model.name}, ${provider.name}` }));
+  await user.click(screen.getByRole('button', { name: 'Done' }));
+
+  expect(routes).toHaveTextContent(model.name);
+  expect(routes).not.toHaveTextContent('(1)');
+});
+
 it('does not validate fields from an inactive action', async () => {
   const user = userEvent.setup();
   let submitted: Api.RuleCreate | undefined;

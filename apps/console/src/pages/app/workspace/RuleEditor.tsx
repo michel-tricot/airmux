@@ -129,7 +129,6 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                   <ModelPicker
                     mode="multiple"
                     aria-label="Requested models"
-                    label="Selected models"
                     emptyLabel="Any model"
                     title="Select requested models"
                     description="Search by model or provider name"
@@ -269,7 +268,6 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
                   <ModelPicker
                     mode="multiple"
                     aria-label="Allowed routes"
-                    label="Selected routes"
                     emptyLabel="Choose routes"
                     title={kind === 'fallback' ? 'Select backup models' : 'Select allowed models'}
                     description="Search by model or provider name"
