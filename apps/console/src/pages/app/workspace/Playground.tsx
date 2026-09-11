@@ -14,7 +14,7 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
 import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
 import { usePlaygroundState, type PlaygroundMessage, type PlaygroundRequest } from '@/features/playground/state';
-import { ModelPicker } from '@/components/shared/model-picker';
+import { SearchPicker } from '@/components/shared/search-picker';
 import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
 import { CopyButton, CopyFeedback } from '@/components/shared/copy-control';
 
@@ -346,7 +346,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
           <div className="space-y-2">
             <Label htmlFor="playground-model">Model</Label>
-            <ModelPicker
+            <SearchPicker
               id="playground-model"
               aria-label="Model"
               className="h-8 text-xs"
@@ -355,6 +355,11 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onSelectionComplete={() => composerRef.current?.focus()}
               options={modelOptions}
               placeholder="Select model"
+              title="Select model"
+              description="Search by model or provider name"
+              searchLabel="Search models"
+              searchPlaceholder="Search models..."
+              emptyMessage="No matching models"
             />
           </div>
 

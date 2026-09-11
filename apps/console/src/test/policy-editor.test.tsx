@@ -1,5 +1,5 @@
-import type { InferenceKeyOut, RuleOut } from '@workspace/api-client-react';
-import { render, screen } from '@testing-library/react';
+import type { InferenceKeyOut, PolicyCreate, RuleCreate, RuleOut } from '@workspace/api-client-react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
 import { PolicyEditor } from '@/pages/app/workspace/PolicyEditor';
@@ -28,6 +28,8 @@ const inferenceKey: InferenceKeyOut = {
   updated_at: now,
   deleted_at: null,
 };
+
+const catalog = { providers: [], models: [] };
 
 function fallbackRule(id: string, name: string): RuleOut {
   return {
@@ -58,8 +60,8 @@ it('selects all keys or individual keys from one Applies to control', async () =
 it('attaches and removes reusable rules', async () => {
   const user = userEvent.setup();
   render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule]} />);
-  await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
-  await user.click(screen.getByRole('option', { name: 'Safe credentials' }));
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
+  await user.click(screen.getByRole('option', { name: /Safe credentials/ }));
   expect(screen.getByText('Rules')).toBeVisible();
   expect(screen.queryByRole('button', { name: /Move Safe credentials/ })).not.toBeInTheDocument();
   expect(screen.getByText('Credentials: workspace')).toBeVisible();
@@ -86,13 +88,139 @@ it('offers at most one fallback rule per policy', async () => {
       pending={false}
       keys={[]}
       rules={[firstFallback, secondFallback, rule]}
+      ruleComposer={{
+        catalog,
+        usageByRuleId: new Map(),
+        createPending: false,
+        updatePending: false,
+        create: async () => secondFallback,
+        update: async (existingRule) => existingRule,
+      }}
     />,
   );
 
-  await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
-  await user.click(screen.getByRole('option', { name: firstFallback.name }));
-  await user.click(screen.getByRole('combobox', { name: 'Add rule' }));
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
+  await user.click(screen.getByRole('option', { name: new RegExp(firstFallback.name) }));
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
 
-  expect(screen.queryByRole('option', { name: secondFallback.name })).not.toBeInTheDocument();
-  expect(screen.getByRole('option', { name: rule.name })).toBeVisible();
+  expect(screen.queryByRole('option', { name: new RegExp(secondFallback.name) })).not.toBeInTheDocument();
+  expect(screen.getByRole('option', { name: new RegExp(rule.name) })).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Close' }));
+  await user.click(screen.getByRole('button', { name: 'Create rule' }));
+
+  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeEnabled();
+});
+
+it('searches existing shared rules before attaching one', async () => {
+  const user = userEvent.setup();
+  const otherRule = { ...rule, id: '01990aa3-4b4c-7000-8000-000000000005', name: 'Other rule' };
+  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule, otherRule]} />);
+
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
+  await user.type(screen.getByRole('combobox', { name: 'Search shared rules' }), 'safe');
+
+  expect(screen.getByRole('option', { name: /Safe credentials/ })).toBeVisible();
+  expect(screen.queryByRole('option', { name: /Other rule/ })).not.toBeInTheDocument();
+});
+
+it('creates and selects a shared rule without losing the policy draft', async () => {
+  const user = userEvent.setup();
+  let createdPayload: RuleCreate | undefined;
+  let submittedPolicy: PolicyCreate | undefined;
+  const createdRule = {
+    ...rule,
+    id: '01990aa3-4b4c-7000-8000-000000000006',
+    name: 'Strict parameters',
+    definition: { match: { kind: 'all_requests' }, action: { kind: 'strict_parameters' } },
+  } satisfies RuleOut;
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async (payload) => {
+        submittedPolicy = payload;
+      }}
+      pending={false}
+      keys={[]}
+      rules={[]}
+      ruleComposer={{
+        catalog,
+        usageByRuleId: new Map(),
+        createPending: false,
+        updatePending: false,
+        create: async (payload) => {
+          createdPayload = payload;
+          return createdRule;
+        },
+        update: async () => createdRule,
+      }}
+    />,
+  );
+
+  await user.type(screen.getByLabelText('Policy name'), 'Production safeguards');
+  await user.click(screen.getByRole('button', { name: 'Create rule' }));
+  expect(screen.getByRole('heading', { name: 'Choose a rule type' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Model fallbacks' })).toBeEnabled();
+  await user.click(screen.getByRole('button', { name: 'Back to policy' }));
+  expect(screen.getByLabelText('Policy name')).toHaveValue('Production safeguards');
+
+  await user.click(screen.getByRole('button', { name: 'Create rule' }));
+  await user.click(screen.getByRole('button', { name: 'Parameter support' }));
+  expect(screen.getByRole('heading', { name: 'Create and add parameter support rule' })).toBeVisible();
+  expect(screen.getByText(/saved to the Rule library/)).toBeVisible();
+  await user.type(screen.getByLabelText('Rule name'), 'Strict parameters');
+  await user.click(screen.getByRole('button', { name: 'Create and add rule' }));
+
+  await waitFor(() => expect(createdPayload?.definition.action).toEqual({ kind: 'strict_parameters' }));
+  expect(screen.getByRole('heading', { name: 'Create policy' })).toBeVisible();
+  expect(screen.getByLabelText('Policy name')).toHaveValue('Production safeguards');
+  expect(screen.getByText('Strict parameters')).toBeVisible();
+  expect(screen.getByText('New')).toBeVisible();
+
+  await user.click(screen.getByRole('button', { name: 'Save policy' }));
+  await waitFor(() => expect(submittedPolicy?.definition.rule_ids).toEqual([createdRule.id]));
+});
+
+it('shows shared rule usage before editing from a policy', async () => {
+  const user = userEvent.setup();
+  let updatedPayload: RuleCreate | undefined;
+  const updatedRule = { ...rule, name: 'Safer credentials' };
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      keys={[]}
+      rules={[rule]}
+      ruleComposer={{
+        catalog,
+        usageByRuleId: new Map([[rule.id, 2]]),
+        createPending: false,
+        updatePending: false,
+        create: async () => rule,
+        update: async (_rule, payload) => {
+          updatedPayload = payload;
+          return updatedRule;
+        },
+      }}
+    />,
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
+  await user.click(screen.getByRole('option', { name: /Safe credentials/ }));
+  await user.click(screen.getByRole('button', { name: 'Edit Safe credentials' }));
+
+  expect(screen.getByRole('heading', { name: 'Edit credential access rule' })).toBeVisible();
+  expect(screen.getByText('Used by 2 policies')).toBeVisible();
+  expect(screen.getByText(/updates every policy that uses it/)).toBeVisible();
+  await user.clear(screen.getByLabelText('Rule name'));
+  await user.type(screen.getByLabelText('Rule name'), updatedRule.name);
+  await user.click(screen.getByRole('button', { name: 'Save rule' }));
+
+  await waitFor(() => expect(updatedPayload?.name).toBe(updatedRule.name));
+  expect(screen.getByRole('heading', { name: 'Create policy' })).toBeVisible();
+  expect(screen.getByText(updatedRule.name)).toBeVisible();
 });

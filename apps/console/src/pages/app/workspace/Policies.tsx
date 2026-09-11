@@ -76,7 +76,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                 <Library className="mr-1 h-4 w-4" />
                 Create rule
               </Button>
-              <Button disabled={!policyEditorReady || !rules.data?.length} onClick={() => editPolicy(null)}>
+              <Button disabled={!policyEditorReady} onClick={() => editPolicy(null)}>
                 <Plus className="mr-1 h-4 w-4" />
                 Create policy
               </Button>
@@ -130,12 +130,25 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
       </Tabs>
       {canManage && keys.data && rules.data && (
         <PolicyEditor
+          key={editingPolicy ? `${editingPolicy.id}:${editingPolicy.updated_at}` : 'new-policy'}
           policy={editingPolicy}
           open={policyOpen}
           onOpenChange={setPolicyOpen}
           keys={keys.data}
           rules={rules.data}
           pending={policyMutations.create.isPending || policyMutations.update.isPending}
+          ruleComposer={
+            catalog.data
+              ? {
+                  catalog: catalog.data,
+                  usageByRuleId: usageReady ? usageByRuleId : null,
+                  createPending: ruleMutations.create.isPending,
+                  updatePending: ruleMutations.update.isPending,
+                  create: (data) => ruleMutations.create.mutateAsync({ orgId, workspaceRef, data }),
+                  update: (rule, data) => ruleMutations.update.mutateAsync({ orgId, workspaceRef, ruleId: rule.id, data }),
+                }
+              : undefined
+          }
           onSubmit={(data) =>
             editingPolicy
               ? policyMutations.update.mutateAsync({ orgId, workspaceRef, policyId: editingPolicy.id, data })

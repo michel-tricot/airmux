@@ -4,21 +4,26 @@ import { Button, Input } from '@/components/ui/elements';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-export interface ModelPickerOption {
+export interface SearchPickerOption {
   value: string;
   label: ReactNode;
   searchText: string;
 }
 
-interface ModelPickerBaseProps {
-  options: ModelPickerOption[];
+interface SearchPickerBaseProps {
+  options: SearchPickerOption[];
+  title: string;
+  description: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  emptyMessage: string;
   disabled?: boolean;
   className?: string;
   id?: string;
   'aria-label'?: string;
 }
 
-interface SingleModelPickerProps extends ModelPickerBaseProps {
+interface SingleSearchPickerProps extends SearchPickerBaseProps {
   mode?: 'single';
   value: string;
   onValueChange: (value: string) => void;
@@ -26,19 +31,17 @@ interface SingleModelPickerProps extends ModelPickerBaseProps {
   placeholder?: string;
 }
 
-interface MultipleModelPickerProps extends ModelPickerBaseProps {
+interface MultipleSearchPickerProps extends SearchPickerBaseProps {
   mode: 'multiple';
   values: readonly string[];
   onValuesChange: (values: string[]) => void;
   emptyLabel: string;
-  title: string;
-  description: string;
-  searchLabel: string;
+  selectionNoun: string;
 }
 
-type ModelPickerProps = SingleModelPickerProps | MultipleModelPickerProps;
+type SearchPickerProps = SingleSearchPickerProps | MultipleSearchPickerProps;
 
-export function ModelPicker(props: ModelPickerProps) {
+export function SearchPicker(props: SearchPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -71,7 +74,7 @@ export function ModelPicker(props: ModelPickerProps) {
     );
   };
 
-  const selectOption = (option: ModelPickerOption) => {
+  const selectOption = (option: SearchPickerOption) => {
     if (multiple) {
       const selected = props.values.includes(option.value);
       props.onValuesChange(selected ? props.values.filter((value) => value !== option.value) : [...props.values, option.value]);
@@ -85,8 +88,8 @@ export function ModelPicker(props: ModelPickerProps) {
   const triggerLabel = multiple
     ? props.values.length === 0
       ? props.emptyLabel
-      : `${props.values.length} ${props.values.length === 1 ? 'model' : 'models'} selected`
-    : (selected?.label ?? props.placeholder ?? 'Select model');
+      : `${props.values.length} ${props.selectionNoun}${props.values.length === 1 ? '' : 's'} selected`
+    : (selected?.label ?? props.placeholder ?? 'Select…');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,15 +116,15 @@ export function ModelPicker(props: ModelPickerProps) {
         }}
       >
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-base">{multiple ? props.title : 'Select model'}</DialogTitle>
-          <DialogDescription>{multiple ? props.description : 'Search by model or provider name'}</DialogDescription>
+          <DialogTitle className="text-base">{props.title}</DialogTitle>
+          <DialogDescription>{props.description}</DialogDescription>
         </DialogHeader>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type={multiple ? 'search' : 'text'}
             role={multiple ? undefined : 'combobox'}
-            aria-label={multiple ? props.searchLabel : undefined}
+            aria-label={props.searchLabel}
             aria-controls={multiple ? undefined : listboxId}
             aria-expanded={multiple ? undefined : true}
             aria-activedescendant={!multiple && highlightedOption ? `${listboxId}-${highlightedIndex}` : undefined}
@@ -151,7 +154,7 @@ export function ModelPicker(props: ModelPickerProps) {
                 onOpenChange(false);
               }
             }}
-            placeholder={multiple ? 'Search models or providers...' : 'Search models...'}
+            placeholder={props.searchPlaceholder}
             className="pl-9"
           />
         </div>
@@ -181,7 +184,7 @@ export function ModelPicker(props: ModelPickerProps) {
               </Button>
             );
           })}
-          {visibleOptions.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted-foreground">No matching models</p>}
+          {visibleOptions.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted-foreground">{props.emptyMessage}</p>}
         </div>
         {multiple && (
           <div className="flex justify-end">

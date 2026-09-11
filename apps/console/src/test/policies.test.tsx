@@ -167,6 +167,55 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'Edit First rule' })).toBeEnabled();
   });
 
+  it('allows policy creation before the rule library has any rules', async () => {
+    server.use(http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })));
+    renderPolicies();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled());
+  });
+
+  it('creates a shared rule from policy creation and keeps it when the policy is canceled', async () => {
+    const user = userEvent.setup();
+    let submittedRule: Api.RuleCreate | undefined;
+    let workspaceRules: Api.RuleOut[] = [];
+    const createdRule: Api.RuleOut = {
+      id: '01990aa3-4b4c-7000-8000-000000000010',
+      org_id: ORG.id,
+      workspace_id: WORKSPACES[0].id,
+      name: 'Inline strict parameters',
+      definition: { match: { kind: 'all_requests' }, action: { kind: 'strict_parameters' } },
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    };
+    server.use(
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: workspaceRules })),
+      http.post('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', async ({ request }) => {
+        submittedRule = (await request.json()) as Api.RuleCreate;
+        workspaceRules = [createdRule];
+        return HttpResponse.json<{ data: Api.RuleOut }>({ data: createdRule });
+      }),
+      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
+    );
+    renderPolicies();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Create policy' }));
+    await user.type(screen.getByLabelText('Policy name'), 'Unsaved policy');
+    await user.click(screen.getByRole('button', { name: 'Create rule' }));
+    await user.click(screen.getByRole('button', { name: 'Parameter support' }));
+    await user.type(screen.getByLabelText('Rule name'), createdRule.name);
+    await user.click(screen.getByRole('button', { name: 'Create and add rule' }));
+
+    await waitFor(() => expect(submittedRule?.name).toBe(createdRule.name));
+    expect(screen.getByText(createdRule.name)).toBeVisible();
+    expect(screen.getByText('New')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('tab', { name: 'Rule library' }));
+
+    expect(await screen.findByText(createdRule.name)).toBeVisible();
+  });
+
   it('chooses a rule type before opening its focused form', async () => {
     const user = userEvent.setup();
     renderPolicies();

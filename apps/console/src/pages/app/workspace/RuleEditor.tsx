@@ -1,10 +1,12 @@
-import type { UseFormReturn } from 'react-hook-form';
+import type { ReactNode } from 'react';
+import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
 import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { ModelPicker } from '@/components/shared/model-picker';
-import { Alert, AlertDescription, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { SearchPicker } from '@/components/shared/search-picker';
+import { Alert, AlertDescription, Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
 import { ModelBadges } from '@/features/rules/presentation';
 import { ruleType, type RuleKind } from '@/features/rules/types';
@@ -114,13 +116,16 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
               <FormItem>
                 <FormLabel>Requested models</FormLabel>
                 <FormControl>
-                  <ModelPicker
+                  <SearchPicker
                     mode="multiple"
                     aria-label="Requested models"
                     emptyLabel="Any model"
                     title="Select requested models"
                     description="Search by model or provider name"
                     searchLabel="Search requested models"
+                    searchPlaceholder="Search models or providers..."
+                    emptyMessage="No matching models"
+                    selectionNoun="model"
                     values={field.value}
                     onValuesChange={field.onChange}
                     options={modelOptions}
@@ -232,13 +237,16 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
                     options={providerOptions}
                   />
                 ) : (
-                  <ModelPicker
+                  <SearchPicker
                     mode="multiple"
                     aria-label="Allowed routes"
                     emptyLabel="Choose routes"
                     title={kind === 'fallback' ? 'Select backup models' : 'Select allowed models'}
                     description="Search by model or provider name"
                     searchLabel="Search allowed routes"
+                    searchPlaceholder="Search models or providers..."
+                    emptyMessage="No matching models"
+                    selectionNoun="model"
                     values={field.value}
                     onValuesChange={field.onChange}
                     options={modelOptions}
@@ -335,6 +343,55 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
         </>
       )}
     </>
+  );
+}
+
+export function RuleFormContent({
+  rule,
+  kind,
+  catalog,
+  pending,
+  submitLabel,
+  onSubmit,
+  onBack,
+  intro,
+}: {
+  rule: RuleOut | null;
+  kind: RuleKind;
+  catalog: TaxonomyOut;
+  pending: boolean;
+  submitLabel: string;
+  onSubmit: (payload: RuleCreate) => Promise<unknown>;
+  onBack: () => void;
+  intro?: ReactNode;
+}) {
+  const form = useForm<RuleForm>({
+    resolver: zodResolver(ruleFormSchema) as Resolver<RuleForm>,
+    defaultValues: rule ? ruleForm(rule) : { ...ruleDefaults, kind },
+  });
+  const handleSubmit = form.handleSubmit(async (values) => {
+    try {
+      await onSubmit(rulePayload(values));
+    } catch {
+      return;
+    }
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {intro}
+        <RuleFields form={form} catalog={catalog} kind={kind} />
+        <div className="flex justify-between gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onBack}>
+            Back to policy
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {submitLabel}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
 
