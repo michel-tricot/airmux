@@ -5,7 +5,7 @@ import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2 
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
-import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
+import { useUsers, useChangeOrgRoleMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
 import { useOrgAccessKeys, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
@@ -41,6 +41,8 @@ export default function OrganizationDetail() {
   const canCreateWorkspace = authorization.can(workspaceAccess.create);
   const canReadKeys = authorization.can(accessKeyAccess.org.read);
   const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const changeRole = useChangeOrgRoleMutation();
+  const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
   const canAddMembers = authorization.can(orgMemberAccess.add);
   const canRemoveMembers = authorization.can(orgMemberAccess.remove);
@@ -221,6 +223,15 @@ export default function OrganizationDetail() {
         {canReadMembers && (
           <TabsContent value="members" className="space-y-4 mt-0">
             <MembersPanel
+              editRole={
+                canChangeRole
+                  ? {
+                      roles: orgRoleOptions,
+                      pending: changeRole.isPending,
+                      onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                    }
+                  : undefined
+              }
               heading="Organization Members"
               members={members}
               isLoading={membersQuery.isLoading}

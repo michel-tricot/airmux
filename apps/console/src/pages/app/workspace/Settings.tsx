@@ -4,6 +4,7 @@ import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
 import {
   useWorkspaceMembers,
+  useChangeWorkspaceRoleMutation,
   useWorkspaceMemberCandidates,
   useAddWorkspaceMemberMutation,
   useRemoveWorkspaceMemberMutation,
@@ -36,6 +37,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const workspace = workspaceQuery.data;
   const workspaceAuthorization = useAuthorization('workspace');
   const orgAuthorization = useAuthorization('org');
+  const changeRole = useChangeWorkspaceRoleMutation(orgId, workspaceRef);
   const canReadMembers = workspaceAuthorization.can(workspaceMemberAccess.read);
   const canListCandidates = workspaceAuthorization.can(workspaceMemberAccess.listCandidates);
   const canAddMembers = workspaceAuthorization.can(workspaceMemberAccess.add);
@@ -98,6 +100,16 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
       {canReadMembers && (
         <div className="space-y-3">
           <MembersPanel
+            editRole={
+              canAddMembers
+                ? {
+                    roles: workspaceRoleOptions,
+                    pending: changeRole.isPending,
+                    onSave: (member, role) =>
+                      changeRole.mutateAsync({ orgId, workspaceRef, userId: member.user_id, data: { role: role as WorkspaceRole } }),
+                  }
+                : undefined
+            }
             heading={
               <span className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-muted-foreground" /> Members

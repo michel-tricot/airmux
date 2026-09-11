@@ -9,7 +9,7 @@ from sqlalchemy import CheckConstraint, Column, ForeignKey, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.authz import InstanceRole  # noqa: TC001 pydantic resolves this enum annotation at runtime
+from control_plane.authz import InstanceRole
 from control_plane.db import current_session
 from control_plane.models.access_key import AccessKeyGrantIn, AccessKeyMintedOut
 from control_plane.models.audit import audited
@@ -24,6 +24,7 @@ EMAIL_MAX_LENGTH = 320
 
 # Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
 _CLAIM_LOCK = 0x41524C4C
+_INSTANCE_ROLE_LOCK = 0x41524C52
 
 
 @audited
@@ -139,6 +140,23 @@ class User(Record, Identified, Tombstonable, table=True):
         await self.delete()
 
     @classmethod
+    async def change_instance_role(cls, user_id: UUID, instance_role: InstanceRole | None) -> Self | None:
+        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _INSTANCE_ROLE_LOCK})
+        user = await cls.find_by_id(user_id)
+        if user is None:
+            return None
+        if user.managing_org_id is not None:
+            msg = "Organization-managed service accounts cannot hold an instance role"
+            raise ValueError(msg)
+        if user.instance_role == InstanceRole.owner and instance_role != InstanceRole.owner:
+            owners = await cls.find(cls.instance_role == InstanceRole.owner)
+            if len(owners) == 1:
+                msg = "Cannot demote the last instance owner"
+                raise ValueError(msg)
+        user.instance_role = instance_role
+        return await user.save()
+
+    @classmethod
     def new_service_account(cls, name: str, instance_role: InstanceRole | None = None, managing_org_id: UUID | None = None) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
@@ -164,6 +182,10 @@ class ServiceAccountNameIn(RequestModel):
             msg = "name must contain at least one letter or digit"
             raise ValueError(msg)
         return v
+
+
+class InstanceRoleIn(RequestModel):
+    instance_role: InstanceRole | None = Field(description="Instance-wide role to assign, or null to remove instance-wide access")
 
 
 class ServiceAccountIn(ServiceAccountNameIn):

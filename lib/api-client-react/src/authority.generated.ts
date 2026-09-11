@@ -114,6 +114,14 @@ export const operationAuthority = {
       },
     ],
   },
+  changeInstanceRole: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["principals.manage"],
+      },
+    ],
+  },
   listOrgs: {
     checks: [
       {

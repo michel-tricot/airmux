@@ -1106,6 +1106,52 @@ paths:
       - scope: instance_scope
         anyOf:
         - principals.read
+  /api/v1/users/{user_id}/instance-role:
+    put:
+      tags:
+      - Instance Users
+      summary: Change Instance Role
+      operationId: change_instance_role
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+        description: User or service-account ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceRoleIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_UserOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - principals.manage
+      description: 'Required permission: `principals.manage`.'
   /api/v1/orgs:
     get:
       tags:
@@ -5727,6 +5773,18 @@ components:
       - auditor
       - data_plane
       title: InstanceRole
+    InstanceRoleIn:
+      properties:
+        instance_role:
+          anyOf:
+          - $ref: '#/components/schemas/InstanceRole'
+          - type: 'null'
+          description: Instance-wide role to assign, or null to remove instance-wide access
+      additionalProperties: false
+      type: object
+      required:
+      - instance_role
+      title: InstanceRoleIn
     InvitationAcceptedOut:
       properties:
         invitation_id:

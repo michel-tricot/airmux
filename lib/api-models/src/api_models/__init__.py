@@ -522,6 +522,16 @@ class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
     root: Annotated[Literal["owner", "auditor", "data_plane"], Field(title="InstanceRole")]
 
 
+class InstanceRoleIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    instance_role: Annotated[
+        InstanceRole | None,
+        Field(description="Instance-wide role to assign, or null to remove instance-wide access"),
+    ]
+
+
 class InvitationAcceptedOut(BaseModel):
     invitation_id: Annotated[UUID, Field(title="Invitation Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]

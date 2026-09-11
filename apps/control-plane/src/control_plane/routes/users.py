@@ -15,7 +15,7 @@ from control_plane.authz import Permission
 from control_plane.deps import instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.user import ServiceAccountIn, UserOut
+from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
 
 router = APIRouter()
 
@@ -71,3 +71,15 @@ async def list_users(service_account: bool | None = None) -> Envelope[list[UserO
     for m in memberships:
         orgs_by_user.setdefault(m.user_id, []).append(m.org_id)
     return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
+
+
+@router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_manage)])
+async def change_instance_role(user_id: UUID, body: InstanceRoleIn) -> Envelope[UserOut]:
+    try:
+        user = await User.change_instance_role(user_id, body.instance_role)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
+    return Envelope(data=_user_out(user, [membership.org_id for membership in memberships]))

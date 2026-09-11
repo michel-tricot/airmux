@@ -37,6 +37,11 @@ interface MembersPanelProps<T extends MemberRow> {
     onAdd: (userId: string, role: string) => Promise<unknown>;
     pending: boolean;
   };
+  editRole?: {
+    roles: Array<{ value: string; label: string }>;
+    onSave: (member: T, role: string) => Promise<unknown>;
+    pending: boolean;
+  };
   remove?: {
     title: (member: T) => string;
     description: string;
@@ -59,8 +64,10 @@ export function MembersPanel<T extends MemberRow>({
   actions,
   add,
   remove,
+  editRole,
 }: MembersPanelProps<T>) {
   const [addOpen, setAddOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<T | null>(null);
 
   const columns: Array<Column<T>> = [
     {
@@ -75,7 +82,26 @@ export function MembersPanel<T extends MemberRow>({
       cellClassName: 'text-muted-foreground',
       cell: (member) => (renderEmail ? renderEmail(member) : (member.email ?? member.user_id)),
     },
-    { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
+    {
+      key: 'role',
+      header: 'Role',
+      cellClassName: 'text-muted-foreground',
+      cell: (member) => (
+        <div className="flex items-center gap-2">
+          {member.role}
+          {editRole && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Change role for ${member.name ?? member.user_id}`}
+              onClick={() => setEditingMember(member)}
+            >
+              Change role
+            </Button>
+          )}
+        </div>
+      ),
+    },
     ...extraColumns,
   ];
   if (remove) {
@@ -125,6 +151,38 @@ export function MembersPanel<T extends MemberRow>({
           empty={emptyText}
         />
       </Card>
+
+      {editRole && editingMember && (
+        <FormDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingMember(null);
+          }}
+          title="Change role"
+          description={`Change the role for ${editingMember.name ?? editingMember.user_id}`}
+          schema={z.object({ role: z.string().refine((role) => editRole.roles.some((option) => option.value === role), 'Select a role') })}
+          defaultValues={{ role: editingMember.role }}
+          onSubmit={({ role }) => editRole.onSave(editingMember, role)}
+          submitLabel="Save role"
+          pending={editRole.pending}
+        >
+          {(form) => (
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <FormControl>
+                    <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={editRole.roles} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </FormDialog>
+      )}
 
       {add && (
         <FormDialog

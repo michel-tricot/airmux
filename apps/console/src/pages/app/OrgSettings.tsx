@@ -1,3 +1,5 @@
+import type { OrgRole } from '@workspace/api-client-react';
+import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId } from '@/lib/session';
@@ -39,6 +41,8 @@ export default function AppOrgSettings() {
   const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
   const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
+  const changeRole = useChangeOrgRoleMutation();
+  const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
   const canListInvitations = authorization.can(orgMemberAccess.listInvitations);
   const canCreateInvitations = authorization.can(orgMemberAccess.invite);
@@ -206,6 +210,15 @@ export default function AppOrgSettings() {
           <TabsContent value="members" className="space-y-4 mt-0">
             {canReadMembers ? (
               <MembersPanel
+                editRole={
+                  canChangeRole
+                    ? {
+                        roles: orgRoleOptions,
+                        pending: changeRole.isPending,
+                        onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                      }
+                    : undefined
+                }
                 heading="Organization Members"
                 members={members}
                 isLoading={membersQuery.isLoading}

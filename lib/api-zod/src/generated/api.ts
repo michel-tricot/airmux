@@ -771,6 +771,32 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 
 
 /**
+ * Required permission: `principals.manage`.
+ * @summary Change Instance Role
+ */
+export const ChangeInstanceRoleParams = zod.object({
+  "user_id": zod.uuid().describe('User or service-account ID')
+})
+
+export const ChangeInstanceRoleBody = zod.object({
+  "instance_role": zod.union([zod.enum(['owner', 'auditor', 'data_plane']),zod.null()]).describe('Instance-wide role to assign, or null to remove instance-wide access')
+})
+
+export const ChangeInstanceRoleResponse = zod.object({
+  "id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "instance_role": zod.union([zod.string(),zod.null()]),
+  "service_account": zod.boolean(),
+  "managing_org_id": zod.union([zod.uuid(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "orgs": zod.array(zod.uuid())
+})
+
+
+/**
  * List every organization on the instance.
  *
  * Required permission: `organizations.read`.

@@ -294,3 +294,70 @@ def test_access_key_listing_shows_the_principal(tmp_path):
         listed = {key["id"]: key["user_id"] for key in client.get("/api/v1/instance/access-keys", headers=root).json()["data"]}
         assert listed[minted["id"]] == user_id
         assert all(principal for principal in listed.values())
+
+
+def test_instance_role_change_updates_authority_and_can_clear_role(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    user = make_user(tmp_path, "roles@example.com")
+    with TestClient(cp.app) as client:
+        for role in ("owner", "auditor", "data_plane", None):
+            changed = client.put(f"/api/v1/users/{user.id}/instance-role", json={"instance_role": role}, headers=root)
+            assert changed.status_code == 200, changed.text
+            assert changed.json()["data"]["instance_role"] == role
+            assert client.get(f"/api/v1/users/{user.id}", headers=root).json()["data"]["instance_role"] == role
+
+
+def test_instance_role_change_rejects_invalid_input_and_missing_user(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    user = make_user(tmp_path, "roles@example.com")
+    with TestClient(cp.app) as client:
+        for body in ({}, {"instance_role": "admin"}, {"instance_role": "owner", "name": "changed"}):
+            assert client.put(f"/api/v1/users/{user.id}/instance-role", json=body, headers=root).status_code == 422
+        assert client.put(f"/api/v1/users/{uuid7()}/instance-role", json={"instance_role": None}, headers=root).status_code == 404
+
+
+def test_last_instance_owner_cannot_be_demoted(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        owner = next(user for user in client.get("/api/v1/users", headers=root).json()["data"] if user["email"] == FIXTURE_ADMIN_EMAIL)
+        response = client.put(f"/api/v1/users/{owner['id']}/instance-role", json={"instance_role": None}, headers=root)
+        assert response.status_code == 409
+        assert client.get(f"/api/v1/users/{owner['id']}", headers=root).json()["data"]["instance_role"] == "owner"
+
+
+def test_role_changes_require_instance_management_and_take_effect_immediately(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app, base_url="https://testserver") as client:
+        user_id = client.post("/api/v1/auth/signup", json={"email": "roles@example.com", "name": "Roles", "password": "hunter2-hunter2"}).json()[
+            "data"
+        ]["user_id"]
+        path = f"/api/v1/users/{user_id}/instance-role"
+        csrf = {"X-Requested-With": "fetch"}
+        assert client.put(path, json={"instance_role": "owner"}, headers=csrf).status_code == 403
+        assert client.put(path, json={"instance_role": "owner"}, headers=root).status_code == 200
+        assert client.get("/api/v1/users", headers=csrf).status_code == 200
+        assert client.put(path, json={"instance_role": "auditor"}, headers=csrf).status_code == 200
+        assert client.put(path, json={"instance_role": "owner"}, headers=csrf).status_code == 403
+        assert client.put(path, json={"instance_role": None}, headers=root).status_code == 200
+        assert client.get("/api/v1/users", headers=csrf).status_code == 403
+
+
+def test_managed_service_account_cannot_gain_instance_role(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, root, "managed")
+
+        async def managed_account():
+            await set_actor(actor_id)
+            return await User.new_service_account("Managed", managing_org_id=org_id).save()
+
+        actor_id = make_user(tmp_path, "actor@example.com").id
+        user = run_in_db(tmp_path, managed_account)
+        response = client.put(f"/api/v1/users/{user.id}/instance-role", json={"instance_role": "owner"}, headers=root)
+        assert response.status_code == 409
+        assert client.get(f"/api/v1/users/{user.id}", headers=root).json()["data"]["instance_role"] is None

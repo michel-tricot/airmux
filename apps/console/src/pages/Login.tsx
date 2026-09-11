@@ -100,10 +100,10 @@ export default function Login({
           <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center mb-4 shadow-md">
             <TerminalSquare className="w-6 h-6" />
           </div>
-          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
+          <h1 className="text-base sm:text-xl font-mono font-bold tracking-wide uppercase">
             {heading ??
               (unclaimedInstance
-                ? 'Create administrator account'
+                ? 'Create admin account'
                 : activeMode === 'choice'
                   ? 'Continue'
                   : activeMode === 'login'

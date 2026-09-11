@@ -62,6 +62,7 @@ import type {
   InferenceKeyMintedOut,
   InferenceKeyOut,
   InferenceKeyRevokedOut,
+  InstanceRoleIn,
   InvitationAcceptedOut,
   InvitationPreviewOut,
   InvitationTokenIn,
@@ -2675,6 +2676,79 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
 
 
+
+export const getChangeInstanceRoleUrl = (userId: string,) => {
+
+
+
+
+  return `/api/v1/users/${userId}/instance-role`
+}
+
+/**
+ * Required permission: `principals.manage`.
+ * @summary Change Instance Role
+ */
+export const changeInstanceRole = async (userId: string,
+    instanceRoleIn: InstanceRoleIn, options?: Parameters<typeof customFetch>[1]): Promise<UserOut> => {
+
+  return customFetch<UserOut>(getChangeInstanceRoleUrl(userId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(instanceRoleIn)
+  }
+);}
+
+
+
+
+
+export const getChangeInstanceRoleMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeInstanceRole>>, TError,{userId: string;data: BodyType<InstanceRoleIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeInstanceRole>>, TError,{userId: string;data: BodyType<InstanceRoleIn>}, TContext> => {
+
+const mutationKey = ['changeInstanceRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeInstanceRole>>, {userId: string;data: BodyType<InstanceRoleIn>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  changeInstanceRole(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeInstanceRoleMutationResult = NonNullable<Awaited<ReturnType<typeof changeInstanceRole>>>
+    export type ChangeInstanceRoleMutationBody = BodyType<InstanceRoleIn>
+    export type ChangeInstanceRoleMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Change Instance Role
+ */
+export const useChangeInstanceRole = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeInstanceRole>>, TError,{userId: string;data: BodyType<InstanceRoleIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeInstanceRole>>,
+        TError,
+        {userId: string;data: BodyType<InstanceRoleIn>},
+        TContext
+      > => {
+      return useMutation(getChangeInstanceRoleMutationOptions(options), queryClient);
+    }
 
 export const getListOrgsUrl = () => {
 

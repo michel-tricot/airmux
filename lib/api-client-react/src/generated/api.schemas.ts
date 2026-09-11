@@ -878,6 +878,11 @@ export const InstanceRole = {
   data_plane: 'data_plane',
 } as const;
 
+export interface InstanceRoleIn {
+  /** Instance-wide role to assign, or null to remove instance-wide access */
+  instance_role: InstanceRole | null;
+}
+
 export interface InvitationAcceptedOut {
   invitation_id: string;
   org_id: string;

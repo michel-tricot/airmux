@@ -78,6 +78,7 @@ export default function UsersList() {
               header: 'Kind',
               cell: (user) => <AccountKindBadge serviceAccount={user.service_account} />,
             },
+            { key: 'role', header: 'Instance role', cell: (user) => user.instance_role ?? 'None' },
             {
               key: 'orgs',
               header: 'Organizations',
