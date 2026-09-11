@@ -123,19 +123,20 @@ export function PermissionChecklist({
           {value.length} selected
         </span>
       </div>
-      <div className="h-80 max-h-[40vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
+      <div className="h-64 max-h-[40vh] overflow-y-auto overscroll-contain rounded-md border border-border px-2">
         {groups.length === 0 && (
           <p className="rounded-lg border border-dashed border-border py-8 text-center text-sm text-muted-foreground">No matching permissions</p>
         )}
         {groups.map(({ resource, label, permissions }) => (
-          <fieldset key={resource} aria-label={label} className="min-w-0 rounded-lg border border-border bg-muted/20 p-3">
-            <div className="mb-2.5 flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">{label}</span>
-              <span className="text-[11px] tabular-nums text-muted-foreground">
-                {permissions.filter((permission) => value.includes(permission)).length} / {permissions.length}
-              </span>
+          <fieldset
+            key={resource}
+            aria-label={label}
+            className="flex min-w-0 flex-col gap-2 border-b border-border py-2 last:border-0 sm:flex-row sm:items-center sm:gap-3"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 sm:w-36">
+              <span className="text-xs font-medium">{label}</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {permissions.map((permission) => {
                 const checked = value.includes(permission);
                 return (
@@ -150,7 +151,7 @@ export function PermissionChecklist({
                     disabled={!checked && !grantablePermissions.includes(permission)}
                     onClick={() => onChange(checked ? value.filter((item) => item !== permission) : [...value, permission])}
                     className={cn(
-                      'gap-1.5 rounded-md font-sans text-xs font-medium normal-case tracking-normal transition-colors',
+                      'h-7 gap-1 rounded px-2 font-sans text-[11px] font-medium normal-case tracking-normal transition-colors',
                       checked
                         ? 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/20'
                         : 'border-border bg-background text-muted-foreground hover:text-foreground',

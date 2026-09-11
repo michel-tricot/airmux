@@ -67,6 +67,9 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
   await user.click(screen.getByRole('button', { name: 'I have saved it' }));
   expect(screen.queryByDisplayValue('workspace-management-secret')).not.toBeInTheDocument();
   expect(await screen.findByText('workspace-ci')).toBeInTheDocument();
+  const table = screen.getByRole('table');
+  expect(within(table).getByText('Owner')).toBeInTheDocument();
+  expect(within(table).getByText('Dev')).toBeInTheDocument();
 });
 
 it('hides management key settings without permission', async () => {

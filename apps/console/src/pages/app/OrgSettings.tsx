@@ -4,7 +4,7 @@ import type { OrgRole } from '@workspace/api-client-react';
 import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
-import { useRequiredOrgId } from '@/lib/session';
+import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
 import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
@@ -42,6 +42,7 @@ const orgServiceAccountSchema = managementKeyFormSchema.extend({
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
+  const { user } = useSession();
   const authorization = useAuthorization('org');
   const canReadKeys = authorization.can(managementKeyAccess.org.read);
   const canIssueKey = authorization.can(managementKeyAccess.org.issue);
@@ -140,6 +141,12 @@ export default function AppOrgSettings() {
               )}
             </div>
             <ManagementKeysTable
+              owners={
+                new Map<string, { name: string }>([
+                  ...(members ?? []).map((member) => [member.user_id, member] as const),
+                  ...(user ? [[user.user_id, user] as const] : []),
+                ])
+              }
               canEditPermissions={authorization.can(managementKeyAccess.org.updatePermissions)}
               resource="management keys"
               keys={keysQuery.data}

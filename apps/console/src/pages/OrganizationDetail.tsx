@@ -16,7 +16,6 @@ import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
-import { AccountIdentity } from '@/components/shared/account-display';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
@@ -202,6 +201,8 @@ export default function OrganizationDetail() {
               <h2 className="text-lg font-semibold">Management Keys</h2>
             </div>
             <ManagementKeysTable
+              owners={usersById}
+              ownerHref={(userId) => `/instance/users/${userId}`}
               canEditPermissions={authorization.can(managementKeyAccess.org.updatePermissions)}
               resource="management keys"
               keys={keysQuery.data}
@@ -210,17 +211,6 @@ export default function OrganizationDetail() {
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
               emptyText="No management keys for this organization."
-              extraColumns={[
-                {
-                  key: 'user',
-                  header: 'Principal',
-                  cellClassName: 'text-muted-foreground text-sm',
-                  cell: (key) => {
-                    const user = usersById.get(key.user_id);
-                    return user ? <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} /> : key.user_id;
-                  },
-                },
-              ]}
               revokeDescription="This key and every key delegated from it will stop working immediately."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}

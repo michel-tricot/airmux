@@ -1,3 +1,7 @@
+import { useSession } from '@/lib/session';
+import { useWorkspaceMembers } from '@/features/members/hooks';
+import { workspaceMemberAccess } from '@/features/members/policy';
+import { ErrorState } from '@/components/shared/states';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/elements';
@@ -12,6 +16,8 @@ import { useWorkspaceManagementKeys, useCreateWorkspaceManagementKeyMutation, us
 
 export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string; workspaceId: string }) {
   const authorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef: workspaceId });
+  const { user } = useSession();
+  const members = useWorkspaceMembers(orgId, workspaceId, { enabled: authorization.can(workspaceMemberAccess.read) });
   const canRead = authorization.can(managementKeyAccess.workspace.read);
   const canIssue = authorization.can(managementKeyAccess.workspace.issue);
   const canRevoke = authorization.can(managementKeyAccess.workspace.revoke);
@@ -34,7 +40,14 @@ export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string;
           )
         }
       />
+      {members.isError && <ErrorState error={members.error} resource="key owners" onRetry={() => members.refetch()} />}
       <ManagementKeysTable
+        owners={
+          new Map<string, { name: string }>([
+            ...(members.data ?? []).map((member) => [member.user_id, member] as const),
+            ...(user ? [[user.user_id, user] as const] : []),
+          ])
+        }
         canEditPermissions={canIssue}
         resource="management keys"
         keys={keys.data}

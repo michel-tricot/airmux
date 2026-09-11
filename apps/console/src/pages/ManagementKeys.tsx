@@ -12,7 +12,6 @@ import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { userAccess } from '@/features/users/policy';
-import { AccountIdentity } from '@/components/shared/account-display';
 
 export default function ManagementKeys() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,6 +45,8 @@ export default function ManagementKeys() {
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
       <ManagementKeysTable
+        owners={usersById}
+        ownerHref={(userId) => `/instance/users/${userId}`}
         canEditPermissions={authorization.can(managementKeyAccess.instance.updatePermissions)}
         resource="management keys"
         keys={keysQuery.data}
@@ -54,21 +55,6 @@ export default function ManagementKeys() {
         error={keysQuery.error}
         onRetry={() => keysQuery.refetch()}
         emptyText="No management keys generated."
-        extraColumns={[
-          {
-            key: 'principal',
-            header: 'Principal',
-            cellClassName: 'text-sm',
-            cell: (key) => {
-              const user = usersById.get(key.user_id);
-              return user ? (
-                <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} />
-              ) : (
-                <span className="font-mono text-xs text-muted-foreground">{key.user_id}</span>
-              );
-            },
-          },
-        ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
         onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
         revokePending={canRevoke ? revokeKey.isPending : undefined}

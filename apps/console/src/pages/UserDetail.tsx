@@ -192,6 +192,7 @@ export default function UserDetail() {
           </h2>
 
           <ManagementKeysTable
+            owners={new Map([[user.id, user]])}
             canEditPermissions={authorization.can(managementKeyAccess.instance.updatePermissions)}
             resource="management keys"
             keys={managementKeysQuery.data}
