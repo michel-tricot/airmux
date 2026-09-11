@@ -1,3 +1,4 @@
+import { SettingsLayout } from '@/components/shared/settings-layout';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useRequiredOrgId } from '@/lib/session';
@@ -11,7 +12,7 @@ import {
   workspaceRoleOptions,
 } from '@/features/members/hooks';
 import type { WorkspaceRole } from '@workspace/api-client-react';
-import { Card, Button, ConfirmButton, Input, Label } from '@/components/ui/elements';
+import { Card, Button, ConfirmButton, Input, Label, TabsContent } from '@/components/ui/elements';
 import { Trash2, UserPlus, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { MembersPanel } from '@/components/shared/members-panel';
@@ -68,117 +69,129 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const draft = name ?? workspace.name;
 
   return (
-    <PageShell className="max-w-4xl">
+    <PageShell>
       <PageHeader title="Workspace Settings" description={<span className="font-mono">{workspace.slug}</span>} />
 
-      {canUpdate && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">General</h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              rename.mutate({ orgId, workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
-            }}
-            className="flex items-end gap-3 max-w-md"
-          >
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="ws-name">Workspace name</Label>
-              <Input id="ws-name" required value={draft} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <Button type="submit" disabled={rename.isPending || draft === workspace.name}>
-              Save
-            </Button>
-          </form>
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="ws-slug">Slug</Label>
-            <Input id="ws-slug" readOnly value={workspace.slug} className="font-mono" />
-            <p className="text-xs text-muted-foreground">The workspace slug is used in links and command-line tools and cannot be changed.</p>
-          </div>
-        </Card>
-      )}
-
-      {canReadMembers && (
-        <div className="space-y-3">
-          <MembersPanel
-            editRole={
-              canAddMembers
-                ? {
-                    roles: workspaceRoleOptions,
-                    pending: changeRole.isPending,
-                    onSave: (member, role) =>
-                      changeRole.mutateAsync({ orgId, workspaceRef, userId: member.user_id, data: { role: role as WorkspaceRole } }),
-                  }
-                : undefined
-            }
-            heading={
-              <span className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-muted-foreground" /> Members
-              </span>
-            }
-            members={members}
-            isLoading={membersQuery.isLoading}
-            isError={membersQuery.isError || candidatesQuery.isError}
-            error={membersQuery.error ?? candidatesQuery.error}
-            onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
-            emptyText="No members in this workspace."
-            actions={
-              canInvite ? (
-                <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
-                  <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+      <SettingsLayout
+        categories={[
+          ...(canUpdate ? [{ id: 'general', label: 'General' }] : []),
+          ...(canReadMembers ? [{ id: 'members', label: 'Members' }] : []),
+          ...(canDelete ? [{ id: 'danger', label: 'Danger zone' }] : []),
+        ]}
+      >
+        {canUpdate && (
+          <TabsContent value="general" className="mt-0">
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold">General</h2>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  rename.mutate({ orgId, workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
+                }}
+                className="flex items-end gap-3 max-w-md"
+              >
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="ws-name">Workspace name</Label>
+                  <Input id="ws-name" required value={draft} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <Button type="submit" disabled={rename.isPending || draft === workspace.name}>
+                  Save
                 </Button>
-              ) : undefined
-            }
-            add={
-              canAddMembers
-                ? {
-                    candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
-                    dialogTitle: 'Add Member',
-                    dialogDescription: 'Choose someone who already belongs to this organization.',
-                    placeholder: 'Select an org member',
-                    roles: workspaceRoleOptions,
-                    defaultRole: 'member',
-                    onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
-                    pending: addMember.isPending || candidates === undefined,
-                  }
-                : undefined
-            }
-            remove={
-              canRemoveMembers
-                ? {
-                    title: (member) => `Remove ${member.name} from the workspace?`,
-                    description: 'They lose access to this workspace but stay in the organization.',
-                    onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
-                    pending: removeMember.isPending,
-                  }
-                : undefined
-            }
-          />
-        </div>
-      )}
+              </form>
+              <div className="space-y-2 max-w-md">
+                <Label htmlFor="ws-slug">Slug</Label>
+                <Input id="ws-slug" readOnly value={workspace.slug} className="font-mono" />
+                <p className="text-xs text-muted-foreground">The workspace slug is used in links and command-line tools and cannot be changed.</p>
+              </div>
+            </Card>
+          </TabsContent>
+        )}
 
-      {canDelete && (
-        <Card className="p-6 space-y-4 border-destructive/30">
-          <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
-          <p className="text-sm text-muted-foreground">
-            Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
-          </p>
-          <ConfirmButton
-            variant="outline"
-            size="default"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            title="Delete Workspace"
-            description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
-            confirmLabel="Delete Workspace"
-            pending={remove.isPending}
-            onConfirm={async () => {
-              await remove.mutateAsync({ orgId, workspaceRef });
-              setLocation('/org');
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
-          </ConfirmButton>
-        </Card>
-      )}
+        {canReadMembers && (
+          <TabsContent value="members" className="mt-0 space-y-3">
+            <MembersPanel
+              editRole={
+                canAddMembers
+                  ? {
+                      roles: workspaceRoleOptions,
+                      pending: changeRole.isPending,
+                      onSave: (member, role) =>
+                        changeRole.mutateAsync({ orgId, workspaceRef, userId: member.user_id, data: { role: role as WorkspaceRole } }),
+                    }
+                  : undefined
+              }
+              heading={
+                <span className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-muted-foreground" /> Members
+                </span>
+              }
+              members={members}
+              isLoading={membersQuery.isLoading}
+              isError={membersQuery.isError || candidatesQuery.isError}
+              error={membersQuery.error ?? candidatesQuery.error}
+              onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
+              emptyText="No members in this workspace."
+              actions={
+                canInvite ? (
+                  <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+                    <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+                  </Button>
+                ) : undefined
+              }
+              add={
+                canAddMembers
+                  ? {
+                      candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
+                      dialogTitle: 'Add Member',
+                      dialogDescription: 'Choose someone who already belongs to this organization.',
+                      placeholder: 'Select an org member',
+                      roles: workspaceRoleOptions,
+                      defaultRole: 'member',
+                      onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
+                      pending: addMember.isPending || candidates === undefined,
+                    }
+                  : undefined
+              }
+              remove={
+                canRemoveMembers
+                  ? {
+                      title: (member) => `Remove ${member.name} from the workspace?`,
+                      description: 'They lose access to this workspace but stay in the organization.',
+                      onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
+                      pending: removeMember.isPending,
+                    }
+                  : undefined
+              }
+            />
+          </TabsContent>
+        )}
+
+        {canDelete && (
+          <TabsContent value="danger" className="mt-0">
+            <Card className="p-6 space-y-4 border-destructive/30">
+              <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
+              <p className="text-sm text-muted-foreground">
+                Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
+              </p>
+              <ConfirmButton
+                variant="outline"
+                size="default"
+                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                title="Delete Workspace"
+                description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+                confirmLabel="Delete Workspace"
+                pending={remove.isPending}
+                onConfirm={async () => {
+                  await remove.mutateAsync({ orgId, workspaceRef });
+                  setLocation('/org');
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
+              </ConfirmButton>
+            </Card>
+          </TabsContent>
+        )}
+      </SettingsLayout>
 
       <InvitationDialog
         open={inviteOpen}

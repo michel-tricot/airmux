@@ -42,7 +42,7 @@ export function useRepublishBundleMutation(orgId: string) {
   return useRepublishBundle({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-      meta: { errorMessage: 'We couldn’t publish the policy. Please try again.' },
+      meta: { errorMessage: 'We couldn’t republish the configuration. Please try again.' },
     },
   });
 }

@@ -1,3 +1,5 @@
+import { SettingsLayout } from '@/components/shared/settings-layout';
+import { BundleHistory } from '@/components/shared/bundle-history';
 import type { OrgRole } from '@workspace/api-client-react';
 import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
@@ -7,9 +9,9 @@ import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyM
 import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
-import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import { Card, Button, Badge, ConfirmButton, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Plus, Key, KeyRound, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
+import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
+import { Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
+import { Plus, KeyRound, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
@@ -40,7 +42,6 @@ export default function AppOrgSettings() {
   const canIssueKey = authorization.can(accessKeyAccess.org.issue);
   const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
-  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
   const changeRole = useChangeOrgRoleMutation();
   const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
@@ -53,7 +54,6 @@ export default function AppOrgSettings() {
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
   const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
-  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
   const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
   const activityQuery = useOrgActivity(orgId, { limit: 50 }, { enabled: canReadActivity });
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListInvitations || canCreateInvitations });
@@ -72,14 +72,13 @@ export default function AppOrgSettings() {
 
   const mintKey = useCreateOrgAccessKeyMutation(orgId);
   const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
-  const republish = useRepublishBundleMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const createServiceAccount = useCreateOrgServiceAccountMutation(orgId);
   const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
-  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers || canListInvitations ? 'members' : 'activity';
+
   const memberActions = (
     <>
       {canCreateServiceAccount && (
@@ -96,41 +95,24 @@ export default function AppOrgSettings() {
   );
 
   return (
-    <PageShell className="max-w-5xl">
+    <PageShell>
       <div className="flex items-center gap-4 mb-8">
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
           <Settings className="w-6 h-6 text-primary" />
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage automation credentials and published organization policies.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Manage organization access, members, and activity.</p>
         </div>
       </div>
 
-      <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="mb-4">
-          {canReadKeys && (
-            <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> Automation Keys
-            </TabsTrigger>
-          )}
-          {canReadBundles && (
-            <TabsTrigger value="bundles" className="gap-2">
-              <Package className="w-4 h-4" /> Policies
-            </TabsTrigger>
-          )}
-          {(canReadMembers || canListInvitations) && (
-            <TabsTrigger value="members" className="gap-2">
-              <Users className="w-4 h-4" /> Members
-            </TabsTrigger>
-          )}
-          {canReadActivity && (
-            <TabsTrigger value="activity" className="gap-2">
-              <Activity className="w-4 h-4" /> Activity
-            </TabsTrigger>
-          )}
-        </TabsList>
-
+      <SettingsLayout
+        categories={[
+          ...(canReadKeys ? [{ id: 'keys', label: 'Automation keys' }] : []),
+          ...(canReadMembers || canListInvitations ? [{ id: 'members', label: 'Members' }] : []),
+          ...(canReadActivity || canReadBundles ? [{ id: 'activity', label: 'Activity' }] : []),
+        ]}
+      >
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
@@ -168,41 +150,6 @@ export default function AppOrgSettings() {
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
             />
-          </TabsContent>
-        )}
-
-        {canReadBundles && (
-          <TabsContent value="bundles" className="space-y-4 mt-0">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Access Policies</h2>
-              {canPublishBundles && (
-                <Button onClick={() => republish.mutate({ orgId })} size="sm" disabled={republish.isPending}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> {republish.isPending ? 'Republishing...' : 'Republish policy'}
-                </Button>
-              )}
-            </div>
-            <Card>
-              <DataTable
-                rows={bundlesQuery.data ? [...bundlesQuery.data].reverse() : undefined}
-                rowKey={(bundle) => bundle.id}
-                isLoading={bundlesQuery.isLoading}
-                isError={bundlesQuery.isError}
-                error={bundlesQuery.error}
-                resource="policies"
-                onRetry={() => bundlesQuery.refetch()}
-                empty="No policies have been published yet."
-                columns={[
-                  { key: 'version', header: 'Version', cellClassName: 'font-mono font-medium', cell: (bundle) => `v${bundle.version}` },
-                  { key: 'id', header: 'Policy ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (bundle) => bundle.id },
-                  {
-                    key: 'published',
-                    header: 'Published',
-                    cellClassName: 'text-muted-foreground text-sm',
-                    cell: (bundle) => formatDate(bundle.issued_at),
-                  },
-                ]}
-              />
-            </Card>
           </TabsContent>
         )}
 
@@ -373,26 +320,29 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {canReadActivity && (
+        {(canReadActivity || canReadBundles) && (
           <TabsContent value="activity" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Recent activity</h2>
+              <h2 className="text-lg font-semibold">Activity</h2>
             </div>
-            <Card>
-              <ActivityTable
-                entries={activityQuery.data}
-                isLoading={activityQuery.isLoading}
-                isError={activityQuery.isError}
-                error={activityQuery.error}
-                onRetry={() => activityQuery.refetch()}
-                emptyText="Nothing has changed in this org yet."
-                recordLabel={describeRecord}
-                renderActor={(entry) => members?.find((member) => member.user_id === entry.user_id)?.email ?? entry.user_id}
-              />
-            </Card>
+            {canReadActivity && (
+              <Card>
+                <ActivityTable
+                  entries={activityQuery.data}
+                  isLoading={activityQuery.isLoading}
+                  isError={activityQuery.isError}
+                  error={activityQuery.error}
+                  onRetry={() => activityQuery.refetch()}
+                  emptyText="Nothing has changed in this org yet."
+                  recordLabel={describeRecord}
+                  renderActor={(entry) => members?.find((member) => member.user_id === entry.user_id)?.email ?? entry.user_id}
+                />
+              </Card>
+            )}
+            {canReadBundles && <ConfigurationHistory orgId={orgId} />}
           </TabsContent>
         )}
-      </Tabs>
+      </SettingsLayout>
 
       {canIssueKey && (
         <FormDialog
@@ -532,5 +482,26 @@ export default function AppOrgSettings() {
         copyLabel="Copy link"
       />
     </PageShell>
+  );
+}
+
+function ConfigurationHistory({ orgId }: { orgId: string }) {
+  const bundlesQuery = useBundles(orgId);
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Configuration history</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configuration bundles are generated automatically when organization configuration changes.
+        </p>
+      </div>
+      <BundleHistory
+        bundles={bundlesQuery.data}
+        isLoading={bundlesQuery.isLoading}
+        isError={bundlesQuery.isError}
+        error={bundlesQuery.error}
+        onRetry={() => bundlesQuery.refetch()}
+      />
+    </section>
   );
 }
