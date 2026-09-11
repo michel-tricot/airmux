@@ -7,18 +7,7 @@ import { Alert, AlertDescription, CheckboxDropdown, Dropdown, Input } from '@/co
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
 import { ModelBadges } from '@/features/rules/presentation';
-
-const actionOptions = [
-  { value: 'models', label: 'Allowed models' },
-  { value: 'providers', label: 'Allowed providers' },
-  { value: 'strict_parameters', label: 'Require parameter support' },
-  { value: 'price_limit', label: 'Model price limit' },
-  { value: 'request_limits', label: 'Request limits' },
-  { value: 'credential_access', label: 'Credential access' },
-  { value: 'deny', label: 'Deny matching requests' },
-  { value: 'fallback', label: 'Model fallbacks' },
-  { value: 'budget', label: 'Budget' },
-];
+import { ruleType, type RuleKind } from '@/features/rules/types';
 const failureOptions = [
   { value: 'rate_limited', label: 'Rate limited (429)' },
   { value: 'upstream_unavailable', label: 'Upstream unavailable (5xx or connection failure)' },
@@ -76,8 +65,7 @@ function TextField({
   );
 }
 
-function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog: TaxonomyOut }) {
-  const kind = form.watch('kind');
+function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; catalog: TaxonomyOut; kind: RuleKind }) {
   const match = form.watch('match');
   const names = form.watch('names');
   const providerById = new Map(catalog.providers.map((provider) => [provider.id, provider]));
@@ -186,27 +174,6 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
           <p className="text-sm text-muted-foreground">All selected request criteria must match.</p>
         </>
       )}
-      <FormField
-        control={form.control}
-        name="kind"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Action</FormLabel>
-            <FormControl>
-              <Dropdown
-                value={field.value}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  form.setValue('names', []);
-                }}
-                options={actionOptions}
-                aria-label="Rule action"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
       {kind === 'strict_parameters' && (
         <p className="text-sm text-muted-foreground">Rejects requests when the selected route would drop an unsupported parameter.</p>
       )}
@@ -373,6 +340,7 @@ function RuleFields({ form, catalog }: { form: UseFormReturn<RuleForm>; catalog:
 
 export function RuleEditor({
   rule,
+  kind,
   open,
   onOpenChange,
   onSubmit,
@@ -380,25 +348,27 @@ export function RuleEditor({
   catalog,
 }: {
   rule: RuleOut | null;
+  kind: RuleKind;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: RuleCreate) => Promise<unknown>;
   pending: boolean;
   catalog: TaxonomyOut;
 }) {
+  const type = ruleType(kind);
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={rule ? 'Edit shared rule' : 'Create shared rule'}
-      description="Rules are reusable. Changes apply to every policy that references this rule."
+      title={`${rule ? 'Edit' : 'Create'} ${type.formName}`}
+      description={`${type.description} Rules are reusable across policies.`}
       schema={ruleFormSchema}
-      defaultValues={rule ? ruleForm(rule) : ruleDefaults}
+      defaultValues={rule ? ruleForm(rule) : { ...ruleDefaults, kind }}
       onSubmit={(values) => onSubmit(rulePayload(values))}
       submitLabel="Save rule"
       pending={pending}
     >
-      {(form) => <RuleFields form={form} catalog={catalog} />}
+      {(form) => <RuleFields form={form} catalog={catalog} kind={kind} />}
     </FormDialog>
   );
 }

@@ -10,12 +10,14 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { usePolicies, usePolicyMutations } from '@/features/policies/hooks';
 import { policyAccess } from '@/features/policies/policy';
 import { useRuleMutations, useRules } from '@/features/rules/hooks';
+import type { RuleKind } from '@/features/rules/types';
 import { useRequiredParam } from '@/lib/route';
 import { useRequiredOrgId } from '@/lib/session';
 import { PolicyEditor } from './PolicyEditor';
 import { PolicyTable } from './PolicyTable';
 import { RuleEditor } from './RuleEditor';
 import { RuleLibrary } from './RuleLibrary';
+import { RuleTypePicker } from './RuleTypePicker';
 
 export default function WorkspacePolicies() {
   const orgId = useRequiredOrgId();
@@ -36,6 +38,8 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const [editingPolicy, setEditingPolicy] = useState<PolicyOut | null>(null);
   const [policyOpen, setPolicyOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<RuleOut | null>(null);
+  const [editingRuleKind, setEditingRuleKind] = useState<RuleKind | null>(null);
+  const [ruleTypeOpen, setRuleTypeOpen] = useState(false);
   const [ruleOpen, setRuleOpen] = useState(false);
   const policyEditorReady = keys.data !== undefined && rules.data !== undefined;
   const ruleEditorReady = catalog.data !== undefined;
@@ -48,8 +52,15 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
     setEditingPolicy(policy);
     setPolicyOpen(true);
   };
-  const editRule = (rule: RuleOut | null) => {
+  const createRule = (kind: RuleKind) => {
+    setRuleTypeOpen(false);
+    setEditingRule(null);
+    setEditingRuleKind(kind);
+    setRuleOpen(true);
+  };
+  const editRule = (rule: RuleOut) => {
     setEditingRule(rule);
+    setEditingRuleKind(rule.definition.action.kind);
     setRuleOpen(true);
   };
 
@@ -61,7 +72,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         actions={
           canManage && (
             <div className="flex gap-2">
-              <Button variant="outline" disabled={!ruleEditorReady} onClick={() => editRule(null)}>
+              <Button variant="outline" disabled={!ruleEditorReady} onClick={() => setRuleTypeOpen(true)}>
                 <Library className="mr-1 h-4 w-4" />
                 Create rule
               </Button>
@@ -133,18 +144,24 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         />
       )}
       {canManage && catalog.data && (
-        <RuleEditor
-          rule={editingRule}
-          open={ruleOpen}
-          onOpenChange={setRuleOpen}
-          catalog={catalog.data}
-          pending={ruleMutations.create.isPending || ruleMutations.update.isPending}
-          onSubmit={(data) =>
-            editingRule
-              ? ruleMutations.update.mutateAsync({ orgId, workspaceRef, ruleId: editingRule.id, data })
-              : ruleMutations.create.mutateAsync({ orgId, workspaceRef, data })
-          }
-        />
+        <>
+          <RuleTypePicker open={ruleTypeOpen} onOpenChange={setRuleTypeOpen} onSelect={createRule} />
+          {editingRuleKind && (
+            <RuleEditor
+              rule={editingRule}
+              kind={editingRuleKind}
+              open={ruleOpen}
+              onOpenChange={setRuleOpen}
+              catalog={catalog.data}
+              pending={ruleMutations.create.isPending || ruleMutations.update.isPending}
+              onSubmit={(data) =>
+                editingRule
+                  ? ruleMutations.update.mutateAsync({ orgId, workspaceRef, ruleId: editingRule.id, data })
+                  : ruleMutations.create.mutateAsync({ orgId, workspaceRef, data })
+              }
+            />
+          )}
+        </>
       )}
     </PageShell>
   );

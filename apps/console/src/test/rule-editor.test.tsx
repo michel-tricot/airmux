@@ -34,6 +34,7 @@ it('treats required route selection as a placeholder instead of a checked option
   render(
     <RuleEditor
       rule={null}
+      kind="models"
       open
       onOpenChange={() => {}}
       onSubmit={async (payload) => {
@@ -45,8 +46,6 @@ it('treats required route selection as a placeholder instead of a checked option
   );
 
   await user.type(screen.getByLabelText('Rule name'), 'Approved model');
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Allowed models' }));
   const routes = screen.getByRole('button', { name: 'Allowed routes' });
   expect(routes).toHaveTextContent('Choose routes');
 
@@ -71,6 +70,7 @@ it('shows provider icons in provider rule choices', async () => {
   render(
     <RuleEditor
       rule={null}
+      kind="providers"
       open
       onOpenChange={() => {}}
       onSubmit={async () => {}}
@@ -79,8 +79,6 @@ it('shows provider icons in provider rule choices', async () => {
     />,
   );
 
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Allowed providers' }));
   await user.click(screen.getByRole('button', { name: 'Allowed routes' }));
 
   expect(screen.getByRole('menuitemcheckbox', { name: provider.name }).querySelector('svg')).toBeInTheDocument();
@@ -91,6 +89,7 @@ it('names a single selected backup model in the picker summary', async () => {
   render(
     <RuleEditor
       rule={null}
+      kind="fallback"
       open
       onOpenChange={() => {}}
       onSubmit={async () => {}}
@@ -99,8 +98,6 @@ it('names a single selected backup model in the picker summary', async () => {
     />,
   );
 
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Model fallbacks' }));
   const routes = screen.getByRole('button', { name: 'Allowed routes' });
   await user.click(routes);
   await user.click(screen.getByRole('option', { name: `${model.name}, ${provider.name}` }));
@@ -110,12 +107,31 @@ it('names a single selected backup model in the picker summary', async () => {
   expect(routes).not.toHaveTextContent('(1)');
 });
 
-it('does not validate fields from an inactive action', async () => {
+it('shows a focused form for one rule type', () => {
+  render(
+    <RuleEditor
+      rule={null}
+      kind="models"
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      catalog={{ providers: [provider], models: [model] }}
+    />,
+  );
+
+  expect(screen.getByRole('heading', { name: 'Create allowed models rule' })).toBeVisible();
+  expect(screen.queryByRole('combobox', { name: 'Rule action' })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Maximum requested output tokens')).not.toBeInTheDocument();
+});
+
+it('submits the selected rule type', async () => {
   const user = userEvent.setup();
   let submitted: Api.RuleCreate | undefined;
   render(
     <RuleEditor
       rule={null}
+      kind="models"
       open
       onOpenChange={() => {}}
       onSubmit={async (payload) => {
@@ -127,11 +143,6 @@ it('does not validate fields from an inactive action', async () => {
   );
 
   await user.type(screen.getByLabelText('Rule name'), 'Approved model');
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Request limits' }));
-  await user.clear(screen.getByLabelText('Maximum requested output tokens'));
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Allowed models' }));
   await user.click(screen.getByRole('button', { name: 'Allowed routes' }));
   await user.click(screen.getByRole('option', { name: `${model.name}, ${provider.name}` }));
   await user.click(screen.getByRole('button', { name: 'Done' }));
@@ -145,6 +156,7 @@ it('searches large model choices by model or provider name', async () => {
   render(
     <RuleEditor
       rule={null}
+      kind="models"
       open
       onOpenChange={() => {}}
       onSubmit={async () => {}}
@@ -153,8 +165,6 @@ it('searches large model choices by model or provider name', async () => {
     />,
   );
 
-  await user.click(screen.getByRole('combobox', { name: 'Rule action' }));
-  await user.click(screen.getByRole('option', { name: 'Allowed models' }));
   await user.click(screen.getByRole('button', { name: 'Allowed routes' }));
   await user.type(screen.getByRole('searchbox', { name: 'Search allowed routes' }), 'gpt-test');
 

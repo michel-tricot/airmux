@@ -167,6 +167,20 @@ describe('workspace policies', () => {
     expect(screen.getByRole('button', { name: 'Edit First rule' })).toBeEnabled();
   });
 
+  it('chooses a rule type before opening its focused form', async () => {
+    const user = userEvent.setup();
+    renderPolicies();
+
+    await user.click(await screen.findByRole('button', { name: 'Create rule' }));
+    expect(screen.getByRole('heading', { name: 'Choose a rule type' })).toBeVisible();
+    expect(screen.queryByLabelText('Rule name')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Allowed models' }));
+    expect(screen.getByRole('heading', { name: 'Create allowed models rule' })).toBeVisible();
+    expect(screen.getByLabelText('Rule name')).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: 'Rule action' })).not.toBeInTheDocument();
+  });
+
   it('keeps policy rows compact and reveals rule details in a tooltip', async () => {
     const user = userEvent.setup();
     const multiRulePolicy = {
