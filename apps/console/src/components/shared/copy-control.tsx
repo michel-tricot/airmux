@@ -22,7 +22,7 @@ export function CopyButton({
     <Button
       variant="secondary"
       size="sm"
-      className={cn('min-w-20 shrink-0 justify-center gap-2 leading-none', className)}
+      className={cn('min-w-20 shrink-0', className)}
       onClick={() => void copy()}
       disabled={status === 'copying'}
       aria-label={subject ? `${action} ${subject}` : action}

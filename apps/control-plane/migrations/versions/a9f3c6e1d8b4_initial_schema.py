@@ -5,7 +5,7 @@ under an org and are named within it by an org-unique slug, workspace_membership
 structurally impossible (with a cascade evicting users whose org membership goes), and
 inference keys live in workspaces with org_id kept consistent by a composite foreign key.
 
-Access keys authenticate one principal and carry an explicit permission ceiling at an instance,
+Management keys authenticate one principal and carry an explicit permission ceiling at an instance,
 organization, or workspace scope. Roles on the principal and memberships provide standing
 authority, so a key can attenuate authority but never create it. Data-plane instances retain the
 organization scope of the key that heartbeats, or null for a global instance-scoped key.
@@ -44,7 +44,7 @@ branch_labels = None
 depends_on = None
 
 TOMBSTONED = (
-    "access_key",
+    "management_key",
     "auth_identity",
     "auth_session",
     "cli_auth_request",
@@ -65,7 +65,7 @@ TOMBSTONED = (
 
 AUDITED = (
     ("inference_key", ("id",)),
-    ("access_key", ("id",)),
+    ("management_key", ("id",)),
     ("model", ("id",)),
     ("org", ("id",)),
     ("org_invitation", ("id",)),
@@ -358,7 +358,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_workspace_membership_workspace_id", "workspace_membership", ["workspace_id"], unique=False)
     op.create_table(
-        "access_key",
+        "management_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("deleted_at", UTCDateTime(), nullable=True),
@@ -373,9 +373,9 @@ def upgrade() -> None:
         sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("expires_at", UTCDateTime(), nullable=True),
         sa.Column("revoked_at", UTCDateTime(), nullable=True),
-        sa.CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="access_key_workspace_needs_org"),
+        sa.CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="management_key_workspace_needs_org"),
         sa.ForeignKeyConstraint(["org_id"], ["org.id"]),
-        sa.ForeignKeyConstraint(["parent_id"], ["access_key.id"]),
+        sa.ForeignKeyConstraint(["parent_id"], ["management_key.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"]),
         sa.ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
         sa.PrimaryKeyConstraint("id"),
@@ -607,7 +607,7 @@ def downgrade() -> None:
     op.drop_table("inference_key")
     op.drop_index("ix_workspace_membership_workspace_id", table_name="workspace_membership")
     op.drop_table("workspace_membership")
-    op.drop_table("access_key")
+    op.drop_table("management_key")
     op.drop_table("workspace")
     op.drop_table("cli_auth_request")
     op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")

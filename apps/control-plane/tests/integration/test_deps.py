@@ -18,7 +18,7 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
         user = make_user(tmp_path, "admin@example.com")
         make_admin(tmp_path, user.id)
         token = c.post(
-            "/api/v1/instance/access-keys",
+            "/api/v1/instance/management-keys",
             json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
             headers=root,
         ).json()["data"]["token"]

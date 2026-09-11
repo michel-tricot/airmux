@@ -52,21 +52,22 @@ def test_every_endpoint_is_tagged_for_docs():
     assert len(grouped_tags) == len(grouped), "Place each tag in exactly one ReDoc group"
 
 
-def test_access_key_docs_distinguish_tenant_scopes():
+def test_management_key_docs_distinguish_tenant_scopes():
     operations = {
         operation["operationId"]: operation["tags"]
         for methods in make_app().openapi()["paths"].values()
         for operation in methods.values()
-        if "access_key" in operation["operationId"]
+        if "management_key" in operation["operationId"]
     }
     assert operations == {
-        "list_instance_access_keys": ["Instance Access Keys"],
-        "create_instance_access_key": ["Instance Access Keys"],
-        "list_org_access_keys": ["Organization Access Keys"],
-        "create_org_access_key": ["Organization Access Keys"],
-        "list_workspace_access_keys": ["Workspace Access Keys"],
-        "create_workspace_access_key": ["Workspace Access Keys"],
-        "revoke_access_key": ["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
+        "list_instance_management_keys": ["Instance Management Keys"],
+        "create_instance_management_key": ["Instance Management Keys"],
+        "list_org_management_keys": ["Organization Management Keys"],
+        "create_org_management_key": ["Organization Management Keys"],
+        "list_workspace_management_keys": ["Workspace Management Keys"],
+        "create_workspace_management_key": ["Workspace Management Keys"],
+        "revoke_management_key": ["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
+        "update_management_key_permissions": ["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
     }
 
 
@@ -80,7 +81,7 @@ def test_documentation_groups_follow_authority_scopes():
         "bundle_scope": {"Data Plane API"},
     }
     expected_by_operation = {
-        "revoke_access_key": {"Instance", "Organization", "Workspace"},
+        "revoke_management_key": {"Instance", "Organization", "Workspace"},
         "get_provider_credential": {"Organization", "Workspace"},
         "update_provider_credential": {"Organization", "Workspace"},
         "rotate_provider_credential": {"Organization", "Workspace"},

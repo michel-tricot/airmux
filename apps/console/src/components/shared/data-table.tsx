@@ -13,6 +13,7 @@ export interface Column<T> {
 
 interface DataTableProps<T> {
   columns: Array<Column<T>>;
+  tableClassName?: string;
   headerGroups?: Array<{
     key: string;
     label: ReactNode;
@@ -37,6 +38,7 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({
   columns,
+  tableClassName,
   headerGroups,
   rows,
   rowKey,
@@ -58,7 +60,7 @@ export function DataTable<T>({
   if (!rows || rows.length === 0) return <EmptyState icon={emptyIcon}>{empty}</EmptyState>;
 
   return (
-    <Table clipOverflow={clipOverflow}>
+    <Table className={tableClassName} clipOverflow={clipOverflow}>
       <TableHeader>
         {headerGroups && (
           <TableRow className="bg-muted/20 hover:bg-muted/20">

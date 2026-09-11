@@ -1,25 +1,34 @@
+import { SettingsLayout } from '@/components/shared/settings-layout';
+import { BundleHistory } from '@/components/shared/bundle-history';
+import type { OrgRole } from '@workspace/api-client-react';
+import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
-import { useRequiredOrgId } from '@/lib/session';
-import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
+import { useRequiredOrgId, useSession } from '@/lib/session';
+import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
 import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
-import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import { Card, Button, Badge, ConfirmButton, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Plus, Key, KeyRound, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
+import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
+import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
+import { Plus, KeyRound, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, PermissionChecklist, accessKeyFormSchema } from '@/components/shared/access-key-form';
-import { PermissionsCell } from '@/components/shared/permissions-cell';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
+import {
+  ManagementKeyFormFields,
+  managementKeyPayload,
+  managementKeyExpiryOptions,
+  PermissionChecklist,
+  managementKeyFormSchema,
+} from '@/components/shared/management-key-form';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -27,18 +36,20 @@ import { AccountIdentity, AccountKindBadge } from '@/components/shared/account-d
 import { ActivityTable } from '@/components/shared/activity-table';
 import { MembersPanel } from '@/components/shared/members-panel';
 
-const orgServiceAccountSchema = accessKeyFormSchema.extend({
+const orgServiceAccountSchema = managementKeyFormSchema.extend({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
 });
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
+  const { user } = useSession();
   const authorization = useAuthorization('org');
-  const canReadKeys = authorization.can(accessKeyAccess.org.read);
-  const canIssueKey = authorization.can(accessKeyAccess.org.issue);
-  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadKeys = authorization.can(managementKeyAccess.org.read);
+  const canIssueKey = authorization.can(managementKeyAccess.org.issue);
+  const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
-  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
+  const changeRole = useChangeOrgRoleMutation();
+  const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
   const canListInvitations = authorization.can(orgMemberAccess.listInvitations);
   const canCreateInvitations = authorization.can(orgMemberAccess.invite);
@@ -48,8 +59,7 @@ export default function AppOrgSettings() {
   const canDeleteServiceAccount = authorization.can(orgMemberAccess.deleteServiceAccount);
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
-  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
-  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
+  const keysQuery = useOrgManagementKeys(orgId, undefined, { enabled: canReadKeys });
   const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
   const activityQuery = useOrgActivity(orgId, { limit: 50 }, { enabled: canReadActivity });
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListInvitations || canCreateInvitations });
@@ -66,71 +76,57 @@ export default function AppOrgSettings() {
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
-  const mintKey = useCreateOrgAccessKeyMutation(orgId);
-  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
-  const republish = useRepublishBundleMutation(orgId);
+  const mintKey = useCreateOrgManagementKeyMutation(orgId);
+  const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const createServiceAccount = useCreateOrgServiceAccountMutation(orgId);
   const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
-  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers || canListInvitations ? 'members' : 'activity';
+
   const memberActions = (
     <>
       {canCreateServiceAccount && (
         <Button size="sm" variant="outline" onClick={() => setServiceAccountOpen(true)}>
-          <Bot className="w-4 h-4 mr-1" /> Create service account
+          <Bot className="w-4 h-4" /> Create service account
         </Button>
       )}
       {canCreateInvitations && (
         <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
-          <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+          <UserPlus className="w-4 h-4" /> Invite by email
         </Button>
       )}
     </>
   );
 
   return (
-    <PageShell className="max-w-5xl">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-          <Settings className="w-6 h-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage automation credentials and published organization policies.</p>
-        </div>
-      </div>
-
-      <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="mb-4">
-          {canReadKeys && (
-            <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> Automation Keys
-            </TabsTrigger>
-          )}
-          {canReadBundles && (
-            <TabsTrigger value="bundles" className="gap-2">
-              <Package className="w-4 h-4" /> Policies
-            </TabsTrigger>
-          )}
-          {(canReadMembers || canListInvitations) && (
-            <TabsTrigger value="members" className="gap-2">
-              <Users className="w-4 h-4" /> Members
-            </TabsTrigger>
-          )}
-          {canReadActivity && (
-            <TabsTrigger value="activity" className="gap-2">
-              <Activity className="w-4 h-4" /> Activity
-            </TabsTrigger>
-          )}
-        </TabsList>
-
+    <PageShell className="max-w-none space-y-0 p-0 sm:p-0">
+      <SettingsLayout
+        header={
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+              <Settings className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
+              <p className="text-muted-foreground mt-1 text-sm">Manage organization access, members, and activity.</p>
+            </div>
+          </div>
+        }
+        categories={[
+          ...(canReadKeys ? [{ id: 'keys', label: 'Management Keys' }] : []),
+          ...(canReadMembers || canListInvitations ? [{ id: 'members', label: 'Members' }] : []),
+          ...(canReadActivity || canReadBundles ? [{ id: 'activity', label: 'Activity' }] : []),
+        ]}
+      >
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Automation Keys</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Management Keys</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Control-plane API access for managing this organization.</p>
+              </div>
               {canIssueKey && (
                 <Button
                   onClick={() => {
@@ -140,26 +136,25 @@ export default function AppOrgSettings() {
                   size="sm"
                   className="shadow-sm"
                 >
-                  <Plus className="w-4 h-4 mr-1" /> Generate Key
+                  <Plus className="w-4 h-4" /> Generate Key
                 </Button>
               )}
             </div>
-            <ApiKeysTable
-              resource="access keys"
+            <ManagementKeysTable
+              owners={
+                new Map<string, { name: string }>([
+                  ...(members ?? []).map((member) => [member.user_id, member] as const),
+                  ...(user ? [[user.user_id, user] as const] : []),
+                ])
+              }
+              canEditPermissions={authorization.can(managementKeyAccess.org.updatePermissions)}
+              resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No access keys generated."
-              extraColumns={[
-                {
-                  key: 'permissions',
-                  header: 'Permissions',
-                  cell: (key) => <PermissionsCell permissions={key.permissions} />,
-                },
-                { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
-              ]}
+              emptyText="No management keys generated."
               revokeDescription="This key and every key delegated from it will stop working immediately."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
@@ -167,45 +162,19 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {canReadBundles && (
-          <TabsContent value="bundles" className="space-y-4 mt-0">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Access Policies</h2>
-              {canPublishBundles && (
-                <Button onClick={() => republish.mutate({ orgId })} size="sm" disabled={republish.isPending}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> {republish.isPending ? 'Republishing...' : 'Republish policy'}
-                </Button>
-              )}
-            </div>
-            <Card>
-              <DataTable
-                rows={bundlesQuery.data ? [...bundlesQuery.data].reverse() : undefined}
-                rowKey={(bundle) => bundle.id}
-                isLoading={bundlesQuery.isLoading}
-                isError={bundlesQuery.isError}
-                error={bundlesQuery.error}
-                resource="policies"
-                onRetry={() => bundlesQuery.refetch()}
-                empty="No policies have been published yet."
-                columns={[
-                  { key: 'version', header: 'Version', cellClassName: 'font-mono font-medium', cell: (bundle) => `v${bundle.version}` },
-                  { key: 'id', header: 'Policy ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (bundle) => bundle.id },
-                  {
-                    key: 'published',
-                    header: 'Published',
-                    cellClassName: 'text-muted-foreground text-sm',
-                    cell: (bundle) => formatDate(bundle.issued_at),
-                  },
-                ]}
-              />
-            </Card>
-          </TabsContent>
-        )}
-
         {(canReadMembers || canListInvitations) && (
           <TabsContent value="members" className="space-y-4 mt-0">
             {canReadMembers ? (
               <MembersPanel
+                editRole={
+                  canChangeRole
+                    ? {
+                        roles: orgRoleOptions,
+                        pending: changeRole.isPending,
+                        onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                      }
+                    : undefined
+                }
                 heading="Organization Members"
                 members={members}
                 isLoading={membersQuery.isLoading}
@@ -250,7 +219,7 @@ export default function AppOrgSettings() {
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
-                                    description="The service account and all of its control-plane access keys will stop working immediately."
+                                    description="The service account and all of its control-plane management keys will stop working immediately."
                                     confirmLabel="Delete service account"
                                     pending={deleteServiceAccount.isPending}
                                     aria-label={`Delete service account ${member.name}`}
@@ -360,26 +329,29 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {canReadActivity && (
+        {(canReadActivity || canReadBundles) && (
           <TabsContent value="activity" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Recent activity</h2>
+              <h2 className="text-lg font-semibold">Activity</h2>
             </div>
-            <Card>
-              <ActivityTable
-                entries={activityQuery.data}
-                isLoading={activityQuery.isLoading}
-                isError={activityQuery.isError}
-                error={activityQuery.error}
-                onRetry={() => activityQuery.refetch()}
-                emptyText="Nothing has changed in this org yet."
-                recordLabel={describeRecord}
-                renderActor={(entry) => members?.find((member) => member.user_id === entry.user_id)?.email ?? entry.user_id}
-              />
-            </Card>
+            {canReadActivity && (
+              <Card>
+                <ActivityTable
+                  entries={activityQuery.data}
+                  isLoading={activityQuery.isLoading}
+                  isError={activityQuery.isError}
+                  error={activityQuery.error}
+                  onRetry={() => activityQuery.refetch()}
+                  emptyText="Nothing has changed in this org yet."
+                  recordLabel={describeRecord}
+                  renderActor={(entry) => members?.find((member) => member.user_id === entry.user_id)?.email ?? entry.user_id}
+                />
+              </Card>
+            )}
+            {canReadBundles && <ConfigurationHistory orgId={orgId} />}
           </TabsContent>
         )}
-      </Tabs>
+      </SettingsLayout>
 
       {canIssueKey && (
         <FormDialog
@@ -388,21 +360,20 @@ export default function AppOrgSettings() {
             setKeyOpen(open);
             if (!open) setKeyTarget(null);
           }}
-          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Create an organization access key'}
+          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate Management Key'}
           description={
             keyTarget
               ? 'The new key is shown once and does not revoke any existing keys for this service account.'
               : 'The key is bound to this organization and carries only the permissions you name.'
           }
-          schema={accessKeyFormSchema}
-          defaultValues={{ label: '', permissions: [] }}
+          schema={managementKeyFormSchema}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const minted = await mintKey.mutateAsync({
               orgId,
               data: {
                 ...(keyTarget ? { user_id: keyTarget.userId } : {}),
-                label: values.label,
-                permissions: values.permissions,
+                ...managementKeyPayload(values),
               },
             });
             setToken(minted.token);
@@ -412,7 +383,7 @@ export default function AppOrgSettings() {
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
-            <AccessKeyFormFields
+            <ManagementKeyFormFields
               form={form}
               availablePermissions={authorization.permissions}
               canIssue={canIssueKey}
@@ -431,13 +402,13 @@ export default function AppOrgSettings() {
           title="Create a service account"
           description="This creates an organization admin for automation and a management key shown only once."
           schema={orgServiceAccountSchema}
-          defaultValues={{ name: '', label: '', permissions: [] }}
+          defaultValues={{ name: '', label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const minted = await createServiceAccount.mutateAsync({
               orgId,
-              data: { name: values.name, access_key: { label: values.label, permissions: values.permissions } },
+              data: { name: values.name, management_key: managementKeyPayload(values) },
             });
-            setToken(minted.access_key.token);
+            setToken(minted.management_key.token);
           }}
           submitLabel="Create service account"
           pendingLabel="Creating..."
@@ -467,6 +438,19 @@ export default function AppOrgSettings() {
                     <FormLabel>Key label</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. deployment-management" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="expiry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expires in</FormLabel>
+                    <FormControl>
+                      <Dropdown value={field.value} onValueChange={field.onChange} options={managementKeyExpiryOptions} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -519,5 +503,26 @@ export default function AppOrgSettings() {
         copyLabel="Copy link"
       />
     </PageShell>
+  );
+}
+
+function ConfigurationHistory({ orgId }: { orgId: string }) {
+  const bundlesQuery = useBundles(orgId);
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Configuration history</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configuration bundles are generated automatically when organization configuration changes.
+        </p>
+      </div>
+      <BundleHistory
+        bundles={bundlesQuery.data}
+        isLoading={bundlesQuery.isLoading}
+        isError={bundlesQuery.isError}
+        error={bundlesQuery.error}
+        onRetry={() => bundlesQuery.refetch()}
+      />
+    </section>
   );
 }

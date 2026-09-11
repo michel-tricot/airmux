@@ -24,7 +24,7 @@ describe('authorization policies', () => {
   });
 
   it('composes alternate operations without repeating their permission names', () => {
-    const policy = anyOf(operationAuthority.listOrgAccessKeys, operationAuthority.listBundles, operationAuthority.listOrgUsers);
+    const policy = anyOf(operationAuthority.listOrgManagementKeys, operationAuthority.listBundles, operationAuthority.listOrgUsers);
 
     expect(allows(permissions('bundles.read'), policy)).toBe(true);
     expect(allows(permissions('audit.read'), policy)).toBe(false);

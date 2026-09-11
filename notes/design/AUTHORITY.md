@@ -78,7 +78,7 @@ path for promoting an existing human account.
 
 | Role | Grant |
 |---|---|
-| `owner` | Organization lifecycle, members, workspaces, provider credentials, inference keys, bundles, usage, audit, and access keys |
+| `owner` | Organization lifecycle, members, workspaces, provider credentials, inference keys, bundles, usage, audit, and management keys |
 | `admin` | The owner grant except organization deletion and owner assignment |
 | `member` | Read the organization and catalog, list workspaces, and create a workspace |
 | `data_plane` | `bundles.read`, `usage.ingest`, and `data-planes.heartbeat` only |
@@ -90,7 +90,7 @@ Removing an organization membership cascades its workspace memberships.
 
 | Role | Grant |
 |---|---|
-| `admin` | Workspace update and deletion, membership management, provider credentials, inference keys, usage, and workspace access keys |
+| `admin` | Workspace update and deletion, membership management, provider credentials, inference keys, usage, and workspace management keys |
 | `member` | Workspace and membership reads, catalog and provider-credential reads, inference-key management, and usage reads |
 | `viewer` | The member read surface without inference-key management |
 
@@ -100,16 +100,16 @@ can create a workspace without joining it because instance authority already cov
 Human and service-account principals use the same role system. A service account may hold any role;
 authorization depends on its resulting standing grants, not its principal kind or a special role name.
 
-## Access keys
+## Management keys
 
-`AccessKey` is the only control-plane key resource. Every key:
+`ManagementKey` is the only control-plane key resource. Every key:
 
 - Uses the `sk-cp-` prefix
 - Authenticates one principal
 - Has exactly one validated scope
 - Stores a non-empty explicit permission ceiling
 - May expire
-- May name a parent access key
+- May name a parent management key
 - Stores only a token hash and display prefix
 - Returns the full token once, when minted
 
@@ -121,14 +121,14 @@ ceiling. The human's current roles still determine the standing authority for ea
 
 ### Issuance and delegation
 
-The collection URL determines a new key's scope. Creating one requires `access-keys.issue` at that
+The collection URL determines a new key's scope. Creating one requires `management-keys.issue` at that
 scope, and the requested permissions must be contained by both the acting principal's and receiving
 principal's current standing authority.
 
-When an access key creates another access key, the child must also satisfy these attenuation rules:
+When an management key creates another management key, the child must also satisfy these attenuation rules:
 
 - Its permission ceiling is a strict subset of the issuer's ceiling
-- It cannot carry `access-keys.issue`
+- It cannot carry `management-keys.issue`
 - It cannot outlive the issuer
 - Its scope must be covered by the issuer's scope
 - It records the issuer as its parent
@@ -136,7 +136,7 @@ When an access key creates another access key, the child must also satisfy these
 Verification walks the parent chain. A missing, expired, or revoked ancestor invalidates every
 descendant. Revoking a key uses the key id, then checks authority against that key's stored scope.
 
-CLI login may present its current access key on the one-time delivery request. The server resolves
+CLI login may present its current management key on the one-time delivery request. The server resolves
 the token hash to the unique key id and retires exactly that key and its descendants only when its
 principal and scope match the approved login. Labels are display metadata and never identify keys.
 
@@ -146,7 +146,7 @@ organization requires a browser session.
 
 ## Data-plane authority
 
-A managed data plane uses an ordinary access key for a service-account principal. The key must have
+A managed data plane uses an ordinary management key for a service-account principal. The key must have
 instance or organization scope and exactly these permissions:
 
 ```text
@@ -167,7 +167,7 @@ heartbeat. The same credential supports only the actions the data plane performs
 - Ingest usage events after every event's workspace scope is authorized
 - Heartbeat at the credential scope
 
-Control-plane startup seeds one configured pool token into the existing service-account and access-key
+Control-plane startup seeds one configured pool token into the existing service-account and management-key
 tables before a human claims the instance. The token may resolve from a shared local file or an
 orchestrator-injected environment variable. Startup is idempotent, serializes
 concurrent replicas with a database advisory lock, and never reactivates a revoked key.

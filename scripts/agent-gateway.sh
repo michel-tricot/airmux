@@ -56,8 +56,8 @@ model="${1:-}"
 [ -n "$model" ] || usage
 shift
 
-api_key="$(env_value AIRLLM_API_KEY)"
-[ -n "$api_key" ] || die "AIRLLM_API_KEY not in .env — run 'uv run airllm quickstart' first"
+api_key="$(env_value AIRLLM_INFERENCE_KEY)"
+[ -n "$api_key" ] || die "AIRLLM_INFERENCE_KEY not in .env — run 'uv run airllm quickstart' first"
 
 if models="$(list_models)" && [ -n "$models" ] && ! grep -qxF "$model" <<<"$models"; then
   echo "warning: '$model' is not in the catalog; starting anyway (requests may 404)" >&2
@@ -83,13 +83,13 @@ case "$agent" in
     # Codex reaches custom providers through a model_providers entry; the -c overrides build it
     # per run, so no config file changes. Codex 0.147 dropped the chat wire, so this needs the
     # gateway's /inf/v1/responses surface (the Responses dialect).
-    export AIRLLM_API_KEY="$api_key"
+    export AIRLLM_INFERENCE_KEY="$api_key"
     echo "codex -> $gateway/inf/v1/responses | model: $model" >&2
     exec codex \
       -c model_provider=airllm \
       -c model_providers.airllm.name=airllm \
       -c "model_providers.airllm.base_url=$gateway/inf/v1" \
-      -c model_providers.airllm.env_key=AIRLLM_API_KEY \
+      -c model_providers.airllm.env_key=AIRLLM_INFERENCE_KEY \
       -c model_providers.airllm.wire_api=responses \
       -m "$model" "$@"
     ;;

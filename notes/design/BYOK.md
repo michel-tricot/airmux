@@ -240,7 +240,7 @@ credential's actual tenant target:
 - Organization members outside a workspace receive no credential access there
 - Data-plane service accounts receive no provider-credential permission
 
-Access keys always store an explicit permission ceiling. Adding a future permission cannot expand an
+Management keys always store an explicit permission ceiling. Adding a future permission cannot expand an
 existing key, and role changes take effect without reminting it. Workspace targets resolve through
 the workspace's organization-owned identity before authorization, so a credential cannot cross an
 organization scope by naming a workspace id from another tenant.

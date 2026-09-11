@@ -193,7 +193,7 @@ function PolicyFields({
                 className="sm:flex-1"
               />
               <Button type="button" variant="outline" disabled={!canComposeRules} onClick={onCreateRule}>
-                <Plus className="mr-1 h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 Create rule
               </Button>
             </div>
@@ -336,7 +336,7 @@ export function PolicyEditor({
         <div className="space-y-4">
           <RuleTypeChoices fallbackDisabled={hasFallback} onSelect={(ruleKind) => setStep({ kind: 'create_rule', ruleKind })} />
           <Button type="button" variant="outline" onClick={() => setStep({ kind: 'policy' })}>
-            <ArrowLeft className="mr-1 h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back to policy
           </Button>
         </div>

@@ -1,10 +1,12 @@
+import { WorkspaceManagementKeys } from '@/components/shared/workspace-management-keys';
+import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
+import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
 import {
   useWorkspaceMembers,
   useWorkspaceMemberCandidates,
@@ -16,17 +18,16 @@ import type { WorkspaceRole } from '@workspace/api-client-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { useScopedAuthorization } from '@/features/permissions/hooks';
-import { inferenceKeyAccess } from '@/features/keys/policy';
+import { inferenceKeyAccess, managementKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
-const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
 interface WorkspacePanelProps {
   orgId: string;
@@ -42,6 +43,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const canReadWorkspace = authorization.can(workspaceAccess.read);
   const workspaceQuery = useWorkspace(orgId, workspaceRef, { enabled: canReadWorkspace });
   const workspace = workspaceQuery.data;
+  const canReadManagementKeys = authorization.can(managementKeyAccess.workspace.read);
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
@@ -61,13 +63,12 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const [renameOpen, setRenameOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
   const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
   const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
-  const defaultTab = canReadKeys ? 'keys' : 'members';
+  const defaultTab = canReadKeys ? 'keys' : canReadManagementKeys ? 'management-keys' : 'members';
 
   if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
   if (authorization.isError)
@@ -100,7 +101,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         <div className="flex gap-2">
           {canUpdate && (
             <Button variant="outline" onClick={() => setRenameOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" /> Rename
+              <Pencil className="w-4 h-4" /> Rename
             </Button>
           )}
           {canDelete && (
@@ -117,7 +118,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
                 setLocation(backHref);
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -130,12 +131,18 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               <Key className="w-4 h-4" /> Inference Keys
             </TabsTrigger>
           )}
+          {canReadManagementKeys && <TabsTrigger value="management-keys">Management Keys</TabsTrigger>}
           {canReadMembers && (
             <TabsTrigger value="members" className="gap-2">
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
           )}
         </TabsList>
+        {canReadManagementKeys && (
+          <TabsContent value="management-keys">
+            <WorkspaceManagementKeys orgId={orgId} workspaceId={workspace.id} />
+          </TabsContent>
+        )}
 
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
@@ -143,11 +150,11 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               <h2 className="text-lg font-semibold">Inference Keys</h2>
               {canCreateKeys && (
                 <Button onClick={() => setKeyOpen(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> Generate Key
+                  <Plus className="w-4 h-4" /> Generate Key
                 </Button>
               )}
             </div>
-            <ApiKeysTable
+            <KeysTable
               resource="inference keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
@@ -202,36 +209,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
       </Tabs>
 
       {canCreateKeys && (
-        <FormDialog
-          open={keyOpen}
-          onOpenChange={setKeyOpen}
-          title="Generate Inference Key"
-          description="Keys let applications send requests to the models available to this workspace."
-          schema={keyLabelSchema}
-          defaultValues={{ label: '' }}
-          onSubmit={async (values) => {
-            const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
-            setToken(minted.token);
-          }}
-          submitLabel="Generate"
-          pending={createKey.isPending}
-        >
-          {(form) => (
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. chatbot-prod" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormDialog>
+        <InferenceKeyDialog orgId={orgId} workspaceRef={workspaceRef} open={keyOpen} onOpenChange={setKeyOpen} onCreated={setToken} />
       )}
 
       {canUpdate && (

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { ActivityOut } from '@workspace/api-client-react';
 import { Badge } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
-import { formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 
 interface ActivityTableProps {
   entries: ActivityOut[] | undefined;
@@ -59,7 +59,7 @@ export function ActivityTable({ entries, isLoading, isError, error, onRetry, emp
           header: 'When',
           headClassName: 'text-right',
           cellClassName: 'text-right text-sm text-muted-foreground',
-          cell: (entry) => formatRelative(entry.occurred_at),
+          cell: (entry) => formatDate(entry.occurred_at),
         },
       ]}
     />

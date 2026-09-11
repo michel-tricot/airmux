@@ -10,59 +10,67 @@ export interface OperationAuthority {
 }
 
 export const operationAuthority = {
-  listInstanceAccessKeys: {
+  listInstanceManagementKeys: {
     checks: [
       {
         scope: "instance_scope",
-        anyOf: ["access-keys.read"],
+        anyOf: ["management-keys.read"],
       },
     ],
   },
-  createInstanceAccessKey: {
+  createInstanceManagementKey: {
     checks: [
       {
         scope: "instance_scope",
-        anyOf: ["access-keys.issue"],
+        anyOf: ["management-keys.issue"],
       },
     ],
   },
-  listOrgAccessKeys: {
+  listOrgManagementKeys: {
     checks: [
       {
         scope: "org_scope",
-        anyOf: ["access-keys.read"],
+        anyOf: ["management-keys.read"],
       },
     ],
   },
-  createOrgAccessKey: {
+  createOrgManagementKey: {
     checks: [
       {
         scope: "org_scope",
-        anyOf: ["access-keys.issue"],
+        anyOf: ["management-keys.issue"],
       },
     ],
   },
-  listWorkspaceAccessKeys: {
+  listWorkspaceManagementKeys: {
     checks: [
       {
         scope: "workspace_scope",
-        anyOf: ["access-keys.read"],
+        anyOf: ["management-keys.read"],
       },
     ],
   },
-  createWorkspaceAccessKey: {
+  createWorkspaceManagementKey: {
     checks: [
       {
         scope: "workspace_scope",
-        anyOf: ["access-keys.issue"],
+        anyOf: ["management-keys.issue"],
       },
     ],
   },
-  revokeAccessKey: {
+  revokeManagementKey: {
     checks: [
       {
-        scope: "access_key_scope",
-        anyOf: ["access-keys.revoke"],
+        scope: "management_key_scope",
+        anyOf: ["management-keys.revoke"],
+      },
+    ],
+  },
+  updateManagementKeyPermissions: {
+    checks: [
+      {
+        scope: "management_key_scope",
+        anyOf: ["management-keys.issue"],
       },
     ],
   },
@@ -111,6 +119,14 @@ export const operationAuthority = {
       {
         scope: "instance_scope",
         anyOf: ["principals.read"],
+      },
+    ],
+  },
+  changeInstanceRole: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["principals.manage"],
       },
     ],
   },
@@ -482,7 +498,7 @@ export const operationAuthority = {
       },
       {
         scope: "org_scope",
-        anyOf: ["access-keys.issue"],
+        anyOf: ["management-keys.issue"],
       },
     ],
   },
@@ -494,7 +510,7 @@ export const operationAuthority = {
       },
       {
         scope: "org_scope",
-        anyOf: ["access-keys.revoke"],
+        anyOf: ["management-keys.revoke"],
       },
     ],
   },

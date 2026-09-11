@@ -19,8 +19,8 @@ const USER: Api.UserOut = {
   deleted_at: null,
   orgs: [ORG.id],
 };
-const ACCESS_KEY: Api.AccessKeyOut = {
-  id: 'access-key-1',
+const MANAGEMENT_KEY: Api.ManagementKeyOut = {
+  id: 'management-key-1',
   user_id: USER.id,
   org_id: null,
   workspace_id: null,
@@ -79,7 +79,7 @@ function installAdminHandlers() {
     http.get('/api/v1/orgs/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
     http.get('/api/v1/users', () => HttpResponse.json<{ data: Api.UserOut[] }>({ data: [USER] })),
     http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
-    http.get('/api/v1/instance/access-keys', () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: [ACCESS_KEY] })),
+    http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [MANAGEMENT_KEY] })),
     http.get('/api/v1/instance/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [PROVIDER], models: [] } })),
     http.get('/api/v1/instance/provider-credentials', () =>
       HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({ data: [PROVIDER_CREDENTIAL] }),
@@ -129,7 +129,7 @@ describe('instance administration routes', () => {
     [`/instance/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}`, WORKSPACES[0].name],
     ['/instance/users', 'Global Users'],
     [`/instance/users/${USER.id}`, USER.name],
-    ['/instance/keys', 'Access Keys'],
+    ['/instance/management-keys', 'Management Keys'],
     ['/instance/provider-keys', 'Provider Keys'],
   ])('renders %s', async (path, heading) => {
     renderAt(path);
@@ -179,42 +179,42 @@ describe('instance administration routes', () => {
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 
-  it('counts only active access keys on the dashboard', async () => {
+  it('counts only active management keys on the dashboard', async () => {
     server.use(
-      http.get('/api/v1/instance/access-keys', () =>
-        HttpResponse.json<{ data: Api.AccessKeyOut[] }>({
+      http.get('/api/v1/instance/management-keys', () =>
+        HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({
           data: [
-            ACCESS_KEY,
-            { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },
-            { ...ACCESS_KEY, id: 'access-key-3', status: 'revoked', revoked_at: now },
+            MANAGEMENT_KEY,
+            { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
+            { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },
           ],
         }),
       ),
     );
     renderAt('/instance');
 
-    const heading = await screen.findByRole('heading', { name: 'Access Keys' });
+    const heading = await screen.findByRole('heading', { name: 'Management Keys' });
     await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('1')).toBeInTheDocument());
   });
 
-  it('mints an access key from the permissions returned by the control plane', async () => {
+  it('mints an management key from the permissions returned by the control plane', async () => {
     let submitted: unknown;
     server.use(
-      http.post('/api/v1/instance/access-keys', async ({ request }) => {
+      http.post('/api/v1/instance/management-keys', async ({ request }) => {
         submitted = await request.json();
-        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({
-          data: { ...ACCESS_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' },
+        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
+          data: { ...MANAGEMENT_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' },
         });
       }),
     );
     const user = userEvent.setup();
-    renderAt('/instance/keys');
+    renderAt('/instance/management-keys');
 
-    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
+    await user.click(await screen.findByRole('button', { name: 'Generate Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Generate Management Key' });
     await user.type(within(dialog).getByLabelText('Label'), 'deploy');
     await user.click(await within(dialog).findByRole('checkbox', { name: 'organizations.read' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Mint key' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Generate' }));
 
     await waitFor(() => expect(submitted).toEqual({ label: 'deploy', permissions: ['organizations.read'] }));
     const keyDialog = await screen.findByRole('dialog', { name: 'Key Generated Successfully' });
@@ -223,20 +223,22 @@ describe('instance administration routes', () => {
 
   it('shows permission discovery failures and prevents key submission', async () => {
     server.use(http.get('/api/v1/auth/permissions', () => new HttpResponse(null, { status: 503 })));
-    renderAt('/instance/keys');
+    renderAt('/instance/management-keys');
 
     expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
-    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
   });
 
-  it('prevents key submission without access-key issuance permission', async () => {
+  it('prevents key submission without management-key issuance permission', async () => {
     server.use(
-      http.get('/api/v1/auth/permissions', () => HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['access-keys.read'] } })),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['management-keys.read'] } }),
+      ),
     );
-    renderAt('/instance/keys');
+    renderAt('/instance/management-keys');
 
-    expect(await screen.findByRole('heading', { name: 'Access Keys' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Management Keys' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
   });
 
   it('keeps instance auditors read-only', async () => {
@@ -261,7 +263,7 @@ describe('instance administration routes', () => {
               'usage.read',
               'data-planes.read',
               'audit.read',
-              'access-keys.read',
+              'management-keys.read',
             ],
           },
         }),
@@ -307,7 +309,7 @@ describe('instance administration routes', () => {
       ),
       http.get('/api/v1/orgs', organizations),
       http.get('/api/v1/users', users),
-      http.get('/api/v1/instance/access-keys', keys),
+      http.get('/api/v1/instance/management-keys', keys),
       http.get('/api/v1/instance/data-planes', dataPlanes),
       http.get('/api/v1/instance/activity', activity),
     );
@@ -319,7 +321,7 @@ describe('instance administration routes', () => {
     const navigation = screen.getByRole('navigation', { name: 'Instance navigation' });
     expect(within(navigation).queryByRole('link', { name: 'Organizations' })).not.toBeInTheDocument();
     expect(within(navigation).queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
-    expect(within(navigation).queryByRole('link', { name: 'Access Keys' })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole('link', { name: 'Management Keys' })).not.toBeInTheDocument();
     await waitFor(() => {
       expect(organizations).not.toHaveBeenCalled();
       expect(users).not.toHaveBeenCalled();

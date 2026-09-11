@@ -9,8 +9,8 @@ from sqlmodel import col
 from contract import token_hash
 from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole
 from control_plane.db import current_session
-from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
-from control_plane.models import AccessKey, User, set_actor
+from control_plane.keys import MANAGEMENT_KEY_PREFIX, key_prefix
+from control_plane.models import ManagementKey, User, set_actor
 
 if TYPE_CHECKING:
     from control_plane.config import DataPlaneBootstrap
@@ -23,7 +23,7 @@ async def bootstrap_data_plane(bootstrap: DataPlaneBootstrap) -> None:
     await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _BOOTSTRAP_LOCK})
     token = bootstrap.token.get_secret_value()
     token_digest = token_hash(token)
-    existing = await AccessKey.first(AccessKey.token_hash == token_digest)
+    existing = await ManagementKey.first(ManagementKey.token_hash == token_digest)
     if existing is not None:
         await _validate_existing(existing)
         return
@@ -36,16 +36,16 @@ async def bootstrap_data_plane(bootstrap: DataPlaneBootstrap) -> None:
         raise RuntimeError(msg)
     await set_actor("root")
     user = await User.new_service_account(_BOOTSTRAP_NAME, instance_role=InstanceRole.data_plane).save()
-    await AccessKey(
+    await ManagementKey(
         user_id=user.id,
         token_hash=token_digest,
-        prefix=key_prefix(token, ACCESS_KEY_PREFIX),
+        prefix=key_prefix(token, MANAGEMENT_KEY_PREFIX),
         permissions=sorted(DATA_PLANE_PERMISSIONS, key=str),
         label=_BOOTSTRAP_NAME,
     ).save()
 
 
-async def _validate_existing(key: AccessKey) -> None:
+async def _validate_existing(key: ManagementKey) -> None:
     if key.revoked_at is not None:
         msg = "the configured data-plane bootstrap key is revoked"
         raise RuntimeError(msg)

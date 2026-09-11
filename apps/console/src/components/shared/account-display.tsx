@@ -3,13 +3,15 @@ import { Avatar, AvatarFallback, Badge } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 
 export function AccountIdentity({ name, href }: { name: string; href?: string }) {
-  const className = cn('flex items-center gap-2', href && 'transition-colors hover:text-primary');
+  const className = cn('flex min-w-0 items-center gap-2', href && 'transition-colors hover:text-primary');
   const identity = (
     <>
-      <Avatar aria-hidden="true" className="h-6 w-6">
+      <Avatar aria-hidden="true" className="h-6 w-6 shrink-0">
         <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{name.charAt(0)}</AvatarFallback>
       </Avatar>
-      {name}
+      <span className="truncate" title={name}>
+        {name}
+      </span>
     </>
   );
   return href ? (

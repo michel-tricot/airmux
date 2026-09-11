@@ -4,6 +4,8 @@ import {
   useGetUser,
   useCreateServiceAccount,
   useDeleteUser,
+  useChangeInstanceRole,
+  getMyPermissionsQueryKey,
   addOrgUser,
   removeOrgUser,
   getListUsersQueryKey,
@@ -60,6 +62,7 @@ function useMembershipInvalidation() {
       queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
       queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(target.orgId) }),
       queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
     ]);
 }
@@ -79,5 +82,30 @@ export function useRemoveUserFromOrgMutation() {
     mutationFn: (target: { userId: string; orgId: string }) => removeOrgUser(target.orgId, target.userId),
     onSuccess: (_data, target) => invalidate(target),
     meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },
+  });
+}
+
+export function useChangeInstanceRoleMutation() {
+  const queryClient = useQueryClient();
+  return useChangeInstanceRole({
+    mutation: {
+      onSuccess: (_user, { userId }) =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId) }),
+          queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
+        ]),
+      meta: { errorMessage: 'We couldn’t change the instance role. Please try again.' },
+    },
+  });
+}
+
+export function useChangeOrgRoleMutation() {
+  const invalidate = useMembershipInvalidation();
+  return useMutation({
+    mutationFn: (target: { userId: string; orgId: string; role: OrgRole }) => addOrgUser(target.orgId, target.userId, { role: target.role }),
+    onSuccess: (_data, target) => invalidate(target),
+    meta: { errorMessage: 'We couldn’t change the organization role. Please try again.' },
   });
 }

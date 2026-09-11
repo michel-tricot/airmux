@@ -64,7 +64,7 @@ def test_decision_requires_credential_scope_ceiling_and_standing_grant():
     actor = Actor(
         credential_id=uuid7(),
         principal_id=uuid7(),
-        credential_kind="access_key",
+        credential_kind="management_key",
         grant=Grant(scope=Scope.org(org_id), permissions=frozenset({permission})),
     )
     standing = (Grant(scope=Scope.org(org_id), permissions=frozenset({permission})),)

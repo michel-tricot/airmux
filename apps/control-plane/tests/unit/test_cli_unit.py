@@ -4,7 +4,7 @@ import stat
 
 from typer.testing import CliRunner
 
-from control_plane.keys import validate_access_key_token
+from control_plane.keys import validate_management_key_token
 from control_plane.main import app as cli_app
 
 runner = CliRunner()
@@ -14,7 +14,7 @@ def test_bootstrap_keygen_writes_one_private_pool_key(tmp_path):
     key_path = tmp_path / "dataplane.key"
     result = runner.invoke(cli_app, ["bootstrap-keygen", "--out", str(key_path)])
     assert result.exit_code == 0, result.output
-    validate_access_key_token(key_path.read_text(encoding="utf-8"))
+    validate_management_key_token(key_path.read_text(encoding="utf-8"))
     assert stat.S_IMODE(key_path.stat().st_mode) == 0o600
 
 

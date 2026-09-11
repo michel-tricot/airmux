@@ -1,3 +1,6 @@
+import { BundleHistory } from '@/components/shared/bundle-history';
+import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
+import { telemetryAccess } from '@/features/telemetry/policy';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -5,22 +8,21 @@ import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2 
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
-import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
+import { useUsers, useChangeOrgRoleMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useOrgAccessKeys, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgManagementKeys, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
-import { AccountIdentity } from '@/components/shared/account-display';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import type { OrgRole } from '@workspace/api-client-react';
 import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
@@ -34,13 +36,19 @@ export default function OrganizationDetail() {
 
   const instanceAuthorization = useAuthorization('instance');
   const authorization = useScopedAuthorization({ level: 'org', orgId });
+  const canReadBundles = authorization.can(telemetryAccess.bundles.read);
+  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
+  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
+  const republish = useRepublishBundleMutation(orgId);
   const canReadOrg = authorization.can(orgAccess.read);
   const orgQuery = useOrg(orgId, { enabled: canReadOrg });
   const org = orgQuery.data;
   const canListWorkspaces = authorization.can(workspaceAccess.list);
   const canCreateWorkspace = authorization.can(workspaceAccess.create);
-  const canReadKeys = authorization.can(accessKeyAccess.org.read);
-  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadKeys = authorization.can(managementKeyAccess.org.read);
+  const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
+  const changeRole = useChangeOrgRoleMutation();
+  const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
   const canAddMembers = authorization.can(orgMemberAccess.add);
   const canRemoveMembers = authorization.can(orgMemberAccess.remove);
@@ -49,7 +57,7 @@ export default function OrganizationDetail() {
 
   const canListUsers = instanceAuthorization.can(userAccess.list);
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
-  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const keysQuery = useOrgManagementKeys(orgId, undefined, { enabled: canReadKeys });
   const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
   const usersQuery = useUsers({ enabled: canListUsers });
   const users = usersQuery.data;
@@ -61,12 +69,12 @@ export default function OrganizationDetail() {
   const [renameOpen, setRenameOpen] = useState(false);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
-  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
+  const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
   const deleteOrg = useDeleteOrgMutation();
-  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : 'members';
+  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : canReadMembers ? 'members' : 'bundles';
 
   if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
   if (authorization.isError) {
@@ -98,7 +106,7 @@ export default function OrganizationDetail() {
         <div className="flex gap-2">
           {canUpdate && (
             <Button variant="outline" onClick={() => setRenameOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" /> Rename
+              <Pencil className="w-4 h-4" /> Rename
             </Button>
           )}
           {canDelete && (
@@ -115,7 +123,7 @@ export default function OrganizationDetail() {
                 setLocation('/instance/organizations');
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -130,7 +138,7 @@ export default function OrganizationDetail() {
           )}
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
-              <Key className="w-4 h-4" /> Access Keys
+              <Key className="w-4 h-4" /> Management Keys
             </TabsTrigger>
           )}
           {canReadMembers && (
@@ -138,6 +146,7 @@ export default function OrganizationDetail() {
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
           )}
+          {canReadBundles && <TabsTrigger value="bundles">Configuration bundles</TabsTrigger>}
         </TabsList>
 
         {canListWorkspaces && (
@@ -146,7 +155,7 @@ export default function OrganizationDetail() {
               <h2 className="text-lg font-semibold">Workspaces</h2>
               {canCreateWorkspace && (
                 <Button onClick={() => setWsOpen(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> New Workspace
+                  <Plus className="w-4 h-4" /> New Workspace
                 </Button>
               )}
             </div>
@@ -189,28 +198,19 @@ export default function OrganizationDetail() {
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Access Keys</h2>
+              <h2 className="text-lg font-semibold">Management Keys</h2>
             </div>
-            <ApiKeysTable
-              resource="access keys"
+            <ManagementKeysTable
+              owners={usersById}
+              ownerHref={(userId) => `/instance/users/${userId}`}
+              canEditPermissions={authorization.can(managementKeyAccess.org.updatePermissions)}
+              resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
-              emptyText="No access keys for this organization."
-              extraColumns={[
-                {
-                  key: 'user',
-                  header: 'Principal',
-                  cellClassName: 'text-muted-foreground text-sm',
-                  cell: (key) => {
-                    const user = usersById.get(key.user_id);
-                    return user ? <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} /> : key.user_id;
-                  },
-                },
-                { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
-              ]}
+              emptyText="No management keys for this organization."
               revokeDescription="This key and every key delegated from it will stop working immediately."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
@@ -221,6 +221,15 @@ export default function OrganizationDetail() {
         {canReadMembers && (
           <TabsContent value="members" className="space-y-4 mt-0">
             <MembersPanel
+              editRole={
+                canChangeRole
+                  ? {
+                      roles: orgRoleOptions,
+                      pending: changeRole.isPending,
+                      onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                    }
+                  : undefined
+              }
               heading="Organization Members"
               members={members}
               isLoading={membersQuery.isLoading}
@@ -256,6 +265,30 @@ export default function OrganizationDetail() {
                     }
                   : undefined
               }
+            />
+          </TabsContent>
+        )}
+        {canReadBundles && (
+          <TabsContent value="bundles" className="space-y-4 mt-0">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Configuration bundles</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Generated automatically from organization configuration. Republish to send a fresh snapshot to the data planes.
+                </p>
+              </div>
+              {canPublishBundles && (
+                <Button disabled={republish.isPending} onClick={() => republish.mutate({ orgId })}>
+                  {republish.isPending ? 'Republishing...' : 'Republish configuration'}
+                </Button>
+              )}
+            </div>
+            <BundleHistory
+              bundles={bundlesQuery.data}
+              isLoading={bundlesQuery.isLoading}
+              isError={bundlesQuery.isError}
+              error={bundlesQuery.error}
+              onRetry={() => bundlesQuery.refetch()}
             />
           </TabsContent>
         )}

@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash
 from control_plane.authz import Actor, Grant, Permission, Scope
-from control_plane.models import AccessKey, InferenceKey, PlaygroundSession
+from control_plane.models import InferenceKey, ManagementKey, PlaygroundSession
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-ACCESS_KEY_PREFIX = "sk-cp-"
-MIN_ACCESS_KEY_SECRET_LENGTH = 32
-MAX_ACCESS_KEY_LENGTH = 512
+MANAGEMENT_KEY_PREFIX = "sk-cp-"
+MIN_MANAGEMENT_KEY_SECRET_LENGTH = 32
+MAX_MANAGEMENT_KEY_LENGTH = 512
 PREFIX_SECRET_CHARS = 6
 PLAYGROUND_SESSION_TTL = timedelta(hours=1)
 
@@ -28,23 +28,23 @@ def _new_key(kind: str) -> tuple[str, str]:
     return token, key_prefix(token, kind)
 
 
-def new_access_key() -> tuple[str, str]:
-    return _new_key(ACCESS_KEY_PREFIX)
+def new_management_key() -> tuple[str, str]:
+    return _new_key(MANAGEMENT_KEY_PREFIX)
 
 
-def validate_access_key_token(token: str) -> str:
+def validate_management_key_token(token: str) -> str:
     if (
-        not token.startswith(ACCESS_KEY_PREFIX)
-        or len(token) < len(ACCESS_KEY_PREFIX) + MIN_ACCESS_KEY_SECRET_LENGTH
-        or len(token) > MAX_ACCESS_KEY_LENGTH
+        not token.startswith(MANAGEMENT_KEY_PREFIX)
+        or len(token) < len(MANAGEMENT_KEY_PREFIX) + MIN_MANAGEMENT_KEY_SECRET_LENGTH
+        or len(token) > MAX_MANAGEMENT_KEY_LENGTH
     ):
-        msg = "token must be a complete access key"
+        msg = "token must be a complete management key"
         raise ValueError(msg)
     return token
 
 
 @dataclass(frozen=True)
-class AccessKeyGrant:
+class ManagementKeyGrant:
     principal_id: UUID
     scope: Scope
     permissions: frozenset[Permission]
@@ -53,9 +53,9 @@ class AccessKeyGrant:
     parent_id: UUID | None = None
 
 
-async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
-    token, prefix = new_access_key()
-    key = await AccessKey(
+async def mint_management_key(grant: ManagementKeyGrant) -> tuple[UUID, str]:
+    token, prefix = new_management_key()
+    key = await ManagementKey(
         user_id=grant.principal_id,
         org_id=grant.scope.org_id,
         workspace_id=grant.scope.workspace_id,
@@ -69,11 +69,11 @@ async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
     return key.id, token
 
 
-async def mint_standing_access_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
-    from control_plane.authority import principal_permissions  # noqa: PLC0415 authority loads access-key models
+async def mint_standing_management_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
+    from control_plane.authority import principal_permissions  # noqa: PLC0415 authority loads management-key models
 
-    return await mint_access_key(
-        AccessKeyGrant(
+    return await mint_management_key(
+        ManagementKeyGrant(
             principal_id=principal_id,
             scope=scope,
             permissions=await principal_permissions(principal_id, scope),
@@ -125,16 +125,20 @@ async def rotate_playground_session(
     return await playground_session.save(), token
 
 
-def _live(key: AccessKey, now: datetime) -> bool:
+def _live(key: ManagementKey, now: datetime) -> bool:
     return key.status(now) == "active"
 
 
-async def verify_access_key(token: str) -> Actor | None:
-    if not token.startswith(ACCESS_KEY_PREFIX):
+async def verify_management_key(token: str) -> Actor | None:
+    if not token.startswith(MANAGEMENT_KEY_PREFIX):
         return None
-    key = await AccessKey.first(AccessKey.token_hash == token_hash(token))
+    key = await ManagementKey.first(ManagementKey.token_hash == token_hash(token))
     now = datetime.now(tz=UTC)
     if key is None or not _live(key, now):
+        return None
+    try:
+        permissions = frozenset(Permission(value) for value in key.permissions)
+    except ValueError:
         return None
     seen = {key.id}
     parent_id = key.parent_id
@@ -142,21 +146,18 @@ async def verify_access_key(token: str) -> Actor | None:
         if parent_id in seen:
             return None
         seen.add(parent_id)
-        parent = await AccessKey.find_by_id(parent_id)
+        parent = await ManagementKey.find_by_id(parent_id)
         if parent is None or not _live(parent, now):
             return None
+        permissions &= frozenset(parent.permissions)
         parent_id = parent.parent_id
-    try:
-        permissions = frozenset(Permission(value) for value in key.permissions)
-    except ValueError:
-        return None
     return Actor(
         credential_id=key.id,
         principal_id=key.user_id,
-        credential_kind="access_key",
+        credential_kind="management_key",
         grant=Grant(scope=key.scope, permissions=permissions),
     )
 
 
 async def verify_bearer(token: str) -> Actor | None:
-    return await verify_access_key(token)
+    return await verify_management_key(token)

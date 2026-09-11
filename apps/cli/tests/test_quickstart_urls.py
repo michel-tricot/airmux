@@ -245,7 +245,7 @@ def test_quickstart_uses_a_model_backed_by_a_configured_provider():
     assert configured_model(cast("httpx.Client", client)) == "anthropic/claude"
 
 
-def test_quickstart_mints_an_access_key_without_replacing_the_active_one():
+def test_quickstart_mints_an_management_key_without_replacing_the_active_one():
     requests: list[httpx.Request] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
@@ -271,7 +271,7 @@ def test_quickstart_mints_an_access_key_without_replacing_the_active_one():
         return httpx.Response(200, json={"data": responses[request.url.path]})
 
     with httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(handle)) as client:
-        token = auth._organization_access_key(client, str(PROVIDER_ONE))
+        token = auth._organization_management_key(client, str(PROVIDER_ONE))
 
     assert token == "new-token"
     poll = next(request for request in requests if request.url.path == "/api/v1/auth/cli/poll")
@@ -329,7 +329,7 @@ def _quickstart(
             deleted_at=None,
         ),
     )
-    monkeypatch.setattr(auth, "_organization_access_key", lambda _client, _org_id: "control-token")
+    monkeypatch.setattr(auth, "_organization_management_key", lambda _client, _org_id: "control-token")
     monkeypatch.setattr(
         auth,
         "_default_workspace",

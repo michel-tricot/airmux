@@ -71,7 +71,7 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         assert client.put(f"/api/v1/orgs/{org_id}/users/{viewer.id}", json={"role": "member"}, headers=org).status_code == 200
         assert client.put(f"/api/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "viewer"}, headers=org).status_code == 200
         minted = client.post(
-            f"/api/v1/orgs/{org_id}/workspaces/{first}/access-keys",
+            f"/api/v1/orgs/{org_id}/workspaces/{first}/management-keys",
             json={
                 "label": "workspace-usage",
                 "user_id": str(viewer.id),

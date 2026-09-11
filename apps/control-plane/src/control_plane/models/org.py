@@ -9,13 +9,13 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
 from control_plane.models.bundle import Bundle
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
+from control_plane.models.management_key import ManagementKey
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.workspace import Workspace
@@ -94,7 +94,7 @@ class Org(Record, Identified, Tombstonable, table=True):
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the org and everything scoped to it: workspaces with their keys, members and
-        provider credentials, then its own credentials, access keys, memberships, bundles.
+        provider credentials, then its own credentials, management keys, memberships, bundles.
 
         Everything removed here exists only to serve the org. What is history rather than structure
         stays: usage events keep the ids they were written with, and the audit trail keeps its rows,
@@ -103,7 +103,7 @@ class Org(Record, Identified, Tombstonable, table=True):
         for workspace in await Workspace.find(Workspace.org_id == self.id):
             await workspace.delete_with_contents(store)
         await ProviderCredential.delete_scoped(store, ProviderCredential.org_id == self.id)
-        await AccessKey.delete_scoped(AccessKey.org_id == self.id)
+        await ManagementKey.delete_scoped(ManagementKey.org_id == self.id)
         for membership in await OrgMembership.find(OrgMembership.org_id == self.id):
             await membership.delete()
         for bundle in await Bundle.find(Bundle.org_id == self.id):

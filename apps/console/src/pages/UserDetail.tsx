@@ -5,21 +5,29 @@ import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
-import { useInstanceAccessKeys } from '@/features/keys/hooks';
-import { useUser, useDeleteUserMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
+import { useInstanceManagementKeys } from '@/features/keys/hooks';
+import {
+  useUser,
+  useChangeInstanceRoleMutation,
+  useDeleteUserMutation,
+  useAddUserToOrgMutation,
+  useRemoveUserFromOrgMutation,
+  orgRoleOptions,
+} from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import type { OrgOut, OrgRole } from '@workspace/api-client-react';
+import { InstanceRole, type OrgOut, type OrgRole } from '@workspace/api-client-react';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -36,12 +44,13 @@ export default function UserDetail() {
   const canDeleteUser = authorization.can(userAccess.delete);
   const canAddMember = authorization.can(orgMemberAccess.add);
   const canRemoveMember = authorization.can(orgMemberAccess.remove);
-  const canReadKeys = authorization.can(accessKeyAccess.instance.read);
+  const canReadKeys = authorization.can(managementKeyAccess.instance.read);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, { enabled: canReadKeys });
+  const managementKeysQuery = useInstanceManagementKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
+  const changeRole = useChangeInstanceRoleMutation();
 
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
@@ -74,6 +83,25 @@ export default function UserDetail() {
         </div>
         <div className="flex items-center gap-3">
           <AccountKindBadge serviceAccount={user.service_account} />
+          {authorization.can(userAccess.changeRole) && !user.managing_org_id ? (
+            <RoleSelect
+              value={user.instance_role ?? 'none'}
+              label="Instance role"
+              name={user.name}
+              options={[
+                { value: 'none', label: 'No instance role' },
+                { value: 'owner', label: 'Owner' },
+                { value: 'auditor', label: 'Auditor' },
+                { value: 'data_plane', label: 'Data plane' },
+              ]}
+              pending={changeRole.isPending}
+              onSave={(role) =>
+                changeRole.mutateAsync({ userId: user.id, data: { instance_role: role === 'none' ? null : z.nativeEnum(InstanceRole).parse(role) } })
+              }
+            />
+          ) : (
+            <Badge variant="secondary">{user.instance_role ?? 'No instance role'}</Badge>
+          )}
           {canDeleteUser && (
             <ConfirmButton
               variant="outline"
@@ -88,7 +116,7 @@ export default function UserDetail() {
                 setLocation('/instance/users');
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -102,7 +130,7 @@ export default function UserDetail() {
           </h2>
           {canAddMember && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
-              <Plus className="w-4 h-4 mr-1" /> Add to Organization
+              <Plus className="w-4 h-4" /> Add to Organization
             </Button>
           )}
         </div>
@@ -163,15 +191,16 @@ export default function UserDetail() {
             Keys owned by this user
           </h2>
 
-          <ApiKeysTable
-            resource="access keys"
-            keys={accessKeysQuery.data}
-            isLoading={accessKeysQuery.isLoading}
-            isError={accessKeysQuery.isError}
-            error={accessKeysQuery.error}
-            onRetry={() => accessKeysQuery.refetch()}
-            emptyText="This user does not own any access keys."
-            extraColumns={[{ key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> }]}
+          <ManagementKeysTable
+            owners={new Map([[user.id, user]])}
+            canEditPermissions={authorization.can(managementKeyAccess.instance.updatePermissions)}
+            resource="management keys"
+            keys={managementKeysQuery.data}
+            isLoading={managementKeysQuery.isLoading}
+            isError={managementKeysQuery.isError}
+            error={managementKeysQuery.error}
+            onRetry={() => managementKeysQuery.refetch()}
+            emptyText="This user does not own any management keys."
           />
         </div>
       )}

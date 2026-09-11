@@ -81,7 +81,7 @@ def test_org_key_cannot_read_instance_or_other_org_permissions(tmp_path):
 
         resp = c.get(f"/api/v1/auth/permissions?org_id={org_a}", headers=org_headers)
         assert resp.status_code == 200
-        assert Permission.access_keys_issue.value in resp.json()["data"]["permissions"]
+        assert Permission.management_keys_issue.value in resp.json()["data"]["permissions"]
 
         limited = c.get(
             f"/api/v1/auth/permissions?org_id={org_a}",
@@ -110,7 +110,7 @@ def test_unknown_org_returns_404_and_anonymous_401(tmp_path):
         assert resp.status_code == 401
 
 
-def test_service_account_access_key_sees_its_effective_permissions(tmp_path):
+def test_service_account_management_key_sees_its_effective_permissions(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
@@ -120,7 +120,7 @@ def test_service_account_access_key_sees_its_effective_permissions(tmp_path):
             headers=root,
         ).json()["data"]
         key = c.post(
-            "/api/v1/instance/access-keys",
+            "/api/v1/instance/management-keys",
             json={
                 "label": "automation",
                 "user_id": service_account["id"],

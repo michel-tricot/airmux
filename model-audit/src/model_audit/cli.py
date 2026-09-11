@@ -576,9 +576,9 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
 ) -> None:
     load_dotenv(ROOT / ".env")
     gateway_url = gateway_url or os.environ.get("AIRLLM_GATEWAY_URL")
-    gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_API_KEY")
+    gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_INFERENCE_KEY")
     if gateway_url is None or gateway_api_key is None:
-        message = "set AIRLLM_GATEWAY_URL and AIRLLM_API_KEY, or pass both gateway options"
+        message = "set AIRLLM_GATEWAY_URL and AIRLLM_INFERENCE_KEY, or pass both gateway options"
         raise typer.BadParameter(message)
     plan = _plan(
         Filters(
@@ -657,9 +657,9 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if current_harness != document.run.harness_fingerprint:
         message = f"audit harness changed since the run started: expected {document.run.harness_fingerprint}, found {current_harness}"
         raise typer.BadParameter(message)
-    gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_API_KEY")
+    gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_INFERENCE_KEY")
     if gateway_api_key is None:
-        message = "set AIRLLM_API_KEY or pass --gateway-api-key"
+        message = "set AIRLLM_INFERENCE_KEY or pass --gateway-api-key"
         raise typer.BadParameter(message)
     pending = remaining_plan(document)
     if not pending.experiments:

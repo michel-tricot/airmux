@@ -7,7 +7,7 @@ import { useWorkspaceEvents } from '@/features/telemetry/hooks';
 import { Card } from '@/components/ui/elements';
 import { Badge } from '@/components/ui/elements';
 import { TerminalSquare, KeyRound, Users, Database, Activity, Coins, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { useRequiredParam } from '@/lib/route';
@@ -249,7 +249,7 @@ export default function WorkspaceOverview() {
                     header: 'When',
                     headClassName: 'text-right',
                     cellClassName: 'text-right text-muted-foreground text-xs',
-                    cell: (e) => formatRelative(e.occurred_at),
+                    cell: (e) => formatDate(e.occurred_at),
                   },
                 ]}
               />

@@ -22,7 +22,7 @@ def show(name: str, resp: httpx.Response) -> None:
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("AIRLLM_API_KEY", "")
+    api_key = os.environ.get("AIRLLM_INFERENCE_KEY", "")
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
     url = f"{gateway}/v1/chat/completions"
     auth = {"authorization": f"Bearer {api_key}"}

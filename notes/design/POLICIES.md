@@ -100,7 +100,7 @@ returned. Policy denials produce the existing denied usage event without an upst
 ## Management
 
 The console exposes **Policies** in the workspace sidebar. Workspace admins and organization
-admins/owners can manage policies. Workspace members and viewers can read them. Access keys
+admins/owners can manage policies. Workspace members and viewers can read them. Management keys
 need `policies.read` or `policies.manage` within their existing authority scope. Every write is
 covered by database audit triggers.
 

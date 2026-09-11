@@ -1,7 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import { Building2, KeyRound, LayoutDashboard, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { anyOf, type AccessPolicy } from '@/features/permissions/authorization';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { providerCredentialAccess } from '@/features/credentials/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
@@ -14,7 +14,7 @@ const OrganizationDetail = lazy(() => import('@/pages/OrganizationDetail'));
 const WorkspaceDetail = lazy(() => import('@/pages/WorkspaceDetail'));
 const UsersPage = lazy(() => import('@/pages/Users'));
 const UserDetail = lazy(() => import('@/pages/UserDetail'));
-const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
+const ManagementKeys = lazy(() => import('@/pages/ManagementKeys'));
 const ProviderKeys = lazy(() => import('@/pages/ProviderKeys'));
 
 export interface InstanceRouteDefinition {
@@ -28,7 +28,7 @@ export const instanceRoutes: readonly InstanceRouteDefinition[] = [
   {
     path: '/instance',
     component: Dashboard,
-    access: anyOf(orgAccess.list, userAccess.list, accessKeyAccess.instance.read, telemetryAccess.dataPlanes, telemetryAccess.instanceActivity),
+    access: anyOf(orgAccess.list, userAccess.list, managementKeyAccess.instance.read, telemetryAccess.dataPlanes, telemetryAccess.instanceActivity),
     navigation: { label: 'Overview', icon: LayoutDashboard },
   },
   {
@@ -47,10 +47,10 @@ export const instanceRoutes: readonly InstanceRouteDefinition[] = [
   },
   { path: '/instance/users/:userId', component: UserDetail, access: userAccess.read },
   {
-    path: '/instance/keys',
-    component: AccessKeys,
-    access: accessKeyAccess.instance.read,
-    navigation: { label: 'Access Keys', icon: KeyRound },
+    path: '/instance/management-keys',
+    component: ManagementKeys,
+    access: managementKeyAccess.instance.read,
+    navigation: { label: 'Management Keys', icon: KeyRound },
   },
   {
     path: '/instance/provider-keys',

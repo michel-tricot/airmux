@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.interfaces import Dialect
     from sqlalchemy.sql.elements import ColumnElement
 
-AccessKeyStatus = Literal["active", "expired", "revoked"]
+ManagementKeyStatus = Literal["active", "expired", "revoked"]
 
 
 class PermissionList(TypeDecorator[list[Permission]]):
@@ -36,16 +36,16 @@ class PermissionList(TypeDecorator[list[Permission]]):
 
 
 @audited
-class AccessKey(Record, Identified, Tombstonable, table=True):
+class ManagementKey(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
-        CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="access_key_workspace_needs_org"),
+        CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="management_key_workspace_needs_org"),
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
     )
 
     user_id: UUID = Field(foreign_key="user.id")
     org_id: UUID | None = Field(default=None, foreign_key="org.id")
     workspace_id: UUID | None = None
-    parent_id: UUID | None = Field(default=None, foreign_key="access_key.id")
+    parent_id: UUID | None = Field(default=None, foreign_key="management_key.id")
     token_hash: str = Field(unique=True)
     prefix: str
     permissions: list[Permission] = Field(sa_type=PermissionList)
@@ -60,12 +60,12 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
         if self.workspace_id is not None:
             org_id = self.org_id
             if org_id is None:
-                msg = "workspace access key has no organization"
+                msg = "workspace management key has no organization"
                 raise ValueError(msg)
             return Scope.workspace(org_id, self.workspace_id)
         return Scope.org(self.org_id) if self.org_id is not None else Scope.instance()
 
-    def status(self, now: datetime) -> AccessKeyStatus:
+    def status(self, now: datetime) -> ManagementKeyStatus:
         if self.revoked_at is not None:
             return "revoked"
         if self.expires_at is not None and self.expires_at <= now:
@@ -86,20 +86,20 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
         return key
 
     async def revoke_with_descendants(self, revoked_at: datetime) -> None:
-        pending: list[AccessKey] = [self]
+        pending: list[ManagementKey] = [self]
         seen: set[UUID] = set()
         while pending:
             key = pending.pop()
             if key.id in seen:
                 continue
             seen.add(key.id)
-            pending.extend(await AccessKey.find(AccessKey.parent_id == key.id))
+            pending.extend(await ManagementKey.find(ManagementKey.parent_id == key.id))
             if key.revoked_at is None:
                 key.revoked_at = revoked_at
                 await key.save()
 
     async def delete_with_descendants(self) -> None:
-        for child in await AccessKey.find(AccessKey.parent_id == self.id):
+        for child in await ManagementKey.find(ManagementKey.parent_id == self.id):
             await child.delete_with_descendants()
         await self.delete()
 
@@ -112,7 +112,7 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
                 await key.delete_with_descendants()
 
 
-class AccessKeyOut(RecordOut[AccessKey]):
+class ManagementKeyOut(RecordOut[ManagementKey]):
     id: UUID
     user_id: UUID
     org_id: UUID | None
@@ -127,12 +127,12 @@ class AccessKeyOut(RecordOut[AccessKey]):
     updated_at: datetime
     deleted_at: datetime | None
     scope: Scope
-    status: AccessKeyStatus
+    status: ManagementKeyStatus
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"scope", "status"})
 
 
-class AccessKeyMintedOut(BaseModel):
+class ManagementKeyMintedOut(BaseModel):
     id: UUID
     user_id: UUID
     org_id: UUID | None
@@ -147,20 +147,18 @@ class AccessKeyMintedOut(BaseModel):
     updated_at: datetime
     deleted_at: datetime | None
     scope: Scope
-    status: AccessKeyStatus
+    status: ManagementKeyStatus
     token: str
 
 
-class AccessKeyRevokedOut(BaseModel):
+class ManagementKeyRevokedOut(BaseModel):
     id: UUID
     status: Literal["revoked"]
     revoked_at: datetime
 
 
-class AccessKeyGrantIn(RequestModel):
-    label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
+class ManagementKeyPermissionsIn(RequestModel):
     permissions: list[Permission] = PydanticField(min_length=1, description="Explicit maximum permissions carried by the key")
-    expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
     @field_validator("permissions")
     @classmethod
@@ -169,6 +167,11 @@ class AccessKeyGrantIn(RequestModel):
             msg = "permissions must not contain duplicates"
             raise ValueError(msg)
         return sorted(permissions, key=str)
+
+
+class ManagementKeyGrantIn(ManagementKeyPermissionsIn):
+    label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
+    expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
     @field_validator("expires_at")
     @classmethod
@@ -181,5 +184,5 @@ class AccessKeyGrantIn(RequestModel):
         return expires_at.astimezone(UTC)
 
 
-class AccessKeyIn(AccessKeyGrantIn):
+class ManagementKeyIn(ManagementKeyGrantIn):
     user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")

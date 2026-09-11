@@ -73,11 +73,11 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
           canManage && (
             <div className="flex gap-2">
               <Button variant="outline" disabled={!ruleEditorReady} onClick={() => setRuleTypeOpen(true)}>
-                <Library className="mr-1 h-4 w-4" />
+                <Library className="h-4 w-4" />
                 Create rule
               </Button>
               <Button disabled={!policyEditorReady} onClick={() => editPolicy(null)}>
-                <Plus className="mr-1 h-4 w-4" />
+                <Plus className="h-4 w-4" />
                 Create policy
               </Button>
             </div>

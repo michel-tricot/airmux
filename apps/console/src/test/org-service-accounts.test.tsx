@@ -23,7 +23,14 @@ describe('organization service accounts', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({
           data: {
-            permissions: ['members.read', 'members.manage', 'access-keys.issue', 'access-keys.revoke', 'workspaces.read', 'workspaces.create'],
+            permissions: [
+              'members.read',
+              'members.manage',
+              'management-keys.issue',
+              'management-keys.revoke',
+              'workspaces.read',
+              'workspaces.create',
+            ],
           },
         }),
       ),
@@ -57,8 +64,8 @@ describe('organization service accounts', () => {
           data: {
             service_account: serviceAccount,
             membership: { user_id: serviceAccount.id, org_id: ORG.id, role: 'admin', status: 'member' },
-            access_key: {
-              id: 'access-key-1',
+            management_key: {
+              id: 'management-key-1',
               user_id: serviceAccount.id,
               org_id: ORG.id,
               workspace_id: null,
@@ -83,11 +90,11 @@ describe('organization service accounts', () => {
         members = [];
         return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: deletedUserId, deleted_at: now } });
       }),
-      http.post('/api/v1/orgs/:orgId/access-keys', async ({ request }) => {
+      http.post('/api/v1/orgs/:orgId/management-keys', async ({ request }) => {
         replacementSubmitted = await request.json();
-        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({
+        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
           data: {
-            id: 'access-key-2',
+            id: 'management-key-2',
             user_id: 'service-account-1',
             org_id: ORG.id,
             workspace_id: null,
@@ -122,7 +129,7 @@ describe('organization service accounts', () => {
     expect(screen.getByDisplayValue('sk-cp-show-once-secret')).toBeInTheDocument();
     expect(submitted).toEqual({
       name: 'Deploy Bot',
-      access_key: { label: 'deployment-management', permissions: ['workspaces.read', 'workspaces.create'] },
+      management_key: { label: 'deployment-management', permissions: ['workspaces.read', 'workspaces.create'] },
     });
     await user.click(screen.getByRole('button', { name: 'I have saved it' }));
     expect(await screen.findByText('Deploy Bot')).toBeInTheDocument();

@@ -69,7 +69,7 @@ uv run airllm-audit runs plan --model anthropic/claude-fable-5
 uv run airllm-audit runs plan --provider anthropic --case modalities
 
 export AIRLLM_GATEWAY_URL=http://127.0.0.1:8080
-export AIRLLM_API_KEY=sk-inf-your-key
+export AIRLLM_INFERENCE_KEY=sk-inf-your-key
 uv run airllm-audit runs execute --model anthropic/claude-fable-5
 uv run airllm-audit runs execute --provider anthropic --case modalities --concurrency 8
 
@@ -126,7 +126,7 @@ uv run airllm-audit runs resume model-audit/reports/<run>.json
 
 The checkpoint contains the complete original plan, confirmation count, transient retry policy,
 request timeout, partial results, and completion state. Resume uses the stored gateway URL and
-requires the gateway key through `AIRLLM_API_KEY` or `--gateway-api-key`.
+requires the gateway key through `AIRLLM_INFERENCE_KEY` or `--gateway-api-key`.
 
 Resume rejects a changed taxonomy, case suite, audit source, or provider definition rather
 than mixing evidence from different harness versions. It preserves original plan order and

@@ -75,7 +75,7 @@ def test_doctor_renders_every_check_and_fails_when_one_is_unhealthy(tmp_path, mo
 
 def test_doctor_accepts_environment_credentials_without_a_profile(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("AIRLLM_ACCESS_KEY", "environment-token")
+    monkeypatch.setenv("AIRLLM_MANAGEMENT_KEY", "environment-token")
     client_class = httpx.Client
     transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"data": {}}))
     monkeypatch.setattr(diagnostics.httpx, "Client", lambda **_kwargs: client_class(transport=transport))

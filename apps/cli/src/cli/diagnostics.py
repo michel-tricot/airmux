@@ -64,7 +64,7 @@ def resolve_gateway_url(override: str = "") -> str:
 
 @profiles_app.command("list")
 def profiles_list(fmt: FormatOption = OutputFormat.table) -> None:
-    """List saved contexts without exposing their access keys."""
+    """List saved contexts without exposing their management keys."""
     print_rows("profiles", _profile_rows(), PROFILE_COLS, fmt)
 
 
@@ -81,7 +81,7 @@ def profiles_use(name: str) -> None:
 
 @profiles_app.command("remove")
 def profiles_remove(name: str) -> None:
-    """Remove a saved context and its access key from this machine."""
+    """Remove a saved context and its management key from this machine."""
     try:
         remove_profile(name)
     except KeyError:
@@ -96,7 +96,7 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
     config = load_config()
     profile = active_profile(config)
     organization = os.environ.get("AIRLLM_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else "")
-    authentication = "environment" if os.environ.get("AIRLLM_ACCESS_KEY") else "profile" if profile is not None and profile.token else "none"
+    authentication = "environment" if os.environ.get("AIRLLM_MANAGEMENT_KEY") else "profile" if profile is not None and profile.token else "none"
     rows = [
         {
             "profile": config.active or "none",
@@ -127,7 +127,7 @@ def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict[str
 
 def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, str]]:
     profile = load_active_profile()
-    token = os.environ.get("AIRLLM_ACCESS_KEY") or (profile.token if profile is not None else None)
+    token = os.environ.get("AIRLLM_MANAGEMENT_KEY") or (profile.token if profile is not None else None)
     path = config_path()
     if path.exists():
         private = stat.S_IMODE(path.stat().st_mode) == PRIVATE_FILE_MODE

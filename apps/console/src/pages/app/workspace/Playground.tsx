@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format';
 import { useEffect, useRef, useState } from 'react';
 import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, ChevronDown } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
@@ -31,7 +32,7 @@ function curlFor(request: PlaygroundRequest) {
   const body = JSON.stringify(prepared.body, null, 2).replaceAll("'", "'\"'\"'");
   return [
     "curl '" + window.location.origin + prepared.path + "' \\",
-    '  -H "Authorization: Bearer $AIRLLM_API_KEY" \\',
+    '  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \\',
     "  -H 'Content-Type: application/json' \\",
     "  -H 'x-airllm-dialect: " + prepared.dialect + "' \\",
     "  --data-raw '" + body + "'",
@@ -48,7 +49,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
       open={open}
       onOpenChange={onOpenChange}
       title="Replicate request"
-      description="Set AIRLLM_API_KEY to an inference key, then run this command from your terminal."
+      description="Set AIRLLM_INFERENCE_KEY to an inference key, then run this command from your terminal."
       contentClassName="sm:max-w-3xl"
     >
       <div className="min-w-0 space-y-3">
@@ -437,7 +438,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
             </div>
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               {sessionExpiresAt
-                ? `Active until ${new Date(sessionExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. It stays available across pages.`
+                ? `Active until ${formatDate(sessionExpiresAt)}. It stays available across pages.`
                 : 'A private one-hour session starts automatically when you send a message.'}
             </p>
             {sessionExpiresAt && (
@@ -448,7 +449,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                 onClick={() => void endPlaygroundSession()}
                 disabled={sending || endSession.isPending}
               >
-                {endSession.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                {endSession.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
                 End session
               </Button>
             )}

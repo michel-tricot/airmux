@@ -18,11 +18,11 @@ from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
-from control_plane.routes.access_keys import router as access_keys_router
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.invitations import router as invitations_router
+from control_plane.routes.management_keys import router as management_keys_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.orgs import router as orgs_router
 from control_plane.routes.oss import router as oss_router
@@ -132,7 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     for router in (
-        access_keys_router,
+        management_keys_router,
         auth_router,
         enroll_router,
         oss_router,

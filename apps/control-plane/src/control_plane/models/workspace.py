@@ -9,7 +9,6 @@ from sqlalchemy import UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
@@ -17,6 +16,7 @@ from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.management_key import ManagementKey
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.policy import Policy
@@ -136,7 +136,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         The usage it recorded is history rather than a scoped row, and stays.
         """
         await ProviderCredential.delete_scoped(store, ProviderCredential.workspace_id == self.id)
-        await AccessKey.delete_scoped(AccessKey.workspace_id == self.id)
+        await ManagementKey.delete_scoped(ManagementKey.workspace_id == self.id)
         for policy in await Policy.for_workspace(self.id):
             await policy.delete()
         for rule in await Rule.for_workspace(self.id):

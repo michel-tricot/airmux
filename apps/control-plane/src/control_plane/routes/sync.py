@@ -107,7 +107,7 @@ def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[dat
 
 @router.post("/heartbeat", dependencies=[require(credential_scope, Permission.data_planes_heartbeat)])
 async def heartbeat(scope: CredentialScopeDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
-    """Create or refresh a data-plane instance at the access key's scope."""
+    """Create or refresh a data-plane instance at the management key's scope."""
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
     fields = {"org_id": scope.org_id, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}

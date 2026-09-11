@@ -30,7 +30,7 @@ export default function ProviderKeys() {
           canCreate &&
           canReadCatalog && (
             <Button onClick={() => setAddOpen(true)} disabled={taxonomyQuery.isLoading || taxonomyQuery.isError || providers.length === 0}>
-              <Plus className="mr-1 h-4 w-4" /> Add Key
+              <Plus className="h-4 w-4" /> Add Key
             </Button>
           )
         }

@@ -58,8 +58,8 @@ workspace_members_app = typer.Typer(help="Who can use a workspace")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)
 users_app = typer.Typer(help="Accounts across the instance")
 service_accounts_app = typer.Typer(help="Machine accounts for CI and automation")
-inference_keys_app = typer.Typer(help="API keys your apps send requests with")
-access_keys_app = typer.Typer(help="Keys for control-plane access at instance, organization, or workspace boundaries")
+inference_keys_app = typer.Typer(help="Inference keys your apps send model requests with")
+management_keys_app = typer.Typer(help="Keys for control-plane access at instance, organization, or workspace boundaries")
 providers_app = typer.Typer(help="Upstream LLM providers")
 provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
@@ -76,7 +76,7 @@ for name, sub in (
     ("workspaces", workspaces_app),
     ("inference-keys", inference_keys_app),
     ("provider-credentials", provider_credentials_app),
-    ("access-keys", access_keys_app),
+    ("management-keys", management_keys_app),
     ("models", models_app),
     ("rules", rules_app),
     ("policies", policies_app),

@@ -9,13 +9,13 @@ from sqlalchemy import CheckConstraint, Column, ForeignKey, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.authz import InstanceRole  # noqa: TC001 pydantic resolves this enum annotation at runtime
+from control_plane.authz import InstanceRole
 from control_plane.db import current_session
-from control_plane.models.access_key import AccessKeyGrantIn, AccessKeyMintedOut
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
+from control_plane.models.management_key import ManagementKeyGrantIn, ManagementKeyMintedOut
 from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
@@ -24,6 +24,7 @@ EMAIL_MAX_LENGTH = 320
 
 # Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
 _CLAIM_LOCK = 0x41524C4C
+_INSTANCE_ROLE_LOCK = 0x41524C52
 
 
 @audited
@@ -124,7 +125,7 @@ class User(Record, Identified, Tombstonable, table=True):
         return not await cls.instance_claimed()
 
     async def delete_with_contents(self) -> None:
-        """Delete the user with the entities they own that are theirs alone: identities, sessions, and access keys.
+        """Delete the user with the entities they own that are theirs alone: identities, sessions, and management keys.
 
         The sibling of Org.delete_with_contents and Workspace.delete_with_contents. Everything else a
         user touches outlives them, so the route refuses rather than cascading: a membership is the
@@ -135,8 +136,25 @@ class User(Record, Identified, Tombstonable, table=True):
         for owned in (models.AuthIdentity, models.AuthSession):
             for record in await owned.find(owned.user_id == self.id):
                 await record.delete()
-        await models.AccessKey.delete_scoped(models.AccessKey.user_id == self.id)
+        await models.ManagementKey.delete_scoped(models.ManagementKey.user_id == self.id)
         await self.delete()
+
+    @classmethod
+    async def change_instance_role(cls, user_id: UUID, instance_role: InstanceRole | None) -> Self | None:
+        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _INSTANCE_ROLE_LOCK})
+        user = await cls.find_by_id(user_id)
+        if user is None:
+            return None
+        if user.managing_org_id is not None:
+            msg = "Organization-managed service accounts cannot hold an instance role"
+            raise ValueError(msg)
+        if user.instance_role == InstanceRole.owner and instance_role != InstanceRole.owner:
+            owners = await cls.find(cls.instance_role == InstanceRole.owner)
+            if len(owners) == 1:
+                msg = "Cannot demote the last instance owner"
+                raise ValueError(msg)
+        user.instance_role = instance_role
+        return await user.save()
 
     @classmethod
     def new_service_account(cls, name: str, instance_role: InstanceRole | None = None, managing_org_id: UUID | None = None) -> Self:
@@ -166,12 +184,16 @@ class ServiceAccountNameIn(RequestModel):
         return v
 
 
+class InstanceRoleIn(RequestModel):
+    instance_role: InstanceRole | None = Field(description="Instance-wide role to assign, or null to remove instance-wide access")
+
+
 class ServiceAccountIn(ServiceAccountNameIn):
     instance_role: InstanceRole | None = Field(default=None, description="Optional instance-wide role for the service account")
 
 
 class OrgServiceAccountIn(ServiceAccountNameIn):
-    access_key: AccessKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
+    management_key: ManagementKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
 
 
 class UserOut(RecordOut[User]):
@@ -192,4 +214,4 @@ class UserOut(RecordOut[User]):
 class OrgServiceAccountMintedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
-    access_key: AccessKeyMintedOut
+    management_key: ManagementKeyMintedOut

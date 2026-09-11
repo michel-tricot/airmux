@@ -59,7 +59,7 @@ export default function WorkspaceByok() {
           canCreate &&
           canReadCatalog && (
             <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
-              <Plus className="w-4 h-4 mr-1" /> Add Key
+              <Plus className="w-4 h-4" /> Add Key
             </Button>
           )
         }

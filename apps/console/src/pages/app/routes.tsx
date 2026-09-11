@@ -2,7 +2,7 @@ import { lazy, type ComponentType } from 'react';
 import { Boxes, Building2, Settings, type LucideIcon } from 'lucide-react';
 import { anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { catalogAccess } from '@/features/catalog/policy';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
@@ -24,11 +24,11 @@ export const orgRoutes: readonly OrgRouteDefinition[] = [
   { path: '/org/models', label: 'Models', icon: Boxes, component: Models, access: catalogAccess.org.read },
   {
     path: '/org/settings',
-    label: 'Org Settings',
+    label: 'Settings',
     icon: Settings,
     component: OrgSettings,
     access: anyOf(
-      accessKeyAccess.org.read,
+      managementKeyAccess.org.read,
       telemetryAccess.bundles.read,
       orgMemberAccess.read,
       orgMemberAccess.listInvitations,

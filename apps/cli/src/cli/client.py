@@ -50,10 +50,10 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
     profile = load_active_profile()
-    environment_token = os.environ.get("AIRLLM_ACCESS_KEY")
+    environment_token = os.environ.get("AIRLLM_MANAGEMENT_KEY")
     selected_token = token or environment_token or (profile.token if profile is not None else None)
     if not selected_token:
-        console.print("[red]No access key available. Run [bold]airllm login[/bold] or set AIRLLM_ACCESS_KEY.[/red]")
+        console.print("[red]No management key available. Run [bold]airllm login[/bold] or set AIRLLM_MANAGEMENT_KEY.[/red]")
         raise typer.Exit(1)
     return _bearer_client(str(selected_token), control_plane_url)
 

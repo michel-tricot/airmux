@@ -3,6 +3,7 @@ import * as z from 'zod';
 import { Card, Button, Dropdown, ConfirmButton } from '@/components/ui/elements';
 import { Plus, UserMinus } from 'lucide-react';
 import { DataTable, type Column } from '@/components/shared/data-table';
+import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
@@ -37,6 +38,11 @@ interface MembersPanelProps<T extends MemberRow> {
     onAdd: (userId: string, role: string) => Promise<unknown>;
     pending: boolean;
   };
+  editRole?: {
+    roles: Array<{ value: string; label: string }>;
+    onSave: (member: T, role: string) => Promise<unknown>;
+    pending: boolean;
+  };
   remove?: {
     title: (member: T) => string;
     description: string;
@@ -59,6 +65,7 @@ export function MembersPanel<T extends MemberRow>({
   actions,
   add,
   remove,
+  editRole,
 }: MembersPanelProps<T>) {
   const [addOpen, setAddOpen] = useState(false);
 
@@ -75,7 +82,24 @@ export function MembersPanel<T extends MemberRow>({
       cellClassName: 'text-muted-foreground',
       cell: (member) => (renderEmail ? renderEmail(member) : (member.email ?? member.user_id)),
     },
-    { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
+    {
+      key: 'role',
+      header: 'Role',
+      cellClassName: 'text-muted-foreground',
+      cell: (member) =>
+        editRole ? (
+          <RoleSelect
+            value={member.role}
+            options={editRole.roles}
+            label={`Role for ${member.name ?? member.user_id}`}
+            name={member.name ?? member.user_id}
+            pending={editRole.pending}
+            onSave={(role) => editRole.onSave(member, role)}
+          />
+        ) : (
+          member.role
+        ),
+    },
     ...extraColumns,
   ];
   if (remove) {
@@ -107,7 +131,7 @@ export function MembersPanel<T extends MemberRow>({
           {actions}
           {add && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={add.pending || add.candidates.length === 0}>
-              <Plus className="w-4 h-4 mr-1" /> Add Member
+              <Plus className="w-4 h-4" /> Add Member
             </Button>
           )}
         </div>

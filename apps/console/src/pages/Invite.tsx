@@ -141,7 +141,7 @@ export default function Invite() {
         <div className="flex justify-end gap-2">
           {!emailMatches ? (
             <Button variant="outline" onClick={logout}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign in with another account
+              <LogOut className="h-4 w-4" /> Sign in with another account
             </Button>
           ) : (
             <Button

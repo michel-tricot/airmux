@@ -79,7 +79,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       destructive: 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20',
     };
     const sizes = {
-      default: 'h-9 px-4 py-2 text-[12px]',
+      default: 'h-9 px-4 text-[12px]',
       sm: 'h-8 rounded px-3 text-[11px]',
       lg: 'h-10 rounded px-8 text-[13px]',
       icon: 'h-9 w-9',
@@ -91,7 +91,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         type={asChild ? undefined : type}
         variant={variant}
         size={size}
-        className={cn('gap-0 rounded font-mono font-bold uppercase tracking-wider focus-visible:ring-2', variants[variant], sizes[size], className)}
+        className={cn(
+          'min-h-0 gap-2 rounded py-0 text-center font-mono font-bold uppercase leading-none tracking-wider focus-visible:ring-2',
+          variants[variant],
+          sizes[size],
+          className,
+        )}
         {...props}
       />
     );
@@ -248,7 +253,7 @@ export const Dropdown = ({
       id={id}
       aria-label={ariaLabel}
       className={cn(
-        'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
+        'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono leading-none shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
         className,
       )}
     >
@@ -575,7 +580,7 @@ export const TabsTrigger = React.forwardRef<
   <TabsTriggerPrimitive
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-4 py-1.5 text-[12px] font-mono font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm',
+      'inline-flex items-center justify-center min-h-8 whitespace-nowrap rounded-sm px-4 py-1.5 text-center text-[12px] leading-none font-mono font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm',
       className,
     )}
     {...props}

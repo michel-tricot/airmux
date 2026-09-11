@@ -1,16 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
 import { Building2, Users, Key, Server, Activity } from 'lucide-react';
-import { formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
-import { useInstanceAccessKeys } from '@/features/keys/hooks';
+import { useInstanceManagementKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { ActivityTable } from '@/components/shared/activity-table';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { userAccess } from '@/features/users/policy';
@@ -19,13 +19,13 @@ export default function Dashboard() {
   const authorization = useAuthorization('instance');
   const canListOrgs = authorization.can(orgAccess.list);
   const canListUsers = authorization.can(userAccess.list);
-  const canReadKeys = authorization.can(accessKeyAccess.instance.read);
+  const canReadKeys = authorization.can(managementKeyAccess.instance.read);
   const canReadDataPlanes = authorization.can(telemetryAccess.dataPlanes);
   const canReadActivity = authorization.can(telemetryAccess.instanceActivity);
   const orgsQuery = useOrgs({ enabled: canListOrgs });
   const usersQuery = useUsers({ enabled: canListUsers });
   const dataPlanesQuery = useDataPlanes({ enabled: canReadDataPlanes });
-  const keysQuery = useInstanceAccessKeys(undefined, { enabled: canReadKeys });
+  const keysQuery = useInstanceManagementKeys(undefined, { enabled: canReadKeys });
   const activityQuery = useInstanceActivity({ limit: 25 }, { enabled: canReadActivity });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const actor = (userId: string) => usersById.get(userId)?.email ?? userId;
@@ -37,7 +37,7 @@ export default function Dashboard() {
     ...(canListOrgs ? [{ label: 'Organizations', value: orgsQuery.data?.length, query: orgsQuery, icon: Building2 }] : []),
     ...(canListUsers ? [{ label: 'Users', value: usersQuery.data?.length, query: usersQuery, icon: Users }] : []),
     ...(canReadKeys
-      ? [{ label: 'Access Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key }]
+      ? [{ label: 'Management Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key }]
       : []),
     ...(canReadDataPlanes
       ? [
@@ -116,7 +116,7 @@ export default function Dashboard() {
                   header: 'Last Seen',
                   headClassName: 'text-right',
                   cellClassName: 'text-right text-muted-foreground text-sm',
-                  cell: (i) => formatRelative(i.last_seen),
+                  cell: (i) => formatDate(i.last_seen),
                 },
               ]}
             />

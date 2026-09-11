@@ -367,7 +367,7 @@ The anchor is YAML reuse only. Both nested configs validate their own complete l
 constraint is applied after parsing. The omitted secret-store setting defaults to environment
 variables.
 
-The control-plane access key defines the bundle set. An instance-scoped key receives the latest
+The control-plane management key defines the bundle set. An instance-scoped key receives the latest
 bundle for every organization, while an organization-scoped key receives only that organization's
 latest bundle. The data plane consumes the same manifest shape in both cases and carries no separate
 organization selector. The removed `bundle.org` setting is rejected so an old narrowed deployment
@@ -426,13 +426,13 @@ Remote startup is designed to serve through a control-plane outage:
 4. Start the poll and heartbeat loops
 
 The poller immediately requests `GET /api/v1/bundles/manifest`. The control plane derives the
-manifest from the access key's scope. The poller reuses unchanged bundles, fetches changed entries
+manifest from the management key's scope. The poller reuses unchanged bundles, fetches changed entries
 by immutable bundle id, validates their schemas and manifest identities, admits the complete result,
 and atomically persists it. Organizations absent from the next successfully admitted manifest are
 removed. Validation, HTTP, and filesystem failures are recoverable. The last admitted bundle set
 remains in service while polling retries.
 
-The data-plane access key authenticates and authorizes bundle transport. Production deployments use
+The data-plane management key authenticates and authorizes bundle transport. Production deployments use
 HTTPS or a protected private network between the planes. The control plane stores the immutable
 serialized snapshot and serves it as a typed `BundleV1`; the data plane does not trust an unvalidated
 response or adopt a bundle whose organization and bundle ids differ from its manifest entry.

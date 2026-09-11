@@ -66,7 +66,7 @@ class ScheduledExperiment:
     index: int
     experiment: Experiment
     api_key: str
-    access_key: tuple[str, str, str]
+    management_key: tuple[str, str, str]
 
 
 @dataclass(frozen=True)
@@ -372,7 +372,7 @@ def _execute_experiment(scheduled: ScheduledExperiment, run: RunContext) -> Pair
     return _result(experiment, final, assessment, tuple(attempts))
 
 
-def _access_key(experiment: Experiment) -> tuple[str, str, str]:
+def _management_key(experiment: Experiment) -> tuple[str, str, str]:
     target = experiment.target
     return target.provider_id, target.model_id, target.surface_id
 
@@ -419,7 +419,7 @@ def _record_access_blocks(
     provider_blocks: dict[str, tuple[str, str]],
 ) -> tuple[str, str] | None:
     if result.direct.error_code in {"direct_authentication", "direct_model_access"}:
-        blocked[scheduled.access_key] = (str(result.direct.error_code), "direct model access could not be established")
+        blocked[scheduled.management_key] = (str(result.direct.error_code), "direct model access could not be established")
     if result.direct.error_code == "provider_billing_access":
         provider_blocks[scheduled.experiment.target.provider_id] = (
             "provider_billing_access",
@@ -455,20 +455,20 @@ def execute(
             while pending and len(in_flight) < options.concurrency:
                 index, experiment = pending.popleft()
                 target = experiment.target
-                access_key = _access_key(experiment)
-                block = gateway_block or provider_blocks.get(target.provider_id) or blocked.get(access_key)
+                management_key = _management_key(experiment)
+                block = gateway_block or provider_blocks.get(target.provider_id) or blocked.get(management_key)
                 api_key = os.environ.get(target.credential_env)
                 if block is None and api_key is None:
                     block = ("direct_authentication", f"{target.credential_env} is not set")
-                    blocked[access_key] = block
+                    blocked[management_key] = block
                 if block is not None:
-                    scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=api_key or "", access_key=access_key)
+                    scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=api_key or "", management_key=management_key)
                     _progress_event(run, "experiment_started", scheduled)
                     result = _blocked_result(experiment, *block)
                     _store_result(results, index, result, on_result)
                     _progress_event(run, "experiment_completed", scheduled, result)
                     continue
-                scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=cast("str", api_key), access_key=access_key)
+                scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=cast("str", api_key), management_key=management_key)
                 _progress_event(run, "experiment_started", scheduled)
                 in_flight[executor.submit(_execute_experiment, scheduled, run)] = scheduled
             if not in_flight:

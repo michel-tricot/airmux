@@ -188,7 +188,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex items-center justify-between gap-1 px-1">
           <Button variant="ghost" size="sm" onClick={logout} className="h-8 flex-1 justify-start px-2 text-muted-foreground hover:text-destructive">
-            <LogOut className="mr-2 h-4 w-4 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0" />
             Sign out
           </Button>
           {user?.instance_role && (

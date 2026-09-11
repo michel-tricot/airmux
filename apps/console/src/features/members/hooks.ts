@@ -8,8 +8,9 @@ import {
   useCreateOrgServiceAccount,
   useDeleteOrgServiceAccount,
   getListOrgUsersQueryKey,
-  getListOrgAccessKeysQueryKey,
+  getListOrgManagementKeysQueryKey,
   getListMembersQueryKey,
+  getMyPermissionsQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
@@ -30,7 +31,7 @@ export function useCreateOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
@@ -43,7 +44,7 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
     },
@@ -74,6 +75,20 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },
+    },
+  });
+}
+
+export function useChangeWorkspaceRoleMutation(orgId: string, workspaceRef: string) {
+  const queryClient = useQueryClient();
+  return useAddMember({
+    mutation: {
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
+        ]),
+      meta: { errorMessage: 'We couldn’t change the workspace role. Please try again.' },
     },
   });
 }

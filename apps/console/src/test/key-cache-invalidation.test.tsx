@@ -6,12 +6,13 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
 import {
-  useInstanceAccessKeys,
-  useOrgAccessKeys,
-  useCreateInstanceAccessKeyMutation,
+  useInstanceManagementKeys,
+  useUpdateManagementKeyPermissionsMutation,
+  useOrgManagementKeys,
+  useCreateInstanceManagementKeyMutation,
   useCreateInferenceKeyMutation,
   useInferenceKeys,
-  useRevokeOrgAccessKeyMutation,
+  useRevokeOrgManagementKeyMutation,
   useRevokeInferenceKeyMutation,
 } from '@/features/keys/hooks';
 import { ORG, server } from './msw';
@@ -27,7 +28,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
-function accessKey(id: string, revokedAt: string | null = null): Api.AccessKeyOut {
+function managementKey(id: string, revokedAt: string | null = null): Api.ManagementKeyOut {
   return {
     id,
     user_id: 'user-1',
@@ -65,41 +66,41 @@ function inferenceKey(id: string, revoked: boolean): Api.InferenceKeyOut {
 }
 
 describe('key cache invalidation across pages', () => {
-  it('revoking an access key refreshes a filtered access-key list', async () => {
-    let key = accessKey('ak-1');
+  it('revoking an management key refreshes a filtered management-key list', async () => {
+    let key = managementKey('ak-1');
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: [key] })),
-      http.delete('/api/v1/access-keys/:keyId', () => {
-        key = accessKey('ak-1', now);
-        return HttpResponse.json<{ data: Api.AccessKeyRevokedOut }>({ data: { id: 'ak-1', status: 'revoked', revoked_at: now } });
+      http.get(`/api/v1/orgs/${ORG.id}/management-keys`, () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [key] })),
+      http.delete('/api/v1/management-keys/:keyId', () => {
+        key = managementKey('ak-1', now);
+        return HttpResponse.json<{ data: Api.ManagementKeyRevokedOut }>({ data: { id: 'ak-1', status: 'revoked', revoked_at: now } });
       }),
     );
 
-    const list = renderHook(() => useOrgAccessKeys(ORG.id), { wrapper });
+    const list = renderHook(() => useOrgManagementKeys(ORG.id), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: null })]);
 
-    const revoke = renderHook(() => useRevokeOrgAccessKeyMutation(ORG.id), { wrapper });
+    const revoke = renderHook(() => useRevokeOrgManagementKeyMutation(ORG.id), { wrapper });
     await revoke.result.current.mutateAsync({ keyId: 'ak-1' });
 
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: now })]));
   });
 
-  it('minting an access key refetches the access-key list', async () => {
-    const keys = [accessKey('ak-1')];
+  it('minting an management key refetches the management-key list', async () => {
+    const keys = [managementKey('ak-1')];
     server.use(
-      http.get('/api/v1/instance/access-keys', () => HttpResponse.json<{ data: Api.AccessKeyOut[] }>({ data: keys })),
-      http.post('/api/v1/instance/access-keys', () => {
-        keys.push(accessKey('ak-2'));
-        return HttpResponse.json<{ data: Api.AccessKeyMintedOut }>({ data: { ...accessKey('ak-2'), token: 'tok-once' } });
+      http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: keys })),
+      http.post('/api/v1/instance/management-keys', () => {
+        keys.push(managementKey('ak-2'));
+        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({ data: { ...managementKey('ak-2'), token: 'tok-once' } });
       }),
     );
 
-    const list = renderHook(() => useInstanceAccessKeys(), { wrapper });
+    const list = renderHook(() => useInstanceManagementKeys(), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
 
-    const mint = renderHook(() => useCreateInstanceAccessKeyMutation(), { wrapper });
+    const mint = renderHook(() => useCreateInstanceManagementKeyMutation(), { wrapper });
     await mint.result.current.mutateAsync({ data: { label: 'ci', permissions: ['workspaces.read'] } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
@@ -148,4 +149,24 @@ describe('key cache invalidation across pages', () => {
 
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]));
   });
+});
+
+it('refreshes filtered instance and organization key lists after editing permissions', async () => {
+  let key = managementKey('editable');
+  server.use(
+    http.get('/api/v1/instance/management-keys', () => HttpResponse.json({ data: [key] })),
+    http.get(`/api/v1/orgs/${ORG.id}/management-keys`, () => HttpResponse.json({ data: [key] })),
+    http.put('/api/v1/management-keys/:keyId/permissions', () => {
+      key = { ...key, permissions: ['usage.read'] };
+      return HttpResponse.json({ data: key });
+    }),
+  );
+  const instance = renderHook(() => useInstanceManagementKeys({ user_id: key.user_id }), { wrapper });
+  const org = renderHook(() => useOrgManagementKeys(ORG.id, { user_id: key.user_id }), { wrapper });
+  const update = renderHook(() => useUpdateManagementKeyPermissionsMutation(), { wrapper });
+  await waitFor(() => expect(instance.result.current.data?.[0].permissions).toEqual(['workspaces.read']));
+  await waitFor(() => expect(org.result.current.data?.[0].permissions).toEqual(['workspaces.read']));
+  await update.result.current.mutateAsync({ keyId: key.id, data: { permissions: ['usage.read'] } });
+  await waitFor(() => expect(instance.result.current.data?.[0].permissions).toEqual(['usage.read']));
+  await waitFor(() => expect(org.result.current.data?.[0].permissions).toEqual(['usage.read']));
 });

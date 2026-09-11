@@ -135,7 +135,7 @@ describe('playground', () => {
     await user.click(screen.getByRole('button', { name: 'View cURL' }));
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
-    expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRLLM_API_KEY');
+    expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRLLM_INFERENCE_KEY');
     expect(curlDialog).toHaveTextContent('x-airllm-dialect: canonical');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"text": "hello"');
