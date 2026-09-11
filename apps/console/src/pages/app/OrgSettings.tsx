@@ -17,7 +17,7 @@ import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { KeysTable } from '@/components/shared/keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import {
   ManagementKeyFormFields,
   managementKeyPayload,
@@ -25,7 +25,6 @@ import {
   PermissionChecklist,
   managementKeyFormSchema,
 } from '@/components/shared/management-key-form';
-import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -140,7 +139,8 @@ export default function AppOrgSettings() {
                 </Button>
               )}
             </div>
-            <KeysTable
+            <ManagementKeysTable
+              canEditPermissions={authorization.can(managementKeyAccess.org.updatePermissions)}
               resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
@@ -148,14 +148,6 @@ export default function AppOrgSettings() {
               error={keysQuery.error}
               onRetry={() => keysQuery.refetch()}
               emptyText="No management keys generated."
-              extraColumns={[
-                {
-                  key: 'permissions',
-                  header: 'Permissions',
-                  cell: (key) => <ManagementKeyPermissionsCell apiKey={key} canEdit={authorization.can(managementKeyAccess.org.updatePermissions)} />,
-                },
-                { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
-              ]}
               revokeDescription="This key and every key delegated from it will stop working immediately."
               onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
               revokePending={canRevokeKeys ? revokeKey.isPending : undefined}

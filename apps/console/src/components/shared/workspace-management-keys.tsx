@@ -3,8 +3,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/elements';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { ManagementKeyFormFields, managementKeyPayload, managementKeyFormSchema } from '@/components/shared/management-key-form';
-import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
-import { KeysTable } from '@/components/shared/keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { SectionHeader } from '@/components/shared/page-shell';
 import { useScopedAuthorization } from '@/features/permissions/hooks';
@@ -35,7 +34,8 @@ export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string;
           )
         }
       />
-      <KeysTable
+      <ManagementKeysTable
+        canEditPermissions={canIssue}
         resource="management keys"
         keys={keys.data}
         isLoading={keys.isLoading}
@@ -43,9 +43,6 @@ export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string;
         error={keys.error}
         onRetry={() => keys.refetch()}
         emptyText="No management keys for this workspace."
-        extraColumns={[
-          { key: 'permissions', header: 'Permissions', cell: (key) => <ManagementKeyPermissionsCell apiKey={key} canEdit={canIssue} /> },
-        ]}
         revokeDescription="This management key and its delegated keys will stop working immediately."
         onRevoke={canRevoke ? (key) => revoke.mutateAsync({ keyId: key.id }) : undefined}
         revokePending={revoke.isPending}

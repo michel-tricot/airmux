@@ -4,7 +4,7 @@ import { useOrgEvents } from '@/features/telemetry/hooks';
 import { Card, Badge } from '@/components/ui/elements';
 import { TerminalSquare, FolderGit2, Activity } from 'lucide-react';
 import { Link } from 'wouter';
-import { formatDate, formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { DataTable } from '@/components/shared/data-table';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -116,7 +116,7 @@ export default function AppDashboard() {
                 header: 'When',
                 headClassName: 'text-right',
                 cellClassName: 'text-right text-muted-foreground text-sm',
-                cell: (event) => formatRelative(event.occurred_at),
+                cell: (event) => formatDate(event.occurred_at),
               },
             ]}
           />

@@ -1,4 +1,3 @@
-import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Dropdown, Badge, ConfirmButton } from '@/components/ui/elements';
@@ -28,7 +27,7 @@ import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
-import { KeysTable } from '@/components/shared/keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -192,7 +191,8 @@ export default function UserDetail() {
             Keys owned by this user
           </h2>
 
-          <KeysTable
+          <ManagementKeysTable
+            canEditPermissions={authorization.can(managementKeyAccess.instance.updatePermissions)}
             resource="management keys"
             keys={managementKeysQuery.data}
             isLoading={managementKeysQuery.isLoading}
@@ -200,16 +200,6 @@ export default function UserDetail() {
             error={managementKeysQuery.error}
             onRetry={() => managementKeysQuery.refetch()}
             emptyText="This user does not own any management keys."
-            extraColumns={[
-              {
-                key: 'permissions',
-                header: 'Permissions',
-                cell: (key) => (
-                  <ManagementKeyPermissionsCell apiKey={key} canEdit={authorization.can(managementKeyAccess.instance.updatePermissions)} />
-                ),
-              },
-              { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
-            ]}
           />
         </div>
       )}

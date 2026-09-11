@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format';
 import { useEffect, useRef, useState } from 'react';
 import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, ChevronDown } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
@@ -438,7 +439,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
             </div>
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               {sessionExpiresAt
-                ? `Active until ${new Date(sessionExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. It stays available across pages.`
+                ? `Active until ${formatDate(sessionExpiresAt)}. It stays available across pages.`
                 : 'A private one-hour session starts automatically when you send a message.'}
             </p>
             {sessionExpiresAt && (

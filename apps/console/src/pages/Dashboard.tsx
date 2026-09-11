@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
 import { Building2, Users, Key, Server, Activity } from 'lucide-react';
-import { formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { useInstanceManagementKeys } from '@/features/keys/hooks';
@@ -116,7 +116,7 @@ export default function Dashboard() {
                   header: 'Last Seen',
                   headClassName: 'text-right',
                   cellClassName: 'text-right text-muted-foreground text-sm',
-                  cell: (i) => formatRelative(i.last_seen),
+                  cell: (i) => formatDate(i.last_seen),
                 },
               ]}
             />

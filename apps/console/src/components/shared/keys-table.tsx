@@ -1,5 +1,4 @@
 import { Card, Badge, ConfirmButton } from '@/components/ui/elements';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Ban } from 'lucide-react';
 import { formatDate } from '@/lib/format';
@@ -15,9 +14,8 @@ interface KeyRow {
   created_at: string;
 }
 
-interface KeysTableProps<T extends KeyRow> {
+export interface KeysTableProps<T extends KeyRow> {
   resource: string;
-  compact?: boolean;
   keys: T[] | undefined;
   isLoading?: boolean;
   isError?: boolean;
@@ -32,7 +30,6 @@ interface KeysTableProps<T extends KeyRow> {
 
 export function KeysTable<T extends KeyRow>({
   resource,
-  compact = false,
   keys,
   isLoading,
   isError,
@@ -50,7 +47,6 @@ export function KeysTable<T extends KeyRow>({
     {
       key: 'label',
       header: 'Label',
-      headClassName: compact ? 'w-[14%]' : undefined,
       cellClassName: 'font-medium',
       cell: (key) => (
         <span className="block truncate" title={key.label}>
@@ -61,7 +57,7 @@ export function KeysTable<T extends KeyRow>({
     {
       key: 'prefix',
       header: 'Key',
-      headClassName: compact ? 'w-[10%]' : undefined,
+      headClassName: 'w-24',
       cellClassName: 'font-mono text-xs text-muted-foreground',
       cell: (key) => (
         <span className="block truncate" title={key.prefix}>
@@ -73,7 +69,7 @@ export function KeysTable<T extends KeyRow>({
     {
       key: 'status',
       header: 'Status',
-      headClassName: compact ? 'w-[9%]' : undefined,
+      headClassName: 'w-24',
       cell: (key) => {
         const status = statusOf(key);
         return <Badge variant={status === 'active' ? 'success' : 'outline'}>{status.toUpperCase()}</Badge>;
@@ -82,11 +78,11 @@ export function KeysTable<T extends KeyRow>({
     {
       key: 'created',
       header: 'Created',
-      headClassName: compact ? 'w-[9%]' : undefined,
+      headClassName: 'w-44',
       cellClassName: 'text-muted-foreground text-sm',
       cell: (key) => (
         <span className="block truncate" title={formatDate(key.created_at)}>
-          {compact ? format(new Date(key.created_at), 'MMM d') : formatDate(key.created_at)}
+          {formatDate(key.created_at)}
         </span>
       ),
     },
@@ -94,13 +90,13 @@ export function KeysTable<T extends KeyRow>({
   if (onRevoke) {
     columns.push({
       key: 'actions',
-      header: compact ? <span className="sr-only">Actions</span> : 'Actions',
-      headClassName: cn('text-right', compact && 'w-[6%]'),
+      header: <span className="sr-only">Actions</span>,
+      headClassName: 'w-12 text-right',
       cellClassName: 'text-right',
       cell: (key) =>
         isRevoked(key) ? null : (
           <ConfirmButton
-            size={compact ? 'icon' : 'sm'}
+            size="icon"
             aria-label={`Revoke ${key.label}`}
             title={`Revoke "${key.label}"?`}
             description={revokeDescription ?? 'This key will stop working immediately.'}
@@ -108,7 +104,7 @@ export function KeysTable<T extends KeyRow>({
             pending={revokePending}
             onConfirm={() => onRevoke(key)}
           >
-            <Ban className={cn('w-4 h-4', !compact && 'mr-1')} /> {!compact && 'Revoke'}
+            <Ban className="size-4" />
           </ConfirmButton>
         ),
     });
@@ -117,8 +113,8 @@ export function KeysTable<T extends KeyRow>({
   return (
     <Card>
       <DataTable
-        tableClassName={compact ? 'table-fixed' : undefined}
-        columns={columns.map((column) => ({ ...column, cellClassName: cn(column.cellClassName, 'whitespace-nowrap', compact && 'overflow-hidden') }))}
+        tableClassName="table-fixed"
+        columns={columns.map((column) => ({ ...column, cellClassName: cn(column.cellClassName, 'whitespace-nowrap', 'overflow-hidden') }))}
         rows={keys}
         rowKey={(key) => key.id}
         isLoading={isLoading}

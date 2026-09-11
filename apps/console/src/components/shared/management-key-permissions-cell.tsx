@@ -68,19 +68,11 @@ function ManagementKeyPermissionsDialog({ apiKey, onClose }: { apiKey: Managemen
   );
 }
 
-export function ManagementKeyPermissionsCell({
-  apiKey,
-  canEdit,
-  compact = false,
-}: {
-  apiKey: ManagementKeyOut;
-  canEdit: boolean;
-  compact?: boolean;
-}) {
+export function ManagementKeyPermissionsCell({ apiKey, canEdit }: { apiKey: ManagementKeyOut; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="inline-flex items-center gap-2 whitespace-nowrap">
-      <PermissionsCell compact={compact} permissions={apiKey.permissions} />
+      <PermissionsCell compact permissions={apiKey.permissions} />
       {canEdit && apiKey.status === 'active' && (
         <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Edit permissions for ${apiKey.label}`} onClick={() => setOpen(true)}>
           <Pencil className="size-3.5" />

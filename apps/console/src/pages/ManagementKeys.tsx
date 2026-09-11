@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
-import { Badge, Button } from '@/components/ui/elements';
+import { Button } from '@/components/ui/elements';
 import { useInstanceManagementKeys, useCreateInstanceManagementKeyMutation, useRevokeInstanceManagementKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { ManagementKeyFormFields, managementKeyPayload, managementKeyFormSchema } from '@/components/shared/management-key-form';
-import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
-import { KeysTable } from '@/components/shared/keys-table';
+import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
@@ -46,8 +45,8 @@ export default function ManagementKeys() {
 
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
-      <KeysTable
-        compact
+      <ManagementKeysTable
+        canEditPermissions={authorization.can(managementKeyAccess.instance.updatePermissions)}
         resource="management keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
@@ -59,7 +58,6 @@ export default function ManagementKeys() {
           {
             key: 'principal',
             header: 'Principal',
-            headClassName: 'w-[13%]',
             cellClassName: 'text-sm',
             cell: (key) => {
               const user = usersById.get(key.user_id);
@@ -71,15 +69,9 @@ export default function ManagementKeys() {
             },
           },
           {
-            key: 'scope',
-            header: 'Scope',
-            headClassName: 'w-[10%]',
-            cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge>,
-          },
-          {
             key: 'target',
             header: 'Target',
-            headClassName: 'w-[9%]',
+            headClassName: 'w-20',
             cellClassName: 'font-mono text-xs text-muted-foreground',
             cell: (key) => {
               const target = key.scope.workspace_id ?? key.scope.org_id;
@@ -89,14 +81,6 @@ export default function ManagementKeys() {
                 </span>
               );
             },
-          },
-          {
-            key: 'permissions',
-            header: 'Permissions',
-            headClassName: 'w-[20%]',
-            cell: (key) => (
-              <ManagementKeyPermissionsCell compact apiKey={key} canEdit={authorization.can(managementKeyAccess.instance.updatePermissions)} />
-            ),
           },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."

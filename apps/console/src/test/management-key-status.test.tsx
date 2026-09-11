@@ -13,7 +13,7 @@ describe('management-key status', () => {
             label: 'ci',
             prefix: 'sk-cp-abc',
             status: 'expired',
-            created_at: '2026-01-01T00:00:00Z',
+            created_at: new Date(2026, 8, 11, 13, 45).toISOString(),
           },
         ]}
         emptyText="No keys"
@@ -24,5 +24,6 @@ describe('management-key status', () => {
     );
 
     expect(screen.getByText('EXPIRED')).toBeInTheDocument();
+    expect(screen.getByText('Sep 11, 2026 13:45')).toBeInTheDocument();
   });
 });

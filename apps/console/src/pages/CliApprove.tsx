@@ -10,7 +10,7 @@ import {
 import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { Alert, AlertDescription, Card, Button, Input, Label, Dropdown } from '@/components/ui/elements';
 import { TerminalSquare, CheckCircle2 } from 'lucide-react';
-import { formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 
 const INSTANCE_SCOPE = 'instance';
@@ -99,7 +99,7 @@ export default function CliApprove() {
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Expires</dt>
-                <dd>{formatRelative(details.data.expires_at)}</dd>
+                <dd>{formatDate(details.data.expires_at)}</dd>
               </div>
             </dl>
 
