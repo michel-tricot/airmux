@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from control_plane.keys import validate_access_key_token
+from control_plane.keys import validate_management_key_token
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -40,8 +40,8 @@ class DataPlaneBootstrap(BaseModel):
 
     @field_validator("token")
     @classmethod
-    def valid_access_key(cls, token: SecretStr) -> SecretStr:
-        validate_access_key_token(token.get_secret_value())
+    def valid_management_key(cls, token: SecretStr) -> SecretStr:
+        validate_management_key_token(token.get_secret_value())
         return token
 
 

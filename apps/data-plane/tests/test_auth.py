@@ -37,7 +37,7 @@ def test_tampered_token_rejected():
     assert authenticate(token + "x", index, now) is None
 
 
-def test_control_plane_access_key_rejected():
+def test_control_plane_management_key_rejected():
     _, entry = make_key("k1")
     assert authenticate("sk-cp-anything", index_keys(make_bundle([entry])), datetime.now(tz=UTC)) is None
 

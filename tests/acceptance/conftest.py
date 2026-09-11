@@ -260,7 +260,7 @@ class Stack:
         """Provision the tenant the way an operator does, over the public surfaces only.
 
         The first signup claims the instance, which is what makes the rest reachable: the org, a
-        workspace, the caller's inference key, and a human access key.
+        workspace, the caller's inference key, and a human management key.
 
         The taxonomy runs in the middle rather than last, because a provider credential names a
         provider that has to exist first. The credential is what a workspace brings, so the deployment
@@ -275,9 +275,9 @@ class Stack:
             _payload(session.put(f"/api/v1/orgs/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
             workspace = _payload(session.post(f"/api/v1/orgs/{self.org_id}/workspaces", json={"name": "acceptance"}))
             caller = _payload(session.post(f"/api/v1/orgs/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}))
-            access_key = _payload(
+            management_key = _payload(
                 session.post(
-                    f"/api/v1/orgs/{self.org_id}/access-keys",
+                    f"/api/v1/orgs/{self.org_id}/management-keys",
                     json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
@@ -286,8 +286,8 @@ class Stack:
             _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
 
         secrets = {
-            "AIRLLM_API_KEY": caller["token"],
-            "AIRLLM_ACCESS_KEY": access_key["token"],
+            "AIRLLM_INFERENCE_KEY": caller["token"],
+            "AIRLLM_MANAGEMENT_KEY": management_key["token"],
             "AIRLLM_DATAPLANE_TOKEN": self.env["AIRLLM_DATAPLANE_TOKEN"],
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
@@ -387,9 +387,9 @@ class Stack:
         """Collect the credentials the bootstrap minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
-        token = secrets.get("AIRLLM_API_KEY")
+        token = secrets.get("AIRLLM_INFERENCE_KEY")
         assert token, "bootstrap did not mint a caller api key"
-        assert secrets.get("AIRLLM_ACCESS_KEY"), "bootstrap did not mint an access key"
+        assert secrets.get("AIRLLM_MANAGEMENT_KEY"), "bootstrap did not mint an management key"
         assert secrets.get("AIRLLM_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
         self.caller_api_key = token
 
@@ -451,7 +451,7 @@ class Stack:
         while True:
             response = httpx.get(
                 f"{self.cp_url}/api/v1/orgs/{self.org_id}/events",
-                headers={"authorization": f"Bearer {self.env['AIRLLM_ACCESS_KEY']}"},
+                headers={"authorization": f"Bearer {self.env['AIRLLM_MANAGEMENT_KEY']}"},
                 params=page_query,
                 timeout=10.0,
             )

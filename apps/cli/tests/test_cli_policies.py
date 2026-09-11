@@ -17,7 +17,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     org_id = str(uuid4())
     policy_id = str(uuid4())
     monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("AIRLLM_ACCESS_KEY", "sk-test-policies")
+    monkeypatch.setenv("AIRLLM_MANAGEMENT_KEY", "sk-test-policies")
     monkeypatch.setenv("AIRLLM_ORG_ID", org_id)
     monkeypatch.setenv("AIRLLM_CONTROL_PLANE_URL", "http://cp.test")
     definition = {

@@ -47,12 +47,12 @@ from contract.policies import (
     StrictParameters,
 )
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
-from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
+from control_plane.keys import MANAGEMENT_KEY_PREFIX, key_prefix
 from control_plane.models import (
-    AccessKey,
     AuthIdentity,
     DataPlaneInstance,
     InferenceKey,
+    ManagementKey,
     Model,
     Org,
     OrgInvitation,
@@ -81,8 +81,8 @@ ACME_PROD_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-production"
 ACME_STAGING_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-staging"
 ACME_RETIRED_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-retired"
 SOLO_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-solo-default"
-ACME_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-acme"
-INSTANCE_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-admin"
+ACME_ACCESS_TOKEN = f"{MANAGEMENT_KEY_PREFIX}fixture-acme"
+INSTANCE_ACCESS_TOKEN = f"{MANAGEMENT_KEY_PREFIX}fixture-admin"
 ACME_MEMBER_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-member"
 ACME_PRODUCTION_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-production-viewer"
 ACME_EXPIRED_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-expired"
@@ -444,20 +444,20 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         ),
     )
 
-    await AccessKey(
-        id=fixture_id("access-key:acme"),
+    await ManagementKey(
+        id=fixture_id("management-key:acme"),
         org_id=acme.id,
         user_id=michel.id,
         token_hash=token_hash(ACME_ACCESS_TOKEN),
-        prefix=key_prefix(ACME_ACCESS_TOKEN, ACCESS_KEY_PREFIX),
+        prefix=key_prefix(ACME_ACCESS_TOKEN, MANAGEMENT_KEY_PREFIX),
         permissions=sorted(permissions_for_org_role(OrgRole.owner), key=str),
         label="fixture-cli",
     ).save()
-    await AccessKey(
-        id=fixture_id("access-key:instance-owner"),
+    await ManagementKey(
+        id=fixture_id("management-key:instance-owner"),
         user_id=michel.id,
         token_hash=token_hash(INSTANCE_ACCESS_TOKEN),
-        prefix=key_prefix(INSTANCE_ACCESS_TOKEN, ACCESS_KEY_PREFIX),
+        prefix=key_prefix(INSTANCE_ACCESS_TOKEN, MANAGEMENT_KEY_PREFIX),
         permissions=sorted(ALL_PERMISSIONS, key=str),
         label="fixture-admin",
     ).save()

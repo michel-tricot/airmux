@@ -22,7 +22,7 @@ from control_plane.compiler import publish_changes
 from control_plane.config import Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
-from control_plane.keys import new_access_key
+from control_plane.keys import new_management_key
 from control_plane.migrate import current_revision, head_revision, run_migrations
 from control_plane.models import Model, Org, User, set_actor
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
@@ -60,7 +60,7 @@ def bootstrap_keygen(out: str = typer.Option(".airllm/dataplane.key", "--out", h
         typer.echo(f"{key_path} exists", err=True)
         raise typer.Exit(1)
     key_path.parent.mkdir(parents=True, exist_ok=True)
-    token, _ = new_access_key()
+    token, _ = new_management_key()
     write_private_text(key_path, token)
     typer.echo(f"wrote {key_path}")
 

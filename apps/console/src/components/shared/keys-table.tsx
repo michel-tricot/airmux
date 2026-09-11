@@ -1,9 +1,11 @@
 import { Card, Badge, ConfirmButton } from '@/components/ui/elements';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { Ban } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { DataTable, type Column } from '@/components/shared/data-table';
 
-interface ApiKeyRow {
+interface KeyRow {
   id: string;
   label: string;
   prefix: string;
@@ -13,8 +15,9 @@ interface ApiKeyRow {
   created_at: string;
 }
 
-interface ApiKeysTableProps<T extends ApiKeyRow> {
+interface KeysTableProps<T extends KeyRow> {
   resource: string;
+  compact?: boolean;
   keys: T[] | undefined;
   isLoading?: boolean;
   isError?: boolean;
@@ -27,8 +30,9 @@ interface ApiKeysTableProps<T extends ApiKeyRow> {
   revokePending?: boolean;
 }
 
-export function ApiKeysTable<T extends ApiKeyRow>({
+export function KeysTable<T extends KeyRow>({
   resource,
+  compact = false,
   keys,
   isLoading,
   isError,
@@ -39,21 +43,37 @@ export function ApiKeysTable<T extends ApiKeyRow>({
   revokeDescription,
   onRevoke,
   revokePending,
-}: ApiKeysTableProps<T>) {
+}: KeysTableProps<T>) {
   const statusOf = (key: T) => key.status ?? (key.revoked === true || key.revoked_at != null ? 'revoked' : 'active');
   const isRevoked = (key: T) => statusOf(key) === 'revoked';
   const columns: Array<Column<T>> = [
-    { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
+    {
+      key: 'label',
+      header: 'Label',
+      headClassName: compact ? 'w-[14%]' : undefined,
+      cellClassName: 'font-medium',
+      cell: (key) => (
+        <span className="block truncate" title={key.label}>
+          {key.label}
+        </span>
+      ),
+    },
     {
       key: 'prefix',
       header: 'Key',
+      headClassName: compact ? 'w-[10%]' : undefined,
       cellClassName: 'font-mono text-xs text-muted-foreground',
-      cell: (key) => <>{key.prefix}…</>,
+      cell: (key) => (
+        <span className="block truncate" title={key.prefix}>
+          {key.prefix}…
+        </span>
+      ),
     },
     ...extraColumns,
     {
       key: 'status',
       header: 'Status',
+      headClassName: compact ? 'w-[9%]' : undefined,
       cell: (key) => {
         const status = statusOf(key);
         return <Badge variant={status === 'active' ? 'success' : 'outline'}>{status.toUpperCase()}</Badge>;
@@ -62,27 +82,33 @@ export function ApiKeysTable<T extends ApiKeyRow>({
     {
       key: 'created',
       header: 'Created',
+      headClassName: compact ? 'w-[9%]' : undefined,
       cellClassName: 'text-muted-foreground text-sm',
-      cell: (key) => formatDate(key.created_at),
+      cell: (key) => (
+        <span className="block truncate" title={formatDate(key.created_at)}>
+          {compact ? format(new Date(key.created_at), 'MMM d') : formatDate(key.created_at)}
+        </span>
+      ),
     },
   ];
   if (onRevoke) {
     columns.push({
       key: 'actions',
-      header: 'Actions',
-      headClassName: 'text-right',
+      header: compact ? <span className="sr-only">Actions</span> : 'Actions',
+      headClassName: cn('text-right', compact && 'w-[6%]'),
       cellClassName: 'text-right',
       cell: (key) =>
         isRevoked(key) ? null : (
           <ConfirmButton
-            size="sm"
+            size={compact ? 'icon' : 'sm'}
+            aria-label={`Revoke ${key.label}`}
             title={`Revoke "${key.label}"?`}
             description={revokeDescription ?? 'This key will stop working immediately.'}
             confirmLabel="Revoke key"
             pending={revokePending}
             onConfirm={() => onRevoke(key)}
           >
-            <Ban className="w-4 h-4 mr-1" /> Revoke
+            <Ban className={cn('w-4 h-4', !compact && 'mr-1')} /> {!compact && 'Revoke'}
           </ConfirmButton>
         ),
     });
@@ -91,7 +117,8 @@ export function ApiKeysTable<T extends ApiKeyRow>({
   return (
     <Card>
       <DataTable
-        columns={columns}
+        tableClassName={compact ? 'table-fixed' : undefined}
+        columns={columns.map((column) => ({ ...column, cellClassName: cn(column.cellClassName, 'whitespace-nowrap', compact && 'overflow-hidden') }))}
         rows={keys}
         rowKey={(key) => key.id}
         isLoading={isLoading}

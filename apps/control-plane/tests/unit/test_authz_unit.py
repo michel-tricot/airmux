@@ -49,9 +49,9 @@ def test_management_routes_name_their_scope_in_the_path():
     assert "/api/v1/orgs/{org_id}/workspaces" in paths
     assert "/api/v1/orgs/{org_id}/users" in paths
     assert "/api/v1/orgs/{org_id}/provider-credentials" in paths
-    assert "/api/v1/orgs/{org_id}/access-keys" in paths
-    assert "/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys" in paths
-    assert "/api/v1/instance/access-keys" in paths
+    assert "/api/v1/orgs/{org_id}/management-keys" in paths
+    assert "/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys" in paths
+    assert "/api/v1/instance/management-keys" in paths
     assert not any(
         parameter.get("name") == "X-Org-Id"
         for item in spec["paths"].values()
@@ -63,7 +63,7 @@ def test_management_routes_name_their_scope_in_the_path():
 def test_permissions_docs_accept_any_authenticated_principal():
     spec = make_app().openapi()
     operation = spec["paths"]["/api/v1/auth/permissions"]["get"]
-    assert operation["security"] == [{"AccessKey": []}, {"SessionCookie": []}]
+    assert operation["security"] == [{"ManagementKey": []}, {"SessionCookie": []}]
     assert "human account" not in operation["description"]
     assert operation["summary"] == "Get Effective Permissions"
     assert spec["components"]["schemas"]["MyPermissionsOut"]["properties"]["permissions"]["description"]
@@ -84,7 +84,7 @@ def test_spec_advertises_the_enforced_permission():
         for method in sorted(route.methods or ()):
             operation = spec["paths"]["/api/v1" + route.path][method.lower()]
             description = operation.get("description", "")
-            if enforced and operation.get("security") != [{"AccessKey": []}, {"SessionCookie": []}]:
+            if enforced and operation.get("security") != [{"ManagementKey": []}, {"SessionCookie": []}]:
                 problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
             permissions = [permission for rule in enforced for permission in rule]
             documented = (
@@ -109,7 +109,7 @@ def test_openapi_is_written_for_external_consumers():
     spec = make_app().openapi()
     assert spec["info"].get("description")
     schemes = spec["components"]["securitySchemes"]
-    assert set(schemes) == {"AccessKey", "SessionCookie"}
+    assert set(schemes) == {"ManagementKey", "SessionCookie"}
     assert all(scheme.get("description") for scheme in schemes.values())
 
     internal_terms = (

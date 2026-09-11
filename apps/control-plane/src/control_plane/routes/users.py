@@ -43,7 +43,7 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
 
 @router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_manage)])
 async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
-    """Delete a principal and its login identities, sessions, and control-plane access keys.
+    """Delete a principal and its login identities, sessions, and control-plane management keys.
 
     Remove organization memberships, personal organizations, and workspaces containing inference
     keys created by this principal before deleting it.

@@ -1,4 +1,4 @@
-import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
+import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { BundleHistory } from '@/components/shared/bundle-history';
 import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
 import { telemetryAccess } from '@/features/telemetry/policy';
@@ -11,20 +11,20 @@ import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
 import { useUsers, useChangeOrgRoleMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useOrgAccessKeys, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgManagementKeys, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
 import { AccountIdentity } from '@/components/shared/account-display';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import type { OrgRole } from '@workspace/api-client-react';
 import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
@@ -47,8 +47,8 @@ export default function OrganizationDetail() {
   const org = orgQuery.data;
   const canListWorkspaces = authorization.can(workspaceAccess.list);
   const canCreateWorkspace = authorization.can(workspaceAccess.create);
-  const canReadKeys = authorization.can(accessKeyAccess.org.read);
-  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadKeys = authorization.can(managementKeyAccess.org.read);
+  const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
   const changeRole = useChangeOrgRoleMutation();
   const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
@@ -59,7 +59,7 @@ export default function OrganizationDetail() {
 
   const canListUsers = instanceAuthorization.can(userAccess.list);
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
-  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const keysQuery = useOrgManagementKeys(orgId, undefined, { enabled: canReadKeys });
   const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
   const usersQuery = useUsers({ enabled: canListUsers });
   const users = usersQuery.data;
@@ -71,7 +71,7 @@ export default function OrganizationDetail() {
   const [renameOpen, setRenameOpen] = useState(false);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
-  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
+  const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
@@ -202,7 +202,7 @@ export default function OrganizationDetail() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Management Keys</h2>
             </div>
-            <ApiKeysTable
+            <KeysTable
               resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
@@ -223,7 +223,7 @@ export default function OrganizationDetail() {
                 {
                   key: 'permissions',
                   header: 'Permissions',
-                  cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.org.updatePermissions)} />,
+                  cell: (key) => <ManagementKeyPermissionsCell apiKey={key} canEdit={authorization.can(managementKeyAccess.org.updatePermissions)} />,
                 },
                 { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
               ]}

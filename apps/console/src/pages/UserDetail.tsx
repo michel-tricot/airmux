@@ -1,4 +1,4 @@
-import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
+import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Dropdown, Badge, ConfirmButton } from '@/components/ui/elements';
@@ -6,7 +6,7 @@ import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
-import { useInstanceAccessKeys } from '@/features/keys/hooks';
+import { useInstanceManagementKeys } from '@/features/keys/hooks';
 import {
   useUser,
   useChangeInstanceRoleMutation,
@@ -24,11 +24,11 @@ import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import { InstanceRole, type OrgOut, type OrgRole } from '@workspace/api-client-react';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -45,10 +45,10 @@ export default function UserDetail() {
   const canDeleteUser = authorization.can(userAccess.delete);
   const canAddMember = authorization.can(orgMemberAccess.add);
   const canRemoveMember = authorization.can(orgMemberAccess.remove);
-  const canReadKeys = authorization.can(accessKeyAccess.instance.read);
+  const canReadKeys = authorization.can(managementKeyAccess.instance.read);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, { enabled: canReadKeys });
+  const managementKeysQuery = useInstanceManagementKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
   const changeRole = useChangeInstanceRoleMutation();
@@ -192,19 +192,21 @@ export default function UserDetail() {
             Keys owned by this user
           </h2>
 
-          <ApiKeysTable
+          <KeysTable
             resource="management keys"
-            keys={accessKeysQuery.data}
-            isLoading={accessKeysQuery.isLoading}
-            isError={accessKeysQuery.isError}
-            error={accessKeysQuery.error}
-            onRetry={() => accessKeysQuery.refetch()}
+            keys={managementKeysQuery.data}
+            isLoading={managementKeysQuery.isLoading}
+            isError={managementKeysQuery.isError}
+            error={managementKeysQuery.error}
+            onRetry={() => managementKeysQuery.refetch()}
             emptyText="This user does not own any management keys."
             extraColumns={[
               {
                 key: 'permissions',
                 header: 'Permissions',
-                cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.instance.updatePermissions)} />,
+                cell: (key) => (
+                  <ManagementKeyPermissionsCell apiKey={key} canEdit={authorization.can(managementKeyAccess.instance.updatePermissions)} />
+                ),
               },
               { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
             ]}

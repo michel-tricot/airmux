@@ -30,8 +30,8 @@ if TYPE_CHECKING:
 
 _bearer = HTTPBearer(
     auto_error=False,
-    scheme_name="AccessKey",
-    description="A control-plane access key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane endpoints.",
+    scheme_name="ManagementKey",
+    description="A control-plane management key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane endpoints.",
 )
 
 BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]

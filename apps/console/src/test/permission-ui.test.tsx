@@ -175,7 +175,7 @@ describe('permission-aware organization console', () => {
       ),
     );
 
-    renderAt(`/org/workspaces/${WORKSPACES[0].slug}/keys`);
+    renderAt(`/org/workspaces/${WORKSPACES[0].slug}/inference-keys`);
 
     expect(await screen.findByText('viewer-key')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /generate key/i })).not.toBeInTheDocument();

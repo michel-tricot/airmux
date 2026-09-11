@@ -11,7 +11,7 @@ from contract import BundleManifest, token_hash, uuid7
 from control_plane.app import create_app
 from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, Permission
 from control_plane.config import DatabaseConfig, DataPlaneBootstrap, Settings
-from control_plane.models import AccessKey, DataPlaneInstance, User, set_actor
+from control_plane.models import DataPlaneInstance, ManagementKey, User, set_actor
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -96,7 +96,7 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         make_admin(tmp_path, user.id)
         user_id = str(user.id)
         minted = c.post(
-            f"/api/v1/orgs/{o1}/access-keys",
+            f"/api/v1/orgs/{o1}/management-keys",
             json={
                 "user_id": user_id,
                 "label": "data-plane",
@@ -107,7 +107,7 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         dp = {"authorization": f"Bearer {minted['token']}"}
         dp1 = uuid7()
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 200
-        assert c.delete(f"/api/v1/access-keys/{minted['id']}", headers=root).status_code == 200
+        assert c.delete(f"/api/v1/management-keys/{minted['id']}", headers=root).status_code == 200
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 401
 
 
@@ -125,8 +125,8 @@ def test_supplied_pool_key_bootstraps_authenticated_bundle_access(tmp_path):
     assert response.status_code == 200, response.text
     assert BundleManifest.model_validate(response.json()["data"]) == BundleManifest(bundles=[])
 
-    async def seeded() -> tuple[list[User], list[AccessKey]]:
-        return await User.find(User.service_account == True), await AccessKey.find()  # noqa: E712 SQLModel builds SQL from this comparison
+    async def seeded() -> tuple[list[User], list[ManagementKey]]:
+        return await User.find(User.service_account == True), await ManagementKey.find()  # noqa: E712 SQLModel builds SQL from this comparison
 
     users, keys = run_in_db(tmp_path, seeded)
     assert len(users) == len(keys) == 1
@@ -145,7 +145,7 @@ def test_bootstrap_is_idempotent_across_control_plane_restarts(tmp_path):
         pass
 
     async def counts() -> tuple[int, int]:
-        return len(await User.find(User.service_account == True)), len(await AccessKey.find())  # noqa: E712 SQLModel builds SQL from this comparison
+        return len(await User.find(User.service_account == True)), len(await ManagementKey.find())  # noqa: E712 SQLModel builds SQL from this comparison
 
     assert run_in_db(tmp_path, counts) == (1, 1)
 
@@ -167,7 +167,7 @@ def test_bootstrap_never_reactivates_a_revoked_pool_key(tmp_path):
         pass
 
     async def revoke() -> None:
-        key = await AccessKey.first(AccessKey.token_hash == token_hash(token))
+        key = await ManagementKey.first(ManagementKey.token_hash == token_hash(token))
         assert key is not None
         await set_actor("root")
         key.revoked_at = datetime.now(tz=UTC)

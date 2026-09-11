@@ -1,33 +1,33 @@
 import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
 import { Badge, Button } from '@/components/ui/elements';
-import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
+import { useInstanceManagementKeys, useCreateInstanceManagementKeyMutation, useRevokeInstanceManagementKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
-import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { ManagementKeyFormFields, managementKeyFormSchema } from '@/components/shared/management-key-form';
+import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
+import { KeysTable } from '@/components/shared/keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountIdentity } from '@/components/shared/account-display';
 
-export default function AccessKeys() {
+export default function ManagementKeys() {
   const [createOpen, setCreateOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const authorization = useAuthorization('instance');
-  const canRead = authorization.can(accessKeyAccess.instance.read);
-  const canIssueKey = authorization.can(accessKeyAccess.instance.issue);
-  const canRevoke = authorization.can(accessKeyAccess.instance.revoke);
+  const canRead = authorization.can(managementKeyAccess.instance.read);
+  const canIssueKey = authorization.can(managementKeyAccess.instance.issue);
+  const canRevoke = authorization.can(managementKeyAccess.instance.revoke);
   const canReadUsers = authorization.can(userAccess.list);
-  const keysQuery = useInstanceAccessKeys(undefined, { enabled: canRead });
+  const keysQuery = useInstanceManagementKeys(undefined, { enabled: canRead });
   const usersQuery = useUsers({ enabled: canReadUsers });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
-  const createKey = useCreateInstanceAccessKeyMutation();
-  const revokeKey = useRevokeInstanceAccessKeyMutation();
+  const createKey = useCreateInstanceManagementKeyMutation();
+  const revokeKey = useRevokeInstanceManagementKeyMutation();
 
   return (
     <PageShell>
@@ -46,7 +46,8 @@ export default function AccessKeys() {
 
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
-      <ApiKeysTable
+      <KeysTable
+        compact
         resource="management keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
@@ -58,6 +59,7 @@ export default function AccessKeys() {
           {
             key: 'principal',
             header: 'Principal',
+            headClassName: 'w-[13%]',
             cellClassName: 'text-sm',
             cell: (key) => {
               const user = usersById.get(key.user_id);
@@ -71,18 +73,30 @@ export default function AccessKeys() {
           {
             key: 'scope',
             header: 'Scope',
+            headClassName: 'w-[10%]',
             cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge>,
           },
           {
             key: 'target',
             header: 'Target',
+            headClassName: 'w-[9%]',
             cellClassName: 'font-mono text-xs text-muted-foreground',
-            cell: (key) => key.scope.workspace_id ?? key.scope.org_id ?? 'instance',
+            cell: (key) => {
+              const target = key.scope.workspace_id ?? key.scope.org_id;
+              return (
+                <span className="block truncate" title={target ?? undefined}>
+                  {target ? `${target.slice(0, 8)}…` : 'instance'}
+                </span>
+              );
+            },
           },
           {
             key: 'permissions',
             header: 'Permissions',
-            cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.instance.updatePermissions)} />,
+            headClassName: 'w-[20%]',
+            cell: (key) => (
+              <ManagementKeyPermissionsCell compact apiKey={key} canEdit={authorization.can(managementKeyAccess.instance.updatePermissions)} />
+            ),
           },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
@@ -96,7 +110,7 @@ export default function AccessKeys() {
           onOpenChange={setCreateOpen}
           title="Generate Management Key"
           description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
-          schema={accessKeyFormSchema}
+          schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [] }}
           onSubmit={async (values) => {
             const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
@@ -108,7 +122,7 @@ export default function AccessKeys() {
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
-            <AccessKeyFormFields
+            <ManagementKeyFormFields
               form={form}
               availablePermissions={authorization.permissions}
               canIssue={canIssueKey}

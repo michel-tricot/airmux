@@ -38,9 +38,9 @@ See `.env.example`. Key variables:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `AIRLLM_ACCESS_KEY` | Bearer for control-plane APIs |
+| `AIRLLM_MANAGEMENT_KEY` | Bearer for control-plane APIs |
 | `AIRLLM_DATAPLANE_TOKEN` | Data plane → control plane bearer |
-| `AIRLLM_API_KEY` | Caller inference key |
+| `AIRLLM_INFERENCE_KEY` | Caller inference key |
 
 `uv run airllmcp bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
 
@@ -66,7 +66,7 @@ scripts/         # shell helpers + Bun workspace scripts package
 
 ## New admin console (Bun workspace)
 
-Tenancy model: access keys can be bound to the instance, an organization, or a workspace; roles grant standing authority and each key narrows it with explicit permissions.
+Tenancy model: management keys can be bound to the instance, an organization, or a workspace; roles grant standing authority and each key narrows it with explicit permissions.
 
 Replit only manages the console (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. The console already talks to the real backend: `lib/api-spec/openapi.yaml` is exported from the control plane routes, and the clients are generated from it.
 

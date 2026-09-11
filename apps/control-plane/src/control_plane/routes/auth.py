@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contract import PLAYGROUND_COOKIE
-from control_plane.authority import effective_permissions, principal_can_issue_instance_access_key, principal_can_select_org, visible_org_ids
+from control_plane.authority import effective_permissions, principal_can_issue_instance_management_key, principal_can_select_org, visible_org_ids
 from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
@@ -26,8 +26,8 @@ from control_plane.deps import (
     require_csrf,
     user_scoped,
 )
-from control_plane.keys import mint_standing_access_key, verify_access_key
-from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgInvitation, OrgMembership, PlaygroundSession, User, set_actor
+from control_plane.keys import mint_standing_management_key, verify_management_key
+from control_plane.models import AuthIdentity, CliAuthRequest, ManagementKey, Org, OrgInvitation, OrgMembership, PlaygroundSession, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
@@ -245,8 +245,8 @@ class CliAuthRequestOut(BaseModel):
 
 class CliAuthApproveIn(RequestModel):
     user_code: str = Field(description="Device code shown by the CLI", min_length=8, max_length=16)
-    scope: Literal["instance", "org"] = Field("org", description="Scope the CLI access key should use")
-    org_id: UUID | None = Field(default=None, description="Organization the CLI access key should use for organization scope")
+    scope: Literal["instance", "org"] = Field("org", description="Scope the CLI management key should use")
+    org_id: UUID | None = Field(default=None, description="Organization the CLI management key should use for organization scope")
 
     @model_validator(mode="after")
     def valid_scope(self) -> CliAuthApproveIn:
@@ -312,7 +312,7 @@ async def cli_auth_request_details(code: str, user: CookieUserDep) -> Envelope[C
             client_name=auth_request.client_name,
             requester=auth_request.requester,
             expires_at=auth_request.expires_at,
-            can_approve_instance=await principal_can_issue_instance_access_key(user.id),
+            can_approve_instance=await principal_can_issue_instance_management_key(user.id),
         )
     )
 
@@ -324,7 +324,7 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     if body.scope == "instance":
-        if not await principal_can_issue_instance_access_key(user.id):
+        if not await principal_can_issue_instance_management_key(user.id):
             raise HTTPException(status_code=403, detail="You cannot approve instance CLI access")
     else:
         org_id = body.org_id
@@ -342,9 +342,9 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
 
 @router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
 async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
-    """Return pending status or deliver the approved scoped access key once.
+    """Return pending status or deliver the approved scoped management key once.
 
-    When the request includes the CLI's current access key for the same user and scope, that
+    When the request includes the CLI's current management key for the same user and scope, that
     key is revoked as part of replacement. Labels do not participate in matching.
     """
     auth_request = _live(await CliAuthRequest.for_delivery(body.poll_secret))
@@ -356,10 +356,10 @@ async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope
     await set_actor(auth_request.approved_user_id)
     scope = Scope.org(org.id) if org is not None else Scope.instance()
     now = datetime.now(tz=UTC)
-    replaced = await verify_access_key(credentials.credentials) if credentials is not None else None
+    replaced = await verify_management_key(credentials.credentials) if credentials is not None else None
     if replaced is not None:
-        await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
-    _, token = await mint_standing_access_key(auth_request.approved_user_id, scope, auth_request.client_name)
+        await ManagementKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
+    _, token = await mint_standing_management_key(auth_request.approved_user_id, scope, auth_request.client_name)
     await auth_request.delete()
     return Envelope(
         data=CliAuthPollOut(

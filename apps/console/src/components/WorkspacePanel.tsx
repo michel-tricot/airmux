@@ -1,3 +1,4 @@
+import { WorkspaceManagementKeys } from '@/components/shared/workspace-management-keys';
 import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -17,12 +18,12 @@ import type { WorkspaceRole } from '@workspace/api-client-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { useScopedAuthorization } from '@/features/permissions/hooks';
-import { inferenceKeyAccess } from '@/features/keys/policy';
+import { inferenceKeyAccess, managementKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 
@@ -42,6 +43,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const canReadWorkspace = authorization.can(workspaceAccess.read);
   const workspaceQuery = useWorkspace(orgId, workspaceRef, { enabled: canReadWorkspace });
   const workspace = workspaceQuery.data;
+  const canReadManagementKeys = authorization.can(managementKeyAccess.workspace.read);
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
@@ -66,7 +68,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
-  const defaultTab = canReadKeys ? 'keys' : 'members';
+  const defaultTab = canReadKeys ? 'keys' : canReadManagementKeys ? 'management-keys' : 'members';
 
   if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
   if (authorization.isError)
@@ -129,12 +131,18 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               <Key className="w-4 h-4" /> Inference Keys
             </TabsTrigger>
           )}
+          {canReadManagementKeys && <TabsTrigger value="management-keys">Management Keys</TabsTrigger>}
           {canReadMembers && (
             <TabsTrigger value="members" className="gap-2">
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
           )}
         </TabsList>
+        {canReadManagementKeys && (
+          <TabsContent value="management-keys">
+            <WorkspaceManagementKeys orgId={orgId} workspaceId={workspace.id} />
+          </TabsContent>
+        )}
 
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">
@@ -146,7 +154,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
                 </Button>
               )}
             </div>
-            <ApiKeysTable
+            <KeysTable
               resource="inference keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}

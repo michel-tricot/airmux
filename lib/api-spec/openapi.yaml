@@ -1,30 +1,30 @@
 openapi: 3.1.0
 info:
   title: AirLLM Control Plane API
-  description: 'Manage AirLLM organizations, workspaces, access keys, provider credentials, and data-plane synchronization.
+  description: 'Manage AirLLM organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
 
 
     Organization and workspace targets are part of each URL. Successful responses wrap their result in
 
-    `{"data": ...}`. Authenticate with a control-plane access key or a browser session as documented by
+    `{"data": ...}`. Authenticate with a control-plane management key or a browser session as documented by
 
     each operation. Inference keys authenticate model requests at the data plane and are not accepted here.
 
     '
   version: 0.1.0
 paths:
-  /api/v1/instance/access-keys:
+  /api/v1/instance/management-keys:
     get:
       tags:
-      - Instance Access Keys
-      summary: List Instance Access Keys
-      description: 'List access keys across all scopes, optionally filtered by principal.
+      - Instance Management Keys
+      summary: List Instance Management Keys
+      description: 'List management keys across all scopes, optionally filtered by principal.
 
 
-        Required permission: `access-keys.read`.'
-      operationId: list_instance_access_keys
+        Required permission: `management-keys.read`.'
+      operationId: list_instance_management_keys
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -36,14 +36,14 @@ paths:
             format: uuid
           - type: 'null'
           title: User Id
-        description: Return only access keys issued to this principal
+        description: Return only management keys issued to this principal
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
         '422':
           description: Validation Error
           content:
@@ -57,32 +57,32 @@ paths:
       x-airllm-authority:
       - scope: instance_scope
         anyOf:
-        - access-keys.read
+        - management-keys.read
     post:
       tags:
-      - Instance Access Keys
-      summary: Create Instance Access Key
-      description: 'Issue an instance-scoped access key and return its token once.
+      - Instance Management Keys
+      summary: Create Instance Management Key
+      description: 'Issue an instance-scoped management key and return its token once.
 
 
-        Required permission: `access-keys.issue`.'
-      operationId: create_instance_access_key
+        Required permission: `management-keys.issue`.'
+      operationId: create_instance_management_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccessKeyIn'
+              $ref: '#/components/schemas/ManagementKeyIn'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
         '422':
           description: Validation Error
           content:
@@ -96,19 +96,19 @@ paths:
       x-airllm-authority:
       - scope: instance_scope
         anyOf:
-        - access-keys.issue
-  /api/v1/orgs/{org_id}/access-keys:
+        - management-keys.issue
+  /api/v1/orgs/{org_id}/management-keys:
     get:
       tags:
-      - Organization Access Keys
-      summary: List Org Access Keys
-      description: 'List organization- and workspace-scoped access keys within an organization.
+      - Organization Management Keys
+      summary: List Org Management Keys
+      description: 'List organization- and workspace-scoped management keys within an organization.
 
 
-        Required permission: `access-keys.read`.'
-      operationId: list_org_access_keys
+        Required permission: `management-keys.read`.'
+      operationId: list_org_management_keys
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -127,14 +127,14 @@ paths:
             format: uuid
           - type: 'null'
           title: User Id
-        description: Return only access keys issued to this principal
+        description: Return only management keys issued to this principal
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
         '422':
           description: Validation Error
           content:
@@ -148,18 +148,18 @@ paths:
       x-airllm-authority:
       - scope: org_scope
         anyOf:
-        - access-keys.read
+        - management-keys.read
     post:
       tags:
-      - Organization Access Keys
-      summary: Create Org Access Key
-      description: 'Issue an organization-scoped access key and return its token once.
+      - Organization Management Keys
+      summary: Create Org Management Key
+      description: 'Issue an organization-scoped management key and return its token once.
 
 
-        Required permission: `access-keys.issue`.'
-      operationId: create_org_access_key
+        Required permission: `management-keys.issue`.'
+      operationId: create_org_management_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -174,14 +174,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccessKeyIn'
+              $ref: '#/components/schemas/ManagementKeyIn'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
         '422':
           description: Validation Error
           content:
@@ -195,19 +195,19 @@ paths:
       x-airllm-authority:
       - scope: org_scope
         anyOf:
-        - access-keys.issue
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
+        - management-keys.issue
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys:
     get:
       tags:
-      - Workspace Access Keys
-      summary: List Workspace Access Keys
-      description: 'List access keys scoped to one workspace.
+      - Workspace Management Keys
+      summary: List Workspace Management Keys
+      description: 'List management keys scoped to one workspace.
 
 
-        Required permission: `access-keys.read`.'
-      operationId: list_workspace_access_keys
+        Required permission: `management-keys.read`.'
+      operationId: list_workspace_management_keys
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -233,14 +233,14 @@ paths:
             format: uuid
           - type: 'null'
           title: User Id
-        description: Return only access keys issued to this principal
+        description: Return only management keys issued to this principal
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
         '422':
           description: Validation Error
           content:
@@ -254,18 +254,18 @@ paths:
       x-airllm-authority:
       - scope: workspace_scope
         anyOf:
-        - access-keys.read
+        - management-keys.read
     post:
       tags:
-      - Workspace Access Keys
-      summary: Create Workspace Access Key
-      description: 'Issue a workspace-scoped access key and return its token once.
+      - Workspace Management Keys
+      summary: Create Workspace Management Key
+      description: 'Issue a workspace-scoped management key and return its token once.
 
 
-        Required permission: `access-keys.issue`.'
-      operationId: create_workspace_access_key
+        Required permission: `management-keys.issue`.'
+      operationId: create_workspace_management_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -287,14 +287,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccessKeyIn'
+              $ref: '#/components/schemas/ManagementKeyIn'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
         '422':
           description: Validation Error
           content:
@@ -308,21 +308,21 @@ paths:
       x-airllm-authority:
       - scope: workspace_scope
         anyOf:
-        - access-keys.issue
-  /api/v1/access-keys/{key_id}:
+        - management-keys.issue
+  /api/v1/management-keys/{key_id}:
     delete:
       tags:
-      - Instance Access Keys
-      - Organization Access Keys
-      - Workspace Access Keys
-      summary: Revoke Access Key
-      description: 'Revoke an access key and every key delegated from it.
+      - Instance Management Keys
+      - Organization Management Keys
+      - Workspace Management Keys
+      summary: Revoke Management Key
+      description: 'Revoke an management key and every key delegated from it.
 
 
-        Required permission: `access-keys.revoke`.'
-      operationId: revoke_access_key
+        Required permission: `management-keys.revoke`.'
+      operationId: revoke_management_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: key_id
@@ -332,14 +332,14 @@ paths:
           type: string
           format: uuid
           title: Key Id
-        description: Access key ID
+        description: Management key ID
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_AccessKeyRevokedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyRevokedOut_'
         '422':
           description: Validation Error
           content:
@@ -351,19 +351,19 @@ paths:
         '403':
           description: The credential does not have the required permission
       x-airllm-authority:
-      - scope: access_key_scope
+      - scope: management_key_scope
         anyOf:
-        - access-keys.revoke
-  /api/v1/access-keys/{key_id}/permissions:
+        - management-keys.revoke
+  /api/v1/management-keys/{key_id}/permissions:
     put:
       tags:
-      - Instance Access Keys
-      - Organization Access Keys
-      - Workspace Access Keys
-      summary: Update Access Key Permissions
-      operationId: update_access_key_permissions
+      - Instance Management Keys
+      - Organization Management Keys
+      - Workspace Management Keys
+      summary: Update Management Key Permissions
+      operationId: update_management_key_permissions
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: key_id
@@ -373,20 +373,20 @@ paths:
           type: string
           format: uuid
           title: Key Id
-        description: Access key ID
+        description: Management key ID
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AccessKeyPermissionsIn'
+              $ref: '#/components/schemas/ManagementKeyPermissionsIn'
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_AccessKeyOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyOut_'
         '422':
           description: Validation Error
           content:
@@ -398,10 +398,10 @@ paths:
         '403':
           description: The credential does not have the required permission
       x-airllm-authority:
-      - scope: access_key_scope
+      - scope: management_key_scope
         anyOf:
-        - access-keys.issue
-      description: 'Required permission: `access-keys.issue`.'
+        - management-keys.issue
+      description: 'Required permission: `management-keys.issue`.'
   /api/v1/auth/login:
     post:
       tags:
@@ -504,7 +504,7 @@ paths:
       description: 'Return the authenticated human user and the organizations visible to this credential.
 
 
-        Authentication: human account using a browser session or control-plane access key.'
+        Authentication: human account using a browser session or control-plane management key.'
       operationId: me
       responses:
         '200':
@@ -522,7 +522,7 @@ paths:
         '401':
           description: An authenticated human account is required
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
   /api/v1/auth/permissions:
     get:
@@ -532,10 +532,10 @@ paths:
       description: 'Return the effective permissions this credential can exercise at the requested scope.
 
 
-        Authentication: browser session or control-plane access key.'
+        Authentication: browser session or control-plane management key.'
       operationId: my_permissions
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -580,7 +580,7 @@ paths:
       description: 'Replace the authenticated user''s password after verifying the current password.
 
 
-        Authentication: human account using a browser session or control-plane access key.'
+        Authentication: human account using a browser session or control-plane management key.'
       operationId: change_password
       requestBody:
         content:
@@ -604,7 +604,7 @@ paths:
         '401':
           description: An authenticated human account is required
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
   /api/v1/auth/cli/start:
     post:
@@ -713,10 +713,10 @@ paths:
       tags:
       - Auth
       summary: Poll CLI Authorization
-      description: 'Return pending status or deliver the approved scoped access key once.
+      description: 'Return pending status or deliver the approved scoped management key once.
 
 
-        When the request includes the CLI''s current access key for the same user and scope, that
+        When the request includes the CLI''s current management key for the same user and scope, that
 
         key is revoked as part of replacement. Labels do not participate in matching.
 
@@ -751,7 +751,7 @@ paths:
       description: 'List the current user''s visible organizations, personal organization, and pending invitations.
 
 
-        Authentication: human account using a browser session or control-plane access key.'
+        Authentication: human account using a browser session or control-plane management key.'
       operationId: enrollment
       responses:
         '200':
@@ -769,7 +769,7 @@ paths:
         '401':
           description: An authenticated human account is required
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
   /api/v1/enroll/org:
     post:
@@ -903,7 +903,7 @@ paths:
         Required permission: `data-planes.read`.'
       operationId: list_data_planes
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: include_offline
@@ -946,7 +946,7 @@ paths:
         Required permission: `audit.read`.'
       operationId: list_instance_activity
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: limit
@@ -1014,7 +1014,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -1031,7 +1031,7 @@ paths:
         Required permission: `principals.read`.'
       operationId: get_user
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1067,7 +1067,7 @@ paths:
       tags:
       - Instance Users
       summary: Delete User
-      description: 'Delete a principal and its login identities, sessions, and control-plane access keys.
+      description: 'Delete a principal and its login identities, sessions, and control-plane management keys.
 
 
         Remove organization memberships, personal organizations, and workspaces containing inference
@@ -1078,7 +1078,7 @@ paths:
         Required permission: `principals.manage`.'
       operationId: delete_user
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1121,7 +1121,7 @@ paths:
         Required permission: `principals.read`.'
       operationId: list_users
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: service_account
@@ -1161,7 +1161,7 @@ paths:
       summary: Change Instance Role
       operationId: change_instance_role
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1228,7 +1228,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -1267,7 +1267,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -1284,7 +1284,7 @@ paths:
         Required permission: `organizations.update`.'
       operationId: update_org
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1331,7 +1331,7 @@ paths:
         Required permission: `organizations.read`.'
       operationId: get_org
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1375,7 +1375,7 @@ paths:
         Required permission: `organizations.delete`.'
       operationId: delete_org
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1417,7 +1417,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: create_invitation
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1464,7 +1464,7 @@ paths:
         Required permission: `members.read`.'
       operationId: list_invitations
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1506,7 +1506,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: reissue_invitation
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: invitation_id
@@ -1556,7 +1556,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: revoke_invitation
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: invitation_id
@@ -1609,7 +1609,7 @@ paths:
         Required permission: `workspaces.create`.'
       operationId: create_workspace
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1656,7 +1656,7 @@ paths:
         Required permission: one of `workspaces.read`, `organizations.read`.'
       operationId: list_workspaces
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1699,7 +1699,7 @@ paths:
         Required permission: `workspaces.read`.'
       operationId: get_workspace
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1750,7 +1750,7 @@ paths:
         Required permission: `workspaces.delete`.'
       operationId: delete_workspace
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1798,7 +1798,7 @@ paths:
         Required permission: `workspaces.update`.'
       operationId: update_workspace
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1853,7 +1853,7 @@ paths:
         Required permission: `members.read`.'
       operationId: list_members
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1902,7 +1902,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: list_member_candidates
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1951,7 +1951,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: add_member
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -2013,7 +2013,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: remove_member
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -2070,7 +2070,7 @@ paths:
         Required permission: `playground.execute`.'
       operationId: ensure_playground_session
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2118,7 +2118,7 @@ paths:
         Required permission: `playground.execute`.'
       operationId: end_playground_session
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2167,7 +2167,7 @@ paths:
         Required permission: `inference-keys.manage`.'
       operationId: create_inference_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2221,7 +2221,7 @@ paths:
         Required permission: `inference-keys.read`.'
       operationId: list_inference_keys
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2270,7 +2270,7 @@ paths:
         Required permission: `inference-keys.manage`.'
       operationId: revoke_inference_key
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: key_id
@@ -2327,7 +2327,7 @@ paths:
         Required permission: `policies.read`.'
       operationId: list_policies
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2375,7 +2375,7 @@ paths:
         Required permission: `policies.manage`.'
       operationId: create_policy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2430,7 +2430,7 @@ paths:
         Required permission: `policies.manage`.'
       operationId: reorder_policies
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2485,7 +2485,7 @@ paths:
         Required permission: `policies.manage`.'
       operationId: update_policy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: policy_id
@@ -2547,7 +2547,7 @@ paths:
         Required permission: `policies.manage`.'
       operationId: delete_policy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: policy_id
@@ -2621,7 +2621,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -2660,7 +2660,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -2677,7 +2677,7 @@ paths:
         Required permission: `provider-credentials.manage`.'
       operationId: create_org_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -2724,7 +2724,7 @@ paths:
         Required permission: `provider-credentials.read`.'
       operationId: list_org_provider_credentials
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -2766,7 +2766,7 @@ paths:
         Required permission: `provider-credentials.manage`.'
       operationId: create_workspace_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2820,7 +2820,7 @@ paths:
         Required permission: `provider-credentials.read`.'
       operationId: list_workspace_provider_credentials
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -2870,7 +2870,7 @@ paths:
         Required permission: `provider-credentials.read`.'
       operationId: get_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -2920,7 +2920,7 @@ paths:
         Required permission: `provider-credentials.manage`.'
       operationId: update_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -2976,7 +2976,7 @@ paths:
         Required permission: `provider-credentials.manage`.'
       operationId: delete_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -3027,7 +3027,7 @@ paths:
         Required permission: `provider-credentials.manage`.'
       operationId: rotate_provider_credential
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -3083,7 +3083,7 @@ paths:
         Required permission: `members.read`.'
       operationId: list_org_users
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3125,7 +3125,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: add_org_user
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -3180,7 +3180,7 @@ paths:
         Required permission: `members.manage`.'
       operationId: remove_org_user
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -3227,10 +3227,10 @@ paths:
       description: 'Create an organization-managed service account and issue its first management key.
 
 
-        Required permissions: `members.manage` and `access-keys.issue`.'
+        Required permissions: `members.manage` and `management-keys.issue`.'
       operationId: create_org_service_account
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3269,7 +3269,7 @@ paths:
         - members.manage
       - scope: org_scope
         anyOf:
-        - access-keys.issue
+        - management-keys.issue
   /api/v1/orgs/{org_id}/service-accounts/{user_id}:
     delete:
       tags:
@@ -3278,10 +3278,10 @@ paths:
       description: 'Delete an organization-managed service account and its control-plane credentials.
 
 
-        Required permissions: `members.manage` and `access-keys.revoke`.'
+        Required permissions: `members.manage` and `management-keys.revoke`.'
       operationId: delete_org_service_account
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -3322,7 +3322,7 @@ paths:
         - members.manage
       - scope: org_scope
         anyOf:
-        - access-keys.revoke
+        - management-keys.revoke
   /api/v1/orgs/{org_id}/bundles/republish:
     post:
       tags:
@@ -3334,7 +3334,7 @@ paths:
         Required permission: `bundles.publish`.'
       operationId: republish_bundle
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3376,7 +3376,7 @@ paths:
         Required permission: `bundles.read`.'
       operationId: list_bundles
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3418,7 +3418,7 @@ paths:
         Required permission: `usage.read`.'
       operationId: list_org_events
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3510,7 +3510,7 @@ paths:
         Required permission: `usage.read`.'
       operationId: list_workspace_events
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -3609,7 +3609,7 @@ paths:
         Required permission: `audit.read`.'
       operationId: list_activity
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3678,7 +3678,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: credential_scope
@@ -3695,7 +3695,7 @@ paths:
         Required permission: `bundles.read`.'
       operationId: get_bundle
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: bundle_id
@@ -3738,7 +3738,7 @@ paths:
         Required permission: `bundles.read`.'
       operationId: bundle_latest
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -3822,7 +3822,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: credential_scope
@@ -3833,7 +3833,7 @@ paths:
       tags:
       - Data Plane API
       summary: Record Data Plane Heartbeat
-      description: 'Create or refresh a data-plane instance at the access key''s scope.
+      description: 'Create or refresh a data-plane instance at the management key''s scope.
 
 
         Required permission: `data-planes.heartbeat`.'
@@ -3862,7 +3862,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: credential_scope
@@ -3879,7 +3879,7 @@ paths:
         Required permission: `catalog.read`.'
       operationId: get_instance_taxonomy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       responses:
         '200':
@@ -3912,7 +3912,7 @@ paths:
         Required permission: `catalog.manage`.'
       operationId: apply_instance_taxonomy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: dry_run
@@ -3962,7 +3962,7 @@ paths:
         Required permission: `catalog.read`.'
       operationId: get_org_taxonomy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -4004,7 +4004,7 @@ paths:
         Required permission: `catalog.read`.'
       operationId: get_workspace_taxonomy
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -4076,7 +4076,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -4116,7 +4116,7 @@ paths:
         '403':
           description: The credential does not have the required permission
       security:
-      - AccessKey: []
+      - ManagementKey: []
       - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
@@ -4124,291 +4124,6 @@ paths:
         - catalog.manage
 components:
   schemas:
-    AccessKeyGrantIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-          description: Optional expiration timestamp with a timezone
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      - label
-      title: AccessKeyGrantIn
-    AccessKeyIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-          description: Optional expiration timestamp with a timezone
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Principal the key authenticates; defaults to the authenticated principal
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      - label
-      title: AccessKeyIn
-    AccessKeyMintedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        org_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-        workspace_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-        parent_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Parent Id
-        prefix:
-          type: string
-          title: Prefix
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          title: Permissions
-        label:
-          type: string
-          title: Label
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-        revoked_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Revoked At
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
-        scope:
-          $ref: '#/components/schemas/Scope'
-        status:
-          type: string
-          enum:
-          - active
-          - expired
-          - revoked
-          title: Status
-        token:
-          type: string
-          title: Token
-      type: object
-      required:
-      - id
-      - user_id
-      - org_id
-      - workspace_id
-      - parent_id
-      - prefix
-      - permissions
-      - label
-      - expires_at
-      - revoked_at
-      - created_at
-      - updated_at
-      - deleted_at
-      - scope
-      - status
-      - token
-      title: AccessKeyMintedOut
-    AccessKeyOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        org_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-        workspace_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-        parent_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Parent Id
-        prefix:
-          type: string
-          title: Prefix
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          title: Permissions
-        label:
-          type: string
-          title: Label
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-        revoked_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Revoked At
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
-        scope:
-          $ref: '#/components/schemas/Scope'
-        status:
-          type: string
-          enum:
-          - active
-          - expired
-          - revoked
-          title: Status
-      type: object
-      required:
-      - id
-      - user_id
-      - org_id
-      - workspace_id
-      - parent_id
-      - prefix
-      - permissions
-      - label
-      - expires_at
-      - revoked_at
-      - created_at
-      - updated_at
-      - deleted_at
-      - scope
-      - status
-      title: AccessKeyOut
-    AccessKeyPermissionsIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      title: AccessKeyPermissionsIn
-    AccessKeyRevokedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        status:
-          type: string
-          const: revoked
-          title: Status
-        revoked_at:
-          type: string
-          format: date-time
-          title: Revoked At
-      type: object
-      required:
-      - id
-      - status
-      - revoked_at
-      title: AccessKeyRevokedOut
     ActivityOut:
       properties:
         id:
@@ -4714,7 +4429,7 @@ components:
           - instance
           - org
           title: Scope
-          description: Scope the CLI access key should use
+          description: Scope the CLI management key should use
           default: org
         org_id:
           anyOf:
@@ -4722,7 +4437,7 @@ components:
             format: uuid
           - type: 'null'
           title: Org Id
-          description: Organization the CLI access key should use for organization scope
+          description: Organization the CLI management key should use for organization scope
       additionalProperties: false
       type: object
       required:
@@ -5159,30 +4874,6 @@ components:
       - personal_org_id
       - pending_invitations
       title: EnrollOut
-    Envelope_AccessKeyMintedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/AccessKeyMintedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[AccessKeyMintedOut]
-    Envelope_AccessKeyOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/AccessKeyOut'
-      type: object
-      required:
-      - data
-      title: Envelope[AccessKeyOut]
-    Envelope_AccessKeyRevokedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/AccessKeyRevokedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[AccessKeyRevokedOut]
     Envelope_BundleManifest_:
       properties:
         data:
@@ -5319,6 +5010,30 @@ components:
       required:
       - data
       title: Envelope[InvitationPreviewOut]
+    Envelope_ManagementKeyMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ManagementKeyMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ManagementKeyMintedOut]
+    Envelope_ManagementKeyOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ManagementKeyOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ManagementKeyOut]
+    Envelope_ManagementKeyRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ManagementKeyRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ManagementKeyRevokedOut]
     Envelope_MeOut_:
       properties:
         data:
@@ -5471,17 +5186,6 @@ components:
       required:
       - data
       title: Envelope[WorkspaceOut]
-    Envelope_list_AccessKeyOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/AccessKeyOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[AccessKeyOut]]
     Envelope_list_ActivityOut__:
       properties:
         data:
@@ -5526,6 +5230,17 @@ components:
       required:
       - data
       title: Envelope[list[InferenceKeyOut]]
+    Envelope_list_ManagementKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ManagementKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[ManagementKeyOut]]
     Envelope_list_OrgInvitationOut__:
       properties:
         data:
@@ -5998,6 +5713,291 @@ components:
       - email
       - password
       title: LoginIn
+    ManagementKeyGrantIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+          description: Optional expiration timestamp with a timezone
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      - label
+      title: ManagementKeyGrantIn
+    ManagementKeyIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+          description: Optional expiration timestamp with a timezone
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: Principal the key authenticates; defaults to the authenticated principal
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      - label
+      title: ManagementKeyIn
+    ManagementKeyMintedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        prefix:
+          type: string
+          title: Prefix
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          title: Permissions
+        label:
+          type: string
+          title: Label
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        scope:
+          $ref: '#/components/schemas/Scope'
+        status:
+          type: string
+          enum:
+          - active
+          - expired
+          - revoked
+          title: Status
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - user_id
+      - org_id
+      - workspace_id
+      - parent_id
+      - prefix
+      - permissions
+      - label
+      - expires_at
+      - revoked_at
+      - created_at
+      - updated_at
+      - deleted_at
+      - scope
+      - status
+      - token
+      title: ManagementKeyMintedOut
+    ManagementKeyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        prefix:
+          type: string
+          title: Prefix
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          title: Permissions
+        label:
+          type: string
+          title: Label
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        scope:
+          $ref: '#/components/schemas/Scope'
+        status:
+          type: string
+          enum:
+          - active
+          - expired
+          - revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - user_id
+      - org_id
+      - workspace_id
+      - parent_id
+      - prefix
+      - permissions
+      - label
+      - expires_at
+      - revoked_at
+      - created_at
+      - updated_at
+      - deleted_at
+      - scope
+      - status
+      title: ManagementKeyOut
+    ManagementKeyPermissionsIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      title: ManagementKeyPermissionsIn
+    ManagementKeyRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+        revoked_at:
+          type: string
+          format: date-time
+          title: Revoked At
+      type: object
+      required:
+      - id
+      - status
+      - revoked_at
+      title: ManagementKeyRevokedOut
     MeOut:
       properties:
         user_id:
@@ -6684,14 +6684,14 @@ components:
           minLength: 1
           title: Name
           description: Display name for the service account
-        access_key:
-          $ref: '#/components/schemas/AccessKeyGrantIn'
+        management_key:
+          $ref: '#/components/schemas/ManagementKeyGrantIn'
           description: Initial organization-scoped management key to issue for the service account
       additionalProperties: false
       type: object
       required:
       - name
-      - access_key
+      - management_key
       title: OrgServiceAccountIn
     OrgServiceAccountMintedOut:
       properties:
@@ -6699,13 +6699,13 @@ components:
           $ref: '#/components/schemas/UserOut'
         membership:
           $ref: '#/components/schemas/MembershipOut'
-        access_key:
-          $ref: '#/components/schemas/AccessKeyMintedOut'
+        management_key:
+          $ref: '#/components/schemas/ManagementKeyMintedOut'
       type: object
       required:
       - service_account
       - membership
-      - access_key
+      - management_key
       title: OrgServiceAccountMintedOut
     OrgUpdate:
       properties:
@@ -6786,9 +6786,9 @@ components:
       - data-planes.read
       - data-planes.heartbeat
       - audit.read
-      - access-keys.read
-      - access-keys.issue
-      - access-keys.revoke
+      - management-keys.read
+      - management-keys.issue
+      - management-keys.revoke
       title: Permission
     PlaygroundSessionEndedOut:
       properties:
@@ -8247,9 +8247,9 @@ components:
       type: object
       title: WorkspaceUpdate
   securitySchemes:
-    AccessKey:
+    ManagementKey:
       type: http
-      description: A control-plane access key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane
+      description: A control-plane management key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane
         endpoints.
       scheme: bearer
     SessionCookie:
@@ -8269,9 +8269,9 @@ tags:
 - name: Instance Users
   description: Manage human users and service accounts across the instance
   x-displayName: Users
-- name: Instance Access Keys
-  description: List access keys across the instance, issue instance-scoped credentials, and revoke keys
-  x-displayName: Access Keys
+- name: Instance Management Keys
+  description: List management keys across the instance, issue instance-scoped credentials, and revoke keys
+  x-displayName: Management Keys
 - name: Instance Model Catalog
   description: Manage the providers and models available through this AirLLM instance
   x-displayName: Model Catalog
@@ -8302,9 +8302,9 @@ tags:
 - name: Organization Workspaces
   description: List and create workspaces within an organization
   x-displayName: Workspaces
-- name: Organization Access Keys
-  description: List access keys within an organization, issue organization-scoped credentials, and revoke keys
-  x-displayName: Access Keys
+- name: Organization Management Keys
+  description: List management keys within an organization, issue organization-scoped credentials, and revoke keys
+  x-displayName: Management Keys
 - name: Organization Provider Credentials
   description: Manage provider API keys available across an organization
   x-displayName: Provider Credentials
@@ -8329,9 +8329,9 @@ tags:
 - name: Workspace Members
   description: Manage workspace membership and workspace roles
   x-displayName: Members
-- name: Workspace Access Keys
-  description: List and issue access keys scoped to a workspace and revoke keys
-  x-displayName: Access Keys
+- name: Workspace Management Keys
+  description: List and issue management keys scoped to a workspace and revoke keys
+  x-displayName: Management Keys
 - name: Workspace Playground
   description: Create and end short-lived browser sessions for playground model requests
   x-displayName: Playground
@@ -8359,7 +8359,7 @@ x-tagGroups:
   tags:
   - Instance Organizations
   - Instance Users
-  - Instance Access Keys
+  - Instance Management Keys
   - Instance Model Catalog
   - Instance Provider Credentials
   - Data Plane Instances
@@ -8372,7 +8372,7 @@ x-tagGroups:
   - Organization Service Accounts
   - Organization Invitations
   - Organization Workspaces
-  - Organization Access Keys
+  - Organization Management Keys
   - Organization Provider Credentials
   - Organization Bundles
   - Organization Usage Events
@@ -8383,7 +8383,7 @@ x-tagGroups:
   - Workspace Settings
   - Workspace Policies
   - Workspace Members
-  - Workspace Access Keys
+  - Workspace Management Keys
   - Workspace Playground
   - Workspace Inference Keys
   - Workspace Provider Credentials

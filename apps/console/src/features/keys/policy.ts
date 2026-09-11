@@ -1,23 +1,23 @@
 import { operationAuthority } from '@workspace/api-client-react';
 
-export const accessKeyAccess = {
+export const managementKeyAccess = {
   instance: {
-    read: operationAuthority.listInstanceAccessKeys,
-    issue: operationAuthority.createInstanceAccessKey,
-    revoke: operationAuthority.revokeAccessKey,
-    updatePermissions: operationAuthority.updateAccessKeyPermissions,
+    read: operationAuthority.listInstanceManagementKeys,
+    issue: operationAuthority.createInstanceManagementKey,
+    revoke: operationAuthority.revokeManagementKey,
+    updatePermissions: operationAuthority.updateManagementKeyPermissions,
   },
   org: {
-    read: operationAuthority.listOrgAccessKeys,
-    issue: operationAuthority.createOrgAccessKey,
-    revoke: operationAuthority.revokeAccessKey,
-    updatePermissions: operationAuthority.updateAccessKeyPermissions,
+    read: operationAuthority.listOrgManagementKeys,
+    issue: operationAuthority.createOrgManagementKey,
+    revoke: operationAuthority.revokeManagementKey,
+    updatePermissions: operationAuthority.updateManagementKeyPermissions,
   },
   workspace: {
-    read: operationAuthority.listWorkspaceAccessKeys,
-    issue: operationAuthority.createWorkspaceAccessKey,
-    revoke: operationAuthority.revokeAccessKey,
-    updatePermissions: operationAuthority.updateAccessKeyPermissions,
+    read: operationAuthority.listWorkspaceManagementKeys,
+    issue: operationAuthority.createWorkspaceManagementKey,
+    revoke: operationAuthority.revokeManagementKey,
+    updatePermissions: operationAuthority.updateManagementKeyPermissions,
   },
 } as const;
 

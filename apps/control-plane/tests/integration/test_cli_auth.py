@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from helpers import make_org, run_in_db, setup_control_plane
 
 from control_plane.authz import Permission
-from control_plane.keys import ACCESS_KEY_PREFIX
+from control_plane.keys import MANAGEMENT_KEY_PREFIX
 from control_plane.models import CliAuthRequest
 
 CSRF = {"X-Requested-With": "fetch"}
@@ -54,7 +54,7 @@ def test_device_flow_end_to_end(tmp_path):
 
         done = c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]
         assert done["status"] == "complete"
-        assert done["token"].startswith(ACCESS_KEY_PREFIX)
+        assert done["token"].startswith(MANAGEMENT_KEY_PREFIX)
         assert done["org_id"] == org["id"]
         assert done["org_name"] == "mine"
 
@@ -140,7 +140,7 @@ def test_two_simultaneous_polls_deliver_one_key(tmp_path):
         assert sorted(response.status_code for response in responses) == [200, 404]
         complete = next(response.json()["data"] for response in responses if response.status_code == 200)
         assert complete["status"] == "complete"
-        assert complete["token"].startswith(ACCESS_KEY_PREFIX)
+        assert complete["token"].startswith(MANAGEMENT_KEY_PREFIX)
 
 
 def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_path):
@@ -156,7 +156,7 @@ def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_pa
 
         first = login_once()
         peer = c.post(
-            f"/api/v1/orgs/{org['id']}/access-keys",
+            f"/api/v1/orgs/{org['id']}/management-keys",
             json={
                 "user_id": user["user_id"],
                 "label": "mbp",

@@ -4,14 +4,14 @@ import { policyAccess } from '@/features/policies/policy';
 import { allOf, anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { catalogAccess } from '@/features/catalog/policy';
 import { providerCredentialAccess } from '@/features/credentials/policy';
-import { inferenceKeyAccess } from '@/features/keys/policy';
+import { inferenceKeyAccess, managementKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 import { playgroundAccess } from '@/features/playground/policy';
 
 const Overview = lazy(() => import('./Overview'));
 const Playground = lazy(() => import('./Playground'));
-const ApiKeys = lazy(() => import('./ApiKeys'));
+const InferenceKeys = lazy(() => import('./InferenceKeys'));
 const Byok = lazy(() => import('./Byok'));
 const Policies = lazy(() => import('./Policies'));
 const SettingsPage = lazy(() => import('./Settings'));
@@ -33,14 +33,14 @@ export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
     access: allOf(catalogAccess.workspace.read, playgroundAccess.execute),
     component: Playground,
   },
-  { suffix: '/keys', label: 'Inference Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: ApiKeys },
+  { suffix: '/inference-keys', label: 'Inference Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: InferenceKeys },
   { suffix: '/byok', label: 'BYOK', icon: Database, access: providerCredentialAccess.workspace.read, component: Byok },
   { suffix: '/policies', label: 'Policies', icon: ShieldCheck, access: policyAccess.read, component: Policies },
   {
     suffix: '/settings',
     label: 'Settings',
     icon: Settings,
-    access: anyOf(workspaceMemberAccess.read, workspaceAccess.update, workspaceAccess.delete),
+    access: anyOf(workspaceMemberAccess.read, workspaceAccess.update, workspaceAccess.delete, managementKeyAccess.workspace.read),
     component: SettingsPage,
   },
 ];

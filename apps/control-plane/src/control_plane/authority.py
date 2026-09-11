@@ -20,7 +20,7 @@ from control_plane.authz import (
     WorkspaceRole,
     decide,
 )
-from control_plane.models import AccessKey, OrgMembership, User, Workspace, WorkspaceMembership
+from control_plane.models import ManagementKey, OrgMembership, User, Workspace, WorkspaceMembership
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -153,33 +153,33 @@ async def principal_can_select_org(principal_id: UUID, org_id: UUID) -> bool:
     return user is not None and (user.instance_role is not None or await OrgMembership.get((principal_id, org_id)) is not None)
 
 
-async def principal_can_issue_instance_access_key(principal_id: UUID) -> bool:
-    return Permission.access_keys_issue in await principal_permissions(principal_id, Scope.instance())
+async def principal_can_issue_instance_management_key(principal_id: UUID) -> bool:
+    return Permission.management_keys_issue in await principal_permissions(principal_id, Scope.instance())
 
 
-async def access_key_parent(
+async def management_key_parent(
     actor: Actor,
     principal_id: UUID,
     scope: Scope,
     permissions: frozenset[Permission],
     expires_at: datetime | None,
 ) -> UUID | None:
-    await ensure_allowed(actor, Permission.access_keys_issue, scope)
+    await ensure_allowed(actor, Permission.management_keys_issue, scope)
     if not permissions <= await principal_permissions(principal_id, scope):
         detail = "Requested permissions exceed the target principal's current permissions"
         raise AuthorizationError(detail)
     if not permissions <= await principal_permissions(actor.principal_id, scope):
         detail = "Requested permissions exceed your current permissions"
         raise AuthorizationError(detail)
-    if actor.credential_kind != "access_key":
+    if actor.credential_kind != "management_key":
         return None
-    if Permission.access_keys_issue in permissions:
-        detail = "A delegated key cannot delegate access-key issuance"
+    if Permission.management_keys_issue in permissions:
+        detail = "A delegated key cannot delegate management-key issuance"
         raise AuthorizationError(detail)
     if not permissions < actor.grant.permissions:
         detail = "A delegated key must carry strictly fewer permissions than its issuer"
         raise AuthorizationError(detail)
-    parent = await AccessKey.find_by_id(actor.credential_id)
+    parent = await ManagementKey.find_by_id(actor.credential_id)
     if parent is None:
         detail = "Issuing credential no longer exists"
         raise CredentialError(detail)
@@ -189,8 +189,8 @@ async def access_key_parent(
     return parent.id
 
 
-async def ensure_access_key_permissions(actor: Actor, key: AccessKey, permissions: frozenset[Permission], now: datetime) -> None:
-    await access_key_parent(actor, key.user_id, key.scope, permissions, key.expires_at)
+async def ensure_management_key_permissions(actor: Actor, key: ManagementKey, permissions: frozenset[Permission], now: datetime) -> None:
+    await management_key_parent(actor, key.user_id, key.scope, permissions, key.expires_at)
     parent_id = key.parent_id
     seen = {key.id}
     while parent_id is not None:
@@ -198,14 +198,14 @@ async def ensure_access_key_permissions(actor: Actor, key: AccessKey, permission
             detail = "The key has an invalid delegation chain"
             raise AuthorizationError(detail)
         seen.add(parent_id)
-        parent = await AccessKey.find_by_id(parent_id)
+        parent = await ManagementKey.find_by_id(parent_id)
         if parent is None or parent.status(now) != "active":
             detail = "The parent management key is no longer active"
             raise AuthorizationError(detail)
-        if Permission.access_keys_issue in permissions or not permissions < frozenset(parent.permissions):
+        if Permission.management_keys_issue in permissions or not permissions < frozenset(parent.permissions):
             detail = "Requested permissions exceed the parent management key's delegation limit"
             raise AuthorizationError(detail)
         parent_id = parent.parent_id
-    if actor.credential_kind == "access_key" and not permissions <= frozenset(key.permissions) and actor.credential_id not in seen:
+    if actor.credential_kind == "management_key" and not permissions <= frozenset(key.permissions) and actor.credential_id not in seen:
         detail = "A bearer credential cannot expand a key outside its delegation chain"
         raise AuthorizationError(detail)

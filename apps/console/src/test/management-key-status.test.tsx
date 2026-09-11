@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 
-describe('access-key status', () => {
+describe('management-key status', () => {
   it('shows an expired key as expired', () => {
     render(
-      <ApiKeysTable
-        resource="access keys"
+      <KeysTable
+        resource="management keys"
         keys={[
           {
             id: 'key-1',

@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import type { AccessKeyOut } from '@workspace/api-client-react';
+import type { ManagementKeyOut } from '@workspace/api-client-react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/elements';
 import { FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PermissionChecklist, accessKeyFormSchema } from '@/components/shared/access-key-form';
+import { PermissionChecklist, managementKeyFormSchema } from '@/components/shared/management-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState } from '@/components/shared/states';
 import { useScopedAuthorization } from '@/features/permissions/hooks';
-import { useUpdateAccessKeyPermissionsMutation } from '@/features/keys/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { useUpdateManagementKeyPermissionsMutation } from '@/features/keys/hooks';
+import { managementKeyAccess } from '@/features/keys/policy';
 
-const permissionsSchema = accessKeyFormSchema.pick({ permissions: true });
+const permissionsSchema = managementKeyFormSchema.pick({ permissions: true });
 
-function AccessKeyPermissionsDialog({ apiKey, onClose }: { apiKey: AccessKeyOut; onClose: () => void }) {
+function ManagementKeyPermissionsDialog({ apiKey, onClose }: { apiKey: ManagementKeyOut; onClose: () => void }) {
   const authorization = useScopedAuthorization(
     apiKey.scope.workspace_id && apiKey.scope.org_id
       ? { level: 'workspace', orgId: apiKey.scope.org_id, workspaceRef: apiKey.scope.workspace_id }
@@ -21,8 +21,8 @@ function AccessKeyPermissionsDialog({ apiKey, onClose }: { apiKey: AccessKeyOut;
         ? { level: 'org', orgId: apiKey.scope.org_id }
         : { level: 'instance' },
   );
-  const update = useUpdateAccessKeyPermissionsMutation();
-  const canEdit = authorization.can(accessKeyAccess.instance.updatePermissions);
+  const update = useUpdateManagementKeyPermissionsMutation();
+  const canEdit = authorization.can(managementKeyAccess.instance.updatePermissions);
   const availablePermissions = [...new Set([...authorization.permissions, ...apiKey.permissions])];
 
   return (
@@ -68,17 +68,25 @@ function AccessKeyPermissionsDialog({ apiKey, onClose }: { apiKey: AccessKeyOut;
   );
 }
 
-export function AccessKeyPermissionsCell({ apiKey, canEdit }: { apiKey: AccessKeyOut; canEdit: boolean }) {
+export function ManagementKeyPermissionsCell({
+  apiKey,
+  canEdit,
+  compact = false,
+}: {
+  apiKey: ManagementKeyOut;
+  canEdit: boolean;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-2">
-      <PermissionsCell permissions={apiKey.permissions} />
+    <div className="inline-flex items-center gap-2 whitespace-nowrap">
+      <PermissionsCell compact={compact} permissions={apiKey.permissions} />
       {canEdit && apiKey.status === 'active' && (
-        <Button variant="ghost" size="icon" aria-label={`Edit permissions for ${apiKey.label}`} onClick={() => setOpen(true)}>
+        <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Edit permissions for ${apiKey.label}`} onClick={() => setOpen(true)}>
           <Pencil className="size-3.5" />
         </Button>
       )}
-      {open && <AccessKeyPermissionsDialog apiKey={apiKey} onClose={() => setOpen(false)} />}
+      {open && <ManagementKeyPermissionsDialog apiKey={apiKey} onClose={() => setOpen(false)} />}
     </div>
   );
 }

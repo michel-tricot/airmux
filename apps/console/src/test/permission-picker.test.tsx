@@ -3,7 +3,7 @@ import type { Permission } from '@workspace/api-client-react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
-import { PermissionChecklist } from '@/components/shared/access-key-form';
+import { PermissionChecklist } from '@/components/shared/management-key-form';
 
 function Picker() {
   const [permissions, setPermissions] = useState<Permission[]>(['workspaces.read', 'usage.read']);

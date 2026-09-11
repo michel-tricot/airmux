@@ -8,7 +8,7 @@ import {
   useCreateOrgServiceAccount,
   useDeleteOrgServiceAccount,
   getListOrgUsersQueryKey,
-  getListOrgAccessKeysQueryKey,
+  getListOrgManagementKeysQueryKey,
   getListMembersQueryKey,
   getMyPermissionsQueryKey,
   type WorkspaceRole,
@@ -31,7 +31,7 @@ export function useCreateOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
@@ -44,7 +44,7 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
     },

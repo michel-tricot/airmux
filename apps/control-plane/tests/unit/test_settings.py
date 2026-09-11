@@ -147,8 +147,8 @@ def test_supplied_bootstrap_token_is_validated_and_redacted():
     bootstrap = DataPlaneBootstrap(token=token)
 
     assert token not in repr(bootstrap)
-    with pytest.raises(ValidationError, match="complete access key"):
-        DataPlaneBootstrap(token="not-an-access-key")
+    with pytest.raises(ValidationError, match="complete management key"):
+        DataPlaneBootstrap(token="not-an-management-key")
 
 
 def test_shared_migration_config_uses_the_selected_database_url(monkeypatch):

@@ -11,11 +11,11 @@ from sqlmodel import Field, col, select
 
 from control_plane.authz import InstanceRole
 from control_plane.db import current_session
-from control_plane.models.access_key import AccessKeyGrantIn, AccessKeyMintedOut
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
+from control_plane.models.management_key import ManagementKeyGrantIn, ManagementKeyMintedOut
 from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
@@ -125,7 +125,7 @@ class User(Record, Identified, Tombstonable, table=True):
         return not await cls.instance_claimed()
 
     async def delete_with_contents(self) -> None:
-        """Delete the user with the entities they own that are theirs alone: identities, sessions, and access keys.
+        """Delete the user with the entities they own that are theirs alone: identities, sessions, and management keys.
 
         The sibling of Org.delete_with_contents and Workspace.delete_with_contents. Everything else a
         user touches outlives them, so the route refuses rather than cascading: a membership is the
@@ -136,7 +136,7 @@ class User(Record, Identified, Tombstonable, table=True):
         for owned in (models.AuthIdentity, models.AuthSession):
             for record in await owned.find(owned.user_id == self.id):
                 await record.delete()
-        await models.AccessKey.delete_scoped(models.AccessKey.user_id == self.id)
+        await models.ManagementKey.delete_scoped(models.ManagementKey.user_id == self.id)
         await self.delete()
 
     @classmethod
@@ -193,7 +193,7 @@ class ServiceAccountIn(ServiceAccountNameIn):
 
 
 class OrgServiceAccountIn(ServiceAccountNameIn):
-    access_key: AccessKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
+    management_key: ManagementKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
 
 
 class UserOut(RecordOut[User]):
@@ -214,4 +214,4 @@ class UserOut(RecordOut[User]):
 class OrgServiceAccountMintedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
-    access_key: AccessKeyMintedOut
+    management_key: ManagementKeyMintedOut

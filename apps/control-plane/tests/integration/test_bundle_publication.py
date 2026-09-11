@@ -96,7 +96,7 @@ def test_bundle_latest_filters_by_org(tmp_path):
         assert bundle.org_id == o1
 
 
-def test_bundle_manifest_follows_the_access_key_scope(tmp_path):
+def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:

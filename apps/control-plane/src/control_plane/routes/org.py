@@ -12,14 +12,14 @@ from control_plane.authz import OrgRole, Permission, Scope
 from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
 from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, RuntimeConfiguration, UsageEvent, User
-from control_plane.models.access_key import AccessKeyIn
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.management_key import ManagementKeyIn
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountIn, OrgServiceAccountMintedOut, UserOut
-from control_plane.routes.access_keys import issue_access_key
+from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
 
@@ -87,7 +87,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
 @router.post(
     "/service-accounts",
     tags=["Organization Service Accounts"],
-    dependencies=[require_all(org_scope, Permission.members_manage, Permission.access_keys_issue)],
+    dependencies=[require_all(org_scope, Permission.members_manage, Permission.management_keys_issue)],
 )
 async def create_org_service_account(
     body: OrgServiceAccountIn,
@@ -98,8 +98,8 @@ async def create_org_service_account(
     await ensure_org_role_change(actor, org_id, None, OrgRole.admin)
     service_account = await User.new_service_account(body.name, managing_org_id=org_id).save()
     membership = await OrgMembership(user_id=service_account.id, org_id=org_id, role=OrgRole.admin).save()
-    access_key = await issue_access_key(
-        AccessKeyIn(user_id=service_account.id, **body.access_key.model_dump()),
+    management_key = await issue_management_key(
+        ManagementKeyIn(user_id=service_account.id, **body.management_key.model_dump()),
         actor,
         Scope.org(org_id),
     )
@@ -107,7 +107,7 @@ async def create_org_service_account(
         data=OrgServiceAccountMintedOut(
             service_account=UserOut.model_validate({**service_account.model_dump(), "orgs": [org_id]}),
             membership=MembershipOut(user_id=service_account.id, org_id=org_id, role=OrgRole(membership.role), status="member"),
-            access_key=access_key,
+            management_key=management_key,
         )
     )
 
@@ -115,7 +115,7 @@ async def create_org_service_account(
 @router.delete(
     "/service-accounts/{user_id}",
     tags=["Organization Service Accounts"],
-    dependencies=[require_all(org_scope, Permission.members_manage, Permission.access_keys_revoke)],
+    dependencies=[require_all(org_scope, Permission.members_manage, Permission.management_keys_revoke)],
 )
 async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Envelope[DeletedOut[UUID]]:
     """Delete an organization-managed service account and its control-plane credentials."""

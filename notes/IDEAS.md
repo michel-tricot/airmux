@@ -25,10 +25,10 @@ tokens have no principal, and recording every attempt would let unauthenticated 
 unbounded telemetry workload. Add aggregate, rate-limited edge metrics if rejected-traffic
 visibility becomes operationally necessary.
 
-## Black-box access-key revocation coverage
+## Black-box management-key revocation coverage
 
 The acceptance suite now proves client-disconnect accounting through a running data plane. It does
-not yet prove that revoking a control-plane access key stops a running data plane within one bundle
+not yet prove that revoking a control-plane management key stops a running data plane within one bundle
 poll. Add that scenario when revocation latency becomes a release-level guarantee.
 
 ## Data-plane benchmarks
@@ -55,7 +55,7 @@ schema and query change. The blueprint is:
 - Give membership tables surrogate primary keys. Move reusable business identities such as
   `(user_id, org_id)` to partial unique indexes where `deleted_at IS NULL`
 - Treat re-adding a membership as a new row, preserving each membership period as history
-- Keep inference-key and access-key revocation distinct from deletion
+- Keep inference-key and management-key revocation distinct from deletion
 - Decide whether deleting an org cascades soft deletion, leaves historical children, or is blocked
 
 This must ship with a new trigger DDL version and a migration. Existing trigger functions are frozen.
@@ -81,11 +81,11 @@ the removed implementation from history without a current product requirement.
 ## Remote data-plane enrollment
 
 Quickstart provisions the first co-located data plane with a service account and an instance-scoped
-access key limited to bundle polling, event ingestion, and heartbeat. A second machine should not
+management key limited to bundle polling, event ingestion, and heartbeat. A second machine should not
 reuse that credential or require shared disk access.
 
 Add a short-lived, single-use enrollment code that exchanges for a new service account's limited
-access key and the pinned bundle public key. Instance scope should remain the default; organization
+management key and the pinned bundle public key. Instance scope should remain the default; organization
 scope is optional for a dedicated deployment. The data plane persists the result in a private local
 file and uses the ordinary poll, event, and heartbeat APIs afterward. Revoking that one key then
 retires one deployment without affecting its peers.

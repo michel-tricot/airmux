@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 
     from control_plane.deps import PermissionCheck
 
-API_DESCRIPTION = """Manage AirLLM organizations, workspaces, access keys, provider credentials, and data-plane synchronization.
+API_DESCRIPTION = """Manage AirLLM organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
 
 Organization and workspace targets are part of each URL. Successful responses wrap their result in
-`{"data": ...}`. Authenticate with a control-plane access key or a browser session as documented by
+`{"data": ...}`. Authenticate with a control-plane management key or a browser session as documented by
 each operation. Inference keys authenticate model requests at the data plane and are not accepted here.
 """
 
@@ -33,9 +33,9 @@ API_TAGS = [
     },
     {"name": "Instance Users", "x-displayName": "Users", "description": "Manage human users and service accounts across the instance"},
     {
-        "name": "Instance Access Keys",
-        "x-displayName": "Access Keys",
-        "description": "List access keys across the instance, issue instance-scoped credentials, and revoke keys",
+        "name": "Instance Management Keys",
+        "x-displayName": "Management Keys",
+        "description": "List management keys across the instance, issue instance-scoped credentials, and revoke keys",
     },
     {
         "name": "Instance Model Catalog",
@@ -72,9 +72,9 @@ API_TAGS = [
         "description": "List and create workspaces within an organization",
     },
     {
-        "name": "Organization Access Keys",
-        "x-displayName": "Access Keys",
-        "description": "List access keys within an organization, issue organization-scoped credentials, and revoke keys",
+        "name": "Organization Management Keys",
+        "x-displayName": "Management Keys",
+        "description": "List management keys within an organization, issue organization-scoped credentials, and revoke keys",
     },
     {
         "name": "Organization Provider Credentials",
@@ -101,9 +101,9 @@ API_TAGS = [
         "description": "Manage workspace membership and workspace roles",
     },
     {
-        "name": "Workspace Access Keys",
-        "x-displayName": "Access Keys",
-        "description": "List and issue access keys scoped to a workspace and revoke keys",
+        "name": "Workspace Management Keys",
+        "x-displayName": "Management Keys",
+        "description": "List and issue management keys scoped to a workspace and revoke keys",
     },
     {
         "name": "Workspace Playground",
@@ -144,7 +144,7 @@ TAG_GROUPS = [
         "tags": [
             "Instance Organizations",
             "Instance Users",
-            "Instance Access Keys",
+            "Instance Management Keys",
             "Instance Model Catalog",
             "Instance Provider Credentials",
             "Data Plane Instances",
@@ -160,7 +160,7 @@ TAG_GROUPS = [
             "Organization Service Accounts",
             "Organization Invitations",
             "Organization Workspaces",
-            "Organization Access Keys",
+            "Organization Management Keys",
             "Organization Provider Credentials",
             "Organization Bundles",
             "Organization Usage Events",
@@ -174,7 +174,7 @@ TAG_GROUPS = [
             "Workspace Settings",
             "Workspace Policies",
             "Workspace Members",
-            "Workspace Access Keys",
+            "Workspace Management Keys",
             "Workspace Playground",
             "Workspace Inference Keys",
             "Workspace Provider Credentials",
@@ -253,9 +253,9 @@ PARAMETER_DESCRIPTIONS = {
 
 def _parameter_description(path: str, name: str, location: str) -> str:
     if name == "key_id":
-        return "Inference key ID" if "inference-keys" in path else "Access key ID"
+        return "Inference key ID" if "inference-keys" in path else "Management key ID"
     if name == "user_id" and location == "query":
-        return "Return only access keys issued to this principal"
+        return "Return only management keys issued to this principal"
     if name == "org_id" and location == "query":
         if "auth/permissions" in path:
             return "Organization scope to evaluate; omit for instance scope"
@@ -306,7 +306,7 @@ class ControlPlaneApp(FastAPI):
                 for parameter in operation.get("parameters", []):
                     parameter.setdefault("description", _parameter_description(path, parameter["name"], parameter["in"]))
                 if permissions:
-                    operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
+                    operation["security"] = [{"ManagementKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "Authentication failed"})
                     operation["responses"].setdefault("403", {"description": "The credential does not have the required permission"})
                     authentication = (
@@ -325,13 +325,13 @@ class ControlPlaneApp(FastAPI):
                     operation["responses"].setdefault("403", {"description": "The request failed browser security checks"})
                     authentication = "Authentication: browser session."
                 elif "principal" in access:
-                    operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
+                    operation["security"] = [{"ManagementKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "Authentication failed"})
-                    authentication = "Authentication: browser session or control-plane access key."
+                    authentication = "Authentication: browser session or control-plane management key."
                 elif "user" in access:
-                    operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
+                    operation["security"] = [{"ManagementKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "An authenticated human account is required"})
-                    authentication = "Authentication: human account using a browser session or control-plane access key."
+                    authentication = "Authentication: human account using a browser session or control-plane management key."
                 else:
                     continue
                 operation["description"] = f"{operation['description']}\n\n{authentication}" if operation.get("description") else authentication

@@ -6,7 +6,7 @@ import { expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, server } from './msw';
 
-const key: Api.AccessKeyOut = {
+const key: Api.ManagementKeyOut = {
   id: 'editable-key',
   user_id: 'user-1',
   org_id: ORG.id,
@@ -33,8 +33,8 @@ function open() {
 it('edits permissions without replacing the key, refreshes the list, and discards cancelled changes', async () => {
   let stored = key;
   server.use(
-    http.get('/api/v1/orgs/:orgId/access-keys', () => HttpResponse.json({ data: [stored] })),
-    http.put('/api/v1/access-keys/:keyId/permissions', async ({ request }) => {
+    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [stored] })),
+    http.put('/api/v1/management-keys/:keyId/permissions', async ({ request }) => {
       expect(await request.json()).toEqual({ permissions: ['workspaces.read', 'usage.read'] });
       stored = { ...stored, permissions: ['workspaces.read', 'usage.read'] };
       return HttpResponse.json({ data: stored });
@@ -59,8 +59,8 @@ it('edits permissions without replacing the key, refreshes the list, and discard
 
 it('keeps the editor open with a readable error when an update is denied', async () => {
   server.use(
-    http.get('/api/v1/orgs/:orgId/access-keys', () => HttpResponse.json({ data: [key] })),
-    http.put('/api/v1/access-keys/:keyId/permissions', () => HttpResponse.json({ detail: 'Permissions exceed the parent key' }, { status: 403 })),
+    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
+    http.put('/api/v1/management-keys/:keyId/permissions', () => HttpResponse.json({ detail: 'Permissions exceed the parent key' }, { status: 403 })),
   );
   open();
   const user = userEvent.setup();
@@ -71,7 +71,7 @@ it('keeps the editor open with a readable error when an update is denied', async
 });
 
 it('does not offer editing for revoked keys', async () => {
-  server.use(http.get('/api/v1/orgs/:orgId/access-keys', () => HttpResponse.json({ data: [{ ...key, status: 'revoked' }] })));
+  server.use(http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [{ ...key, status: 'revoked' }] })));
   open();
   expect(await screen.findByText('deployment')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit permissions for deployment' })).not.toBeInTheDocument();
@@ -79,8 +79,8 @@ it('does not offer editing for revoked keys', async () => {
 
 it('does not offer editing to readers without key issuance permission', async () => {
   server.use(
-    http.get('/api/v1/orgs/:orgId/access-keys', () => HttpResponse.json({ data: [key] })),
-    http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['access-keys.read'] } })),
+    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['management-keys.read'] } })),
   );
   open();
   expect(await screen.findByText('deployment')).toBeInTheDocument();

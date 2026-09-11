@@ -6,7 +6,7 @@ from uuid import uuid4
 import httpx
 from typer.testing import CliRunner
 
-from api_models import AccessKeyMintedOut, Scope
+from api_models import ManagementKeyMintedOut, Scope
 from cli import resources
 from cli.main import app
 
@@ -27,7 +27,7 @@ class Client:
         self.submitted.update(path=path, body=json)
         request = httpx.Request("POST", f"http://control-plane{path}")
         now = datetime.now(tz=UTC)
-        key = AccessKeyMintedOut(
+        key = ManagementKeyMintedOut(
             id=uuid4(),
             user_id=uuid4(),
             org_id=None,
@@ -48,13 +48,13 @@ class Client:
         return httpx.Response(200, request=request, json={"data": key.model_dump(mode="json")})
 
 
-def test_instance_flag_overrides_the_active_org_for_access_key_mint(monkeypatch):
+def test_instance_flag_overrides_the_active_org_for_management_key_mint(monkeypatch):
     submitted = {}
     monkeypatch.setattr(resources, "access_client", lambda _url: Client(submitted))
 
-    result = runner.invoke(app, ["access-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance"])
+    result = runner.invoke(app, ["management-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance"])
 
     assert result.exit_code == 0, result.output
-    assert submitted["path"] == "/api/v1/instance/access-keys"
+    assert submitted["path"] == "/api/v1/instance/management-keys"
     assert "org_id" not in submitted["body"]
     assert "workspace_id" not in submitted["body"]

@@ -5,7 +5,7 @@ import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks
 import { useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId } from '@/lib/session';
-import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
 import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
@@ -17,13 +17,13 @@ import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, PermissionChecklist, accessKeyFormSchema } from '@/components/shared/access-key-form';
-import { AccessKeyPermissionsCell } from '@/components/shared/access-key-permissions-cell';
+import { KeysTable } from '@/components/shared/keys-table';
+import { ManagementKeyFormFields, PermissionChecklist, managementKeyFormSchema } from '@/components/shared/management-key-form';
+import { ManagementKeyPermissionsCell } from '@/components/shared/management-key-permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { accessKeyAccess } from '@/features/keys/policy';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -31,16 +31,16 @@ import { AccountIdentity, AccountKindBadge } from '@/components/shared/account-d
 import { ActivityTable } from '@/components/shared/activity-table';
 import { MembersPanel } from '@/components/shared/members-panel';
 
-const orgServiceAccountSchema = accessKeyFormSchema.extend({
+const orgServiceAccountSchema = managementKeyFormSchema.extend({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
 });
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
   const authorization = useAuthorization('org');
-  const canReadKeys = authorization.can(accessKeyAccess.org.read);
-  const canIssueKey = authorization.can(accessKeyAccess.org.issue);
-  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadKeys = authorization.can(managementKeyAccess.org.read);
+  const canIssueKey = authorization.can(managementKeyAccess.org.issue);
+  const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
   const changeRole = useChangeOrgRoleMutation();
   const canChangeRole = authorization.can(orgMemberAccess.add);
@@ -53,7 +53,7 @@ export default function AppOrgSettings() {
   const canDeleteServiceAccount = authorization.can(orgMemberAccess.deleteServiceAccount);
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
-  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const keysQuery = useOrgManagementKeys(orgId, undefined, { enabled: canReadKeys });
   const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
   const activityQuery = useOrgActivity(orgId, { limit: 50 }, { enabled: canReadActivity });
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListInvitations || canCreateInvitations });
@@ -70,8 +70,8 @@ export default function AppOrgSettings() {
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
-  const mintKey = useCreateOrgAccessKeyMutation(orgId);
-  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
+  const mintKey = useCreateOrgManagementKeyMutation(orgId);
+  const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
@@ -134,7 +134,7 @@ export default function AppOrgSettings() {
                 </Button>
               )}
             </div>
-            <ApiKeysTable
+            <KeysTable
               resource="management keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
@@ -146,7 +146,7 @@ export default function AppOrgSettings() {
                 {
                   key: 'permissions',
                   header: 'Permissions',
-                  cell: (key) => <AccessKeyPermissionsCell apiKey={key} canEdit={authorization.can(accessKeyAccess.org.updatePermissions)} />,
+                  cell: (key) => <ManagementKeyPermissionsCell apiKey={key} canEdit={authorization.can(managementKeyAccess.org.updatePermissions)} />,
                 },
                 { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
               ]}
@@ -361,7 +361,7 @@ export default function AppOrgSettings() {
               ? 'The new key is shown once and does not revoke any existing keys for this service account.'
               : 'The key is bound to this organization and carries only the permissions you name.'
           }
-          schema={accessKeyFormSchema}
+          schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [] }}
           onSubmit={async (values) => {
             const minted = await mintKey.mutateAsync({
@@ -379,7 +379,7 @@ export default function AppOrgSettings() {
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
-            <AccessKeyFormFields
+            <ManagementKeyFormFields
               form={form}
               availablePermissions={authorization.permissions}
               canIssue={canIssueKey}
@@ -402,9 +402,9 @@ export default function AppOrgSettings() {
           onSubmit={async (values) => {
             const minted = await createServiceAccount.mutateAsync({
               orgId,
-              data: { name: values.name, access_key: { label: values.label, permissions: values.permissions } },
+              data: { name: values.name, management_key: { label: values.label, permissions: values.permissions } },
             });
-            setToken(minted.access_key.token);
+            setToken(minted.management_key.token);
           }}
           submitLabel="Create service account"
           pendingLabel="Creating..."

@@ -4,9 +4,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { groupPermissions } from '@/components/shared/permission-groups';
 
 const allPermissions = Object.values(Permission);
-const VISIBLE_GROUPS = 3;
+const VISIBLE_GROUPS = 1;
 
-export function PermissionsCell({ permissions }: { permissions: readonly PermissionName[] }) {
+export function PermissionsCell({ permissions, compact = false }: { permissions: readonly PermissionName[]; compact?: boolean }) {
   if (permissions.length === 0) {
     return <span className="text-xs text-muted-foreground">No permissions</span>;
   }
@@ -23,15 +23,21 @@ export function PermissionsCell({ permissions }: { permissions: readonly Permiss
       <TooltipTrigger
         type="button"
         aria-label={`Show all ${permissions.length} permissions`}
-        className="flex max-w-72 cursor-default flex-wrap items-center gap-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex shrink-0 cursor-default items-center whitespace-nowrap gap-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {visible.map(([resource, actions]) => (
-          <Badge key={resource} variant="outline" className="gap-1 font-mono text-[10px]">
-            {resource}
-            <span className="text-muted-foreground">{actions.length}</span>
-          </Badge>
-        ))}
-        {hidden > 0 && <span className="text-xs text-muted-foreground">+{hidden} groups</span>}
+        {compact ? (
+          <span className="text-xs">
+            {permissions.length} {permissions.length === 1 ? 'permission' : 'permissions'}
+          </span>
+        ) : (
+          visible.map(([resource, actions]) => (
+            <Badge key={resource} variant="outline" className="gap-1 font-mono text-[10px]">
+              {resource}
+              <span className="text-muted-foreground">{actions.length}</span>
+            </Badge>
+          ))
+        )}
+        {!compact && hidden > 0 && <span className="text-xs text-muted-foreground">+{hidden} more</span>}
       </TooltipTrigger>
       <TooltipContent side="left" className="max-w-80">
         <div className="space-y-1 py-1">

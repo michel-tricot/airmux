@@ -24,7 +24,7 @@ uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:
 ```
 
 `quickstart` creates or resumes your owner account, organization, and workspace, imports missing
-provider credentials from `.env`, and prints a new `AIRLLM_API_KEY` and a working curl command.
+provider credentials from `.env`, and prints a new `AIRLLM_INFERENCE_KEY` and a working curl command.
 It reports **Ready** after completing a real inference request, which uses your provider's API quota.
 
 Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
@@ -65,7 +65,7 @@ inference key is for local development. Stop the Docker stack first if it occupi
 Export the inference key printed by `quickstart`:
 
 ```sh
-export AIRLLM_API_KEY='the key printed by quickstart'
+export AIRLLM_INFERENCE_KEY='the key printed by quickstart'
 ```
 
 For the OpenAI Python SDK:
@@ -76,7 +76,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8080/inf/v1",
-    api_key=os.environ["AIRLLM_API_KEY"],
+    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
 )
 response = client.chat.completions.create(
     model="openai/gpt-4o-mini",
@@ -94,7 +94,7 @@ from anthropic import Anthropic
 client = Anthropic(
     base_url="http://localhost:8080",
     api_key="unused",
-    auth_token=os.environ["AIRLLM_API_KEY"],
+    auth_token=os.environ["AIRLLM_INFERENCE_KEY"],
 )
 message = client.messages.create(
     model="openai/gpt-4o-mini",
@@ -134,3 +134,24 @@ and [credential design](notes/design/BYOK.md). Follow [AGENTS.md](AGENTS.md) whe
 
 AirLLM is pre-1.0. APIs, configuration, and migrations may change before the first stable release.
 Licensed under the [Elastic License 2.0](LICENSE).
+
+## Credential types
+
+- **Management keys** authenticate control-plane API calls and are scoped to an instance, organization, or workspace. Use `AIRLLM_MANAGEMENT_KEY` with the CLI
+- **Inference keys** authenticate model requests within one workspace. Use `AIRLLM_INFERENCE_KEY` in the gateway examples
+- **Provider credentials** are upstream provider API keys used by the gateway
+
+To create a workspace management key in the console, open **Workspace → Settings → Management Keys → Generate Key**, enter a label, and select permissions. The key cannot manage other workspaces or make inference requests. Copy its secret before closing the reveal dialog.
+
+The CLI equivalent, with an authenticated profile, is:
+
+```bash
+airllm management-keys mint \
+  --org <org-id> \
+  --workspace <workspace-slug-or-id> \
+  --label workspace-automation \
+  --permission workspaces.read \
+  --permission inference-keys.manage
+```
+
+Management endpoints use `/api/v1/instance/management-keys`, `/api/v1/orgs/{org_id}/management-keys`, and `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys`. Permission names use `management-keys.read`, `management-keys.issue`, and `management-keys.revoke`. Creating or expanding keys is bounded by the caller's authority and the key principal's permissions.

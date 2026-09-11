@@ -24,7 +24,7 @@ from control_plane.authority import principal_permissions
 from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
 from control_plane.config import DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
-from control_plane.keys import AccessKeyGrant, mint_access_key
+from control_plane.keys import ManagementKeyGrant, mint_management_key
 from control_plane.models import Org, OrgMembership, User, set_actor
 
 PROVIDER = {
@@ -101,7 +101,9 @@ class ControlPlane:
                     else Scope.instance()
                 )
                 ceiling = frozenset(Permission(permission) for permission in permissions) if permissions is not None else ALL_PERMISSIONS
-                _, token = await mint_access_key(AccessKeyGrant(principal_id=admin.id, scope=scope, permissions=ceiling, label="fixture-admin"))
+                _, token = await mint_management_key(
+                    ManagementKeyGrant(principal_id=admin.id, scope=scope, permissions=ceiling, label="fixture-admin")
+                )
                 return token
 
         headers = {"authorization": f"Bearer {asyncio.run(mint())}"}
@@ -117,8 +119,8 @@ class ControlPlane:
                 await set_actor(UUID(str(user_id)))
                 principal_id = UUID(str(user_id))
                 scope = Scope.workspace(org_id, workspace_id) if workspace_id is not None else Scope.org(org_id)
-                _, token = await mint_access_key(
-                    AccessKeyGrant(
+                _, token = await mint_management_key(
+                    ManagementKeyGrant(
                         principal_id=principal_id,
                         scope=scope,
                         permissions=await principal_permissions(principal_id, scope),

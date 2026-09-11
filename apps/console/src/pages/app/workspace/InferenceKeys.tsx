@@ -5,13 +5,13 @@ import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys
 import { Button } from '@/components/ui/elements';
 import { Plus } from 'lucide-react';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { KeysTable } from '@/components/shared/keys-table';
 import { useRequiredParam } from '@/lib/route';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { inferenceKeyAccess } from '@/features/keys/policy';
 
-export default function WorkspaceApiKeys() {
+export default function WorkspaceInferenceKeys() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
 
@@ -40,7 +40,7 @@ export default function WorkspaceApiKeys() {
         }
       />
 
-      <ApiKeysTable
+      <KeysTable
         resource="inference keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}

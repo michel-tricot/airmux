@@ -10,15 +10,15 @@ import { cn } from '@/lib/utils';
 import { ErrorState } from '@/components/shared/states';
 import { groupPermissions } from '@/components/shared/permission-groups';
 
-export const accessKeyFormSchema = z.object({
+export const managementKeyFormSchema = z.object({
   label: z.string().min(1, 'Label is required').max(80, 'Label must be 80 characters or fewer'),
   permissions: z.array(z.nativeEnum(Permission)).min(1, 'Select at least one permission'),
 });
 
-export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
+export type ManagementKeyFormValues = z.infer<typeof managementKeyFormSchema>;
 
 const resourceLabels: Record<string, string> = {
-  'access-keys': 'Management keys',
+  'management-keys': 'Management keys',
   'inference-keys': 'Inference keys',
   'provider-credentials': 'Provider credentials',
   'data-planes': 'Data planes',
@@ -157,7 +157,7 @@ export function PermissionChecklist({
   );
 }
 
-export function AccessKeyFormFields({
+export function ManagementKeyFormFields({
   form,
   availablePermissions,
   canIssue,
@@ -165,7 +165,7 @@ export function AccessKeyFormFields({
   permissionsError,
   onPermissionsRetry,
 }: {
-  form: UseFormReturn<AccessKeyFormValues>;
+  form: UseFormReturn<ManagementKeyFormValues>;
   availablePermissions: readonly PermissionName[];
   canIssue: boolean;
   permissionsLoading?: boolean;

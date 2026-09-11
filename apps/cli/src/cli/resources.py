@@ -12,12 +12,12 @@ from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
 from api_models import (
-    AccessKeyMintedOut,
-    AccessKeyOut,
     BundleOut,
     DataPlaneInstanceOut,
     InferenceKeyMintedOut,
     InferenceKeyOut,
+    ManagementKeyMintedOut,
+    ManagementKeyOut,
     OrgMemberOut,
     OrgOut,
     ProviderCredentialOut,
@@ -41,12 +41,12 @@ from cli.client import (
     resolve_workspace,
 )
 from cli.common import (
-    access_keys_app,
     bundles_app,
     console,
     data_planes_app,
     events_app,
     inference_keys_app,
+    management_keys_app,
     models_app,
     org_members_app,
     orgs_app,
@@ -217,7 +217,7 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 
 @inference_keys_app.command("list")
 def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List this workspace's API keys."""
+    """List this workspace's inference keys."""
     workspace_ref = resolve_workspace(workspace)
     print_rows(
         "inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut), KEY_COLS, fmt
@@ -226,7 +226,7 @@ def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str 
 
 @inference_keys_app.command("revoke")
 def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
-    """Revoke an API key."""
+    """Revoke an inference key."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
         resp = c.delete(org_path(f"/workspaces/{workspace_ref}/inference-keys/{key_id}"))
@@ -238,7 +238,7 @@ def _permissions(value: object) -> str:
     return ", ".join(map(str, value)) if isinstance(value, list) else str(value or "")
 
 
-ACCESS_KEY_COLS = [
+MANAGEMENT_KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("label", "Label", max_width=30),
     Col("scope", "Scope", fmt=lambda value: str(value.get("level", "")) if isinstance(value, dict) else str(value or "")),
@@ -325,8 +325,8 @@ def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
     console.print(f"Removed [bold]{user_id}[/bold] from your organization")
 
 
-@access_keys_app.command("list")
-def access_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+@management_keys_app.command("list")
+def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     org_id: str = typer.Option("", "--org", help="Organization target; defaults to the active profile"),
     workspace_id: str = typer.Option("", "--workspace", help="Workspace target within the selected organization"),
     instance: bool = typer.Option(False, "--instance", help="List keys at instance scope"),
@@ -334,23 +334,25 @@ def access_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List access keys at a tenancy scope."""
+    """List management keys at a tenancy scope."""
     if instance and (org_id or workspace_id):
         console.print("[red]--instance cannot be combined with --org or --workspace.[/red]")
         raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
-        "/api/v1/instance/access-keys"
+        "/api/v1/instance/management-keys"
         if instance
-        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/management-keys"
         if workspace_id
-        else f"/api/v1/orgs/{selected_org}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/management-keys"
     )
-    print_rows("access keys", access_get(path, control_plane_url, AccessKeyOut, {"user_id": user_id} if user_id else None), ACCESS_KEY_COLS, fmt)
+    print_rows(
+        "management keys", access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None), MANAGEMENT_KEY_COLS, fmt
+    )
 
 
-@access_keys_app.command("mint")
-def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+@management_keys_app.command("mint")
+def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
     permission: Annotated[list[str] | None, typer.Option("--permission", "-p", help="Permission ceiling; repeat for each permission")] = None,
     user_id: str = typer.Option("", "--user", help="Principal the key authenticates; defaults to you"),
@@ -360,7 +362,7 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
     expires_at: str = typer.Option("", "--expires-at", help="Optional ISO 8601 expiration"),
     control_plane_url: str = "",
 ) -> None:
-    """Create an explicitly limited access key. Shown once, never stored."""
+    """Create an explicitly limited management key. Shown once, never stored."""
     if not permission:
         console.print("[red]Pass at least one --permission.[/red]")
         raise typer.Exit(1)
@@ -369,11 +371,11 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
-        "/api/v1/instance/access-keys"
+        "/api/v1/instance/management-keys"
         if instance
-        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/management-keys"
         if workspace_id
-        else f"/api/v1/orgs/{selected_org}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/management-keys"
     )
     body = {
         "label": label,
@@ -382,16 +384,16 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:
-        key = payload(post_expecting(c, path, body, ok=(200,)), AccessKeyMintedOut)
-    console.print(f"Access key [bold]{key.id}[/bold] minted at [bold]{key.scope.level}[/bold] scope, shown once:")
+        key = payload(post_expecting(c, path, body, ok=(200,)), ManagementKeyMintedOut)
+    console.print(f"Management key [bold]{key.id}[/bold] minted at [bold]{key.scope.level}[/bold] scope, shown once:")
     console.print(key.token)
 
 
-@access_keys_app.command("revoke")
-def access_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
-    """Revoke an access key and all keys delegated from it."""
+@management_keys_app.command("revoke")
+def management_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
+    """Revoke an management key and all keys delegated from it."""
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/api/v1/access-keys/{key_id}")
+        resp = c.delete(f"/api/v1/management-keys/{key_id}")
         ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
@@ -542,7 +544,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
 
 
 def _key_created(key: InferenceKeyMintedOut) -> None:
-    console.print("Your new key, shown once:")
+    console.print("Your new inference key, shown once:")
     console.print(key.token)
 
 
@@ -565,7 +567,7 @@ def inference_keys_create(
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
 ) -> None:
-    """Create an API key. Shown once, never stored."""
+    """Create an inference key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
         _key_created(

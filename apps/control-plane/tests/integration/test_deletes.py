@@ -7,7 +7,7 @@ from helpers import make_org, make_user, make_workspace, run_in_db, setup_contro
 
 from contract import uuid7
 from control_plane.authz import Permission
-from control_plane.models import AccessKey, DataPlaneInstance, InferenceKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
+from control_plane.models import DataPlaneInstance, InferenceKey, ManagementKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
 
 
 def _record_usage(tmp_path, org_id, workspace_id):
@@ -80,7 +80,7 @@ def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
         workspace = make_workspace(c, headers, "staging")
         c.post(f"/api/v1/orgs/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
         c.post(
-            f"/api/v1/orgs/{org}/access-keys",
+            f"/api/v1/orgs/{org}/management-keys",
             json={"label": "k", "permissions": [Permission.workspaces_read]},
             headers=headers,
         )
@@ -90,7 +90,7 @@ def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
         assert deleted.status_code == 200, deleted.text
         assert c.get("/api/v1/orgs", headers=root).json()["data"] == []
         assert run_in_db(tmp_path, lambda: Workspace.find(Workspace.org_id == org)) == []
-        assert run_in_db(tmp_path, lambda: AccessKey.find(AccessKey.org_id == org)) == []
+        assert run_in_db(tmp_path, lambda: ManagementKey.find(ManagementKey.org_id == org)) == []
         assert run_in_db(tmp_path, lambda: OrgMembership.find(OrgMembership.org_id == org)) == []
 
 

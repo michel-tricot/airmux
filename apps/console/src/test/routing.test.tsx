@@ -17,7 +17,7 @@ const WS = WORKSPACES[0];
 
 const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name },
-  { suffix: '/keys', heading: 'Inference Keys' },
+  { suffix: '/inference-keys', heading: 'Inference Keys' },
   { suffix: '/byok', heading: 'Provider Keys' },
   { suffix: '/settings', heading: 'Workspace Settings' },
 ];
@@ -83,7 +83,7 @@ describe('default workspace selection', () => {
   });
 
   it('remembers the workspace visited via a deep link', async () => {
-    renderAt(`/org/workspaces/${WORKSPACES[1].slug}/keys`);
+    renderAt(`/org/workspaces/${WORKSPACES[1].slug}/inference-keys`);
     await screen.findByRole('heading', { level: 1, name: 'Inference Keys' });
     await waitFor(() => {
       expect(window.localStorage.getItem(`airllm_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
@@ -137,7 +137,7 @@ describe('workspace route state', () => {
 function sectionLabel(suffix: string): string {
   return {
     '': 'Overview',
-    '/keys': 'Inference Keys',
+    '/inference-keys': 'Inference Keys',
     '/byok': 'BYOK',
     '/settings': 'Settings',
   }[suffix]!;

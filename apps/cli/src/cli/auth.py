@@ -58,7 +58,7 @@ def _client_name() -> str:
     return f"cli@{socket.gethostname()}"
 
 
-def _existing_access_key(control_plane_url: str) -> str | None:
+def _existing_management_key(control_plane_url: str) -> str | None:
     profile = load_active_profile()
     if profile is None or (profile.control_plane_url or "").rstrip("/") != control_plane_url.rstrip("/"):
         return None
@@ -205,14 +205,14 @@ def _personal_org(client: httpx.Client, email: str, requested_name: str) -> OrgO
     return organization
 
 
-def _organization_access_key(client: httpx.Client, org_id: str) -> str:
-    started = _payload_or_die(client.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request", CliAuthStartOut)
+def _organization_management_key(client: httpx.Client, org_id: str) -> str:
+    started = _payload_or_die(client.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "management key request", CliAuthStartOut)
     _payload_or_die(
         client.post(
             "/api/v1/auth/cli/approve",
             json={"user_code": started.user_code, "scope": "org", "org_id": org_id},
         ),
-        "access key approval",
+        "management key approval",
         CliAuthApprovedOut,
     )
     delivered = _payload_or_die(
@@ -220,11 +220,11 @@ def _organization_access_key(client: httpx.Client, org_id: str) -> str:
             "/api/v1/auth/cli/poll",
             json={"poll_secret": started.poll_secret},
         ),
-        "access key delivery",
+        "management key delivery",
         CliAuthPollOut,
     )
     if delivered.status != "complete" or delivered.scope != "org" or delivered.token is None:
-        console.print("[red]Access key delivery returned an incomplete response.[/red]")
+        console.print("[red]Management key delivery returned an incomplete response.[/red]")
         raise typer.Exit(1)
     return delivered.token
 
@@ -310,7 +310,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
 ) -> None:
-    """Set up or resume an instance and verify a new API key through the gateway."""
+    """Set up or resume an instance and verify a new inference key through the gateway."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
@@ -320,7 +320,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         _login_or_signup(c, claimed, email, password)
         organization = _personal_org(c, email, org)
         org_id, org_name = organization.id, organization.name
-        token = _organization_access_key(c, str(org_id))
+        token = _organization_management_key(c, str(org_id))
         bearer = {"authorization": f"Bearer {token}"}
         workspace = _default_workspace(c, str(org_id), bearer)
         upsert_url_profile(
@@ -339,9 +339,9 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         )
         _step(f"Workspace [bold]{workspace.name}[/bold], signed in and saved to {config_path()}")
         key = _inference_key(c, str(org_id), workspace, bearer)
-        _step("API key created")
-        console.print(f"\nYour API key for [bold]{org_name}[/bold], shown once:")
-        console.print(Panel(key.token, title="AIRLLM_API_KEY", border_style="cyan", expand=False))
+        _step("Inference key created")
+        console.print(f"\nYour inference key for [bold]{org_name}[/bold], shown once:")
+        console.print(Panel(key.token, title="AIRLLM_INFERENCE_KEY", border_style="cyan", expand=False))
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Global provider keys. Press enter to skip a provider.[/dim]")
         results = seed_provider_credentials(c, overrides)
@@ -383,7 +383,7 @@ def login(
 
     control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
     client_name = _client_name()
-    existing_access_key = _existing_access_key(control_plane_url)
+    existing_management_key = _existing_management_key(control_plane_url)
     with httpx.Client(base_url=control_plane_url, timeout=10.0) as c:
         started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in", CliAuthStartOut)
         console.print(f"Confirm code [bold]{started.user_code}[/bold] at {started.verification_url}")
@@ -395,7 +395,7 @@ def login(
             poll = c.post(
                 "/api/v1/auth/cli/poll",
                 json={"poll_secret": started.poll_secret},
-                headers={"authorization": f"Bearer {existing_access_key}"} if existing_access_key else None,
+                headers={"authorization": f"Bearer {existing_management_key}"} if existing_management_key else None,
             )
             if poll.status_code == HTTP_GONE:
                 console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
@@ -436,8 +436,8 @@ def login(
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
     """Switch to another organization."""
-    if os.environ.get("AIRLLM_ACCESS_KEY"):
-        console.print("[yellow]AIRLLM_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
+    if os.environ.get("AIRLLM_MANAGEMENT_KEY"):
+        console.print("[yellow]AIRLLM_MANAGEMENT_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in config.profiles:
         set_active(name)

@@ -45,9 +45,9 @@ class Permission(StrEnum):
     data_planes_read = "data-planes.read"
     data_planes_heartbeat = "data-planes.heartbeat"
     audit_read = "audit.read"
-    access_keys_read = "access-keys.read"
-    access_keys_issue = "access-keys.issue"
-    access_keys_revoke = "access-keys.revoke"
+    management_keys_read = "management-keys.read"
+    management_keys_issue = "management-keys.issue"
+    management_keys_revoke = "management-keys.revoke"
 
 
 class InstanceRole(StrEnum):
@@ -84,7 +84,7 @@ READ_PERMISSIONS = frozenset(
         Permission.usage_read,
         Permission.data_planes_read,
         Permission.audit_read,
-        Permission.access_keys_read,
+        Permission.management_keys_read,
     }
 )
 DATA_PLANE_PERMISSIONS = frozenset(
@@ -124,9 +124,9 @@ ORG_ROLE_PERMISSIONS = {
             Permission.bundles_publish,
             Permission.usage_read,
             Permission.audit_read,
-            Permission.access_keys_read,
-            Permission.access_keys_issue,
-            Permission.access_keys_revoke,
+            Permission.management_keys_read,
+            Permission.management_keys_issue,
+            Permission.management_keys_revoke,
         }
     ),
     OrgRole.admin: frozenset(
@@ -151,9 +151,9 @@ ORG_ROLE_PERMISSIONS = {
             Permission.bundles_publish,
             Permission.usage_read,
             Permission.audit_read,
-            Permission.access_keys_read,
-            Permission.access_keys_issue,
-            Permission.access_keys_revoke,
+            Permission.management_keys_read,
+            Permission.management_keys_issue,
+            Permission.management_keys_revoke,
         }
     ),
     OrgRole.member: frozenset(
@@ -182,9 +182,9 @@ WORKSPACE_ROLE_PERMISSIONS = {
             Permission.policies_manage,
             Permission.playground_execute,
             Permission.usage_read,
-            Permission.access_keys_read,
-            Permission.access_keys_issue,
-            Permission.access_keys_revoke,
+            Permission.management_keys_read,
+            Permission.management_keys_issue,
+            Permission.management_keys_revoke,
         }
     ),
     WorkspaceRole.member: frozenset(

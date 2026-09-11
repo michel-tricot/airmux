@@ -9,7 +9,7 @@ describe('ActivityTable', () => {
         entries={[
           {
             id: 1,
-            table_name: 'access_key',
+            table_name: 'management_key',
             record_id: 'key-1',
             action: 'create',
             user_id: 'user-1',

@@ -1,3 +1,5 @@
+import { WorkspaceManagementKeys } from '@/components/shared/workspace-management-keys';
+import { managementKeyAccess } from '@/features/keys/policy';
 import { SettingsLayout } from '@/components/shared/settings-layout';
 import { useState } from 'react';
 import { useLocation } from 'wouter';
@@ -44,6 +46,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const canAddMembers = workspaceAuthorization.can(workspaceMemberAccess.add);
   const canRemoveMembers = workspaceAuthorization.can(workspaceMemberAccess.remove);
   const canUpdate = workspaceAuthorization.can(workspaceAccess.update);
+  const canReadManagementKeys = workspaceAuthorization.can(managementKeyAccess.workspace.read);
   const canDelete = workspaceAuthorization.can(workspaceAccess.delete);
 
   const [name, setName] = useState<string | null>(null);
@@ -74,6 +77,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
         header={<PageHeader title="Workspace Settings" description={<span className="font-mono">{workspace.slug}</span>} />}
         categories={[
           ...(canUpdate ? [{ id: 'general', label: 'General' }] : []),
+          ...(canReadManagementKeys ? [{ id: 'management-keys', label: 'Management Keys' }] : []),
           ...(canReadMembers ? [{ id: 'members', label: 'Members' }] : []),
           ...(canDelete ? [{ id: 'danger', label: 'Danger zone' }] : []),
         ]}
@@ -106,6 +110,11 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
           </TabsContent>
         )}
 
+        {canReadManagementKeys && (
+          <TabsContent value="management-keys" className="mt-0">
+            <WorkspaceManagementKeys orgId={orgId} workspaceId={workspace.id} />
+          </TabsContent>
+        )}
         {canReadMembers && (
           <TabsContent value="members" className="mt-0 space-y-3">
             <MembersPanel
