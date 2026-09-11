@@ -70,7 +70,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           onClick={logout}
           className="h-8 w-full justify-start px-2 text-sidebar-foreground/70 hover:text-destructive"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="h-4 w-4" />
           Sign out
         </Button>
       </div>

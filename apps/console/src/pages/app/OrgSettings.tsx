@@ -88,12 +88,12 @@ export default function AppOrgSettings() {
     <>
       {canCreateServiceAccount && (
         <Button size="sm" variant="outline" onClick={() => setServiceAccountOpen(true)}>
-          <Bot className="w-4 h-4 mr-1" /> Create service account
+          <Bot className="w-4 h-4" /> Create service account
         </Button>
       )}
       {canCreateInvitations && (
         <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
-          <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+          <UserPlus className="w-4 h-4" /> Invite by email
         </Button>
       )}
     </>
@@ -135,7 +135,7 @@ export default function AppOrgSettings() {
                   size="sm"
                   className="shadow-sm"
                 >
-                  <Plus className="w-4 h-4 mr-1" /> Generate Key
+                  <Plus className="w-4 h-4" /> Generate Key
                 </Button>
               )}
             </div>

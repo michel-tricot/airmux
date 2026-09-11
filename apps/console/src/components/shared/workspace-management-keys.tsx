@@ -28,7 +28,7 @@ export function WorkspaceManagementKeys({ orgId, workspaceId }: { orgId: string;
         actions={
           canIssue && (
             <Button size="sm" onClick={() => setOpen(true)}>
-              <Plus className="mr-1 size-4" />
+              <Plus className="size-4" />
               Generate Key
             </Button>
           )

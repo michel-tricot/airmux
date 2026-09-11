@@ -142,7 +142,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
               actions={
                 canInvite ? (
                   <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
-                    <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+                    <UserPlus className="w-4 h-4" /> Invite by email
                   </Button>
                 ) : undefined
               }
@@ -194,7 +194,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
                   setLocation('/org');
                 }}
               >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
+                <Trash2 className="w-4 h-4" /> Delete Workspace
               </ConfirmButton>
             </Card>
           </TabsContent>

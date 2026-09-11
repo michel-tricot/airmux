@@ -450,7 +450,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                 onClick={() => void endPlaygroundSession()}
                 disabled={sending || endSession.isPending}
               >
-                {endSession.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                {endSession.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
                 End session
               </Button>
             )}

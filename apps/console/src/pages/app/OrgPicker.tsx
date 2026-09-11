@@ -99,10 +99,10 @@ export default function AppOrgPicker() {
             <Button
               key={org.id}
               variant="outline"
-              className="w-full justify-start h-16 text-left hover:border-primary/50 hover:bg-primary/10 group"
+              className="w-full justify-start gap-4 h-16 text-left hover:border-primary/50 hover:bg-primary/10 group"
               onClick={() => pickOrg(org.id)}
             >
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center mr-4 group-hover:bg-primary/20 transition-colors">
+              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Building2 className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1">

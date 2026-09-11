@@ -131,7 +131,7 @@ export function MembersPanel<T extends MemberRow>({
           {actions}
           {add && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={add.pending || add.candidates.length === 0}>
-              <Plus className="w-4 h-4 mr-1" /> Add Member
+              <Plus className="w-4 h-4" /> Add Member
             </Button>
           )}
         </div>

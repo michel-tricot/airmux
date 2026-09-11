@@ -101,7 +101,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         <div className="flex gap-2">
           {canUpdate && (
             <Button variant="outline" onClick={() => setRenameOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" /> Rename
+              <Pencil className="w-4 h-4" /> Rename
             </Button>
           )}
           {canDelete && (
@@ -118,7 +118,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
                 setLocation(backHref);
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -150,7 +150,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               <h2 className="text-lg font-semibold">Inference Keys</h2>
               {canCreateKeys && (
                 <Button onClick={() => setKeyOpen(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> Generate Key
+                  <Plus className="w-4 h-4" /> Generate Key
                 </Button>
               )}
             </div>

@@ -107,7 +107,7 @@ export default function OrganizationDetail() {
         <div className="flex gap-2">
           {canUpdate && (
             <Button variant="outline" onClick={() => setRenameOpen(true)}>
-              <Pencil className="w-4 h-4 mr-2" /> Rename
+              <Pencil className="w-4 h-4" /> Rename
             </Button>
           )}
           {canDelete && (
@@ -124,7 +124,7 @@ export default function OrganizationDetail() {
                 setLocation('/instance/organizations');
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -156,7 +156,7 @@ export default function OrganizationDetail() {
               <h2 className="text-lg font-semibold">Workspaces</h2>
               {canCreateWorkspace && (
                 <Button onClick={() => setWsOpen(true)} size="sm">
-                  <Plus className="w-4 h-4 mr-1" /> New Workspace
+                  <Plus className="w-4 h-4" /> New Workspace
                 </Button>
               )}
             </div>

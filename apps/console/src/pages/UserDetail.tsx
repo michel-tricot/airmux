@@ -116,7 +116,7 @@ export default function UserDetail() {
                 setLocation('/instance/users');
               }}
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
+              <Trash2 className="w-4 h-4" /> Delete
             </ConfirmButton>
           )}
         </div>
@@ -130,7 +130,7 @@ export default function UserDetail() {
           </h2>
           {canAddMember && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
-              <Plus className="w-4 h-4 mr-1" /> Add to Organization
+              <Plus className="w-4 h-4" /> Add to Organization
             </Button>
           )}
         </div>

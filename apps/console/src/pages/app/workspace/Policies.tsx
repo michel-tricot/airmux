@@ -144,7 +144,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
                 setOpen(true);
               }}
             >
-              <Plus className="mr-1 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               Create policy
             </Button>
           )
