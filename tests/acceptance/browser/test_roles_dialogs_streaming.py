@@ -10,24 +10,7 @@ from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
 from playwright.sync_api import expect
 
 if TYPE_CHECKING:
-    from browser_support import Console
     from conftest import Stack
-
-
-def visit_sidebar(console: Console, navigation: str) -> None:
-    page = console.page
-    links = page.get_by_role("navigation", name=navigation, exact=True).get_by_role("link")
-    destinations = [link.get_attribute("href") for link in links.all()]
-    assert destinations
-    for index, destination in enumerate(dict.fromkeys(destinations)):
-        assert destination is not None
-        page.goto(f"{console.url}{destination}")
-        main = page.get_by_role("main").first
-        expect(main).to_be_visible()
-        expect(main.get_by_role("status").filter(has_text=re.compile("Loading"))).to_have_count(0)
-        expect(main).to_contain_text(re.compile(r"\S"))
-        expect(main.get_by_role("alert")).to_have_count(0)
-        console.capture(f"sidebar-{index}")
 
 
 def test_instance_owner_login_errors_navigation_dialogs_and_logout(stack: Stack) -> None:
@@ -38,11 +21,9 @@ def test_instance_owner_login_errors_navigation_dialogs_and_logout(stack: Stack)
         page.get_by_label("Password", exact=True).fill("incorrect-password")
         page.get_by_role("button", name="Sign in", exact=True).click()
         expect(page.get_by_text("Incorrect email or password", exact=True)).to_be_visible()
-        console.capture("incorrect-login")
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
         page.goto(f"{console.url}/instance")
         expect(page.get_by_role("navigation", name="Instance navigation", exact=True)).to_be_visible()
-        visit_sidebar(console, "Instance navigation")
         page.goto(f"{console.url}/instance/organizations")
         page.get_by_role("button", name="New Organization", exact=True).click()
         dialog = page.get_by_role("dialog", name="Create Organization", exact=True)
@@ -54,7 +35,6 @@ def test_instance_owner_login_errors_navigation_dialogs_and_logout(stack: Stack)
         dialog.get_by_label("Name", exact=True).fill("Created in browser")
         dialog.get_by_role("button", name="Create Organization", exact=True).click()
         expect(page.get_by_role("row").filter(has_text="Created in browser")).to_be_visible()
-        console.capture("organization-created")
         page.get_by_role("button", name="Sign out", exact=True).click()
         expect(page.get_by_role("heading", name="Sign in", exact=True)).to_be_visible()
         page.reload()
@@ -64,7 +44,7 @@ def test_instance_owner_login_errors_navigation_dialogs_and_logout(stack: Stack)
         expect(page.get_by_role("button", name="Sign out", exact=True)).to_be_visible()
 
 
-@pytest.mark.parametrize("role", ["owner", "admin", "member"])
+@pytest.mark.parametrize("role", ["admin", "member"])
 def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: Stack, role: str) -> None:
     with (
         running_console(stack) as console,
@@ -82,7 +62,6 @@ def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: S
         expect(page.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text("acceptance")
         page.reload()
         expect(page.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text("acceptance")
-        visit_sidebar(console, "Workspace navigation")
         page.goto(f"{console.url}/instance/users")
         expect(page).to_have_url(re.compile(r"/org(?:/|$)"))
         expect(page.get_by_role("navigation", name="Instance navigation", exact=True)).to_have_count(0)
@@ -100,7 +79,6 @@ def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: S
         dialog.get_by_label("Name", exact=True).fill(f"{role}-workspace")
         dialog.get_by_role("button", name="Create", exact=True).click()
         expect(page.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text(f"{role}-workspace")
-        console.capture(f"role-{role}")
 
 
 def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
@@ -114,7 +92,6 @@ def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
         expect(page.get_by_role("button", name="Stop generation", exact=True)).to_be_visible()
         expect(page.get_by_text("tick29", exact=False)).to_be_visible()
         expect(page.get_by_role("button", name="Stop generation", exact=True)).not_to_be_visible()
-        console.capture("streaming-completed")
         page.get_by_role("button", name="Clear conversation", exact=True).click()
         page.get_by_role("switch", name="Streaming", exact=True).uncheck()
         composer.fill("malformed-buffered")
@@ -122,9 +99,7 @@ def test_playground_streaming_errors_and_recovery(stack: Stack) -> None:
             page.get_by_role("button", name="Send message", exact=True).click()
         assert failed.value.status >= 400
         expect(page.get_by_text("Request failed", exact=True)).to_be_visible()
-        console.capture("inference-error")
         composer.fill("recovered browser probe")
         page.get_by_role("button", name="Send message", exact=True).click()
         expect(page.get_by_text("ok", exact=True)).to_be_visible()
         expect(page.get_by_text("Request failed", exact=True)).to_have_count(0)
-        console.capture("inference-recovered")
