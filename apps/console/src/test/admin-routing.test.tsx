@@ -197,12 +197,12 @@ describe('instance administration routes', () => {
     await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('1')).toBeInTheDocument());
   });
 
-  it('mints an management key from the permissions returned by the control plane', async () => {
+  it('creates a management key from the permissions returned by the control plane', async () => {
     let submitted: unknown;
     server.use(
       http.post('/api/v1/instance/management-keys', async ({ request }) => {
         submitted = await request.json();
-        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
+        return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({
           data: { ...MANAGEMENT_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' },
         });
       }),

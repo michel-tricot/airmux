@@ -29,8 +29,8 @@ export function InferenceKeyDialog({
       schema={keyLabelSchema}
       defaultValues={{ label: '' }}
       onSubmit={async (values) => {
-        const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
-        onCreated(minted.token);
+        const key = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
+        onCreated(key.token);
       }}
       submitLabel="Generate"
       pending={createKey.isPending}

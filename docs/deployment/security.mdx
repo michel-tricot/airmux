@@ -48,7 +48,7 @@ If a secret may be exposed, rotate or revoke it at its owning layer:
 
 | Exposed value | Response |
 | --- | --- |
-| Inference key | Revoke the key and mint a replacement |
+| Inference key | Revoke the key and create a replacement |
 | Management key | Revoke it; delegated descendant keys are also revoked |
 | Provider credential | Rotate the credential value and verify the new fingerprint |
 | Postgres password | Rotate it at Postgres and update `DATABASE_URL` |

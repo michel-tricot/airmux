@@ -76,7 +76,7 @@ export default function AppOrgSettings() {
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
-  const mintKey = useCreateOrgManagementKeyMutation(orgId);
+  const createKey = useCreateOrgManagementKeyMutation(orgId);
   const revokeKey = useRevokeOrgManagementKeyMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
@@ -207,7 +207,7 @@ export default function AppOrgSettings() {
                                     size="icon"
                                     variant="ghost"
                                     aria-label={`Generate replacement key for ${member.name}`}
-                                    disabled={mintKey.isPending}
+                                    disabled={createKey.isPending}
                                     onClick={() => {
                                       setKeyTarget({ userId: member.user_id, name: member.name });
                                       setKeyOpen(true);
@@ -369,17 +369,17 @@ export default function AppOrgSettings() {
           schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
-            const minted = await mintKey.mutateAsync({
+            const key = await createKey.mutateAsync({
               orgId,
               data: {
                 ...(keyTarget ? { user_id: keyTarget.userId } : {}),
                 ...managementKeyPayload(values),
               },
             });
-            setToken(minted.token);
+            setToken(key.token);
           }}
           submitLabel={keyTarget ? 'Generate replacement key' : 'Generate'}
-          pending={mintKey.isPending}
+          pending={createKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
@@ -404,11 +404,11 @@ export default function AppOrgSettings() {
           schema={orgServiceAccountSchema}
           defaultValues={{ name: '', label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
-            const minted = await createServiceAccount.mutateAsync({
+            const serviceAccount = await createServiceAccount.mutateAsync({
               orgId,
               data: { name: values.name, management_key: managementKeyPayload(values) },
             });
-            setToken(minted.management_key.token);
+            setToken(serviceAccount.management_key.token);
           }}
           submitLabel="Create service account"
           pendingLabel="Creating..."

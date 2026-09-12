@@ -59,7 +59,7 @@ class InferenceKeyOut(RecordOut[InferenceKey]):
     deleted_at: datetime | None
 
 
-class InferenceKeyMintedOut(BaseModel):
+class InferenceKeyCreatedOut(BaseModel):
     id: UUID
     token: str
 

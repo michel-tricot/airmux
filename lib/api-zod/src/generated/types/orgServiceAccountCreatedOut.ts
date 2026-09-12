@@ -10,12 +10,12 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { ManagementKeyMintedOut } from './managementKeyMintedOut';
+import type { ManagementKeyCreatedOut } from './managementKeyCreatedOut';
 import type { MembershipOut } from './membershipOut';
 import type { UserOut } from './userOut';
 
-export interface OrgServiceAccountMintedOut {
+export interface OrgServiceAccountCreatedOut {
   service_account: UserOut;
   membership: MembershipOut;
-  management_key: ManagementKeyMintedOut;
+  management_key: ManagementKeyCreatedOut;
 }

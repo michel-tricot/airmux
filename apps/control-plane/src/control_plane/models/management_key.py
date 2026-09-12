@@ -132,7 +132,7 @@ class ManagementKeyOut(RecordOut[ManagementKey]):
     api_extra: ClassVar[frozenset[str]] = frozenset({"scope", "status"})
 
 
-class ManagementKeyMintedOut(BaseModel):
+class ManagementKeyCreatedOut(BaseModel):
     id: UUID
     user_id: UUID
     org_id: UUID | None

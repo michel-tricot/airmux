@@ -10,8 +10,25 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ManagementKeyCreatedOutStatus } from './managementKeyCreatedOutStatus';
+import type { Permission } from './permission';
+import type { Scope } from './scope';
 
-export interface InferenceKeyMintedOut {
+export interface ManagementKeyCreatedOut {
   id: string;
+  user_id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  parent_id: string | null;
+  prefix: string;
+  permissions: Permission[];
+  label: string;
+  expires_at: Date | null;
+  revoked_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  deleted_at: Date | null;
+  scope: Scope;
+  status: ManagementKeyCreatedOutStatus;
   token: string;
 }

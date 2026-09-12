@@ -10,12 +10,12 @@ from sqlmodel import col
 from control_plane.authority import ensure_management_key_permissions, management_key_parent
 from control_plane.authz import Actor, Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
-from control_plane.keys import ManagementKeyGrant, mint_management_key
+from control_plane.keys import ManagementKeyGrant, create_management_key
 from control_plane.models import ManagementKey, User
 from control_plane.models.common.wire import Envelope
 from control_plane.models.management_key import (
+    ManagementKeyCreatedOut,
     ManagementKeyIn,
-    ManagementKeyMintedOut,
     ManagementKeyOut,
     ManagementKeyPermissionsIn,
     ManagementKeyRevokedOut,
@@ -55,7 +55,7 @@ async def _list_management_keys(scope: Scope, user_id: UUID | None) -> Envelope[
     return Envelope(data=[_out(key, now) for key in keys])
 
 
-async def issue_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> ManagementKeyMintedOut:
+async def create_scoped_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> ManagementKeyCreatedOut:
     now = datetime.now(tz=UTC)
     if body.expires_at is not None and body.expires_at <= now:
         raise HTTPException(status_code=422, detail="expires_at must be in the future")
@@ -64,7 +64,7 @@ async def issue_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope
         raise HTTPException(status_code=404, detail="Principal not found")
     permissions = frozenset(body.permissions)
     parent_id = await management_key_parent(actor, principal_id, scope, permissions, body.expires_at)
-    key_id, token = await mint_management_key(
+    key_id, token = await create_management_key(
         ManagementKeyGrant(
             principal_id=principal_id,
             scope=scope,
@@ -77,11 +77,11 @@ async def issue_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope
     key = await ManagementKey.find_by_id(key_id)
     if key is None:
         raise HTTPException(status_code=500, detail="Management key was not persisted")
-    return ManagementKeyMintedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token})
+    return ManagementKeyCreatedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token})
 
 
-async def _create_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> Envelope[ManagementKeyMintedOut]:
-    return Envelope(data=await issue_management_key(body, actor, scope))
+async def _create_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> Envelope[ManagementKeyCreatedOut]:
+    return Envelope(data=await create_scoped_management_key(body, actor, scope))
 
 
 @router.get("/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require(instance_scope, Permission.management_keys_read)])
@@ -91,8 +91,8 @@ async def list_instance_management_keys(user_id: UUID | None = None) -> Envelope
 
 
 @router.post("/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require(instance_scope, Permission.management_keys_issue)])
-async def create_instance_management_key(body: ManagementKeyIn, actor: ActorDep) -> Envelope[ManagementKeyMintedOut]:
-    """Issue an instance-scoped management key and return its token once."""
+async def create_instance_management_key(body: ManagementKeyIn, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
+    """Create an instance-scoped management key and return its token once."""
     return await _create_management_key(body, actor, Scope.instance())
 
 
@@ -107,8 +107,8 @@ async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) 
 @router.post(
     "/orgs/{org_id}/management-keys", tags=["Organization Management Keys"], dependencies=[require(org_scope, Permission.management_keys_issue)]
 )
-async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor: ActorDep) -> Envelope[ManagementKeyMintedOut]:
-    """Issue an organization-scoped management key and return its token once."""
+async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
+    """Create an organization-scoped management key and return its token once."""
     return await _create_management_key(body, actor, Scope.org(org_id))
 
 
@@ -127,8 +127,8 @@ async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID 
     tags=["Workspace Management Keys"],
     dependencies=[require(workspace_scope, Permission.management_keys_issue)],
 )
-async def create_workspace_management_key(body: ManagementKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[ManagementKeyMintedOut]:
-    """Issue a workspace-scoped management key and return its token once."""
+async def create_workspace_management_key(body: ManagementKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
+    """Create a workspace-scoped management key and return its token once."""
     return await _create_management_key(body, actor, Scope.workspace(workspace.org_id, workspace.id))
 
 

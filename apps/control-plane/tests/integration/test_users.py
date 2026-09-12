@@ -74,17 +74,17 @@ def test_service_account_can_hold_any_instance_role(tmp_path):
         assert owner.status_code == 200, owner.text
         assert owner.json()["data"]["instance_role"] == InstanceRole.owner
 
-        minted = c.post(
+        management_key_response = c.post(
             "/api/v1/instance/management-keys",
             json={"user_id": principal["id"], "label": "data-plane", "permissions": sorted(DATA_PLANE_PERMISSIONS)},
             headers=root,
         )
-        assert minted.status_code == 200, minted.text
-        token = minted.json()["data"]
-        assert token["scope"]["level"] == "instance"
+        assert management_key_response.status_code == 200, management_key_response.text
+        management_key = management_key_response.json()["data"]
+        assert management_key["scope"]["level"] == "instance"
         instance_id = uuid7()
         heartbeat = {"instance_id": str(instance_id), "version": "0.1.0", "bundle_id": None}
-        assert c.post("/api/v1/heartbeat", json=heartbeat, headers={"authorization": f"Bearer {token['token']}"}).status_code == 200
+        assert c.post("/api/v1/heartbeat", json=heartbeat, headers={"authorization": f"Bearer {management_key['token']}"}).status_code == 200
         instance = run_in_db(tmp_path, lambda: DataPlaneInstance.get(instance_id))
         assert instance is not None
         assert instance.org_id is None
@@ -95,28 +95,28 @@ def test_service_account_is_a_full_principal(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        created = c.post("/api/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
+        service_account = c.post("/api/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
         make_user(tmp_path, "m@example.com")
 
-        c.put(f"/api/v1/orgs/{o1}/users/{created['id']}", json={"role": "data_plane"}, headers=cp.headers(o1))
-        minted = c.post(
+        c.put(f"/api/v1/orgs/{o1}/users/{service_account['id']}", json={"role": "data_plane"}, headers=cp.headers(o1))
+        management_key = c.post(
             f"/api/v1/orgs/{o1}/management-keys",
             json={
-                "user_id": created["id"],
+                "user_id": service_account["id"],
                 "label": "data-plane",
                 "permissions": sorted(DATA_PLANE_PERMISSIONS),
             },
             headers=root,
         ).json()["data"]
-        org = {"authorization": f"Bearer {minted['token']}"}
+        org = {"authorization": f"Bearer {management_key['token']}"}
         assert c.get(f"/api/v1/orgs/{o1}/workspaces", headers=org).status_code == 403
         heartbeat = {"instance_id": str(uuid7()), "version": "0.1.0", "bundle_id": None}
         assert c.post("/api/v1/heartbeat", json=heartbeat, headers=org).status_code == 200
-        c.delete(f"/api/v1/orgs/{o1}/users/{created['id']}", headers=cp.headers(o1))
+        c.delete(f"/api/v1/orgs/{o1}/users/{service_account['id']}", headers=cp.headers(o1))
         assert c.post("/api/v1/heartbeat", json=heartbeat, headers=org).status_code == 403
 
         by_email = {u["email"]: u["service_account"] for u in _users(c, root)}
-        assert by_email == {created["email"]: True, "m@example.com": False}
+        assert by_email == {service_account["email"]: True, "m@example.com": False}
 
 
 def test_listing_filters_by_principal_kind(tmp_path):
@@ -208,9 +208,9 @@ def test_org_management_key_requires_standing_membership(tmp_path):
         }
         assert client.post(f"/api/v1/orgs/{org_id}/management-keys", json=body, headers=root).status_code == 403
         client.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id))
-        minted = client.post(f"/api/v1/orgs/{org_id}/management-keys", json=body, headers=root)
-        assert minted.status_code == 200, minted.text
-        key = minted.json()["data"]
+        management_key_response = client.post(f"/api/v1/orgs/{org_id}/management-keys", json=body, headers=root)
+        assert management_key_response.status_code == 200, management_key_response.text
+        key = management_key_response.json()["data"]
         assert key["org_id"] == str(org_id)
         assert key["user_id"] == user_id
         headers = {"authorization": f"Bearer {key['token']}"}
@@ -226,9 +226,9 @@ def test_instance_management_key_requires_an_instance_role(tmp_path):
         make_admin(tmp_path, owner)
         body = {"label": "instance", "permissions": [Permission.principals_read]}
         assert client.post("/api/v1/instance/management-keys", json={**body, "user_id": member}, headers=root).status_code == 403
-        minted = client.post("/api/v1/instance/management-keys", json={**body, "user_id": owner}, headers=root)
-        assert minted.status_code == 200, minted.text
-        headers = {"authorization": f"Bearer {minted.json()['data']['token']}"}
+        management_key_response = client.post("/api/v1/instance/management-keys", json={**body, "user_id": owner}, headers=root)
+        assert management_key_response.status_code == 200, management_key_response.text
+        headers = {"authorization": f"Bearer {management_key_response.json()['data']['token']}"}
         assert client.get("/api/v1/users", headers=headers).status_code == 200
 
 
@@ -239,7 +239,7 @@ def test_instance_owner_can_use_an_org_scope_without_membership(tmp_path):
         org_id = make_org(client, root, "o1")
         owner = str(make_user(tmp_path, "a@example.com").id)
         make_admin(tmp_path, owner)
-        minted = client.post(
+        management_key_response = client.post(
             f"/api/v1/orgs/{org_id}/management-keys",
             json={
                 "user_id": owner,
@@ -248,8 +248,8 @@ def test_instance_owner_can_use_an_org_scope_without_membership(tmp_path):
             },
             headers=root,
         )
-        assert minted.status_code == 200, minted.text
-        headers = {"authorization": f"Bearer {minted.json()['data']['token']}"}
+        assert management_key_response.status_code == 200, management_key_response.text
+        headers = {"authorization": f"Bearer {management_key_response.json()['data']['token']}"}
         assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=headers).status_code == 200
 
 
@@ -260,7 +260,7 @@ def test_removing_membership_removes_effective_key_authority(tmp_path):
         org_id = make_org(client, root, "o1")
         user_id = str(make_user(tmp_path, "m@example.com").id)
         client.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id))
-        minted = client.post(
+        management_key = client.post(
             f"/api/v1/orgs/{org_id}/management-keys",
             json={
                 "user_id": user_id,
@@ -269,7 +269,7 @@ def test_removing_membership_removes_effective_key_authority(tmp_path):
             },
             headers=root,
         ).json()["data"]
-        headers = {"authorization": f"Bearer {minted['token']}"}
+        headers = {"authorization": f"Bearer {management_key['token']}"}
         assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=headers).status_code == 200
         client.delete(f"/api/v1/orgs/{org_id}/users/{user_id}", headers=cp.headers(org_id))
         assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=headers).status_code == 403
@@ -282,7 +282,7 @@ def test_management_key_listing_shows_the_principal(tmp_path):
         org_id = make_org(client, root, "o1")
         user_id = str(make_user(tmp_path, "m@example.com").id)
         client.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id))
-        minted = client.post(
+        management_key = client.post(
             f"/api/v1/orgs/{org_id}/management-keys",
             json={
                 "user_id": user_id,
@@ -292,7 +292,7 @@ def test_management_key_listing_shows_the_principal(tmp_path):
             headers=root,
         ).json()["data"]
         listed = {key["id"]: key["user_id"] for key in client.get("/api/v1/instance/management-keys", headers=root).json()["data"]}
-        assert listed[minted["id"]] == user_id
+        assert listed[management_key["id"]] == user_id
         assert all(principal for principal in listed.values())
 
 

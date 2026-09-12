@@ -69,8 +69,8 @@ export default function ManagementKeys() {
           schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
-            const minted = await createKey.mutateAsync({ data: managementKeyPayload(values) });
-            setToken(minted.token);
+            const key = await createKey.mutateAsync({ data: managementKeyPayload(values) });
+            setToken(key.token);
           }}
           submitLabel="Generate"
           pendingLabel="Generating..."

@@ -48,7 +48,7 @@ export const ListInstanceManagementKeysResponse = zod.array(ListInstanceManageme
 
 
 /**
- * Issue an instance-scoped management key and return its token once.
+ * Create an instance-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Instance Management Key
@@ -128,7 +128,7 @@ export const ListOrgManagementKeysResponse = zod.array(ListOrgManagementKeysResp
 
 
 /**
- * Issue an organization-scoped management key and return its token once.
+ * Create an organization-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Org Management Key
@@ -213,7 +213,7 @@ export const ListWorkspaceManagementKeysResponse = zod.array(ListWorkspaceManage
 
 
 /**
- * Issue a workspace-scoped management key and return its token once.
+ * Create a workspace-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Workspace Management Key
@@ -457,7 +457,7 @@ export const cliAuthStartBodyClientNameMax = 80;
 
 
 export const CliAuthStartBody = zod.object({
-  "client_name": zod.string().min(1).max(cliAuthStartBodyClientNameMax).describe('Where the CLI runs, e.g. the hostname; becomes the minted key\'s label')
+  "client_name": zod.string().min(1).max(cliAuthStartBodyClientNameMax).describe('Where the CLI runs, e.g. the hostname; becomes the created key\'s label')
 })
 
 export const CliAuthStartResponse = zod.object({
@@ -1331,7 +1331,7 @@ export const EndPlaygroundSessionResponse = zod.object({
 
 
 /**
- * Issue an inference key for model requests to this workspace and return its token once.
+ * Create an inference key for model requests to this workspace and return its token once.
  *
  * Required permission: `inference-keys.manage`.
  * @summary Create Inference Key
@@ -2603,7 +2603,7 @@ export const RemoveOrgUserResponse = zod.object({
 
 
 /**
- * Create an organization-managed service account and issue its first management key.
+ * Create an organization-managed service account and its first management key.
  *
  * Required permissions: `members.manage` and `management-keys.issue`.
  * @summary Create Organization Service Account
@@ -2625,7 +2625,7 @@ export const CreateOrgServiceAccountBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createOrgServiceAccountBodyManagementKeyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
-}).describe('Initial organization-scoped management key to issue for the service account')
+}).describe('Initial organization-scoped management key to create for the service account')
 })
 
 export const CreateOrgServiceAccountResponse = zod.object({

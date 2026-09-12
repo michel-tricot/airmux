@@ -35,12 +35,12 @@ def test_new_inference_key_reaches_a_running_data_plane_without_manual_publicati
         workspaces = admin.get(f"/api/v1/orgs/{org_id}/workspaces")
         workspaces.raise_for_status()
         workspace_id = workspaces.json()["data"][0]["id"]
-        minted = admin.post(
+        inference_key_response = admin.post(
             f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys",
             json={"label": "automatic-publication"},
         )
-        minted.raise_for_status()
-        token = minted.json()["data"]["token"]
+        inference_key_response.raise_for_status()
+        token = inference_key_response.json()["data"]["token"]
 
     def accepted() -> bool:
         response = httpx.post(

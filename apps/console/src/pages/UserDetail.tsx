@@ -108,7 +108,7 @@ export default function UserDetail() {
               size="default"
               className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
               title="Delete User"
-              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
+              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or created inference keys must be cleared first."
               confirmLabel="Delete User"
               pending={deleteUser.isPending}
               onConfirm={async () => {

@@ -11,11 +11,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CliAuthStartIn {
-  /**
-     * Where the CLI runs, e.g. the hostname; becomes the created key's label
-     * @minLength 1
-     * @maxLength 80
-     */
-  client_name: string;
-}
+export type ManagementKeyCreatedOutStatus = typeof ManagementKeyCreatedOutStatus[keyof typeof ManagementKeyCreatedOutStatus];
+
+
+export const ManagementKeyCreatedOutStatus = {
+  active: 'active',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;

@@ -15,7 +15,7 @@ from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
-from control_plane.models.management_key import ManagementKeyGrantIn, ManagementKeyMintedOut
+from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyGrantIn
 from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
@@ -193,7 +193,7 @@ class ServiceAccountIn(ServiceAccountNameIn):
 
 
 class OrgServiceAccountIn(ServiceAccountNameIn):
-    management_key: ManagementKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
+    management_key: ManagementKeyGrantIn = Field(description="Initial organization-scoped management key to create for the service account")
 
 
 class UserOut(RecordOut[User]):
@@ -211,7 +211,7 @@ class UserOut(RecordOut[User]):
     api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})
 
 
-class OrgServiceAccountMintedOut(BaseModel):
+class OrgServiceAccountCreatedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
-    management_key: ManagementKeyMintedOut
+    management_key: ManagementKeyCreatedOut

@@ -32,7 +32,7 @@ def test_every_command_is_listed_once():
         "airllm profiles use",
         "airllm orgs mine",
         "airllm provider-credentials add",
-        "airllm management-keys mint",
+        "airllm management-keys create",
         "airllm taxonomy apply",
     ):
         assert path in paths

@@ -86,13 +86,13 @@ describe('key cache invalidation across pages', () => {
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: now })]));
   });
 
-  it('minting an management key refetches the management-key list', async () => {
+  it('creating a management key refetches the management-key list', async () => {
     const keys = [managementKey('ak-1')];
     server.use(
       http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: keys })),
       http.post('/api/v1/instance/management-keys', () => {
         keys.push(managementKey('ak-2'));
-        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({ data: { ...managementKey('ak-2'), token: 'tok-once' } });
+        return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({ data: { ...managementKey('ak-2'), token: 'tok-once' } });
       }),
     );
 
@@ -100,13 +100,13 @@ describe('key cache invalidation across pages', () => {
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
 
-    const mint = renderHook(() => useCreateInstanceManagementKeyMutation(), { wrapper });
-    await mint.result.current.mutateAsync({ data: { label: 'ci', permissions: ['workspaces.read'] } });
+    const create = renderHook(() => useCreateInstanceManagementKeyMutation(), { wrapper });
+    await create.result.current.mutateAsync({ data: { label: 'ci', permissions: ['workspaces.read'] } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
   });
 
-  it('minting an inference key refetches the workspace inference key list', async () => {
+  it('creating an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
       http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () =>
@@ -114,7 +114,7 @@ describe('key cache invalidation across pages', () => {
       ),
       http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
-        return HttpResponse.json<{ data: Api.InferenceKeyMintedOut }>({ data: { id: 'ifk-2', token: 'tok-once' } });
+        return HttpResponse.json<{ data: Api.InferenceKeyCreatedOut }>({ data: { id: 'ifk-2', token: 'tok-once' } });
       }),
     );
 
@@ -122,8 +122,8 @@ describe('key cache invalidation across pages', () => {
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
 
-    const mint = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await mint.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
+    const create = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
+    await create.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
   });

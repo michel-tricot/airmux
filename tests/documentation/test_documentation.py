@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).parents[3]
+ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
 FENCE = re.compile(r"^[ \t]*```(?P<language>[A-Za-z0-9_+-]+)[^\n]*\n(?P<body>.*?)^[ \t]*```[ \t]*$", re.MULTILINE | re.DOTALL)
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
@@ -82,6 +82,15 @@ def test_documentation_does_not_name_comparison_products() -> None:
     forbidden = re.compile(r"openrouter|litellm", re.IGNORECASE)
     occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if forbidden.search(path.read_text())]
     assert occurrences == []
+
+
+def test_quickstart_runs_the_project_cli_against_the_public_url() -> None:
+    documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
+    commands = re.findall(r"^uv run --package cli --no-dev --frozen airllm quickstart --url \S+$", documents, re.MULTILINE)
+
+    assert commands
+    assert "docker compose run" not in documents
+    assert "--connect-url" not in documents
 
 
 def test_runnable_examples_use_the_public_inference_prefix() -> None:
