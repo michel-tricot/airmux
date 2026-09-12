@@ -79,7 +79,7 @@ def https_deployment(tmp_path_factory):
             "127.0.0.1::443",
             "--volume",
             f"{directory}:/test:ro",
-            "caddy:2",
+            "caddy:2.10.2-alpine",
             "caddy",
             "run",
             "--config",
