@@ -12,64 +12,25 @@ permissions:
   contents: read
 
 jobs:
-  audit:
+  python:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        ecosystem: [python, javascript]
-        scope: [all, production]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.13'
+      - run: uv export --frozen --all-packages --all-groups --no-emit-workspace --no-hashes --output-file requirements-audit.txt
+      - uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: requirements-audit.txt
+
+  javascript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      - run: uv sync --all-packages --frozen
-      - run: uv run pytest tests/security/test_dependency_audit.py
-      - run: mkdir -p security-reports
-      - name: Export locked Python dependencies
-        if: matrix.ecosystem == 'python'
-        env:
-          AUDIT_SCOPE: ${{ matrix.scope }}
-        run: |
-          if [ "$AUDIT_SCOPE" = production ]; then
-            uv export --frozen --only-group backend --no-emit-workspace --no-hashes --output-file security-reports/requirements.txt
-          else
-            uv export --frozen --all-packages --all-groups --no-emit-workspace --no-hashes --output-file security-reports/requirements.txt
-          fi
-      - name: Scan Python dependencies
-        if: matrix.ecosystem == 'python'
-        run: |
-          status=0
-          uvx pip-audit==2.10.0 --strict --disable-pip --no-deps -r security-reports/requirements.txt --format json --output security-reports/audit.json >security-reports/scanner.stdout 2>security-reports/scanner.stderr || status=$?
-          printf '%s\n' "$status" > security-reports/status.txt
-      - name: Scan JavaScript dependencies
-        if: matrix.ecosystem == 'javascript'
-        env:
-          AUDIT_SCOPE: ${{ matrix.scope }}
-        run: |
-          status=0
-          if [ "$AUDIT_SCOPE" = production ]; then
-            bun audit --prod --json >security-reports/audit.json 2>security-reports/scanner.stderr || status=$?
-          else
-            bun audit --json >security-reports/audit.json 2>security-reports/scanner.stderr || status=$?
-          fi
-          printf '%s\n' "$status" > security-reports/status.txt
-      - name: Validate scan and summarize findings
-        env:
-          AUDIT_ECOSYSTEM: ${{ matrix.ecosystem }}
-          AUDIT_SCOPE: ${{ matrix.scope }}
-        run: |
-          uv run scripts/dependency_audit.py --ecosystem "$AUDIT_ECOSYSTEM" --scope "$AUDIT_SCOPE" --source security-reports/audit.json --status-file security-reports/status.txt --summary security-reports/summary.md
-          cat security-reports/summary.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-audit-${{ matrix.ecosystem }}-${{ matrix.scope }}-${{ github.sha }}
-          path: security-reports/
-          retention-days: 30
-          if-no-files-found: warn
+      - run: bun audit
