@@ -201,6 +201,7 @@
                     "group": "Service Accounts",
                     "pages": [
                       "POST /api/v1/orgs/{org_id}/service-accounts",
+                      "POST /api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys",
                       "DELETE /api/v1/orgs/{org_id}/service-accounts/{user_id}"
                     ]
                   },
