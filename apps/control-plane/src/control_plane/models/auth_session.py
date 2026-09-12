@@ -8,7 +8,6 @@ from sqlmodel import Field
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
-from control_plane.models.playground_session import PlaygroundSession
 
 
 class AuthSession(Record, Identified, Tombstonable, table=True):
@@ -23,7 +22,3 @@ class AuthSession(Record, Identified, Tombstonable, table=True):
     token_hash: str = Field(unique=True)
     expires_at: datetime = Field(sa_type=UTCDateTime)
     absolute_expires_at: datetime = Field(sa_type=UTCDateTime)
-
-    async def delete(self) -> None:
-        await PlaygroundSession.revoke_credential(self.id)
-        await super().delete()

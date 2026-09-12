@@ -16,7 +16,7 @@ MANAGEMENT_KEY_PREFIX = "sk-cp-"
 MIN_MANAGEMENT_KEY_SECRET_LENGTH = 32
 MAX_MANAGEMENT_KEY_LENGTH = 512
 PREFIX_SECRET_CHARS = 6
-PLAYGROUND_SESSION_TTL = timedelta(hours=1)
+PLAYGROUND_SESSION_TTL = timedelta(minutes=5)
 
 
 def key_prefix(token: str, kind: str) -> str:
@@ -122,13 +122,6 @@ async def rotate_playground_session(
         playground_session.token_hash = token_hash(token)
         playground_session.expires_at = now + PLAYGROUND_SESSION_TTL
         playground_session.revoked = False
-    expiry = await playground_session.authorized_until(now)
-    if expiry is None:
-        from control_plane.authority import AuthorizationError  # noqa: PLC0415 authority imports key models
-
-        detail = "Playground access is no longer authorized"
-        raise AuthorizationError(detail)
-    playground_session.expires_at = expiry
     return await playground_session.save(), token
 
 
