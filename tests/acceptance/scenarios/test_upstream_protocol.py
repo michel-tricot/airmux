@@ -32,7 +32,7 @@ def test_invalid_upstream_successes_are_rejected(stack: Stack) -> None:
         body = "".join(streamed.iter_text())
     payloads = [json.loads(line[6:]) for line in body.splitlines() if line.startswith("data: ") and line != "data: [DONE]"]
     errors = [payload["error"] for payload in payloads if "error" in payload]
-    assert errors == [{"code": "invalid_upstream_response", "message": "upstream stream ended before its terminal event"}]
+    assert errors == [{"code": "invalid_upstream_response", "message": "invalid upstream response"}]
 
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:

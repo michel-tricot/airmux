@@ -27,8 +27,8 @@ from data_plane.canonical import (
     CanonicalUsage,
 )
 from data_plane.egress.base import (
-    CanonicalError,
     EgressAdapter,
+    ProviderDiagnostic,
     RawEvent,
     StreamState,
     UpstreamProtocolError,
@@ -192,14 +192,12 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
             usage=usage_of(message.usage),
         )
 
-    def map_error(self, error: Exception) -> CanonicalError:
-        if not isinstance(error, UpstreamResponseError):
-            return super().map_error(error)
+    def parse_error(self, error: UpstreamResponseError) -> ProviderDiagnostic | None:
         try:
             upstream_error = UpstreamErrorBody.model_validate_json(error.body)
         except ValidationError:
-            return super().map_error(error)
-        return CanonicalError(status=error.status, code=upstream_error.error.type, message=upstream_error.error.message)
+            return None
+        return ProviderDiagnostic(code=upstream_error.error.type, message=upstream_error.error.message)
 
     def new_stream_state(self, ctx: Ctx) -> AnthropicStreamState:
         return AnthropicStreamState(ctx=ctx)

@@ -314,4 +314,4 @@ def test_anthropic_cross_provider_transport_errors_speak_this_dialect(api_key, d
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
     assert response.status_code == 504
-    assert response.json() == {"type": "error", "error": {"type": "upstream_timeout", "message": "timed out"}}
+    assert response.json() == {"type": "error", "error": {"type": "upstream_timeout", "message": "upstream request timed out"}}

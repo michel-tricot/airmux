@@ -457,4 +457,4 @@ def test_repeated_request_preserves_rate_limited_status_during_credential_cooldo
         for _ in range(2):
             response = client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {api_key}"}, json=request().model_dump(mode="json"))
             assert response.status_code == 429
-        assert "rate limited" in response.text
+        assert response.json()["error"] == {"code": "429", "message": "rate limited"}

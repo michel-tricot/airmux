@@ -25,8 +25,8 @@ from data_plane.canonical import (
     CanonicalToolCallPart,
 )
 from data_plane.egress.base import (
-    CanonicalError,
     EgressAdapter,
+    ProviderDiagnostic,
     RawEvent,
     StreamState,
     UpstreamProtocolError,
@@ -138,15 +138,12 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             usage=usage_of(completion.usage),
         )
 
-    def map_error(self, error: Exception) -> CanonicalError:
-        if not isinstance(error, UpstreamResponseError):
-            return super().map_error(error)
+    def parse_error(self, error: UpstreamResponseError) -> ProviderDiagnostic | None:
         try:
             upstream_error = UpstreamErrorBody.model_validate_json(error.body)
         except ValidationError:
-            return super().map_error(error)
-        return CanonicalError(
-            status=error.status,
+            return None
+        return ProviderDiagnostic(
             code=upstream_error.error.code or str(error.status),
             message=upstream_error.error.message,
         )
