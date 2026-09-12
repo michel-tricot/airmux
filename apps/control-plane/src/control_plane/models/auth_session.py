@@ -22,6 +22,7 @@ class AuthSession(Record, Identified, Tombstonable, table=True):
     token_hash: str = Field(unique=True)
     expires_at: datetime = Field(sa_type=UTCDateTime)
     absolute_expires_at: datetime = Field(sa_type=UTCDateTime)
+
     @classmethod
     async def end_for_user(cls, user_id: UUID) -> None:
         for auth_session in await cls.find(cls.user_id == user_id):
