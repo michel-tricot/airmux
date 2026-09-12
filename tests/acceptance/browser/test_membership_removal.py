@@ -36,7 +36,6 @@ def test_membership_removal_clears_open_tabs_history_and_playground(stack: Stack
         second = console.context.new_page()
         second.goto(page.url)
         expect(second.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text("acceptance")
-        console.capture("membership-before-removal")
         admin.delete(f"{org_path}/users/{user_id}").raise_for_status()
         expect(page.get_by_text("private conversation marker", exact=True)).not_to_be_visible(timeout=15_000)
         for tab in (page, second):
@@ -50,4 +49,3 @@ def test_membership_removal_clears_open_tabs_history_and_playground(stack: Stack
             tab.get_by_role("combobox", name="Workspace", exact=True).click()
             tab.get_by_role("option", name="retained-workspace", exact=True).click()
             expect(tab.get_by_role("combobox", name="Workspace", exact=True)).to_contain_text("retained-workspace")
-        console.capture("membership-after-removal")
