@@ -40,10 +40,16 @@ def test_authentication_throttles_without_starving_health_or_inference(stack: St
     assert limited
     assert all(int(response.headers["Retry-After"]) > 0 for response in limited)
     assert stack.request().status_code == 200
+
+    async def start_burst() -> list[httpx.Response]:
+        async with httpx.AsyncClient(base_url=stack.cp_url, timeout=10) as client:
+            return await asyncio.gather(*(client.post("/api/v1/auth/cli/start", json={"client_name": "throttle-test"}) for _ in range(5)))
+
+    starts = asyncio.run(start_burst())
+    assert any(response.status_code == 200 for response in starts)
+    assert any(response.status_code == 429 for response in starts)
+
+    time.sleep(max(int(response.headers["Retry-After"]) for response in limited))
     with httpx.Client(base_url=stack.cp_url, timeout=10) as client:
-        starts = [client.post("/api/v1/auth/cli/start", json={"client_name": "throttle-test"}) for _ in range(5)]
-        assert starts[0].status_code == 200
-        assert any(response.status_code == 429 for response in starts)
-        time.sleep(max(int(response.headers["Retry-After"]) for response in limited))
         login = client.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
         assert login.status_code == 200, login.text

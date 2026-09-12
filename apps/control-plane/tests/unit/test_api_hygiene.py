@@ -128,6 +128,13 @@ def test_every_endpoint_declares_one_throttle_group():
     assert offenders == []
 
 
+def test_throttle_route_map_uses_mounted_api_paths():
+    app = make_app()
+    routes = app.user_middleware[0].kwargs["routes"]
+    groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
+    assert groups == ["cli_start"]
+
+
 def test_membership_and_workspace_docs_are_resource_specific():
     operations = {operation["operationId"]: operation["tags"] for methods in make_app().openapi()["paths"].values() for operation in methods.values()}
     assert {operation: operations[operation] for operation in ("list_org_users", "add_org_user", "remove_org_user")} == {
