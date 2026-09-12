@@ -24,7 +24,7 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
         assert set(session) == {"id", "expires_at", "status"}
         assert session["status"] == "ready"
         expires_at = datetime.fromisoformat(session["expires_at"])
-        assert datetime.now(tz=UTC) + timedelta(minutes=55) < expires_at <= datetime.now(tz=UTC) + timedelta(hours=1)
+        assert datetime.now(tz=UTC) + timedelta(minutes=4) < expires_at <= datetime.now(tz=UTC) + timedelta(minutes=5)
         cookie = first.headers["set-cookie"]
         assert "airllm_playground=" in cookie
         assert "HttpOnly" in cookie

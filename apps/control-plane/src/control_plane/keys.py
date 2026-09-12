@@ -16,7 +16,7 @@ MANAGEMENT_KEY_PREFIX = "sk-cp-"
 MIN_MANAGEMENT_KEY_SECRET_LENGTH = 32
 MAX_MANAGEMENT_KEY_LENGTH = 512
 PREFIX_SECRET_CHARS = 6
-PLAYGROUND_SESSION_TTL = timedelta(hours=1)
+PLAYGROUND_SESSION_TTL = timedelta(minutes=5)
 
 
 def key_prefix(token: str, kind: str) -> str:
