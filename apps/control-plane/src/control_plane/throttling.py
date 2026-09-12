@@ -5,13 +5,14 @@ import hashlib
 import math
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import JSONResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from re import Pattern
 
     from starlette.requests import Request
     from starlette.types import ASGIApp, Receive, Scope, Send
@@ -89,18 +90,7 @@ class LocalThrottleBackend:
 
 
 type TrafficGroup = Literal["api", "authentication", "cli_start", "cli_poll", "operational"]
-
-
-def traffic_group(path: str) -> TrafficGroup:
-    if path in {"/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/password", "/api/v1/auth/cli/approve"}:
-        return "authentication"
-    if path == "/api/v1/auth/cli/start":
-        return "cli_start"
-    if path == "/api/v1/auth/cli/poll":
-        return "cli_poll"
-    if path.startswith("/api/v1/bundles/") or path in {"/api/v1/bundle/latest", "/api/v1/events", "/api/v1/heartbeat"}:
-        return "operational"
-    return "api"
+type ThrottleRoute = tuple["Pattern[str]", frozenset[str], TrafficGroup]
 
 
 def quota(config: ThrottleConfig, group: TrafficGroup) -> RateLimit:
@@ -120,14 +110,17 @@ def denied_response(decision: Denied) -> JSONResponse:
 
 
 class ThrottleMiddleware:
-    def __init__(self, app: ASGIApp, *, backend: ThrottleBackend, config: ThrottleConfig) -> None:
+    def __init__(self, app: ASGIApp, *, backend: ThrottleBackend, config: ThrottleConfig, routes: tuple[ThrottleRoute, ...]) -> None:
         self.app = app
         self.backend = backend
         self.config = config
+        self.routes = routes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and scope["path"].startswith("/api/v1/"):
-            group = traffic_group(scope["path"].rstrip("/"))
+            method = scope["method"]
+            group = next((group for pattern, methods, group in self.routes if method in methods and pattern.fullmatch(scope["path"])), "api")
+            scope.setdefault("state", {})["traffic_group"] = group
             client = scope.get("client")
             identity = client[0] if client else "unknown"
             decision = await self.backend.consume(throttle_key(f"ip:{group}", identity), quota(self.config, group))
@@ -143,7 +136,7 @@ class ThrottledError(Exception):
 
 
 async def check_identity(request: Request, identity: str) -> None:
-    group = traffic_group(request.url.path.rstrip("/"))
+    group = cast("TrafficGroup", request.state.traffic_group)
     decision = await request.app.state.throttle_backend.consume(
         throttle_key(f"principal:{group}", identity), quota(request.app.state.settings.throttling, group)
     )

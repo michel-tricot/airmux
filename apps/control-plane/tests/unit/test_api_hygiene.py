@@ -119,6 +119,15 @@ def test_permission_requirements_are_machine_readable():
     assert {name: operation.get("x-airllm-authority", []) for name, operation in operations.items()} == expected
 
 
+def test_every_endpoint_declares_one_throttle_group():
+    offenders = []
+    for route in api_routes(make_app()):
+        groups = [dependency.call.traffic_group for dependency in route.dependant.dependencies if hasattr(dependency.call, "traffic_group")]
+        if len(groups) != 1:
+            offenders.append(f"{sorted(route.methods or ())} {route.path}: {groups}")
+    assert offenders == []
+
+
 def test_membership_and_workspace_docs_are_resource_specific():
     operations = {operation["operationId"]: operation["tags"] for methods in make_app().openapi()["paths"].values() for operation in methods.values()}
     assert {operation: operations[operation] for operation in ("list_org_users", "add_org_user", "remove_org_user")} == {
