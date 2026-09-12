@@ -4,15 +4,18 @@ import ast
 import json
 import re
 import subprocess
+from collections import Counter
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
 FENCE = re.compile(r"^[ \t]*```(?P<language>[A-Za-z0-9_+-]+)[^\n]*\n(?P<body>.*?)^[ \t]*```[ \t]*$", re.MULTILINE | re.DOTALL)
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
+OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
 
 
 def documentation_files() -> list[Path]:
@@ -20,10 +23,10 @@ def documentation_files() -> list[Path]:
 
 
 def navigation_pages(node: object) -> list[str]:
+    if isinstance(node, str):
+        return [node]
     if isinstance(node, dict):
-        raw_pages = node.get("pages")
-        pages = [str(page) for page in raw_pages] if isinstance(raw_pages, list) else []
-        return pages + [page for key, value in node.items() if key != "pages" for page in navigation_pages(value)]
+        return [page for value in node.values() if isinstance(value, (dict, list)) for page in navigation_pages(value)]
     if isinstance(node, list):
         return [page for value in node for page in navigation_pages(value)]
     return []
@@ -42,10 +45,34 @@ def route_exists(route: str) -> bool:
 
 def test_navigation_references_existing_pages() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
-    pages = navigation_pages(config["navigation"])
+    pages = [page for page in navigation_pages(config["navigation"]) if not OPENAPI_ENDPOINT.fullmatch(page)]
     missing = [page for page in pages if not any((ROOT / f"{page}{suffix}").exists() for suffix in (".md", ".mdx"))]
     assert missing == []
     assert len(pages) == len(set(pages))
+
+
+def test_api_navigation_follows_openapi_domains_and_resources() -> None:
+    config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    api_group = next(group for tab in config["navigation"]["tabs"] for group in tab["groups"] if group["group"] == "Control plane endpoints")
+    documented = [
+        (domain["group"], resource["group"], endpoint)
+        for domain in api_group["pages"]
+        for resource in domain["pages"]
+        for endpoint in resource["pages"]
+    ]
+    schema = yaml.safe_load((ROOT / "lib/api-spec/openapi.yaml").read_text(encoding="utf-8"))
+    methods = {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
+    domains = {tag: group["name"] for group in schema["x-tagGroups"] for tag in group["tags"]}
+    resources = {tag["name"]: tag.get("x-displayName", tag["name"]) for tag in schema["tags"]}
+    expected = [
+        (domains[tag], resources[tag], f"{method.upper()} {path}")
+        for path, path_item in schema["paths"].items()
+        for method, operation in path_item.items()
+        if method in methods
+        for tag in operation["tags"]
+    ]
+
+    assert Counter(documented) == Counter(expected)
 
 
 def test_internal_documentation_links_resolve() -> None:
