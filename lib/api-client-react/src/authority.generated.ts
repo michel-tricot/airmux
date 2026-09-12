@@ -502,6 +502,14 @@ export const operationAuthority = {
       },
     ],
   },
+  createOrgServiceAccountManagementKey: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["management-keys.issue"],
+      },
+    ],
+  },
   deleteOrgServiceAccount: {
     checks: [
       {

@@ -6,7 +6,12 @@ import { useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
-import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
+import {
+  useCreateOrgServiceAccountManagementKeyMutation,
+  useCreateOrgServiceAccountMutation,
+  useDeleteOrgServiceAccountMutation,
+  useOrgMembers,
+} from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
@@ -70,6 +75,7 @@ export default function AppOrgSettings() {
   const [token, setToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
+  const [serviceAccountKeyTarget, setServiceAccountKeyTarget] = useState<NonNullable<typeof members>[number] | null>(null);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
@@ -82,6 +88,7 @@ export default function AppOrgSettings() {
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const createServiceAccount = useCreateOrgServiceAccountMutation(orgId);
   const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
+  const mintServiceAccountKey = useCreateOrgServiceAccountManagementKeyMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
 
   const memberActions = (
@@ -190,7 +197,7 @@ export default function AppOrgSettings() {
                     cellClassName: 'text-right',
                     cell: (member) => <AccountKindBadge serviceAccount={member.service_account} />,
                   },
-                  ...(canDeleteServiceAccount
+                  ...(canIssueKey || canDeleteServiceAccount
                     ? [
                         {
                           key: 'actions',
@@ -200,6 +207,16 @@ export default function AppOrgSettings() {
                           cell: (member: NonNullable<typeof members>[number]) =>
                             member.managed ? (
                               <span className="inline-flex items-center gap-1">
+                                {canIssueKey && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    aria-label={`Generate replacement key for ${member.name}`}
+                                    onClick={() => setServiceAccountKeyTarget(member)}
+                                  >
+                                    <RefreshCw className="w-4 h-4" /> Generate key
+                                  </Button>
+                                )}
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
@@ -368,6 +385,38 @@ export default function AppOrgSettings() {
       )}
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
+
+      {canIssueKey && (
+        <FormDialog
+          open={serviceAccountKeyTarget !== null}
+          onOpenChange={(open) => !open && setServiceAccountKeyTarget(null)}
+          title="Generate service account key"
+          description={`Issue a new organization key for ${serviceAccountKeyTarget?.name ?? 'this service account'}.`}
+          schema={managementKeyFormSchema}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
+          onSubmit={async (values) => {
+            if (!serviceAccountKeyTarget) return;
+            const minted = await mintServiceAccountKey.mutateAsync({
+              orgId,
+              userId: serviceAccountKeyTarget.user_id,
+              data: managementKeyPayload(values),
+            });
+            setServiceAccountKeyTarget(null);
+            setToken(minted.token);
+          }}
+          submitLabel="Generate"
+          pending={mintServiceAccountKey.isPending}
+        >
+          {(form) => (
+            <ManagementKeyFormFields
+              form={form}
+              availablePermissions={authorization.permissions}
+              canIssue={canIssueKey}
+              permissionsLoading={authorization.isFetching}
+            />
+          )}
+        </FormDialog>
+      )}
 
       {canCreateServiceAccount && (
         <FormDialog
