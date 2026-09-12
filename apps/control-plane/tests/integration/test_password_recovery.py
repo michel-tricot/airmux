@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+
 import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, run_in_db, setup_control_plane
@@ -43,3 +46,38 @@ def test_password_change_revokes_browser_sessions_but_preserves_management_keys(
         assert client.get("/api/v1/auth/me", headers=bearer).status_code == 200
         assert client.post("/api/v1/auth/login", json={"email": "recovery@example.com", "password": PASSWORD}).status_code == 401
         assert client.post("/api/v1/auth/login", json={"email": "recovery@example.com", "password": "replacement-password"}).status_code == 200
+
+
+def test_password_change_rejects_a_concurrent_login_using_the_old_password(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app, base_url="https://testserver") as client:
+        signup = client.post("/api/v1/auth/signup", json={"email": "concurrent@example.com", "password": PASSWORD})
+        signup.raise_for_status()
+        current_cookie = signup.cookies[SESSION_COOKIE]
+        barrier = Barrier(2)
+
+        def change_password():
+            barrier.wait()
+            return client.post(
+                "/api/v1/auth/password",
+                headers={**CSRF, "cookie": f"{SESSION_COOKIE}={current_cookie}"},
+                json={"current_password": PASSWORD, "new_password": "replacement-password"},
+            )
+
+        def log_in():
+            barrier.wait()
+            return client.post("/api/v1/auth/login", json={"email": "concurrent@example.com", "password": PASSWORD})
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            changed, logged_in = (future.result() for future in (executor.submit(change_password), executor.submit(log_in)))
+
+        assert changed.status_code == 200
+        assert logged_in.status_code in {200, 401}
+        competing_cookie = logged_in.cookies.get(SESSION_COOKIE)
+        if logged_in.status_code == 200:
+            assert competing_cookie is not None
+
+    if competing_cookie is not None:
+        with TestClient(cp.app, base_url="https://testserver") as verifier:
+            headers = {**CSRF, "cookie": f"{SESSION_COOKIE}={competing_cookie}"}
+            assert verifier.get("/api/v1/auth/me", headers=headers).status_code == 401

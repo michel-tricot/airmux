@@ -38,7 +38,12 @@ class AuthIdentity(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def password_for_update(cls, email: str) -> AuthIdentity | None:
-        query = select(cls).where(cls.provider == PASSWORD_PROVIDER, cls.subject == User.normalize_email(email)).with_for_update()
+        query = (
+            select(cls)
+            .where(cls.provider == PASSWORD_PROVIDER, cls.subject == User.normalize_email(email))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         return (await current_session().execute(query)).scalar_one_or_none()
 
     @classmethod
