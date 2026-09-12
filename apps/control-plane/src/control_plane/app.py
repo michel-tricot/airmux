@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import contextlib
-import re
 from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
@@ -37,7 +35,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
-from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, TrafficGroup, denied_response
+from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, compile_routes, denied_response
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -165,14 +163,5 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     for router in routers:
         v1.include_router(router)
     app.include_router(v1)
-    throttle_routes = tuple(
-        (re.compile(f"^/api/v1{route.path_regex.pattern.removeprefix('^')}"), frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
-        for router in routers
-        for route in router.routes
-        if isinstance(route, APIRoute)
-        if (
-            groups := [group for dependency in route.dependant.dependencies if (group := getattr(dependency.call, "traffic_group", None)) is not None]
-        )
-    )
-    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=throttle_routes)
+    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=compile_routes(routers))
     return app

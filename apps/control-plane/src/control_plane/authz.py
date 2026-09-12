@@ -272,6 +272,10 @@ class Actor(BaseModel):
     credential_kind: str
     grant: Grant
 
+    @property
+    def throttle_identity(self) -> UUID:
+        return self.credential_id if self.credential_kind == "management_key" else self.principal_id
+
 
 class AccessRequest(BaseModel):
     model_config = ConfigDict(frozen=True)

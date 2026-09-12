@@ -3,17 +3,21 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import math
+import re
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, Protocol, cast
 
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import JSONResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from re import Pattern
+    from uuid import UUID
 
+    from fastapi import APIRouter
     from starlette.requests import Request
     from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -31,8 +35,7 @@ class ThrottleConfig(BaseModel):
     api: RateLimit = RateLimit(burst=120, per_second=20)
     authentication: RateLimit = RateLimit(burst=5, per_second=1 / 6)
     account: RateLimit = RateLimit(burst=5, per_second=1 / 12)
-    cli_start: RateLimit = RateLimit(burst=5, per_second=1 / 6)
-    cli_poll: RateLimit = RateLimit(burst=10, per_second=2)
+    cli: RateLimit = RateLimit(burst=10, per_second=2)
     operational: RateLimit = RateLimit(burst=1000, per_second=100)
     max_buckets: int = Field(default=10000, gt=0)
     password_workers: int = Field(default=2, gt=0, le=32)
@@ -89,8 +92,20 @@ class LocalThrottleBackend:
             return Allowed()
 
 
-type TrafficGroup = Literal["api", "authentication", "cli_start", "cli_poll", "operational"]
+type TrafficGroup = Literal["api", "authentication", "cli", "operational"]
 type ThrottleRoute = tuple["Pattern[str]", frozenset[str], TrafficGroup]
+
+
+def compile_routes(routers: tuple[APIRouter, ...]) -> tuple[ThrottleRoute, ...]:
+    return tuple(
+        (re.compile(f"^/api/v1{route.path_regex.pattern.removeprefix('^')}"), frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
+        for router in routers
+        for route in router.routes
+        if isinstance(route, APIRoute)
+        if (
+            groups := [group for dependency in route.dependant.dependencies if (group := getattr(dependency.call, "traffic_group", None)) is not None]
+        )
+    )
 
 
 def quota(config: ThrottleConfig, group: TrafficGroup) -> RateLimit:
@@ -135,10 +150,10 @@ class ThrottledError(Exception):
         self.decision = decision
 
 
-async def check_identity(request: Request, identity: str) -> None:
+async def check_identity(request: Request, identity: UUID) -> None:
     group = cast("TrafficGroup", request.state.traffic_group)
     decision = await request.app.state.throttle_backend.consume(
-        throttle_key(f"principal:{group}", identity), quota(request.app.state.settings.throttling, group)
+        throttle_key(f"principal:{group}", str(identity)), quota(request.app.state.settings.throttling, group)
     )
     if isinstance(decision, Denied):
         raise ThrottledError(decision)

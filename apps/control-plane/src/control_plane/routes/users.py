@@ -20,7 +20,7 @@ from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
 router = APIRouter()
 
 
-@router.post("/service-accounts", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_manage)])
+@router.post("/service-accounts", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     """Create a machine principal with an optional instance role."""
     user = User.new_service_account(body.name, body.instance_role)
@@ -31,7 +31,7 @@ def _user_out(u: User, orgs: list[UUID]) -> UserOut:
     return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
 
 
-@router.get("/users/{user_id}", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_read)])
+@router.get("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
 async def get_user(user_id: UUID) -> Envelope[UserOut]:
     """Return one human user or service account and its organization memberships."""
     user = await User.find_by_id(user_id)
@@ -41,7 +41,7 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
     return Envelope(data=_user_out(user, [m.org_id for m in memberships]))
 
 
-@router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_manage)])
+@router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
 async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
     """Delete a principal and its login identities, sessions, and control-plane management keys.
 
@@ -61,7 +61,7 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
     return Envelope(data=DeletedOut.of(user_id))
 
 
-@router.get("/users", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_read)])
+@router.get("/users", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
 async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
     """List human users and service accounts across the instance."""
     kind = [] if service_account is None else [User.service_account == service_account]
@@ -73,7 +73,7 @@ async def list_users(service_account: bool | None = None) -> Envelope[list[UserO
     return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
 
 
-@router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require(instance_scope, Permission.principals_manage)])
+@router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
 async def change_instance_role(user_id: UUID, body: InstanceRoleIn) -> Envelope[UserOut]:
     try:
         user = await User.change_instance_role(user_id, body.instance_role)

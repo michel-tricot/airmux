@@ -74,3 +74,17 @@ def test_decision_requires_credential_scope_ceiling_and_standing_grant():
     without_ceiling = actor.model_copy(update={"grant": Grant(scope=Scope.org(org_id), permissions=frozenset())})
     assert decide(without_ceiling, standing, AccessRequest(permission=permission, target=Scope.org(org_id))) is Decision.credential_ceiling
     assert decide(actor, (), AccessRequest(permission=permission, target=Scope.org(org_id))) is Decision.standing_authority
+
+
+def test_actor_throttle_identity_follows_the_credential_kind():
+    principal_id = uuid7()
+    credential_id = uuid7()
+    actor = Actor(
+        credential_id=credential_id,
+        principal_id=principal_id,
+        credential_kind="management_key",
+        grant=Grant(scope=Scope.instance(), permissions=frozenset()),
+    )
+
+    assert actor.throttle_identity == credential_id
+    assert actor.model_copy(update={"credential_kind": "session"}).throttle_identity == principal_id

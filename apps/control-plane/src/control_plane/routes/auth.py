@@ -191,7 +191,7 @@ async def signup(
     return Envelope(data=await _me_out(user))
 
 
-@router.post("/logout", tags=["Auth"], dependencies=[browser_scoped()])
+@router.post("/logout", tags=["Auth"], dependencies=[browser_scoped("api")])
 async def logout(
     response: Response,
     _user: CookieUserDep,
@@ -216,13 +216,13 @@ async def logout(
     return Envelope(data=DeletedOut.of(auth_session.id))
 
 
-@router.get("/me", tags=["Auth"], dependencies=[user_scoped()])
+@router.get("/me", tags=["Auth"], dependencies=[user_scoped("api")])
 async def me(user: ActingUserDep, actor: ActorDep) -> Envelope[MeOut]:
     """Return the authenticated human user and the organizations visible to this credential."""
     return Envelope(data=await _me_out(user, actor))
 
 
-@router.get("/permissions", tags=["Auth"], dependencies=[principal_scoped()])
+@router.get("/permissions", tags=["Auth"], dependencies=[principal_scoped("api")])
 async def my_permissions(actor: ActorDep, scope: PermissionScopeDep) -> Envelope[MyPermissionsOut]:
     """Return the effective permissions this credential can exercise at the requested scope."""
     permissions = await effective_permissions(actor, scope)
@@ -312,7 +312,7 @@ def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
     return auth_request
 
 
-@router.post("/cli/start", tags=["Auth"], dependencies=[public("cli_start")])
+@router.post("/cli/start", tags=["Auth"], dependencies=[public("cli")])
 async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[CliAuthStartOut]:
     """Create a short-lived device authorization for a CLI sign-in."""
     _, user_code, poll_secret = await CliAuthRequest.open(body.client_name, request.client.host if request.client else "")
@@ -328,7 +328,7 @@ async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[Cli
     )
 
 
-@router.get("/cli/request", tags=["Auth"], dependencies=[browser_scoped()])
+@router.get("/cli/request", tags=["Auth"], dependencies=[browser_scoped("api")])
 async def cli_auth_request_details(code: str, user: CookieUserDep) -> Envelope[CliAuthRequestOut]:
     """Return the client and expiry details for a device authorization code."""
     auth_request = _live(await CliAuthRequest.by_user_code(code))
@@ -367,7 +367,7 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
     return Envelope(data=CliAuthApprovedOut(status="approved", client_name=auth_request.client_name))
 
 
-@router.post("/cli/poll", tags=["Auth"], dependencies=[public("cli_poll")])
+@router.post("/cli/poll", tags=["Auth"], dependencies=[public("cli")])
 async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
     """Return pending status or deliver the approved scoped management key once.
 

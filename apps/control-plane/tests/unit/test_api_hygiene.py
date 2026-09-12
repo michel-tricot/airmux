@@ -135,7 +135,7 @@ def test_throttle_route_map_uses_mounted_api_paths():
     app = make_app()
     routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
     groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
-    assert groups == ["cli_start"]
+    assert groups == ["cli"]
 
 
 def test_membership_and_workspace_docs_are_resource_specific():

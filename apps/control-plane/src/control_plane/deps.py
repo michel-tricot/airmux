@@ -77,8 +77,7 @@ async def actor(
         )
     else:
         raise HTTPException(status_code=401, detail="Authentication required; sign in or provide a credential")
-    identity = str(resolved.credential_id) if resolved.credential_kind == "management_key" else str(resolved.principal_id)
-    await check_identity(request, identity)
+    await check_identity(request, resolved.throttle_identity)
     await set_actor(resolved.principal_id)
     return resolved
 
@@ -105,7 +104,7 @@ async def cookie_user(
     if session_cookie is None:
         raise HTTPException(status_code=401, detail="Sign in to approve this request; a key cannot be used here")
     _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
-    await check_identity(request, str(user.id))
+    await check_identity(request, user.id)
     await set_actor(user.id)
     return user
 
@@ -220,19 +219,19 @@ def _require(
 
 
 def require(
+    traffic_group: TrafficGroup,
     scope_resolver: Callable[..., Awaitable[Scope]],
     permission: Permission,
     *additional_permissions: Permission,
-    traffic_group: TrafficGroup = "api",
 ) -> params.Depends:
     return _require(scope_resolver, ((permission, *additional_permissions),), traffic_group)
 
 
 def require_all(
+    traffic_group: TrafficGroup,
     scope_resolver: Callable[..., Awaitable[Scope]],
     permission: Permission,
     *additional_permissions: Permission,
-    traffic_group: TrafficGroup = "api",
 ) -> params.Depends:
     return _require(scope_resolver, tuple((required,) for required in (permission, *additional_permissions)), traffic_group)
 
@@ -253,19 +252,19 @@ def _access_marker(kind: str, traffic_group: TrafficGroup) -> params.Depends:
     return Depends(tagged)
 
 
-def public(traffic_group: TrafficGroup = "api") -> params.Depends:
+def public(traffic_group: TrafficGroup) -> params.Depends:
     return _access_marker("public", traffic_group)
 
 
-def user_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+def user_scoped(traffic_group: TrafficGroup) -> params.Depends:
     return _access_marker("user", traffic_group)
 
 
-def principal_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+def principal_scoped(traffic_group: TrafficGroup) -> params.Depends:
     return _access_marker("principal", traffic_group)
 
 
-def browser_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+def browser_scoped(traffic_group: TrafficGroup) -> params.Depends:
     return _access_marker("browser", traffic_group)
 
 

@@ -12,13 +12,13 @@ from control_plane.models.policy import InvalidPolicyError, Policy, PolicyCreate
 router = APIRouter(prefix="/orgs/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
 
-@router.get("", dependencies=[require(workspace_scope, Permission.policies_read)])
+@router.get("", dependencies=[require("api", workspace_scope, Permission.policies_read)])
 async def list_policies(workspace: WorkspaceDep) -> Envelope[list[PolicyOut]]:
     """List workspace inference policies in evaluation order."""
     return Envelope(data=[PolicyOut.model_validate(policy) for policy in await Policy.for_workspace(workspace.id)])
 
 
-@router.post("", dependencies=[require(workspace_scope, Permission.policies_manage)])
+@router.post("", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope[PolicyOut]:
     """Create a workspace inference policy; budgets are recorded but not yet enforced."""
     policy = Policy(
@@ -28,7 +28,7 @@ async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope
     return Envelope(data=PolicyOut.model_validate(policy))
 
 
-@router.put("/order", dependencies=[require(workspace_scope, Permission.policies_manage)])
+@router.put("/order", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def reorder_policies(workspace: WorkspaceDep, body: PolicyOrder) -> Envelope[list[PolicyOut]]:
     """Replace the workspace policy evaluation order."""
     try:
@@ -38,7 +38,7 @@ async def reorder_policies(workspace: WorkspaceDep, body: PolicyOrder) -> Envelo
     return Envelope(data=[PolicyOut.model_validate(policy) for policy in policies])
 
 
-@router.patch("/{policy_id}", dependencies=[require(workspace_scope, Permission.policies_manage)])
+@router.patch("/{policy_id}", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def update_policy(workspace: WorkspaceDep, policy_id: UUID, body: PolicyUpdate) -> Envelope[PolicyOut]:
     """Update a policy without changing its workspace."""
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
@@ -54,7 +54,7 @@ async def update_policy(workspace: WorkspaceDep, policy_id: UUID, body: PolicyUp
     return Envelope(data=PolicyOut.model_validate(policy))
 
 
-@router.delete("/{policy_id}", dependencies=[require(workspace_scope, Permission.policies_manage)])
+@router.delete("/{policy_id}", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def delete_policy(workspace: WorkspaceDep, policy_id: UUID) -> Envelope[DeletedOut[UUID]]:
     """Delete a workspace policy and publish the new configuration."""
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)

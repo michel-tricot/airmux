@@ -84,20 +84,24 @@ async def _create_management_key(body: ManagementKeyIn, actor: Actor, scope: Sco
     return Envelope(data=await create_scoped_management_key(body, actor, scope))
 
 
-@router.get("/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require(instance_scope, Permission.management_keys_read)])
+@router.get(
+    "/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require("api", instance_scope, Permission.management_keys_read)]
+)
 async def list_instance_management_keys(user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
     """List management keys across all scopes, optionally filtered by principal."""
     return await _list_management_keys(Scope.instance(), user_id)
 
 
-@router.post("/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require(instance_scope, Permission.management_keys_issue)])
+@router.post(
+    "/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require("api", instance_scope, Permission.management_keys_issue)]
+)
 async def create_instance_management_key(body: ManagementKeyIn, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
     """Create an instance-scoped management key and return its token once."""
     return await _create_management_key(body, actor, Scope.instance())
 
 
 @router.get(
-    "/orgs/{org_id}/management-keys", tags=["Organization Management Keys"], dependencies=[require(org_scope, Permission.management_keys_read)]
+    "/orgs/{org_id}/management-keys", tags=["Organization Management Keys"], dependencies=[require("api", org_scope, Permission.management_keys_read)]
 )
 async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
     """List organization- and workspace-scoped management keys within an organization."""
@@ -105,7 +109,9 @@ async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) 
 
 
 @router.post(
-    "/orgs/{org_id}/management-keys", tags=["Organization Management Keys"], dependencies=[require(org_scope, Permission.management_keys_issue)]
+    "/orgs/{org_id}/management-keys",
+    tags=["Organization Management Keys"],
+    dependencies=[require("api", org_scope, Permission.management_keys_issue)],
 )
 async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
     """Create an organization-scoped management key and return its token once."""
@@ -115,7 +121,7 @@ async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor
 @router.get(
     "/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
     tags=["Workspace Management Keys"],
-    dependencies=[require(workspace_scope, Permission.management_keys_read)],
+    dependencies=[require("api", workspace_scope, Permission.management_keys_read)],
 )
 async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
     """List management keys scoped to one workspace."""
@@ -125,7 +131,7 @@ async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID 
 @router.post(
     "/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
     tags=["Workspace Management Keys"],
-    dependencies=[require(workspace_scope, Permission.management_keys_issue)],
+    dependencies=[require("api", workspace_scope, Permission.management_keys_issue)],
 )
 async def create_workspace_management_key(body: ManagementKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[ManagementKeyCreatedOut]:
     """Create a workspace-scoped management key and return its token once."""
@@ -135,7 +141,7 @@ async def create_workspace_management_key(body: ManagementKeyIn, workspace: Work
 @router.delete(
     "/management-keys/{key_id}",
     tags=["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
-    dependencies=[require(management_key_scope, Permission.management_keys_revoke)],
+    dependencies=[require("api", management_key_scope, Permission.management_keys_revoke)],
 )
 async def revoke_management_key(key: ManagementKeyDep) -> Envelope[ManagementKeyRevokedOut]:
     """Revoke an management key and every key delegated from it."""
@@ -147,7 +153,7 @@ async def revoke_management_key(key: ManagementKeyDep) -> Envelope[ManagementKey
 @router.put(
     "/management-keys/{key_id}/permissions",
     tags=["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
-    dependencies=[require(management_key_scope, Permission.management_keys_issue)],
+    dependencies=[require("api", management_key_scope, Permission.management_keys_issue)],
 )
 async def update_management_key_permissions(body: ManagementKeyPermissionsIn, key: ManagementKeyDep, actor: ActorDep) -> Envelope[ManagementKeyOut]:
     now = datetime.now(tz=UTC)

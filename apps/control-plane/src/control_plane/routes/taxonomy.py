@@ -39,13 +39,13 @@ async def _taxonomy() -> Envelope[TaxonomyOut]:
     )
 
 
-@router.get("/instance/taxonomy", tags=["Instance Model Catalog"], dependencies=[require(instance_scope, Permission.catalog_read)])
+@router.get("/instance/taxonomy", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_read)])
 async def get_instance_taxonomy() -> Envelope[TaxonomyOut]:
     """Return the provider and model catalog at instance scope."""
     return await _taxonomy()
 
 
-@router.post("/instance/taxonomy", tags=["Instance Model Catalog"], dependencies=[require(instance_scope, Permission.catalog_manage)])
+@router.post("/instance/taxonomy", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_manage)])
 async def apply_instance_taxonomy(
     body: TaxonomySpec,
     dry_run: Annotated[bool, Query(description="Validate and report changes without applying them")] = False,
@@ -69,7 +69,7 @@ async def apply_instance_taxonomy(
     )
 
 
-@router.get("/orgs/{org_id}/taxonomy", tags=["Organization Model Catalog"], dependencies=[require(org_scope, Permission.catalog_read)])
+@router.get("/orgs/{org_id}/taxonomy", tags=["Organization Model Catalog"], dependencies=[require("api", org_scope, Permission.catalog_read)])
 async def get_org_taxonomy() -> Envelope[TaxonomyOut]:
     """Return the provider and model catalog available to an organization."""
     return await _taxonomy()
@@ -78,20 +78,22 @@ async def get_org_taxonomy() -> Envelope[TaxonomyOut]:
 @router.get(
     "/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy",
     tags=["Workspace Model Catalog"],
-    dependencies=[require(workspace_scope, Permission.catalog_read)],
+    dependencies=[require("api", workspace_scope, Permission.catalog_read)],
 )
 async def get_workspace_taxonomy() -> Envelope[TaxonomyOut]:
     """Return the provider and model catalog available to a workspace."""
     return await _taxonomy()
 
 
-@router.post("/instance/taxonomy/providers", tags=["Instance Model Catalog"], dependencies=[require(instance_scope, Permission.catalog_manage)])
+@router.post(
+    "/instance/taxonomy/providers", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_manage)]
+)
 async def create_provider(body: ProviderIn) -> Envelope[ProviderOut]:
     """Create a provider or replace the catalog entry with the same name."""
     return Envelope(data=ProviderOut.model_validate(await upsert_provider(body)))
 
 
-@router.post("/instance/taxonomy/models", tags=["Instance Model Catalog"], dependencies=[require(instance_scope, Permission.catalog_manage)])
+@router.post("/instance/taxonomy/models", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_manage)])
 async def create_model(body: ModelIn) -> Envelope[ModelOut]:
     """Create a model or replace the catalog entry with the same name."""
     try:

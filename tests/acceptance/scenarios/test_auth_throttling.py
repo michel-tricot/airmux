@@ -18,7 +18,7 @@ def test_authentication_throttles_without_starving_health_or_inference(stack: St
     configuration["control_plane"]["throttling"] = {
         "authentication": {"burst": 4, "per_second": 2},
         "account": {"burst": 4, "per_second": 2},
-        "cli_start": {"burst": 2, "per_second": 1},
+        "cli": {"burst": 2, "per_second": 1},
     }
     stack.config_path.write_text(yaml.safe_dump(configuration))
     stack.start_cp()

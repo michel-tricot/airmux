@@ -32,7 +32,7 @@ def _minted(invitation: OrgInvitation, token: str, console_url: str, now: dateti
     return OrgInvitationMintedOut(invitation=_out(invitation, now), url=url)
 
 
-@router.post("", tags=["Organization Invitations"], dependencies=[require(org_scope, Permission.members_manage)])
+@router.post("", tags=["Organization Invitations"], dependencies=[require("api", org_scope, Permission.members_manage)])
 async def create_invitation(
     body: OrgInvitationCreate,
     org_id: OrgDep,
@@ -57,7 +57,7 @@ async def create_invitation(
     return Envelope(data=_minted(invitation, token, request.app.state.settings.console_url, now))
 
 
-@router.get("", tags=["Organization Invitations"], dependencies=[require(org_scope, Permission.members_read)])
+@router.get("", tags=["Organization Invitations"], dependencies=[require("api", org_scope, Permission.members_read)])
 async def list_invitations(org_id: OrgDep) -> Envelope[list[OrgInvitationOut]]:
     """List pending and expired invitations without returning their secret URLs."""
     invitations = await OrgInvitation.find(
@@ -73,7 +73,7 @@ async def list_invitations(org_id: OrgDep) -> Envelope[list[OrgInvitationOut]]:
 @router.post(
     "/{invitation_id}/reissue",
     tags=["Organization Invitations"],
-    dependencies=[require(org_scope, Permission.members_manage)],
+    dependencies=[require("api", org_scope, Permission.members_manage)],
 )
 async def reissue_invitation(
     invitation_id: UUID,
@@ -95,7 +95,7 @@ async def reissue_invitation(
 @router.post(
     "/{invitation_id}/revoke",
     tags=["Organization Invitations"],
-    dependencies=[require(org_scope, Permission.members_manage)],
+    dependencies=[require("api", org_scope, Permission.members_manage)],
 )
 async def revoke_invitation(invitation_id: UUID, org_id: OrgDep) -> Envelope[OrgInvitationRevokedOut]:
     """Revoke an invitation without changing any membership already granted."""
