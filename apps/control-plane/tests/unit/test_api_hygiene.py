@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import get_args, get_origin
+from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from helpers import api_routes, make_app
 from pydantic import BaseModel
 
 from control_plane.deps import get_session
 from control_plane.models.common.wire import Envelope
+
+if TYPE_CHECKING:
+    from control_plane.throttling import ThrottleRoute
 
 
 def _nested_models(tp: object, seen: set[type[BaseModel]] | None = None) -> set[type[BaseModel]]:
@@ -130,7 +133,7 @@ def test_every_endpoint_declares_one_throttle_group():
 
 def test_throttle_route_map_uses_mounted_api_paths():
     app = make_app()
-    routes = app.user_middleware[0].kwargs["routes"]
+    routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
     groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
     assert groups == ["cli_start"]
 
