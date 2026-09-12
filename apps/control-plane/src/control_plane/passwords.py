@@ -53,7 +53,13 @@ class PasswordWorkers:
             self._capacity.release()
             raise
         future.add_done_callback(self._release)
-        return await asyncio.wrap_future(future)
+        completion = asyncio.wrap_future(future)
+        completion.add_done_callback(self._observe)
+        return await asyncio.shield(completion)
+
+    def _observe[T](self, completion: asyncio.Future[T]) -> None:
+        if not completion.cancelled():
+            completion.exception()
 
     def _release(self, _future: Future) -> None:
         self._capacity.release()
