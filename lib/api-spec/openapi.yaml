@@ -3533,7 +3533,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -6162,13 +6162,6 @@ components:
           - type: 'null'
           title: Expires At
           description: Optional expiration timestamp with a timezone
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Principal the key authenticates; defaults to the authenticated principal
       additionalProperties: false
       type: object
       required:

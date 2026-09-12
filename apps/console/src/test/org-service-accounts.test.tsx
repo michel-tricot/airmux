@@ -92,7 +92,7 @@ describe('organization service accounts', () => {
       }),
       http.post('/api/v1/orgs/:orgId/service-accounts/:userId/management-keys', async ({ params, request }) => {
         replacement = { userId: String(params.userId), body: await request.json() };
-        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
+        return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({
           data: {
             id: 'management-key-2',
             user_id: String(params.userId),
