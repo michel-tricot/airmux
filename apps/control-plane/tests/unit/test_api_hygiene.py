@@ -71,6 +71,7 @@ def test_management_key_docs_distinguish_tenant_scopes():
         "create_workspace_management_key": ["Workspace Management Keys"],
         "revoke_management_key": ["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
         "update_management_key_permissions": ["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],
+        "create_org_service_account_management_key": ["Organization Service Accounts"],
     }
 
 
@@ -145,8 +146,10 @@ def test_membership_and_workspace_docs_are_resource_specific():
         "add_org_user": ["Organization Members"],
         "remove_org_user": ["Organization Members"],
     }
-    assert {operation: operations[operation] for operation in ("create_org_service_account", "delete_org_service_account")} == {
+    service_account_operations = ("create_org_service_account", "create_org_service_account_management_key", "delete_org_service_account")
+    assert {operation: operations[operation] for operation in service_account_operations} == {
         "create_org_service_account": ["Organization Service Accounts"],
+        "create_org_service_account_management_key": ["Organization Service Accounts"],
         "delete_org_service_account": ["Organization Service Accounts"],
     }
     assert {operation: operations[operation] for operation in ("create_workspace", "list_workspaces")} == {
