@@ -18,8 +18,8 @@ from data_plane.canonical import (
     CanonicalToolCallPart,
 )
 from data_plane.egress.base import (
-    CanonicalError,
     EgressAdapter,
+    ProviderDiagnostic,
     RawEvent,
     StreamState,
     UpstreamProtocolError,
@@ -114,16 +114,14 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
             usage=fmt.usage_of(parsed.usage),
         )
 
-    def map_error(self, error: Exception) -> CanonicalError:
-        if not isinstance(error, UpstreamResponseError):
-            return super().map_error(error)
+    def parse_error(self, error: UpstreamResponseError) -> ProviderDiagnostic | None:
         try:
             detail = fmt.UpstreamResponseEvent.model_validate_json(error.body).error
         except ValidationError:
-            return super().map_error(error)
+            return None
         if detail is None:
-            return super().map_error(error)
-        return CanonicalError(status=error.status, code=detail.code or "upstream_error", message=detail.message)
+            return None
+        return ProviderDiagnostic(code=detail.code or "upstream_error", message=detail.message)
 
     def new_stream_state(self, ctx: Ctx) -> ResponsesStreamState:
         return ResponsesStreamState(ctx=ctx)

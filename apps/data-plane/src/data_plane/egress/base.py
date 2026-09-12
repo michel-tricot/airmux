@@ -4,7 +4,7 @@ import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, final
 
 import httpx
 from pydantic import BaseModel
@@ -19,6 +19,12 @@ if TYPE_CHECKING:
 
 class CanonicalError(BaseModel):
     status: int
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ProviderDiagnostic:
     code: str
     message: str
 
@@ -174,16 +180,36 @@ class EgressAdapter[StateT: StreamState](ABC):
         being valid mid-stream.
         """
 
+    def parse_error(self, error: UpstreamResponseError) -> ProviderDiagnostic | None:  # noqa: ARG002 adapters opt into provider diagnostics
+        return None
+
+    @final
     def map_error(self, error: Exception) -> CanonicalError:
-        """Transport failures mapped to a canonical error; override only for provider-specific codes."""
         if isinstance(error, UpstreamResponseError):
-            return CanonicalError(status=error.status, code="upstream_error", message="")
-        if isinstance(error, UpstreamProtocolError):
-            return CanonicalError(status=502, code="invalid_upstream_response", message=str(error))
-        if isinstance(error, UpstreamStreamError):
-            return CanonicalError(status=502, code=error.code, message=error.message)
-        if isinstance(error, httpx.TimeoutException):
-            return CanonicalError(status=504, code="upstream_timeout", message=str(error))
-        if isinstance(error, httpx.ConnectError):
-            return CanonicalError(status=502, code="upstream_unreachable", message=str(error))
-        return CanonicalError(status=502, code="upstream_error", message=str(error))
+            diagnostic = self.parse_error(error)
+            rendered = (
+                self._provider_error(error.status, diagnostic)
+                if diagnostic is not None
+                else CanonicalError(status=error.status, code="upstream_error", message="upstream request failed")
+            )
+        elif isinstance(error, UpstreamProtocolError):
+            rendered = CanonicalError(status=502, code="invalid_upstream_response", message="invalid upstream response")
+        elif isinstance(error, UpstreamStreamError):
+            rendered = self._provider_error(502, ProviderDiagnostic(code=error.code, message=error.message))
+        elif isinstance(error, httpx.TimeoutException):
+            rendered = CanonicalError(status=504, code="upstream_timeout", message="upstream request timed out")
+        elif isinstance(error, httpx.ConnectError):
+            rendered = CanonicalError(status=502, code="upstream_unreachable", message="upstream service is unreachable")
+        else:
+            rendered = CanonicalError(status=502, code="upstream_error", message="upstream request failed")
+        return rendered
+
+    def _provider_error(self, status: int, diagnostic: ProviderDiagnostic) -> CanonicalError:
+        credential = self.credential.reveal()
+        code = diagnostic.code.replace(credential, "[REDACTED]") if credential else diagnostic.code
+        message = diagnostic.message.replace(credential, "[REDACTED]") if credential else diagnostic.message
+        return CanonicalError(
+            status=status,
+            code=code[:128],
+            message=message[:1024],
+        )

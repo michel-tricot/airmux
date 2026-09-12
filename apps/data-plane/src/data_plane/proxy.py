@@ -385,7 +385,7 @@ async def _resolve_credential(entry: CredentialEntry, resolver: CredentialResolv
     try:
         secret = await resolver.fetch(entry)
     except SecretStoreUnavailableError as error:
-        logger.exception("secret store unavailable for credential %s", entry.ref.secret_id)
+        logger.warning("secret store unavailable for credential %s", entry.ref.secret_id)
         raise RequestRejectedError(503, "credential_backend_unavailable") from error
     return secret
 
