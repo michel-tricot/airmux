@@ -1,0 +1,76 @@
+---
+title: "Chat Completions"
+description: "Reference the Chat Completions-compatible request, response, streaming, and dialect-selection behavior."
+---
+
+```text
+POST /inf/v1/chat/completions
+```
+
+This route accepts Chat Completions or canonical JSON. Official SDK requests are detected from their user-agent and
+unambiguous request fields. Raw text-only requests should set `x-airllm-dialect: openai_native`.
+
+## Request
+
+```bash
+curl https://llm.example.com/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'x-airllm-dialect: openai_native' \
+  -d '{
+    "model": "openai/gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Say hello"}],
+    "max_completion_tokens": 128
+  }'
+```
+
+## Core fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `model` | string | Required catalog model ID |
+| `messages` | array | System, developer, user, assistant, and tool messages |
+| `stream` | boolean | Defaults to `false` |
+| `max_tokens` | integer | Canonical name; minimum 1 |
+| `max_completion_tokens` | integer | Chat Completions alias for `max_tokens` |
+| `temperature` | number | Minimum 0 |
+| `top_p` | number | Greater than 0 and at most 1 |
+| `stop` | string or array | Normalized to an array |
+| `seed` | integer | Forwarded when supported |
+| `tools` | array | Function tools |
+| `tool_choice` | string or object | `auto`, `none`, `required`, or a named function |
+| `parallel_tool_calls` | boolean | Requires provider support when supplied |
+| `response_format` | object | `text`, `json_object`, or `json_schema` |
+| `reasoning_effort` | string | Folded into canonical reasoning configuration |
+| `reasoning` | object | Extended reasoning configuration |
+
+Other top-level fields are treated as provider extras. A provider profile either forwards them or reports them as dropped in `gateway.adjustments`.
+
+## Response
+
+```json
+{
+  "id": "019...",
+  "object": "chat.completion",
+  "created": 1789000000,
+  "model": "openai/gpt-4o-mini",
+  "choices": [
+    {
+      "index": 0,
+      "message": {"role": "assistant", "content": "Hello!"},
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {"prompt_tokens": 8, "completion_tokens": 2, "total_tokens": 10},
+  "gateway": {"finish_reason": "stop", "adjustments": []}
+}
+```
+
+`finish_reason` is one of `stop`, `length`, `tool_calls`, or `content_filter` when present.
+
+## Streaming
+
+Streaming returns Chat Completions SSE chunks, a terminal choice carrying `finish_reason`, a usage-only chunk with
+`choices: []` and `gateway`, then `data: [DONE]`. Usage is always included even if the caller omits `stream_options`.
+
+See [streaming](/docs/guides/streaming) and [tools](/docs/guides/tools) for complete client flows.

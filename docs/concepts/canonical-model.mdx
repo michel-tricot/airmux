@@ -1,0 +1,55 @@
+---
+title: "Canonical model"
+description: "See how caller dialects and provider families cross one typed request and response model."
+---
+
+AirLLM uses a canonical model as the waist between callers and providers. Each ingress dialect translates into canonical
+once; each provider family translates out once.
+
+```mermaid
+flowchart LR
+  O[Chat Completions] --> C[Canonical]
+  R[Responses] --> C
+  A[Messages] --> C
+  N[Native canonical] --> C
+  C --> E1[OpenAI-compatible provider]
+  C --> E2[Responses provider]
+  C --> E3[Anthropic provider]
+```
+
+With `N` caller dialects and `M` provider families, this requires `N + M` translators. Routing, policies, capability
+checks, parameter reconciliation, streaming accounting, and usage measurement operate on canonical values once.
+
+## Typed content
+
+Canonical messages have `system`, `user`, or `assistant` roles. Their typed parts include:
+
+| Part | Purpose |
+| --- | --- |
+| `text` | Text input or output |
+| `image` | URL or base64 image input |
+| `document` | URL, base64 data, or provider file ID |
+| `reasoning` | Reasoning text plus optional opaque identity and signature |
+| `tool_call` | Tool name, call ID, and JSON argument text |
+| `tool_result` | Result associated with a prior call ID |
+
+Nested shapes are closed and reject unknown fields. The documented top level of a canonical request is open so
+provider-specific parameters can travel to a compatible provider profile.
+
+## Dialect selection
+
+`/inf/v1/responses` and `/inf/v1/messages` bind their dialect by route. `/inf/v1/chat/completions` resolves the dialect in this order:
+
+1. `x-airllm-dialect` override
+2. Unambiguous request shape or SDK user-agent
+3. Canonical as the default
+
+For raw text-only Chat Completions requests, set `x-airllm-dialect: openai_native`. Official SDK requests are recognized automatically.
+
+## Visible translation
+
+Translation loss is never silent. The response `gateway.adjustments` array names any parameter that was clamped,
+emulated, or dropped and explains why. A strict-parameter policy can turn a would-be drop into a denial.
+
+The selected ingress adapter also owns the response and error shape. A Messages caller receives Messages events and
+errors even when AirLLM routed the request to a different provider family.

@@ -1,0 +1,86 @@
+---
+title: "Call tools"
+description: "Define functions, assemble streamed arguments, return tool results, and continue a conversation."
+---
+
+Tools are translated through AirLLM's canonical model. The selected catalog model must advertise the `tools` capability.
+
+## Request a tool call
+
+```python
+import json
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+)
+
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a city",
+            "parameters": {
+                "type": "object",
+                "properties": {"city": {"type": "string"}},
+                "required": ["city"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
+
+messages = [{"role": "user", "content": "What is the weather in Paris?"}]
+first = client.chat.completions.create(
+    model=os.environ["AIRLLM_MODEL"],
+    messages=messages,
+    tools=tools,
+    tool_choice={"type": "function", "function": {"name": "get_weather"}},
+)
+
+call = first.choices[0].message.tool_calls[0]
+arguments = json.loads(call.function.arguments)
+result = {"city": arguments["city"], "temperature_c": 18}
+```
+
+## Return the result
+
+Append the complete assistant message and a tool result with the matching call ID:
+
+```python
+messages.append(first.choices[0].message)
+messages.append(
+    {
+        "role": "tool",
+        "tool_call_id": call.id,
+        "content": json.dumps(result),
+    }
+)
+
+final = client.chat.completions.create(
+    model=os.environ["AIRLLM_MODEL"],
+    messages=messages,
+    tools=tools,
+)
+
+print(final.choices[0].message.content)
+```
+
+AirLLM does not execute tools. Your application validates the arguments, invokes the function, and returns the result.
+
+## Streamed tool calls
+
+Argument JSON may arrive as fragments across several stream events. Group fragments by the tool-call `index` and
+concatenate `function.arguments` in order before parsing JSON. Do not parse an individual fragment.
+
+```bash
+uv run python examples/chat_stream_tools.py
+```
+
+<Info>
+  Tool IDs and opaque reasoning signatures must be replayed exactly on later turns when the provider requires them.
+</Info>

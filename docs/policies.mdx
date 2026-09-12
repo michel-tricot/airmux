@@ -1,0 +1,233 @@
+---
+title: "Workspace policies"
+description: "Match inference requests and compose model, provider, credential, price, parameter, request, denial, and fallback rules."
+---
+
+Workspace policies control which inference requests AirLLM accepts, which routes and credentials are eligible, and when it may try a fallback model.
+
+## Policy model
+
+A **rule** owns one request match and one action. A **policy** targets all inference keys or a selected set of keys and
+references one or more reusable rules.
+
+- Every matching restriction must pass
+- Rules within one policy are unordered
+- All matching policies compose
+- Lower policy priority numbers are evaluated first
+- The first matching fallback policy supplies the fallback plan
+- Editing a shared rule updates every policy that references it
+- A referenced rule cannot be deleted
+
+Changes take effect after a gateway adopts the workspace's newly published bundle. Saving a policy and observing it at
+every gateway are not one synchronous operation.
+
+## Targets
+
+Apply a policy to every current and future inference key, including playground sessions:
+
+```json
+{"kind": "all_keys"}
+```
+
+Or select specific key IDs:
+
+```json
+{
+  "kind": "selected_keys",
+  "key_ids": ["key-id-1", "key-id-2"]
+}
+```
+
+A selected-key policy does not include keys created later.
+
+## Request matching
+
+Match every request:
+
+```json
+{"kind": "all_requests"}
+```
+
+Or combine one or more criteria. All supplied criteria must match:
+
+```json
+{
+  "kind": "request",
+  "models": ["openai/gpt-4o-mini"],
+  "stream": true,
+  "capabilities": ["tools"]
+}
+```
+
+`capabilities` accepts `tools`, `reasoning`, and `structured_output`. Matching always uses the caller's original
+request, so a fallback model cannot escape a restriction by changing the route.
+
+## Actions
+
+### Allowed models
+
+Restrict matching requests to an explicit catalog allowlist:
+
+```json
+{
+  "kind": "models",
+  "names": ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4-6"]
+}
+```
+
+Fallback models must also pass every matching model allowlist.
+
+### Allowed providers
+
+```json
+{
+  "kind": "providers",
+  "names": ["openai", "anthropic"]
+}
+```
+
+The restriction applies to both the primary route and fallback routes.
+
+### Credential access
+
+Allow credentials from one or more scopes:
+
+```json
+{
+  "kind": "credential_access",
+  "scopes": ["workspace", "org"]
+}
+```
+
+Multiple matching credential rules intersect. After filtering, AirLLM chooses the most specific populated allowed scope
+in workspace, organization, instance order. If that scope has candidates, AirLLM does not fall through to a broader
+scope.
+
+### Require parameter support
+
+```json
+{"kind": "strict_parameters"}
+```
+
+This rejects a route when AirLLM would otherwise remove a caller-supplied parameter because the selected model or
+provider does not support it. Model capability and input-modality checks always run, with or without this action.
+
+### Model price limit
+
+Prices are USD per one million tokens:
+
+```json
+{
+  "kind": "price_limit",
+  "max_input_price_per_mtok": "2.50",
+  "max_output_price_per_mtok": "10.00"
+}
+```
+
+Both catalog prices must pass. This is a static route-price check, not a prediction or cap on the total request cost.
+
+### Request limits
+
+```json
+{
+  "kind": "request_limits",
+  "max_output_tokens": 4096
+}
+```
+
+A larger explicit output limit is rejected. A request that omits its output limit is allowed because the gateway does not invent one.
+
+### Deny matching requests
+
+```json
+{
+  "kind": "deny",
+  "message": "Reasoning models are not approved for this workspace"
+}
+```
+
+The caller receives `403 policy_denied` and the configured message.
+
+### Model fallbacks
+
+```json
+{
+  "kind": "fallback",
+  "models": [
+    "anthropic/claude-sonnet-4-6",
+    "openai/gpt-4o-mini"
+  ],
+  "on": ["rate_limited", "upstream_unavailable", "timeout"],
+  "max_attempts": 3,
+  "timeout_ms": 30000
+}
+```
+
+| Reason | Trigger |
+| --- | --- |
+| `rate_limited` | Upstream HTTP 429 |
+| `upstream_unavailable` | Upstream HTTP 5xx or connection failure |
+| `timeout` | The configured request deadline expires |
+
+One policy may contain at most one fallback rule, with up to four backup models. `max_attempts` is between 2 and 5 and
+counts the primary call plus credential and model retries. `timeout_ms` is between 100 and 120,000 milliseconds.
+
+Invalid requests, policy denials, and authentication failures do not trigger a model fallback. An upstream
+authentication failure may try another credential in the same selected scope.
+
+<Info>
+  A provider may continue generation after a timeout. AirLLM records every attempted route separately, so fallback does
+  not provide exactly-once generation.
+</Info>
+
+### Budget
+
+```json
+{
+  "kind": "budget",
+  "period": "month",
+  "amount_usd": "250.00",
+  "sharing": "shared"
+}
+```
+
+`period` is `day` or `month`; `sharing` is `shared` or `per_key`.
+
+<Warning>
+  Budget enforcement is not implemented. Saving or enabling a budget rule does not limit spending.
+</Warning>
+
+## Complete API shapes
+
+Create the reusable rule first at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`:
+
+```json
+{
+  "name": "Approved production pricing",
+  "definition": {
+    "match": {"kind": "all_requests"},
+    "action": {
+      "kind": "price_limit",
+      "max_input_price_per_mtok": "2.50",
+      "max_output_price_per_mtok": "10.00"
+    }
+  }
+}
+```
+
+Then attach the returned rule ID at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`:
+
+```json
+{
+  "name": "Approved production routing",
+  "enabled": true,
+  "priority": 20,
+  "definition": {
+    "target": {"kind": "all_keys"},
+    "rule_ids": ["00000000-0000-0000-0000-000000000001"]
+  }
+}
+```
+
+Successful control-plane responses wrap the result in `{"data": ...}`. See the
+[policy tutorial](/docs/guides/policy-workflow) for the CLI flow and the generated endpoint reference for exact schemas.

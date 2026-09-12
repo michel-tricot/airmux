@@ -1,0 +1,63 @@
+---
+title: "Inference API overview"
+description: "Choose an inference surface, authenticate a request, and understand the shared routing behavior."
+---
+
+All inference endpoints live under `/inf/v1` and accept a workspace inference key as a bearer token.
+
+```text
+Authorization: Bearer sk-inf-your-key
+Content-Type: application/json
+```
+
+## Surfaces
+
+| Surface | Endpoint | Use when |
+| --- | --- | --- |
+| Chat Completions | `POST /inf/v1/chat/completions` | Existing Chat Completions clients or the canonical API |
+| Responses | `POST /inf/v1/responses` | Responses clients and item-based input/output |
+| Messages | `POST /inf/v1/messages` | Messages clients and named SSE events |
+
+The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
+Chat Completions request can target an Anthropic model. AirLLM returns the response and errors in the caller's dialect.
+
+## Shared behavior
+
+Every surface uses the same:
+
+- Model catalog and capability checks
+- Inference-key authentication
+- Workspace policy evaluation
+- Provider-credential selection
+- Fallback planning
+- Parameter reconciliation and visible adjustments
+- Usage and cost accounting
+
+## Model selection
+
+Managed catalog model IDs use `provider/model` form. List the models visible to the active organization:
+
+```bash
+airllm models list -f json
+```
+
+The model must support every required input modality and capability. Streaming, tools, reasoning, and structured output
+are inferred from the request rather than trusted as caller metadata.
+
+## Base URLs
+
+If the public AirLLM origin is `https://llm.example.com`:
+
+| Client | Base URL |
+| --- | --- |
+| OpenAI client | `https://llm.example.com/inf/v1` |
+| Anthropic client | `https://llm.example.com/inf` |
+| Raw HTTP | Full endpoint from the table above |
+
+## Limits
+
+The checked-in Nginx proxy accepts request bodies up to 32 MB and allows an established inference response to remain
+idle for up to 300 seconds. Provider clients and other ingress proxies may have smaller limits. Fallback deadlines apply
+only until response headers arrive; they do not cap an established stream.
+
+See [errors](/docs/reference/errors) for stable gateway codes and [models and providers](/docs/reference/models-and-providers) for catalog fields.

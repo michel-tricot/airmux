@@ -24,7 +24,7 @@ def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
     api_key = os.environ.get("AIRLLM_INFERENCE_KEY", "")
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    url = f"{gateway}/v1/chat/completions"
+    url = f"{gateway.rstrip('/')}/inf/v1/chat/completions"
     auth = {"authorization": f"Bearer {api_key}"}
     messages = [{"role": "user", "content": "hi"}]
 
@@ -42,10 +42,6 @@ def main() -> int:
         httpx.post(url, headers=auth, json={"model": "no-such-model", "messages": messages, "stream": True}),
     )
 
-    show(
-        "upstream rejection passes through -> OpenAI's own 400",
-        httpx.post(url, headers=auth, json={"model": "openai/gpt-4o-mini", "messages": messages, "max_tokens": 10_000_000}, timeout=30.0),
-    )
     return 0
 
 

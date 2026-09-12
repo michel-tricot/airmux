@@ -1,0 +1,102 @@
+---
+title: "Configuration reference"
+description: "Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores."
+---
+
+AirLLM servers read YAML from `airllm.yml` by default or the path in `AIRLLM_CONFIG`. The all-in-one image uses `deploy/docker/airllm.yml`.
+
+## Docker Compose variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `AIRLLM_PORT` | `8080` | Published host port |
+| `AIRLLM_PUBLIC_URL` | `http://localhost:8080` | Compose value mapped to the console origin |
+| `AIRLLM_PUBLIC_SIGNUP` | `false` | Allow account creation after instance claim |
+| `POSTGRES_PASSWORD` | `airllm` | Initial local Postgres password |
+| `AIRLLM_IMAGE` | `airllm:local` | All-in-one image override |
+| `AIRLLM_CONTROL_PLANE_IMAGE` | `airllm-control-plane:local` | Split control-plane image override |
+| `AIRLLM_DATA_PLANE_IMAGE` | `airllm-data-plane:local` | Split gateway image override |
+| `AIRLLM_CONSOLE_IMAGE` | `airllm-console:local` | Split console image override |
+
+Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
+migration while the application keeps the pooled URL.
+
+## YAML structure
+
+```yaml
+vars:
+  cache_dir: .airllm
+
+control_plane:
+  database:
+    url: ${env:DATABASE_URL:-postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm}
+  bootstrap:
+    token: ${file:${var:cache_dir}/dataplane.key}
+  console_url: ${env:AIRLLM_CONSOLE_URL:-http://127.0.0.1:5000}
+  public_signup: ${env:AIRLLM_PUBLIC_SIGNUP:-false}
+  secrets:
+    kind: file
+    root: ${var:cache_dir}/secrets
+
+data_plane:
+  bundle:
+    kind: remote
+    control_plane: &control_plane_link
+      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      token: ${file:${var:cache_dir}/dataplane.key}
+    cache_dir: ${var:cache_dir}
+    poll_interval_s: 5
+    heartbeat_interval_s: 30
+  events:
+    kind: sqlite
+    control_plane: *control_plane_link
+    cache_dir: ${var:cache_dir}
+    flush_interval_s: 5
+  secrets:
+    kind: file
+    root: ${var:cache_dir}/secrets
+```
+
+Both planes must configure the same secret store. A remote data plane uses a management key with bundle-read, usage-ingest, and heartbeat permissions.
+
+## References and variables
+
+| Syntax | Behavior |
+| --- | --- |
+| `${env:NAME}` | Environment value; a missing reference resolves the enclosing scalar to null and required-field validation fails |
+| `${env:NAME:-fallback}` | Environment value with a fallback |
+| `${file:path}` | Trimmed file contents |
+| `${file:path:-fallback}` | File contents with a fallback when absent |
+| `${var:name}` | Text substitution from the top-level `vars` mapping |
+
+Refs can appear inside a larger string. Variables resolve before environment and file refs.
+
+## Bundle sources
+
+| Kind | Fields |
+| --- | --- |
+| `remote` | `control_plane`, `cache_dir`, `poll_interval_s`, `heartbeat_interval_s` |
+| `local` | `path`, `reload_interval_s` |
+
+Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle reload defaults to 2 seconds.
+
+## Event outboxes
+
+| Kind | Use |
+| --- | --- |
+| `sqlite` | Durable queued usage export; requires a control-plane link and cache directory |
+| `devnull` | Discard usage; standalone development only |
+
+SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
+
+## Secret stores
+
+| Kind | Use |
+| --- | --- |
+| `file` | One private file per credential; default managed deployment |
+| `env` | One effective credential per provider; standalone or single-tenant use |
+| `insecure_database` | Postgres-backed prototype store |
+| `memory` | Tests and ephemeral development |
+
+The environment store checks `AIRLLM_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
+are not part of its lookup, so it cannot isolate tenant-specific values.

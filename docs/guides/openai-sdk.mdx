@@ -1,0 +1,92 @@
+---
+title: "Use the OpenAI SDK"
+description: "Point Chat Completions and Responses clients at AirLLM without changing application request shapes."
+---
+
+AirLLM exposes both Chat Completions and Responses at the standard SDK paths beneath `/inf/v1`. Your inference key replaces the upstream API key.
+
+## Configure the client
+
+```bash
+export AIRLLM_URL='http://localhost:8080'
+export AIRLLM_INFERENCE_KEY='sk-inf-your-key'
+export AIRLLM_MODEL='openai/gpt-4o-mini'
+```
+
+<CodeGroup>
+
+```python Chat Completions
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+)
+
+completion = client.chat.completions.create(
+    model=os.environ["AIRLLM_MODEL"],
+    messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
+)
+
+print(completion.choices[0].message.content)
+```
+
+```python Responses
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+)
+
+response = client.responses.create(
+    model=os.environ["AIRLLM_MODEL"],
+    input="Explain request routing in one sentence.",
+)
+
+print(response.output_text)
+```
+
+</CodeGroup>
+
+## Migrate an existing application
+
+For a client that already constructs the same SDK, only two values change:
+
+| Setting | AirLLM value |
+| --- | --- |
+| Base URL | `https://your-airllm-domain/inf/v1` |
+| API key | A workspace inference key beginning with `sk-inf-` |
+| Model | A catalog model ID from `airllm models list` |
+
+The official SDK identifies its dialect automatically. If you send raw HTTP to `/chat/completions`, set
+`x-airllm-dialect: openai_native` when a text-only request could also be valid canonical JSON.
+
+<Info>
+  Inference keys authorize model requests only. Management keys beginning with `sk-cp-` are rejected by the gateway.
+</Info>
+
+## Inspect gateway adjustments
+
+AirLLM reports every parameter it clamps, emulates, or drops in the additive `gateway.adjustments` field. The SDK
+retains this extension in `model_extra`:
+
+```python
+gateway = (completion.model_extra or {}).get("gateway", {})
+for adjustment in gateway.get("adjustments", []):
+    print(adjustment["param"], adjustment["action"], adjustment["detail"])
+```
+
+Use a [strict parameter policy](/docs/policies#require-parameter-support) when a dropped requested parameter must reject the route instead.
+
+## Run the repository example
+
+```bash
+uv run python examples/chat.py
+```
+
+Continue with [streaming](/docs/guides/streaming), [tools](/docs/guides/tools), or the [Chat Completions reference](/docs/reference/chat-completions).

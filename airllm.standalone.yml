@@ -6,7 +6,7 @@
 #   uv run airllmdp serve --config airllm.standalone.yml
 #
 # Then:
-#   curl http://127.0.0.1:8080/v1/chat/completions \
+#   curl http://127.0.0.1:8080/inf/v1/chat/completions \
 #     -H "Authorization: Bearer sk-inf-standalone-dev" \
 #     -H "Content-Type: application/json" \
 #     -d '{"model": "claude-sonnet-5", "messages": [{"role": "user", "content": "hi"}]}'

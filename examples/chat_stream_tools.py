@@ -17,15 +17,12 @@ import httpx
 from dotenv import find_dotenv, load_dotenv
 
 WEATHER_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": "Get the current weather for a city",
-        "parameters": {
-            "type": "object",
-            "properties": {"city": {"type": "string"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}},
-            "required": ["city"],
-        },
+    "name": "get_weather",
+    "description": "Get the current weather for a city",
+    "parameters": {
+        "type": "object",
+        "properties": {"city": {"type": "string"}, "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}},
+        "required": ["city"],
     },
 }
 
@@ -43,12 +40,13 @@ def main() -> int:
     names: dict[int, str] = {}
     with httpx.stream(
         "POST",
-        f"{gateway}/v1/chat/completions",
-        headers={"authorization": f"Bearer {api_key}"},
+        f"{gateway.rstrip('/')}/inf/v1/chat/completions",
+        headers={"authorization": f"Bearer {api_key}", "x-airllm-dialect": "canonical"},
         json={
             "model": model,
             "messages": [{"role": "user", "content": "What is the weather in Paris and in Tokyo, in celsius?"}],
             "tools": [WEATHER_TOOL],
+            "tool_choice": {"name": "get_weather"},
             "stream": True,
         },
         timeout=60.0,
@@ -60,13 +58,12 @@ def main() -> int:
             delta = event.get("delta", {})
             if delta.get("type") == "tool_call":
                 index = delta.get("index", 0)
-                fn = delta.get("function") or {}
-                if fn.get("name"):
-                    names[index] = fn["name"]
-                    print(f"\n[tool {index}] {fn['name']}(", end="", flush=True)
-                if fn.get("arguments"):
-                    arguments[index] = arguments.get(index, "") + fn["arguments"]
-                    print(fn["arguments"], end="", flush=True)
+                if delta.get("name"):
+                    names[index] = delta["name"]
+                    print(f"\n[tool {index}] {delta['name']}(", end="", flush=True)
+                if delta.get("arguments"):
+                    arguments[index] = arguments.get(index, "") + delta["arguments"]
+                    print(delta["arguments"], end="", flush=True)
             elif "usage" in event:
                 print(f"\n\nfinish: {event['finish_reason']} | {event['usage']['input_tokens']} in / {event['usage']['output_tokens']} out")
 

@@ -1,0 +1,124 @@
+---
+title: "Development"
+description: "Run the Python services and console from source, execute checks, regenerate contracts, and verify request-path changes."
+---
+
+Run commands from the repository root. Development requires Python 3.13+, uv, Bun, and Docker with Compose.
+
+## Install and initialize
+
+```bash
+uv sync --all-packages --frozen
+bun install --frozen-lockfile
+uv run pre-commit install
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up -d --wait
+uv run airllmcp bootstrap-keygen
+uv run airllmcp migrate
+uv run airllmcp taxonomy --file taxonomy/taxonomy.yml
+```
+
+Run `bootstrap-keygen` once. It creates `.airllm/dataplane.key`; keep it with the matching local database. This leaves
+the instance unclaimed so the normal onboarding flow remains available.
+
+## Start the services
+
+Run each process in a separate terminal:
+
+| Process | Command | Address |
+| --- | --- | --- |
+| Control plane | `uv run airllmcp serve --dev` | `http://127.0.0.1:8000` |
+| Data plane | `uv run airllmdp serve --config airllm.yml --dev` | `http://127.0.0.1:8080` |
+| Console | `bun run dev` | `http://127.0.0.1:5000` |
+
+Complete setup through Vite's public development origin:
+
+```bash
+uv run --package cli airllm quickstart --url http://127.0.0.1:5000
+```
+
+Vite forwards `/api` and `/inf` to the Python services. Use the same hostname throughout a browser session.
+
+## Gateway-only development
+
+```bash
+export OPENAI_API_KEY='your-provider-key'
+uv run airllmdp serve --config airllm.standalone.yml --dev
+```
+
+`bundle.standalone.yml` reloads after edits. This mode uses environment provider keys, a public development inference
+key, and a `devnull` usage outbox.
+
+## Python checks
+
+```bash
+uv run ruff format .
+uv run ruff check .
+uv run ty check .
+uv run lint-imports
+uv run pytest -n auto
+```
+
+Control-plane unit tests do not need Postgres:
+
+```bash
+uv run pytest apps/control-plane/tests/unit
+```
+
+Integration tests start one throwaway Postgres server and clone a migrated template database per test. Docker must be
+running. `AIRLLM_TEST_PG_URL` can point to a disposable long-lived Postgres server whose user may create databases.
+
+Request-path changes also require black-box scenarios and a real request against a running data plane:
+
+```bash
+uv run pytest tests/acceptance/scenarios
+```
+
+## Console checks
+
+```bash
+bun run format:check
+bun run lint
+bun run typecheck
+bun run coverage
+bun run --filter '@workspace/gateway-console' build
+```
+
+## Generated contracts
+
+After changing a management endpoint or canonical schema:
+
+```bash
+./scripts/export-openapi.sh
+./scripts/generate-api-models.sh
+./scripts/export-completion-schemas.sh
+bun run --cwd lib/api-spec codegen
+```
+
+Commit generated files with their source. Do not edit generated API models, clients, or schemas by hand.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `apps/control-plane` | Management API, catalog, bundles, usage ingestion |
+| `apps/data-plane` | Inference, adapters, routing, streaming, metering |
+| `apps/console` | React management console |
+| `apps/cli` | Setup and resource-management CLI |
+| `lib/contract` | Only shared contract between the planes |
+| `lib/api-models` | Generated Python management API models |
+| `lib/api-client-react` | Generated console client |
+| `taxonomy`, `model-audit` | Provider catalog and direct API evidence |
+| `tests/acceptance` | Running-gateway behavior |
+| `tests/deployment` | Fresh Docker deployment verification |
+
+## Reset development state
+
+Stop the three source processes, then run:
+
+```bash
+docker compose -f docker-compose.dev.yml down -v
+rm -rf .airllm
+```
+
+This permanently deletes the development database, runtime key, provider credentials, bundle cache, and usage outbox. Repeat initialization afterward.

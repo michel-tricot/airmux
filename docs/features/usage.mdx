@@ -1,0 +1,55 @@
+---
+title: "Usage and activity"
+description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
+---
+
+AirLLM records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways queue events
+locally and export them to the control plane in batches.
+
+## Usage event fields
+
+| Field | Meaning |
+| --- | --- |
+| `request_id` | One caller request; fallback attempts share this ID |
+| `event_id` | Unique event ID for one attempt |
+| `model_id`, `provider_id` | Route used for the attempt |
+| `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
+| `cache_read_tokens`, `cache_write_tokens` | Cache traffic included in input tokens |
+| `cost_usd` | Cost derived from catalog rates and token counts |
+| `latency_ms` | Attempt latency observed by the gateway |
+| `status` | `ok`, a denial or provider failure class, or `cancelled` |
+| `credential_id`, `credential_scope` | Credential metadata without the secret value |
+| `bundle_id` | Configuration version that governed the request |
+
+Costs use the prices stored in the catalog at request time. When complete provider usage is unavailable, AirLLM marks the event's usage as estimated.
+
+## Inspect usage
+
+```bash
+airllm events list
+airllm events tail --interval 2 --keep 30
+```
+
+The console shows workspace usage and instance or organization activity where the current principal has permission. The
+management API supports cursor pagination with an `(occurred_at, event_id)` pair.
+
+## Gateway health
+
+```bash
+airllm data-planes list
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+```
+
+`/healthz` reports the number and age of queued events. `/readyz` returns `503` when the gateway has no usable bundle or
+rejected the latest manifest. A gateway is reported offline after 90 seconds without a heartbeat.
+
+## Audit activity
+
+Control-plane writes to audited resources are attributed to the acting user by database triggers. Activity views expose
+the before and after state while excluding database-owned timestamps. Usage events and audit activity answer different
+questions: usage describes inference attempts; audit activity describes management changes.
+
+<Info>
+  A budget rule can be stored today, but budget enforcement is not implemented. Do not rely on it as a spending limit.
+</Info>

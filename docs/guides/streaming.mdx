@@ -1,0 +1,75 @@
+---
+title: "Stream responses"
+description: "Consume incremental text, reasoning, tool calls, usage, and terminal events from AirLLM."
+---
+
+Set `stream: true` on any inference surface. AirLLM translates the provider stream into the caller's dialect while
+preserving incremental text, reasoning, and tool-call arguments.
+
+## SDK streaming
+
+```python
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+)
+
+stream = client.chat.completions.create(
+    model=os.environ["AIRLLM_MODEL"],
+    messages=[{"role": "user", "content": "Count from one to five."}],
+    stream=True,
+)
+
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+## Raw canonical stream
+
+```bash
+curl --no-buffer http://localhost:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'x-airllm-dialect: canonical' \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Count from one to five"}],"stream":true}'
+```
+
+Canonical streaming emits:
+
+1. Zero or more `data:` events with a text, reasoning, or tool-call `delta`
+2. One closing event with `finish_reason`, `usage`, and `gateway`, but no `delta`
+3. `data: [DONE]`
+
+```json
+{"id":"019...","delta":{"type":"text","text":"One"}}
+```
+
+```json
+{
+  "id": "019...",
+  "finish_reason": "stop",
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 8,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "estimated": false
+  },
+  "gateway": {"finish_reason": "stop", "adjustments": []}
+}
+```
+
+## Cancellation and failures
+
+When a client disconnects, AirLLM closes the upstream connection and records the partial attempt with
+`status=cancelled`. If the provider fails after streaming has started, the HTTP status is already committed, so the
+stream carries a dialect-shaped error event instead.
+
+The final usage can be estimated when a provider does not report complete token counts. Each fallback attempt produces its own usage event.
+
+Run `uv run python examples/chat_stream.py` for parsed output or `uv run python examples/chat_stream_raw.py` to inspect every SSE line.

@@ -1,0 +1,54 @@
+---
+title: "Errors"
+description: "Handle stable gateway error codes, provider errors, and failures that arrive after streaming begins."
+---
+
+AirLLM keeps the error envelope native to the caller surface.
+
+<CodeGroup>
+
+```json Canonical
+{"error": {"code": "unknown_model", "message": ""}}
+```
+
+```json Chat Completions or Responses
+{"error": {"type": "invalid_request_error", "code": "unknown_model", "message": ""}}
+```
+
+```json Messages
+{"type": "error", "error": {"type": "unknown_model", "message": ""}}
+```
+
+</CodeGroup>
+
+## Gateway codes
+
+| HTTP | Code | Meaning |
+| --- | --- | --- |
+| 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
+| 400 | `invalid_dialect` | Unknown `x-airllm-dialect` value |
+| 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
+| 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
+| 401 | `missing_bearer_token` | No bearer token and no valid playground cookie |
+| 401 | `invalid_token` | Inference key is unknown, expired, revoked, or not adopted yet |
+| 402 | `credential_unavailable` | Policy and scope selection left no eligible credential |
+| 403 | `policy_denied` | A matching workspace restriction rejected the request |
+| 404 | `unknown_model` | Catalog model ID does not exist in the active bundle |
+| 502 | `provider_not_configured` | Model references a provider absent from the bundle |
+| 502 | `credential_missing` | Eligible credential references could not resolve a value |
+| 502 | `invalid_upstream_response` | Provider response or stream violated its expected protocol |
+| 502 | `upstream_unreachable` | Provider connection failed |
+| 503 | `bundle_unavailable` | Gateway has no accepted bundle |
+| 503 | `credential_backend_unavailable` | Secret store could not answer |
+| 504 | `upstream_timeout` | Provider transport timed out |
+| 504 | `fallback_deadline_exceeded` | Overall configured fallback deadline expired |
+
+Provider HTTP errors may retain the provider status and normalized provider code. Do not branch only on the human
+message; prefer HTTP status and `code` or `type`.
+
+## Streaming errors
+
+After response headers are sent, the HTTP status remains `200`. The stream emits a dialect-shaped error event and then
+terminates. Treat either an error event or an incomplete terminal sequence as failure.
+
+Retries belong in the workspace fallback policy or application layer. Avoid retrying validation errors, authentication failures, and policy denials.

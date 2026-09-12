@@ -1,0 +1,65 @@
+---
+title: "Create a workspace policy"
+description: "Build a reusable rule, attach it to a policy, and verify the policy from the CLI."
+---
+
+Rules hold request matching and one action. Policies target inference keys and attach one or more reusable rules.
+
+This example limits every request in the active workspace to 1,024 output tokens.
+
+<Steps>
+  <Step title="Create the rule configuration">
+    Save this as `output-limit-rule.json`:
+
+    ```json
+    {
+      "name": "Limit output to 1024 tokens",
+      "definition": {
+        "match": {"kind": "all_requests"},
+        "action": {"kind": "request_limits", "max_output_tokens": 1024}
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Create the reusable rule">
+    ```bash
+    airllm rules create output-limit-rule.json -f json
+    ```
+
+    Copy the returned rule `id`.
+  </Step>
+
+  <Step title="Create the policy configuration">
+    Save this as `output-limit-policy.json`, replacing `RULE_ID`:
+
+    ```json
+    {
+      "name": "Production output limit",
+      "enabled": true,
+      "priority": 10,
+      "definition": {
+        "target": {"kind": "all_keys"},
+        "rule_ids": ["00000000-0000-0000-0000-000000000001"]
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Create and inspect the policy">
+    ```bash
+    airllm policies create output-limit-policy.json
+    airllm policies list
+    ```
+  </Step>
+
+  <Step title="Verify behavior">
+    After a gateway adopts the new bundle, a request with `max_tokens` greater than `1024` returns `403 policy_denied`.
+    A request that omits `max_tokens` is allowed because AirLLM does not invent a caller limit.
+  </Step>
+</Steps>
+
+Policy updates publish a new configuration bundle asynchronously. Check
+[bundles and consistency](/docs/concepts/bundles) if a newly saved policy is not visible at a gateway yet.
+
+See [workspace policies](/docs/policies) for every match and action type.

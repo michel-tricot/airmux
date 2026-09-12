@@ -2,33 +2,101 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "AirLLM",
+  "description": "A self-hosted LLM gateway with provider routing, scoped credentials, policies, and usage accounting.",
   "colors": {
-    "primary": "#ff0000"
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
   },
+  "favicon": "apps/console/public/favicon.svg",
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting started",
-        "pages": ["docs/index", "docs/policies"]
-      },
-      {
-        "group": "Deployment",
-        "pages": [
-          "docs/deployment/index",
-          "docs/deployment/docker",
-          "docs/deployment/fly",
-          "docs/deployment/render",
-          "docs/deployment/digitalocean",
-          "docs/deployment/scaling"
+        "tab": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["docs/index", "docs/quickstart"]
+          },
+          {
+            "group": "Tutorials",
+            "pages": [
+              "docs/guides/openai-sdk",
+              "docs/guides/anthropic-sdk",
+              "docs/guides/streaming",
+              "docs/guides/tools",
+              "docs/guides/structured-output",
+              "docs/guides/policy-workflow"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "docs/features/model-routing",
+              "docs/features/provider-credentials",
+              "docs/policies",
+              "docs/features/usage"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "docs/concepts/architecture",
+              "docs/concepts/canonical-model",
+              "docs/concepts/authentication",
+              "docs/concepts/bundles",
+              "docs/concepts/request-lifecycle"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "docs/deployment/index",
+              "docs/deployment/docker",
+              "docs/deployment/fly",
+              "docs/deployment/render",
+              "docs/deployment/digitalocean",
+              "docs/deployment/scaling",
+              "docs/deployment/operations",
+              "docs/deployment/security"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": ["docs/development"]
+          }
         ]
       },
       {
-        "group": "Development",
-        "pages": ["docs/development"]
-      },
-      {
-        "group": "Technical design",
-        "pages": ["notes/design/DATAPLANE", "notes/design/AUTHORITY", "notes/design/BYOK"]
+        "tab": "Reference",
+        "icon": "braces",
+        "groups": [
+          {
+            "group": "Inference",
+            "pages": [
+              "docs/reference/inference",
+              "docs/reference/chat-completions",
+              "docs/reference/responses",
+              "docs/reference/messages",
+              "docs/reference/canonical",
+              "docs/reference/errors"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "docs/reference/cli",
+              "docs/reference/configuration",
+              "docs/reference/models-and-providers",
+              "docs/reference/management-api"
+            ]
+          },
+          {
+            "group": "Control plane endpoints",
+            "openapi": "lib/api-spec/openapi.yaml"
+          }
+        ]
       }
     ]
   }

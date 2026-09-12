@@ -1,0 +1,82 @@
+---
+title: "Management API overview"
+description: "Authenticate to the control plane, address tenant scopes, unwrap envelopes, handle errors, and browse generated endpoints."
+---
+
+The control plane is served at `/api/v1`. The generated endpoint pages in this reference come directly from `lib/api-spec/openapi.yaml`.
+
+## Authentication
+
+Automation sends a management key:
+
+```text
+Authorization: Bearer sk-cp-your-key
+```
+
+Browser sessions use the `airllm_session` cookie and must also send `X-Requested-With`. Inference keys are not accepted by management endpoints.
+
+## Scope in URLs
+
+| Scope | Path pattern |
+| --- | --- |
+| Instance | `/api/v1/instance/...` or another instance resource |
+| Organization | `/api/v1/orgs/{org_id}/...` |
+| Workspace | `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/...` |
+
+`org_id` and `workspace_ref` accept the resource UUID or slug where the endpoint documents that behavior. A scoped
+management key must cover the target, and its permission ceiling must include the operation.
+
+## Response envelope
+
+Every successful management response wraps its result once:
+
+```json
+{
+  "data": {
+    "id": "019...",
+    "name": "Production",
+    "slug": "production"
+  }
+}
+```
+
+Lists use `{"data": [...]}`. Errors retain FastAPI's `{"detail": ...}` shape and are not enveloped.
+
+## Example
+
+```bash
+curl https://llm.example.com/api/v1/orgs/$ORG_ID/workspaces \
+  -H "Authorization: Bearer $AIRLLM_MANAGEMENT_KEY" \
+  -H 'Accept: application/json'
+```
+
+## Permissions
+
+Permission names are closed strings grouped by resource:
+
+- `organizations.read|create|update|delete`
+- `principals.read|manage`
+- `members.read|manage`
+- `workspaces.read|create|update|delete`
+- `catalog.read|manage`
+- `provider-credentials.read|manage`
+- `inference-keys.read|manage`
+- `policies.read|manage`
+- `playground.execute`
+- `bundles.read|publish`
+- `usage.read|ingest`
+- `data-planes.read|heartbeat`
+- `audit.read`
+- `management-keys.read|issue|revoke`
+
+## One-time secrets
+
+Inference-key creation, management-key creation, invitation issue/reissue, and service-account creation actions can mint
+a secret. Store the returned value immediately; later list and get operations return metadata only.
+
+## Pagination
+
+Usage endpoints accept `limit` from 1 to 200 plus either a complete `before` and `before_event_id` pair or an `after`
+and `after_event_id` pair. Timestamps must include a timezone. Do not mix before and after cursors.
+
+Use the endpoint pages that follow this overview for request bodies, response schemas, required permissions, and interactive examples.

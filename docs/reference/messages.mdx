@@ -1,0 +1,65 @@
+---
+title: "Messages"
+description: "Reference the Messages-compatible request, response, thinking, tools, structured output, and SSE behavior."
+---
+
+```text
+POST /inf/v1/messages
+```
+
+The route always returns Messages-shaped output and errors, independent of the selected provider family.
+
+## Request
+
+```bash
+curl https://llm.example.com/inf/v1/messages \
+  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "anthropic/claude-sonnet-4-6",
+    "max_tokens": 128,
+    "system": "Be concise.",
+    "messages": [{"role": "user", "content": "Say hello"}]
+  }'
+```
+
+## Fields
+
+| Field | Notes |
+| --- | --- |
+| `model` | Required catalog model ID |
+| `messages` | User and assistant Messages content |
+| `system` | String or supported text-block array |
+| `max_tokens` | Minimum 1 when supplied |
+| `stream` | Boolean |
+| `temperature`, `top_p` | Sampling fields |
+| `stop_sequences` | Canonical stop-sequence alias |
+| `tools`, `tool_choice` | Tool definitions and selection |
+| `thinking` | Reasoning type, token budget, and display settings |
+| `output_config` | Reasoning effort and structured-output format |
+
+Other top-level fields, such as `top_k`, `metadata`, and `service_tier`, travel as provider extras when the selected profile accepts them.
+
+## Response
+
+```json
+{
+  "id": "019...",
+  "type": "message",
+  "role": "assistant",
+  "model": "anthropic/claude-sonnet-4-6",
+  "content": [{"type": "text", "text": "Hello!"}],
+  "stop_reason": "end_turn",
+  "usage": {"input_tokens": 8, "output_tokens": 2},
+  "gateway": {"finish_reason": "stop", "adjustments": []}
+}
+```
+
+Reasoning signatures are opaque provider values. Replay the complete thinking block unchanged on a later turn when the SDK includes it.
+
+## Streaming
+
+The response uses named Messages events: `message_start`, `ping`, content block start/delta/stop events,
+`message_delta`, and `message_stop`. The terminal `message_delta` carries final usage and the additive `gateway` object.
+
+See [use the Anthropic SDK](/docs/guides/anthropic-sdk) for a buffered and streaming client example.
