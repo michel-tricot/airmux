@@ -61,7 +61,7 @@ def test_instance_flag_overrides_the_active_org_for_management_key_creation(monk
     assert "user_id" not in submitted["body"]
 
 
-def test_management_key_mint_rejects_a_target_user():
-    result = runner.invoke(app, ["management-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance", "--user", str(uuid4())])
+def test_management_key_creation_rejects_a_target_user():
+    result = runner.invoke(app, ["management-keys", "create", "--label", "ci", "--permission", "bundles.read", "--instance", "--user", str(uuid4())])
     assert result.exit_code == 2
     assert "No such option" in result.output
