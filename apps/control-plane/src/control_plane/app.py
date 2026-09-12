@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI
@@ -143,7 +144,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(CredentialError, credential_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
-    for router in (
+    routers = (
         management_keys_router,
         auth_router,
         enroll_router,
@@ -160,13 +161,15 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
         org_router,
         sync_router,
         taxonomy_router,
-    ):
+    )
+    for router in routers:
         v1.include_router(router)
     app.include_router(v1)
     throttle_routes = tuple(
-        (route.path_regex, frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
-        for route in v1.routes
-        if isinstance(route, APIRoute) and route.path.startswith("/api/v1/")
+        (re.compile(f"^/api/v1{route.path_regex.pattern.removeprefix('^')}"), frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
+        for router in routers
+        for route in router.routes
+        if isinstance(route, APIRoute)
         if (
             groups := [group for dependency in route.dependant.dependencies if (group := getattr(dependency.call, "traffic_group", None)) is not None]
         )
