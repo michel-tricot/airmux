@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Literal, Self
+from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -14,7 +14,6 @@ from control_plane.models.audit import audited
 from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RequestModel
-from control_plane.models.playground_session import PlaygroundSession
 
 
 @audited
@@ -37,15 +36,6 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
     workspace_id: UUID = Field(primary_key=True, index=True)
     org_id: UUID
     role: str = WorkspaceRole.member
-
-    async def save(self) -> Self:
-        await super().save()
-        await PlaygroundSession.revoke_unsupported(self.user_id)
-        return self
-
-    async def delete(self) -> None:
-        await super().delete()
-        await PlaygroundSession.revoke_unsupported(self.user_id)
 
     @classmethod
     async def ensure(cls, *, user_id: UUID, workspace_id: UUID, org_id: UUID, role: str) -> None:

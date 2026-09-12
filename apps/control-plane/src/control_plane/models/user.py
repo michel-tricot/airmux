@@ -17,7 +17,6 @@ from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyGrantIn
 from control_plane.models.org_membership import MembershipOut, OrgMembership
-from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.workspace_membership import WorkspaceMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airllm.invalid"
@@ -49,15 +48,6 @@ class User(Record, Identified, Tombstonable, table=True):
 
     api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account", "managing_org_id"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
-
-    async def save(self) -> Self:
-        await super().save()
-        await PlaygroundSession.revoke_unsupported(self.id)
-        return self
-
-    async def delete(self) -> None:
-        await PlaygroundSession.revoke_user(self.id)
-        await super().delete()
 
     @staticmethod
     def normalize_email(email: str) -> str:
