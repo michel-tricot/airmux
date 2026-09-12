@@ -19,6 +19,17 @@ categories below use it, so a new test in either place gets the same one-line se
 CI runs the two as separate jobs, so a slow benchmark sweep does not delay the correctness
 signal and can be gated independently.
 
+## Browser security regressions
+
+`browser/` runs Chromium against the actual console, control plane, data plane, and synthetic
+upstream. Every test gets an empty browser context, an isolated database, and dynamic local
+ports. The management API seeds fixtures; login and the tested mutations go through the UI.
+
+Install with `uv sync --all-packages --frozen`, `bun install --frozen-lockfile`, and
+`uv run playwright install chromium`, then run `uv run pytest tests/acceptance/browser -q`.
+The Browser security workflow runs this suite on pull requests and main pushes.
+Screenshots live beside the temporary deployment logs; secret reveal inputs are masked.
+
 ## Adding a benchmark
 
 Measure overhead as a difference, not an absolute: run the same work with and without the thing

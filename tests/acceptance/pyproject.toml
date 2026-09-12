@@ -8,6 +8,7 @@ dependencies = [
   "python-dotenv",
   "rich",
   "testcontainers",
+  "playwright>=1.55",
 ]
 
 [tool.uv]
