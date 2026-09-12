@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 
 from control_plane.models import AuthIdentity, AuthSession, PlaygroundSession, User, set_actor
+from control_plane.passwords import hash_password
 from control_plane.sessions import SESSION_COOKIE, mint_session, verify_session
+from control_plane.throttling import RateLimit, ThrottleConfig
 
 CSRF = {"X-Requested-With": "fetch"}
 
@@ -191,7 +193,9 @@ def test_logout_revokes_active_playground_session(tmp_path):
 
 
 def test_self_change_requires_current_password(tmp_path):
-    cp = setup_control_plane(tmp_path)
+    cp = setup_control_plane(
+        tmp_path, throttling=ThrottleConfig(authentication=RateLimit(burst=10, per_second=10), account=RateLimit(burst=10, per_second=10))
+    )
     with _client(cp) as c:
         _make_user(c, cp)
         _login(c)
@@ -226,7 +230,7 @@ def test_service_accounts_rejected_from_password_login(tmp_path):
             row = await User.find_by_id(UUID(sa["id"]))
             assert row is not None
             await set_actor(row.id)
-            await AuthIdentity.set_password(row, PASSWORD)
+            await AuthIdentity.set_password_hash(row, hash_password(PASSWORD))
 
         run_in_db(tmp_path, plant_password)
         assert c.post("/api/v1/auth/login", json={"email": sa["email"], "password": PASSWORD}).status_code == 401

@@ -42,7 +42,7 @@ def _invitation_preview(invitation: OrgInvitation, org_name: str, workspace_name
     )
 
 
-@router.get("", tags=["Enrollment"], dependencies=[user_scoped()])
+@router.get("", tags=["Enrollment"], dependencies=[user_scoped("api")])
 async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut]:
     """List the current user's visible organizations, personal organization, and pending invitations."""
     orgs = await Org.joined_by(user.id)
@@ -60,7 +60,7 @@ async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut
     )
 
 
-@router.post("/org", tags=["Enrollment"], dependencies=[browser_scoped()])
+@router.post("/org", tags=["Enrollment"], dependencies=[browser_scoped("api")])
 async def create_personal_org(body: OrgCreate, user: CookieUserDep) -> Envelope[OrgOut]:
     """Create the current user's personal organization and make them its owner.
 
@@ -76,7 +76,7 @@ async def create_personal_org(body: OrgCreate, user: CookieUserDep) -> Envelope[
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.post("/invitations/preview", tags=["Enrollment"], dependencies=[public()])
+@router.post("/invitations/preview", tags=["Enrollment"], dependencies=[public("api")])
 async def preview_invitation(body: InvitationTokenIn) -> Envelope[InvitationPreviewOut]:
     """Preview the organization and optional workspace named by a shared invitation secret."""
     preview = await OrgInvitation.preview_for_token(body.token)
@@ -88,7 +88,7 @@ async def preview_invitation(body: InvitationTokenIn) -> Envelope[InvitationPrev
     return Envelope(data=_invitation_preview(invitation, org_name, workspace_name))
 
 
-@router.post("/invitations/accept", tags=["Enrollment"], dependencies=[browser_scoped()])
+@router.post("/invitations/accept", tags=["Enrollment"], dependencies=[browser_scoped("api")])
 async def accept_invitation(body: InvitationTokenIn, user: CookieUserDep) -> Envelope[InvitationAcceptedOut]:
     """Accept an invitation whose email matches the signed-in human account."""
     invitation = await OrgInvitation.for_token(body.token, lock=True)

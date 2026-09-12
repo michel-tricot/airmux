@@ -8,7 +8,6 @@ from control_plane.db import current_session
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.user import User
-from control_plane.passwords import hash_password
 
 PASSWORD_PROVIDER = "password"  # noqa: S105 provider discriminator, not a secret
 
@@ -47,10 +46,10 @@ class AuthIdentity(Record, Identified, Tombstonable, table=True):
         return (await current_session().execute(query)).scalar_one_or_none()
 
     @classmethod
-    async def set_password(cls, user: User, password: str) -> AuthIdentity:
+    async def set_password_hash(cls, user: User, secret_hash: str) -> AuthIdentity:
         identity = await cls.password_for(user.email)
         if identity is not None and identity.user_id != user.id:
             raise IdentityConflictError
         identity = identity or cls(user_id=user.id, provider=PASSWORD_PROVIDER, subject=User.normalize_email(user.email))
-        identity.secret_hash = hash_password(password)
+        identity.secret_hash = secret_hash
         return await identity.save()

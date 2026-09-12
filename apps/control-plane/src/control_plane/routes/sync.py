@@ -37,7 +37,7 @@ def _bundle(bundle: Bundle) -> BundleV1:
     return BundleV1.model_validate_json(bundle.payload)
 
 
-@router.get("/bundles/manifest", dependencies=[require(credential_scope, Permission.bundles_read)])
+@router.get("/bundles/manifest", dependencies=[require("operational", credential_scope, Permission.bundles_read)])
 async def bundle_manifest(scope: CredentialScopeDep) -> Envelope[BundleManifest]:
     """Return every latest organization bundle visible to the authenticated data plane credential."""
     if scope.level is ScopeLevel.workspace:
@@ -60,13 +60,13 @@ async def selected_bundle_scope(bundle: BundleDep) -> Scope:
     return Scope.org(bundle.org_id)
 
 
-@router.get("/bundles/{bundle_id}", dependencies=[require(selected_bundle_scope, Permission.bundles_read)])
+@router.get("/bundles/{bundle_id}", dependencies=[require("operational", selected_bundle_scope, Permission.bundles_read)])
 async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
     """Return one immutable bundle visible to the authenticated data plane credential."""
     return Envelope(data=_bundle(bundle))
 
 
-@router.get("/bundle/latest", dependencies=[require(bundle_scope, Permission.bundles_read)])
+@router.get("/bundle/latest", dependencies=[require("operational", bundle_scope, Permission.bundles_read)])
 async def bundle_latest(scope: BundleScopeDep) -> Envelope[BundleV1]:
     """Return the newest policy bundle available at the requested organization scope."""
     conditions = (Bundle.org_id == scope.org_id,) if scope.org_id is not None else ()
@@ -76,7 +76,7 @@ async def bundle_latest(scope: BundleScopeDep) -> Envelope[BundleV1]:
     return Envelope(data=_bundle(bundle))
 
 
-@router.post("/events", dependencies=[require(credential_scope, Permission.usage_ingest)])
+@router.post("/events", dependencies=[require("operational", credential_scope, Permission.usage_ingest)])
 async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
     """Ingest up to 1,000 usage events; repeated event IDs are ignored."""
     if not events:
@@ -105,7 +105,7 @@ def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[dat
     return health
 
 
-@router.post("/heartbeat", dependencies=[require(credential_scope, Permission.data_planes_heartbeat)])
+@router.post("/heartbeat", dependencies=[require("operational", credential_scope, Permission.data_planes_heartbeat)])
 async def heartbeat(scope: CredentialScopeDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Create or refresh a data-plane instance at the management key's scope."""
     now = datetime.now(tz=UTC)

@@ -10,7 +10,7 @@ from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 from contract import Secret
 from data_plane.canonical import CanonicalReasoningPart, CanonicalTextPart, CanonicalToolCallPart
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import UpstreamStreamError
+from data_plane.egress.base import UpstreamProtocolError, UpstreamStreamError
 
 if TYPE_CHECKING:
     from data_plane.canonical import CanonicalChunk, CanonicalResponse
@@ -315,6 +315,19 @@ def test_a_malformed_stream_event_is_rejected(kind):
     (event,) = list(adapter.frame(b"data: not-json\n\n", state))
     with pytest.raises(ValueError, match="invalid upstream stream event"):
         adapter.transform_stream_event(event, state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_invalid_sse_event_name_preserves_partial_accounting(kind):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    events = list(adapter.frame(CASES[kind]["text"].log, adapter.new_stream_state(CTX)))
+    adapter.transform_stream_event(events[0], state)
+    partial = adapter.finalize(state)
+
+    with pytest.raises(UpstreamProtocolError):
+        list(adapter.frame(b"event: \xff\ndata: {}\n\n", state))
+    assert adapter.finalize(state) == partial
 
 
 @pytest.mark.parametrize("kind", KINDS)

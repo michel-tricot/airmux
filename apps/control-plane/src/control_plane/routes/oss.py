@@ -15,7 +15,7 @@ class ClaimOut(BaseModel):
     public_signup: bool
 
 
-@router.get("/claim", dependencies=[public()])
+@router.get("/claim", dependencies=[public("api")])
 async def claim(request: Request) -> Envelope[ClaimOut]:
     """Return whether a human account has claimed this deployment."""
     return Envelope(data=ClaimOut(claimed=await User.instance_claimed(), public_signup=request.app.state.settings.public_signup))

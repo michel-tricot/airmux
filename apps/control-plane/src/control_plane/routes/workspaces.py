@@ -34,7 +34,7 @@ def _set_playground_cookie(response: Response, token: str, request: Request) -> 
     )
 
 
-@router.post("", tags=["Organization Workspaces"], dependencies=[require(org_scope, Permission.workspaces_create)])
+@router.post("", tags=["Organization Workspaces"], dependencies=[require("api", org_scope, Permission.workspaces_create)])
 async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDep) -> Envelope[WorkspaceOut]:
     """Create a workspace and make the creator its first admin when they belong to the organization.
 
@@ -54,7 +54,7 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
 @router.get(
     "",
     tags=["Organization Workspaces"],
-    dependencies=[require(org_scope, Permission.workspaces_read, Permission.organizations_read)],
+    dependencies=[require("api", org_scope, Permission.workspaces_read, Permission.organizations_read)],
 )
 async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
     """List workspaces the caller can read in an organization."""
@@ -62,13 +62,13 @@ async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[Work
     return Envelope(data=[WorkspaceOut.model_validate(workspace) for workspace in visible])
 
 
-@router.get("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require(workspace_scope, Permission.workspaces_read)])
+@router.get("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require("api", workspace_scope, Permission.workspaces_read)])
 async def get_workspace(workspace: WorkspaceDep) -> Envelope[WorkspaceOut]:
     """Return a workspace by ID or slug."""
     return Envelope(data=WorkspaceOut.model_validate(workspace))
 
 
-@router.delete("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require(workspace_scope, Permission.workspaces_delete)])
+@router.delete("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require("api", workspace_scope, Permission.workspaces_delete)])
 async def delete_workspace(workspace: WorkspaceDep, request: Request) -> Envelope[DeletedOut[UUID]]:
     """Delete a workspace, its memberships, inference keys, and provider credentials.
 
@@ -78,13 +78,13 @@ async def delete_workspace(workspace: WorkspaceDep, request: Request) -> Envelop
     return Envelope(data=DeletedOut.of(workspace.id))
 
 
-@router.patch("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require(workspace_scope, Permission.workspaces_update)])
+@router.patch("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require("api", workspace_scope, Permission.workspaces_update)])
 async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> Envelope[WorkspaceOut]:
     """Update a workspace's name or slug."""
     return Envelope(data=WorkspaceOut.model_validate(await workspace.apply(body).save()))
 
 
-@router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require(workspace_scope, Permission.members_read)])
+@router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_read)])
 async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
     """List the members of a workspace and their workspace roles."""
     memberships = await User.workspace_members(workspace.id)
@@ -107,7 +107,7 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
 @router.get(
     "/{workspace_ref}/member-candidates",
     tags=["Workspace Members"],
-    dependencies=[require(workspace_scope, Permission.members_manage)],
+    dependencies=[require("api", workspace_scope, Permission.members_manage)],
 )
 async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
     """List organization members who can be added to a workspace."""
@@ -120,7 +120,9 @@ async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[Works
     )
 
 
-@router.put("/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require(workspace_scope, Permission.members_manage)])
+@router.put(
+    "/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_manage)]
+)
 async def add_member(user_id: UUID, body: WorkspaceMembershipIn, workspace: WorkspaceDep) -> Envelope[WorkspaceMembershipOut]:
     """Add or update a workspace member who already belongs to the organization."""
     user = await User.find_by_id(user_id)
@@ -147,7 +149,9 @@ async def add_member(user_id: UUID, body: WorkspaceMembershipIn, workspace: Work
     )
 
 
-@router.delete("/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require(workspace_scope, Permission.members_manage)])
+@router.delete(
+    "/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_manage)]
+)
 async def remove_member(user_id: UUID, workspace: WorkspaceDep) -> Envelope[DeletedOut[str]]:
     """Remove a member from a workspace without changing organization membership."""
     membership = await WorkspaceMembership.get((user_id, workspace.id))
@@ -160,7 +164,7 @@ async def remove_member(user_id: UUID, workspace: WorkspaceDep) -> Envelope[Dele
 @router.put(
     "/{workspace_ref}/playground-session",
     tags=["Workspace Playground"],
-    dependencies=[require(workspace_scope, Permission.playground_execute)],
+    dependencies=[require("api", workspace_scope, Permission.playground_execute)],
 )
 async def ensure_playground_session(
     workspace: WorkspaceDep,
@@ -189,7 +193,7 @@ async def ensure_playground_session(
 @router.delete(
     "/{workspace_ref}/playground-session",
     tags=["Workspace Playground"],
-    dependencies=[require(workspace_scope, Permission.playground_execute)],
+    dependencies=[require("api", workspace_scope, Permission.playground_execute)],
 )
 async def end_playground_session(
     workspace: WorkspaceDep,
@@ -211,7 +215,7 @@ async def end_playground_session(
 @router.post(
     "/{workspace_ref}/inference-keys",
     tags=["Workspace Inference Keys"],
-    dependencies=[require(workspace_scope, Permission.inference_keys_manage)],
+    dependencies=[require("api", workspace_scope, Permission.inference_keys_manage)],
 )
 async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[InferenceKeyCreatedOut]:
     """Create an inference key for model requests to this workspace and return its token once."""
@@ -222,7 +226,7 @@ async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, ac
 @router.get(
     "/{workspace_ref}/inference-keys",
     tags=["Workspace Inference Keys"],
-    dependencies=[require(workspace_scope, Permission.inference_keys_read)],
+    dependencies=[require("api", workspace_scope, Permission.inference_keys_read)],
 )
 async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[InferenceKeyOut]]:
     """List inference-key metadata for a workspace without returning secret tokens."""
@@ -233,7 +237,7 @@ async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[Inferenc
 @router.delete(
     "/{workspace_ref}/inference-keys/{key_id}",
     tags=["Workspace Inference Keys"],
-    dependencies=[require(workspace_scope, Permission.inference_keys_manage)],
+    dependencies=[require("api", workspace_scope, Permission.inference_keys_manage)],
 )
 async def revoke_inference_key(workspace: WorkspaceDep, key_id: UUID) -> Envelope[InferenceKeyRevokedOut]:
     """Revoke an inference key in a workspace."""
