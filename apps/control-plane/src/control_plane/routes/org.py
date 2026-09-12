@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Query
@@ -15,15 +15,13 @@ from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, 
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
-
-if TYPE_CHECKING:
-    from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut
 
 
 @router.get("/users", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_read)])
