@@ -117,18 +117,22 @@ async def _me_out(user: User, actor: Actor | None = None) -> MeOut:
 
 async def _login_user(email: str, password: str) -> User:
     """Password verification with one 401 for every failure shape, so responses never say which part was wrong."""
-    identity = await AuthIdentity.password_for_update(email)
+    identity = await AuthIdentity.password_for(email)
     if identity is None or identity.secret_hash is None:
         verify_password(DUMMY_HASH, password)
         raise HTTPException(status_code=401, detail="Incorrect email or password")
-    if not verify_password(identity.secret_hash, password):
+    secret_hash = identity.secret_hash
+    if not verify_password(secret_hash, password):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
-    user = await User.find_by_id(identity.user_id)
+    locked_identity = await AuthIdentity.password_for_update(email)
+    if locked_identity is None or locked_identity.id != identity.id or locked_identity.secret_hash != secret_hash:
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    user = await User.find_by_id(locked_identity.user_id)
     if user is None or user.service_account:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
-    if needs_rehash(identity.secret_hash):
-        identity.secret_hash = hash_password(password)
-        await identity.save()
+    if needs_rehash(secret_hash):
+        locked_identity.secret_hash = hash_password(password)
+        await locked_identity.save()
     return user
 
 
