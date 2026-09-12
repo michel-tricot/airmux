@@ -12,6 +12,7 @@ from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, _poll
 if TYPE_CHECKING:
     from conftest import Stack
 
+
 def _start(stack: Stack) -> None:
     stack.write_config()
     configuration = yaml.safe_load(stack.config_path.read_text())
@@ -27,6 +28,7 @@ def _start(stack: Stack) -> None:
     stack.start_dp()
     stack.wait_dp_ready()
 
+
 def test_bounded_malformed_inputs_and_disconnects_preserve_service_recovery(stack: Stack) -> None:
     _start(stack)
     with httpx.Client(base_url=stack.cp_url, timeout=3) as control, httpx.Client(base_url=stack.dp_url, timeout=3) as inference:
@@ -37,9 +39,7 @@ def test_bounded_malformed_inputs_and_disconnects_preserve_service_recovery(stac
         headers = {"Authorization": f"Bearer {stack.caller_api_key}", "x-airllm-dialect": "canonical"}
         body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
         malformed_parameters = [
-            (field, value)
-            for field, values in {"messages": [[]], "stream": ["true"], "max_tokens": [0]}.items()
-            for value in values
+            (field, value) for field, values in {"messages": [[]], "stream": ["true"], "max_tokens": [0]}.items() for value in values
         ]
         baseline = stack.upstream_requests
         for field, value in malformed_parameters:
