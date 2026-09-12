@@ -15,7 +15,7 @@ from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
-from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyGrantIn
+from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn
 from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
@@ -111,6 +111,10 @@ class User(Record, Identified, Tombstonable, table=True):
         return user
 
     @classmethod
+    async def instance_service_account(cls, user_id: UUID) -> Self | None:
+        return await cls.first(cls.id == user_id, col(cls.service_account).is_(True), col(cls.managing_org_id).is_(None))
+
+    @classmethod
     async def instance_claimed(cls) -> bool:
         return await cls.first(cls.instance_role == InstanceRole.owner) is not None
 
@@ -200,7 +204,7 @@ class ServiceAccountIn(ServiceAccountNameIn):
 
 
 class OrgServiceAccountIn(ServiceAccountNameIn):
-    management_key: ManagementKeyGrantIn = Field(description="Initial organization-scoped management key to create for the service account")
+    management_key: ManagementKeyIn = Field(description="Initial organization-scoped management key to create for the service account")
 
 
 class UserOut(RecordOut[User]):

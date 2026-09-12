@@ -98,6 +98,14 @@ export const operationAuthority = {
       },
     ],
   },
+  createInstanceServiceAccountManagementKey: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["management-keys.issue"],
+      },
+    ],
+  },
   getUser: {
     checks: [
       {

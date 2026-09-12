@@ -65,6 +65,7 @@ def test_management_key_docs_distinguish_tenant_scopes():
     assert operations == {
         "list_instance_management_keys": ["Instance Management Keys"],
         "create_instance_management_key": ["Instance Management Keys"],
+        "create_instance_service_account_management_key": ["Instance Users"],
         "list_org_management_keys": ["Organization Management Keys"],
         "create_org_management_key": ["Organization Management Keys"],
         "list_workspace_management_keys": ["Workspace Management Keys"],

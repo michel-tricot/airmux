@@ -15,7 +15,6 @@ from control_plane.models import ManagementKey
 from control_plane.models.common.wire import Envelope
 from control_plane.models.management_key import (
     ManagementKeyCreatedOut,
-    ManagementKeyGrantIn,
     ManagementKeyIn,
     ManagementKeyOut,
     ManagementKeyPermissionsIn,
@@ -56,7 +55,7 @@ async def _list_management_keys(scope: Scope, user_id: UUID | None) -> Envelope[
     return Envelope(data=[_out(key, now) for key in keys])
 
 
-async def issue_management_key(body: ManagementKeyGrantIn, actor: Actor, scope: Scope, *, principal_id: UUID) -> ManagementKeyCreatedOut:
+async def issue_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope, *, principal_id: UUID) -> ManagementKeyCreatedOut:
     now = datetime.now(tz=UTC)
     if body.expires_at is not None and body.expires_at <= now:
         raise HTTPException(status_code=422, detail="expires_at must be in the future")

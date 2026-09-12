@@ -18,7 +18,7 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
     }),
     http.post('/api/v1/orgs/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
       expect(params.workspaceRef).toBe(workspace.id);
-      const submitted = (await request.json()) as Api.ManagementKeyGrantIn;
+      const submitted = (await request.json()) as Api.ManagementKeyIn;
       expect(submitted).toEqual({
         label: 'workspace-ci',
         permissions: ['workspaces.read'],

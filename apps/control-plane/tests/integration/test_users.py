@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_user, run_in_db, setup_control_plane
 
 from contract import uuid7
-from control_plane.authz import InstanceRole, Permission
+from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, Permission
 from control_plane.models import DataPlaneInstance, User, set_actor
 
 
@@ -74,13 +74,41 @@ def test_service_account_can_hold_any_instance_role(tmp_path):
         assert owner.status_code == 200, owner.text
         assert owner.json()["data"]["instance_role"] == InstanceRole.owner
 
-        headers = cp.headers_for(None, principal["id"])
+        management_key = c.post(
+            f"/api/v1/service-accounts/{principal['id']}/management-keys",
+            json={"label": "data-plane", "permissions": sorted(DATA_PLANE_PERMISSIONS)},
+            headers=cp.headers(permissions=[Permission.management_keys_issue, *DATA_PLANE_PERMISSIONS]),
+        )
+        assert management_key.status_code == 200, management_key.text
+        minted = management_key.json()["data"]
+        assert minted["user_id"] == principal["id"]
+        assert minted["scope"] == {"level": "instance", "org_id": None, "workspace_id": None}
+        headers = {"authorization": f"Bearer {minted['token']}"}
         instance_id = uuid7()
         heartbeat = {"instance_id": str(instance_id), "version": "0.1.0", "bundle_id": None}
         assert c.post("/api/v1/heartbeat", json=heartbeat, headers=headers).status_code == 200
         instance = run_in_db(tmp_path, lambda: DataPlaneInstance.get(instance_id))
         assert instance is not None
         assert instance.org_id is None
+
+
+def test_instance_service_account_key_issuance_rejects_humans_and_org_managed_accounts(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    human = make_user(tmp_path, "human@example.com")
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, root)
+        managed = client.post(
+            f"/api/v1/orgs/{org_id}/service-accounts",
+            json={
+                "name": "Org Bot",
+                "management_key": {"label": "initial", "permissions": [Permission.organizations_read]},
+            },
+            headers=root,
+        ).json()["data"]["service_account"]
+        body = {"label": "invalid", "permissions": [Permission.organizations_read]}
+        assert client.post(f"/api/v1/service-accounts/{human.id}/management-keys", json=body, headers=root).status_code == 404
+        assert client.post(f"/api/v1/service-accounts/{managed['id']}/management-keys", json=body, headers=root).status_code == 404
 
 
 def test_service_account_is_a_full_principal(tmp_path):

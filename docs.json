@@ -136,6 +136,7 @@
                     "group": "Users",
                     "pages": [
                       "POST /api/v1/service-accounts",
+                      "POST /api/v1/service-accounts/{user_id}/management-keys",
                       "GET /api/v1/users/{user_id}",
                       "DELETE /api/v1/users/{user_id}",
                       "GET /api/v1/users",
