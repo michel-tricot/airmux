@@ -355,7 +355,6 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
 def management_keys_create(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
     permission: Annotated[list[str] | None, typer.Option("--permission", "-p", help="Permission ceiling; repeat for each permission")] = None,
-    user_id: str = typer.Option("", "--user", help="Principal the key authenticates; defaults to you"),
     org_id: str = typer.Option("", "--org", help="Organization scope; defaults to the active profile"),
     workspace_id: str = typer.Option("", "--workspace", help="Workspace scope; requires an organization"),
     instance: bool = typer.Option(False, "--instance", help="Use instance scope instead of the active organization"),
@@ -380,7 +379,6 @@ def management_keys_create(  # noqa: PLR0913, PLR0917 command flags define the C
     body = {
         "label": label,
         "permissions": permission,
-        "user_id": user_id or None,
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:

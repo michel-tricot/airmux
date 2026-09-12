@@ -11,10 +11,11 @@ from control_plane.authority import ensure_management_key_permissions, managemen
 from control_plane.authz import Actor, Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import ManagementKeyGrant, create_management_key
-from control_plane.models import ManagementKey, User
+from control_plane.models import ManagementKey
 from control_plane.models.common.wire import Envelope
 from control_plane.models.management_key import (
     ManagementKeyCreatedOut,
+    ManagementKeyGrantIn,
     ManagementKeyIn,
     ManagementKeyOut,
     ManagementKeyPermissionsIn,
@@ -55,13 +56,10 @@ async def _list_management_keys(scope: Scope, user_id: UUID | None) -> Envelope[
     return Envelope(data=[_out(key, now) for key in keys])
 
 
-async def create_scoped_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> ManagementKeyCreatedOut:
+async def issue_management_key(body: ManagementKeyGrantIn, actor: Actor, scope: Scope, *, principal_id: UUID) -> ManagementKeyCreatedOut:
     now = datetime.now(tz=UTC)
     if body.expires_at is not None and body.expires_at <= now:
         raise HTTPException(status_code=422, detail="expires_at must be in the future")
-    principal_id = body.user_id or actor.principal_id
-    if await User.find_by_id(principal_id) is None:
-        raise HTTPException(status_code=404, detail="Principal not found")
     permissions = frozenset(body.permissions)
     parent_id = await management_key_parent(actor, principal_id, scope, permissions, body.expires_at)
     key_id, token = await create_management_key(
@@ -81,7 +79,7 @@ async def create_scoped_management_key(body: ManagementKeyIn, actor: Actor, scop
 
 
 async def _create_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope) -> Envelope[ManagementKeyCreatedOut]:
-    return Envelope(data=await create_scoped_management_key(body, actor, scope))
+    return Envelope(data=await issue_management_key(body, actor, scope, principal_id=actor.principal_id))
 
 
 @router.get(

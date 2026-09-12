@@ -146,7 +146,7 @@ def test_two_simultaneous_polls_deliver_one_key(tmp_path):
 def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
-        user, org = _signup_with_org(c)
+        _, org = _signup_with_org(c)
 
         def login_once(replaced: str | None = None) -> str:
             started = _start(c, client_name="mbp")
@@ -158,7 +158,6 @@ def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_pa
         peer = c.post(
             f"/api/v1/orgs/{org['id']}/management-keys",
             json={
-                "user_id": user["user_id"],
                 "label": "mbp",
                 "permissions": [Permission.workspaces_read],
             },

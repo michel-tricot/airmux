@@ -119,16 +119,7 @@ def test_service_account_management_key_sees_its_effective_permissions(tmp_path)
             json={"name": "automation", "instance_role": "auditor"},
             headers=root,
         ).json()["data"]
-        key = c.post(
-            "/api/v1/instance/management-keys",
-            json={
-                "label": "automation",
-                "user_id": service_account["id"],
-                "permissions": [Permission.organizations_read],
-            },
-            headers=root,
-        ).json()["data"]
-
-        resp = c.get("/api/v1/auth/permissions", headers={"authorization": f"Bearer {key['token']}"})
+        headers = cp.headers_for(None, service_account["id"], permissions=frozenset({Permission.organizations_read}))
+        resp = c.get("/api/v1/auth/permissions", headers=headers)
         assert resp.status_code == 200
         assert resp.json()["data"]["permissions"] == [Permission.organizations_read]

@@ -15,11 +15,10 @@ from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, 
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.management_key import ManagementKeyIn
 from control_plane.models.org_membership import LastOrgOwnerError, MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
-from control_plane.routes.management_keys import create_scoped_management_key
+from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
 
@@ -100,10 +99,11 @@ async def create_org_service_account(
     await ensure_org_role_change(actor, org_id, None, OrgRole.admin)
     service_account = await User.new_service_account(body.name, managing_org_id=org_id).save()
     membership = await OrgMembership(user_id=service_account.id, org_id=org_id, role=OrgRole.admin).save()
-    management_key = await create_scoped_management_key(
-        ManagementKeyIn(user_id=service_account.id, **body.management_key.model_dump()),
+    management_key = await issue_management_key(
+        body.management_key,
         actor,
         Scope.org(org_id),
+        principal_id=service_account.id,
     )
     return Envelope(
         data=OrgServiceAccountCreatedOut(

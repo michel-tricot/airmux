@@ -2,12 +2,67 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, run_in_db, setup_control_plane
+from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from control_plane.authz import Permission
 from control_plane.keys import MANAGEMENT_KEY_PREFIX
 from control_plane.models import ManagementKey, set_actor
+
+
+@pytest.mark.parametrize("scope", ["instance", "org", "workspace"])
+def test_management_key_issuance_rejects_a_target_principal(tmp_path, scope):
+    cp = setup_control_plane(tmp_path)
+    target = make_user(tmp_path, "target@example.com")
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        path = (
+            "/api/v1/instance/management-keys"
+            if scope == "instance"
+            else f"/api/v1/orgs/{org_id}/management-keys"
+            if scope == "org"
+            else f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/management-keys"
+        )
+        response = client.post(
+            path,
+            headers=root,
+            json={
+                "label": "impersonation",
+                "permissions": [Permission.workspaces_read],
+                "user_id": str(target.id),
+            },
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"][0]["type"] == "extra_forbidden"
+
+
+def test_admin_cannot_impersonate_owner_and_descendant_loses_authority_after_demotion(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    admin = make_user(tmp_path, "admin@example.com")
+    owner = make_user(tmp_path, "owner@example.com")
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        for user, role in ((admin, "admin"), (owner, "owner")):
+            assert client.put(f"/api/v1/orgs/{org_id}/users/{user.id}", headers=root, json={"role": role}).status_code == 200
+        issuer = cp.headers_for(org_id, admin.id)
+        path = f"/api/v1/orgs/{org_id}/management-keys"
+        payload = {"label": "delegated", "permissions": [Permission.members_manage]}
+        assert client.post(path, headers=issuer, json={**payload, "user_id": str(owner.id)}).status_code == 422
+        response = client.post(path, headers=issuer, json=payload)
+        assert response.status_code == 200, response.text
+        key = response.json()["data"]
+        assert key["user_id"] == str(admin.id)
+        bearer = {"authorization": f"Bearer {key['token']}"}
+        member_path = f"/api/v1/orgs/{org_id}/users/{admin.id}"
+        assert client.put(member_path, headers=bearer, json={"role": "owner"}).status_code == 403
+        assert client.put(member_path, headers=root, json={"role": "member"}).status_code == 200
+        assert client.put(member_path, headers=bearer, json={"role": "admin"}).status_code == 403
+        assert client.delete(f"/api/v1/management-keys/{key['parent_id']}", headers=root).status_code == 200
+        assert client.put(member_path, headers=bearer, json={"role": "admin"}).status_code == 401
 
 
 def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path):
