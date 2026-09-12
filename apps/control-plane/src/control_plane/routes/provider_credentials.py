@@ -84,7 +84,7 @@ async def _hold(store: SecretStore, credential: ProviderCredential, secret: Secr
 @instance_router.post(
     "",
     tags=["Instance Provider Credentials"],
-    dependencies=[require(instance_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", instance_scope, Permission.provider_credentials_manage)],
 )
 async def create_instance_provider_credential(body: ProviderCredentialIn, request: Request) -> Envelope[ProviderCredentialOut]:
     """Store a provider API key available to every organization on the instance."""
@@ -94,7 +94,7 @@ async def create_instance_provider_credential(body: ProviderCredentialIn, reques
 @instance_router.get(
     "",
     tags=["Instance Provider Credentials"],
-    dependencies=[require(instance_scope, Permission.provider_credentials_read)],
+    dependencies=[require("api", instance_scope, Permission.provider_credentials_read)],
 )
 async def list_instance_provider_credentials() -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials owned by the instance."""
@@ -105,7 +105,7 @@ async def list_instance_provider_credentials() -> Envelope[list[ProviderCredenti
 @router.post(
     "/provider-credentials",
     tags=["Organization Provider Credentials"],
-    dependencies=[require(org_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", org_scope, Permission.provider_credentials_manage)],
 )
 async def create_org_provider_credential(body: ProviderCredentialIn, org_id: OrgDep, request: Request) -> Envelope[ProviderCredentialOut]:
     """Store a provider API key for every workspace in an organization."""
@@ -115,7 +115,7 @@ async def create_org_provider_credential(body: ProviderCredentialIn, org_id: Org
 @router.post(
     "/workspaces/{workspace_ref}/provider-credentials",
     tags=["Workspace Provider Credentials"],
-    dependencies=[require(workspace_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", workspace_scope, Permission.provider_credentials_manage)],
 )
 async def create_workspace_provider_credential(
     body: ProviderCredentialIn,
@@ -130,7 +130,7 @@ async def create_workspace_provider_credential(
 @router.get(
     "/provider-credentials",
     tags=["Organization Provider Credentials"],
-    dependencies=[require(org_scope, Permission.provider_credentials_read)],
+    dependencies=[require("api", org_scope, Permission.provider_credentials_read)],
 )
 async def list_org_provider_credentials(org_id: OrgDep) -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials owned by an organization, including its workspace credentials."""
@@ -141,7 +141,7 @@ async def list_org_provider_credentials(org_id: OrgDep) -> Envelope[list[Provide
 @router.get(
     "/workspaces/{workspace_ref}/provider-credentials",
     tags=["Workspace Provider Credentials"],
-    dependencies=[require(workspace_scope, Permission.provider_credentials_read)],
+    dependencies=[require("api", workspace_scope, Permission.provider_credentials_read)],
 )
 async def list_workspace_provider_credentials(workspace: WorkspaceDep) -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials stored specifically for one workspace."""
@@ -152,7 +152,7 @@ async def list_workspace_provider_credentials(workspace: WorkspaceDep) -> Envelo
 @router.get(
     "/provider-credentials/{credential_id}",
     tags=["Organization Provider Credentials", "Workspace Provider Credentials"],
-    dependencies=[require(credential_scope, Permission.provider_credentials_read)],
+    dependencies=[require("api", credential_scope, Permission.provider_credentials_read)],
 )
 async def get_provider_credential(credential: CredentialDep) -> Envelope[ProviderCredentialOut]:
     """Return provider credential metadata without its secret value."""
@@ -162,7 +162,7 @@ async def get_provider_credential(credential: CredentialDep) -> Envelope[Provide
 @router.patch(
     "/provider-credentials/{credential_id}",
     tags=["Organization Provider Credentials", "Workspace Provider Credentials"],
-    dependencies=[require(credential_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", credential_scope, Permission.provider_credentials_manage)],
 )
 async def update_provider_credential(body: ProviderCredentialUpdate, credential: CredentialDep) -> Envelope[ProviderCredentialOut]:
     """Update a provider credential's priority or enabled state."""
@@ -172,7 +172,7 @@ async def update_provider_credential(body: ProviderCredentialUpdate, credential:
 @router.put(
     "/provider-credentials/{credential_id}/value",
     tags=["Organization Provider Credentials", "Workspace Provider Credentials"],
-    dependencies=[require(credential_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", credential_scope, Permission.provider_credentials_manage)],
 )
 async def rotate_provider_credential(body: ProviderCredentialValueIn, credential: CredentialDep, request: Request) -> Envelope[ProviderCredentialOut]:
     """Replace a provider credential's secret value."""
@@ -187,7 +187,7 @@ async def rotate_provider_credential(body: ProviderCredentialValueIn, credential
 @router.delete(
     "/provider-credentials/{credential_id}",
     tags=["Organization Provider Credentials", "Workspace Provider Credentials"],
-    dependencies=[require(credential_scope, Permission.provider_credentials_manage)],
+    dependencies=[require("api", credential_scope, Permission.provider_credentials_manage)],
 )
 async def delete_provider_credential(credential: CredentialDep, request: Request) -> Envelope[DeletedOut[UUID]]:
     """Delete provider credential metadata and its stored secret value."""

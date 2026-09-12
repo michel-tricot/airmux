@@ -87,7 +87,10 @@ def frame_sse(chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
         elif line.startswith(b":"):
             continue
         elif line.startswith(b"event:"):
-            state.pending_name = line[len(b"event:") :].strip().decode()
+            try:
+                state.pending_name = line[len(b"event:") :].strip().decode()
+            except UnicodeDecodeError as error:
+                raise UpstreamProtocolError.stream_event() from error
         elif line.startswith(b"data:"):
             state.pending_data.append(line[len(b"data:") :].strip())
 

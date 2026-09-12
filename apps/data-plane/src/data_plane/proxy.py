@@ -105,8 +105,8 @@ async def responses(request: Request) -> Response:
 async def _body(request: Request) -> dict[str, Any]:
     try:
         body = json.loads(await request.body())
-    except json.JSONDecodeError as error:
-        raise RequestRejectedError(400, "invalid_request", str(error)) from error
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise RequestRejectedError(400, "invalid_request", "the request body must be valid JSON") from error
     if not isinstance(body, dict):
         raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
     return body

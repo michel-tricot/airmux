@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import get_args, get_origin
+from typing import TYPE_CHECKING, cast, get_args, get_origin
 
 from helpers import api_routes, make_app
 from pydantic import BaseModel
 
 from control_plane.deps import get_session
 from control_plane.models.common.wire import Envelope
+
+if TYPE_CHECKING:
+    from control_plane.throttling import ThrottleRoute
 
 
 def _nested_models(tp: object, seen: set[type[BaseModel]] | None = None) -> set[type[BaseModel]]:
@@ -117,6 +120,22 @@ def test_permission_requirements_are_machine_readable():
         for route in api_routes(app)
     }
     assert {name: operation.get("x-airllm-authority", []) for name, operation in operations.items()} == expected
+
+
+def test_every_endpoint_declares_one_throttle_group():
+    offenders = []
+    for route in api_routes(make_app()):
+        groups = [dependency.call.traffic_group for dependency in route.dependant.dependencies if hasattr(dependency.call, "traffic_group")]
+        if len(groups) != 1:
+            offenders.append(f"{sorted(route.methods or ())} {route.path}: {groups}")
+    assert offenders == []
+
+
+def test_throttle_route_map_uses_mounted_api_paths():
+    app = make_app()
+    routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
+    groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
+    assert groups == ["cli"]
 
 
 def test_membership_and_workspace_docs_are_resource_specific():

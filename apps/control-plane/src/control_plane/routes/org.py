@@ -24,7 +24,7 @@ from control_plane.routes.management_keys import create_scoped_management_key
 router = APIRouter(prefix="/orgs/{org_id}")
 
 
-@router.get("/users", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_read)])
+@router.get("/users", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_read)])
 async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
     """List the human users and service accounts that belong to an organization."""
     members = await User.members_of(org_id)
@@ -45,7 +45,7 @@ async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
     )
 
 
-@router.put("/users/{user_id}", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_manage)])
+@router.put("/users/{user_id}", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_manage)])
 async def add_org_user(user_id: UUID, body: OrgMembershipIn, org_id: OrgDep, actor: ActorDep) -> Envelope[MembershipOut]:
     """Add a principal to an organization or update its organization role."""
     user = await User.find_by_id(user_id)
@@ -68,7 +68,7 @@ async def add_org_user(user_id: UUID, body: OrgMembershipIn, org_id: OrgDep, act
     return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, role=membership.role, status="member"))
 
 
-@router.delete("/users/{user_id}", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_manage)])
+@router.delete("/users/{user_id}", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_manage)])
 async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Envelope[DeletedOut[str]]:
     """Remove a principal from an organization and its workspaces."""
     membership = await OrgMembership.get((user_id, org_id))
@@ -87,7 +87,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
 @router.post(
     "/service-accounts",
     tags=["Organization Service Accounts"],
-    dependencies=[require_all(org_scope, Permission.members_manage, Permission.management_keys_issue)],
+    dependencies=[require_all("api", org_scope, Permission.members_manage, Permission.management_keys_issue)],
 )
 async def create_org_service_account(
     body: OrgServiceAccountIn,
@@ -115,7 +115,7 @@ async def create_org_service_account(
 @router.delete(
     "/service-accounts/{user_id}",
     tags=["Organization Service Accounts"],
-    dependencies=[require_all(org_scope, Permission.members_manage, Permission.management_keys_revoke)],
+    dependencies=[require_all("api", org_scope, Permission.members_manage, Permission.management_keys_revoke)],
 )
 async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Envelope[DeletedOut[UUID]]:
     """Delete an organization-managed service account and its control-plane credentials."""
@@ -131,7 +131,7 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
     return Envelope(data=DeletedOut.of(user_id))
 
 
-@router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_publish)])
+@router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_publish)])
 async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
     """Request a fresh bundle for the organization's current configuration."""
     now = datetime.now(tz=UTC)
@@ -141,28 +141,30 @@ async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
     return Envelope(data=BundleOut.model_validate(bundle))
 
 
-@router.get("/bundles", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_read)])
+@router.get("/bundles", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])
 async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
     """List policy bundle metadata for an organization."""
     bundles = await Bundle.find(Bundle.org_id == org_id, order_by=col(Bundle.version))
     return Envelope(data=[BundleOut.model_validate(bundle) for bundle in bundles])
 
 
-@router.get("/events", tags=["Organization Usage Events"], dependencies=[require(org_scope, Permission.usage_read)])
+@router.get("/events", tags=["Organization Usage Events"], dependencies=[require("api", org_scope, Permission.usage_read)])
 async def list_org_events(org_id: OrgDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
     """List usage events across an organization with cursor pagination."""
     events = await UsageEvent.for_scope(org_id, None, page)
     return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
 
 
-@router.get("/workspaces/{workspace_ref}/events", tags=["Workspace Usage Events"], dependencies=[require(workspace_scope, Permission.usage_read)])
+@router.get(
+    "/workspaces/{workspace_ref}/events", tags=["Workspace Usage Events"], dependencies=[require("api", workspace_scope, Permission.usage_read)]
+)
 async def list_workspace_events(workspace: WorkspaceDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
     """List usage events for one workspace with cursor pagination."""
     events = await UsageEvent.for_scope(workspace.org_id, workspace.id, page)
     return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
 
 
-@router.get("/activity", tags=["Organization Activity"], dependencies=[require(org_scope, Permission.audit_read)])
+@router.get("/activity", tags=["Organization Activity"], dependencies=[require("api", org_scope, Permission.audit_read)])
 async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
     """List the most recent audited changes in an organization."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])
