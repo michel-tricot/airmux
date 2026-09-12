@@ -737,6 +737,85 @@ export const useCreateWorkspaceManagementKey = <TError = ErrorType<void | HTTPVa
       return useMutation(getCreateWorkspaceManagementKeyMutationOptions(options), queryClient);
     }
 
+export const getIssueWorkspaceServiceAccountManagementKeyUrl = (orgId: string,
+    workspaceRef: string,
+    userId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/service-accounts/${userId}/management-keys`
+}
+
+/**
+ * Issue a workspace-scoped management key for a service account under instance or organization control.
+ *
+ * Required permission: `management-keys.issue`.
+ * @summary Issue Workspace Service Account Management Key
+ */
+export const issueWorkspaceServiceAccountManagementKey = async (orgId: string,
+    workspaceRef: string,
+    userId: string,
+    managementKeyGrantIn: ManagementKeyGrantIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+
+  return customFetch<ManagementKeyMintedOut>(getIssueWorkspaceServiceAccountManagementKeyUrl(orgId,workspaceRef,userId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(managementKeyGrantIn)
+  }
+);}
+
+
+
+
+
+export const getIssueWorkspaceServiceAccountManagementKeyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>, TError,{orgId: string;workspaceRef: string;userId: string;data: BodyType<ManagementKeyGrantIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>, TError,{orgId: string;workspaceRef: string;userId: string;data: BodyType<ManagementKeyGrantIn>}, TContext> => {
+
+const mutationKey = ['issueWorkspaceServiceAccountManagementKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>, {orgId: string;workspaceRef: string;userId: string;data: BodyType<ManagementKeyGrantIn>}> = (props) => {
+          const {orgId,workspaceRef,userId,data} = props ?? {};
+
+          return  issueWorkspaceServiceAccountManagementKey(orgId,workspaceRef,userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IssueWorkspaceServiceAccountManagementKeyMutationResult = NonNullable<Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>>
+    export type IssueWorkspaceServiceAccountManagementKeyMutationBody = BodyType<ManagementKeyGrantIn>
+    export type IssueWorkspaceServiceAccountManagementKeyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Issue Workspace Service Account Management Key
+ */
+export const useIssueWorkspaceServiceAccountManagementKey = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>, TError,{orgId: string;workspaceRef: string;userId: string;data: BodyType<ManagementKeyGrantIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof issueWorkspaceServiceAccountManagementKey>>,
+        TError,
+        {orgId: string;workspaceRef: string;userId: string;data: BodyType<ManagementKeyGrantIn>},
+        TContext
+      > => {
+      return useMutation(getIssueWorkspaceServiceAccountManagementKeyMutationOptions(options), queryClient);
+    }
+
 export const getRevokeManagementKeyUrl = (keyId: string,) => {
 
 

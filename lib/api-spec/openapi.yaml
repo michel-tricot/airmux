@@ -309,6 +309,69 @@ paths:
       - scope: workspace_scope
         anyOf:
         - management-keys.issue
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/service-accounts/{user_id}/management-keys:
+    post:
+      tags:
+      - Workspace Management Keys
+      summary: Issue Workspace Service Account Management Key
+      description: 'Issue a workspace-scoped management key for a service account under instance or organization control.
+
+
+        Required permission: `management-keys.issue`.'
+      operationId: issue_workspace_service_account_management_key
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+        description: User or service-account ID
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagementKeyGrantIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - management-keys.issue
   /api/v1/management-keys/{key_id}:
     delete:
       tags:

@@ -7,7 +7,7 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col
 
-from control_plane.authority import ensure_management_key_permissions, management_key_parent
+from control_plane.authority import ensure_allowed, ensure_management_key_permissions, management_key_parent
 from control_plane.authz import Actor, Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import ManagementKeyGrant, mint_management_key
@@ -135,6 +135,25 @@ async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID 
 async def create_workspace_management_key(body: ManagementKeyGrantIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[ManagementKeyMintedOut]:
     """Issue a workspace-scoped management key and return its token once."""
     return await _create_management_key(body, actor, Scope.workspace(workspace.org_id, workspace.id))
+
+
+@router.post(
+    "/orgs/{org_id}/workspaces/{workspace_ref}/service-accounts/{user_id}/management-keys",
+    tags=["Workspace Management Keys"],
+    dependencies=[require(workspace_scope, Permission.management_keys_issue)],
+)
+async def issue_workspace_service_account_management_key(
+    user_id: UUID,
+    body: ManagementKeyGrantIn,
+    workspace: WorkspaceDep,
+    actor: ActorDep,
+) -> Envelope[ManagementKeyMintedOut]:
+    """Issue a workspace-scoped management key for a service account under instance or organization control."""
+    service_account = await User.service_account_for_org(workspace.org_id, user_id)
+    if service_account.managing_org_id is None:
+        await ensure_allowed(actor, Permission.principals_manage, Scope.instance())
+    scope = Scope.workspace(workspace.org_id, workspace.id)
+    return Envelope(data=await issue_management_key(body, actor, scope, principal_id=service_account.id))
 
 
 @router.delete(

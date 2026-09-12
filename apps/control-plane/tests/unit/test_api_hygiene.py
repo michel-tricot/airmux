@@ -66,6 +66,7 @@ def test_management_key_docs_distinguish_tenant_scopes():
         "create_org_management_key": ["Organization Management Keys"],
         "list_workspace_management_keys": ["Workspace Management Keys"],
         "create_workspace_management_key": ["Workspace Management Keys"],
+        "issue_workspace_service_account_management_key": ["Workspace Management Keys"],
         "issue_instance_service_account_management_key": ["Instance Users"],
         "issue_org_service_account_management_key": ["Organization Service Accounts"],
         "revoke_management_key": ["Instance Management Keys", "Organization Management Keys", "Workspace Management Keys"],

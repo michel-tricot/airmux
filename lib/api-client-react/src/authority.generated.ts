@@ -58,6 +58,14 @@ export const operationAuthority = {
       },
     ],
   },
+  issueWorkspaceServiceAccountManagementKey: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["management-keys.issue"],
+      },
+    ],
+  },
   revokeManagementKey: {
     checks: [
       {

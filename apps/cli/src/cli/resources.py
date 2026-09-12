@@ -369,13 +369,12 @@ def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI
     if instance and (org_id or workspace_id):
         console.print("[red]--instance cannot be combined with --org or --workspace.[/red]")
         raise typer.Exit(1)
-    if service_account_id and workspace_id:
-        console.print("[red]--service-account cannot be combined with --workspace.[/red]")
-        raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
         f"/api/v1/service-accounts/{service_account_id}/management-keys"
         if instance and service_account_id
+        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/service-accounts/{service_account_id}/management-keys"
+        if workspace_id and service_account_id
         else f"/api/v1/orgs/{selected_org}/service-accounts/{service_account_id}/management-keys"
         if service_account_id
         else "/api/v1/instance/management-keys"

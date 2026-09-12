@@ -107,3 +107,30 @@ def test_org_service_account_management_key_uses_the_dedicated_endpoint(monkeypa
     assert result.exit_code == 0, result.output
     assert submitted["path"] == "/api/v1/orgs/org-id/service-accounts/service-account-id/management-keys"
     assert "user_id" not in submitted["body"]
+
+
+def test_workspace_service_account_management_key_uses_the_dedicated_endpoint(monkeypatch):
+    submitted = {}
+    monkeypatch.setattr(resources, "access_client", lambda _url: Client(submitted))
+
+    result = runner.invoke(
+        app,
+        [
+            "management-keys",
+            "mint",
+            "--label",
+            "ci",
+            "--permission",
+            "bundles.read",
+            "--org",
+            "org-id",
+            "--workspace",
+            "workspace-id",
+            "--service-account",
+            "service-account-id",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert submitted["path"] == "/api/v1/orgs/org-id/workspaces/workspace-id/service-accounts/service-account-id/management-keys"
+    assert "user_id" not in submitted["body"]

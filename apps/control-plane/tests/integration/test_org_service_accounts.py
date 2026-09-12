@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, run_in_db, setup_control_plane
+from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 
 from control_plane.authz import Permission
 from control_plane.models import ManagementKey, OrgMembership, User
@@ -111,6 +111,51 @@ def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp
         assert replacement["scope"] == {"level": "org", "org_id": str(org_id), "workspace_id": None}
         assert replacement["permissions"] == [Permission.workspaces_read]
         assert replacement["token"] != created["management_key"]["token"]
+
+
+def test_workspace_admin_can_issue_a_workspace_key_for_a_managed_service_account(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as client:
+        org_id = make_org(client, root, "acme")
+        _org_admin(client, cp, org_id)
+        workspace_id = make_workspace(client, cp.headers(org_id), "production")
+        service_account = _create(client, org_id).json()["data"]["service_account"]
+
+        response = client.post(
+            f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/service-accounts/{service_account['id']}/management-keys",
+            json={"label": "workspace-management", "permissions": [Permission.workspaces_read]},
+            headers=cp.headers(org_id, workspace_id=workspace_id),
+        )
+
+        assert response.status_code == 200, response.text
+        key = response.json()["data"]
+        assert key["user_id"] == service_account["id"]
+        assert key["scope"] == {"level": "workspace", "org_id": str(org_id), "workspace_id": str(workspace_id)}
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}", headers={"authorization": f"Bearer {key['token']}"}).status_code == 200
+
+
+def test_workspace_service_account_key_endpoint_rejects_humans_and_the_wrong_owner(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as client:
+        first = make_org(client, root, "first")
+        second = make_org(client, root, "second")
+        first_workspace = make_workspace(client, cp.headers(first), "first")
+        admin_id = _org_admin(client, cp, first)
+        service_account = client.post(
+            f"/api/v1/orgs/{second}/service-accounts",
+            json={
+                "name": "Wrong Org Bot",
+                "management_key": {"label": "initial", "permissions": [Permission.workspaces_read]},
+            },
+            headers=root,
+        ).json()["data"]["service_account"]
+        path = f"/api/v1/orgs/{first}/workspaces/{first_workspace}/service-accounts"
+        body = {"label": "wrong-target", "permissions": [Permission.workspaces_read]}
+
+        assert client.post(f"{path}/{admin_id}/management-keys", json=body, headers=root).status_code == 404
+        assert client.post(f"{path}/{service_account['id']}/management-keys", json=body, headers=root).status_code == 404
 
 
 def test_service_account_key_endpoints_reject_humans_and_the_wrong_owner(tmp_path):
