@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 
 import httpx
 import pytest
@@ -42,7 +43,11 @@ def test_invalid_refill_rates_are_rejected(value):
 async def test_ip_throttling_precedes_routes_and_separates_operational_traffic():
     app = FastAPI()
     config = ThrottleConfig(api=RateLimit(burst=1, per_second=0.001))
-    app.add_middleware(ThrottleMiddleware, backend=LocalThrottleBackend(), config=config)
+    routes = (
+        (re.compile(r"/api/v1/anything(?:-else)?"), frozenset({"GET"}), "api"),
+        (re.compile(r"/api/v1/bundles/manifest"), frozenset({"GET"}), "operational"),
+    )
+    app.add_middleware(ThrottleMiddleware, backend=LocalThrottleBackend(), config=config, routes=routes)
 
     @app.get("/{path:path}")
     async def endpoint(path: str):
@@ -63,7 +68,8 @@ async def test_middleware_accepts_an_independent_backend():
             return Denied(retry_after=7, reason="capacity")
 
     app = FastAPI()
-    app.add_middleware(ThrottleMiddleware, backend=UnavailableBackend(), config=ThrottleConfig())
+    routes = ((re.compile(r"/api/v1/auth/me"), frozenset({"GET"}), "api"),)
+    app.add_middleware(ThrottleMiddleware, backend=UnavailableBackend(), config=ThrottleConfig(), routes=routes)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/auth/me")
     assert response.status_code == 503

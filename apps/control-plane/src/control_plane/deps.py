@@ -15,7 +15,7 @@ from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
 from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configuration_changes
 from control_plane.sessions import SESSION_COOKIE, verify_session
-from control_plane.throttling import check_identity
+from control_plane.throttling import TrafficGroup, check_identity
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
 PlaygroundCookie = Annotated[str | None, Cookie(alias=PLAYGROUND_COOKIE, include_in_schema=False)]
@@ -183,6 +183,7 @@ class PermissionCheck(Protocol):
     required_permissions: tuple[Permission, ...]
     required_permission_rules: tuple[tuple[Permission, ...], ...]
     required_scope: str
+    traffic_group: TrafficGroup
 
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
@@ -190,6 +191,7 @@ class PermissionCheck(Protocol):
 def _require(
     scope_resolver: Callable[..., Awaitable[Scope]],
     required_permission_rules: tuple[tuple[Permission, ...], ...],
+    traffic_group: TrafficGroup,
 ) -> params.Depends:
     required = tuple(permission for rule in required_permission_rules for permission in rule)
     scope_dependency = Depends(scope_resolver)
@@ -213,45 +215,58 @@ def _require(
     checker.required_permission_rules = required_permission_rules
     scope_name = getattr(scope_resolver, "__name__", "")
     checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
+    checker.traffic_group = traffic_group
     return Depends(checker)
 
 
-def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
-    return _require(scope_resolver, ((permission, *additional_permissions),))
+def require(
+    scope_resolver: Callable[..., Awaitable[Scope]],
+    permission: Permission,
+    *additional_permissions: Permission,
+    traffic_group: TrafficGroup = "api",
+) -> params.Depends:
+    return _require(scope_resolver, ((permission, *additional_permissions),), traffic_group)
 
 
-def require_all(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
-    return _require(scope_resolver, tuple((required,) for required in (permission, *additional_permissions)))
+def require_all(
+    scope_resolver: Callable[..., Awaitable[Scope]],
+    permission: Permission,
+    *additional_permissions: Permission,
+    traffic_group: TrafficGroup = "api",
+) -> params.Depends:
+    return _require(scope_resolver, tuple((required,) for required in (permission, *additional_permissions)), traffic_group)
 
 
 class AccessTag(Protocol):
     access: str
+    traffic_group: TrafficGroup
 
     def __call__(self) -> Awaitable[None]: ...
 
 
-def _access_marker(kind: str) -> params.Depends:
+def _access_marker(kind: str, traffic_group: TrafficGroup) -> params.Depends:
     async def access_marker() -> None: ...
 
     tagged = cast("AccessTag", access_marker)
     tagged.access = kind
+    tagged.traffic_group = traffic_group
     return Depends(tagged)
 
 
-def public() -> params.Depends:
-    return _access_marker("public")
+def public(traffic_group: TrafficGroup = "api") -> params.Depends:
+    return _access_marker("public", traffic_group)
 
 
-def user_scoped() -> params.Depends:
-    return _access_marker("user")
+def user_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+    return _access_marker("user", traffic_group)
 
 
-def principal_scoped() -> params.Depends:
-    return _access_marker("principal")
+def principal_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+    return _access_marker("principal", traffic_group)
 
 
-def browser_scoped() -> params.Depends:
-    return _access_marker("browser")
+def browser_scoped(traffic_group: TrafficGroup = "api") -> params.Depends:
+    return _access_marker("browser", traffic_group)
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:

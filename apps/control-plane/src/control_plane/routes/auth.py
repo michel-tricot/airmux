@@ -149,7 +149,7 @@ async def _validate_signup_invitation(token: str, email: str) -> None:
         raise HTTPException(status_code=410, detail="Invitation is no longer available") from error
 
 
-@router.post("/login", tags=["Auth"], dependencies=[public()])
+@router.post("/login", tags=["Auth"], dependencies=[public("authentication")])
 async def login(body: LoginIn, request: Request, response: Response) -> Envelope[MeOut]:
     """Authenticate a human user and start a browser session."""
     await check_account(request, body.email)
@@ -159,7 +159,7 @@ async def login(body: LoginIn, request: Request, response: Response) -> Envelope
     return Envelope(data=await _me_out(user))
 
 
-@router.post("/signup", tags=["Auth"], dependencies=[public()])
+@router.post("/signup", tags=["Auth"], dependencies=[public("authentication")])
 async def signup(
     body: SignupIn,
     request: Request,
@@ -229,7 +229,7 @@ async def my_permissions(actor: ActorDep, scope: PermissionScopeDep) -> Envelope
     return Envelope(data=MyPermissionsOut(permissions=sorted(permissions)))
 
 
-@router.post("/password", tags=["Auth"], dependencies=[user_scoped()])
+@router.post("/password", tags=["Auth"], dependencies=[user_scoped("authentication")])
 async def change_password(
     body: PasswordChangeIn, user: ActingUserDep, actor: ActorDep, request: Request, response: Response
 ) -> Envelope[PasswordChangedOut]:
@@ -312,7 +312,7 @@ def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
     return auth_request
 
 
-@router.post("/cli/start", tags=["Auth"], dependencies=[public()])
+@router.post("/cli/start", tags=["Auth"], dependencies=[public("cli_start")])
 async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[CliAuthStartOut]:
     """Create a short-lived device authorization for a CLI sign-in."""
     _, user_code, poll_secret = await CliAuthRequest.open(body.client_name, request.client.host if request.client else "")
@@ -344,7 +344,7 @@ async def cli_auth_request_details(code: str, user: CookieUserDep) -> Envelope[C
     )
 
 
-@router.post("/cli/approve", tags=["Auth"], dependencies=[browser_scoped()])
+@router.post("/cli/approve", tags=["Auth"], dependencies=[browser_scoped("authentication")])
 async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envelope[CliAuthApprovedOut]:
     """Approve a device authorization for instance access or one visible organization."""
     auth_request = _live(await CliAuthRequest.for_approval(body.user_code))
@@ -367,7 +367,7 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
     return Envelope(data=CliAuthApprovedOut(status="approved", client_name=auth_request.client_name))
 
 
-@router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
+@router.post("/cli/poll", tags=["Auth"], dependencies=[public("cli_poll")])
 async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
     """Return pending status or deliver the approved scoped management key once.
 

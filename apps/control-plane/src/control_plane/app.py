@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
@@ -35,7 +36,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
-from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, denied_response
+from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, TrafficGroup, denied_response
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -134,7 +135,6 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     throttling = app.state.settings.throttling
     app.state.throttle_backend = throttle_backend if throttle_backend is not None else LocalThrottleBackend(max_buckets=throttling.max_buckets)
     app.state.password_workers = PasswordWorkers(workers=throttling.password_workers, queue=throttling.password_queue)
-    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling)
     app.add_exception_handler(ThrottledError, throttled_handler)
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
@@ -163,4 +163,13 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     ):
         v1.include_router(router)
     app.include_router(v1)
+    throttle_routes = tuple(
+        (route.path_regex, frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
+        for route in v1.routes
+        if isinstance(route, APIRoute) and route.path.startswith("/api/v1/")
+        if (
+            groups := [group for dependency in route.dependant.dependencies if (group := getattr(dependency.call, "traffic_group", None)) is not None]
+        )
+    )
+    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=throttle_routes)
     return app
