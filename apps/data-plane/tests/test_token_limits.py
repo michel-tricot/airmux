@@ -26,11 +26,11 @@ def test_native_output_token_limits_enter_canonical_before_policy(dialect):
     assert not request.extra
 
 
-def test_output_token_aliases_come_from_the_bundle() -> None:
-    provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "provider_output_limit"}})
+def test_all_provider_parameter_aliases_come_from_the_bundle() -> None:
+    provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "provider_output_limit", "temperature": "provider_temperature"}})
     bundle = make_bundle(catalog=Catalog(providers=[provider], models=[MODEL]))
     snapshot = BundleSnapshot.from_bundle(bundle)
-    assert snapshot.output_token_aliases == frozenset({"provider_output_limit"})
+    assert snapshot.provider_param_aliases == frozenset({"provider_output_limit", "provider_temperature"})
     assert CanonicalRequest.model_validate({**BODY, "max_new_tokens": 9}).extra == {"max_new_tokens": 9}
 
 
