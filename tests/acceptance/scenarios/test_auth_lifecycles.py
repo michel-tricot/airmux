@@ -34,7 +34,7 @@ def start(stack: Stack) -> None:
     stack.wait_dp_ready()
 
 
-def race(first: Callable[[], httpx.Response], second: Callable[[], httpx.Response]) -> tuple[httpx.Response, httpx.Response]:
+def concurrently(first: Callable[[], httpx.Response], second: Callable[[], httpx.Response]) -> tuple[httpx.Response, httpx.Response]:
     barrier = Barrier(2, timeout=10)
 
     def invoke(action: Callable[[], httpx.Response]) -> httpx.Response:
@@ -69,7 +69,7 @@ def test_invitation_competing_transitions_preserve_one_membership(stack: Stack, 
         def compete() -> httpx.Response:
             return accept() if competing_action == "accept" else admin.post(f"{invitation_path}/{competing_action}")
 
-        accepted, competing = race(accept, compete)
+        accepted, competing = concurrently(accept, compete)
         if competing_action == "accept":
             assert (accepted.status_code, competing.status_code) == (200, 200)
         elif accepted.status_code == 200:
@@ -92,7 +92,7 @@ def test_cli_competing_transitions_deliver_one_usable_credential(stack: Stack, c
     start(stack)
     with httpx.Client(base_url=stack.cp_url, headers=CSRF, timeout=10) as admin:
         admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}).raise_for_status()
-        started = admin.post("/api/v1/auth/cli/start", json={"client_name": "lifecycle-race"})
+        started = admin.post("/api/v1/auth/cli/start", json={"client_name": "lifecycle-concurrency"})
         started.raise_for_status()
         auth_request = started.json()["data"]
 
@@ -106,12 +106,12 @@ def test_cli_competing_transitions_deliver_one_usable_credential(stack: Stack, c
         assert pending.json()["data"]["status"] == "pending"
         assert pending.json()["data"]["token"] is None
         if competing_action == "approval":
-            responses = race(approve, approve)
+            responses = concurrently(approve, approve)
             assert sorted(response.status_code for response in responses) == [200, 409]
             delivered = poll()
         else:
             approve().raise_for_status()
-            responses = race(poll, poll)
+            responses = concurrently(poll, poll)
             assert sorted(response.status_code for response in responses) == [200, 404]
             delivered = next(response for response in responses if response.status_code == 200)
         delivered.raise_for_status()
@@ -121,7 +121,7 @@ def test_cli_competing_transitions_deliver_one_usable_credential(stack: Stack, c
         assert poll().status_code == 404
         keys = admin.get(f"/api/v1/orgs/{stack.org_id}/management-keys")
         keys.raise_for_status()
-        minted = [key for key in keys.json()["data"] if key["label"] == "lifecycle-race"]
+        minted = [key for key in keys.json()["data"] if key["label"] == "lifecycle-concurrency"]
         assert len(minted) == 1
         assert token not in keys.text
         admin.delete(f"/api/v1/management-keys/{minted[0]['id']}").raise_for_status()
@@ -136,7 +136,7 @@ def test_password_change_closes_a_concurrent_old_password_login(stack: Stack) ->
         httpx.Client(base_url=stack.cp_url, headers=CSRF, timeout=10) as competing,
     ):
         current.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}).raise_for_status()
-        changed, logged_in = race(
+        changed, logged_in = concurrently(
             lambda: current.post("/api/v1/auth/password", json={"current_password": ADMIN_PASSWORD, "new_password": MEMBER_PASSWORD}),
             lambda: competing.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}),
         )
