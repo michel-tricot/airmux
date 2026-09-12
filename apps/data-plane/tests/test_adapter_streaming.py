@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,7 +11,7 @@ from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 from contract import Secret
 from data_plane.canonical import CanonicalReasoningPart, CanonicalTextPart, CanonicalToolCallPart
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import UpstreamStreamError
+from data_plane.egress.base import UpstreamProtocolError, UpstreamStreamError
 
 if TYPE_CHECKING:
     from data_plane.canonical import CanonicalChunk, CanonicalResponse
@@ -315,6 +316,30 @@ def test_a_malformed_stream_event_is_rejected(kind):
     (event,) = list(adapter.frame(b"data: not-json\n\n", state))
     with pytest.raises(ValueError, match="invalid upstream stream event"):
         adapter.transform_stream_event(event, state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("seed", range(12))
+@pytest.mark.parametrize("malformed", [b"event: \xff\ndata: {}\n\n", b"data: \xff\r\n\r\n", b"data: {\n\n", b"data: [\r\r:tail\n"])
+def test_generated_malformed_sse_splits_reject_cleanly_and_preserve_partial_accounting(kind, seed, malformed):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    events = list(adapter.frame(CASES[kind]["text"].log, adapter.new_stream_state(CTX)))
+    adapter.transform_stream_event(events[0], state)
+    partial = adapter.finalize(state)
+    cuts = sorted({0, len(malformed), *(1 + (seed * 37 + index * 13) % len(malformed) for index in range(8))})
+
+    def feed():
+        for start, end in pairwise(cuts):
+            for event in adapter.frame(malformed[start:end], state):
+                adapter.transform_stream_event(event, state)
+
+    with pytest.raises(UpstreamProtocolError):
+        feed()
+    assert adapter.finalize(state) == partial
+    assert partial.id
+    assert partial.usage.input_tokens >= 0
+    assert partial.usage.output_tokens >= 0
 
 
 @pytest.mark.parametrize("kind", KINDS)

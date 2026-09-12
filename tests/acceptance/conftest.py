@@ -133,6 +133,13 @@ class _StubHandler(BaseHTTPRequestHandler):
         messages = request.get("messages")
         message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
         prompt = message.get("content")
+        if prompt == "malformed-sse-name":
+            self.send_response(200)
+            self.send_header("content-type", "text/event-stream")
+            self.end_headers()
+            self.wfile.write(b"event: \xff\ndata: {}\n\n")
+            self.wfile.flush()
+            return
         if prompt == "fallback-primary-unavailable" and request.get("model") == MODEL:
             body = json.dumps({"error": {"message": "primary unavailable"}}).encode("utf-8")
             self.send_response(503)
