@@ -22,9 +22,12 @@ from control_plane.models.workspace_membership import WorkspaceMembership
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airllm.invalid"
 EMAIL_MAX_LENGTH = 320
 
-# Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
-_CLAIM_LOCK = 0x41524C4C
-_INSTANCE_ROLE_LOCK = 0x41524C52
+_INSTANCE_OWNER_LOCK = 0x41524C4C
+
+
+class LastInstanceOwnerError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("An instance must keep at least one owner")
 
 
 @audited
@@ -109,20 +112,25 @@ class User(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def instance_claimed(cls) -> bool:
-        """Whether any human account exists. Service accounts do not claim an instance."""
-        return await cls.first(col(cls.service_account).is_(False)) is not None
+        return await cls.first(cls.instance_role == InstanceRole.owner) is not None
 
     @classmethod
-    async def claims_the_instance(cls) -> bool:
-        """Whether the account about to be created is the first human, and so founds the deployment.
+    async def _lock_instance_owners(cls) -> tuple[UUID, ...]:
+        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _INSTANCE_OWNER_LOCK})
+        query = select(cls.id).where(cls.instance_role == InstanceRole.owner).order_by(col(cls.id))
+        return tuple((await current_session().execute(query)).scalars().all())
 
-        The transaction-scoped advisory lock serializes the check against the insert that follows
-        it, so two signups racing on a fresh deployment cannot both come back true; the loser sees
-        the winner's row. The lock dies with the transaction, and it is taken only while the
-        instance is unclaimed, so it costs a signup nothing once someone holds an account.
-        """
-        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CLAIM_LOCK})
-        return not await cls.instance_claimed()
+    @classmethod
+    async def reserve_unclaimed_instance(cls) -> bool:
+        """Return whether the transaction may create authority before the first owner exists."""
+        if await cls.instance_claimed():
+            return False
+        return not await cls._lock_instance_owners()
+
+    @staticmethod
+    def _refuse_last_owner_removal(owner_ids: tuple[UUID, ...], user_id: UUID) -> None:
+        if owner_ids == (user_id,):
+            raise LastInstanceOwnerError
 
     async def delete_with_contents(self) -> None:
         """Delete the user with the entities they own that are theirs alone: identities, sessions, and management keys.
@@ -133,6 +141,8 @@ class User(Record, Identified, Tombstonable, table=True):
         """
         from control_plane import models  # noqa: PLC0415 auth_identity imports user, so the two only meet at call time
 
+        owner_ids = await self._lock_instance_owners()
+        self._refuse_last_owner_removal(owner_ids, self.id)
         for owned in (models.AuthIdentity, models.AuthSession):
             for record in await owned.find(owned.user_id == self.id):
                 await record.delete()
@@ -141,7 +151,7 @@ class User(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def change_instance_role(cls, user_id: UUID, instance_role: InstanceRole | None) -> Self | None:
-        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _INSTANCE_ROLE_LOCK})
+        owner_ids = await cls._lock_instance_owners()
         user = await cls.find_by_id(user_id)
         if user is None:
             return None
@@ -149,10 +159,7 @@ class User(Record, Identified, Tombstonable, table=True):
             msg = "Organization-managed service accounts cannot hold an instance role"
             raise ValueError(msg)
         if user.instance_role == InstanceRole.owner and instance_role != InstanceRole.owner:
-            owners = await cls.find(cls.instance_role == InstanceRole.owner)
-            if len(owners) == 1:
-                msg = "Cannot demote the last instance owner"
-                raise ValueError(msg)
+            cls._refuse_last_owner_removal(owner_ids, user_id)
         user.instance_role = instance_role
         return await user.save()
 

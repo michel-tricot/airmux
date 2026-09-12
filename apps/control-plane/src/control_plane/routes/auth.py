@@ -155,7 +155,7 @@ async def signup(
     """
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
-    claims_instance = await User.claims_the_instance()
+    claims_instance = await User.reserve_unclaimed_instance()
     if body.invitation_token is not None:
         await _validate_signup_invitation(body.invitation_token, body.email)
     elif not request.app.state.settings.public_signup and not claims_instance:

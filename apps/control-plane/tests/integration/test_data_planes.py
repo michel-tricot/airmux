@@ -191,3 +191,17 @@ def test_bootstrap_refuses_to_add_authority_after_a_human_claims_the_instance(tm
 
     with pytest.raises(RuntimeError, match="already claimed"), TestClient(create_app(settings)):
         pass
+
+
+def test_bootstrap_refuses_to_add_authority_when_a_service_account_is_the_owner(tmp_path):
+    settings = _bootstrap_settings(tmp_path, "sk-cp-one-shared-pool-secret-that-is-long-enough")
+
+    async def claim() -> None:
+        user = User.new_service_account("Recovery", instance_role=InstanceRole.owner)
+        await set_actor(user.id)
+        await user.save()
+
+    run_in_db(tmp_path, claim)
+
+    with pytest.raises(RuntimeError, match="already claimed"), TestClient(create_app(settings)):
+        pass

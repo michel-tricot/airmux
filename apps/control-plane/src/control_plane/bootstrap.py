@@ -31,7 +31,7 @@ async def bootstrap_data_plane(bootstrap: DataPlaneBootstrap) -> None:
     if initialized is not None:
         msg = "the configured data-plane bootstrap token does not match the initialized pool key"
         raise RuntimeError(msg)
-    if await User.instance_claimed():
+    if not await User.reserve_unclaimed_instance():
         msg = "cannot bootstrap a data-plane key after the instance is already claimed"
         raise RuntimeError(msg)
     await set_actor("root")
