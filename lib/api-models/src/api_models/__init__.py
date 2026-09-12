@@ -2025,13 +2025,6 @@ class ManagementKeyIn(BaseModel):
             title="Expires At",
         ),
     ] = None
-    user_id: Annotated[
-        UUID | None,
-        Field(
-            description="Principal the key authenticates; defaults to the authenticated principal",
-            title="User Id",
-        ),
-    ] = None
 
 
 class ManagementKeyPermissionsIn(BaseModel):

@@ -898,8 +898,6 @@ export interface ManagementKeyIn {
   label: string;
   /** Optional expiration timestamp with a timezone */
   expires_at?: string | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
 }
 
 export type ManagementKeyOutStatus = typeof ManagementKeyOutStatus[keyof typeof ManagementKeyOutStatus];

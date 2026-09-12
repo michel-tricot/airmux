@@ -11,7 +11,7 @@ import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutati
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
 import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
-import { Plus, KeyRound, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
+import { Plus, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
@@ -67,7 +67,6 @@ export default function AppOrgSettings() {
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [keyTarget, setKeyTarget] = useState<{ userId: string; name: string } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
@@ -130,7 +129,6 @@ export default function AppOrgSettings() {
               {canIssueKey && (
                 <Button
                   onClick={() => {
-                    setKeyTarget(null);
                     setKeyOpen(true);
                   }}
                   size="sm"
@@ -192,7 +190,7 @@ export default function AppOrgSettings() {
                     cellClassName: 'text-right',
                     cell: (member) => <AccountKindBadge serviceAccount={member.service_account} />,
                   },
-                  ...(canIssueKey || canDeleteServiceAccount
+                  ...(canDeleteServiceAccount
                     ? [
                         {
                           key: 'actions',
@@ -202,20 +200,6 @@ export default function AppOrgSettings() {
                           cell: (member: NonNullable<typeof members>[number]) =>
                             member.managed ? (
                               <span className="inline-flex items-center gap-1">
-                                {canIssueKey && (
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    aria-label={`Generate replacement key for ${member.name}`}
-                                    disabled={createKey.isPending}
-                                    onClick={() => {
-                                      setKeyTarget({ userId: member.user_id, name: member.name });
-                                      setKeyOpen(true);
-                                    }}
-                                  >
-                                    <KeyRound className="w-4 h-4" />
-                                  </Button>
-                                )}
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
@@ -356,29 +340,19 @@ export default function AppOrgSettings() {
       {canIssueKey && (
         <FormDialog
           open={keyOpen}
-          onOpenChange={(open) => {
-            setKeyOpen(open);
-            if (!open) setKeyTarget(null);
-          }}
-          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate Management Key'}
-          description={
-            keyTarget
-              ? 'The new key is shown once and does not revoke any existing keys for this service account.'
-              : 'The key is bound to this organization and carries only the permissions you name.'
-          }
+          onOpenChange={setKeyOpen}
+          title="Generate Management Key"
+          description="The key represents you in this organization and carries only the permissions you name."
           schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const key = await createKey.mutateAsync({
               orgId,
-              data: {
-                ...(keyTarget ? { user_id: keyTarget.userId } : {}),
-                ...managementKeyPayload(values),
-              },
+              data: managementKeyPayload(values),
             });
             setToken(key.token);
           }}
-          submitLabel={keyTarget ? 'Generate replacement key' : 'Generate'}
+          submitLabel="Generate"
           pending={createKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >

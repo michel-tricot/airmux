@@ -185,4 +185,4 @@ class ManagementKeyGrantIn(ManagementKeyPermissionsIn):
 
 
 class ManagementKeyIn(ManagementKeyGrantIn):
-    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")
+    pass

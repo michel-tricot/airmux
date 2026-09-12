@@ -137,15 +137,12 @@ def test_permission_changes_cannot_exceed_the_key_principals_current_role(tmp_pa
             await OrgMembership(user_id=member.id, org_id=org_id, role=OrgRole.member).save()
 
         run_in_db(tmp_path, join)
-        key = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
-            json={"label": "member", "user_id": str(member.id), "permissions": [Permission.organizations_read]},
-            headers=root,
-        ).json()["data"]
+        bearer = cp.headers_for(org_id, member.id)
+        keys = client.get(f"/api/v1/orgs/{org_id}/management-keys", headers=root).json()["data"]
+        key = next(key for key in keys if key["user_id"] == str(member.id))
         response = client.put(f"/api/v1/management-keys/{key['id']}/permissions", json={"permissions": [Permission.members_manage]}, headers=root)
         assert response.status_code == 403
         assert "target principal" in response.json()["detail"]
-        bearer = {"authorization": f"Bearer {key['token']}"}
         assert client.get(f"/api/v1/orgs/{org_id}", headers=bearer).status_code == 200
 
 

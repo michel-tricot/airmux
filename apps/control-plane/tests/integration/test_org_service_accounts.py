@@ -88,7 +88,7 @@ def test_org_admin_creates_an_org_owned_service_account_with_a_management_key(tm
         assert managed["managed"] is True
 
 
-def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp_path):
+def test_generic_management_key_issuance_cannot_select_a_service_account(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as client:
@@ -106,12 +106,8 @@ def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp
             headers=CSRF,
         )
 
-        assert response.status_code == 200, response.text
-        replacement = response.json()["data"]
-        assert replacement["user_id"] == created["service_account"]["id"]
-        assert replacement["scope"] == {"level": "org", "org_id": str(org_id), "workspace_id": None}
-        assert replacement["permissions"] == [Permission.workspaces_read]
-        assert replacement["token"] != created["management_key"]["token"]
+        assert response.status_code == 422, response.text
+        assert response.json()["detail"][0]["type"] == "extra_forbidden"
 
 
 def test_service_account_creation_is_atomic_when_the_key_exceeds_its_role(tmp_path):

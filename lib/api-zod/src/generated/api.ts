@@ -61,8 +61,7 @@ export const createInstanceManagementKeyBodyLabelMax = 80;
 export const CreateInstanceManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createInstanceManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateInstanceManagementKeyResponse = zod.object({
@@ -145,8 +144,7 @@ export const createOrgManagementKeyBodyLabelMax = 80;
 export const CreateOrgManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createOrgManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateOrgManagementKeyResponse = zod.object({
@@ -231,8 +229,7 @@ export const createWorkspaceManagementKeyBodyLabelMax = 80;
 export const CreateWorkspaceManagementKeyBody = zod.object({
   "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'policies.read', 'policies.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'management-keys.read', 'management-keys.issue', 'management-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "label": zod.string().min(1).max(createWorkspaceManagementKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal')
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
 export const CreateWorkspaceManagementKeyResponse = zod.object({

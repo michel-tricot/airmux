@@ -94,15 +94,13 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         o1 = make_org(c, root, "o1")
         user = make_user(tmp_path, "ops@example.com")
         make_admin(tmp_path, user.id)
-        user_id = str(user.id)
         management_key = c.post(
             f"/api/v1/orgs/{o1}/management-keys",
             json={
-                "user_id": user_id,
                 "label": "data-plane",
                 "permissions": [Permission.data_planes_heartbeat],
             },
-            headers=root,
+            headers=cp.headers_for(o1, user.id),
         ).json()["data"]
         dp = {"authorization": f"Bearer {management_key['token']}"}
         dp1 = uuid7()

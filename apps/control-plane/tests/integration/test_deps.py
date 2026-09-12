@@ -13,14 +13,13 @@ from control_plane.models import AuditLog, Org
 def test_api_requests_attribute_the_acting_user(tmp_path):
     """The full chain: bearer token -> authority -> set_actor -> GUC -> audit trigger."""
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with TestClient(cp.app) as c:
         user = make_user(tmp_path, "admin@example.com")
         make_admin(tmp_path, user.id)
         token = c.post(
             "/api/v1/instance/management-keys",
-            json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
-            headers=root,
+            json={"label": "t", "permissions": [Permission.organizations_create]},
+            headers=cp.headers_for(None, user.id),
         ).json()["data"]["token"]
         c.post("/api/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
