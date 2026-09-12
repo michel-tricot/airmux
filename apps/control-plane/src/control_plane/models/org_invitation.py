@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from contract import token_hash
+from control_plane.authz import Scope, ScopeLevel
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
@@ -119,7 +120,7 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
-    async def pending_for_email(cls, email: str, now: datetime) -> list[tuple[Self, str, str | None]]:
+    async def pending_for_email(cls, email: str, now: datetime, scope: Scope) -> list[tuple[Self, str, str | None]]:
         query = (
             select(cls, Org.name, Workspace.name)
             .join(Org, col(Org.id) == col(cls.org_id))
@@ -132,6 +133,10 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
             )
             .order_by(col(cls.created_at), col(cls.id))
         )
+        if scope.level is not ScopeLevel.instance:
+            query = query.where(cls.org_id == scope.org_id)
+        if scope.level is ScopeLevel.workspace:
+            query = query.where(cls.workspace_id == scope.workspace_id)
         return [(result[0], result[1], result[2]) for result in (await current_session().execute(query)).all()]
 
     @classmethod

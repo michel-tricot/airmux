@@ -50,7 +50,7 @@ async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut
     orgs = [org for org in orgs if org.id in visible]
     personal = await Org.personal_of(user.id)
     personal_visible = personal is not None and bool(visible_org_ids(actor, (personal.id,)))
-    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC))
+    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC), actor.grant.scope)
     return Envelope(
         data=EnrollOut(
             orgs=[OrgOut.model_validate(org) for org in orgs],
