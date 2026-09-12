@@ -28,6 +28,12 @@ AIRLLM_PUBLIC_URL=http://localhost:9000
 Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For a public deployment, terminate TLS at a
 reverse proxy and set `AIRLLM_PUBLIC_URL` to the exact HTTPS origin.
 
+The packaged proxy replaces incoming forwarding headers and uses the configured public URL for the request scheme. API
+and inference responses carry `Cache-Control: no-store`, including errors. When an external TLS proxy sits in front of
+the packaged proxy, its address is the observed client address. Client-specific throttling behind that edge requires an
+explicitly configured trusted-edge integration; incoming client forwarding chains are never trusted by default. Keep the
+split deployment's control-plane port private to its Docker network.
+
 Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
 does not rotate the password already stored by Postgres.
 
