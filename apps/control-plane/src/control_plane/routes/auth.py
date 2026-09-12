@@ -27,7 +27,18 @@ from control_plane.deps import (
     user_scoped,
 )
 from control_plane.keys import create_standing_management_key, verify_management_key
-from control_plane.models import AuthIdentity, CliAuthRequest, ManagementKey, Org, OrgInvitation, OrgMembership, PlaygroundSession, User, set_actor
+from control_plane.models import (
+    AuthIdentity,
+    AuthSession,
+    CliAuthRequest,
+    ManagementKey,
+    Org,
+    OrgInvitation,
+    OrgMembership,
+    PlaygroundSession,
+    User,
+    set_actor,
+)
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
@@ -106,7 +117,7 @@ async def _me_out(user: User, actor: Actor | None = None) -> MeOut:
 
 async def _login_user(email: str, password: str) -> User:
     """Password verification with one 401 for every failure shape, so responses never say which part was wrong."""
-    identity = await AuthIdentity.password_for(email)
+    identity = await AuthIdentity.password_for_update(email)
     if identity is None or identity.secret_hash is None:
         verify_password(DUMMY_HASH, password)
         raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -212,12 +223,19 @@ async def my_permissions(actor: ActorDep, scope: PermissionScopeDep) -> Envelope
 
 
 @router.post("/password", tags=["Auth"], dependencies=[user_scoped()])
-async def change_password(body: PasswordChangeIn, user: ActingUserDep) -> Envelope[PasswordChangedOut]:
+async def change_password(
+    body: PasswordChangeIn, user: ActingUserDep, actor: ActorDep, request: Request, response: Response
+) -> Envelope[PasswordChangedOut]:
     """Replace the authenticated user's password after verifying the current password."""
-    identity = await AuthIdentity.password_for(user.email)
+    identity = await AuthIdentity.password_for_update(user.email)
     if identity is None or identity.secret_hash is None or not verify_password(identity.secret_hash, body.current_password):
         raise HTTPException(status_code=403, detail="Current password is incorrect")
     await AuthIdentity.set_password(user, body.new_password)
+    await AuthSession.end_for_user(user.id)
+    if actor.credential_kind == "session":
+        _, token = await mint_session(user.id)
+        _set_session_cookie(response, token, request)
+        response.delete_cookie(PLAYGROUND_COOKIE, path="/")
     return Envelope(data=PasswordChangedOut(user_id=user.id, status="changed"))
 
 
