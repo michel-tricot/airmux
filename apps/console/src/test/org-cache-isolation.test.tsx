@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { expect, it } from 'vitest';
 import { SessionProvider, useSession } from '@/lib/session';
 
-it('evicts the departed organization data and permissions while retaining another organization cache', () => {
+it('clears cached organization data when the organization changes', () => {
   window.localStorage.setItem('airllm_org_id', 'departed');
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const departed = getListWorkspacesQueryKey('departed');
@@ -23,6 +23,6 @@ it('evicts the departed organization data and permissions while retaining anothe
   act(() => session.result.current.setOrgId('retained'));
   expect(queryClient.getQueryData(departed)).toBeUndefined();
   expect(queryClient.getQueryData(permissions)).toBeUndefined();
-  expect(queryClient.getQueryData(retained)).toEqual([{ name: 'retained workspace' }]);
+  expect(queryClient.getQueryData(retained)).toBeUndefined();
   expect(window.localStorage.getItem('airllm_org_id')).toBe('retained');
 });

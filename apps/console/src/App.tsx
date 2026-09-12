@@ -76,8 +76,6 @@ function AppSection() {
     query: {
       queryKey: getEnrollmentQueryKey(),
       retry: false,
-      refetchInterval: 10000,
-      refetchIntervalInBackground: true,
       refetchOnWindowFocus: 'always',
     },
   });
