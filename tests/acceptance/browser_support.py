@@ -37,6 +37,7 @@ class Console:
         self.page.get_by_role("button", name="Sign in", exact=True).click()
         expect(self.page.get_by_role("heading", name="Sign in", exact=True)).not_to_be_visible()
 
+
 @contextmanager
 def running_console(stack: Stack) -> Iterator[Console]:
     stack.write_config()
