@@ -25,7 +25,6 @@ REPOSITORY = Path(__file__).resolve().parents[2]
 
 @dataclass
 class Console:
-    stack: Stack
     url: str
     context: BrowserContext
     page: Page
@@ -37,10 +36,6 @@ class Console:
         self.page.get_by_label("Password", exact=True).fill(password)
         self.page.get_by_role("button", name="Sign in", exact=True).click()
         expect(self.page.get_by_role("heading", name="Sign in", exact=True)).not_to_be_visible()
-
-    def capture(self, name: str) -> None:
-        self.page.screenshot(path=str(self.stack.tmp / f"{name}.png"), full_page=True, mask=[self.page.get_by_label("Key Secret", exact=True)])
-
 
 @contextmanager
 def running_console(stack: Stack) -> Iterator[Console]:
@@ -80,7 +75,7 @@ def running_console(stack: Stack) -> Iterator[Console]:
                 try:
                     page = context.new_page()
                     page.set_default_timeout(10_000)
-                    yield Console(stack, url, context, page)
+                    yield Console(url, context, page)
                 finally:
                     context.close()
                     browser.close()

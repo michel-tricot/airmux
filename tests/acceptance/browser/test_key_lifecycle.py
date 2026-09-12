@@ -37,7 +37,6 @@ def test_management_key_is_self_owned_shown_once_and_revoked(stack: Stack) -> No
         expect(secret).to_have_value(key["token"])
         page.get_by_role("button", name="Copy key", exact=True).click()
         assert page.evaluate("navigator.clipboard.readText()") == key["token"]
-        console.capture("key-reveal-masked")
         page.get_by_role("button", name="I have saved it", exact=True).click()
         expect(secret).to_have_count(0)
         expect(page.get_by_role("row").filter(has_text="browser-lifecycle")).to_be_visible()
@@ -54,4 +53,3 @@ def test_management_key_is_self_owned_shown_once_and_revoked(stack: Stack) -> No
         page.get_by_role("button", name="Revoke key", exact=True).click()
         expect(page.get_by_role("row").filter(has_text="browser-lifecycle")).to_contain_text("REVOKED")
         assert httpx.get(f"{stack.cp_url}/api/v1/auth/me", headers=headers).status_code == 401
-        console.capture("key-revoked")
