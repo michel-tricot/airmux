@@ -15,7 +15,7 @@ from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, 
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.org_membership import LastOrgOwnerError, MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
@@ -125,7 +125,7 @@ async def create_org_service_account_management_key(
     body: ManagementKeyIn,
     org_id: OrgDep,
     actor: ActorDep,
-) -> Envelope[ManagementKeyMintedOut]:
+) -> Envelope[ManagementKeyCreatedOut]:
     """Issue a replacement key for an organization-managed service account."""
     service_account = await User.owned_by(org_id, user_id)
     return Envelope(data=await issue_management_key(body, actor, Scope.org(org_id), principal_id=service_account.id))

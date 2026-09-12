@@ -6845,9 +6845,9 @@ export const getCreateOrgServiceAccountManagementKeyUrl = (orgId: string,
  */
 export const createOrgServiceAccountManagementKey = async (orgId: string,
     userId: string,
-    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyCreatedOut> => {
 
-  return customFetch<ManagementKeyMintedOut>(getCreateOrgServiceAccountManagementKeyUrl(orgId,userId),
+  return customFetch<ManagementKeyCreatedOut>(getCreateOrgServiceAccountManagementKeyUrl(orgId,userId),
   {
     ...options,
     method: 'POST',
