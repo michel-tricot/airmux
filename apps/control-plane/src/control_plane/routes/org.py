@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Query
@@ -21,6 +21,9 @@ from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAcc
 from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
+
+if TYPE_CHECKING:
+    from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut
 
 
 @router.get("/users", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_read)])
@@ -110,6 +113,22 @@ async def create_org_service_account(
             management_key=management_key,
         )
     )
+
+
+@router.post(
+    "/service-accounts/{user_id}/management-keys",
+    tags=["Organization Service Accounts"],
+    dependencies=[require(org_scope, Permission.management_keys_issue)],
+)
+async def create_org_service_account_management_key(
+    user_id: UUID,
+    body: ManagementKeyIn,
+    org_id: OrgDep,
+    actor: ActorDep,
+) -> Envelope[ManagementKeyMintedOut]:
+    """Issue a replacement key for an organization-managed service account."""
+    service_account = await User.owned_by(org_id, user_id)
+    return Envelope(data=await issue_management_key(body, actor, Scope.org(org_id), principal_id=service_account.id))
 
 
 @router.delete(

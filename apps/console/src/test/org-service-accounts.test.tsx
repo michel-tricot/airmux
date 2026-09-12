@@ -1,5 +1,5 @@
 import type * as Api from '@workspace/api-client-react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -17,6 +17,7 @@ describe('organization service accounts', () => {
     const now = '2026-08-18T12:00:00Z';
     let members: Api.OrgMemberOut[] = [];
     let submitted: unknown;
+    let replacement: { userId: string; body: unknown } | undefined;
     let deletedUserId: string | undefined;
     server.use(
       http.get('/api/v1/auth/permissions', () =>
@@ -89,6 +90,29 @@ describe('organization service accounts', () => {
         members = [];
         return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: deletedUserId, deleted_at: now } });
       }),
+      http.post('/api/v1/orgs/:orgId/service-accounts/:userId/management-keys', async ({ params, request }) => {
+        replacement = { userId: String(params.userId), body: await request.json() };
+        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
+          data: {
+            id: 'management-key-2',
+            user_id: String(params.userId),
+            org_id: ORG.id,
+            workspace_id: null,
+            parent_id: null,
+            prefix: 'sk-cp-repla',
+            permissions: ['workspaces.read'],
+            label: 'replacement-management',
+            expires_at: null,
+            revoked_at: null,
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+            scope: { level: 'org', org_id: ORG.id, workspace_id: null },
+            status: 'active',
+            token: 'sk-cp-replacement-secret',
+          },
+        });
+      }),
     );
     const user = userEvent.setup();
     renderAt('/org/settings');
@@ -112,7 +136,17 @@ describe('organization service accounts', () => {
     expect(screen.getByText('SERVICE')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('sk-cp-show-once-secret')).not.toBeInTheDocument();
 
-    expect(screen.queryByRole('button', { name: 'Generate replacement key for Deploy Bot' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Generate replacement key for Deploy Bot' }));
+    const replacementDialog = screen.getByRole('dialog', { name: 'Generate service account key' });
+    await user.type(within(replacementDialog).getByLabelText('Label'), 'replacement-management');
+    await user.click(within(replacementDialog).getByRole('checkbox', { name: 'workspaces.read' }));
+    await user.click(within(replacementDialog).getByRole('button', { name: 'Generate' }));
+    expect(await screen.findByDisplayValue('sk-cp-replacement-secret')).toBeInTheDocument();
+    expect(replacement).toEqual({
+      userId: 'service-account-1',
+      body: { label: 'replacement-management', permissions: ['workspaces.read'] },
+    });
+    await user.click(screen.getByRole('button', { name: 'I have saved it' }));
 
     await user.click(screen.getByRole('button', { name: 'Delete service account Deploy Bot' }));
     await user.click(screen.getByRole('button', { name: 'Delete service account' }));

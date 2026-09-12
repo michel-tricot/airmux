@@ -6828,6 +6828,83 @@ export const useCreateOrgServiceAccount = <TError = ErrorType<void | HTTPValidat
       return useMutation(getCreateOrgServiceAccountMutationOptions(options), queryClient);
     }
 
+export const getCreateOrgServiceAccountManagementKeyUrl = (orgId: string,
+    userId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/service-accounts/${userId}/management-keys`
+}
+
+/**
+ * Issue a replacement key for an organization-managed service account.
+ *
+ * Required permission: `management-keys.issue`.
+ * @summary Create Org Service Account Management Key
+ */
+export const createOrgServiceAccountManagementKey = async (orgId: string,
+    userId: string,
+    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+
+  return customFetch<ManagementKeyMintedOut>(getCreateOrgServiceAccountManagementKeyUrl(orgId,userId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(managementKeyIn)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgServiceAccountManagementKeyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>, TError,{orgId: string;userId: string;data: BodyType<ManagementKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>, TError,{orgId: string;userId: string;data: BodyType<ManagementKeyIn>}, TContext> => {
+
+const mutationKey = ['createOrgServiceAccountManagementKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>, {orgId: string;userId: string;data: BodyType<ManagementKeyIn>}> = (props) => {
+          const {orgId,userId,data} = props ?? {};
+
+          return  createOrgServiceAccountManagementKey(orgId,userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgServiceAccountManagementKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>>
+    export type CreateOrgServiceAccountManagementKeyMutationBody = BodyType<ManagementKeyIn>
+    export type CreateOrgServiceAccountManagementKeyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Create Org Service Account Management Key
+ */
+export const useCreateOrgServiceAccountManagementKey = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>, TError,{orgId: string;userId: string;data: BodyType<ManagementKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgServiceAccountManagementKey>>,
+        TError,
+        {orgId: string;userId: string;data: BodyType<ManagementKeyIn>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgServiceAccountManagementKeyMutationOptions(options), queryClient);
+    }
+
 export const getDeleteOrgServiceAccountUrl = (orgId: string,
     userId: string,) => {
 

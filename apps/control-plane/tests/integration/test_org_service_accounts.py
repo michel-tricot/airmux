@@ -110,6 +110,28 @@ def test_generic_management_key_issuance_cannot_select_a_service_account(tmp_pat
         assert response.json()["detail"][0]["type"] == "extra_forbidden"
 
 
+def test_org_admin_rotates_an_org_managed_service_account_key(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as client:
+        org_id = make_org(client, root, "acme")
+        _org_admin(client, cp, org_id)
+        created = _create(client, org_id).json()["data"]
+        service_account = created["service_account"]
+
+        response = client.post(
+            f"/api/v1/orgs/{org_id}/service-accounts/{service_account['id']}/management-keys",
+            json={"label": "replacement-management", "permissions": [Permission.workspaces_read]},
+            headers=CSRF,
+        )
+
+        assert response.status_code == 200, response.text
+        replacement = response.json()["data"]
+        assert replacement["user_id"] == service_account["id"]
+        assert replacement["org_id"] == str(org_id)
+        assert replacement["permissions"] == [Permission.workspaces_read]
+
+
 def test_service_account_creation_is_atomic_when_the_key_exceeds_its_role(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
