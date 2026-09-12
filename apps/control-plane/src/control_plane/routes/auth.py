@@ -43,8 +43,9 @@ from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
 from control_plane.models.org_invitation import InvitationEmailMismatchError, InvitationUnavailableError
-from control_plane.passwords import DUMMY_HASH, hash_password, needs_rehash, verify_password
+from control_plane.passwords import DUMMY_HASH, PasswordWorkers, needs_rehash
 from control_plane.sessions import SESSION_ABSOLUTE_TTL, SESSION_COOKIE, mint_session, verify_session
+from control_plane.throttling import check_account
 
 router = APIRouter(prefix="/auth")
 
@@ -115,14 +116,14 @@ async def _me_out(user: User, actor: Actor | None = None) -> MeOut:
     return MeOut(user_id=user.id, email=user.email, name=user.name, instance_role=user.instance_role, orgs=orgs)
 
 
-async def _login_user(email: str, password: str) -> User:
+async def _login_user(email: str, password: str, workers: PasswordWorkers) -> User:
     """Password verification with one 401 for every failure shape, so responses never say which part was wrong."""
     identity = await AuthIdentity.password_for(email)
     if identity is None or identity.secret_hash is None:
-        verify_password(DUMMY_HASH, password)
+        await workers.verify(DUMMY_HASH, password)
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     secret_hash = identity.secret_hash
-    if not verify_password(secret_hash, password):
+    if not await workers.verify(secret_hash, password):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     locked_identity = await AuthIdentity.password_for_update(email)
     if locked_identity is None or locked_identity.id != identity.id or locked_identity.secret_hash != secret_hash:
@@ -131,7 +132,7 @@ async def _login_user(email: str, password: str) -> User:
     if user is None or user.service_account:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     if needs_rehash(secret_hash):
-        locked_identity.secret_hash = hash_password(password)
+        locked_identity.secret_hash = await workers.hash(password)
         await locked_identity.save()
     return user
 
@@ -151,7 +152,8 @@ async def _validate_signup_invitation(token: str, email: str) -> None:
 @router.post("/login", tags=["Auth"], dependencies=[public()])
 async def login(body: LoginIn, request: Request, response: Response) -> Envelope[MeOut]:
     """Authenticate a human user and start a browser session."""
-    user = await _login_user(body.email, body.password)
+    await check_account(request, body.email)
+    user = await _login_user(body.email, body.password, request.app.state.password_workers)
     _, token = await mint_session(user.id)
     _set_session_cookie(response, token, request)
     return Envelope(data=await _me_out(user))
@@ -168,6 +170,7 @@ async def signup(
     The first human account on a new deployment becomes the instance owner. Later accounts require
     an organization membership or instance role before they can access managed resources.
     """
+    await check_account(request, body.email)
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
     claims_instance = await User.claims_the_instance()
@@ -180,7 +183,7 @@ async def signup(
     await set_actor(user.id)
     await user.save()
     try:
-        await AuthIdentity.set_password(user, body.password)
+        await AuthIdentity.set_password_hash(user, await request.app.state.password_workers.hash(body.password))
     except IdentityConflictError as e:
         raise HTTPException(status_code=409, detail="An account with this email already exists") from e
     _, token = await mint_session(user.id)
@@ -231,10 +234,12 @@ async def change_password(
     body: PasswordChangeIn, user: ActingUserDep, actor: ActorDep, request: Request, response: Response
 ) -> Envelope[PasswordChangedOut]:
     """Replace the authenticated user's password after verifying the current password."""
+    await check_account(request, user.email)
     identity = await AuthIdentity.password_for_update(user.email)
-    if identity is None or identity.secret_hash is None or not verify_password(identity.secret_hash, body.current_password):
+    workers = request.app.state.password_workers
+    if identity is None or identity.secret_hash is None or not await workers.verify(identity.secret_hash, body.current_password):
         raise HTTPException(status_code=403, detail="Current password is incorrect")
-    await AuthIdentity.set_password(user, body.new_password)
+    await AuthIdentity.set_password_hash(user, await workers.hash(body.new_password))
     await AuthSession.end_for_user(user.id)
     if actor.credential_kind == "session":
         _, token = await mint_session(user.id)

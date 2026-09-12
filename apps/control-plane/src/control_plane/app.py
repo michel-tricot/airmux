@@ -18,6 +18,7 @@ from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
+from control_plane.passwords import PasswordWorkers
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
 from control_plane.routes.instance import router as instance_router
@@ -34,6 +35,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
+from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, denied_response
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -72,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.secret_store = secret_store
             yield
     finally:
+        app.state.password_workers.close()
         await engine.dispose()
 
 
@@ -114,7 +117,11 @@ async def healthz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+async def throttled_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return denied_response(cast("ThrottledError", exc).decision)
+
+
+def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBackend | None = None) -> FastAPI:
     app = ControlPlaneApp(
         title="AirLLM Control Plane API",
         description=API_DESCRIPTION,
@@ -124,6 +131,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=operation_id,
     )
     app.state.settings = settings if settings is not None else load_settings()
+    throttling = app.state.settings.throttling
+    app.state.throttle_backend = throttle_backend if throttle_backend is not None else LocalThrottleBackend(max_buckets=throttling.max_buckets)
+    app.state.password_workers = PasswordWorkers(workers=throttling.password_workers, queue=throttling.password_queue)
+    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling)
+    app.add_exception_handler(ThrottledError, throttled_handler)
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(IntegrityError, integrity_handler)

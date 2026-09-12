@@ -15,6 +15,7 @@ from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
 from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configuration_changes
 from control_plane.sessions import SESSION_COOKIE, verify_session
+from control_plane.throttling import check_identity
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
 PlaygroundCookie = Annotated[str | None, Cookie(alias=PLAYGROUND_COOKIE, include_in_schema=False)]
@@ -56,6 +57,7 @@ async def _session_user(session_cookie: str, x_requested_with: str | None, sec_f
 
 
 async def actor(
+    request: Request,
     credentials: BearerDep,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
@@ -75,6 +77,8 @@ async def actor(
         )
     else:
         raise HTTPException(status_code=401, detail="Authentication required; sign in or provide a credential")
+    identity = str(resolved.credential_id) if resolved.credential_kind == "management_key" else str(resolved.principal_id)
+    await check_identity(request, identity)
     await set_actor(resolved.principal_id)
     return resolved
 
@@ -93,6 +97,7 @@ ActingUserDep = Annotated[User, Depends(acting_user)]
 
 
 async def cookie_user(
+    request: Request,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
@@ -100,6 +105,7 @@ async def cookie_user(
     if session_cookie is None:
         raise HTTPException(status_code=401, detail="Sign in to approve this request; a key cannot be used here")
     _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
+    await check_identity(request, str(user.id))
     await set_actor(user.id)
     return user
 

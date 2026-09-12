@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from contract import EnvStoreConfig, SecretsConfig, load_config_section
 from control_plane.keys import validate_management_key_token
+from control_plane.throttling import ThrottleConfig
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,6 +50,7 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    throttling: ThrottleConfig = Field(default_factory=ThrottleConfig)
     bootstrap: DataPlaneBootstrap | None = None
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; the data plane must name the same store
 
