@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import httpx
 from pydantic import BaseModel
 
+from data_plane.canonical import CanonicalRequest
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from uuid import UUID
 
     from contract import CredentialScope, ModelEntry, ProviderEntry, Secret
-    from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
+    from data_plane.canonical import CanonicalChunk, CanonicalResponse
 
 
 class CanonicalError(BaseModel):
@@ -28,6 +30,14 @@ def encode(body: BaseModel | Mapping[str, Any], aliases: Mapping[str, str], extr
     extras merged after them, typed fields winning any collision. Absent fields are omitted:
     a provider must never see a null it would reject."""
     fields = body.model_dump(mode="json", exclude_none=True) if isinstance(body, BaseModel) else body
+    token_parameters = CanonicalRequest.output_token_parameters
+    token_spellings = token_parameters | {spelling for name, spelling in aliases.items() if name in token_parameters}
+    if token_spellings.intersection(extras):
+        message = "output token limits must use max_tokens"
+        raise ValueError(message)
+    if any(name not in token_parameters and aliases.get(name, name) in token_spellings for name in fields):
+        message = "provider parameter aliases collide with output token limits"
+        raise ValueError(message)
     rendered = {aliases.get(key, key): value for key, value in fields.items() if value is not None}
     return json.dumps({**dict(extras), **rendered}).encode()
 

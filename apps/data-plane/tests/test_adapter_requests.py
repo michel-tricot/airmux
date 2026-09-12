@@ -253,12 +253,12 @@ def test_responses_applies_provider_aliases_after_the_explicit_field_mapping():
     assert "max_output_tokens" not in sent
 
 
-def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
+def test_the_provider_spelling_receives_the_canonical_token_limit():
     adapter, model = _adapter("openai_compatible")
     provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "max_completion_tokens"}})
     adapter.provider = provider
     body = json.loads(request_of(CORPUS[0]).model_dump_json())
-    request = CanonicalRequest.model_validate({**body, "max_tokens": 64, "max_completion_tokens": 999})
+    request = CanonicalRequest.model_validate({**body, "max_tokens": 64})
     sent = json.loads(adapter.transform_request(request, model).body)
     assert sent["max_completion_tokens"] == 64  # the canonical value, in the provider's spelling
     assert "max_tokens" not in sent

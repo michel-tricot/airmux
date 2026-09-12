@@ -17,7 +17,7 @@ text part at the edge. Everything stored, translated or emitted is the typed for
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
@@ -221,6 +221,7 @@ class CanonicalReasoningConfig(BaseModel):
 
 class CanonicalRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
+    output_token_parameters: ClassVar[frozenset[str]] = frozenset({"max_tokens", "max_completion_tokens", "max_output_tokens", "max_new_tokens"})
 
     model: str
     messages: list[CanonicalMessage] = Field(min_length=1)
@@ -235,6 +236,13 @@ class CanonicalRequest(BaseModel):
     response_format: CanonicalResponseFormat | None = None
     reasoning: CanonicalReasoningConfig | None = None
     parallel_tool_calls: bool | None = Field(default=None, strict=True)
+
+    @model_validator(mode="after")
+    def reject_output_token_passthrough(self) -> Self:
+        if self.output_token_parameters.intersection(self.extra):
+            message = "output token limits must use max_tokens"
+            raise ValueError(message)
+        return self
 
     @property
     def extra(self) -> dict[str, Any]:
