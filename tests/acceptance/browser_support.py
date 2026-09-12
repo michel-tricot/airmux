@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 from playwright.sync_api import expect, sync_playwright
@@ -21,6 +22,22 @@ if TYPE_CHECKING:
     from playwright.sync_api import BrowserContext, Page
 
 REPOSITORY = Path(__file__).resolve().parents[2]
+
+
+def invite_member(admin: httpx.Client, member: httpx.Client, org_path: str, workspace_id: str) -> str:
+    invitation = admin.post(
+        f"{org_path}/invitations",
+        json={"email": "browser-member@acceptance.test", "org_role": "member", "workspace_id": workspace_id, "workspace_role": "admin"},
+    )
+    invitation.raise_for_status()
+    invitation_token = parse_qs(urlsplit(invitation.json()["data"]["url"]).fragment)["token"][0]
+    signup = member.post(
+        "/api/v1/auth/signup",
+        json={"email": "browser-member@acceptance.test", "password": "browser-member-password", "invitation_token": invitation_token},
+    )
+    signup.raise_for_status()
+    member.post("/api/v1/enroll/invitations/accept", json={"token": invitation_token}).raise_for_status()
+    return signup.json()["data"]["user_id"]
 
 
 @dataclass
