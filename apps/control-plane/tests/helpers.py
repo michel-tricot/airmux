@@ -26,6 +26,7 @@ from control_plane.config import DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import ManagementKeyGrant, mint_management_key
 from control_plane.models import Org, OrgMembership, User, set_actor
+from control_plane.throttling import ThrottleConfig
 
 PROVIDER = {
     "provider_id": "openai",
@@ -193,7 +194,7 @@ def make_app() -> FastAPI:
     return create_app(settings)
 
 
-def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True) -> ControlPlane:
+def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True, throttling: ThrottleConfig | None = None) -> ControlPlane:
     """Database plus a real app over it, for tests that drive the API.
 
     The secret store is in-process by default so credential writes work and a test can read the
@@ -204,6 +205,7 @@ def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True) -
         database=DatabaseConfig(url=url),
         secrets=secrets if secrets is not None else MemoryStoreConfig(),
         public_signup=public_signup,
+        throttling=throttling if throttling is not None else ThrottleConfig(),
     )
     return ControlPlane(app=create_app(settings), db_url=url)
 

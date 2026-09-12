@@ -70,6 +70,7 @@ from control_plane.models import (
     set_actor,
 )
 from control_plane.models.org_invitation import INVITATION_TOKEN_PREFIX
+from control_plane.passwords import hash_password
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -299,10 +300,10 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await set_actor("root")
 
     michel = await User(id=fixture_id("user:michel"), email="m@airbyte.com", name="Michel Tricot", instance_role="owner").save()
-    await AuthIdentity.set_password(michel, FIXTURE_PASSWORD)
+    await AuthIdentity.set_password_hash(michel, hash_password(FIXTURE_PASSWORD))
 
     dana = await User(id=fixture_id("user:dana"), email="b@airbyte.com", name="Dana Reeves").save()
-    await AuthIdentity.set_password(dana, FIXTURE_PASSWORD)
+    await AuthIdentity.set_password_hash(dana, hash_password(FIXTURE_PASSWORD))
 
     acme = await Org(id=fixture_id("org:acme"), name="Acme", slug="acme", personal_for=michel.id).save()
     solo = await Org(id=fixture_id("org:solo"), name="Solo Shop", slug="solo-shop").save()
