@@ -6,6 +6,7 @@ import httpx
 import openai
 import pytest
 import respx
+from anthropic import Anthropic
 from anthropic.types import Message, RawMessageStreamEvent
 from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from openai import OpenAI
@@ -21,6 +22,24 @@ TEXT_BODY = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}
 
 def _sdk(client: TestClient, api_key: str) -> OpenAI:
     return OpenAI(base_url="http://testserver/inf/v1", api_key=api_key, http_client=client)
+
+
+class _GatewayTransport(httpx.BaseTransport):
+    def __init__(self, client: TestClient) -> None:
+        self.client = client
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        response = self.client.request(
+            request.method,
+            request.url.raw_path.decode(),
+            headers=request.headers,
+            content=request.read(),
+        )
+        return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
+
+def _anthropic_sdk(client: httpx.Client, api_key: str) -> Anthropic:
+    return Anthropic(base_url="http://testserver/inf", api_key="unused", auth_token=api_key, http_client=client)
 
 
 STREAM_EVENT: TypeAdapter[RawMessageStreamEvent] = TypeAdapter(RawMessageStreamEvent)
@@ -189,6 +208,20 @@ def test_anthropic_a_cross_provider_round_trip_parses_with_the_sdk_models(api_ke
 
     sent = json.loads(route.calls.last.request.content)
     assert sent["messages"][0] == {"role": "system", "content": "You are terse."}  # hoisted system, respelled for OpenAI
+
+
+@respx.mock
+def test_anthropic_the_documented_sdk_configuration_handles_buffered_and_streaming_responses(api_key, dp_app):
+    respx.post(UPSTREAM).mock(side_effect=[httpx.Response(200, json=TEXT_NONSTREAM), httpx.Response(200, content=TEXT_LOG)])
+    mock_control_plane()
+    with TestClient(dp_app) as gateway, httpx.Client(transport=_GatewayTransport(gateway)) as transport:
+        client = _anthropic_sdk(transport, api_key)
+        message = client.messages.create(model="gpt-test", max_tokens=64, messages=[{"role": "user", "content": "hi"}])
+        with client.messages.stream(model="gpt-test", max_tokens=64, messages=[{"role": "user", "content": "hi"}]) as stream:
+            text = "".join(stream.text_stream)
+    assert message.content[0].type == "text"
+    assert message.content[0].text == "héllo \U0001f30d world"
+    assert text == "héllo \U0001f30d world"
 
 
 @respx.mock

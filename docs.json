@@ -2,33 +2,361 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "AirLLM",
+  "description": "A self-hosted LLM gateway with provider routing, scoped credentials, policies, and usage accounting.",
   "colors": {
-    "primary": "#ff0000"
+    "primary": "#2563EB",
+    "light": "#3B82F6",
+    "dark": "#1D4ED8"
   },
+  "favicon": "apps/console/public/favicon.svg",
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting started",
-        "pages": ["docs/index", "docs/policies"]
-      },
-      {
-        "group": "Deployment",
-        "pages": [
-          "docs/deployment/index",
-          "docs/deployment/docker",
-          "docs/deployment/fly",
-          "docs/deployment/render",
-          "docs/deployment/digitalocean",
-          "docs/deployment/scaling"
+        "tab": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["docs/index", "docs/quickstart"]
+          },
+          {
+            "group": "Tutorials",
+            "pages": [
+              "docs/guides/openai-sdk",
+              "docs/guides/anthropic-sdk",
+              "docs/guides/streaming",
+              "docs/guides/tools",
+              "docs/guides/structured-output",
+              "docs/guides/policy-workflow"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "docs/features/model-routing",
+              "docs/features/provider-credentials",
+              "docs/policies",
+              "docs/features/usage"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "docs/concepts/architecture",
+              "docs/concepts/canonical-model",
+              "docs/concepts/authentication",
+              "docs/concepts/bundles",
+              "docs/concepts/request-lifecycle"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "docs/deployment/index",
+              "docs/deployment/docker",
+              "docs/deployment/fly",
+              "docs/deployment/render",
+              "docs/deployment/digitalocean",
+              "docs/deployment/scaling",
+              "docs/deployment/operations",
+              "docs/deployment/security"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": ["docs/development"]
+          }
         ]
       },
       {
-        "group": "Development",
-        "pages": ["docs/development"]
-      },
-      {
-        "group": "Technical design",
-        "pages": ["notes/design/DATAPLANE", "notes/design/AUTHORITY", "notes/design/BYOK"]
+        "tab": "Reference",
+        "icon": "braces",
+        "groups": [
+          {
+            "group": "Inference",
+            "pages": [
+              "docs/reference/inference",
+              "docs/reference/chat-completions",
+              "docs/reference/responses",
+              "docs/reference/messages",
+              "docs/reference/canonical",
+              "docs/reference/errors"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "docs/reference/cli",
+              "docs/reference/configuration",
+              "docs/reference/models-and-providers",
+              "docs/reference/management-api"
+            ]
+          },
+          {
+            "group": "Control plane endpoints",
+            "openapi": "lib/api-spec/openapi.yaml",
+            "pages": [
+              {
+                "group": "Account",
+                "pages": [
+                  {
+                    "group": "Authentication",
+                    "pages": [
+                      "POST /api/v1/auth/login",
+                      "POST /api/v1/auth/signup",
+                      "POST /api/v1/auth/logout",
+                      "GET /api/v1/auth/me",
+                      "GET /api/v1/auth/permissions",
+                      "POST /api/v1/auth/password",
+                      "POST /api/v1/auth/cli/start",
+                      "GET /api/v1/auth/cli/request",
+                      "POST /api/v1/auth/cli/approve",
+                      "POST /api/v1/auth/cli/poll"
+                    ]
+                  },
+                  {
+                    "group": "Enrollment",
+                    "pages": [
+                      "GET /api/v1/enroll",
+                      "POST /api/v1/enroll/org",
+                      "POST /api/v1/enroll/invitations/preview",
+                      "POST /api/v1/enroll/invitations/accept"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Instance",
+                "pages": [
+                  {
+                    "group": "Organizations",
+                    "pages": ["GET /api/v1/orgs", "POST /api/v1/orgs"]
+                  },
+                  {
+                    "group": "Users",
+                    "pages": [
+                      "POST /api/v1/service-accounts",
+                      "GET /api/v1/users/{user_id}",
+                      "DELETE /api/v1/users/{user_id}",
+                      "GET /api/v1/users",
+                      "PUT /api/v1/users/{user_id}/instance-role"
+                    ]
+                  },
+                  {
+                    "group": "Management Keys",
+                    "pages": [
+                      "GET /api/v1/instance/management-keys",
+                      "POST /api/v1/instance/management-keys",
+                      "DELETE /api/v1/management-keys/{key_id}",
+                      "PUT /api/v1/management-keys/{key_id}/permissions"
+                    ]
+                  },
+                  {
+                    "group": "Model Catalog",
+                    "pages": [
+                      "GET /api/v1/instance/taxonomy",
+                      "POST /api/v1/instance/taxonomy",
+                      "POST /api/v1/instance/taxonomy/providers",
+                      "POST /api/v1/instance/taxonomy/models"
+                    ]
+                  },
+                  {
+                    "group": "Provider Credentials",
+                    "pages": ["GET /api/v1/instance/provider-credentials", "POST /api/v1/instance/provider-credentials"]
+                  },
+                  {
+                    "group": "Data Planes",
+                    "pages": ["GET /api/v1/instance/data-planes"]
+                  },
+                  {
+                    "group": "Activity",
+                    "pages": ["GET /api/v1/instance/activity"]
+                  },
+                  {
+                    "group": "Self-hosting",
+                    "pages": ["GET /api/v1/instance/oss/claim"]
+                  }
+                ]
+              },
+              {
+                "group": "Organization",
+                "pages": [
+                  {
+                    "group": "Settings",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}",
+                      "PATCH /api/v1/orgs/{org_id}",
+                      "DELETE /api/v1/orgs/{org_id}"
+                    ]
+                  },
+                  {
+                    "group": "Members",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/users",
+                      "PUT /api/v1/orgs/{org_id}/users/{user_id}",
+                      "DELETE /api/v1/orgs/{org_id}/users/{user_id}"
+                    ]
+                  },
+                  {
+                    "group": "Service Accounts",
+                    "pages": [
+                      "POST /api/v1/orgs/{org_id}/service-accounts",
+                      "DELETE /api/v1/orgs/{org_id}/service-accounts/{user_id}"
+                    ]
+                  },
+                  {
+                    "group": "Invitations",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/invitations",
+                      "POST /api/v1/orgs/{org_id}/invitations",
+                      "POST /api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue",
+                      "POST /api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke"
+                    ]
+                  },
+                  {
+                    "group": "Workspaces",
+                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces", "POST /api/v1/orgs/{org_id}/workspaces"]
+                  },
+                  {
+                    "group": "Management Keys",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/management-keys",
+                      "POST /api/v1/orgs/{org_id}/management-keys",
+                      "DELETE /api/v1/management-keys/{key_id}",
+                      "PUT /api/v1/management-keys/{key_id}/permissions"
+                    ]
+                  },
+                  {
+                    "group": "Provider Credentials",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/provider-credentials",
+                      "POST /api/v1/orgs/{org_id}/provider-credentials",
+                      "GET /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "PATCH /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "DELETE /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "PUT /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value"
+                    ]
+                  },
+                  {
+                    "group": "Bundles",
+                    "pages": ["POST /api/v1/orgs/{org_id}/bundles/republish", "GET /api/v1/orgs/{org_id}/bundles"]
+                  },
+                  {
+                    "group": "Usage Events",
+                    "pages": ["GET /api/v1/orgs/{org_id}/events"]
+                  },
+                  {
+                    "group": "Activity",
+                    "pages": ["GET /api/v1/orgs/{org_id}/activity"]
+                  },
+                  {
+                    "group": "Model Catalog",
+                    "pages": ["GET /api/v1/orgs/{org_id}/taxonomy"]
+                  }
+                ]
+              },
+              {
+                "group": "Workspace",
+                "pages": [
+                  {
+                    "group": "Settings",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}",
+                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}"
+                    ]
+                  },
+                  {
+                    "group": "Rules",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules",
+                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules",
+                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}"
+                    ]
+                  },
+                  {
+                    "group": "Policies",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies",
+                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies",
+                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/order",
+                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}"
+                    ]
+                  },
+                  {
+                    "group": "Members",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members",
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/member-candidates",
+                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}"
+                    ]
+                  },
+                  {
+                    "group": "Management Keys",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
+                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
+                      "DELETE /api/v1/management-keys/{key_id}",
+                      "PUT /api/v1/management-keys/{key_id}/permissions"
+                    ]
+                  },
+                  {
+                    "group": "Playground",
+                    "pages": [
+                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session"
+                    ]
+                  },
+                  {
+                    "group": "Inference Keys",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys",
+                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys",
+                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}"
+                    ]
+                  },
+                  {
+                    "group": "Provider Credentials",
+                    "pages": [
+                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials",
+                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials",
+                      "GET /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "PATCH /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "DELETE /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
+                      "PUT /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value"
+                    ]
+                  },
+                  {
+                    "group": "Usage Events",
+                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/events"]
+                  },
+                  {
+                    "group": "Model Catalog",
+                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy"]
+                  }
+                ]
+              },
+              {
+                "group": "Data Plane API",
+                "pages": [
+                  {
+                    "group": "Synchronization",
+                    "pages": [
+                      "GET /api/v1/bundles/manifest",
+                      "GET /api/v1/bundles/{bundle_id}",
+                      "GET /api/v1/bundle/latest",
+                      "POST /api/v1/events",
+                      "POST /api/v1/heartbeat"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ]
   }

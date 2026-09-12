@@ -1,4 +1,4 @@
-"""The official Anthropic SDK pointed at the gateway's /v1/messages surface.
+"""The official Anthropic SDK pointed at the gateway's /inf/v1/messages surface.
 
     uv run --with anthropic python examples/anthropic_sdk.py
 
@@ -26,7 +26,7 @@ def main() -> int:
     model = os.environ.get("AIRLLM_MODEL", "anthropic/claude-sonnet-4-6")
 
     # api_key is required by the SDK but unused; the gateway reads auth_token as the bearer.
-    client = Anthropic(base_url=gateway, api_key="unused", auth_token=api_key)
+    client = Anthropic(base_url=f"{gateway.rstrip('/')}/inf", api_key="unused", auth_token=api_key)
 
     print(f"non-streaming ({model}):")
     msg = client.messages.create(model=model, max_tokens=128, messages=[{"role": "user", "content": "In one sentence, what is an LLM gateway?"}])

@@ -18,8 +18,8 @@ from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyIn
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
-from control_plane.models.user import OrgServiceAccountIn, OrgServiceAccountMintedOut, UserOut
-from control_plane.routes.management_keys import issue_management_key
+from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
+from control_plane.routes.management_keys import create_scoped_management_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
 
@@ -93,18 +93,18 @@ async def create_org_service_account(
     body: OrgServiceAccountIn,
     org_id: OrgDep,
     actor: ActorDep,
-) -> Envelope[OrgServiceAccountMintedOut]:
-    """Create an organization-managed service account and issue its first management key."""
+) -> Envelope[OrgServiceAccountCreatedOut]:
+    """Create an organization-managed service account and its first management key."""
     await ensure_org_role_change(actor, org_id, None, OrgRole.admin)
     service_account = await User.new_service_account(body.name, managing_org_id=org_id).save()
     membership = await OrgMembership(user_id=service_account.id, org_id=org_id, role=OrgRole.admin).save()
-    management_key = await issue_management_key(
+    management_key = await create_scoped_management_key(
         ManagementKeyIn(user_id=service_account.id, **body.management_key.model_dump()),
         actor,
         Scope.org(org_id),
     )
     return Envelope(
-        data=OrgServiceAccountMintedOut(
+        data=OrgServiceAccountCreatedOut(
             service_account=UserOut.model_validate({**service_account.model_dump(), "orgs": [org_id]}),
             membership=MembershipOut(user_id=service_account.id, org_id=org_id, role=OrgRole(membership.role), status="member"),
             management_key=management_key,
@@ -124,7 +124,7 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
     if membership is not None:
         await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
     if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
-        raise HTTPException(status_code=409, detail="service account minted inference keys that outlive it; delete those workspaces first")
+        raise HTTPException(status_code=409, detail="service account created inference keys that outlive it; delete those workspaces first")
     if membership is not None:
         await membership.delete()
     await service_account.delete_with_contents()

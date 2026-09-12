@@ -1,0 +1,46 @@
+---
+title: "Bundles and consistency"
+description: "Understand how management changes become immutable gateway snapshots and what happens during outages."
+---
+
+A bundle is a complete, versioned configuration snapshot for one organization. It is the only management state needed on the inference request path.
+
+## Contents
+
+Each bundle includes:
+
+- Active inference-key hashes and workspace identities
+- Provider endpoints and adapter kinds
+- Model routes, prices, limits, modalities, capabilities, and parameter support
+- Enabled provider-credential references, priorities, and versions
+- Enabled policies and the reusable rules they reference
+
+It excludes plaintext inference tokens and provider secret values.
+
+## Publication flow
+
+1. A management transaction changes bundle-relevant state
+2. The control plane advances the affected organization's desired revision
+3. It compiles and stores a new immutable bundle
+4. A gateway polls the bundle manifest
+5. The gateway fetches changed bundles and validates their internal references
+6. It writes the accepted set to disk and atomically swaps in-memory indexes
+
+The default source configuration polls every five seconds. The general remote-bundle default is 30 seconds when an interval is not configured.
+
+## Consistency behavior
+
+Management writes are immediately visible through the control plane but become effective for inference only after bundle
+adoption. This applies to new or revoked inference keys, provider credentials, catalog changes, and policies.
+
+A request uses one immutable snapshot from authentication through routing, so it cannot observe half of a configuration change.
+
+## Failure behavior
+
+- A gateway with a valid cached bundle keeps serving if the control plane is unavailable
+- Usage events queue in the gateway's SQLite outbox and drain when connectivity returns
+- A new gateway with no cached bundle returns `503 bundle_unavailable`
+- A gateway that rejects the latest manifest keeps its current bundle but reports `503` from `/readyz`
+- Secret-store availability remains a runtime dependency for uncached provider credentials
+
+Use `airllm bundles list`, `airllm data-planes list`, `/healthz`, and `/readyz` to investigate convergence.

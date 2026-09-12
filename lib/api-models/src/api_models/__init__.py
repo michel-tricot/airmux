@@ -198,7 +198,7 @@ class CliAuthStartIn(BaseModel):
     client_name: Annotated[
         str,
         Field(
-            description="Where the CLI runs, e.g. the hostname; becomes the minted key's label",
+            description="Where the CLI runs, e.g. the hostname; becomes the created key's label",
             max_length=80,
             min_length=1,
             title="Client Name",
@@ -470,6 +470,11 @@ class HeartbeatV1(BaseModel):
     ] = None
 
 
+class InferenceKeyCreatedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    token: Annotated[str, Field(title="Token")]
+
+
 class InferenceKeyIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -483,11 +488,6 @@ class InferenceKeyIn(BaseModel):
             title="Label",
         ),
     ]
-
-
-class InferenceKeyMintedOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    token: Annotated[str, Field(title="Token")]
 
 
 class InferenceKeyOut(BaseModel):
@@ -1863,8 +1863,8 @@ class EnvelopeHeartbeatOut(BaseModel):
     data: HeartbeatOut
 
 
-class EnvelopeInferenceKeyMintedOut(BaseModel):
-    data: InferenceKeyMintedOut
+class EnvelopeInferenceKeyCreatedOut(BaseModel):
+    data: InferenceKeyCreatedOut
 
 
 class EnvelopeInferenceKeyRevokedOut(BaseModel):
@@ -2106,7 +2106,7 @@ class OrgServiceAccountIn(BaseModel):
     ]
     management_key: Annotated[
         ManagementKeyGrantIn,
-        Field(description="Initial organization-scoped management key to issue for the service account"),
+        Field(description="Initial organization-scoped management key to create for the service account"),
     ]
 
 
@@ -2342,7 +2342,7 @@ class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
 
 
-class ManagementKeyMintedOut(BaseModel):
+class ManagementKeyCreatedOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")]
@@ -2379,10 +2379,10 @@ class ManagementKeyOut(BaseModel):
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
 
 
-class OrgServiceAccountMintedOut(BaseModel):
+class OrgServiceAccountCreatedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
-    management_key: ManagementKeyMintedOut
+    management_key: ManagementKeyCreatedOut
 
 
 class PolicyCreate(BaseModel):
@@ -2458,16 +2458,16 @@ class EnvelopeBundleV1(BaseModel):
     data: BundleV1
 
 
-class EnvelopeManagementKeyMintedOut(BaseModel):
-    data: ManagementKeyMintedOut
+class EnvelopeManagementKeyCreatedOut(BaseModel):
+    data: ManagementKeyCreatedOut
 
 
 class EnvelopeManagementKeyOut(BaseModel):
     data: ManagementKeyOut
 
 
-class EnvelopeOrgServiceAccountMintedOut(BaseModel):
-    data: OrgServiceAccountMintedOut
+class EnvelopeOrgServiceAccountCreatedOut(BaseModel):
+    data: OrgServiceAccountCreatedOut
 
 
 class EnvelopeListManagementKeyOut(BaseModel):

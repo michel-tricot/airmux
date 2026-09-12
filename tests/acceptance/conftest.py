@@ -384,13 +384,13 @@ class Stack:
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
     def collect_credentials(self) -> None:
-        """Collect the credentials the bootstrap minted into .env; a checkpoint that they all exist."""
+        """Collect the credentials the bootstrap created in .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_INFERENCE_KEY")
-        assert token, "bootstrap did not mint a caller api key"
-        assert secrets.get("AIRLLM_MANAGEMENT_KEY"), "bootstrap did not mint an management key"
-        assert secrets.get("AIRLLM_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
+        assert token, "bootstrap did not create a caller api key"
+        assert secrets.get("AIRLLM_MANAGEMENT_KEY"), "bootstrap did not create a management key"
+        assert secrets.get("AIRLLM_DATAPLANE_TOKEN"), "bootstrap did not create a data plane token"
         self.caller_api_key = token
 
     # processes ------------------------------------------------------------

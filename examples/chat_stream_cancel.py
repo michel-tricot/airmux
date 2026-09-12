@@ -31,7 +31,7 @@ def main() -> int:
     seen = 0
     with httpx.stream(
         "POST",
-        f"{gateway}/v1/chat/completions",
+        f"{gateway.rstrip('/')}/inf/v1/chat/completions",
         headers={"authorization": f"Bearer {api_key}"},
         json={"model": model, "messages": [{"role": "user", "content": "Count from 1 to 200, one number per line."}], "stream": True},
         timeout=60.0,

@@ -10,10 +10,10 @@ from contract import PLAYGROUND_COOKIE, token_hash
 from control_plane.authority import readable_workspaces
 from control_plane.authz import Permission, WorkspaceRole
 from control_plane.deps import ActorDep, OrgDep, PlaygroundCookie, WorkspaceDep, org_scope, require, workspace_scope
-from control_plane.keys import PLAYGROUND_SESSION_TTL, mint_inference_key, rotate_playground_session
+from control_plane.keys import PLAYGROUND_SESSION_TTL, create_inference_key_for_workspace, rotate_playground_session
 from control_plane.models import InferenceKey, Org, OrgMembership, PlaygroundSession, User, Workspace, WorkspaceMembership
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
+from control_plane.models.inference_key import InferenceKeyCreatedOut, InferenceKeyIn, InferenceKeyOut, InferenceKeyRevokedOut
 from control_plane.models.playground_session import PlaygroundSessionEndedOut, PlaygroundSessionReadyOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 from control_plane.models.workspace_membership import WorkspaceMemberCandidateOut, WorkspaceMembershipIn, WorkspaceMembershipOut
@@ -213,10 +213,10 @@ async def end_playground_session(
     tags=["Workspace Inference Keys"],
     dependencies=[require(workspace_scope, Permission.inference_keys_manage)],
 )
-async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[InferenceKeyMintedOut]:
-    """Issue an inference key for model requests to this workspace and return its token once."""
-    key_id, token = await mint_inference_key(workspace.org_id, workspace.id, actor.principal_id, label=body.label)
-    return Envelope(data=InferenceKeyMintedOut(id=key_id, token=token))
+async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[InferenceKeyCreatedOut]:
+    """Create an inference key for model requests to this workspace and return its token once."""
+    key_id, token = await create_inference_key_for_workspace(workspace.org_id, workspace.id, actor.principal_id, label=body.label)
+    return Envelope(data=InferenceKeyCreatedOut(id=key_id, token=token))
 
 
 @router.get(

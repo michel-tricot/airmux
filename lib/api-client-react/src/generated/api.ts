@@ -54,8 +54,8 @@ import type {
   HTTPValidationError,
   HeartbeatOut,
   HeartbeatV1,
+  InferenceKeyCreatedOut,
   InferenceKeyIn,
-  InferenceKeyMintedOut,
   InferenceKeyOut,
   InferenceKeyRevokedOut,
   InstanceRoleIn,
@@ -72,8 +72,8 @@ import type {
   ListWorkspaceEventsParams,
   ListWorkspaceManagementKeysParams,
   LoginIn,
+  ManagementKeyCreatedOut,
   ManagementKeyIn,
-  ManagementKeyMintedOut,
   ManagementKeyOut,
   ManagementKeyPermissionsIn,
   ManagementKeyRevokedOut,
@@ -91,8 +91,8 @@ import type {
   OrgMemberOut,
   OrgMembershipIn,
   OrgOut,
+  OrgServiceAccountCreatedOut,
   OrgServiceAccountIn,
-  OrgServiceAccountMintedOut,
   OrgUpdate,
   PasswordChangeIn,
   PasswordChangedOut,
@@ -274,14 +274,14 @@ export const getCreateInstanceManagementKeyUrl = () => {
 }
 
 /**
- * Issue an instance-scoped management key and return its token once.
+ * Create an instance-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Instance Management Key
  */
-export const createInstanceManagementKey = async (managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+export const createInstanceManagementKey = async (managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyCreatedOut> => {
 
-  return customFetch<ManagementKeyMintedOut>(getCreateInstanceManagementKeyUrl(),
+  return customFetch<ManagementKeyCreatedOut>(getCreateInstanceManagementKeyUrl(),
   {
     ...options,
     method: 'POST',
@@ -467,15 +467,15 @@ export const getCreateOrgManagementKeyUrl = (orgId: string,) => {
 }
 
 /**
- * Issue an organization-scoped management key and return its token once.
+ * Create an organization-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Org Management Key
  */
 export const createOrgManagementKey = async (orgId: string,
-    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyCreatedOut> => {
 
-  return customFetch<ManagementKeyMintedOut>(getCreateOrgManagementKeyUrl(orgId),
+  return customFetch<ManagementKeyCreatedOut>(getCreateOrgManagementKeyUrl(orgId),
   {
     ...options,
     method: 'POST',
@@ -670,16 +670,16 @@ export const getCreateWorkspaceManagementKeyUrl = (orgId: string,
 }
 
 /**
- * Issue a workspace-scoped management key and return its token once.
+ * Create a workspace-scoped management key and return its token once.
  *
  * Required permission: `management-keys.issue`.
  * @summary Create Workspace Management Key
  */
 export const createWorkspaceManagementKey = async (orgId: string,
     workspaceRef: string,
-    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
+    managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyCreatedOut> => {
 
-  return customFetch<ManagementKeyMintedOut>(getCreateWorkspaceManagementKeyUrl(orgId,workspaceRef),
+  return customFetch<ManagementKeyCreatedOut>(getCreateWorkspaceManagementKeyUrl(orgId,workspaceRef),
   {
     ...options,
     method: 'POST',
@@ -4582,16 +4582,16 @@ export const getCreateInferenceKeyUrl = (orgId: string,
 }
 
 /**
- * Issue an inference key for model requests to this workspace and return its token once.
+ * Create an inference key for model requests to this workspace and return its token once.
  *
  * Required permission: `inference-keys.manage`.
  * @summary Create Inference Key
  */
 export const createInferenceKey = async (orgId: string,
     workspaceRef: string,
-    inferenceKeyIn: InferenceKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyMintedOut> => {
+    inferenceKeyIn: InferenceKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyCreatedOut> => {
 
-  return customFetch<InferenceKeyMintedOut>(getCreateInferenceKeyUrl(orgId,workspaceRef),
+  return customFetch<InferenceKeyCreatedOut>(getCreateInferenceKeyUrl(orgId,workspaceRef),
   {
     ...options,
     method: 'POST',
@@ -6762,15 +6762,15 @@ export const getCreateOrgServiceAccountUrl = (orgId: string,) => {
 }
 
 /**
- * Create an organization-managed service account and issue its first management key.
+ * Create an organization-managed service account and its first management key.
  *
  * Required permissions: `members.manage` and `management-keys.issue`.
  * @summary Create Organization Service Account
  */
 export const createOrgServiceAccount = async (orgId: string,
-    orgServiceAccountIn: OrgServiceAccountIn, options?: Parameters<typeof customFetch>[1]): Promise<OrgServiceAccountMintedOut> => {
+    orgServiceAccountIn: OrgServiceAccountIn, options?: Parameters<typeof customFetch>[1]): Promise<OrgServiceAccountCreatedOut> => {
 
-  return customFetch<OrgServiceAccountMintedOut>(getCreateOrgServiceAccountUrl(orgId),
+  return customFetch<OrgServiceAccountCreatedOut>(getCreateOrgServiceAccountUrl(orgId),
   {
     ...options,
     method: 'POST',

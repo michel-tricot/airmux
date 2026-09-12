@@ -37,7 +37,7 @@ def run_turn(gateway: str, api_key: str, model: str, messages: list[dict]) -> st
     in_reasoning = False
     with httpx.stream(
         "POST",
-        f"{gateway}/v1/chat/completions",
+        f"{gateway.rstrip('/')}/inf/v1/chat/completions",
         headers={"authorization": f"Bearer {api_key}"},
         json={"model": model, "messages": messages, "stream": True},
         timeout=120.0,

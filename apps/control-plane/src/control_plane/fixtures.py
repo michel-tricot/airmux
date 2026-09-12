@@ -160,7 +160,7 @@ def fixture_id(name: str) -> UUID:
 
 
 def inference_key(token: str, workspace: Workspace, user: User, *, label: str, revoked: bool = False) -> InferenceKey:
-    """A key row for a token the fixtures already know, the way mint_inference_key builds one for a token it just drew."""
+    """A key row for a token the fixtures already know, the way create_inference_key_for_workspace builds one for a token it just drew."""
     return InferenceKey(
         id=fixture_id(f"inference-key:{workspace.name}:{label}"),
         org_id=workspace.org_id,

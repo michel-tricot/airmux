@@ -2,7 +2,7 @@
 
 The control plane writes token_hash(plaintext) into the bundle key index and the data
 plane hashes the presented bearer to look it up, so both planes must agree byte for
-byte. Minting stays in the control plane; nothing here touches secrets at rest.
+byte. Key creation stays in the control plane; nothing here touches secrets at rest.
 Lookup through a unique index on the hash is the timing-safe comparison.
 """
 

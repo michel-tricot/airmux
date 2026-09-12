@@ -1,0 +1,61 @@
+---
+title: "Models and providers"
+description: "Understand catalog model IDs, provider profiles, modalities, capabilities, prices, and parameter support."
+---
+
+The model catalog is the routing contract between management and inference. Query the deployed catalog instead of hard-coding the repository snapshot:
+
+```bash
+airllm providers list -f json
+airllm models list -f json
+```
+
+## Provider entries
+
+| Field | Meaning |
+| --- | --- |
+| `provider_id` | Stable lowercase routing name |
+| `kind` | Egress adapter family |
+| `base_url` | Upstream API base URL |
+| `param_aliases` | Canonical parameter to provider spelling |
+| `accepted_params` | Known accepted top-level extras |
+| `params_closed` | Whether undeclared extras must be dropped |
+
+The shipped taxonomy currently includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and
+xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
+
+## Model entries
+
+| Field | Meaning |
+| --- | --- |
+| `model_id` | Caller-facing `provider/model` identifier |
+| `provider_id` | Provider route |
+| `upstream_model` | Model name sent to the provider |
+| `egress_kind` | Optional model-level adapter override |
+| `input_price_per_mtok` | USD per million input tokens |
+| `output_price_per_mtok` | USD per million output tokens |
+| `cache_read_price_per_mtok` | USD per million cache-read tokens |
+| `cache_write_price_per_mtok` | USD per million cache-write tokens |
+| `context_window` | Maximum context tokens |
+| `max_output_tokens` | Output cap used for reconciliation |
+| `input_modalities` | Supported input kinds |
+| `output_modalities` | Supported output kinds |
+| `capabilities` | Supported gateway features |
+| `parameter_support` | Explicit `supported` or `unsupported` values |
+
+Modalities are `text`, `image`, `audio`, `video`, and `pdf`. Current inference content supports text, images, and PDFs;
+catalog entries can still describe the broader vocabulary.
+
+Capabilities are `streaming`, `tools`, `reasoning`, and `structured_output`. AirLLM derives requirements from the
+request and rejects a route with a missing capability.
+
+## Update the catalog
+
+The repository taxonomy is generated from the model-audit evidence. Apply it to an instance with a dry run first:
+
+```bash
+airllm taxonomy apply --file taxonomy/taxonomy.yml --dry-run
+airllm taxonomy apply --file taxonomy/taxonomy.yml
+```
+
+Catalog changes publish new bundles for affected organizations. They do not mutate requests already executing on an older snapshot.

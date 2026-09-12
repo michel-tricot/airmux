@@ -14,9 +14,9 @@ from rich.live import Live
 from api_models import (
     BundleOut,
     DataPlaneInstanceOut,
-    InferenceKeyMintedOut,
+    InferenceKeyCreatedOut,
     InferenceKeyOut,
-    ManagementKeyMintedOut,
+    ManagementKeyCreatedOut,
     ManagementKeyOut,
     OrgMemberOut,
     OrgOut,
@@ -351,8 +351,8 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
     )
 
 
-@management_keys_app.command("mint")
-def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+@management_keys_app.command("create")
+def management_keys_create(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
     permission: Annotated[list[str] | None, typer.Option("--permission", "-p", help="Permission ceiling; repeat for each permission")] = None,
     user_id: str = typer.Option("", "--user", help="Principal the key authenticates; defaults to you"),
@@ -384,8 +384,8 @@ def management_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:
-        key = payload(post_expecting(c, path, body, ok=(200,)), ManagementKeyMintedOut)
-    console.print(f"Management key [bold]{key.id}[/bold] minted at [bold]{key.scope.level}[/bold] scope, shown once:")
+        key = payload(post_expecting(c, path, body, ok=(200,)), ManagementKeyCreatedOut)
+    console.print(f"Management key [bold]{key.id}[/bold] created at [bold]{key.scope.level}[/bold] scope, shown once:")
     console.print(key.token)
 
 
@@ -543,7 +543,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             console.print("[dim]stopped[/dim]")
 
 
-def _key_created(key: InferenceKeyMintedOut) -> None:
+def _key_created(key: InferenceKeyCreatedOut) -> None:
     console.print("Your new inference key, shown once:")
     console.print(key.token)
 
@@ -571,7 +571,7 @@ def inference_keys_create(
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
         _key_created(
-            payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,)), InferenceKeyMintedOut)
+            payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,)), InferenceKeyCreatedOut)
         )
 
 

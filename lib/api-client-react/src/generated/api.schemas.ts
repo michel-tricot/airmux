@@ -511,7 +511,7 @@ export interface CliAuthRequestOut {
 
 export interface CliAuthStartIn {
   /**
-     * Where the CLI runs, e.g. the hostname; becomes the minted key's label
+     * Where the CLI runs, e.g. the hostname; becomes the created key's label
      * @minLength 1
      * @maxLength 80
      */
@@ -711,6 +711,11 @@ export interface HeartbeatV1 {
   bundle_id?: string | null;
 }
 
+export interface InferenceKeyCreatedOut {
+  id: string;
+  token: string;
+}
+
 export interface InferenceKeyIn {
   /**
      * What this key is for, e.g. staging or the calling app; shown in listings
@@ -718,11 +723,6 @@ export interface InferenceKeyIn {
      * @maxLength 80
      */
   label: string;
-}
-
-export interface InferenceKeyMintedOut {
-  id: string;
-  token: string;
 }
 
 export interface InferenceKeyOut {
@@ -788,6 +788,15 @@ export interface LoginIn {
   password: string;
 }
 
+export type ManagementKeyCreatedOutStatus = typeof ManagementKeyCreatedOutStatus[keyof typeof ManagementKeyCreatedOutStatus];
+
+
+export const ManagementKeyCreatedOutStatus = {
+  active: 'active',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;
+
 export type Permission = typeof Permission[keyof typeof Permission];
 
 
@@ -825,6 +834,40 @@ export const Permission = {
   'management-keysrevoke': 'management-keys.revoke',
 } as const;
 
+export type ScopeLevel = typeof ScopeLevel[keyof typeof ScopeLevel];
+
+
+export const ScopeLevel = {
+  instance: 'instance',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface Scope {
+  level: ScopeLevel;
+  org_id?: string | null;
+  workspace_id?: string | null;
+}
+
+export interface ManagementKeyCreatedOut {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  parent_id: string | null;
+  prefix: string;
+  permissions: Permission[];
+  label: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  scope: Scope;
+  status: ManagementKeyCreatedOutStatus;
+  token: string;
+}
+
 export interface ManagementKeyGrantIn {
   /**
      * Explicit maximum permissions carried by the key
@@ -857,49 +900,6 @@ export interface ManagementKeyIn {
   expires_at?: string | null;
   /** Principal the key authenticates; defaults to the authenticated principal */
   user_id?: string | null;
-}
-
-export type ManagementKeyMintedOutStatus = typeof ManagementKeyMintedOutStatus[keyof typeof ManagementKeyMintedOutStatus];
-
-
-export const ManagementKeyMintedOutStatus = {
-  active: 'active',
-  expired: 'expired',
-  revoked: 'revoked',
-} as const;
-
-export type ScopeLevel = typeof ScopeLevel[keyof typeof ScopeLevel];
-
-
-export const ScopeLevel = {
-  instance: 'instance',
-  org: 'org',
-  workspace: 'workspace',
-} as const;
-
-export interface Scope {
-  level: ScopeLevel;
-  org_id?: string | null;
-  workspace_id?: string | null;
-}
-
-export interface ManagementKeyMintedOut {
-  id: string;
-  user_id: string;
-  org_id: string | null;
-  workspace_id: string | null;
-  parent_id: string | null;
-  prefix: string;
-  permissions: Permission[];
-  label: string;
-  expires_at: string | null;
-  revoked_at: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  scope: Scope;
-  status: ManagementKeyMintedOutStatus;
-  token: string;
 }
 
 export type ManagementKeyOutStatus = typeof ManagementKeyOutStatus[keyof typeof ManagementKeyOutStatus];
@@ -1225,17 +1225,6 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
-export interface OrgServiceAccountIn {
-  /**
-     * Display name for the service account
-     * @minLength 1
-     * @maxLength 200
-     */
-  name: string;
-  /** Initial organization-scoped management key to issue for the service account */
-  management_key: ManagementKeyGrantIn;
-}
-
 export interface UserOut {
   id: string;
   email: string;
@@ -1249,10 +1238,21 @@ export interface UserOut {
   orgs: string[];
 }
 
-export interface OrgServiceAccountMintedOut {
+export interface OrgServiceAccountCreatedOut {
   service_account: UserOut;
   membership: MembershipOut;
-  management_key: ManagementKeyMintedOut;
+  management_key: ManagementKeyCreatedOut;
+}
+
+export interface OrgServiceAccountIn {
+  /**
+     * Display name for the service account
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** Initial organization-scoped management key to create for the service account */
+  management_key: ManagementKeyGrantIn;
 }
 
 export interface OrgUpdate {

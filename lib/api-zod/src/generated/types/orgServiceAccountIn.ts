@@ -19,6 +19,6 @@ export interface OrgServiceAccountIn {
      * @maxLength 200
      */
   name: string;
-  /** Initial organization-scoped management key to issue for the service account */
+  /** Initial organization-scoped management key to create for the service account */
   management_key: ManagementKeyGrantIn;
 }

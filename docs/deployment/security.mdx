@@ -1,0 +1,55 @@
+---
+title: "Security checklist"
+description: "Harden a public AirLLM deployment and protect its management, inference, provider, and state credentials."
+---
+
+## Before exposing the service
+
+- Terminate HTTPS at the public origin
+- Set `AIRLLM_CONSOLE_URL` to that exact origin
+- Claim the instance immediately
+- Keep `AIRLLM_PUBLIC_SIGNUP=false` unless open registration is intentional
+- Use a strong URL-safe Postgres password set before database initialization
+- Restrict access to Postgres, the secret store, gateway state, and backups
+- Keep control-plane synchronization traffic on a private or otherwise protected network
+- Disable response buffering on `/inf/` and set an appropriate streaming read timeout
+
+## Credential practices
+
+- Give each application its own workspace inference key
+- Give automation a service account and a management key with the minimum scope and permissions
+- Never use a management key for inference or expose a provider credential to an application
+- Store one-time tokens immediately; AirLLM does not return them again
+- Rotate provider credentials through the API so their version invalidates gateway caches
+- Revoke unused inference and management keys
+
+## State and logs
+
+The default file-backed secret store writes one owner-readable file per provider credential under `/state`. Bundle
+caches contain token hashes and secret references, not plaintext tokens or provider values. Usage and audit records can
+still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
+
+Do not log bearer headers, request bodies, provider keys, or one-time token responses. Limit access to application logs,
+database exports, volume snapshots, and support bundles.
+
+## Browser boundary
+
+The all-in-one proxy sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`,
+`X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY`. Preserve equivalent behavior if you replace the
+checked-in proxy.
+
+Playground requests may authenticate with a same-origin cookie. The gateway requires an `X-Requested-With` header and
+rejects cross-site fetch metadata for cookie-authenticated inference. Normal applications should use bearer inference
+keys.
+
+## Incident response
+
+If a secret may be exposed, rotate or revoke it at its owning layer:
+
+| Exposed value | Response |
+| --- | --- |
+| Inference key | Revoke the key and create a replacement |
+| Management key | Revoke it; delegated descendant keys are also revoked |
+| Provider credential | Rotate the credential value and verify the new fingerprint |
+| Postgres password | Rotate it at Postgres and update `DATABASE_URL` |
+| Gateway runtime key | Replace it on both planes, verify bundle and usage traffic, then revoke the old key |

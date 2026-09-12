@@ -1,0 +1,74 @@
+---
+title: "Docker Compose"
+description: "Run the all-in-one AirLLM image and Postgres with persistent named volumes."
+---
+
+The default `docker-compose.yml` runs two containers: AirLLM and Postgres.
+
+## Start
+
+```bash
+cp .env.example .env
+docker compose up -d --build --wait
+uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
+```
+
+The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
+application container does not receive the provider-key variables from that file.
+
+## Configure the public origin
+
+For another local port:
+
+```bash
+AIRLLM_PORT=9000
+AIRLLM_PUBLIC_URL=http://localhost:9000
+```
+
+Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For a public deployment, terminate TLS at a
+reverse proxy and set `AIRLLM_PUBLIC_URL` to the exact HTTPS origin.
+
+Set a URL-safe `POSTGRES_PASSWORD` before the first start of a public installation. Changing the Compose variable later
+does not rotate the password already stored by Postgres.
+
+## State
+
+| Volume | Contents |
+| --- | --- |
+| `pgdata` | Postgres data |
+| `state` | Runtime management key, provider secrets, gateway identity, bundle cache, and usage outbox |
+
+`docker compose down` preserves both volumes. `docker compose down -v` deletes the complete installation.
+
+<Warning>
+  Back up both volumes before an update, and do not use `down -v` unless permanent deletion is intended.
+</Warning>
+
+## Update
+
+Check out the intended release, take a backup, then rebuild:
+
+```bash
+docker compose up -d --build --wait
+```
+
+Startup applies the baseline migration and shipped catalog before serving. The image prepares volume ownership and runs
+application processes as UID `10001`.
+
+## Run deployment tests
+
+The deployment suite uses a local test provider and a disposable project:
+
+```bash
+AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
+  docker compose -p airllm-test up -d --build --wait
+
+AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
+  DEPLOYMENT_PROJECT=airllm-test \
+  DEPLOYMENT_FILE=docker-compose.yml \
+  DEPLOYMENT_URL=http://localhost:18080 \
+  uv run pytest tests/deployment
+```
+
+The suite creates accounts, makes buffered and streaming requests, checks usage export, restarts services, and verifies
+persistent state. Use only a disposable installation.

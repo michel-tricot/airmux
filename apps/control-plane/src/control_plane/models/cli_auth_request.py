@@ -27,9 +27,9 @@ class CliAuthRequest(Record, Identified, Tombstonable, table=True):
     """A pending device authorization: the CLI holds the poll secret, the human confirms the user code.
 
     Only hashes of both are stored; open() is the only place the plaintexts exist. The management key
-    is minted at poll time, after approval, so its plaintext never rests in the pending request;
+    is created at poll time, after approval, so its plaintext never rests in the pending request;
     the poll that delivers it also deletes the request, making delivery one-time. Internal table
-    with no api models. Not audited: pre-identity churn; the minted key carries the audit trail.
+    with no api models. Not audited: pre-identity churn; the created key carries the audit trail.
     """
 
     __table_args__: ClassVar = (

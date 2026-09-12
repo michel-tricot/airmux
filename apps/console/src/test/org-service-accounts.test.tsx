@@ -60,7 +60,7 @@ describe('organization service accounts', () => {
             managed: true,
           },
         ];
-        return HttpResponse.json<{ data: Api.OrgServiceAccountMintedOut }>({
+        return HttpResponse.json<{ data: Api.OrgServiceAccountCreatedOut }>({
           data: {
             service_account: serviceAccount,
             membership: { user_id: serviceAccount.id, org_id: ORG.id, role: 'admin', status: 'member' },
@@ -92,7 +92,7 @@ describe('organization service accounts', () => {
       }),
       http.post('/api/v1/orgs/:orgId/management-keys', async ({ request }) => {
         replacementSubmitted = await request.json();
-        return HttpResponse.json<{ data: Api.ManagementKeyMintedOut }>({
+        return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({
           data: {
             id: 'management-key-2',
             user_id: 'service-account-1',

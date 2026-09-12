@@ -1,0 +1,16 @@
+*
+!docs/
+!docs/**
+!docs.json
+!apps/
+apps/*
+!apps/console/
+apps/console/*
+!apps/console/public/
+apps/console/public/*
+!apps/console/public/favicon.svg
+!lib/
+lib/*
+!lib/api-spec/
+lib/api-spec/*
+!lib/api-spec/openapi.yaml

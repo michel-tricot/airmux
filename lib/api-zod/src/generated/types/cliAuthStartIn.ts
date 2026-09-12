@@ -13,7 +13,7 @@
 
 export interface CliAuthStartIn {
   /**
-     * Where the CLI runs, e.g. the hostname; becomes the minted key's label
+     * Where the CLI runs, e.g. the hostname; becomes the created key's label
      * @minLength 1
      * @maxLength 80
      */

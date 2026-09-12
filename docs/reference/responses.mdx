@@ -1,0 +1,74 @@
+---
+title: "Responses"
+description: "Reference the Responses-compatible request fields, output items, restrictions, and streaming events."
+---
+
+```text
+POST /inf/v1/responses
+```
+
+The route always returns Responses-shaped output and errors.
+
+## Request
+
+```bash
+curl https://llm.example.com/inf/v1/responses \
+  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "openai/gpt-4o-mini",
+    "input": "Explain request routing in one sentence",
+    "max_output_tokens": 128,
+    "store": false
+  }'
+```
+
+## Supported fields
+
+| Field | Notes |
+| --- | --- |
+| `model` | Required catalog model ID |
+| `input` | String or supported input-item array |
+| `instructions` | Prepended as a system message |
+| `stream` | Boolean |
+| `max_output_tokens` | Canonical `max_tokens` alias |
+| `temperature`, `top_p` | Sampling fields |
+| `tools` | Function tools only; hosted tools are rejected |
+| `tool_choice` | `auto`, `none`, `required`, or named function |
+| `parallel_tool_calls` | Boolean |
+| `reasoning` | Reasoning configuration |
+| `text.format` | `text`, `json_object`, or `json_schema` |
+| `store` | Only `false` or omitted is supported |
+| `include` | Omitted, empty, or `reasoning.encrypted_content` |
+
+Unknown top-level fields are rejected with `unsupported_feature` on this surface.
+
+## Response
+
+The buffered response contains `output` items for assistant messages, reasoning, and function calls. It also includes
+usage plus an additive `gateway` object.
+
+```json
+{
+  "id": "019...",
+  "object": "response",
+  "status": "completed",
+  "model": "openai/gpt-4o-mini",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_0",
+      "role": "assistant",
+      "status": "completed",
+      "content": [{"type": "output_text", "text": "Requests are routed by catalog model, policy, and eligible credential."}]
+    }
+  ],
+  "gateway": {"finish_reason": "stop", "adjustments": []}
+}
+```
+
+## Streaming
+
+The stream emits named SSE events such as `response.created`, `response.output_item.added`, text or function-argument
+deltas, `response.output_item.done`, and `response.completed`. A failure after streaming begins is emitted as an `error`
+event.

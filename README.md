@@ -1,14 +1,11 @@
 # AirLLM
 
-One gateway for your LLM applications, across providers. Use OpenAI and Anthropic clients with
-OpenAI, Anthropic, Groq, Fireworks, Together, and other compatible providers. AirLLM handles
-routing, scoped provider credentials, inference keys, and usage tracking.
-
-[Policies](docs/policies.md) · [Deployment guides](docs/deployment/index.md) · [Development](docs/development.md) · [Examples](examples)
+AirLLM is a self-hosted LLM gateway. Applications use one endpoint across providers while AirLLM handles request
+translation, workspace policies, scoped provider credentials, inference keys, failover, and usage accounting.
 
 ## Quickstart
 
-You need Docker with Compose 2.24.4+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and a provider API key.
+You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
 
 ```sh
 git clone https://github.com/michel-tricot/airllm.git
@@ -16,142 +13,30 @@ cd airllm
 cp .env.example .env
 ```
 
-Add at least one provider key to `.env`, then run:
+Add a provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
 uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
 ```
 
-`quickstart` creates or resumes your owner account, organization, and workspace, imports missing
-provider credentials from `.env`, and prints a new `AIRLLM_INFERENCE_KEY` and a working curl command.
-It reports **Ready** after completing a real inference request, which uses your provider's API quota.
+`quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
+prints a new inference key; and verifies it with a real model request. Open [localhost:8080](http://localhost:8080) for
+the console.
 
-Every catalog provider uses `<PROVIDER>_API_KEY`: for example, `GROQ_API_KEY`,
-`DEEPSEEK_API_KEY`, or `XAI_API_KEY`. See [.env.example](.env.example) for the full list.
-You can also manage provider credentials in the console, scoped to an organization or workspace.
+## Documentation
 
-Open **[localhost:8080](http://localhost:8080)** for the console. The console, management API,
-and inference API share that address. Docker keeps two services running: AirLLM and Postgres.
-The local CLI sends provider keys through the management API; the application containers do not
-receive your `.env` file.
+- [Quickstart](docs/quickstart.mdx)
+- [Tutorials](docs/guides/openai-sdk.mdx)
+- [Features and policies](docs/features/model-routing.mdx)
+- [Concepts and architecture](docs/concepts/architecture.mdx)
+- [Deployment](docs/deployment/index.mdx)
+- [Inference reference](docs/reference/inference.mdx)
+- [Management API](docs/reference/management-api.mdx)
+- [Development](docs/development.mdx)
 
-`docker compose down` stops the stack and preserves its data. Adding `-v` deletes its volumes.
+The complete management API is generated from [`lib/api-spec/openapi.yaml`](lib/api-spec/openapi.yaml) in the Mintlify reference navigation.
 
-## Gateway only
+## License and stability
 
-For a local gateway without Postgres or the console, use the standalone configuration:
-
-```sh
-export OPENAI_API_KEY='your-provider-key'
-uv run --package data-plane --no-dev --frozen airllmdp serve --config airllm.standalone.yml
-```
-
-In another terminal:
-
-```sh
-curl http://127.0.0.1:8080/inf/v1/chat/completions \
-  -H 'Authorization: Bearer sk-inf-standalone-dev' \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"gpt-5-nano","messages":[{"role":"user","content":"Say hello"}]}'
-```
-
-Edit [bundle.standalone.yml](bundle.standalone.yml) to change routing. Standalone mode reloads
-that bundle, reads provider keys from the environment, and discards usage events. Its built-in
-inference key is for local development. Stop the Docker stack first if it occupies port 8080.
-
-## Connect your SDK
-
-Export the inference key printed by `quickstart`:
-
-```sh
-export AIRLLM_INFERENCE_KEY='the key printed by quickstart'
-```
-
-For the OpenAI Python SDK:
-
-```python
-import os
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://localhost:8080/inf/v1",
-    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
-)
-response = client.chat.completions.create(
-    model="openai/gpt-4o-mini",
-    messages=[{"role": "user", "content": "Hello"}],
-)
-print(response.choices[0].message.content)
-```
-
-Anthropic clients can call the same model:
-
-```python
-import os
-from anthropic import Anthropic
-
-client = Anthropic(
-    base_url="http://localhost:8080",
-    api_key="unused",
-    auth_token=os.environ["AIRLLM_INFERENCE_KEY"],
-)
-message = client.messages.create(
-    model="openai/gpt-4o-mini",
-    max_tokens=256,
-    messages=[{"role": "user", "content": "Hello"}],
-)
-print(message.content[0].text)
-```
-
-Choose a catalog model whose provider credential you configured. See [examples](examples) for
-streaming, tools, and other integrations.
-
-## Deploy
-
-| Platform | Setup |
-| --- | --- |
-| [Docker](docs/deployment/docker.md) | One AirLLM container and Postgres |
-| [Fly.io](docs/deployment/fly.md) | One app and Machine, plus Managed Postgres |
-| [Render](docs/deployment/render.md) | Deploy button with a checked-in Blueprint |
-| [DigitalOcean](docs/deployment/digitalocean.md) | Docker Droplet with automatic HTTPS |
-
-All use the same image. For independent services and multiple gateways, use
-[docker-compose.split.yml](docs/deployment/scaling.md).
-
-## Develop
-
-The [development guide](docs/development.md) covers source setup, hot reload, tests, and generated
-clients. Docker Compose runs the packaged application; source development runs the Python
-services and Vite separately.
-
-The control plane manages configuration in Postgres and publishes bundles to gateways. Gateways
-route from their local bundle, stream provider responses, and persist usage for later export.
-Separately deployed gateways keep serving during control-plane outages.
-
-Read the [data-plane design](notes/design/DATAPLANE.md), [authority model](notes/design/AUTHORITY.md),
-and [credential design](notes/design/BYOK.md). Follow [AGENTS.md](AGENTS.md) when contributing.
-
-AirLLM is pre-1.0. APIs, configuration, and migrations may change before the first stable release.
-Licensed under the [Elastic License 2.0](LICENSE).
-
-## Credential types
-
-- **Management keys** authenticate control-plane API calls and are scoped to an instance, organization, or workspace. Use `AIRLLM_MANAGEMENT_KEY` with the CLI
-- **Inference keys** authenticate model requests within one workspace. Use `AIRLLM_INFERENCE_KEY` in the gateway examples
-- **Provider credentials** are upstream provider API keys used by the gateway
-
-To create a workspace management key in the console, open **Workspace → Settings → Management Keys → Generate Key**, enter a label, and select permissions. The key cannot manage other workspaces or make inference requests. Copy its secret before closing the reveal dialog.
-
-The CLI equivalent, with an authenticated profile, is:
-
-```bash
-airllm management-keys mint \
-  --org <org-id> \
-  --workspace <workspace-slug-or-id> \
-  --label workspace-automation \
-  --permission workspaces.read \
-  --permission inference-keys.manage
-```
-
-Management endpoints use `/api/v1/instance/management-keys`, `/api/v1/orgs/{org_id}/management-keys`, and `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys`. Permission names use `management-keys.read`, `management-keys.issue`, and `management-keys.revoke`. Creating or expanding keys is bounded by the caller's authority and the key principal's permissions.
+AirLLM is pre-1.0. APIs, configuration, and migrations may change before the first stable release. Licensed under the [Elastic License 2.0](LICENSE).

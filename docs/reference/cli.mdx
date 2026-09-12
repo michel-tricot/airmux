@@ -1,0 +1,101 @@
+---
+title: "CLI reference"
+description: "Reference AirLLM CLI contexts, environment precedence, output formats, and resource commands."
+---
+
+Run the CLI from a checkout:
+
+```bash
+uv run --package cli --no-dev --frozen airllm --help
+```
+
+Or use `airllm` directly in an environment where the workspace CLI package is installed.
+
+## Authentication and context
+
+`airllm login` uses a browser device flow and saves a private profile to `~/.airllm/config.toml`. Override the file with `AIRLLM_CLI_CONFIG`.
+
+```bash
+airllm login --url https://llm.example.com
+airllm profiles list
+airllm profiles use my-org
+airllm workspaces use production
+airllm status
+airllm doctor
+```
+
+Resolution order is explicit option, `--dev` where supported, environment, active profile, then local default.
+
+| Environment variable | Purpose |
+| --- | --- |
+| `AIRLLM_CONTROL_PLANE_URL` | Override the management origin |
+| `AIRLLM_GATEWAY_URL` | Override the inference origin used by diagnostics |
+| `AIRLLM_MANAGEMENT_KEY` | Override the saved profile token |
+| `AIRLLM_ORG_ID` | Override the selected organization |
+| `AIRLLM_CLI_CONFIG` | Override the profile file path |
+
+## Output formats
+
+Commands returning resource data accept `-f/--format table|json|text`. Table is the interactive default, JSON is
+intended for automation, and text is tab-separated.
+
+```bash
+airllm models list -f json
+airllm events list -f text
+airllm commands -f table
+```
+
+`airllm commands` is the source-backed inventory for the installed CLI version.
+
+## Setup commands
+
+| Command | Purpose |
+| --- | --- |
+| `quickstart` | Claim or resume an instance, create a workspace and inference key, import provider keys, and verify inference |
+| `login` | Sign in through the browser device flow |
+| `status` | Show active endpoints, organization, workspace, and authentication source |
+| `doctor` | Check profile permissions, control-plane access, authentication, and gateway readiness |
+| `profiles list`, `profiles use`, `profiles remove` | Manage saved deployment and organization contexts |
+
+## Organization and workspace commands
+
+| Command group | Commands |
+| --- | --- |
+| `orgs` | `create`, `list`, `mine`, `switch` |
+| `orgs members` | `add`, `list`, `remove` |
+| `workspaces` | `create`, `list`, `use` |
+| `workspaces members` | `add`, `list`, `remove` |
+| `users` | `list` |
+| `service-accounts` | `create`, `list` |
+
+## Gateway resource commands
+
+| Command group | Commands |
+| --- | --- |
+| `inference-keys` | `create`, `list`, `revoke` |
+| `management-keys` | `create`, `list`, `revoke` |
+| `provider-credentials` | `add`, `list`, `rotate`, `disable`, `rm` |
+| `providers` | `list` |
+| `models` | `list` |
+| `rules` | `create`, `list`, `update`, `delete` |
+| `policies` | `create`, `list`, `update`, `delete` |
+| `bundles` | `list`, `republish` |
+| `data-planes` | `list` |
+| `events` | `list`, `tail` |
+| `taxonomy` | `apply` |
+
+Run `airllm <group> <command> --help` for the exact options installed on your machine.
+
+## Automation pattern
+
+```bash
+export AIRLLM_CONTROL_PLANE_URL='https://llm.example.com'
+export AIRLLM_MANAGEMENT_KEY='sk-cp-your-key'
+export AIRLLM_ORG_ID='your-org-id'
+
+airllm workspaces list -f json
+airllm inference-keys create deployment --workspace production
+```
+
+Use a service account and a management key limited to the required scope and permissions. One-time secret output should
+be captured by a secret manager and not written to logs.

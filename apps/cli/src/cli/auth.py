@@ -17,7 +17,7 @@ from api_models import (
     CliAuthPollOut,
     CliAuthStartOut,
     EnrollOut,
-    InferenceKeyMintedOut,
+    InferenceKeyCreatedOut,
     MeOut,
     OrgOut,
     ProviderCredentialOut,
@@ -241,9 +241,9 @@ def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]
     return workspace
 
 
-def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyMintedOut:
+def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyCreatedOut:
     path = f"/api/v1/orgs/{org_id}/workspaces/{workspace.id}/inference-keys"
-    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key mint", InferenceKeyMintedOut)
+    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key creation", InferenceKeyCreatedOut)
 
 
 def _gateway_error(response: httpx.Response) -> str:

@@ -2,8 +2,8 @@
 
     uv run python examples/anthropic_chat.py [prompt ...]
 
-Same gateway request as examples/chat.py, just a Claude model id. The
-gateway translates the OpenAI-shaped request into Anthropic's Messages
+Same canonical gateway request as examples/chat.py, just a Claude model id. The
+gateway translates the request into Anthropic's Messages
 API and maps the reply back to canonical shape. Needs ANTHROPIC_API_KEY
 in .env and a compiled bundle whose anthropic provider uses the native
 adapter (kind: anthropic).
@@ -29,7 +29,7 @@ def main() -> int:
     prompt = " ".join(sys.argv[1:]) or "In one sentence, what makes Claude different from other assistants?"
 
     resp = httpx.post(
-        f"{gateway}/v1/chat/completions",
+        f"{gateway.rstrip('/')}/inf/v1/chat/completions",
         headers={"authorization": f"Bearer {api_key}"},
         json={"model": model, "messages": [{"role": "user", "content": prompt}]},
         timeout=60.0,

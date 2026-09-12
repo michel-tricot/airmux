@@ -62,7 +62,7 @@ paths:
       tags:
       - Instance Management Keys
       summary: Create Instance Management Key
-      description: 'Issue an instance-scoped management key and return its token once.
+      description: 'Create an instance-scoped management key and return its token once.
 
 
         Required permission: `management-keys.issue`.'
@@ -82,7 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -153,7 +153,7 @@ paths:
       tags:
       - Organization Management Keys
       summary: Create Org Management Key
-      description: 'Issue an organization-scoped management key and return its token once.
+      description: 'Create an organization-scoped management key and return its token once.
 
 
         Required permission: `management-keys.issue`.'
@@ -181,7 +181,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -259,7 +259,7 @@ paths:
       tags:
       - Workspace Management Keys
       summary: Create Workspace Management Key
-      description: 'Issue a workspace-scoped management key and return its token once.
+      description: 'Create a workspace-scoped management key and return its token once.
 
 
         Required permission: `management-keys.issue`.'
@@ -294,7 +294,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -2161,7 +2161,7 @@ paths:
       tags:
       - Workspace Inference Keys
       summary: Create Inference Key
-      description: 'Issue an inference key for model requests to this workspace and return its token once.
+      description: 'Create an inference key for model requests to this workspace and return its token once.
 
 
         Required permission: `inference-keys.manage`.'
@@ -2196,7 +2196,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_InferenceKeyMintedOut_'
+                $ref: '#/components/schemas/Envelope_InferenceKeyCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -3446,7 +3446,7 @@ paths:
       tags:
       - Organization Service Accounts
       summary: Create Organization Service Account
-      description: 'Create an organization-managed service account and issue its first management key.
+      description: 'Create an organization-managed service account and its first management key.
 
 
         Required permissions: `members.manage` and `management-keys.issue`.'
@@ -3474,7 +3474,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_OrgServiceAccountMintedOut_'
+                $ref: '#/components/schemas/Envelope_OrgServiceAccountCreatedOut_'
         '422':
           description: Validation Error
           content:
@@ -4767,7 +4767,7 @@ components:
           maxLength: 80
           minLength: 1
           title: Client Name
-          description: Where the CLI runs, e.g. the hostname; becomes the minted key's label
+          description: Where the CLI runs, e.g. the hostname; becomes the created key's label
       additionalProperties: false
       type: object
       required:
@@ -5206,14 +5206,14 @@ components:
       required:
       - data
       title: Envelope[HeartbeatOut]
-    Envelope_InferenceKeyMintedOut_:
+    Envelope_InferenceKeyCreatedOut_:
       properties:
         data:
-          $ref: '#/components/schemas/InferenceKeyMintedOut'
+          $ref: '#/components/schemas/InferenceKeyCreatedOut'
       type: object
       required:
       - data
-      title: Envelope[InferenceKeyMintedOut]
+      title: Envelope[InferenceKeyCreatedOut]
     Envelope_InferenceKeyRevokedOut_:
       properties:
         data:
@@ -5238,14 +5238,14 @@ components:
       required:
       - data
       title: Envelope[InvitationPreviewOut]
-    Envelope_ManagementKeyMintedOut_:
+    Envelope_ManagementKeyCreatedOut_:
       properties:
         data:
-          $ref: '#/components/schemas/ManagementKeyMintedOut'
+          $ref: '#/components/schemas/ManagementKeyCreatedOut'
       type: object
       required:
       - data
-      title: Envelope[ManagementKeyMintedOut]
+      title: Envelope[ManagementKeyCreatedOut]
     Envelope_ManagementKeyOut_:
       properties:
         data:
@@ -5318,14 +5318,14 @@ components:
       required:
       - data
       title: Envelope[OrgOut]
-    Envelope_OrgServiceAccountMintedOut_:
+    Envelope_OrgServiceAccountCreatedOut_:
       properties:
         data:
-          $ref: '#/components/schemas/OrgServiceAccountMintedOut'
+          $ref: '#/components/schemas/OrgServiceAccountCreatedOut'
       type: object
       required:
       - data
-      title: Envelope[OrgServiceAccountMintedOut]
+      title: Envelope[OrgServiceAccountCreatedOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -5702,6 +5702,20 @@ components:
       - version
       title: HeartbeatV1
       description: The identity, software version, and single active bundle reported by a data plane.
+    InferenceKeyCreatedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - token
+      title: InferenceKeyCreatedOut
     InferenceKeyIn:
       properties:
         label:
@@ -5715,20 +5729,6 @@ components:
       required:
       - label
       title: InferenceKeyIn
-    InferenceKeyMintedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        token:
-          type: string
-          title: Token
-      type: object
-      required:
-      - id
-      - token
-      title: InferenceKeyMintedOut
     InferenceKeyOut:
       properties:
         id:
@@ -5960,70 +5960,7 @@ components:
       - email
       - password
       title: LoginIn
-    ManagementKeyGrantIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-          description: Optional expiration timestamp with a timezone
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      - label
-      title: ManagementKeyGrantIn
-    ManagementKeyIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-          description: Optional expiration timestamp with a timezone
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Principal the key authenticates; defaults to the authenticated principal
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      - label
-      title: ManagementKeyIn
-    ManagementKeyMintedOut:
+    ManagementKeyCreatedOut:
       properties:
         id:
           type: string
@@ -6118,7 +6055,70 @@ components:
       - scope
       - status
       - token
-      title: ManagementKeyMintedOut
+      title: ManagementKeyCreatedOut
+    ManagementKeyGrantIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+          description: Optional expiration timestamp with a timezone
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      - label
+      title: ManagementKeyGrantIn
+    ManagementKeyIn:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+          description: Optional expiration timestamp with a timezone
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: Principal the key authenticates; defaults to the authenticated principal
+      additionalProperties: false
+      type: object
+      required:
+      - permissions
+      - label
+      title: ManagementKeyIn
     ManagementKeyOut:
       properties:
         id:
@@ -6923,6 +6923,20 @@ components:
       - member
       - data_plane
       title: OrgRole
+    OrgServiceAccountCreatedOut:
+      properties:
+        service_account:
+          $ref: '#/components/schemas/UserOut'
+        membership:
+          $ref: '#/components/schemas/MembershipOut'
+        management_key:
+          $ref: '#/components/schemas/ManagementKeyCreatedOut'
+      type: object
+      required:
+      - service_account
+      - membership
+      - management_key
+      title: OrgServiceAccountCreatedOut
     OrgServiceAccountIn:
       properties:
         name:
@@ -6933,27 +6947,13 @@ components:
           description: Display name for the service account
         management_key:
           $ref: '#/components/schemas/ManagementKeyGrantIn'
-          description: Initial organization-scoped management key to issue for the service account
+          description: Initial organization-scoped management key to create for the service account
       additionalProperties: false
       type: object
       required:
       - name
       - management_key
       title: OrgServiceAccountIn
-    OrgServiceAccountMintedOut:
-      properties:
-        service_account:
-          $ref: '#/components/schemas/UserOut'
-        membership:
-          $ref: '#/components/schemas/MembershipOut'
-        management_key:
-          $ref: '#/components/schemas/ManagementKeyMintedOut'
-      type: object
-      required:
-      - service_account
-      - membership
-      - management_key
-      title: OrgServiceAccountMintedOut
     OrgUpdate:
       properties:
         name:

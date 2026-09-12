@@ -1,0 +1,78 @@
+---
+title: "Model routing and failover"
+description: "Route catalog model IDs across provider families, select healthy credentials, and define bounded fallback plans."
+---
+
+Every inference request names one catalog model. AirLLM resolves that model to a provider profile, validates the
+request, chooses a credential, and translates the request into the provider's wire format.
+
+## Model IDs
+
+Catalog IDs use `provider/model` form in managed deployments, for example `openai/gpt-4o-mini` or
+`anthropic/claude-sonnet-4-6`. The prefix selects the provider entry; the catalog maps the public ID to the upstream
+model name.
+
+```bash
+airllm models list
+airllm providers list
+```
+
+Each model declares:
+
+- Input and output prices per million tokens
+- Context window and maximum output tokens
+- Input and output modalities
+- Capabilities such as streaming, tools, reasoning, and structured output
+- Parameter support where the provider or model has a known restriction
+
+AirLLM checks capabilities and modalities before it resolves a provider credential.
+
+## Credential selection
+
+Eligible credentials are considered by scope, then priority:
+
+1. Workspace credentials
+2. Organization credentials
+3. Instance credentials
+
+AirLLM uses the first populated scope allowed by policy. Within that scope, lower numeric priority is tried first and
+name breaks ties. It does not fall through to a broader scope when the selected scope has credentials but they fail.
+
+Authentication failures and rate limits may advance to the next credential in the same scope. A rate-limited credential
+enters a short cooldown so concurrent requests do not immediately reuse it.
+
+## Parameter reconciliation
+
+Provider profiles define aliases, accepted extra fields, and model-specific parameter support. Before the upstream call, AirLLM may:
+
+- Re-spell a parameter for the provider
+- Clamp `max_tokens` to the model's catalog maximum
+- Drop an unsupported optional parameter
+- Forward a documented top-level extra field
+
+Every clamp, emulation, or drop appears in `gateway.adjustments`. Use `strict_parameters` policy to reject a route that
+would drop a supplied parameter.
+
+## Fallback plans
+
+A fallback rule contains up to four backup model IDs and selects any of these failure classes:
+
+| Reason | Trigger |
+| --- | --- |
+| `rate_limited` | Upstream HTTP 429 |
+| `upstream_unavailable` | Upstream HTTP 5xx or connection failure |
+| `timeout` | The request exceeds the fallback deadline |
+
+The configured `max_attempts` counts the primary call, credential retries, and backup routes, with a maximum of five.
+`timeout_ms` covers secret resolution and all attempts until response headers arrive. It does not cap the duration of an
+established stream.
+
+Every backup route is evaluated against the same workspace restrictions. A fallback cannot escape an allowlist, price
+ceiling, credential rule, capability check, or parameter policy.
+
+<Info>
+  Fallback is not exactly-once generation. A timed-out provider may continue work after AirLLM starts another attempt,
+  and each attempt gets its own usage record.
+</Info>
+
+Configure failover in [workspace policies](/docs/policies#model-fallbacks).

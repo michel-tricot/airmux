@@ -1,0 +1,52 @@
+---
+title: "Request lifecycle"
+description: "Follow an inference request from authentication through policy, translation, streaming, and usage export."
+---
+
+One inference request follows the same stages regardless of caller dialect or provider family.
+
+<Steps>
+  <Step title="Authenticate">
+    The gateway loads its current bundle set, hashes the bearer token, and looks up the active inference-key entry.
+    Missing, unknown, expired, or not-yet-adopted keys are rejected.
+  </Step>
+
+  <Step title="Parse">
+    The route or dialect resolver chooses an ingress adapter. The adapter validates the caller's wire shape and produces
+    a canonical request plus any translation adjustments.
+  </Step>
+
+  <Step title="Resolve the route">
+    The gateway looks up the requested catalog model and provider, then checks required input modalities and
+    capabilities such as streaming, tools, reasoning, or structured output.
+  </Step>
+
+  <Step title="Evaluate policy">
+    Matching rules compose against the original request. A denial stops before any provider call. Credential rules
+    filter candidates, and a fallback rule can add bounded backup routes.
+  </Step>
+
+  <Step title="Resolve a credential">
+    The gateway chooses the most specific populated allowed scope, orders candidates by priority, and resolves the
+    selected versioned secret reference. Secret values never enter the bundle.
+  </Step>
+
+  <Step title="Reconcile and translate">
+    Provider and model profiles re-spell, clamp, forward, or drop parameters. The egress adapter writes the provider
+    request by hand and attaches upstream authentication.
+  </Step>
+
+  <Step title="Execute and render">
+    Buffered responses are translated into canonical and then into the caller's dialect. Streaming responses are folded
+    incrementally without buffering the whole completion.
+  </Step>
+
+  <Step title="Account">
+    AirLLM records tokens, cache usage, estimated status, cost, latency, route, credential metadata, bundle ID, and
+    outcome. The local outbox exports the event to the control plane.
+  </Step>
+</Steps>
+
+If an eligible failure occurs before response headers, routing can advance to another credential or fallback model
+within the attempt and deadline limits. After streaming starts, failures are rendered as events because the HTTP status
+has already been sent.

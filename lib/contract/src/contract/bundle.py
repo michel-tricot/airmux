@@ -22,7 +22,7 @@ class KeyEntry(BaseModel):
 
     key_id: str = Field(min_length=1, max_length=255)
     org_id: UUID
-    workspace_id: UUID  # the workspace the key was minted in, stamped onto usage events
+    workspace_id: UUID  # the workspace the key was created in, stamped onto usage events
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
     expires_at: datetime | None = None
 

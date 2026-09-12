@@ -518,7 +518,7 @@ def test_a_workspace_credential_needs_workspace_membership(tmp_path):
 
     Whoever supplies a provider key owns the account the workspace's traffic is billed to, and that
     account's dashboard shows every request made with it, so attaching one is at least as privileged
-    as minting an inference key.
+    as creating an inference key.
     """
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:

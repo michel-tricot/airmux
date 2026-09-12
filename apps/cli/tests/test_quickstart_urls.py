@@ -13,7 +13,7 @@ import typer
 import yaml
 from typer.testing import CliRunner
 
-from api_models import InferenceKeyMintedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
+from api_models import InferenceKeyCreatedOut, ModelOut, OrgOut, ProviderCredentialOut, ProviderOut, TaxonomyOut, WorkspaceOut
 from cli import auth
 from cli.auth import DEFAULT_CONSOLE_URL, DEFAULT_GATEWAY_URL, ProviderKey, configured_model, resolve_deployment_urls, seed_provider_credentials
 from cli.client import LOCAL_CONTROL_PLANE_URL, resolve_control_plane_url
@@ -245,7 +245,7 @@ def test_quickstart_uses_a_model_backed_by_a_configured_provider():
     assert configured_model(cast("httpx.Client", client)) == "anthropic/claude"
 
 
-def test_quickstart_mints_an_management_key_without_replacing_the_active_one():
+def test_quickstart_creates_a_management_key_without_replacing_the_active_one():
     requests: list[httpx.Request] = []
 
     def handle(request: httpx.Request) -> httpx.Response:
@@ -345,7 +345,7 @@ def _quickstart(
     )
     monkeypatch.setattr(auth, "upsert_url_profile", lambda name, values: saved.update(name=name, values=values))
     monkeypatch.setattr(
-        auth, "_inference_key", lambda _client, _org_id, _workspace, _bearer: InferenceKeyMintedOut(id=uuid4(), token="inference-token")
+        auth, "_inference_key", lambda _client, _org_id, _workspace, _bearer: InferenceKeyCreatedOut(id=uuid4(), token="inference-token")
     )
     monkeypatch.setattr(auth, "seed_provider_credentials", lambda _client, _overrides: [ProviderKey("anthropic", "already configured")])
     monkeypatch.setattr(auth, "configured_model", lambda _client: model)

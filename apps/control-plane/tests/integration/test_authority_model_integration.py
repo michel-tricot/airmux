@@ -11,7 +11,7 @@ from control_plane.authz import (
     Permission,
     Scope,
 )
-from control_plane.keys import MANAGEMENT_KEY_PREFIX, ManagementKeyGrant, mint_management_key, verify_management_key
+from control_plane.keys import MANAGEMENT_KEY_PREFIX, ManagementKeyGrant, create_management_key, verify_management_key
 from control_plane.models import ManagementKey, Org, OrgMembership, User, Workspace, WorkspaceMembership, set_actor
 
 
@@ -22,7 +22,7 @@ def test_management_key_has_one_prefix_explicit_permissions_and_a_stored_hash(tm
         user = User(email="owner@example.com", name="Owner", instance_role="owner")
         await set_actor(user.id)
         await user.save()
-        key_id, token = await mint_management_key(
+        key_id, token = await create_management_key(
             ManagementKeyGrant(
                 principal_id=user.id,
                 scope=Scope.instance(),
@@ -53,7 +53,7 @@ def test_role_loss_removes_authority_without_changing_the_key(tmp_path):
         membership = await OrgMembership(user_id=owner.id, org_id=org.id, role=OrgRole.owner).save()
         workspace = await Workspace(org_id=org.id, name="Workspace", slug="workspace").save()
         await WorkspaceMembership(user_id=owner.id, workspace_id=workspace.id, org_id=org.id, role="admin").save()
-        _, token = await mint_management_key(
+        _, token = await create_management_key(
             ManagementKeyGrant(
                 principal_id=owner.id,
                 scope=Scope.org(org.id),
@@ -87,7 +87,7 @@ def test_expired_management_key_is_rejected(tmp_path):
         user = User(email="owner@example.com", name="Owner", instance_role="owner")
         await set_actor(user.id)
         await user.save()
-        _, token = await mint_management_key(
+        _, token = await create_management_key(
             ManagementKeyGrant(
                 principal_id=user.id,
                 scope=Scope.instance(),

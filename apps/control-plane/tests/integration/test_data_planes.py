@@ -95,7 +95,7 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         user = make_user(tmp_path, "ops@example.com")
         make_admin(tmp_path, user.id)
         user_id = str(user.id)
-        minted = c.post(
+        management_key = c.post(
             f"/api/v1/orgs/{o1}/management-keys",
             json={
                 "user_id": user_id,
@@ -104,10 +104,10 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
             },
             headers=root,
         ).json()["data"]
-        dp = {"authorization": f"Bearer {minted['token']}"}
+        dp = {"authorization": f"Bearer {management_key['token']}"}
         dp1 = uuid7()
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 200
-        assert c.delete(f"/api/v1/management-keys/{minted['id']}", headers=root).status_code == 200
+        assert c.delete(f"/api/v1/management-keys/{management_key['id']}", headers=root).status_code == 200
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 401
 
 

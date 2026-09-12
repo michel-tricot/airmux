@@ -1,0 +1,65 @@
+---
+title: "Authentication and scopes"
+description: "Distinguish browser sessions, management keys, inference keys, principals, roles, and tenancy scopes."
+---
+
+AirLLM has separate credentials for management and inference. They are not interchangeable.
+
+| Credential | Prefix or transport | Purpose |
+| --- | --- | --- |
+| Browser session | Secure cookie | Console and browser-only management flows |
+| Management key | `sk-cp-` | Permission-limited `/api/v1` automation |
+| Inference key | `sk-inf-` | Model requests for one workspace |
+| Provider credential | Provider-specific | Upstream authentication selected by the gateway |
+
+## Tenancy scopes
+
+Management authority can be scoped to the instance, an organization, or one workspace. A scope covers only itself and its descendants:
+
+- Instance scope can act across the installation
+- Organization scope can act within one organization and its workspaces
+- Workspace scope can act only within one workspace
+
+Organizations and workspaces can be addressed by ID or slug in management URLs. Inference keys carry an immutable
+organization and workspace identity in the bundle.
+
+## Human and service principals
+
+Human accounts sign in with a session and can approve the CLI device flow. Service accounts represent automation and
+cannot use browser-only flows. Both can receive roles and management keys.
+
+Roles grant permission sets at a scope:
+
+| Scope | Roles |
+| --- | --- |
+| Instance | `owner`, `auditor`, `data_plane` |
+| Organization | `owner`, `admin`, `member`, `data_plane` |
+| Workspace | `admin`, `member`, `viewer` |
+
+The effective permission is the intersection of the principal's authority, the management key's permission ceiling, and
+the target scope. A management key cannot delegate authority its caller or key principal does not have.
+
+## Create a management key
+
+```bash
+airllm management-keys create \
+  --org "$ORG_ID" \
+  --workspace production \
+  --label deployment-automation \
+  --permission workspaces.read \
+  --permission inference-keys.manage
+```
+
+The token is shown once. Revoking a management key also revokes keys delegated from it.
+
+## Inference keys
+
+```bash
+airllm inference-keys create checkout-service --workspace production
+```
+
+An inference key authenticates one workspace's requests and is the unit targeted by selected-key policies. Revocation
+becomes effective after the gateway adopts a bundle that no longer contains its hash.
+
+See the [management API](/docs/reference/management-api) for bearer authentication and the
+[CLI reference](/docs/reference/cli) for context management.

@@ -53,7 +53,7 @@ class ManagementKeyGrant:
     parent_id: UUID | None = None
 
 
-async def mint_management_key(grant: ManagementKeyGrant) -> tuple[UUID, str]:
+async def create_management_key(grant: ManagementKeyGrant) -> tuple[UUID, str]:
     token, prefix = new_management_key()
     key = await ManagementKey(
         user_id=grant.principal_id,
@@ -69,10 +69,10 @@ async def mint_management_key(grant: ManagementKeyGrant) -> tuple[UUID, str]:
     return key.id, token
 
 
-async def mint_standing_management_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
+async def create_standing_management_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
     from control_plane.authority import principal_permissions  # noqa: PLC0415 authority loads management-key models
 
-    return await mint_management_key(
+    return await create_management_key(
         ManagementKeyGrant(
             principal_id=principal_id,
             scope=scope,
@@ -82,7 +82,7 @@ async def mint_standing_management_key(principal_id: UUID, scope: Scope, label: 
     )
 
 
-async def mint_inference_key(org_id: UUID, workspace_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
+async def create_inference_key_for_workspace(org_id: UUID, workspace_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
     token, prefix = _new_key(INFERENCE_TOKEN_PREFIX)
     key = await InferenceKey(
         org_id=org_id,

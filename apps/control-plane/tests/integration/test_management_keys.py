@@ -10,18 +10,18 @@ from control_plane.keys import MANAGEMENT_KEY_PREFIX
 from control_plane.models import ManagementKey, set_actor
 
 
-def test_management_key_api_mints_lists_and_revokes_one_resource_type(tmp_path):
+def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         root = cp.headers()
         org_id = make_org(client, root)
-        minted = client.post(
+        response = client.post(
             f"/api/v1/orgs/{org_id}/management-keys",
             json={"label": "ci", "permissions": [Permission.workspaces_read]},
             headers=root,
         )
-        assert minted.status_code == 200, minted.text
-        key = minted.json()["data"]
+        assert response.status_code == 200, response.text
+        key = response.json()["data"]
         assert key["token"].startswith(MANAGEMENT_KEY_PREFIX)
         assert key["scope"] == {"level": "org", "org_id": str(org_id), "workspace_id": None}
         assert key["org_id"] == str(org_id)
@@ -109,7 +109,7 @@ def test_expired_management_key_is_reported_as_expired(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         root = cp.headers()
-        minted = client.post(
+        management_key = client.post(
             "/api/v1/instance/management-keys",
             json={
                 "label": "short-lived",
@@ -120,7 +120,7 @@ def test_expired_management_key_is_reported_as_expired(tmp_path):
         ).json()["data"]
 
         async def expire():
-            key = await ManagementKey.find_by_id(minted["id"])
+            key = await ManagementKey.find_by_id(management_key["id"])
             assert key is not None
             await set_actor(key.user_id)
             key.expires_at = datetime.now(tz=UTC) - timedelta(seconds=1)
@@ -128,4 +128,4 @@ def test_expired_management_key_is_reported_as_expired(tmp_path):
 
         run_in_db(tmp_path, expire)
         keys = client.get("/api/v1/instance/management-keys", headers=root).json()["data"]
-        assert next(key for key in keys if key["id"] == minted["id"])["status"] == "expired"
+        assert next(key for key in keys if key["id"] == management_key["id"])["status"] == "expired"

@@ -111,7 +111,7 @@ authorization depends on its resulting standing grants, not its principal kind o
 - May expire
 - May name a parent management key
 - Stores only a token hash and display prefix
-- Returns the full token once, when minted
+- Returns the full token once, when created
 
 There is no omitted permission list meaning everything. A key's effective authority is always the
 intersection of its stored ceiling and the principal's current standing grants.

@@ -1,0 +1,98 @@
+---
+title: "Quickstart"
+description: "Start AirLLM with Docker, claim the instance, import a provider credential, and make a verified inference request."
+---
+
+This path runs the console, control plane, gateway, and Postgres on one machine.
+
+## Prerequisites
+
+- Docker with Compose 2.24.4 or newer
+- Python 3.13 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- An API key for at least one provider in the shipped catalog
+
+<Steps>
+  <Step title="Clone and configure">
+    ```bash
+    git clone https://github.com/michel-tricot/airllm.git
+    cd airllm
+    cp .env.example .env
+    ```
+
+    Open `.env` and set at least one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`.
+  </Step>
+
+  <Step title="Start the stack">
+    ```bash
+    docker compose up -d --build --wait
+    ```
+
+    The public origin is `http://localhost:8080`. It serves the console at `/`, the management API at `/api/v1`, and inference at `/inf/v1`.
+  </Step>
+
+  <Step title="Claim and verify the instance">
+    ```bash
+    uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
+    ```
+
+    Enter an email and password when prompted. The command creates or resumes an owner account, organization, and
+    workspace; imports missing provider keys from `.env`; creates an inference key; and sends a real model request.
+  </Step>
+
+  <Step title="Save the inference key">
+    The secret shown as `AIRLLM_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
+
+    ```bash
+    export AIRLLM_INFERENCE_KEY='sk-inf-your-key'
+    ```
+  </Step>
+
+  <Step title="Make a request">
+    Use a model served by the provider you configured. `airllm models list` shows the catalog.
+
+    ```bash
+    curl http://localhost:8080/inf/v1/chat/completions \
+      -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+      -H 'Content-Type: application/json' \
+      -H 'x-airllm-dialect: canonical' \
+      -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}]}'
+    ```
+  </Step>
+</Steps>
+
+<Check>
+  The installation is ready when `quickstart` prints `Ready` and `curl http://localhost:8080/readyz` returns `{"status":"ready"}`.
+</Check>
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Connect an SDK" icon="code" href="/docs/guides/openai-sdk">
+    Change the base URL in an existing application.
+  </Card>
+  <Card title="Add workspace policy" icon="shield-halved" href="/docs/guides/policy-workflow">
+    Restrict models, prices, output length, credentials, or failure behavior.
+  </Card>
+</Columns>
+
+## Stop or reset
+
+`docker compose down` stops the stack and preserves both named volumes. `docker compose down -v` permanently deletes the
+local database, credentials, cached bundles, and pending usage.
+
+<Warning>
+  Do not use `docker compose down -v` on an installation whose state you need.
+</Warning>
+
+## Gateway-only mode
+
+For adapter development or a local provider-neutral endpoint without Postgres or the console:
+
+```bash
+export OPENAI_API_KEY='your-provider-key'
+uv run --package data-plane --no-dev --frozen airllmdp serve --config airllm.standalone.yml
+```
+
+Standalone mode reads `bundle.standalone.yml`, reloads it after changes, resolves provider credentials from environment
+variables, and discards usage events. Its built-in inference key is `sk-inf-standalone-dev`; keep this mode on a
+development machine.

@@ -26,7 +26,7 @@ from control_plane.deps import (
     require_csrf,
     user_scoped,
 )
-from control_plane.keys import mint_standing_management_key, verify_management_key
+from control_plane.keys import create_standing_management_key, verify_management_key
 from control_plane.models import AuthIdentity, CliAuthRequest, ManagementKey, Org, OrgInvitation, OrgMembership, PlaygroundSession, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
@@ -225,7 +225,7 @@ CLI_POLL_INTERVAL_SECONDS = 5
 
 
 class CliAuthStartIn(RequestModel):
-    client_name: str = Field(min_length=1, max_length=80, description="Where the CLI runs, e.g. the hostname; becomes the minted key's label")
+    client_name: str = Field(min_length=1, max_length=80, description="Where the CLI runs, e.g. the hostname; becomes the created key's label")
 
 
 class CliAuthStartOut(BaseModel):
@@ -359,7 +359,7 @@ async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope
     replaced = await verify_management_key(credentials.credentials) if credentials is not None else None
     if replaced is not None:
         await ManagementKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
-    _, token = await mint_standing_management_key(auth_request.approved_user_id, scope, auth_request.client_name)
+    _, token = await create_standing_management_key(auth_request.approved_user_id, scope, auth_request.client_name)
     await auth_request.delete()
     return Envelope(
         data=CliAuthPollOut(

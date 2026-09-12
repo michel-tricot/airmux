@@ -11,11 +11,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ManagementKeyMintedOutStatus = typeof ManagementKeyMintedOutStatus[keyof typeof ManagementKeyMintedOutStatus];
-
-
-export const ManagementKeyMintedOutStatus = {
-  active: 'active',
-  expired: 'expired',
-  revoked: 'revoked',
-} as const;
+export interface InferenceKeyCreatedOut {
+  id: string;
+  token: string;
+}
