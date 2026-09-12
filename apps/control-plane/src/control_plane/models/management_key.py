@@ -16,6 +16,7 @@ from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut, RequestModel
+from control_plane.models.playground_session import PlaygroundSession
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.interfaces import Dialect
@@ -54,6 +55,24 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
     revoked_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
+
+    async def save(self) -> Self:
+        await super().save()
+        await PlaygroundSession.revoke_unsupported(credential_ids=await self.delegation_ids())
+        return self
+
+    async def delegation_ids(self) -> frozenset[UUID]:
+        seen = frozenset({self.id})
+        pending = seen
+        while pending:
+            children = await ManagementKey.find(col(ManagementKey.parent_id).in_(pending))
+            pending = frozenset(key.id for key in children) - seen
+            seen |= pending
+        return seen
+
+    async def delete(self) -> None:
+        await PlaygroundSession.revoke_credential(self.id)
+        await super().delete()
 
     @property
     def scope(self) -> Scope:

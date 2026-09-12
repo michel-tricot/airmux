@@ -91,10 +91,10 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     org_id=playground_session.org_id,
                     workspace_id=playground_session.workspace_id,
                     token_hash=playground_session.token_hash,
-                    expires_at=playground_session.expires_at,
+                    expires_at=expiry,
                 )
                 for playground_session in playground_sessions
-                if playground_session.active(now)
+                if playground_session.active(now) and (expiry := await playground_session.authorized_until(now)) is not None
             ],
         ],
         catalog=Catalog(
