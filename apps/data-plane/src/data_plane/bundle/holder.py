@@ -35,12 +35,14 @@ class BundleSnapshot:
     provider_index: Mapping[str, ProviderEntry]
     credential_index: CredentialIndex
     profile_index: Mapping[str, CompiledProfile]
+    provider_param_aliases: frozenset[str]
     policy_index: PolicyIndex
 
     @classmethod
     def from_bundle(cls, bundle: BundleV1) -> Self:
         provider_index = _unique_index(bundle.catalog.providers, lambda provider: provider.provider_id, "provider")
         model_index = _unique_index(bundle.catalog.models, lambda model: model.model_id, "model")
+        profile_index = index_profiles(bundle)
         _admit_keys(bundle)
         _admit_providers(provider_index)
         _admit_models(model_index, provider_index)
@@ -50,7 +52,8 @@ class BundleSnapshot:
             model_index=MappingProxyType(model_index),
             provider_index=MappingProxyType(provider_index),
             credential_index=MappingProxyType(index_credentials(bundle)),
-            profile_index=MappingProxyType(index_profiles(bundle)),
+            profile_index=MappingProxyType(profile_index),
+            provider_param_aliases=frozenset(spelling for profile in profile_index.values() for spelling in profile.respelled),
             policy_index=compile_policies(bundle.policies, bundle.rules),
         )
 

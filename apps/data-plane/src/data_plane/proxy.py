@@ -259,6 +259,8 @@ class RequestExecution:
     start: RequestStart
 
     async def run(self) -> Response:
+        if self.snapshot.provider_param_aliases.intersection(self.request.extra):
+            raise RequestRejectedError(400, "invalid_request", "Provider parameter aliases must use canonical names")
         plan = plan_routes(self.request, self.key, self.snapshot)
         if isinstance(plan, Deny):
             record_denied(
