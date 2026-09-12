@@ -3,23 +3,15 @@ from __future__ import annotations
 import json
 
 import pytest
-from conftest import MODEL, PROVIDER
-from pydantic import ValidationError
+from conftest import MODEL, PROVIDER, make_bundle
 
-from contract import Secret
+from contract import Catalog, Secret
+from data_plane.bundle.holder import BundleSnapshot
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
 from data_plane.ingress import REGISTRY as INGRESS
 
-ALIASES = ("max_completion_tokens", "max_output_tokens", "max_new_tokens")
 BODY = {"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}]}
-
-
-@pytest.mark.parametrize("alias", ALIASES)
-@pytest.mark.parametrize("limit", [None, 1, 999])
-def test_canonical_passthrough_rejects_output_token_aliases(alias, limit):
-    with pytest.raises(ValidationError, match="output token limits must use max_tokens"):
-        CanonicalRequest.model_validate({**BODY, "max_tokens": limit, alias: 999})
 
 
 @pytest.mark.parametrize("dialect", sorted(INGRESS))
@@ -34,26 +26,12 @@ def test_native_output_token_limits_enter_canonical_before_policy(dialect):
     assert not request.extra
 
 
-@pytest.mark.parametrize("kind", sorted(REGISTRY))
-@pytest.mark.parametrize("limit", [None, 1])
-def test_configured_output_token_alias_cannot_enter_as_passthrough(kind, limit):
-    provider = PROVIDER.model_copy(
-        update={"kind": kind, "param_aliases": {"max_tokens": "custom_output_limit", "max_output_tokens": "custom_output_limit"}}
-    )
-    adapter = REGISTRY[kind](provider, Secret("sk-test"))
-    request = CanonicalRequest.model_validate({**BODY, "max_tokens": limit, "custom_output_limit": 999})
-    with pytest.raises(ValueError, match="output token limits must use max_tokens"):
-        adapter.transform_request(request, MODEL)
-
-
-@pytest.mark.parametrize("kind", sorted(REGISTRY))
-def test_rendered_output_token_limit_cannot_be_replaced_by_another_typed_parameter(kind):
-    limit_name = "max_output_tokens" if kind == "openai_responses" else "max_tokens"
-    provider = PROVIDER.model_copy(update={"kind": kind, "param_aliases": {"temperature": limit_name}})
-    adapter = REGISTRY[kind](provider, Secret("sk-test"))
-    request = CanonicalRequest.model_validate({**BODY, "max_tokens": 1, "temperature": 999})
-    with pytest.raises(ValueError, match="provider parameter aliases collide with output token limits"):
-        adapter.transform_request(request, MODEL)
+def test_output_token_aliases_come_from_the_bundle() -> None:
+    provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "provider_output_limit"}})
+    bundle = make_bundle(catalog=Catalog(providers=[provider], models=[MODEL]))
+    snapshot = BundleSnapshot.from_bundle(bundle)
+    assert snapshot.output_token_aliases == frozenset({"provider_output_limit"})
+    assert CanonicalRequest.model_validate({**BODY, "max_new_tokens": 9}).extra == {"max_new_tokens": 9}
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))

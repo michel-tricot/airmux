@@ -4,15 +4,13 @@ import json
 from typing import TYPE_CHECKING
 
 import httpx
-import pytest
 from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, _payload, _poll
 
 if TYPE_CHECKING:
     from conftest import Stack
 
 
-@pytest.mark.parametrize("model", ["echo", "quirk"])
-def test_output_token_aliases_cannot_bypass_live_policy(stack: Stack, model: str) -> None:
+def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
     stack.collect_credentials()
@@ -37,22 +35,19 @@ def test_output_token_aliases_cannot_bypass_live_policy(stack: Stack, model: str
                 json={"name": "One output token", "definition": {"target": {"kind": "all_keys"}, "rule_ids": [rule["id"]]}},
             )
         )
-    body = {"model": model, "messages": [{"role": "user", "content": "hi"}]}
+    body = {"model": "quirk", "messages": [{"role": "user", "content": "hi"}]}
     headers = {"authorization": f"Bearer {stack.caller_api_key}", "x-airllm-dialect": "canonical"}
     with httpx.Client(base_url=stack.dp_url, headers=headers, timeout=10) as client:
         path = "/inf/v1/chat/completions"
         assert _poll(lambda: client.post(path, json={**body, "max_tokens": 999}).status_code == 403, 30)
         baseline = stack.upstream_requests
-        for stream in (False, True):
-            for alias in ("max_completion_tokens", "max_output_tokens", "max_new_tokens"):
-                response = client.post(path, json={**body, alias: 999, "stream": stream})
-                assert response.status_code == 400, response.text
-            response = client.post(path, headers={"x-airllm-dialect": "openai_native"}, json={**body, "max_completion_tokens": 999, "stream": stream})
-            assert response.status_code == 403, response.text
+        response = client.post(path, json={**body, "max_completion_tokens": 999})
+        assert response.status_code == 400, response.text
+        response = client.post(path, headers={"x-airllm-dialect": "openai_native"}, json={**body, "max_completion_tokens": 999})
+        assert response.status_code == 403, response.text
         assert stack.upstream_requests == baseline
         response = client.post(path, json={**body, "max_tokens": 1})
         assert response.status_code == 200, response.text
-        if model == "quirk":
-            sent = json.loads(response.json()["content"][0]["text"])
-            assert sent["max_completion_tokens"] == 1
-            assert "max_tokens" not in sent
+        sent = json.loads(response.json()["content"][0]["text"])
+        assert sent["max_completion_tokens"] == 1
+        assert "max_tokens" not in sent

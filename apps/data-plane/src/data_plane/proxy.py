@@ -259,6 +259,8 @@ class RequestExecution:
     start: RequestStart
 
     async def run(self) -> Response:
+        if self.snapshot.output_token_aliases.intersection(self.request.extra):
+            raise RequestRejectedError(400, "invalid_request", "Output token limits must use max_tokens")
         plan = plan_routes(self.request, self.key, self.snapshot)
         if isinstance(plan, Deny):
             record_denied(

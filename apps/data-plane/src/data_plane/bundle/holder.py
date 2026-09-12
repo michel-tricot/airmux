@@ -35,6 +35,7 @@ class BundleSnapshot:
     provider_index: Mapping[str, ProviderEntry]
     credential_index: CredentialIndex
     profile_index: Mapping[str, CompiledProfile]
+    output_token_aliases: frozenset[str]
     policy_index: PolicyIndex
 
     @classmethod
@@ -51,6 +52,12 @@ class BundleSnapshot:
             provider_index=MappingProxyType(provider_index),
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(index_profiles(bundle)),
+            output_token_aliases=frozenset(
+                spelling
+                for provider in bundle.catalog.providers
+                for canonical, spelling in provider.param_aliases.items()
+                if canonical == "max_tokens"
+            ),
             policy_index=compile_policies(bundle.policies, bundle.rules),
         )
 
