@@ -32,8 +32,6 @@ BASE = f"https://unpkg.com/@lobehub/icons-static-svg@{VERSION}/icons"
 CTX = ssl.create_default_context()
 UA = {"User-Agent": "airllm-taxonomy/1.0"}
 
-ID_ATTRS = ("id", "xlink:href", "href", "fill", "stroke", "clip-path", "mask", "filter")
-
 
 def normalize(svg: str, slug: str) -> str:
     # drop the sizing and layout the consumer should own, and any title we do not control

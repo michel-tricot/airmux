@@ -62,21 +62,6 @@ def ensure_database(name: str, template: str | None = None) -> str:
     return url_for(name)
 
 
-def database_is_empty(tmp_path: Path) -> bool:
-    """No tables in public: proof a failed init exited before the database step."""
-
-    async def count() -> int:
-        engine = create_async_engine(db_url_for(tmp_path))
-        try:
-            async with engine.connect() as conn:
-                result = await conn.execute(text("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"))
-                return result.scalar_one()
-        finally:
-            await engine.dispose()
-
-    return asyncio.run(count()) == 0
-
-
 def drop_database(name: str) -> None:
     """FORCE terminates lingering pooled connections; test engines are not always disposed."""
 

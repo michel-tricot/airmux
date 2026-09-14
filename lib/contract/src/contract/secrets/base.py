@@ -78,10 +78,6 @@ class SecretRef:
     org_id: UUID | None = None
     workspace_id: UUID | None = None
 
-    @property
-    def is_platform(self) -> bool:
-        return self.org_id is None
-
 
 def path_segments(ref: SecretRef) -> tuple[str, ...]:
     """A hierarchical address for stores that have a hierarchy.
