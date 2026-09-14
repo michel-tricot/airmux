@@ -79,7 +79,11 @@ def service_action(compose, action, service):
 def assert_unprivileged(compose, service, expected):
     container = docker(*compose, "ps", "-q", service)
     processes = docker("top", container, "-eo", "pid,user,args")
-    servers = [process for process in processes.splitlines()[1:] if any(name in process for name in ("tokkeepercp", "tokkeeperdp", "nginx:"))]
+    servers = [
+        process
+        for process in processes.splitlines()[1:]
+        if any(name in process for name in ("tokkeeper-control-plane", "tokkeeper-data-plane", "nginx:"))
+    ]
     assert servers
     assert all(server.split()[1] in {"tokkeeper", "10001"} for server in servers), processes
     assert all(sum(command in server for server in servers) == 1 for command in expected), processes
@@ -88,11 +92,11 @@ def assert_unprivileged(compose, service, expected):
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     if compact:
-        assert_unprivileged(compose, gateways[0], ("tokkeepercp serve", "tokkeeperdp serve", "nginx: master"))
+        assert_unprivileged(compose, gateways[0], ("tokkeeper-control-plane serve", "tokkeeper-data-plane serve", "nginx: master"))
         return
-    assert_unprivileged(compose, "control-plane", ("tokkeepercp serve",))
+    assert_unprivileged(compose, "control-plane", ("tokkeeper-control-plane serve",))
     for gateway in gateways:
-        assert_unprivileged(compose, gateway, ("tokkeeperdp serve",))
+        assert_unprivileged(compose, gateway, ("tokkeeper-data-plane serve",))
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 

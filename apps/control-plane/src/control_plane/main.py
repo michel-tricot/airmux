@@ -30,7 +30,7 @@ from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-app = typer.Typer(name="tokkeepercp", no_args_is_help=True)
+app = typer.Typer(name="tokkeeper-control-plane", no_args_is_help=True)
 
 console = Console()
 
@@ -137,7 +137,7 @@ def fixtures(config: str = "tokkeeper.yml") -> None:
 
     typer.echo(f"seeded; bundles: {', '.join(f'{name} v{version}' for name, version in versions)}")
     if models == 0:
-        typer.echo("catalog is empty, so the bundles route nothing; run `tokkeepercp taxonomy` to fill it")
+        typer.echo("catalog is empty, so the bundles route nothing; run `tokkeeper-control-plane taxonomy` to fill it")
     if seeded.unresolved_providers:
         names = ", ".join(seeded.unresolved_providers)
         typer.echo(f"no key behind the seeded {names} credentials; supply one with `tokkeeper provider-credentials add <provider>`")

@@ -3,7 +3,7 @@
 #
 # Run from the repo root:
 #   export OPENAI_API_KEY=... ANTHROPIC_API_KEY=... GROQ_API_KEY=...
-#   uv run tokkeeperdp serve --config tokkeeper.standalone.yml
+#   uv run tokkeeper-data-plane serve --config tokkeeper.standalone.yml
 #
 # Then:
 #   curl http://127.0.0.1:8080/inf/v1/chat/completions \

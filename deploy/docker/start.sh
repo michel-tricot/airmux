@@ -5,18 +5,18 @@ prepare_control_plane() {
   umask 077
   mkdir -p /state/runtime /state/secrets
   if [ ! -f /state/runtime/dataplane.key ]; then
-    tokkeepercp bootstrap-keygen --out /state/runtime/dataplane.key
+    tokkeeper-control-plane bootstrap-keygen --out /state/runtime/dataplane.key
   fi
-  DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}" tokkeepercp migrate --config /app/deploy/docker/migrate.yml
-  tokkeepercp taxonomy --config "$TOKKEEPER_CONFIG" --file /app/taxonomy/taxonomy.yml
+  DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}" tokkeeper-control-plane migrate --config /app/deploy/docker/migrate.yml
+  tokkeeper-control-plane taxonomy --config "$TOKKEEPER_CONFIG" --file /app/taxonomy/taxonomy.yml
 }
 
 start_control_plane() {
-  exec tokkeepercp serve --host "$1" --port 8000 --config "$TOKKEEPER_CONFIG"
+  exec tokkeeper-control-plane serve --host "$1" --port 8000 --config "$TOKKEEPER_CONFIG"
 }
 
 start_data_plane() {
-  exec tokkeeperdp serve --host "$1" --port 8081 --config "$TOKKEEPER_CONFIG"
+  exec tokkeeper-data-plane serve --host "$1" --port 8081 --config "$TOKKEEPER_CONFIG"
 }
 
 start_console() {

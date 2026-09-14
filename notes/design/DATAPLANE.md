@@ -285,7 +285,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`tokkeeperdp serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`tokkeeper-data-plane serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -398,7 +398,7 @@ Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`tokkeeperdp serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`tokkeeper-data-plane serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state
@@ -703,7 +703,7 @@ A canonical change affects every caller and provider family:
 2. Map the field or part by hand in every relevant format
 3. Decide explicit reject, adjustment, or support behavior for families that cannot carry it
 4. Add the case to the shared canonical corpus
-5. Run `uv run tokkeeperdp schema` and review the committed schema diff
+5. Run `uv run tokkeeper-data-plane schema` and review the committed schema diff
 6. Prove buffered and streamed behavior where applicable
 
 Never replace explicit mappings with reflection. A shared field name is not a protocol guarantee.

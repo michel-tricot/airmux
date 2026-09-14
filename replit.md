@@ -7,7 +7,7 @@ An LLM gateway prototype with a strict control plane / data plane split, plus th
 - **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles policy bundles
 - **Data plane** (bare Starlette): serves `POST /v1/chat/completions` and `POST /v1/messages` (Anthropic API) with zero I/O on the hot path
 - **Console** (`apps/console`): React/Vite admin and org console
-- **CLI** (`apps/cli`): `tokkeeper` and `tokkeepercp` commands for managing the gateway
+- **CLI** (`apps/cli`): `tokkeeper` and `tokkeeper-control-plane` commands for managing the gateway
 
 ## Stack
 
@@ -23,12 +23,12 @@ See README.md for the full getting-started guide. The short version:
 ```bash
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-uv run tokkeepercp bootstrap-keygen # shared data-plane pool key
+uv run tokkeeper-control-plane bootstrap-keygen # shared data-plane pool key
 # add OPENAI_API_KEY to .env
-uv run tokkeepercp serve --dev     # control plane on :8000
+uv run tokkeeper-control-plane serve --dev     # control plane on :8000
 # sign up at the console: the first account claims the instance
-uv run tokkeepercp taxonomy        # load and publish the catalog
-uv run tokkeeperdp --dev           # data plane on :8080
+uv run tokkeeper-control-plane taxonomy        # load and publish the catalog
+uv run tokkeeper-data-plane --dev           # data plane on :8080
 ```
 
 ## Required secrets / env vars
@@ -42,13 +42,13 @@ See `.env.example`. Key variables:
 | `TOKKEEPER_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `TOKKEEPER_INFERENCE_KEY` | Caller inference key |
 
-`uv run tokkeepercp bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
+`uv run tokkeeper-control-plane bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
 
 ## Project layout
 
 ```
 apps/
-  cli/           # tokkeeper / tokkeepercp CLI
+  cli/           # tokkeeper / tokkeeper-control-plane CLI
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
 packages/
@@ -102,11 +102,11 @@ repository root:
 
 That script runs the required sequence:
 
-1. `uv run tokkeepercp bootstrap-keygen` (when `.tokkeeper/dataplane.key` does not exist)
-2. `uv run tokkeepercp migrate`
-3. `uv run tokkeepercp taxonomy`
-4. `uv run tokkeepercp fixtures`
-5. `uv run tokkeepercp serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
+1. `uv run tokkeeper-control-plane bootstrap-keygen` (when `.tokkeeper/dataplane.key` does not exist)
+2. `uv run tokkeeper-control-plane migrate`
+3. `uv run tokkeeper-control-plane taxonomy`
+4. `uv run tokkeeper-control-plane fixtures`
+5. `uv run tokkeeper-control-plane serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
 
 If there is any migration incompatibility, the script must start the Replit
 development database from scratch: drop and recreate it, then run the full

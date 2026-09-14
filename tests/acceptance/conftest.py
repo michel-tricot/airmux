@@ -290,7 +290,7 @@ class Stack:
                     json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
-            self._run([_bin("tokkeepercp"), "taxonomy", "--config", str(self.config_path)], self.env)
+            self._run([_bin("tokkeeper-control-plane"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
 
@@ -407,14 +407,16 @@ class Stack:
     def start_cp(self) -> None:
         if not self.env:
             self._provision_keys()
-        self._run([_bin("tokkeepercp"), "migrate", "--config", str(self.config_path)], self.env)
-        self._spawn("cp", [_bin("tokkeepercp"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
+        self._run([_bin("tokkeeper-control-plane"), "migrate", "--config", str(self.config_path)], self.env)
+        self._spawn(
+            "cp", [_bin("tokkeeper-control-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)]
+        )
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
         if not self.provisioned:
             self._bootstrap()  # a restart keeps the deployment it already provisioned
 
     def start_dp(self, workers: int = 1) -> None:
-        cmd = [_bin("tokkeeperdp"), "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
+        cmd = [_bin("tokkeeper-data-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
         self._spawn("dp", [*cmd, "--workers", str(workers)])
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 

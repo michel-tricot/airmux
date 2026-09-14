@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tokkeepercp = "control_plane.main:app"
+tokkeeper-control-plane = "control_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]
