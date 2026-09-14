@@ -98,7 +98,9 @@ async def create_instance_management_key(body: ManagementKeyIn, actor: ActorDep)
 
 
 @router.get(
-    "/orgs/{org_id}/management-keys", tags=["Organization Management Keys"], dependencies=[require("api", org_scope, Permission.management_keys_read)]
+    "/organizations/{org_id}/management-keys",
+    tags=["Organization Management Keys"],
+    dependencies=[require("api", org_scope, Permission.management_keys_read)],
 )
 async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
     """List organization- and workspace-scoped management keys within an organization."""
@@ -106,7 +108,7 @@ async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) 
 
 
 @router.post(
-    "/orgs/{org_id}/management-keys",
+    "/organizations/{org_id}/management-keys",
     tags=["Organization Management Keys"],
     dependencies=[require("api", org_scope, Permission.management_keys_issue)],
 )
@@ -116,7 +118,7 @@ async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor
 
 
 @router.get(
-    "/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
+    "/organizations/{org_id}/workspaces/{workspace_ref}/management-keys",
     tags=["Workspace Management Keys"],
     dependencies=[require("api", workspace_scope, Permission.management_keys_read)],
 )
@@ -126,7 +128,7 @@ async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID 
 
 
 @router.post(
-    "/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
+    "/organizations/{org_id}/workspaces/{workspace_ref}/management-keys",
     tags=["Workspace Management Keys"],
     dependencies=[require("api", workspace_scope, Permission.management_keys_issue)],
 )

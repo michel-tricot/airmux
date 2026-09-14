@@ -44,7 +44,7 @@ def test_event_ingest_is_idempotent_and_org_scoped(tmp_path):
         assert first == {"received": 3, "ingested": 3}
         replay = c.post("/api/v1/events", json=events, headers=root).json()["data"]
         assert replay == {"received": 3, "ingested": 0}
-        rows = c.get(f"/api/v1/orgs/{o1}/events", headers=org).json()["data"]
+        rows = c.get(f"/api/v1/organizations/{o1}/events", headers=org).json()["data"]
         assert len(rows) == 2
         assert {r["org_id"] for r in rows} == {str(o1)}
         assert c.post("/api/v1/events", json=[_event(o1)], headers=org).status_code == 200
@@ -63,7 +63,7 @@ def test_event_list_filters_by_workspace(tmp_path):
         second = {**_event(org_id), "workspace_id": str(second_workspace)}
         assert c.post("/api/v1/events", json=[first, second], headers=root).status_code == 200
 
-        response = c.get(f"/api/v1/orgs/{org_id}/workspaces/{first_workspace}/events", headers=cp.headers(org_id))
+        response = c.get(f"/api/v1/organizations/{org_id}/workspaces/{first_workspace}/events", headers=cp.headers(org_id))
 
         assert response.status_code == 200, response.text
         assert [event["event_id"] for event in response.json()["data"]] == [first["event_id"]]
@@ -82,7 +82,7 @@ def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
         assert landed.status_code == 200, landed.text
         assert landed.json()["data"] == {"received": 3, "ingested": 2}
 
-        stored = c.get(f"/api/v1/orgs/{o1}/events", headers=cp.headers(o1)).json()["data"]
+        stored = c.get(f"/api/v1/organizations/{o1}/events", headers=cp.headers(o1)).json()["data"]
         assert sorted(e["event_id"] for e in stored) == sorted({duplicated["event_id"], other["event_id"]})
 
         replay = c.post("/api/v1/events", json=batch, headers=root).json()["data"]
@@ -132,9 +132,9 @@ def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
-        first = c.get(f"/api/v1/orgs/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
+        first = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
         second = c.get(
-            f"/api/v1/orgs/{org_id}/events",
+            f"/api/v1/organizations/{org_id}/events",
             params={"limit": 2, "before": first[-1]["occurred_at"], "before_event_id": first[-1]["event_id"]},
             headers=headers,
         ).json()["data"]
@@ -152,14 +152,14 @@ def test_event_cursors_are_stable_when_timestamps_match_and_support_tailing(tmp_
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
-        newest = c.get(f"/api/v1/orgs/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
+        newest = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
         older = c.get(
-            f"/api/v1/orgs/{org_id}/events",
+            f"/api/v1/organizations/{org_id}/events",
             params={"before": newest[-1]["occurred_at"], "before_event_id": newest[-1]["event_id"]},
             headers=headers,
         ).json()["data"]
         newer = c.get(
-            f"/api/v1/orgs/{org_id}/events",
+            f"/api/v1/organizations/{org_id}/events",
             params={"after": older[-1]["occurred_at"], "after_event_id": older[-1]["event_id"]},
             headers=headers,
         ).json()["data"]
@@ -188,4 +188,4 @@ def test_event_cursor_parameters_must_form_one_complete_pair(tmp_path, params):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         org_id = make_org(c, cp.headers(), "o1")
-        assert c.get(f"/api/v1/orgs/{org_id}/events", params=params, headers=cp.headers(org_id)).status_code == 422
+        assert c.get(f"/api/v1/organizations/{org_id}/events", params=params, headers=cp.headers(org_id)).status_code == 422

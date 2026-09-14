@@ -59,7 +59,7 @@ def test_device_flow_end_to_end(tmp_path):
         assert done["org_name"] == "mine"
 
         bearer = {"authorization": f"Bearer {done['token']}"}
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers=bearer).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers=bearer).status_code == 200
         assert c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 404
 
 
@@ -156,18 +156,18 @@ def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_pa
 
         first = login_once()
         peer = c.post(
-            f"/api/v1/orgs/{org['id']}/management-keys",
+            f"/api/v1/organizations/{org['id']}/management-keys",
             json={
                 "label": "mbp",
                 "permissions": [Permission.workspaces_read],
             },
             headers=CSRF,
         ).json()["data"]["token"]
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
         second = login_once(first)
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {peer}"}).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {peer}"}).status_code == 200
 
 
 def test_login_without_an_existing_key_does_not_retire_matching_labels(tmp_path):
@@ -183,8 +183,8 @@ def test_login_without_an_existing_key_does_not_retire_matching_labels(tmp_path)
         first = login_once()
         second = login_once()
 
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
-        assert c.get(f"/api/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
 
 
 def test_approval_requires_membership_and_a_browser_session(tmp_path):
@@ -227,11 +227,13 @@ def test_deleting_an_approved_org_removes_its_device_request(tmp_path):
     with _client(cp) as c:
         user = c.post("/api/v1/auth/signup", json={"email": "member@example.com", "password": PASSWORD}).json()["data"]
         org_id = make_org(c, root, "temporary")
-        assert c.put(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
+        assert (
+            c.put(f"/api/v1/organizations/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
+        )
         started = _start(c)
         assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
 
-        deleted = c.delete(f"/api/v1/orgs/{org_id}", headers=root)
+        deleted = c.delete(f"/api/v1/organizations/{org_id}", headers=root)
 
         assert deleted.status_code == 200, deleted.text
         assert c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 404
@@ -245,10 +247,10 @@ def test_deleting_an_approver_removes_their_device_request(tmp_path):
         user = c.post("/api/v1/auth/signup", json={"email": "member@example.com", "password": PASSWORD}).json()["data"]
         org_id = make_org(c, root, "kept")
         org = cp.headers(org_id)
-        assert c.put(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=org).status_code == 200
+        assert c.put(f"/api/v1/organizations/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=org).status_code == 200
         started = _start(c)
         assert c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
-        assert c.delete(f"/api/v1/orgs/{org_id}/users/{user['user_id']}", headers=org).status_code == 200
+        assert c.delete(f"/api/v1/organizations/{org_id}/users/{user['user_id']}", headers=org).status_code == 200
 
         deleted = c.delete(f"/api/v1/users/{user['user_id']}", headers=root)
 

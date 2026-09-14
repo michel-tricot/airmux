@@ -33,7 +33,7 @@ function open() {
 it('edits permissions without replacing the key, refreshes the list, and discards cancelled changes', async () => {
   let stored = key;
   server.use(
-    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [stored] })),
+    http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json({ data: [stored] })),
     http.put('/api/v1/management-keys/:keyId/permissions', async ({ request }) => {
       expect(await request.json()).toEqual({ permissions: ['workspaces.read', 'usage.read'] });
       stored = { ...stored, permissions: ['workspaces.read', 'usage.read'] };
@@ -59,7 +59,7 @@ it('edits permissions without replacing the key, refreshes the list, and discard
 
 it('keeps the editor open with a readable error when an update is denied', async () => {
   server.use(
-    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
     http.put('/api/v1/management-keys/:keyId/permissions', () => HttpResponse.json({ detail: 'Permissions exceed the parent key' }, { status: 403 })),
   );
   open();
@@ -71,7 +71,7 @@ it('keeps the editor open with a readable error when an update is denied', async
 });
 
 it('does not offer editing for revoked keys', async () => {
-  server.use(http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [{ ...key, status: 'revoked' }] })));
+  server.use(http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json({ data: [{ ...key, status: 'revoked' }] })));
   open();
   expect(await screen.findByText('deployment')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit permissions for deployment' })).not.toBeInTheDocument();
@@ -79,7 +79,7 @@ it('does not offer editing for revoked keys', async () => {
 
 it('does not offer editing to readers without key issuance permission', async () => {
   server.use(
-    http.get('/api/v1/orgs/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json({ data: [key] })),
     http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['management-keys.read'] } })),
   );
   open();

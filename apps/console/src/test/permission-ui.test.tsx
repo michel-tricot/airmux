@@ -42,7 +42,7 @@ describe('permission-aware organization console', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['organizations.read'] } }),
       ),
-      http.get('/api/v1/orgs/:orgId/taxonomy', taxonomy),
+      http.get('/api/v1/organizations/:orgId/taxonomy', taxonomy),
     );
 
     renderAt('/org/models');
@@ -55,8 +55,8 @@ describe('permission-aware organization console', () => {
     installPermissionHandler(WORKSPACE_MEMBER_PERMISSIONS);
     const orgMembers = vi.fn(() => new HttpResponse(null, { status: 403 }));
     server.use(
-      http.get('/api/v1/orgs/:orgId/users', orgMembers),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/members', () =>
+      http.get('/api/v1/organizations/:orgId/users', orgMembers),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
         HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({
           data: [
             {
@@ -85,7 +85,7 @@ describe('permission-aware organization console', () => {
   it('renders provider credentials read-only for workspace members', async () => {
     installPermissionHandler(WORKSPACE_MEMBER_PERMISSIONS);
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/taxonomy', () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({
           data: {
             providers: [
@@ -107,7 +107,7 @@ describe('permission-aware organization console', () => {
           },
         }),
       ),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
         HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
           data: [
             {
@@ -155,7 +155,7 @@ describe('permission-aware organization console', () => {
   it('renders inference keys read-only for workspace viewers', async () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () =>
         HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({
           data: [
             {

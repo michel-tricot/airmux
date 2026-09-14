@@ -20,14 +20,14 @@ def test_full_flow_to_verified_bundle(tmp_path):
         o1 = make_org(c, root, "o1")
         org = cp.headers(o1)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/orgs/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
         latest = c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root)
         assert latest.status_code == 200
         bundle = BundleV1.model_validate(latest.json()["data"])
-        bundles = c.get(f"/api/v1/orgs/{o1}/bundles", headers=org).json()["data"]
+        bundles = c.get(f"/api/v1/organizations/{o1}/bundles", headers=org).json()["data"]
         assert [entry["version"] for entry in bundles] == [1, 2, 3]
         assert str(bundle.bundle_id) == bundles[-1]["id"]
         assert [k.key_id for k in bundle.keys] == [key["id"]]
@@ -49,11 +49,11 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         org_id = make_org(c, root, "o1")
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
-        assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
+        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert bundle.keys == []
-        bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
+        bundles = c.get(f"/api/v1/organizations/{org_id}/bundles", headers=org).json()["data"]
         assert [entry["version"] for entry in bundles] == [1, 2]
 
 
@@ -66,14 +66,14 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
         workspace_id = make_workspace(c, org)
 
         key = c.post(
-            f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys",
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
             json={"label": "automatic"},
             headers=org,
         ).json()["data"]
         created = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert [entry.key_id for entry in created.keys] == [key["id"]]
 
-        assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
+        assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
         revoked = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert revoked.bundle_id != created.bundle_id
         assert revoked.keys == []
@@ -85,8 +85,8 @@ def test_bundle_latest_filters_by_org(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
-        c.post(f"/api/v1/orgs/{o2}/bundles/republish", headers=cp.headers(o2))
+        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=cp.headers(o1))
+        c.post(f"/api/v1/organizations/{o2}/bundles/republish", headers=cp.headers(o2))
         global_latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"])
         assert global_latest.org_id == o2
         latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=cp.headers(o2)).json()["data"])
@@ -102,8 +102,8 @@ def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
-        c.post(f"/api/v1/orgs/{o2}/bundles/republish", headers=cp.headers(o2))
+        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=cp.headers(o1))
+        c.post(f"/api/v1/organizations/{o2}/bundles/republish", headers=cp.headers(o2))
 
         instance = BundleManifest.model_validate(c.get("/api/v1/bundles/manifest", headers=root).json()["data"])
         org = BundleManifest.model_validate(c.get("/api/v1/bundles/manifest", headers=cp.headers(o1)).json()["data"])
@@ -141,7 +141,7 @@ def test_compile_endpoint_is_removed(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         org_id = make_org(c, cp.headers(), "o1")
-        assert c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=cp.headers(org_id)).status_code == 404
+        assert c.post(f"/api/v1/organizations/{org_id}/bundles/compile", headers=cp.headers(org_id)).status_code == 404
 
 
 @pytest.mark.parametrize(

@@ -23,7 +23,7 @@ def test_owner_changes_keep_instance_and_organization_authority_live(stack):
         founder_id = founder_login.json()["data"]["user_id"]
 
         invitation = founder.post(
-            f"/api/v1/orgs/{stack.org_id}/invitations",
+            f"/api/v1/organizations/{stack.org_id}/invitations",
             json={"email": "successor@acceptance.test", "org_role": "member"},
         )
         invitation.raise_for_status()
@@ -46,16 +46,16 @@ def test_owner_changes_keep_instance_and_organization_authority_live(stack):
         assert refused.status_code == 409, refused.text
         assert successor.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is True
 
-        organization = successor.post("/api/v1/orgs", json={"name": "Ownership race"})
+        organization = successor.post("/api/v1/organizations", json={"name": "Ownership race"})
         organization.raise_for_status()
         org_id = organization.json()["data"]["id"]
         for user_id in (founder_id, successor_id):
-            successor.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "owner"}).raise_for_status()
+            successor.put(f"/api/v1/organizations/{org_id}/users/{user_id}", json={"role": "owner"}).raise_for_status()
         with ThreadPoolExecutor(max_workers=2) as pool:
             responses = [
                 attempt.result()
                 for attempt in [
-                    pool.submit(successor.put, f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"})
+                    pool.submit(successor.put, f"/api/v1/organizations/{org_id}/users/{user_id}", json={"role": "member"})
                     for user_id in (founder_id, successor_id)
                 ]
             ]

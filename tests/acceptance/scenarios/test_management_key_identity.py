@@ -20,7 +20,7 @@ def test_management_keys_keep_the_issuing_identity_over_http(stack):
         owner_login = owner.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
         owner_login.raise_for_status()
         owner_id = owner_login.json()["data"]["user_id"]
-        invitation = owner.post(f"/api/v1/orgs/{stack.org_id}/invitations", json={"email": "org-admin@acceptance.test", "org_role": "admin"})
+        invitation = owner.post(f"/api/v1/organizations/{stack.org_id}/invitations", json={"email": "org-admin@acceptance.test", "org_role": "admin"})
         invitation.raise_for_status()
         invitation_token = parse_qs(urlsplit(invitation.json()["data"]["url"]).fragment)["token"][0]
         signup = admin.post(
@@ -29,9 +29,9 @@ def test_management_keys_keep_the_issuing_identity_over_http(stack):
         )
         signup.raise_for_status()
         admin_id = signup.json()["data"]["user_id"]
-        member_path = f"/api/v1/orgs/{stack.org_id}/users/{admin_id}"
+        member_path = f"/api/v1/organizations/{stack.org_id}/users/{admin_id}"
         owner.put(member_path, json={"role": "admin"}).raise_for_status()
-        key_path = f"/api/v1/orgs/{stack.org_id}/management-keys"
+        key_path = f"/api/v1/organizations/{stack.org_id}/management-keys"
         body = {"label": "self-only", "permissions": ["management-keys.issue", "members.manage"]}
         assert admin.post(key_path, json={**body, "user_id": owner_id}).status_code == 422
         issued = admin.post(key_path, json=body)

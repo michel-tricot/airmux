@@ -9,7 +9,7 @@ from control_plane.deps import WorkspaceDep, require, workspace_scope
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.policy import InvalidPolicyError, Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 
-router = APIRouter(prefix="/orgs/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
+router = APIRouter(prefix="/organizations/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
 
 @router.get("", dependencies=[require("api", workspace_scope, Permission.policies_read)])

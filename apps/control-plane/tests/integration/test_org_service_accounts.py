@@ -25,7 +25,7 @@ def _org_admin(client: TestClient, cp, org_id: UUID) -> str:
         json={"email": "admin@example.com", "name": "Org Admin", "password": PASSWORD},
     ).json()["data"]
     response = client.put(
-        f"/api/v1/orgs/{org_id}/users/{account['user_id']}",
+        f"/api/v1/organizations/{org_id}/users/{account['user_id']}",
         json={"role": "admin"},
         headers=cp.headers(org_id),
     )
@@ -35,7 +35,7 @@ def _org_admin(client: TestClient, cp, org_id: UUID) -> str:
 
 def _create(client: TestClient, org_id: UUID, permissions: list[Permission | str] | None = None):
     return client.post(
-        f"/api/v1/orgs/{org_id}/service-accounts",
+        f"/api/v1/organizations/{org_id}/service-accounts",
         json={
             "name": "Deploy Bot",
             "management_key": {
@@ -80,10 +80,10 @@ def test_org_admin_creates_an_org_owned_service_account_with_a_management_key(tm
         ]
 
         key_headers = {"authorization": f"Bearer {management_key['token']}"}
-        workspace = client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "Production"}, headers=key_headers)
+        workspace = client.post(f"/api/v1/organizations/{org_id}/workspaces", json={"name": "Production"}, headers=key_headers)
         assert workspace.status_code == 200, workspace.text
 
-        members = client.get(f"/api/v1/orgs/{org_id}/users", headers=CSRF).json()["data"]
+        members = client.get(f"/api/v1/organizations/{org_id}/users", headers=CSRF).json()["data"]
         managed = next(member for member in members if member["user_id"] == service_account["id"])
         assert managed["managed"] is True
 
@@ -97,7 +97,7 @@ def test_generic_management_key_issuance_cannot_select_a_service_account(tmp_pat
         created = _create(client, org_id).json()["data"]
 
         response = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
+            f"/api/v1/organizations/{org_id}/management-keys",
             json={
                 "user_id": created["service_account"]["id"],
                 "label": "replacement-management",
@@ -120,7 +120,7 @@ def test_org_admin_rotates_an_org_managed_service_account_key(tmp_path):
         service_account = created["service_account"]
 
         response = client.post(
-            f"/api/v1/orgs/{org_id}/service-accounts/{service_account['id']}/management-keys",
+            f"/api/v1/organizations/{org_id}/service-accounts/{service_account['id']}/management-keys",
             json={"label": "replacement-management", "permissions": [Permission.workspaces_read]},
             headers=CSRF,
         )
@@ -153,7 +153,7 @@ def test_service_account_creation_requires_member_management_and_key_issuance(tm
     with _client(cp) as client:
         org_id = make_org(client, root, "acme")
         response = client.post(
-            f"/api/v1/orgs/{org_id}/service-accounts",
+            f"/api/v1/organizations/{org_id}/service-accounts",
             json={
                 "name": "Deploy Bot",
                 "management_key": {"label": "deployment-management", "permissions": [Permission.workspaces_read]},
@@ -174,16 +174,16 @@ def test_org_managed_service_account_cannot_be_moved_removed_or_promoted(tmp_pat
         service_account = _create(client, first).json()["data"]["service_account"]
 
         moved = client.put(
-            f"/api/v1/orgs/{second}/users/{service_account['id']}",
+            f"/api/v1/organizations/{second}/users/{service_account['id']}",
             json={"role": "admin"},
             headers=root,
         )
         promoted = client.put(
-            f"/api/v1/orgs/{first}/users/{service_account['id']}",
+            f"/api/v1/organizations/{first}/users/{service_account['id']}",
             json={"role": "owner"},
             headers=root,
         )
-        removed = client.delete(f"/api/v1/orgs/{first}/users/{service_account['id']}", headers=root)
+        removed = client.delete(f"/api/v1/organizations/{first}/users/{service_account['id']}", headers=root)
 
         assert moved.status_code == 409
         assert promoted.status_code == 409
@@ -204,13 +204,13 @@ def test_org_admin_deletes_an_org_managed_service_account_and_its_key(tmp_path):
         key_id = created["management_key"]["id"]
         key_headers = {"authorization": f"Bearer {created['management_key']['token']}"}
 
-        response = client.delete(f"/api/v1/orgs/{org_id}/service-accounts/{service_account_id}", headers=CSRF)
+        response = client.delete(f"/api/v1/organizations/{org_id}/service-accounts/{service_account_id}", headers=CSRF)
 
         assert response.status_code == 200, response.text
         assert response.json()["data"]["id"] == service_account_id
         assert run_in_db(tmp_path, lambda: User.find_by_id(UUID(service_account_id))) is None
         assert run_in_db(tmp_path, lambda: ManagementKey.find_by_id(UUID(key_id))) is None
-        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=key_headers).status_code == 401
+        assert client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=key_headers).status_code == 401
 
 
 def test_deleting_an_org_deletes_its_managed_service_accounts(tmp_path):
@@ -221,7 +221,7 @@ def test_deleting_an_org_deletes_its_managed_service_accounts(tmp_path):
         _org_admin(client, cp, org_id)
         service_account_id = _create(client, org_id).json()["data"]["service_account"]["id"]
 
-        response = client.delete(f"/api/v1/orgs/{org_id}", headers=root)
+        response = client.delete(f"/api/v1/organizations/{org_id}", headers=root)
 
         assert response.status_code == 200, response.text
         assert run_in_db(tmp_path, lambda: User.find_by_id(UUID(service_account_id))) is None

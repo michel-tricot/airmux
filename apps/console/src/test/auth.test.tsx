@@ -38,7 +38,7 @@ function withTwoOrgs() {
     http.get('/api/v1/enroll', () =>
       HttpResponse.json<{ data: Api.EnrollOut }>({ data: { orgs: [ORG, ORG2], personal_org_id: ORG.id, pending_invitations: [] } }),
     ),
-    http.get('/api/v1/orgs/:orgId/workspaces', ({ params }) => {
+    http.get('/api/v1/organizations/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
         return HttpResponse.json<{ data: Api.WorkspaceOut[] }>({
           data: [
@@ -53,7 +53,7 @@ function withTwoOrgs() {
       }
       return new HttpResponse(null, { status: 403 });
     }),
-    http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef', ({ params }) => {
       const rows = {
         'ws-acme': {
           id: 'ws-acme',

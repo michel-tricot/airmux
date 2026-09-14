@@ -54,14 +54,14 @@ def test_invitation_competing_transitions_preserve_one_membership(stack: Stack, 
         httpx.Client(base_url=stack.cp_url, headers=CSRF, timeout=10) as member,
     ):
         admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}).raise_for_status()
-        invitation = admin.post(f"/api/v1/orgs/{stack.org_id}/invitations", json={"email": MEMBER_EMAIL, "org_role": "member"})
+        invitation = admin.post(f"/api/v1/organizations/{stack.org_id}/invitations", json={"email": MEMBER_EMAIL, "org_role": "member"})
         invitation.raise_for_status()
         minted = invitation.json()["data"]
         token = parse_qs(urlsplit(minted["url"]).fragment)["token"][0]
         signup = member.post("/api/v1/auth/signup", json={"email": MEMBER_EMAIL, "password": MEMBER_PASSWORD, "invitation_token": token})
         signup.raise_for_status()
         user_id = signup.json()["data"]["user_id"]
-        invitation_path = f"/api/v1/orgs/{stack.org_id}/invitations/{minted['invitation']['id']}"
+        invitation_path = f"/api/v1/organizations/{stack.org_id}/invitations/{minted['invitation']['id']}"
 
         def accept() -> httpx.Response:
             return member.post("/api/v1/enroll/invitations/accept", json={"token": token})
@@ -77,7 +77,7 @@ def test_invitation_competing_transitions_preserve_one_membership(stack: Stack, 
         else:
             assert competing.status_code == 200, competing.text
             assert accepted.status_code == (410 if competing_action == "revoke" else 404)
-        members = admin.get(f"/api/v1/orgs/{stack.org_id}/users")
+        members = admin.get(f"/api/v1/organizations/{stack.org_id}/users")
         members.raise_for_status()
         memberships = [membership for membership in members.json()["data"] if membership["user_id"] == user_id]
         assert len(memberships) == (1 if accepted.status_code == 200 else 0)
@@ -117,15 +117,15 @@ def test_cli_competing_transitions_deliver_one_usable_credential(stack: Stack, c
         delivered.raise_for_status()
         token = delivered.json()["data"]["token"]
         headers = {"authorization": f"Bearer {token}"}
-        assert httpx.get(f"{stack.cp_url}/api/v1/orgs/{stack.org_id}/workspaces", headers=headers).status_code == 200
+        assert httpx.get(f"{stack.cp_url}/api/v1/organizations/{stack.org_id}/workspaces", headers=headers).status_code == 200
         assert poll().status_code == 404
-        keys = admin.get(f"/api/v1/orgs/{stack.org_id}/management-keys")
+        keys = admin.get(f"/api/v1/organizations/{stack.org_id}/management-keys")
         keys.raise_for_status()
         minted = [key for key in keys.json()["data"] if key["label"] == "lifecycle-concurrency"]
         assert len(minted) == 1
         assert token not in keys.text
         admin.delete(f"/api/v1/management-keys/{minted[0]['id']}").raise_for_status()
-        assert httpx.get(f"{stack.cp_url}/api/v1/orgs/{stack.org_id}/workspaces", headers=headers).status_code == 401
+        assert httpx.get(f"{stack.cp_url}/api/v1/organizations/{stack.org_id}/workspaces", headers=headers).status_code == 401
         assert stack.request().status_code == 200
 
 

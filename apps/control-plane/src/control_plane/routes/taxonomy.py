@@ -69,14 +69,16 @@ async def apply_instance_taxonomy(
     )
 
 
-@router.get("/orgs/{org_id}/taxonomy", tags=["Organization Model Catalog"], dependencies=[require("api", org_scope, Permission.catalog_read)])
+@router.get(
+    "/organizations/{org_id}/taxonomy", tags=["Organization Model Catalog"], dependencies=[require("api", org_scope, Permission.catalog_read)]
+)
 async def get_org_taxonomy() -> Envelope[TaxonomyOut]:
     """Return the provider and model catalog available to an organization."""
     return await _taxonomy()
 
 
 @router.get(
-    "/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy",
+    "/organizations/{org_id}/workspaces/{workspace_ref}/taxonomy",
     tags=["Workspace Model Catalog"],
     dependencies=[require("api", workspace_scope, Permission.catalog_read)],
 )

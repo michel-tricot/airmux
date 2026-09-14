@@ -12,7 +12,7 @@ from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.org import OrgCreate, OrgOut, OrgSlugTakenError, OrgUpdate
 from control_plane.routes.provider_credentials import secret_store
 
-router = APIRouter(prefix="/orgs")
+router = APIRouter(prefix="/organizations")
 
 
 @router.post("", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_create)])

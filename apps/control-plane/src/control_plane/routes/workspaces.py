@@ -19,7 +19,7 @@ from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, Worksp
 from control_plane.models.workspace_membership import WorkspaceMemberCandidateOut, WorkspaceMembershipIn, WorkspaceMembershipOut
 from control_plane.routes.provider_credentials import secret_store
 
-router = APIRouter(prefix="/orgs/{org_id}/workspaces")
+router = APIRouter(prefix="/organizations/{org_id}/workspaces")
 
 
 def _set_playground_cookie(response: Response, token: str, request: Request) -> None:

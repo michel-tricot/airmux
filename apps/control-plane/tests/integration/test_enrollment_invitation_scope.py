@@ -22,13 +22,13 @@ def test_enrollment_limits_invitation_metadata_to_credential_scope(tmp_path, inv
         workspace_id = selected if invited_workspace == "selected" else sibling if invited_workspace == "sibling" else None
         body = {"email": "invitee@example.com", "org_role": "member"}
         local = client.post(
-            f"/api/v1/orgs/{first}/invitations",
+            f"/api/v1/organizations/{first}/invitations",
             headers=root,
             json={**body, **({"workspace_id": str(workspace_id), "workspace_role": "viewer"} if workspace_id else {})},
         )
         assert local.status_code == 200, local.text
-        assert client.post(f"/api/v1/orgs/{second}/invitations", headers=root, json=body).status_code == 200
-        assert client.put(f"/api/v1/orgs/{first}/users/{user_id}", headers=root, json={"role": "admin"}).status_code == 200
+        assert client.post(f"/api/v1/organizations/{second}/invitations", headers=root, json=body).status_code == 200
+        assert client.put(f"/api/v1/organizations/{first}/users/{user_id}", headers=root, json={"role": "admin"}).status_code == 200
         browser = client.get("/api/v1/enroll", headers=CSRF).json()["data"]
         assert {invitation["org_id"] for invitation in browser["pending_invitations"]} == {str(first), str(second)}
         org_bearer = cp.headers_for(first, user_id)

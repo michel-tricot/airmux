@@ -31,14 +31,14 @@ def _catalog(client, root):
 def _collection(headers: dict[str, str], workspace: UUID | str | None = None) -> str:
     org_id = headers["X-Test-Org-Id"]
     return (
-        f"/api/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials"
+        f"/api/v1/organizations/{org_id}/workspaces/{workspace}/provider-credentials"
         if workspace is not None
-        else f"/api/v1/orgs/{org_id}/provider-credentials"
+        else f"/api/v1/organizations/{org_id}/provider-credentials"
     )
 
 
 def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
-    return f"/api/v1/orgs/{org_id or credential['org_id']}/provider-credentials/{credential['id']}"
+    return f"/api/v1/organizations/{org_id or credential['org_id']}/provider-credentials/{credential['id']}"
 
 
 def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
@@ -386,7 +386,7 @@ def test_the_audit_trail_holds_no_value(tmp_path):
         created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
         c.put(f"{_credential_path(created)}/value", json={"value": "sk-rotated-9999"}, headers=org)
         c.delete(_credential_path(created), headers=org)
-        trail = c.get(f"/api/v1/orgs/{org_id}/activity", headers=org)
+        trail = c.get(f"/api/v1/organizations/{org_id}/activity", headers=org)
         assert trail.status_code == 200, trail.text
         assert KEY not in trail.text
         assert "sk-rotated-9999" not in trail.text
@@ -418,11 +418,11 @@ def test_a_rejected_key_shows_up_as_invalid(tmp_path):
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
         assert m.credential["status"] == "unknown"
-        before = c.get(f"/api/v1/orgs/{m.org_id}/bundles", headers=m.org).json()["data"]
+        before = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
         event = _usage_event(m, "credential_rejected", datetime.now(tz=UTC))
         assert c.post("/api/v1/events", json=[event], headers=m.root).status_code == 200
         assert _status_of(c, m) == "invalid"
-        after = c.get(f"/api/v1/orgs/{m.org_id}/bundles", headers=m.org).json()["data"]
+        after = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
         assert [bundle["id"] for bundle in after] == [bundle["id"] for bundle in before]
 
 
@@ -490,7 +490,7 @@ def test_deleting_a_workspace_takes_its_credentials(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
-        deleted = c.delete(f"/api/v1/orgs/{m.org_id}/workspaces/{m.workspace_id}", headers=m.org)
+        deleted = c.delete(f"/api/v1/organizations/{m.org_id}/workspaces/{m.workspace_id}", headers=m.org)
         assert deleted.status_code == 200, deleted.text
         assert c.get(_credential_path(m.credential), headers=m.org).status_code == 404
         with pytest.raises(SecretNotFoundError):
@@ -505,7 +505,7 @@ def test_deleting_an_org_takes_its_credentials(tmp_path):
         org_scoped = c.post(_collection(m.org), json={"provider": "openai", "name": "shared", "value": KEY}, headers=m.org)
         assert org_scoped.status_code == 200, org_scoped.text
         shared = org_scoped.json()["data"]
-        deleted = c.delete(f"/api/v1/orgs/{m.org_id}", headers=m.root)
+        deleted = c.delete(f"/api/v1/organizations/{m.org_id}", headers=m.root)
         assert deleted.status_code == 200, deleted.text
         for credential in (m.credential, shared):
             with pytest.raises(SecretNotFoundError):
@@ -526,11 +526,11 @@ def test_a_workspace_credential_needs_workspace_membership(tmp_path):
         _catalog(c, root)
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        workspace = c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "Theirs"}, headers=org).json()["data"]
+        workspace = c.post(f"/api/v1/organizations/{org_id}/workspaces", json={"name": "Theirs"}, headers=org).json()["data"]
         outsider = c.post("/api/v1/auth/signup", json={"email": "out@example.com", "password": "hunter2hunter2", "name": "Out"}, headers=CSRF)
         assert outsider.status_code == 200, outsider.text
         user_id = outsider.json()["data"]["user_id"]
-        c.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=org)
+        c.put(f"/api/v1/organizations/{org_id}/users/{user_id}", json={"role": "member"}, headers=org)
         theirs = cp.headers_for(org_id, user_id)
 
         body = {"provider": "openai", "value": KEY}
@@ -558,7 +558,7 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=org)
+        c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=org)
         entries = _latest_bundle(c, org).catalog.credentials
         assert [entry.ref.name for entry in entries] == ["platform"]
         assert entries[0].ref.org_id is None

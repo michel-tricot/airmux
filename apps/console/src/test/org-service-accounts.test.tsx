@@ -34,8 +34,8 @@ describe('organization service accounts', () => {
           },
         }),
       ),
-      http.get('/api/v1/orgs/:orgId/users', () => HttpResponse.json<{ data: Api.OrgMemberOut[] }>({ data: members })),
-      http.post('/api/v1/orgs/:orgId/service-accounts', async ({ request }) => {
+      http.get('/api/v1/organizations/:orgId/users', () => HttpResponse.json<{ data: Api.OrgMemberOut[] }>({ data: members })),
+      http.post('/api/v1/organizations/:orgId/service-accounts', async ({ request }) => {
         submitted = await request.json();
         const serviceAccount = {
           id: 'service-account-1',
@@ -85,12 +85,12 @@ describe('organization service accounts', () => {
           },
         });
       }),
-      http.delete('/api/v1/orgs/:orgId/service-accounts/:userId', ({ params }) => {
+      http.delete('/api/v1/organizations/:orgId/service-accounts/:userId', ({ params }) => {
         deletedUserId = String(params.userId);
         members = [];
         return HttpResponse.json<{ data: Api.DeletedOutUUID }>({ data: { id: deletedUserId, deleted_at: now } });
       }),
-      http.post('/api/v1/orgs/:orgId/service-accounts/:userId/management-keys', async ({ params, request }) => {
+      http.post('/api/v1/organizations/:orgId/service-accounts/:userId/management-keys', async ({ params, request }) => {
         replacement = { userId: String(params.userId), body: await request.json() };
         return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({
           data: {

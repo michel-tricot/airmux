@@ -104,11 +104,11 @@ admins/owners can manage policies. Workspace members and viewers can read them. 
 need `policies.read` or `policies.manage` within their existing authority scope. Every write is
 covered by database audit triggers.
 
-Rules are workspace resources at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`. Policies
+Rules are workspace resources at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules`. Policies
 reference those rules by ID, so a single live rule can be reused across policies. Updating the rule
 changes every use in the next bundle. Deletion returns 409 while any policy references it.
 
-The policy API is `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
+The policy API is `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
 create, patch, and delete. Successful responses use the standard envelope. Create example:
 
 ```json

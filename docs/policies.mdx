@@ -199,7 +199,7 @@ authentication failure may try another credential in the same selected scope.
 
 ## Complete API shapes
 
-Create the reusable rule first at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules`:
+Create the reusable rule first at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules`:
 
 ```json
 {
@@ -215,7 +215,7 @@ Create the reusable rule first at `/api/v1/orgs/{org_id}/workspaces/{workspace_r
 }
 ```
 
-Then attach the returned rule ID at `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies`:
+Then attach the returned rule ID at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`:
 
 ```json
 {

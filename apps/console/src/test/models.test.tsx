@@ -80,7 +80,9 @@ const models = [
 
 beforeEach(() => {
   window.localStorage.setItem('airllm_org_id', ORG.id);
-  server.use(http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers, models } })));
+  server.use(
+    http.get(`/api/v1/organizations/${ORG.id}/taxonomy`, () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers, models } })),
+  );
 });
 
 function renderModels() {
@@ -242,7 +244,7 @@ describe('organization models', () => {
 
 it('waits for catalog readiness when the server takes longer than one second', async () => {
   server.use(
-    http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, async () => {
+    http.get(`/api/v1/organizations/${ORG.id}/taxonomy`, async () => {
       await delay(1200);
       return HttpResponse.json({ data: { providers, models } });
     }),

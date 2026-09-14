@@ -27,7 +27,7 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
       }),
     ),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),
-    http.get('/api/v1/orgs', () => HttpResponse.json({ data: [] })),
+    http.get('/api/v1/organizations', () => HttpResponse.json({ data: [] })),
     http.put('/api/v1/users/target-user/instance-role', async ({ request }) => {
       const body = (await request.json()) as Api.InstanceRoleIn;
       user = { ...user, instance_role: body.instance_role };

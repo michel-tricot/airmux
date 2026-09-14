@@ -42,7 +42,7 @@ def test_rule_create_preserves_typed_configuration(tmp_path, monkeypatch):
         assert json.loads(incoming.content)["definition"] == definition
         return httpx.Response(200, json={"data": rule})
 
-    respx.post(f"http://cp.test/api/v1/orgs/{org_id}/workspaces/production/rules").mock(side_effect=create)
+    respx.post(f"http://cp.test/api/v1/organizations/{org_id}/workspaces/production/rules").mock(side_effect=create)
     created = runner.invoke(app, ["rules", "create", str(path), "-w", "production", "-f", "json"])
     assert created.exit_code == 0, created.output
     assert json.loads(created.stdout)[0]["definition"] == definition

@@ -17,7 +17,7 @@ from control_plane.models.provider_credential import (
     ProviderCredentialValueIn,
 )
 
-router = APIRouter(prefix="/orgs/{org_id}")
+router = APIRouter(prefix="/organizations/{org_id}")
 instance_router = APIRouter(prefix="/instance/provider-credentials")
 
 

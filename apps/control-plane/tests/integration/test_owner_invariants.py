@@ -57,12 +57,13 @@ def test_concurrent_organization_owner_demotions_keep_one_owner(tmp_path):
         root = cp.headers()
         org_id = make_org(client, root)
         for user in (first, second):
-            added = client.put(f"/api/v1/orgs/{org_id}/users/{user.id}", headers=root, json={"role": "owner"})
+            added = client.put(f"/api/v1/organizations/{org_id}/users/{user.id}", headers=root, json={"role": "owner"})
             assert added.status_code == 200, added.text
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             attempts = [
-                pool.submit(client.put, f"/api/v1/orgs/{org_id}/users/{user.id}", headers=root, json={"role": "member"}) for user in (first, second)
+                pool.submit(client.put, f"/api/v1/organizations/{org_id}/users/{user.id}", headers=root, json={"role": "member"})
+                for user in (first, second)
             ]
             responses = [attempt.result() for attempt in attempts]
 

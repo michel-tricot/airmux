@@ -33,11 +33,11 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
 
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
-        workspace = _payload(admin.get(f"/api/v1/orgs/{stack.org_id}/workspaces"))[0]
-        policies_path = f"/api/v1/orgs/{stack.org_id}/workspaces/{workspace['id']}/policies"
-        rules_path = f"/api/v1/orgs/{stack.org_id}/workspaces/{workspace['id']}/rules"
-        sibling = _payload(admin.post(f"/api/v1/orgs/{stack.org_id}/workspaces", json={"name": "sibling"}))
-        caller = _payload(admin.post(f"/api/v1/orgs/{stack.org_id}/workspaces/{sibling['id']}/inference-keys", json={"label": "sibling"}))
+        workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
+        policies_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/policies"
+        rules_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/rules"
+        sibling = _payload(admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces", json={"name": "sibling"}))
+        caller = _payload(admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces/{sibling['id']}/inference-keys", json={"label": "sibling"}))
         model_rule_id = _create_rule(
             admin,
             rules_path,
@@ -80,9 +80,9 @@ def test_fallback_runs_through_real_gateway_and_stays_inside_restrictions(stack:
     stack.wait_dp_ready()
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
-        workspace = _payload(admin.get(f"/api/v1/orgs/{stack.org_id}/workspaces"))[0]
-        policies_path = f"/api/v1/orgs/{stack.org_id}/workspaces/{workspace['id']}/policies"
-        rules_path = f"/api/v1/orgs/{stack.org_id}/workspaces/{workspace['id']}/rules"
+        workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
+        policies_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/policies"
+        rules_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/rules"
         fallback_rule_id = _create_rule(
             admin,
             rules_path,

@@ -27,7 +27,7 @@ def _token(url: str) -> str:
 
 def _issue(client: TestClient, cp, org_id, **body):
     payload = {"email": "invitee@example.com", "org_role": "member", **body}
-    response = client.post(f"/api/v1/orgs/{org_id}/invitations", json=payload, headers=cp.headers(org_id))
+    response = client.post(f"/api/v1/organizations/{org_id}/invitations", json=payload, headers=cp.headers(org_id))
     assert response.status_code == 200, response.text
     return response.json()["data"]
 
@@ -42,7 +42,7 @@ def test_invitation_link_is_revealed_once_and_only_its_hash_is_stored(tmp_path):
         assert invitation["invitation"]["email"] == "invitee@example.com"
         assert invitation["invitation"]["status"] == "pending"
         assert token.startswith("invite_")
-        listed = client.get(f"/api/v1/orgs/{org_id}/invitations", headers=cp.headers(org_id)).json()["data"]
+        listed = client.get(f"/api/v1/organizations/{org_id}/invitations", headers=cp.headers(org_id)).json()["data"]
         assert [item["id"] for item in listed] == [invitation["invitation"]["id"]]
         assert token not in str(listed)
 
@@ -101,10 +101,10 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
             "status": "accepted",
         }
 
-        org_members = client.get(f"/api/v1/orgs/{org_id}/users", headers=cp.headers(org_id)).json()["data"]
+        org_members = client.get(f"/api/v1/organizations/{org_id}/users", headers=cp.headers(org_id)).json()["data"]
         assert [(member["user_id"], member["role"]) for member in org_members] == [(user_id, "member")]
         workspace_members = client.get(
-            f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/members",
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/members",
             headers=cp.headers(org_id),
         ).json()["data"]
         assert [(member["user_id"], member["role"]) for member in workspace_members] == [(user_id, "viewer")]
@@ -144,7 +144,7 @@ def test_closed_signup_rejects_invalid_unavailable_and_mismatched_invitations(tm
             json={"email": "someone-else@example.com", "name": "Other", "password": PASSWORD, "invitation_token": token},
         )
         client.post(
-            f"/api/v1/orgs/{org_id}/invitations/{minted['invitation']['id']}/revoke",
+            f"/api/v1/organizations/{org_id}/invitations/{minted['invitation']['id']}/revoke",
             headers=cp.headers(org_id),
         )
         revoked = client.post(
@@ -246,7 +246,7 @@ def test_reissue_invalidates_the_old_link_and_revoke_blocks_the_new_one(tmp_path
         invitation_id = minted["invitation"]["id"]
 
         reissued = client.post(
-            f"/api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue",
+            f"/api/v1/organizations/{org_id}/invitations/{invitation_id}/reissue",
             headers=cp.headers(org_id),
         )
         assert reissued.status_code == 200, reissued.text
@@ -255,7 +255,7 @@ def test_reissue_invalidates_the_old_link_and_revoke_blocks_the_new_one(tmp_path
         assert client.post("/api/v1/enroll/invitations/preview", json={"token": old_token}).status_code == 404
 
         revoked = client.post(
-            f"/api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke",
+            f"/api/v1/organizations/{org_id}/invitations/{invitation_id}/revoke",
             headers=cp.headers(org_id),
         )
         assert revoked.status_code == 200, revoked.text
@@ -282,7 +282,7 @@ def test_expired_invitation_can_be_reissued_but_not_accepted(tmp_path):
         invitation_id = minted["invitation"]["id"]
         assert (
             client.post(
-                f"/api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue",
+                f"/api/v1/organizations/{org_id}/invitations/{invitation_id}/reissue",
                 headers=cp.headers(org_id),
             ).status_code
             == 200
@@ -299,7 +299,7 @@ def test_only_org_member_managers_can_invite_and_existing_members_use_direct_mem
         ).json()["data"]
         assert (
             client.put(
-                f"/api/v1/orgs/{org_id}/users/{member['user_id']}",
+                f"/api/v1/organizations/{org_id}/users/{member['user_id']}",
                 json={"role": "member"},
                 headers=cp.headers(org_id),
             ).status_code
@@ -307,14 +307,14 @@ def test_only_org_member_managers_can_invite_and_existing_members_use_direct_mem
         )
         member_headers = cp.headers_for(org_id, member["user_id"])
         denied = client.post(
-            f"/api/v1/orgs/{org_id}/invitations",
+            f"/api/v1/organizations/{org_id}/invitations",
             json={"email": "new@example.com", "org_role": "member"},
             headers=member_headers,
         )
         assert denied.status_code == 403
 
         existing = client.post(
-            f"/api/v1/orgs/{org_id}/invitations",
+            f"/api/v1/organizations/{org_id}/invitations",
             json={"email": "member@example.com", "org_role": "member"},
             headers=cp.headers(org_id),
         )
@@ -330,7 +330,7 @@ def test_invitation_rejects_machine_roles_and_cross_org_workspaces(tmp_path):
 
         assert (
             client.post(
-                f"/api/v1/orgs/{first}/invitations",
+                f"/api/v1/organizations/{first}/invitations",
                 json={"email": "invitee@example.com", "org_role": "data_plane"},
                 headers=cp.headers(first),
             ).status_code
@@ -338,7 +338,7 @@ def test_invitation_rejects_machine_roles_and_cross_org_workspaces(tmp_path):
         )
         assert (
             client.post(
-                f"/api/v1/orgs/{first}/invitations",
+                f"/api/v1/organizations/{first}/invitations",
                 json={
                     "email": "invitee@example.com",
                     "org_role": "member",

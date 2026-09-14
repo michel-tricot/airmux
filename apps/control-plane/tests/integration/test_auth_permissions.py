@@ -28,7 +28,7 @@ def test_session_user_sees_org_role_permissions(tmp_path):
     with _client(cp) as c:
         org_id = make_org(c, root, "o1")
         user_id = _signup(c, "member@example.com")
-        assert c.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
+        assert c.put(f"/api/v1/organizations/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
 
         resp = c.get(f"/api/v1/auth/permissions?org_id={org_id}", headers=CSRF)
         assert resp.status_code == 200
@@ -46,10 +46,10 @@ def test_session_user_sees_effective_workspace_permissions(tmp_path):
         org_id = make_org(c, root, "o1")
         workspace_id = make_workspace(c, cp.headers(org_id), "staging")
         user_id = _signup(c, "viewer@example.com")
-        assert c.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
+        assert c.put(f"/api/v1/organizations/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
         assert (
             c.put(
-                f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/members/{user_id}",
+                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/members/{user_id}",
                 json={"role": "viewer"},
                 headers=cp.headers(org_id),
             ).status_code

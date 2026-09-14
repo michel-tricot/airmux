@@ -95,7 +95,7 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         user = make_user(tmp_path, "ops@example.com")
         make_admin(tmp_path, user.id)
         management_key = c.post(
-            f"/api/v1/orgs/{o1}/management-keys",
+            f"/api/v1/organizations/{o1}/management-keys",
             json={
                 "label": "data-plane",
                 "permissions": [Permission.data_planes_heartbeat],

@@ -75,11 +75,11 @@ def test_the_founder_reaches_the_instance_endpoints_and_others_do_not(tmp_path):
     with TestClient(cp.app) as c:
         _signup(c, "founder@example.com")
         headers = {"X-Requested-With": "XMLHttpRequest"}
-        assert c.get("/api/v1/orgs", headers=headers).status_code == 200
+        assert c.get("/api/v1/organizations", headers=headers).status_code == 200
 
         c.post("/api/v1/auth/logout", headers=headers)
         _signup(c, "later@example.com")
-        assert c.get("/api/v1/orgs", headers=headers).status_code == 403
+        assert c.get("/api/v1/organizations", headers=headers).status_code == 403
 
 
 def test_racing_signups_produce_one_owner(tmp_path):

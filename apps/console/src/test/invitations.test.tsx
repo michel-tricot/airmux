@@ -73,8 +73,8 @@ describe('organization invitations', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['members.manage', 'members.read'] } }),
       ),
-      http.get('/api/v1/orgs/:orgId/invitations', () => HttpResponse.json<{ data: Api.OrgInvitationOut[] }>({ data: invitations })),
-      http.post('/api/v1/orgs/:orgId/invitations', async ({ request }) => {
+      http.get('/api/v1/organizations/:orgId/invitations', () => HttpResponse.json<{ data: Api.OrgInvitationOut[] }>({ data: invitations })),
+      http.post('/api/v1/organizations/:orgId/invitations', async ({ request }) => {
         const body = (await request.json()) as { email: string; org_role: string };
         invitations = [{ ...invitation(), email: body.email, org_role: body.org_role }];
         return HttpResponse.json<{ data: Api.OrgInvitationMintedOut }>({

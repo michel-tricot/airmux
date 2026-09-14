@@ -28,11 +28,11 @@ def test_every_route_declares_one_authorization_rule_and_every_permission_names_
 def test_management_routes_name_their_scope_in_the_path():
     spec = make_app().openapi()
     paths = set(spec["paths"])
-    assert "/api/v1/orgs/{org_id}/workspaces" in paths
-    assert "/api/v1/orgs/{org_id}/users" in paths
-    assert "/api/v1/orgs/{org_id}/provider-credentials" in paths
-    assert "/api/v1/orgs/{org_id}/management-keys" in paths
-    assert "/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys" in paths
+    assert "/api/v1/organizations/{org_id}/workspaces" in paths
+    assert "/api/v1/organizations/{org_id}/users" in paths
+    assert "/api/v1/organizations/{org_id}/provider-credentials" in paths
+    assert "/api/v1/organizations/{org_id}/management-keys" in paths
+    assert "/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/management-keys" in paths
     assert "/api/v1/instance/management-keys" in paths
     assert not any(
         parameter.get("name") == "X-Org-Id"
@@ -148,6 +148,6 @@ def test_openapi_is_written_for_external_consumers():
 
 
 def test_event_page_stays_flat_in_the_openapi_query_contract():
-    operation = make_app().openapi()["paths"]["/api/v1/orgs/{org_id}/events"]["get"]
+    operation = make_app().openapi()["paths"]["/api/v1/organizations/{org_id}/events"]["get"]
     query_parameters = {parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "query"}
     assert query_parameters == {"before", "before_event_id", "after", "after_event_id", "limit"}

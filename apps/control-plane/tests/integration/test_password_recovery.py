@@ -22,7 +22,9 @@ def test_password_change_revokes_browser_sessions_but_preserves_management_keys(
         assert signup.status_code == 200
         first_cookie = client.cookies[SESSION_COOKIE]
         org_id = make_org(client, CSRF)
-        key = client.post(f"/api/v1/orgs/{org_id}/management-keys", headers=CSRF, json={"label": "retained", "permissions": ["catalog.read"]})
+        key = client.post(
+            f"/api/v1/organizations/{org_id}/management-keys", headers=CSRF, json={"label": "retained", "permissions": ["catalog.read"]}
+        )
         assert key.status_code == 200
         bearer = {"authorization": f"Bearer {key.json()['data']['token']}"}
         assert client.post("/api/v1/auth/login", json={"email": "recovery@example.com", "password": PASSWORD}).status_code == 200

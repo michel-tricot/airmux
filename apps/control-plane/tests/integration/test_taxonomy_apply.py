@@ -7,7 +7,7 @@ from control_plane.authz import Permission
 
 
 def _bundles(client: TestClient, org_id, headers: dict[str, str]) -> list[dict]:
-    return client.get(f"/api/v1/orgs/{org_id}/bundles", headers=headers).json()["data"]
+    return client.get(f"/api/v1/organizations/{org_id}/bundles", headers=headers).json()["data"]
 
 
 def test_instance_admin_applies_a_taxonomy_atomically_and_publishes_once(tmp_path):

@@ -10,13 +10,13 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
   const workspace = WORKSPACES[0];
   let keys: Api.ManagementKeyOut[] = [];
   server.use(
-    http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
-    http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/management-keys', ({ params }) => {
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', ({ params }) => {
       expect(params.orgId).toBe(ORG.id);
       expect(params.workspaceRef).toBe(workspace.id);
       return HttpResponse.json({ data: keys });
     }),
-    http.post('/api/v1/orgs/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
+    http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
       expect(params.workspaceRef).toBe(workspace.id);
       const submitted = (await request.json()) as Api.ManagementKeyIn;
       expect(submitted).toEqual({

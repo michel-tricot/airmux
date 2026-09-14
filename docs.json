@@ -130,7 +130,7 @@
                 "pages": [
                   {
                     "group": "Organizations",
-                    "pages": ["GET /api/v1/orgs", "POST /api/v1/orgs"]
+                    "pages": ["GET /api/v1/organizations", "POST /api/v1/organizations"]
                   },
                   {
                     "group": "Users",
@@ -185,45 +185,45 @@
                   {
                     "group": "Settings",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}",
-                      "PATCH /api/v1/orgs/{org_id}",
-                      "DELETE /api/v1/orgs/{org_id}"
+                      "GET /api/v1/organizations/{org_id}",
+                      "PATCH /api/v1/organizations/{org_id}",
+                      "DELETE /api/v1/organizations/{org_id}"
                     ]
                   },
                   {
                     "group": "Members",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/users",
-                      "PUT /api/v1/orgs/{org_id}/users/{user_id}",
-                      "DELETE /api/v1/orgs/{org_id}/users/{user_id}"
+                      "GET /api/v1/organizations/{org_id}/users",
+                      "PUT /api/v1/organizations/{org_id}/users/{user_id}",
+                      "DELETE /api/v1/organizations/{org_id}/users/{user_id}"
                     ]
                   },
                   {
                     "group": "Service Accounts",
                     "pages": [
-                      "POST /api/v1/orgs/{org_id}/service-accounts",
-                      "POST /api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys",
-                      "DELETE /api/v1/orgs/{org_id}/service-accounts/{user_id}"
+                      "POST /api/v1/organizations/{org_id}/service-accounts",
+                      "POST /api/v1/organizations/{org_id}/service-accounts/{user_id}/management-keys",
+                      "DELETE /api/v1/organizations/{org_id}/service-accounts/{user_id}"
                     ]
                   },
                   {
                     "group": "Invitations",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/invitations",
-                      "POST /api/v1/orgs/{org_id}/invitations",
-                      "POST /api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue",
-                      "POST /api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke"
+                      "GET /api/v1/organizations/{org_id}/invitations",
+                      "POST /api/v1/organizations/{org_id}/invitations",
+                      "POST /api/v1/organizations/{org_id}/invitations/{invitation_id}/reissue",
+                      "POST /api/v1/organizations/{org_id}/invitations/{invitation_id}/revoke"
                     ]
                   },
                   {
                     "group": "Workspaces",
-                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces", "POST /api/v1/orgs/{org_id}/workspaces"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/workspaces", "POST /api/v1/organizations/{org_id}/workspaces"]
                   },
                   {
                     "group": "Management Keys",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/management-keys",
-                      "POST /api/v1/orgs/{org_id}/management-keys",
+                      "GET /api/v1/organizations/{org_id}/management-keys",
+                      "POST /api/v1/organizations/{org_id}/management-keys",
                       "DELETE /api/v1/management-keys/{key_id}",
                       "PUT /api/v1/management-keys/{key_id}/permissions"
                     ]
@@ -231,29 +231,29 @@
                   {
                     "group": "Provider Credentials",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/provider-credentials",
-                      "POST /api/v1/orgs/{org_id}/provider-credentials",
-                      "GET /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "PATCH /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "DELETE /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "PUT /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value"
+                      "GET /api/v1/organizations/{org_id}/provider-credentials",
+                      "POST /api/v1/organizations/{org_id}/provider-credentials",
+                      "GET /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "PATCH /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "DELETE /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "PUT /api/v1/organizations/{org_id}/provider-credentials/{credential_id}/value"
                     ]
                   },
                   {
                     "group": "Bundles",
-                    "pages": ["POST /api/v1/orgs/{org_id}/bundles/republish", "GET /api/v1/orgs/{org_id}/bundles"]
+                    "pages": ["POST /api/v1/organizations/{org_id}/bundles/republish", "GET /api/v1/organizations/{org_id}/bundles"]
                   },
                   {
                     "group": "Usage Events",
-                    "pages": ["GET /api/v1/orgs/{org_id}/events"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/events"]
                   },
                   {
                     "group": "Activity",
-                    "pages": ["GET /api/v1/orgs/{org_id}/activity"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/activity"]
                   },
                   {
                     "group": "Model Catalog",
-                    "pages": ["GET /api/v1/orgs/{org_id}/taxonomy"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/taxonomy"]
                   }
                 ]
               },
@@ -263,44 +263,44 @@
                   {
                     "group": "Settings",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}",
-                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}",
+                      "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}"
                     ]
                   },
                   {
                     "group": "Rules",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules",
-                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules",
-                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
+                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
+                      "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}"
                     ]
                   },
                   {
                     "group": "Policies",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies",
-                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies",
-                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/order",
-                      "PATCH /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies",
+                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies",
+                      "PUT /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/order",
+                      "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}"
                     ]
                   },
                   {
                     "group": "Members",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members",
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/member-candidates",
-                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/member-candidates",
+                      "PUT /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members/{user_id}",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members/{user_id}"
                     ]
                   },
                   {
                     "group": "Management Keys",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
-                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/management-keys",
+                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/management-keys",
                       "DELETE /api/v1/management-keys/{key_id}",
                       "PUT /api/v1/management-keys/{key_id}/permissions"
                     ]
@@ -308,36 +308,36 @@
                   {
                     "group": "Playground",
                     "pages": [
-                      "PUT /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session"
+                      "PUT /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/playground-session",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/playground-session"
                     ]
                   },
                   {
                     "group": "Inference Keys",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys",
-                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys",
-                      "DELETE /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
+                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
+                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}"
                     ]
                   },
                   {
                     "group": "Provider Credentials",
                     "pages": [
-                      "GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials",
-                      "POST /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials",
-                      "GET /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "PATCH /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "DELETE /api/v1/orgs/{org_id}/provider-credentials/{credential_id}",
-                      "PUT /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value"
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/provider-credentials",
+                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/provider-credentials",
+                      "GET /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "PATCH /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "DELETE /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
+                      "PUT /api/v1/organizations/{org_id}/provider-credentials/{credential_id}/value"
                     ]
                   },
                   {
                     "group": "Usage Events",
-                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/events"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/events"]
                   },
                   {
                     "group": "Model Catalog",
-                    "pages": ["GET /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy"]
+                    "pages": ["GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/taxonomy"]
                   }
                 ]
               },

@@ -22,9 +22,9 @@ def test_management_key_issuance_rejects_a_target_principal(tmp_path, scope):
         path = (
             "/api/v1/instance/management-keys"
             if scope == "instance"
-            else f"/api/v1/orgs/{org_id}/management-keys"
+            else f"/api/v1/organizations/{org_id}/management-keys"
             if scope == "org"
-            else f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/management-keys"
+            else f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/management-keys"
         )
         response = client.post(
             path,
@@ -47,9 +47,9 @@ def test_admin_cannot_impersonate_owner_and_descendant_loses_authority_after_dem
         root = cp.headers()
         org_id = make_org(client, root)
         for user, role in ((admin, "admin"), (owner, "owner")):
-            assert client.put(f"/api/v1/orgs/{org_id}/users/{user.id}", headers=root, json={"role": role}).status_code == 200
+            assert client.put(f"/api/v1/organizations/{org_id}/users/{user.id}", headers=root, json={"role": role}).status_code == 200
         issuer = cp.headers_for(org_id, admin.id)
-        path = f"/api/v1/orgs/{org_id}/management-keys"
+        path = f"/api/v1/organizations/{org_id}/management-keys"
         payload = {"label": "delegated", "permissions": [Permission.members_manage]}
         assert client.post(path, headers=issuer, json={**payload, "user_id": str(owner.id)}).status_code == 422
         response = client.post(path, headers=issuer, json=payload)
@@ -57,7 +57,7 @@ def test_admin_cannot_impersonate_owner_and_descendant_loses_authority_after_dem
         key = response.json()["data"]
         assert key["user_id"] == str(admin.id)
         bearer = {"authorization": f"Bearer {key['token']}"}
-        member_path = f"/api/v1/orgs/{org_id}/users/{admin.id}"
+        member_path = f"/api/v1/organizations/{org_id}/users/{admin.id}"
         assert client.put(member_path, headers=bearer, json={"role": "owner"}).status_code == 403
         assert client.put(member_path, headers=root, json={"role": "member"}).status_code == 200
         assert client.put(member_path, headers=bearer, json={"role": "admin"}).status_code == 403
@@ -71,7 +71,7 @@ def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path
         root = cp.headers()
         org_id = make_org(client, root)
         response = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
+            f"/api/v1/organizations/{org_id}/management-keys",
             json={"label": "ci", "permissions": [Permission.workspaces_read]},
             headers=root,
         )
@@ -84,7 +84,7 @@ def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path
         assert key["permissions"] == [Permission.workspaces_read]
         assert key["status"] == "active"
 
-        listed = client.get(f"/api/v1/orgs/{org_id}/management-keys", headers=root)
+        listed = client.get(f"/api/v1/organizations/{org_id}/management-keys", headers=root)
         assert listed.status_code == 200, listed.text
         stored = next(candidate for candidate in listed.json()["data"] if candidate["id"] == key["id"])
         assert stored["prefix"] == key["token"][:12]
@@ -92,14 +92,14 @@ def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path
         assert "token_hash" not in stored
 
         child_headers = {"authorization": f"Bearer {key['token']}"}
-        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=child_headers).status_code == 200
+        assert client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=child_headers).status_code == 200
         assert client.get("/api/v1/users", headers=child_headers).status_code == 403
 
         revoked = client.delete(f"/api/v1/management-keys/{key['id']}", headers=root)
         assert revoked.status_code == 200, revoked.text
         assert revoked.json()["data"]["status"] == "revoked"
-        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=child_headers).status_code == 401
-        relisted = client.get(f"/api/v1/orgs/{org_id}/management-keys", headers=root).json()["data"]
+        assert client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=child_headers).status_code == 401
+        relisted = client.get(f"/api/v1/organizations/{org_id}/management-keys", headers=root).json()["data"]
         assert next(candidate for candidate in relisted if candidate["id"] == key["id"])["status"] == "revoked"
 
 
@@ -129,7 +129,7 @@ def test_bearer_delegation_is_strictly_attenuated_and_cannot_redelegate(tmp_path
         root = cp.headers()
         org_id = make_org(client, root)
         cannot_delegate = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
+            f"/api/v1/organizations/{org_id}/management-keys",
             json={
                 "label": "peer",
                 "permissions": [Permission.management_keys_issue, Permission.workspaces_read],
@@ -140,7 +140,7 @@ def test_bearer_delegation_is_strictly_attenuated_and_cannot_redelegate(tmp_path
 
         issuer = cp.headers(org_id)
         child = client.post(
-            f"/api/v1/orgs/{org_id}/management-keys",
+            f"/api/v1/organizations/{org_id}/management-keys",
             json={"label": "child", "permissions": [Permission.workspaces_read]},
             headers=issuer,
         ).json()["data"]
@@ -149,7 +149,7 @@ def test_bearer_delegation_is_strictly_attenuated_and_cannot_redelegate(tmp_path
         child_headers = {"authorization": f"Bearer {child['token']}"}
         assert (
             client.post(
-                f"/api/v1/orgs/{org_id}/management-keys",
+                f"/api/v1/organizations/{org_id}/management-keys",
                 json={"label": "grandchild", "permissions": [Permission.workspaces_read]},
                 headers=child_headers,
             ).status_code
@@ -157,7 +157,7 @@ def test_bearer_delegation_is_strictly_attenuated_and_cannot_redelegate(tmp_path
         )
 
         assert client.delete(f"/api/v1/management-keys/{child['parent_id']}", headers=root).status_code == 200
-        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=child_headers).status_code == 401
+        assert client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=child_headers).status_code == 401
 
 
 def test_expired_management_key_is_reported_as_expired(tmp_path):
