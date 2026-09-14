@@ -9,7 +9,7 @@ bookmarked console URL, a saved login, and a token pasted into a .env survive be
 scratch. Seeding only runs before any human account exists: to start over, drop the database and recreate it.
 
 The tokens here are public knowledge, which is what makes them useful and what makes them
-unacceptable outside development. `tokkeeper-control-plane fixtures` refuses any database that already holds
+unacceptable outside development. `tokkeeper control-plane fixtures` refuses any database that already holds
 human accounts.
 
 The file reads in three parts: every constant first, so the credentials and the knobs are in one
@@ -120,12 +120,12 @@ class MissingProvidersError(ValueError):
     """
 
     def __init__(self, missing: list[str]) -> None:
-        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper-control-plane taxonomy` to fill it before seeding")
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper control-plane taxonomy --file PATH` to fill it before seeding")
 
 
 class MissingModelsError(ValueError):
     def __init__(self, missing: list[str]) -> None:
-        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper-control-plane taxonomy` to fill it before seeding")
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper control-plane taxonomy --file PATH` to fill it before seeding")
 
 
 class ExistingHumanAccountsError(ValueError):

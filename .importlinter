@@ -1,5 +1,6 @@
 [importlinter]
 root_packages =
+    cli
     contract
     control_plane
     data_plane
@@ -30,3 +31,13 @@ source_modules =
 forbidden_modules =
     control_plane
     data_plane
+
+[importlinter:contract:runtimes-independent-of-cli]
+name = runtimes and contract do not import the command interface
+type = forbidden
+source_modules =
+    contract
+    control_plane
+    data_plane
+forbidden_modules =
+    cli

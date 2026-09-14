@@ -6,8 +6,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from data_plane.bundle.config import BundleConfig, LocalBundleConfig
+from contract import EnvStoreConfig, FileStoreConfig, SecretsConfig, load_config_section
+from data_plane.bundle.config import BundleConfig, LocalBundleConfig, RemoteBundleConfig
 from data_plane.control_plane_link import ControlPlaneLink
 
 
@@ -42,6 +42,15 @@ def load_config(config_path: str | Path | None = None) -> Config:
     path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
     section = load_config_section("data_plane", path)
     config = Config.model_validate({**section, "dev": os.environ.get("TOKKEEPER_DEV") == "1"})
-    if isinstance(config.bundle, LocalBundleConfig):
-        return config.model_copy(update={"bundle": config.bundle.model_copy(update={"path": path.parent / config.bundle.path})})
-    return config
+    bundle = config.bundle
+    if isinstance(bundle, LocalBundleConfig):
+        bundle = bundle.model_copy(update={"path": path.parent / bundle.path})
+    elif isinstance(bundle, RemoteBundleConfig):
+        bundle = bundle.model_copy(update={"cache_dir": path.parent / bundle.cache_dir})
+    events = config.events
+    if isinstance(events, SqliteOutboxConfig):
+        events = events.model_copy(update={"cache_dir": path.parent / events.cache_dir})
+    secrets = config.secrets
+    if isinstance(secrets, FileStoreConfig):
+        secrets = secrets.model_copy(update={"root": path.parent / secrets.root})
+    return config.model_copy(update={"bundle": bundle, "events": events, "secrets": secrets})

@@ -7,7 +7,7 @@ The `docker-compose.split.yml` example runs Postgres, one control plane, the con
 
 ```bash
 docker compose -p tokkeeper-split -f docker-compose.split.yml up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
 The console proxy distributes `/inf/` requests between both gateways.

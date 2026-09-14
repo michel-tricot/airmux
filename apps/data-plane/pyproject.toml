@@ -1,23 +1,19 @@
 [project]
-name = "data-plane"
+name = "tokkeeper-data-plane"
 version = "0.1.0"
 description = "TokKeeper standalone and connected LLM inference gateway"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "contract==0.1.0",
+  "tokkeeper-contract==0.1.0",
   "starlette",
   "uvicorn[standard]",
   "httpx[http2]",
   "pydantic>=2",
   "tiktoken",
-  "typer",
   "python-dotenv",
   "pyyaml",
 ]
-
-[project.scripts]
-tokkeeper-data-plane = "data_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

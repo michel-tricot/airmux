@@ -9,10 +9,10 @@ import yaml
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
+from cli.gateway import gateway_app as app
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
 from data_plane.config import load_config
-from data_plane.main import app
 
 TAXONOMY = {
     "providers": [{"provider_id": "stub", "kind": "openai_compatible", "base_url": "http://localhost:9000", "icon": ""}],
@@ -75,14 +75,13 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     runner = CliRunner()
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
     assert result.exit_code == 0, result.output
-    key = (directory / "inference.key").read_text().strip()
+    key = (directory / ".tokkeeper/inference.key").read_text().strip()
     assert key.startswith("sk-inf-")
     assert len(key) >= 40
     assert key not in result.output
-    assert (directory / "inference.key").stat().st_mode & 0o777 == 0o600
+    assert (directory / ".tokkeeper/inference.key").stat().st_mode & 0o777 == 0o600
     assert directory.stat().st_mode & 0o777 == 0o700
     assert "providers:" not in (directory / "bundle.yml").read_text()
-    monkeypatch.setenv("TOKKEEPER_INFERENCE_KEY", key)
     monkeypatch.setenv("TOKKEEPER_CONFIG", str(directory / "tokkeeper.yml"))
     monkeypatch.chdir(tmp_path.parent)
     config = load_config()
@@ -93,7 +92,7 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     assert key not in result.output
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
     assert result.exit_code != 0
-    assert (directory / "inference.key").read_text().strip() == key
+    assert (directory / ".tokkeeper/inference.key").read_text().strip() == key
 
 
 def test_init_rejects_invalid_taxonomy_before_writing(tmp_path):

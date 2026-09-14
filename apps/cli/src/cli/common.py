@@ -7,7 +7,7 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
-app = typer.Typer(name="tokkeeper", no_args_is_help=True)
+app = typer.Typer(name="tokkeeper", help="Run an LLM gateway or manage a TokKeeper installation", no_args_is_help=True)
 console = Console()
 
 
@@ -29,7 +29,7 @@ invocation = Invocation()
 def _show_version(value: bool) -> bool:
     if value:
         try:
-            release = version("cli")
+            release = version("tokkeeper")
         except PackageNotFoundError:
             release = "unknown"
         typer.echo(f"tokkeeper {release}")

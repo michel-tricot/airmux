@@ -1,22 +1,22 @@
 ---
-title: "Configuration reference"
-description: "Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores."
+title: 'Configuration reference'
+description: 'Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores.'
 ---
 
-TokKeeper servers read YAML from `tokkeeper.yml` by default or the path in `TOKKEEPER_CONFIG`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
+TokKeeper runtime commands read YAML from `--config`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
 
 ## Docker Compose variables
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `TOKKEEPER_PORT` | `8080` | Published host port |
-| `TOKKEEPER_PUBLIC_URL` | `http://localhost:8080` | Compose value mapped to the console origin |
-| `TOKKEEPER_PUBLIC_SIGNUP` | `false` | Allow account creation after instance claim |
-| `POSTGRES_PASSWORD` | `tokkeeper` | Initial local Postgres password |
-| `TOKKEEPER_IMAGE` | `tokkeeper:local` | All-in-one image override |
-| `TOKKEEPER_CONTROL_PLANE_IMAGE` | `tokkeeper-control-plane:local` | Split control-plane image override |
-| `TOKKEEPER_DATA_PLANE_IMAGE` | `tokkeeper-data-plane:local` | Split gateway image override |
-| `TOKKEEPER_CONSOLE_IMAGE` | `tokkeeper-console:local` | Split console image override |
+| Variable                        | Default                         | Purpose                                     |
+| ------------------------------- | ------------------------------- | ------------------------------------------- |
+| `TOKKEEPER_PORT`                | `8080`                          | Published host port                         |
+| `TOKKEEPER_PUBLIC_URL`          | `http://localhost:8080`         | Compose value mapped to the console origin  |
+| `TOKKEEPER_PUBLIC_SIGNUP`       | `false`                         | Allow account creation after instance claim |
+| `POSTGRES_PASSWORD`             | `tokkeeper`                     | Initial local Postgres password             |
+| `TOKKEEPER_IMAGE`               | `tokkeeper:local`               | All-in-one image override                   |
+| `TOKKEEPER_CONTROL_PLANE_IMAGE` | `tokkeeper-control-plane:local` | Split control-plane image override          |
+| `TOKKEEPER_DATA_PLANE_IMAGE`    | `tokkeeper-data-plane:local`    | Split gateway image override                |
+| `TOKKEEPER_CONSOLE_IMAGE`       | `tokkeeper-console:local`       | Split console image override                |
 
 Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
 migration while the application keeps the pooled URL.
@@ -61,42 +61,43 @@ Both planes must configure the same secret store. A remote data plane uses a man
 
 ## References and variables
 
-| Syntax | Behavior |
-| --- | --- |
-| `${env:NAME}` | Environment value; a missing reference resolves the enclosing scalar to null and required-field validation fails |
-| `${env:NAME:-fallback}` | Environment value with a fallback |
-| `${file:path}` | Trimmed file contents |
-| `${file:path:-fallback}` | File contents with a fallback when absent |
-| `${var:name}` | Text substitution from the top-level `vars` mapping |
+| Syntax                   | Behavior                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `${env:NAME}`            | Environment value; a missing reference resolves the enclosing scalar to null and required-field validation fails |
+| `${env:NAME:-fallback}`  | Environment value with a fallback                                                                                |
+| `${file:path}`           | Trimmed file contents                                                                                            |
+| `${file:path:-fallback}` | File contents with a fallback when absent                                                                        |
+| `${var:name}`            | Text substitution from the top-level `vars` mapping                                                              |
 
-Refs can appear inside a larger string. Variables resolve before environment and file refs.
+Refs can appear inside a larger string. Variables resolve before environment and file refs. Relative file references and runtime
+paths resolve against the containing configuration file; a local bundle resolves its taxonomy and key references against the bundle file.
 
 ## Bundle sources
 
-| Kind | Fields |
-| --- | --- |
+| Kind     | Fields                                                                  |
+| -------- | ----------------------------------------------------------------------- |
 | `remote` | `control_plane`, `cache_dir`, `poll_interval_s`, `heartbeat_interval_s` |
-| `local` | `path`, `reload_interval_s` |
+| `local`  | `path`, `reload_interval_s`                                             |
 
 Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle reload defaults to 2 seconds.
 
 ## Event outboxes
 
-| Kind | Use |
-| --- | --- |
-| `sqlite` | Durable queued usage export; requires a control-plane link and cache directory |
-| `devnull` | Discard usage; standalone development only |
+| Kind      | Use                                                                            |
+| --------- | ------------------------------------------------------------------------------ |
+| `sqlite`  | Durable queued usage export; requires a control-plane link and cache directory |
+| `devnull` | Discard usage; standalone development only                                     |
 
 SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
 
 ## Secret stores
 
-| Kind | Use |
-| --- | --- |
-| `file` | One private file per credential; default managed deployment |
-| `env` | One effective credential per provider; standalone or single-tenant use |
-| `insecure_database` | Postgres-backed prototype store |
-| `memory` | Tests and ephemeral development |
+| Kind                | Use                                                                    |
+| ------------------- | ---------------------------------------------------------------------- |
+| `file`              | One private file per credential; default managed deployment            |
+| `env`               | One effective credential per provider; standalone or single-tenant use |
+| `insecure_database` | Postgres-backed prototype store                                        |
+| `memory`            | Tests and ephemeral development                                        |
 
 The environment store checks `TOKKEEPER_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
 are not part of its lookup, so it cannot isolate tenant-specific values.

@@ -7,10 +7,10 @@ translation, workspace policies, scoped provider credentials, inference keys, fa
 
 TokKeeper separates mutable management work from the inference request path:
 
-| Plane | Responsibility |
-| --- | --- |
+| Plane         | Responsibility                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
 | Control plane | Organizations, workspaces, users, credentials, policies, catalog data, bundles, usage, and audit activity |
-| Data plane | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering |
+| Data plane    | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering      |
 
 Caller dialects and provider protocols meet at one canonical model. Adding a caller dialect requires one ingress adapter;
 adding a provider family requires one egress adapter. Policy, routing, and metering remain provider-neutral and are
@@ -23,14 +23,12 @@ See [Architecture](docs/concepts/architecture.mdx) for the full data flow and fa
 From a checkout, install the inference gateway without Docker, Postgres, or the control plane:
 
 ```bash
-uv build --package contract --wheel
-uv build --package data-plane --wheel
-uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
-tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory gateway
-export TOKKEEPER_INFERENCE_KEY="$(cat gateway/inference.key)"
+uv build --all-packages --wheel
+uv tool install --find-links dist './dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]'
+tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory gateway
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper-data-plane validate --config gateway/tokkeeper.yml
-tokkeeper-data-plane serve --config gateway/tokkeeper.yml
+tokkeeper gateway validate --config gateway/tokkeeper.yml
+tokkeeper gateway serve --config gateway/tokkeeper.yml
 ```
 
 The bundle references the existing taxonomy file, which reloads after edits. The default event sink discards usage.
@@ -50,7 +48,7 @@ Add a provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
 `quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
@@ -59,14 +57,14 @@ the console.
 
 ## Common commands
 
-| Goal | Command |
-| --- | --- |
-| Start or update the local stack | `docker compose up -d --build --wait` |
-| Check gateway readiness | `curl --fail http://localhost:8080/readyz` |
-| Inspect the installation | `uv run --package cli --no-dev --frozen tokkeeper doctor` |
-| Follow service logs | `docker compose logs -f tokkeeper` |
-| Stop while preserving state | `docker compose down` |
-| Validate documentation | `uv run pytest tests/documentation` |
+| Goal                            | Command                                                         |
+| ------------------------------- | --------------------------------------------------------------- |
+| Start or update the local stack | `docker compose up -d --build --wait`                           |
+| Check gateway readiness         | `curl --fail http://localhost:8080/readyz`                      |
+| Inspect the installation        | `uv run --package tokkeeper --no-dev --frozen tokkeeper doctor` |
+| Follow service logs             | `docker compose logs -f tokkeeper`                              |
+| Stop while preserving state     | `docker compose down`                                           |
+| Validate documentation          | `uv run pytest tests/documentation`                             |
 
 ## Documentation
 

@@ -118,9 +118,9 @@ def run(script: str) -> int:
 
 
 def export_canonical_schemas() -> int:
-    executable = Path(sys.executable).with_name("tokkeeper-data-plane")
-    print("\n=== tokkeeper-data-plane schema")
-    return run_command([str(executable), "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
+    executable = Path(sys.executable).with_name("tokkeeper")
+    print("\n=== tokkeeper gateway schema")
+    return run_command([str(executable), "gateway", "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
 
 
 def main() -> int:

@@ -31,7 +31,7 @@ docker compose \
   -f deploy/digitalocean/compose.yml \
   up -d --build --wait
 
-uv run --package cli --no-dev --frozen tokkeeper quickstart \
+uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart \
   --url https://llm.example.com
 ```
 

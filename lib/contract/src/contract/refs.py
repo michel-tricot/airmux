@@ -49,21 +49,21 @@ def resolve_ref(ref: str) -> str:
     raise UnsupportedRefSchemeError(scheme)
 
 
-def try_resolve_ref(ref: str) -> str | None:
+def try_resolve_ref(ref: str, *, base_dir: Path = Path()) -> str | None:
     """The forgiving variant for config refs: missing values become None instead of raising, unless the ref carries a default."""
     scheme, _, rest = ref.partition(":")
     target, fallback = _split_default(rest)
     if scheme == "env":
         return os.environ.get(target, fallback)
     if scheme == "file":
-        source = Path(target)
+        source = base_dir / target
         return source.read_text(encoding="utf-8").strip() if source.exists() else fallback
     raise UnsupportedRefSchemeError(scheme)
 
 
-def _interpolate(value: str) -> str | None:
+def _interpolate(value: str, base_dir: Path) -> str | None:
     """Substitute every ${env:NAME} and ${file:PATH} placeholder; a missing ref with no :- default voids the whole string."""
-    refs = {match.group(0): try_resolve_ref(f"{match.group(1)}:{match.group(2)}") for match in _REF.finditer(value)}
+    refs = {match.group(0): try_resolve_ref(f"{match.group(1)}:{match.group(2)}", base_dir=base_dir) for match in _REF.finditer(value)}
     if not refs:
         return value
     resolved = {placeholder: text for placeholder, text in refs.items() if text is not None}
@@ -86,17 +86,17 @@ def _substitute_vars(value: str, variables: dict[str, str]) -> str:
     return _VAR.sub(replace, value)
 
 
-def resolve_refs(node: object, variables: dict[str, str] | None = None) -> object:
+def resolve_refs(node: object, variables: dict[str, str] | None = None, *, base_dir: Path = Path()) -> object:
     if isinstance(node, dict):
-        return {key: resolve_refs(value, variables) for key, value in node.items()}
+        return {key: resolve_refs(value, variables, base_dir=base_dir) for key, value in node.items()}
     if isinstance(node, list):
-        return [resolve_refs(value, variables) for value in node]
+        return [resolve_refs(value, variables, base_dir=base_dir) for value in node]
     if isinstance(node, str):
         if variables is not None:
             node = _substitute_vars(node, variables)
         if node.startswith(("env:", "file:")):
-            return try_resolve_ref(node)
-        return _interpolate(node)
+            return try_resolve_ref(node, base_dir=base_dir)
+        return _interpolate(node, base_dir)
     return node
 
 
@@ -112,4 +112,4 @@ def load_config_section(name: str, config_path: str | Path | None = None) -> dic
     section = doc.get(name)
     if not isinstance(section, dict):
         return {}
-    return {str(key): resolve_refs(value, variables) for key, value in section.items()}
+    return {str(key): resolve_refs(value, variables, base_dir=path.parent) for key, value in section.items()}

@@ -125,7 +125,7 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
 
 def load_local(path: Path, now: datetime) -> BundleV1:
     raw = path.read_text(encoding="utf-8")
-    spec = LocalBundleSpec.model_validate(resolve_refs(yaml.safe_load(raw) or {}))
+    spec = LocalBundleSpec.model_validate(resolve_refs(yaml.safe_load(raw) or {}, base_dir=path.parent))
     taxonomy = parse_taxonomy(path.parent / spec.taxonomy) if isinstance(spec.taxonomy, Path) else spec.taxonomy
     identity = spec.model_dump_json() + "\n" + taxonomy.model_dump_json()
     return compile_local(spec, taxonomy, identity, now)

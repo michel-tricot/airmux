@@ -66,21 +66,20 @@ def eventually(check: Callable[[], bool]) -> None:
 
 def initialize_gateway(executable, taxonomy_path, directory, tmp_path, environment):
     initialized = subprocess.run(  # noqa: S603 trusted installed gateway executable
-        [executable, "init", "--taxonomy", str(taxonomy_path), "--directory", str(directory)],
+        [executable, "gateway", "init", "--taxonomy", str(taxonomy_path), "--directory", str(directory)],
         cwd=tmp_path,
         env=environment,
         capture_output=True,
         text=True,
         check=True,
     )
-    key = (directory / "inference.key").read_text().strip()
+    key = (directory / ".tokkeeper/inference.key").read_text().strip()
     assert key not in initialized.stdout
-    environment["TOKKEEPER_INFERENCE_KEY"] = key
     config_path = directory / "tokkeeper.yml"
     config = yaml.safe_load(config_path.read_text())
     config["data_plane"]["bundle"]["reload_interval_s"] = 0.1
     config_path.write_text(yaml.safe_dump(config))
-    subprocess.run([executable, "validate", "--config", str(config_path)], cwd=tmp_path, env=environment, check=True)  # noqa: S603 trusted gateway
+    subprocess.run([executable, "gateway", "validate", "--config", str(config_path)], cwd=tmp_path, env=environment, check=True)  # noqa: S603 trusted gateway
     return config_path, key
 
 
@@ -93,7 +92,7 @@ def verify_stream(client, headers, body):
 
 
 def test_installed_gateway_with_external_taxonomy(tmp_path):
-    executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper-data-plane"))
+    executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper"))
     provider = ThreadingHTTPServer(("127.0.0.1", 0), ProviderHandler)
     thread = threading.Thread(target=provider.serve_forever, daemon=True)
     thread.start()
@@ -116,7 +115,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
             listener.bind(("127.0.0.1", 0))
             port = listener.getsockname()[1]
         with (tmp_path / "gateway.log").open("w") as log:
-            command = [executable, "serve", "--config", str(config_path), "--port", str(port)]
+            command = [executable, "gateway", "serve", "--config", str(config_path), "--port", str(port)]
             process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
                 eventually(lambda: client.get("/readyz").status_code == 200)

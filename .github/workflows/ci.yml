@@ -50,22 +50,35 @@ jobs:
           DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock
       - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
 
-  gateway:
+  installation:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        extra: ['', gateway, control-plane]
     env:
-      UV_TOOL_DIR: ${{ runner.temp }}/gateway-tools
-      UV_TOOL_BIN_DIR: ${{ runner.temp }}/gateway-bin
+      UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
+      UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
-      - run: uv build --package contract --wheel && uv build --package data-plane --wheel
-      - run: uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
-      - run: uv run pytest tests/gateway
+      - run: uv build --all-packages --wheel
+      - name: Install from built wheels
         env:
-          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/gateway-bin/tokkeeper-data-plane
+          EXTRA: ${{ matrix.extra }}
+        run: |
+          wheel=$(find dist -name 'tokkeeper-*.whl')
+          uv tool install --find-links dist "${wheel}${EXTRA:+[${EXTRA}]}"
+      - run: uv run pytest tests/installation
+        env:
+          TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          TOKKEEPER_INSTALL_EXTRA: ${{ matrix.extra }}
+      - if: matrix.extra == 'gateway'
+        run: uv run pytest tests/gateway
+        env:
+          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
           DOCKER_HOST: unix:///no-docker.sock
 
   acceptance:

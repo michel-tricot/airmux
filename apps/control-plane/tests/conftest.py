@@ -103,6 +103,6 @@ def _build_template() -> None:
 
     asyncio.run(recreate())
     config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
-    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "src" / "control_plane" / "migrations"))
     config.set_main_option("sqlalchemy.url", url_for(TEMPLATE_DB))
     command.upgrade(config, "head")

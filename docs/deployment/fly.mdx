@@ -35,7 +35,7 @@ Keep Managed Postgres in session pooling mode. Startup uses the direct URL for m
 flyctl deploy --config deploy/fly/fly.toml --app my-tokkeeper --ha=false \
   --env TOKKEEPER_CONSOLE_URL=https://my-tokkeeper.fly.dev
 
-uv run --package cli --no-dev --frozen tokkeeper quickstart \
+uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart \
   --url https://my-tokkeeper.fly.dev
 ```
 

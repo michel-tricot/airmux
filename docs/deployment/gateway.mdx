@@ -1,6 +1,6 @@
 ---
-title: "Gateway only"
-description: "Install the inference gateway as a Python service with a local taxonomy and no Docker, Postgres, or control plane."
+title: 'Gateway only'
+description: 'Install the inference gateway as a Python service with a local taxonomy and no Docker, Postgres, or control plane.'
 ---
 
 Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
@@ -8,33 +8,34 @@ You supply the model taxonomy and inference keys through files. Provider credent
 
 ## Install
 
-You need Python 3.13+ and uv. From a checkout, build and install the two matching wheels:
+You need Python 3.13+ and uv. From a checkout, build the workspace wheels and install the CLI with its gateway extra:
 
 ```bash
-uv build --package contract --wheel
-uv build --package data-plane --wheel
-uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
+uv build --all-packages --wheel
+uv tool install --find-links dist './dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]'
 ```
 
 The installed gateway runs outside the checkout. Keep your configuration and referenced taxonomy files.
 
-If your shell cannot find `tokkeeper-data-plane`, run `uv tool update-shell` and restart the shell.
+If your shell cannot find `tokkeeper`, run `uv tool update-shell` and restart the shell.
 
 ## Initialize and start
 
 Choose the shipped taxonomy or your own file in the same format:
 
 ```bash
-tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory gateway
-export TOKKEEPER_INFERENCE_KEY="$(cat gateway/inference.key)"
+tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory gateway
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper-data-plane validate --config gateway/tokkeeper.yml
-tokkeeper-data-plane serve --config gateway/tokkeeper.yml
+tokkeeper gateway validate --config gateway/tokkeeper.yml
+tokkeeper gateway serve --config gateway/tokkeeper.yml
 ```
 
-`init` checks taxonomy and adapter validity, creates a private directory and random inference key, and refuses to overwrite
-an existing directory. It does not copy the taxonomy or print the key. Set the provider variable for each provider you use:
+`init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
+existing files. Omit `--directory` to initialize the current directory. It does not copy the taxonomy or print the key. Set the provider variable for each provider you use:
 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a request.
+
+`--config` takes precedence over `TOKKEEPER_CONFIG`, then defaults to `./tokkeeper.yml`. File references resolve relative to the
+file containing them, so starting from another directory is safe.
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
 
@@ -46,6 +47,7 @@ It does not contact providers or prove that their credentials work. A real infer
 Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
 
 ```bash
+export TOKKEEPER_INFERENCE_KEY="$(cat gateway/.tokkeeper/inference.key)"
 curl --fail http://127.0.0.1:8080/readyz
 curl --fail http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
@@ -77,7 +79,7 @@ The bundle path is relative to this configuration file. `gateway/bundle.yml` con
 
 ```yaml
 keys:
-  - ${env:TOKKEEPER_INFERENCE_KEY}
+  - ${file:.tokkeeper/inference.key}
 taxonomy: ../taxonomy/taxonomy.yml
 rules: []
 policies: []
@@ -96,10 +98,27 @@ The gateway checks bundle and taxonomy content at the reload interval. A valid e
 or missing files are logged while the last good snapshot keeps serving. If no valid snapshot has ever loaded, inference and
 `/readyz` return `503`. Restarting requires valid files again; local mode does not persist a separate last-good cache.
 
-You can add plaintext inference tokens to `keys` or use environment references. Tokens must start with `sk-inf-`, contain
+You can add plaintext inference tokens to `keys` or use file or environment references. Tokens must start with `sk-inf-`, contain
 no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
 are fixed for a running process; changing an environment-based key or provider credential requires restarting the service.
 Keep plaintext key files private and out of version control.
+
+## Run the same configuration in a container
+
+After initialization above, run from the checkout containing `gateway/` and `taxonomy/`:
+
+```bash
+docker build --target data-plane -t tokkeeper-gateway:local .
+docker run --rm --user "$(id -u):$(id -g)" \
+  --mount "type=bind,source=$PWD,target=/config,readonly" \
+  -e OPENAI_API_KEY -p 8080:8081 \
+  tokkeeper-gateway:local serve --config /config/gateway/tokkeeper.yml --host 0.0.0.0 --port 8081
+```
+
+The image entry point is `tokkeeper gateway`, so `validate --config ...` and `serve --help` work as container arguments.
+Matching the host user allows it to read the private generated key. The read-only mount preserves the relative taxonomy
+reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No control plane or database
+is needed for this configuration.
 
 ## Standalone limits
 

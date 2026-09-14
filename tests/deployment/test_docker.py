@@ -82,7 +82,7 @@ def assert_unprivileged(compose, service, expected):
     servers = [
         process
         for process in processes.splitlines()[1:]
-        if any(name in process for name in ("tokkeeper-control-plane", "tokkeeper-data-plane", "nginx:"))
+        if any(name in process for name in ("tokkeeper control-plane", "tokkeeper gateway", "nginx:"))
     ]
     assert servers
     assert all(server.split()[1] in {"tokkeeper", "10001"} for server in servers), processes
@@ -92,11 +92,11 @@ def assert_unprivileged(compose, service, expected):
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     if compact:
-        assert_unprivileged(compose, gateways[0], ("tokkeeper-control-plane serve", "tokkeeper-data-plane serve", "nginx: master"))
+        assert_unprivileged(compose, gateways[0], ("tokkeeper control-plane serve", "tokkeeper gateway serve", "nginx: master"))
         return
-    assert_unprivileged(compose, "control-plane", ("tokkeeper-control-plane serve",))
+    assert_unprivileged(compose, "control-plane", ("tokkeeper control-plane serve",))
     for gateway in gateways:
-        assert_unprivileged(compose, gateway, ("tokkeeper-data-plane serve",))
+        assert_unprivileged(compose, gateway, ("tokkeeper gateway serve",))
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
@@ -108,7 +108,7 @@ def assert_quickstart(public_url, config_path):
             uv,
             "run",
             "--package",
-            "cli",
+            "tokkeeper",
             "--no-dev",
             "--frozen",
             "tokkeeper",
@@ -133,11 +133,9 @@ def assert_quickstart(public_url, config_path):
 
 def assert_installed_packages(compose, gateway):
     container = docker(*compose, "ps", "-q", gateway)
-    packages = docker(
-        "exec", container, "python", "-c", "import importlib.metadata as m; print(*(d.metadata['Name'] for d in m.distributions()))"
-    ).split()
-    assert {"control-plane", "data-plane"} <= set(packages)
-    assert "cli" not in packages
+    assert docker("exec", container, "tokkeeper", "--version").startswith("tokkeeper ")
+    assert "--config" in docker("exec", container, "tokkeeper", "gateway", "serve", "--help")
+    assert "--config" in docker("exec", container, "tokkeeper", "control-plane", "serve", "--help")
 
 
 def assert_control_plane_outage(client, compose, path, headers, request):

@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
+from cli.control_plane import control_plane_app as cli_app
 from contract import EnvStoreConfig, MemoryStoreConfig
 from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
@@ -20,7 +21,6 @@ from control_plane.fixtures import (
     MissingProvidersError,
     apply_fixtures,
 )
-from control_plane.main import app as cli_app
 from control_plane.models import (
     DataPlaneInstance,
     InferenceKey,
@@ -45,7 +45,7 @@ NOW = datetime(2026, 8, 9, tzinfo=UTC)
 
 
 def seed_catalog(tmp_path, *, include_models=True):
-    """The providers the fixtures route traffic to, as `tokkeeper-control-plane taxonomy` would leave them."""
+    """The providers the fixtures route traffic to, as `tokkeeper control-plane taxonomy` would leave them."""
 
     async def apply():
         await set_actor("root")
@@ -130,7 +130,7 @@ def test_the_cli_names_the_command_that_fills_the_catalog(tmp_path):
     refused = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 
     assert refused.exit_code == 1
-    assert "tokkeeper-control-plane taxonomy" in refused.output
+    assert "tokkeeper control-plane taxonomy" in refused.output
 
 
 def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path):
@@ -144,7 +144,7 @@ def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path)
 
 
 def test_the_keys_are_seeded_whatever_the_store_can_hold(tmp_path, monkeypatch):
-    """The env store is the default, so `tokkeeper-control-plane fixtures` on an unconfigured instance hits it.
+    """The env store is the default, so `tokkeeper control-plane fixtures` on an unconfigured instance hits it.
 
     The rows are the fixture; the value beside them is the store's business. On the env store there
     is nothing to write because the ref already resolves to a variable the operator owns, so a
@@ -260,5 +260,5 @@ def test_the_cli_names_the_credentials_with_no_key_behind_them(tmp_path, monkeyp
 
     assert seeded.exit_code == 0, seeded.output
     assert "openai" in seeded.output
-    assert "invitations" in seeded.output
+    assert "invitation" in seeded.output
     assert "new.member@example.com" in seeded.output

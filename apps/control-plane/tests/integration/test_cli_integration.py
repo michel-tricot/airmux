@@ -5,7 +5,7 @@ from helpers import run_in_db, setup_db
 from pg import db_name_for, ensure_database
 from typer.testing import CliRunner
 
-from control_plane.main import app as cli_app
+from cli.control_plane import control_plane_app as cli_app
 from control_plane.models import User, set_actor
 
 runner = CliRunner()

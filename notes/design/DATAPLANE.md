@@ -285,7 +285,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`tokkeeper-data-plane serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`tokkeeper gateway serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -398,7 +398,7 @@ Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`tokkeeper-data-plane serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`tokkeeper gateway serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state
@@ -464,7 +464,7 @@ snapshot keeps serving. On a fresh start, invalid inputs leave readiness unavail
 persist a last-good snapshot across restarts. The operator owns and protects these files.
 
 The independently installable data-plane wheel and matching contract wheel require neither the control plane nor its ORM
-packages. `tokkeeper-data-plane init` admits the chosen taxonomy before creating a private directory, generates a random
+packages. `tokkeeper gateway init` admits the chosen taxonomy before creating a private directory, generates a random
 inference key, and writes a bundle referring to the taxonomy. `validate` performs local admission without network access.
 These commands and the file source are supported deployment interfaces, documented in `docs/deployment/gateway.mdx`.
 The `tests/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
@@ -716,7 +716,7 @@ A canonical change affects every caller and provider family:
 2. Map the field or part by hand in every relevant format
 3. Decide explicit reject, adjustment, or support behavior for families that cannot carry it
 4. Add the case to the shared canonical corpus
-5. Run `uv run tokkeeper-data-plane schema` and review the committed schema diff
+5. Run `uv run tokkeeper gateway schema` and review the committed schema diff
 6. Prove buffered and streamed behavior where applicable
 
 Never replace explicit mappings with reflection. A shared field name is not a protocol guarantee.

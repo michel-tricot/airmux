@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from contract.initialization import write_new_configuration
 from contract.taxonomy import parse_taxonomy
 from data_plane.bundle.config import LocalBundleConfig
 from data_plane.bundle.holder import BundleSet
@@ -22,7 +23,6 @@ def initialize(directory: Path, taxonomy_path: Path) -> None:
     key = f"sk-inf-{secrets.token_urlsafe(32)}"
     spec = LocalBundleSpec(keys=[key], taxonomy=taxonomy)
     BundleSet.from_bundles((compile_local(spec, taxonomy, spec.model_dump_json(), datetime.now(tz=UTC)),))
-    directory.mkdir(mode=0o700)
     config = {
         "data_plane": {
             "bundle": {"kind": "local", "path": "bundle.yml"},
@@ -30,20 +30,18 @@ def initialize(directory: Path, taxonomy_path: Path) -> None:
             "events": {"kind": "devnull"},
         }
     }
-    bundle = {"keys": ["${env:TOKKEEPER_INFERENCE_KEY}"], "taxonomy": os.path.relpath(taxonomy_path.resolve(), directory.resolve())}
-    for name, contents in (
-        ("inference.key", key + "\n"),
-        ("bundle.yml", yaml.safe_dump(bundle, sort_keys=False)),
-        ("tokkeeper.yml", yaml.safe_dump(config, sort_keys=False)),
-    ):
-        with (directory / name).open("x", encoding="utf-8") as destination:
-            destination.write(contents)
-        (directory / name).chmod(0o600)
+    bundle = {"keys": ["${file:.tokkeeper/inference.key}"], "taxonomy": os.path.relpath(taxonomy_path.resolve(), directory.resolve())}
+    write_new_configuration(
+        directory,
+        {
+            ".tokkeeper/inference.key": key + "\n",
+            "bundle.yml": yaml.safe_dump(bundle, sort_keys=False),
+            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+        },
+    )
 
 
-def validate_local(config_path: Path) -> None:
+def validate_configuration(config_path: Path) -> None:
     config = load_config(config_path)
-    if not isinstance(config.bundle, LocalBundleConfig):
-        message = "validate requires a local bundle configuration"
-        raise TypeError(message)
-    BundleSet.from_bundles((load_local(config.bundle.path, datetime.now(tz=UTC)),))
+    if isinstance(config.bundle, LocalBundleConfig):
+        BundleSet.from_bundles((load_local(config.bundle.path, datetime.now(tz=UTC)),))

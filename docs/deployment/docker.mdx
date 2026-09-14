@@ -10,7 +10,7 @@ The default `docker-compose.yml` runs two containers: TokKeeper and Postgres.
 ```bash
 cp .env.example .env
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
 The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
