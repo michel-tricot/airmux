@@ -15,7 +15,7 @@ jobs:
       AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
       FLY_APP: ${{ vars.FLY_APP }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: >-
           flyctl deploy --config deploy/fly/fly.toml --app "$FLY_APP"
