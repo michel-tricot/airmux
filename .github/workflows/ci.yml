@@ -55,9 +55,6 @@ jobs:
     strategy:
       matrix:
         extra: ['', gateway, control-plane]
-    env:
-      UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
-      UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -68,6 +65,8 @@ jobs:
       - name: Install from built wheels
         env:
           EXTRA: ${{ matrix.extra }}
+          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
         run: |
           wheel=$(find dist -name 'tokkeeper-*.whl')
           uv tool install --find-links dist "${wheel}${EXTRA:+[${EXTRA}]}"
