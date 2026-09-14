@@ -136,6 +136,41 @@ describe('instance administration routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
   });
 
+  it('lets an instance administrator change a workspace member role', async () => {
+    const workspace = WORKSPACES[0];
+    let role: Api.WorkspaceRole = 'member';
+    const member = (): Api.WorkspaceMembershipOut => ({
+      user_id: 'user-2',
+      workspace_id: workspace.id,
+      email: 'member@example.com',
+      name: 'Workspace Member',
+      service_account: false,
+      role,
+      status: 'member',
+    });
+    server.use(
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
+        HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({ data: [member()] }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
+      http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members/:userId', async ({ params, request }) => {
+        expect(params.userId).toBe('user-2');
+        role = ((await request.json()) as Api.WorkspaceMembershipIn).role;
+        return HttpResponse.json<{ data: Api.WorkspaceMembershipOut }>({ data: member() });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt(`/instance/organizations/${ORG.id}/workspaces/${workspace.slug}`);
+
+    await user.click(await screen.findByRole('tab', { name: 'Members' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Role for Workspace Member' }));
+    await user.click(screen.getByRole('option', { name: 'Admin' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm role change' }));
+
+    await waitFor(() => expect(role).toBe('admin'));
+    expect(await screen.findByRole('combobox', { name: 'Role for Workspace Member' })).toHaveTextContent('Admin');
+  });
+
   it('creates an instance provider key and shows its status', async () => {
     let submitted: unknown;
     server.use(
