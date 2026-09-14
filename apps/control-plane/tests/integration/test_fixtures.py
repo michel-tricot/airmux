@@ -9,7 +9,7 @@ from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
 from cli.control_plane import control_plane_app as cli_app
-from contract import EnvStoreConfig, MemoryStoreConfig
+from contract import EnvStoreConfig, MemoryStoreConfig, token_hash
 from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
     ACME_MEMBER_INVITE_TOKEN,
@@ -24,6 +24,7 @@ from control_plane.fixtures import (
 from control_plane.models import (
     DataPlaneInstance,
     InferenceKey,
+    ManagementKey,
     Model,
     Org,
     OrgInvitation,
@@ -108,6 +109,31 @@ def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):
     assert refused.exit_code == 1
     assert "already has human accounts" in refused.output
     assert run_in_db(tmp_path, Org.find) == []
+
+
+def test_cli_bootstraps_the_configured_data_plane_before_human_fixtures(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+    token = "sk-cp-fixture-bootstrap-secret-that-is-long-enough"
+    config = tmp_path / "tokkeeper.yml"
+    config.write_text(
+        f"control_plane:\n  database:\n    url: {cp.db_url}\n  bootstrap:\n    token: {token}\n",
+        encoding="utf-8",
+    )
+
+    seeded = runner.invoke(cli_app, ["fixtures", "--config", str(config)])
+
+    assert seeded.exit_code == 0, seeded.output
+
+    async def bootstrap_authority() -> tuple[User | None, ManagementKey | None]:
+        return await User.first(User.name == "deployment data plane"), await ManagementKey.first(ManagementKey.token_hash == token_hash(token))
+
+    user, key = run_in_db(tmp_path, bootstrap_authority)
+    assert user is not None
+    assert user.service_account
+    assert user.instance_role == InstanceRole.data_plane
+    assert key is not None
+    assert key.user_id == user.id
 
 
 def test_seeding_refuses_a_catalog_without_the_providers_it_routes_to(tmp_path):

@@ -6,6 +6,7 @@ dependencies = [
   "anthropic",
   "tokkeeper-contract",
   "httpx",
+  "jsonschema",
   "openai",
   "pydantic>=2",
   "python-dotenv",

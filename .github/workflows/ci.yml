@@ -19,7 +19,7 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run codegen && git diff --exit-code lib/api-client-react lib/api-zod
+      - run: bun run codegen && git diff --exit-code lib/api-client-react
       - run: bun run format:check
       - run: bun run lint
       - run: bun run typecheck
@@ -44,7 +44,6 @@ jobs:
       - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
       - run: uv run tokkeeper-audit cases coverage
       - run: uv run tokkeeper-audit taxonomy validate
-      - run: uv run pytest model-audit/catalog/tests
       - run: uv run pytest apps/control-plane/tests/unit
         env:
           DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock

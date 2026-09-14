@@ -977,6 +977,7 @@ source = { editable = "model-audit" }
 dependencies = [
     { name = "anthropic" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -990,6 +991,7 @@ dependencies = [
 requires-dist = [
     { name = "anthropic" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "openai" },
     { name = "pydantic", specifier = ">=2" },
     { name = "python-dotenv" },

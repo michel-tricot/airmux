@@ -1,4 +1,4 @@
-import { Button, Modal } from '@/components/ui/elements';
+import { Badge, Button, Modal } from '@/components/ui/elements';
 import { ruleTypes, type RuleKind } from '@/features/rules/types';
 
 export function RuleTypeChoices({ onSelect, fallbackDisabled = false }: { onSelect: (kind: RuleKind) => void; fallbackDisabled?: boolean }) {
@@ -15,7 +15,10 @@ export function RuleTypeChoices({ onSelect, fallbackDisabled = false }: { onSele
           onClick={() => onSelect(type.kind)}
         >
           <span>
-            <span className="block text-sm font-semibold text-foreground">{type.label}</span>
+            <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              {type.label}
+              {type.kind === 'budget' && <Badge variant="outline">Coming soon</Badge>}
+            </span>
             <span className="mt-1 block text-xs font-normal text-muted-foreground">{type.description}</span>
           </span>
         </Button>

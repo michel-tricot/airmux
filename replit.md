@@ -56,7 +56,6 @@ packages/
 apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app
 lib/             # Bun workspace libs
   api-spec/         # openapi.yaml — API contract (codegen via orval)
-  api-zod/          # generated zod schemas
   api-client-react/ # generated react-query client
 docs/            # MkDocs site
 examples/        # ready-made curl / Python scripts

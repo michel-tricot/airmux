@@ -88,20 +88,13 @@
       "name": "@workspace/api-spec",
       "version": "0.0.0",
       "devDependencies": {
+        "@types/node": "^25.3.3",
         "orval": "^8.23.0",
-      },
-    },
-    "lib/api-zod": {
-      "name": "@workspace/api-zod",
-      "version": "0.0.0",
-      "dependencies": {
-        "zod": "catalog:",
       },
     },
   },
   "trustedDependencies": [
     "esbuild",
-    "msw",
   ],
   "overrides": {
     "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0",
@@ -632,8 +625,6 @@
     "@workspace/api-client-react": ["@workspace/api-client-react@workspace:lib/api-client-react"],
 
     "@workspace/api-spec": ["@workspace/api-spec@workspace:lib/api-spec"],
-
-    "@workspace/api-zod": ["@workspace/api-zod@workspace:lib/api-zod"],
 
     "@workspace/gateway-console": ["@workspace/gateway-console@workspace:apps/console"],
 

@@ -171,6 +171,33 @@ describe('instance administration routes', () => {
     expect(await screen.findByRole('combobox', { name: 'Role for Workspace Member' })).toHaveTextContent('Admin');
   });
 
+  it('keeps organization members visible when the global user list is unavailable', async () => {
+    server.use(
+      http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })),
+      http.get('/api/v1/organizations/:orgId/users', () =>
+        HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
+          data: [
+            {
+              user_id: 'user-2',
+              email: 'member@example.com',
+              name: 'Organization Member',
+              service_account: false,
+              role: 'member',
+              status: 'member',
+            },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt(`/instance/organizations/${ORG.id}`);
+
+    await user.click(await screen.findByRole('tab', { name: 'Members' }));
+
+    expect(await screen.findByText('Organization Member')).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/member candidates/i);
+  });
+
   it('creates an instance provider key and shows its status', async () => {
     let submitted: unknown;
     server.use(

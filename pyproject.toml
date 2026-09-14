@@ -94,10 +94,6 @@ ignore = [
 "apps/cli/**"                  = ["T201"]
 "examples/**"                  = ["T201", "INP001"]
 "lib/api-models/src/api_models/__init__.py" = ["ALL"]
-"model-audit/catalog/scripts/**/*.py" = [
-  "A003", "ANN", "BLE001", "E402", "E501", "EM102", "INP001", "PLC0415", "PLR",
-  "RUF012", "S110", "S310", "S603", "T201", "TC001", "TC003", "TRY003",
-]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

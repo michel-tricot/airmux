@@ -20,7 +20,6 @@ WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.json tsconfig.base.json ./
 COPY lib/api-client-react lib/api-client-react
 COPY lib/api-spec lib/api-spec
-COPY lib/api-zod lib/api-zod
 COPY apps/console apps/console
 RUN bun install --frozen-lockfile
 RUN bun run --filter '@workspace/gateway-console' build

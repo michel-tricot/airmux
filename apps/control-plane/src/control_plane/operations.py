@@ -15,6 +15,7 @@ from contract.initialization import write_new_configuration
 from contract.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
+from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.compiler import publish_changes
 from control_plane.config import Settings, load_settings
 from control_plane.db import standalone_transaction
@@ -143,6 +144,8 @@ async def seed_fixtures(config: Path) -> FixtureResult:
     settings = load_settings(config)
     with database_errors():
         async with settings.secrets.build() as secret_store, standalone_transaction(settings.database.url):
+            if settings.bootstrap is not None:
+                await bootstrap_data_plane(settings.bootstrap)
             fixtures = await apply_fixtures(datetime.now(tz=UTC), secret_store)
             return FixtureResult(fixtures, await _publish(), len(await Model.find()))
 
