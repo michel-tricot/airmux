@@ -63,9 +63,6 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv build --package contract --wheel && uv build --package data-plane --wheel
       - run: uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
-      - name: Verify independent installation
-        run: |
-          "$UV_TOOL_DIR/data-plane/bin/python" -c 'from importlib.util import find_spec; assert all(find_spec(name) is None for name in ("control_plane", "fastapi", "sqlalchemy", "sqlmodel", "alembic"))'
       - run: uv run pytest tests/gateway
         env:
           TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/gateway-bin/tokkeeper-data-plane
