@@ -11,7 +11,7 @@ from control_plane.authz import OrgRole
 from control_plane.deps import ActingUserDep, ActorDep, CookieUserDep, browser_scoped, public, user_scoped
 from control_plane.models import Org, OrgInvitation, OrgMembership
 from control_plane.models.common.wire import Envelope
-from control_plane.models.org import OrgCreate, OrgOut, OrgSlugTakenError
+from control_plane.models.org import OrgCreate, OrgOut
 from control_plane.models.org_invitation import (
     InvitationAcceptedOut,
     InvitationEmailMismatchError,
@@ -68,10 +68,7 @@ async def create_personal_org(body: OrgCreate, user: CookieUserDep) -> Envelope[
     """
     if await Org.personal_of(user.id) is not None:
         raise HTTPException(status_code=409, detail="personal org already exists")
-    try:
-        org = await Org.create(body.name, body.slug, personal_for=user.id)
-    except OrgSlugTakenError as error:
-        raise HTTPException(status_code=409, detail="slug is already taken") from error
+    org = await Org.create(body.name, body.slug, personal_for=user.id)
     await OrgMembership(user_id=user.id, org_id=org.id, role=OrgRole.owner).save()
     return Envelope(data=OrgOut.model_validate(org))
 

@@ -16,7 +16,7 @@ from control_plane.deps import ActorDep, instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.user import InstanceRoleIn, LastInstanceOwnerError, ServiceAccountIn, UserOut
+from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter()
@@ -76,10 +76,7 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
         raise HTTPException(status_code=409, detail="user owns a personal org; delete the org first")
     if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
         raise HTTPException(status_code=409, detail="user created inference keys that outlive them; delete those workspaces first")
-    try:
-        await user.delete_with_contents()
-    except LastInstanceOwnerError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+    await user.delete_with_contents()
     return Envelope(data=DeletedOut.of(user_id))
 
 
@@ -97,10 +94,7 @@ async def list_users(service_account: bool | None = None) -> Envelope[list[UserO
 
 @router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
 async def change_instance_role(user_id: UUID, body: InstanceRoleIn) -> Envelope[UserOut]:
-    try:
-        user = await User.change_instance_role(user_id, body.instance_role)
-    except ValueError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+    user = await User.change_instance_role(user_id, body.instance_role)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))

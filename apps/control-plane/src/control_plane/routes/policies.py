@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID  # noqa: TC003 FastAPI resolves path parameter annotations at runtime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from control_plane.authz import Permission
 from control_plane.deps import WorkspaceDep, require, workspace_scope
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.policy import InvalidPolicyError, Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
+from control_plane.models.policy import Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 
 router = APIRouter(prefix="/organizations/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
@@ -24,17 +24,14 @@ async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope
     policy = Policy(
         org_id=workspace.org_id, workspace_id=workspace.id, name=body.name, enabled=body.enabled, priority=body.priority, definition=body.definition
     )
-    await _save(policy)
+    await policy.save()
     return Envelope(data=PolicyOut.model_validate(policy))
 
 
 @router.put("/order", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def reorder_policies(workspace: WorkspaceDep, body: PolicyOrder) -> Envelope[list[PolicyOut]]:
     """Replace the workspace policy evaluation order."""
-    try:
-        policies = await Policy.reorder(workspace.org_id, workspace.id, body.policy_ids)
-    except InvalidPolicyError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    policies = await Policy.reorder(workspace.org_id, workspace.id, body.policy_ids)
     return Envelope(data=[PolicyOut.model_validate(policy) for policy in policies])
 
 
@@ -50,7 +47,7 @@ async def update_policy(workspace: WorkspaceDep, policy_id: UUID, body: PolicyUp
         policy.priority = body.priority
     if body.definition is not None:
         policy.definition = body.definition
-    await _save(policy)
+    await policy.save()
     return Envelope(data=PolicyOut.model_validate(policy))
 
 
@@ -60,10 +57,3 @@ async def delete_policy(workspace: WorkspaceDep, policy_id: UUID) -> Envelope[De
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
     await policy.delete()
     return Envelope(data=DeletedOut.of(policy.id))
-
-
-async def _save(policy: Policy) -> None:
-    try:
-        await policy.save()
-    except InvalidPolicyError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
