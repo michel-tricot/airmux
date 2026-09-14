@@ -29,7 +29,7 @@ def _make_user(c, cp, email="m@example.com", *, admin=False, org=None, tmp_path=
     c.cookies.clear()
     user = {"id": me["user_id"], **me}
     if org is not None:
-        assert c.put(f"/api/v1/orgs/{org}/users/{user['id']}", json={"role": "member"}, headers=cp.headers(org)).status_code == 200
+        assert c.put(f"/api/v1/organizations/{org}/users/{user['id']}", json={"role": "member"}, headers=cp.headers(org)).status_code == 200
     if admin:
         assert tmp_path is not None
 
@@ -65,7 +65,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
         assert resp.json()["data"]["user_id"] == user["id"]
         assert resp.json()["data"]["orgs"] == [str(org_id)]
 
-        keys = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=CSRF)
+        keys = c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=CSRF)
         assert keys.status_code == 200
         me = c.get("/api/v1/auth/me", headers=CSRF)
         assert me.status_code == 200
@@ -87,10 +87,10 @@ def test_cookie_without_csrf_header_or_with_cross_site_fetch_site_is_403(tmp_pat
     with _client(cp) as c:
         _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 200
-        assert c.get("/api/v1/orgs").status_code == 403
-        assert c.get("/api/v1/orgs", headers={**CSRF, "Sec-Fetch-Site": "cross-site"}).status_code == 403
-        assert c.get("/api/v1/orgs", headers={**CSRF, "Sec-Fetch-Site": "same-origin"}).status_code == 200
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 200
+        assert c.get("/api/v1/organizations").status_code == 403
+        assert c.get("/api/v1/organizations", headers={**CSRF, "Sec-Fetch-Site": "cross-site"}).status_code == 403
+        assert c.get("/api/v1/organizations", headers={**CSRF, "Sec-Fetch-Site": "same-origin"}).status_code == 200
 
 
 def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
@@ -99,8 +99,8 @@ def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
     with _client(cp) as c:
         _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
-        assert c.get("/api/v1/orgs", headers={**CSRF, "authorization": "Bearer sk-cp-garbage"}).status_code == 401
-        assert c.get("/api/v1/orgs", headers=root).status_code == 200
+        assert c.get("/api/v1/organizations", headers={**CSRF, "authorization": "Bearer sk-cp-garbage"}).status_code == 401
+        assert c.get("/api/v1/organizations", headers=root).status_code == 200
 
 
 def test_org_paths_require_membership_and_instance_routes_require_an_instance_role(tmp_path):
@@ -111,14 +111,14 @@ def test_org_paths_require_membership_and_instance_routes_require_an_instance_ro
         o2 = make_org(c, root, "o2")
         _make_user(c, cp, org=o1)
         _login(c)
-        assert c.get(f"/api/v1/orgs/{o1}/workspaces", headers=CSRF).status_code == 200
-        assert c.get(f"/api/v1/orgs/{o2}/workspaces", headers=CSRF).status_code == 403
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 403
+        assert c.get(f"/api/v1/organizations/{o1}/workspaces", headers=CSRF).status_code == 200
+        assert c.get(f"/api/v1/organizations/{o2}/workspaces", headers=CSRF).status_code == 403
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 403
 
         _make_user(c, cp, email="root@example.com", admin=True, tmp_path=tmp_path)
         _login(c, email="root@example.com")
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 200
-        assert c.get(f"/api/v1/orgs/{o1}/workspaces", headers=CSRF).status_code == 200
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 200
+        assert c.get(f"/api/v1/organizations/{o1}/workspaces", headers=CSRF).status_code == 200
 
 
 def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):
@@ -133,7 +133,7 @@ def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):
             await row.save()
 
         run_in_db(tmp_path, expire)
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 401
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 401
 
     async def sliding():
         slider = User(email="slider@example.com", name="slider")
@@ -161,12 +161,12 @@ def test_logout_revokes_session_and_clears_cookie(tmp_path):
         _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
         stolen = c.cookies[SESSION_COOKIE]
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 200
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 200
         out = c.post("/api/v1/auth/logout", headers=CSRF)
         assert out.status_code == 200
         assert UUID(out.json()["data"]["id"]).version == 7
         c.cookies.set(SESSION_COOKIE, stolen)
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 401
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 401
 
 
 def test_logout_revokes_active_playground_session(tmp_path):
@@ -177,7 +177,7 @@ def test_logout_revokes_active_playground_session(tmp_path):
         workspace_id = make_workspace(c, cp.headers(org_id))
         _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
-        path = f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/playground-session"
+        path = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/playground-session"
         playground_session = c.put(path, headers=CSRF)
         assert playground_session.status_code == 200, playground_session.text
 
@@ -255,7 +255,7 @@ def test_signup_creates_user_identity_and_session(tmp_path):
         assert me["instance_role"] is None
         assert me["orgs"] == []
         assert c.get("/api/v1/auth/me", headers=CSRF).json()["data"]["user_id"] == me["user_id"]
-        assert c.get("/api/v1/orgs", headers=CSRF).status_code == 403
+        assert c.get("/api/v1/organizations", headers=CSRF).status_code == 403
         c.cookies.clear()
         _login(c, email="New@Example.com")
 

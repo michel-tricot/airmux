@@ -10,7 +10,7 @@ beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
 describe('provider icons', () => {
   it('removes active content from taxonomy SVG markup', async () => {
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({
           data: {
             models: [],
@@ -39,7 +39,7 @@ describe('provider icons', () => {
 
   it('supports arrow-key navigation between providers', async () => {
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({
           data: {
             models: [],

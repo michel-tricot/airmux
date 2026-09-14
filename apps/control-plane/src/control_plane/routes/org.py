@@ -21,7 +21,7 @@ from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
-router = APIRouter(prefix="/orgs/{org_id}")
+router = APIRouter(prefix="/organizations/{org_id}")
 
 
 @router.get("/users", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_read)])

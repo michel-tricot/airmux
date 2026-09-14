@@ -11,7 +11,7 @@ describe('playground', () => {
   it('labels playground sessions in recent activity without exposing their ids', async () => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
         HttpResponse.json<{ data: Api.UsageEventOut[] }>({
           data: [
             {
@@ -77,10 +77,10 @@ describe('playground', () => {
     let requestBody: Record<string, unknown> = {};
     let sessions = 0;
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [provider], models: [model] } }),
       ),
-      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () => {
+      http.put(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () => {
         sessions += 1;
         return HttpResponse.json<{ data: Api.PlaygroundSessionReadyOut }>({
           data: { id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' },
@@ -187,10 +187,10 @@ describe('playground', () => {
       deleted_at: null,
     } satisfies Api.ModelOut;
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [provider], models: [model] } }),
       ),
-      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
+      http.put(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
         HttpResponse.json<{ data: Api.PlaygroundSessionReadyOut }>({
           data: { id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' },
         }),
@@ -262,7 +262,7 @@ describe('playground', () => {
       } satisfies Api.ModelOut,
     ];
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [firstProvider, secondProvider], models } }),
       ),
     );
@@ -304,10 +304,10 @@ describe('playground', () => {
     } satisfies Api.ModelOut;
     let requestBody: Record<string, unknown> = {};
     server.use(
-      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [provider], models: [model] } }),
       ),
-      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
+      http.put(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
         HttpResponse.json<{ data: Api.PlaygroundSessionReadyOut }>({
           data: { id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' },
         }),

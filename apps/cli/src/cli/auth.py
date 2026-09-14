@@ -230,11 +230,11 @@ def _organization_management_key(client: httpx.Client, org_id: str) -> str:
 
 
 def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]) -> WorkspaceOut:
-    listed = payload_rows(ensure_ok(client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=bearer)), WorkspaceOut)
+    listed = payload_rows(ensure_ok(client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=bearer)), WorkspaceOut)
     workspace = next((candidate for candidate in listed if candidate.slug == "default"), None)
     if workspace is None:
         workspace = _payload_or_die(
-            client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer),
+            client.post(f"/api/v1/organizations/{org_id}/workspaces", json={"name": "default"}, headers=bearer),
             "workspace creation",
             WorkspaceOut,
         )
@@ -242,7 +242,7 @@ def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]
 
 
 def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyCreatedOut:
-    path = f"/api/v1/orgs/{org_id}/workspaces/{workspace.id}/inference-keys"
+    path = f"/api/v1/organizations/{org_id}/workspaces/{workspace.id}/inference-keys"
     return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key creation", InferenceKeyCreatedOut)
 
 

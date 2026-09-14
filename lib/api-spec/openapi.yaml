@@ -97,7 +97,7 @@ paths:
       - scope: instance_scope
         anyOf:
         - management-keys.issue
-  /api/v1/orgs/{org_id}/management-keys:
+  /api/v1/organizations/{org_id}/management-keys:
     get:
       tags:
       - Organization Management Keys
@@ -196,7 +196,7 @@ paths:
       - scope: org_scope
         anyOf:
         - management-keys.issue
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/management-keys:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/management-keys:
     get:
       tags:
       - Workspace Management Keys
@@ -1249,7 +1249,7 @@ paths:
         anyOf:
         - principals.manage
       description: 'Required permission: `principals.manage`.'
-  /api/v1/orgs:
+  /api/v1/organizations:
     get:
       tags:
       - Instance Organizations
@@ -1322,7 +1322,7 @@ paths:
       - scope: instance_scope
         anyOf:
         - organizations.create
-  /api/v1/orgs/{org_id}:
+  /api/v1/organizations/{org_id}:
     patch:
       tags:
       - Organization Settings
@@ -1455,7 +1455,7 @@ paths:
       - scope: org_scope
         anyOf:
         - organizations.delete
-  /api/v1/orgs/{org_id}/invitations:
+  /api/v1/organizations/{org_id}/invitations:
     post:
       tags:
       - Organization Invitations
@@ -1544,7 +1544,7 @@ paths:
       - scope: org_scope
         anyOf:
         - members.read
-  /api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue:
+  /api/v1/organizations/{org_id}/invitations/{invitation_id}/reissue:
     post:
       tags:
       - Organization Invitations
@@ -1594,7 +1594,7 @@ paths:
       - scope: org_scope
         anyOf:
         - members.manage
-  /api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke:
+  /api/v1/organizations/{org_id}/invitations/{invitation_id}/revoke:
     post:
       tags:
       - Organization Invitations
@@ -1644,7 +1644,7 @@ paths:
       - scope: org_scope
         anyOf:
         - members.manage
-  /api/v1/orgs/{org_id}/workspaces:
+  /api/v1/organizations/{org_id}/workspaces:
     post:
       tags:
       - Organization Workspaces
@@ -1737,7 +1737,7 @@ paths:
         anyOf:
         - workspaces.read
         - organizations.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}:
     get:
       tags:
       - Workspace Settings
@@ -1891,7 +1891,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - workspaces.update
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
       - Workspace Members
@@ -1940,7 +1940,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - members.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/member-candidates:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/member-candidates:
     get:
       tags:
       - Workspace Members
@@ -1989,7 +1989,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - members.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
       - Workspace Members
@@ -2108,7 +2108,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - members.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/playground-session:
     put:
       tags:
       - Workspace Playground
@@ -2205,7 +2205,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - playground.execute
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
       - Workspace Inference Keys
@@ -2308,7 +2308,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
       - Workspace Inference Keys
@@ -2365,7 +2365,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules:
     get:
       tags:
       - Workspace Rules
@@ -2468,7 +2468,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}:
     patch:
       tags:
       - Workspace Rules
@@ -2587,7 +2587,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies:
     get:
       tags:
       - Workspace Policies
@@ -2690,7 +2690,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/order:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/order:
     put:
       tags:
       - Workspace Policies
@@ -2745,7 +2745,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}:
     patch:
       tags:
       - Workspace Policies
@@ -2937,7 +2937,7 @@ paths:
       - scope: instance_scope
         anyOf:
         - provider-credentials.manage
-  /api/v1/orgs/{org_id}/provider-credentials:
+  /api/v1/organizations/{org_id}/provider-credentials:
     post:
       tags:
       - Organization Provider Credentials
@@ -3026,7 +3026,7 @@ paths:
       - scope: org_scope
         anyOf:
         - provider-credentials.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/provider-credentials:
     post:
       tags:
       - Workspace Provider Credentials
@@ -3129,7 +3129,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - provider-credentials.read
-  /api/v1/orgs/{org_id}/provider-credentials/{credential_id}:
+  /api/v1/organizations/{org_id}/provider-credentials/{credential_id}:
     get:
       tags:
       - Organization Provider Credentials
@@ -3286,7 +3286,7 @@ paths:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
-  /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
+  /api/v1/organizations/{org_id}/provider-credentials/{credential_id}/value:
     put:
       tags:
       - Organization Provider Credentials
@@ -3343,7 +3343,7 @@ paths:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
-  /api/v1/orgs/{org_id}/users:
+  /api/v1/organizations/{org_id}/users:
     get:
       tags:
       - Organization Members
@@ -3385,7 +3385,7 @@ paths:
       - scope: org_scope
         anyOf:
         - members.read
-  /api/v1/orgs/{org_id}/users/{user_id}:
+  /api/v1/organizations/{org_id}/users/{user_id}:
     put:
       tags:
       - Organization Members
@@ -3490,7 +3490,7 @@ paths:
       - scope: org_scope
         anyOf:
         - members.manage
-  /api/v1/orgs/{org_id}/service-accounts:
+  /api/v1/organizations/{org_id}/service-accounts:
     post:
       tags:
       - Organization Service Accounts
@@ -3541,7 +3541,7 @@ paths:
       - scope: org_scope
         anyOf:
         - management-keys.issue
-  /api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys:
+  /api/v1/organizations/{org_id}/service-accounts/{user_id}/management-keys:
     post:
       tags:
       - Organization Service Accounts
@@ -3597,7 +3597,7 @@ paths:
       - scope: org_scope
         anyOf:
         - management-keys.issue
-  /api/v1/orgs/{org_id}/service-accounts/{user_id}:
+  /api/v1/organizations/{org_id}/service-accounts/{user_id}:
     delete:
       tags:
       - Organization Service Accounts
@@ -3650,7 +3650,7 @@ paths:
       - scope: org_scope
         anyOf:
         - management-keys.revoke
-  /api/v1/orgs/{org_id}/bundles/republish:
+  /api/v1/organizations/{org_id}/bundles/republish:
     post:
       tags:
       - Organization Bundles
@@ -3692,7 +3692,7 @@ paths:
       - scope: org_scope
         anyOf:
         - bundles.publish
-  /api/v1/orgs/{org_id}/bundles:
+  /api/v1/organizations/{org_id}/bundles:
     get:
       tags:
       - Organization Bundles
@@ -3734,7 +3734,7 @@ paths:
       - scope: org_scope
         anyOf:
         - bundles.read
-  /api/v1/orgs/{org_id}/events:
+  /api/v1/organizations/{org_id}/events:
     get:
       tags:
       - Organization Usage Events
@@ -3826,7 +3826,7 @@ paths:
       - scope: org_scope
         anyOf:
         - usage.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/events:
     get:
       tags:
       - Workspace Usage Events
@@ -3925,7 +3925,7 @@ paths:
       - scope: workspace_scope
         anyOf:
         - usage.read
-  /api/v1/orgs/{org_id}/activity:
+  /api/v1/organizations/{org_id}/activity:
     get:
       tags:
       - Organization Activity
@@ -4278,7 +4278,7 @@ paths:
       - scope: instance_scope
         anyOf:
         - catalog.manage
-  /api/v1/orgs/{org_id}/taxonomy:
+  /api/v1/organizations/{org_id}/taxonomy:
     get:
       tags:
       - Organization Model Catalog
@@ -4320,7 +4320,7 @@ paths:
       - scope: org_scope
         anyOf:
         - catalog.read
-  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/taxonomy:
     get:
       tags:
       - Workspace Model Catalog

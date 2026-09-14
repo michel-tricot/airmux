@@ -15,7 +15,7 @@ function open(path: string) {
 }
 
 it('shows bundle generation history under organization Activity without publishing controls or a Policies category', async () => {
-  server.use(http.get('/api/v1/orgs/:orgId/bundles', () => HttpResponse.json({ data: [bundle] })));
+  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: [bundle] })));
   open('/org/settings');
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Activity' }));
@@ -34,7 +34,7 @@ it('keeps Activity available for bundle readers without audit permission', async
 });
 
 it('organizes workspace settings into selectable categories', async () => {
-  server.use(http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })));
+  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })));
   open(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
   const user = userEvent.setup();
   expect(await screen.findByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
@@ -52,10 +52,10 @@ it('republishes configuration from Instance Administration and updates the bundl
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', orgs: [ORG.id] } }),
     ),
-    http.get('/api/v1/orgs/:orgId', () => HttpResponse.json({ data: ORG })),
+    http.get('/api/v1/organizations/:orgId', () => HttpResponse.json({ data: ORG })),
     http.get('/api/v1/users', () => HttpResponse.json({ data: [] })),
-    http.get('/api/v1/orgs/:orgId/bundles', () => HttpResponse.json({ data: bundles })),
-    http.post('/api/v1/orgs/:orgId/bundles/republish', () => {
+    http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })),
+    http.post('/api/v1/organizations/:orgId/bundles/republish', () => {
       const published = { ...bundle, id: 'bundle-2', version: 2 };
       bundles = [...bundles, published];
       return HttpResponse.json({ data: published });
@@ -71,7 +71,7 @@ it('republishes configuration from Instance Administration and updates the bundl
 
 it('refreshes generated configuration history when returning to Activity', async () => {
   let bundles = [bundle];
-  server.use(http.get('/api/v1/orgs/:orgId/bundles', () => HttpResponse.json({ data: bundles })));
+  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })));
   open('/org/settings');
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Activity' }));

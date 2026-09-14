@@ -34,7 +34,7 @@ def cli(tmp_path, monkeypatch):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.headers.update(org)
-        workspace = c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "Staging"}, headers=org).json()["data"]
+        workspace = c.post(f"/api/v1/organizations/{org_id}/workspaces", json={"name": "Staging"}, headers=org).json()["data"]
 
         def _client(token: str, control_plane_url: str):
             return nullcontext(c)

@@ -26,13 +26,13 @@ def test_invitation_terminal_states_have_consistent_preview_and_redemption(tmp_p
         owner_headers = {**CSRF, "cookie": f"airllm_session={client.cookies['airllm_session']}"}
         org = client.post("/api/v1/enroll/org", json={"name": "Transitions"}, headers=owner_headers).json()["data"]
         invited = client.post(
-            f"/api/v1/orgs/{org['id']}/invitations", json={"email": "member@transition.test", "org_role": "member"}, headers=owner_headers
+            f"/api/v1/organizations/{org['id']}/invitations", json={"email": "member@transition.test", "org_role": "member"}, headers=owner_headers
         )
         assert invited.status_code == 200
         invitation = invited.json()["data"]
         token = parse_qs(urlsplit(invitation["url"]).fragment)["token"][0]
         assert client.post("/api/v1/auth/signup", json={"email": "member@transition.test", "password": PASSWORD}).status_code == 200
-        path = f"/api/v1/orgs/{org['id']}/invitations/{invitation['invitation']['id']}"
+        path = f"/api/v1/organizations/{org['id']}/invitations/{invitation['invitation']['id']}"
         if transition == "expired":
 
             async def expire():
@@ -50,6 +50,6 @@ def test_invitation_terminal_states_have_consistent_preview_and_redemption(tmp_p
             assert client.post(f"{path}/{action}", headers=owner_headers).status_code == 200
         assert client.post("/api/v1/enroll/invitations/preview", json={"token": token}).status_code == preview_status
         assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == accept_status
-        available = client.get(f"/api/v1/orgs/{org['id']}/invitations", headers=owner_headers)
+        available = client.get(f"/api/v1/organizations/{org['id']}/invitations", headers=owner_headers)
         assert available.status_code == 200
         assert token not in available.text

@@ -20,8 +20,8 @@ Browser sessions use the `airllm_session` cookie and must also send `X-Requested
 | Scope | Path pattern |
 | --- | --- |
 | Instance | `/api/v1/instance/...` or another instance resource |
-| Organization | `/api/v1/orgs/{org_id}/...` |
-| Workspace | `/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/...` |
+| Organization | `/api/v1/organizations/{org_id}/...` |
+| Workspace | `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/...` |
 
 `org_id` and `workspace_ref` accept the resource UUID or slug where the endpoint documents that behavior. A scoped
 management key must cover the target, and its permission ceiling must include the operation.
@@ -45,7 +45,7 @@ Lists use `{"data": [...]}`. Errors retain FastAPI's `{"detail": ...}` shape and
 ## Example
 
 ```bash
-curl https://llm.example.com/api/v1/orgs/$ORG_ID/workspaces \
+curl https://llm.example.com/api/v1/organizations/$ORG_ID/workspaces \
   -H "Authorization: Bearer $AIRLLM_MANAGEMENT_KEY" \
   -H 'Accept: application/json'
 ```

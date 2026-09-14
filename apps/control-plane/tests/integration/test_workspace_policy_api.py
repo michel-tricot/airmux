@@ -31,7 +31,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
         sibling = make_workspace(client, headers, "staging")
-        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
         rules = create_rules(client, base, headers)
         body = {
@@ -46,7 +46,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         assert policy["workspace_id"] == str(workspace)
         assert policy["definition"]["rule_ids"] == [rule["id"] for rule in rules]
         assert [item["id"] for item in client.get(path, headers=headers).json()["data"]] == [policy["id"]]
-        sibling_path = f"/api/v1/orgs/{org}/workspaces/{sibling}/policies/{policy['id']}"
+        sibling_path = f"/api/v1/organizations/{org}/workspaces/{sibling}/policies/{policy['id']}"
         assert client.patch(sibling_path, headers=headers, json={"enabled": False}).status_code == 404
         invalid = {
             **body,
@@ -69,14 +69,16 @@ def test_workspace_policy_permissions(tmp_path, role):
         org = make_org(client, cp.headers(), "policies")
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
-        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         rules = create_rules(client, base, headers)
         member = client.post("/api/v1/auth/signup", json={"email": "member@example.com", "name": "Member", "password": "hunter2-hunter2"}).json()[
             "data"
         ]
-        assert client.put(f"/api/v1/orgs/{org}/users/{member['user_id']}", headers=headers, json={"role": "member"}).status_code == 200
+        assert client.put(f"/api/v1/organizations/{org}/users/{member['user_id']}", headers=headers, json={"role": "member"}).status_code == 200
         assert (
-            client.put(f"/api/v1/orgs/{org}/workspaces/{workspace}/members/{member['user_id']}", headers=headers, json={"role": role}).status_code
+            client.put(
+                f"/api/v1/organizations/{org}/workspaces/{workspace}/members/{member['user_id']}", headers=headers, json={"role": role}
+            ).status_code
             == 200
         )
         path = f"{base}/policies"
@@ -98,7 +100,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         org = make_org(client, cp.headers(), "policies")
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
-        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
         definition = policy_definition(create_rules(client, base, headers))
         policies = [
@@ -106,7 +108,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
             for name, priority in (("First", 10), ("Second", 20), ("Third", 30))
         ]
         ordered_ids = [policy["id"] for policy in reversed(policies)]
-        bundles_before = client.get(f"/api/v1/orgs/{org}/bundles", headers=headers).json()["data"]
+        bundles_before = client.get(f"/api/v1/organizations/{org}/bundles", headers=headers).json()["data"]
 
         reordered = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids})
 
@@ -116,7 +118,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
         bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=cp.headers(), params={"org_id": str(org)}).json()["data"])
         assert {str(policy.id): policy.priority for policy in bundle.policies} == dict(zip(ordered_ids, range(3), strict=True))
-        assert len(client.get(f"/api/v1/orgs/{org}/bundles", headers=headers).json()["data"]) == len(bundles_before) + 1
+        assert len(client.get(f"/api/v1/organizations/{org}/bundles", headers=headers).json()["data"]) == len(bundles_before) + 1
 
         incomplete = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids[:-1]})
         assert incomplete.status_code == 422
@@ -134,7 +136,7 @@ def test_policy_rejects_multiple_fallback_rules(tmp_path):
         org = make_org(client, root, "fallback-policy")
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
-        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         action = {"kind": "fallback", "models": [MODEL["model_id"]], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}
         fallback_rules = [
             client.post(
@@ -179,8 +181,10 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
         sibling = make_workspace(client, headers, "sibling")
-        caller = client.post(f"/api/v1/orgs/{org}/workspaces/{sibling}/inference-keys", headers=headers, json={"label": "sibling"}).json()["data"]
-        base = f"/api/v1/orgs/{org}/workspaces/{workspace}"
+        caller = client.post(f"/api/v1/organizations/{org}/workspaces/{sibling}/inference-keys", headers=headers, json={"label": "sibling"}).json()[
+            "data"
+        ]
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
         rules = create_rules(client, base, headers)
         definition = policy_definition(rules)

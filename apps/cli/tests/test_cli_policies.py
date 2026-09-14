@@ -48,8 +48,8 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
         assert json.loads(incoming.content) == {"enabled": False}
         return httpx.Response(200, json={"data": {**policy, "enabled": False}})
 
-    respx.post(f"http://cp.test/api/v1/orgs/{org_id}/workspaces/production/policies").mock(side_effect=create)
-    respx.patch(f"http://cp.test/api/v1/orgs/{org_id}/workspaces/production/policies/{policy_id}").mock(side_effect=update)
+    respx.post(f"http://cp.test/api/v1/organizations/{org_id}/workspaces/production/policies").mock(side_effect=create)
+    respx.patch(f"http://cp.test/api/v1/organizations/{org_id}/workspaces/production/policies/{policy_id}").mock(side_effect=update)
     created = runner.invoke(app, ["policies", "create", str(path), "-w", "production", "-f", "json"])
     assert created.exit_code == 0, created.output
     assert json.loads(created.stdout)[0]["definition"] == definition

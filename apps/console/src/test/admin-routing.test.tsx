@@ -75,8 +75,8 @@ function installAdminHandlers() {
         data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs },
       }),
     ),
-    http.get('/api/v1/orgs', () => HttpResponse.json<{ data: Api.OrgOut[] }>({ data: [ORG] })),
-    http.get('/api/v1/orgs/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
+    http.get('/api/v1/organizations', () => HttpResponse.json<{ data: Api.OrgOut[] }>({ data: [ORG] })),
+    http.get('/api/v1/organizations/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
     http.get('/api/v1/users', () => HttpResponse.json<{ data: Api.UserOut[] }>({ data: [USER] })),
     http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
     http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [MANAGEMENT_KEY] })),
@@ -105,12 +105,12 @@ function installAdminHandlers() {
         data: [{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }],
       }),
     ),
-    http.get('/api/v1/orgs/:orgId/users', () =>
+    http.get('/api/v1/organizations/:orgId/users', () =>
       HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
         data: [{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }],
       }),
     ),
-    http.get('/api/v1/orgs/:orgId/workspaces', () => HttpResponse.json<{ data: Api.WorkspaceOut[] }>({ data: WORKSPACES })),
+    http.get('/api/v1/organizations/:orgId/workspaces', () => HttpResponse.json<{ data: Api.WorkspaceOut[] }>({ data: WORKSPACES })),
   );
 }
 
@@ -307,7 +307,7 @@ describe('instance administration routes', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['bundles.read', 'usage.ingest', 'data-planes.heartbeat'] } }),
       ),
-      http.get('/api/v1/orgs', organizations),
+      http.get('/api/v1/organizations', organizations),
       http.get('/api/v1/users', users),
       http.get('/api/v1/instance/management-keys', keys),
       http.get('/api/v1/instance/data-planes', dataPlanes),
@@ -338,7 +338,7 @@ describe('instance administration routes', () => {
         const scoped = new URL(request.url).searchParams.has('org_id');
         return HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: scoped ? [] : ['organizations.read'] } });
       }),
-      http.get('/api/v1/orgs/:orgId', organization),
+      http.get('/api/v1/organizations/:orgId', organization),
     );
 
     renderAt(`/instance/organizations/${ORG.id}`);

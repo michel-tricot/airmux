@@ -87,8 +87,10 @@ describe('workspace policies', () => {
   it('shows reusable rules and their policy usage in a focused library', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
     );
@@ -104,8 +106,10 @@ describe('workspace policies', () => {
   it('does not treat rule usage as zero when policies are unavailable', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
     );
     renderPolicies();
 
@@ -122,8 +126,10 @@ describe('workspace policies', () => {
       definition: { match: { kind: 'all_requests' }, action: { kind: 'models', names: ['openai/gpt-4o'] } },
     };
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: [modelRule] })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: [modelRule] }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [initialPolicies[0]] }),
       ),
     );
@@ -136,11 +142,13 @@ describe('workspace policies', () => {
 
   it('keeps policy editing available when only the model catalog is unavailable', async () => {
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
     );
     renderPolicies();
 
@@ -153,11 +161,15 @@ describe('workspace policies', () => {
   it('keeps rule editing available when only inference keys are unavailable', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json({ detail: 'unavailable' }, { status: 503 })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () =>
+        HttpResponse.json({ detail: 'unavailable' }, { status: 503 }),
+      ),
     );
     renderPolicies();
 
@@ -168,7 +180,9 @@ describe('workspace policies', () => {
   });
 
   it('allows policy creation before the rule library has any rules', async () => {
-    server.use(http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })));
+    server.use(
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
+    );
     renderPolicies();
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled());
@@ -189,13 +203,15 @@ describe('workspace policies', () => {
       deleted_at: null,
     };
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: workspaceRules })),
-      http.post('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', async ({ request }) => {
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: workspaceRules }),
+      ),
+      http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', async ({ request }) => {
         submittedRule = (await request.json()) as Api.RuleCreate;
         workspaceRules = [createdRule];
         return HttpResponse.json<{ data: Api.RuleOut }>({ data: createdRule });
       }),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
     );
     renderPolicies();
 
@@ -237,8 +253,10 @@ describe('workspace policies', () => {
       definition: { target: { kind: 'all_keys' } as const, rule_ids: initialRules.map((item) => item.id) },
     };
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [multiRulePolicy] }),
       ),
     );
@@ -260,8 +278,10 @@ describe('workspace policies', () => {
     const user = userEvent.setup();
     mockPolicyRowLayout();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
     );
@@ -281,8 +301,10 @@ describe('workspace policies', () => {
   it('keeps the dragged policy row on the table axis', async () => {
     mockPolicyRowLayout();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
     );
@@ -308,9 +330,13 @@ describe('workspace policies', () => {
     let submittedOrder: string[] | undefined;
     let reorderCompleted = false;
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies })),
-      http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
+        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies }),
+      ),
+      http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
         submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
         await new Promise((resolve) => setTimeout(resolve, 250));
         const policiesById = new Map(policies.map((item) => [item.id, item]));
@@ -334,11 +360,13 @@ describe('workspace policies', () => {
     mockPolicyRowLayout();
     let submittedOrder: string[] | undefined;
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
-      http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
+      http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
         submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
         const policiesById = new Map(initialPolicies.map((item) => [item.id, item]));
         return HttpResponse.json<{ data: Api.PolicyOut[] }>({
@@ -361,11 +389,13 @@ describe('workspace policies', () => {
   it('restores the prior order when saving fails', async () => {
     mockPolicyRowLayout();
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
-      http.put('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies/order', async () => {
+      http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/order', async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         return HttpResponse.json({ detail: 'failed' }, { status: 500 });
       }),
@@ -381,11 +411,13 @@ describe('workspace policies', () => {
 
   it('does not show reorder controls to a policy viewer', async () => {
     server.use(
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/rules', () => HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
+        HttpResponse.json<{ data: Api.RuleOut[] }>({ data: initialRules }),
+      ),
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['organizations.read', 'workspaces.read', 'policies.read'] } }),
       ),
-      http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/policies', () =>
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
     );

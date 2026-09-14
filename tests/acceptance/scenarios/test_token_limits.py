@@ -18,8 +18,8 @@ def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:
     stack.wait_dp_ready()
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as admin:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
-        workspace = _payload(admin.get(f"/api/v1/orgs/{stack.org_id}/workspaces"))[0]
-        scope = f"/api/v1/orgs/{stack.org_id}/workspaces/{workspace['id']}"
+        workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
+        scope = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}"
         rule = _payload(
             admin.post(
                 f"{scope}/rules",

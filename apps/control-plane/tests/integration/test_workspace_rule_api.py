@@ -20,7 +20,7 @@ def test_rule_is_shared_live_across_policies_and_cannot_be_deleted_while_referen
         org_id = make_org(client, control_plane.headers(), "shared-rules")
         headers = control_plane.headers(org_id)
         workspace_id = make_workspace(client, headers, "production")
-        base = f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}"
+        base = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}"
 
         created_rule = client.post(f"{base}/rules", headers=headers, json=RULE)
         assert created_rule.status_code == 200, created_rule.text
@@ -60,10 +60,10 @@ def test_policy_rejects_rule_from_another_workspace(tmp_path):
         headers = control_plane.headers(org_id)
         first = make_workspace(client, headers, "first")
         second = make_workspace(client, headers, "second")
-        rule = client.post(f"/api/v1/orgs/{org_id}/workspaces/{first}/rules", headers=headers, json=RULE).json()["data"]
+        rule = client.post(f"/api/v1/organizations/{org_id}/workspaces/{first}/rules", headers=headers, json=RULE).json()["data"]
 
         response = client.post(
-            f"/api/v1/orgs/{org_id}/workspaces/{second}/policies",
+            f"/api/v1/organizations/{org_id}/workspaces/{second}/policies",
             headers=headers,
             json={"name": "Invalid", "definition": {"target": {"kind": "all_keys"}, "rule_ids": [rule["id"]]}},
         )

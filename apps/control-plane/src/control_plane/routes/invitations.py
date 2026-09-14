@@ -20,7 +20,7 @@ from control_plane.models.org_invitation import (
     OrgInvitationRevokedOut,
 )
 
-router = APIRouter(prefix="/orgs/{org_id}/invitations")
+router = APIRouter(prefix="/organizations/{org_id}/invitations")
 
 
 def _out(invitation: OrgInvitation, now: datetime) -> OrgInvitationOut:

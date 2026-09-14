@@ -152,7 +152,7 @@ BUNDLE_COLS = [
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every organization on this instance."""
-    print_rows("orgs", access_get("/api/v1/orgs", control_plane_url, OrgOut), ORG_COLS, fmt)
+    print_rows("orgs", access_get("/api/v1/organizations", control_plane_url, OrgOut), ORG_COLS, fmt)
 
 
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
@@ -342,9 +342,9 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
     path = (
         "/api/v1/instance/management-keys"
         if instance
-        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/management-keys"
+        else f"/api/v1/organizations/{selected_org}/workspaces/{workspace_id}/management-keys"
         if workspace_id
-        else f"/api/v1/orgs/{selected_org}/management-keys"
+        else f"/api/v1/organizations/{selected_org}/management-keys"
     )
     print_rows(
         "management keys", access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None), MANAGEMENT_KEY_COLS, fmt
@@ -372,9 +372,9 @@ def management_keys_create(  # noqa: PLR0913, PLR0917 command flags define the C
     path = (
         "/api/v1/instance/management-keys"
         if instance
-        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/management-keys"
+        else f"/api/v1/organizations/{selected_org}/workspaces/{workspace_id}/management-keys"
         if workspace_id
-        else f"/api/v1/orgs/{selected_org}/management-keys"
+        else f"/api/v1/organizations/{selected_org}/management-keys"
     )
     body = {
         "label": label,
@@ -555,7 +555,7 @@ def orgs_create(
     """Create an organization."""
     body = {"name": name, "slug": slug}
     with access_client(control_plane_url) as client:
-        organization = payload(post_expecting(client, "/api/v1/orgs", body, ok=(200,)), OrgOut)
+        organization = payload(post_expecting(client, "/api/v1/organizations", body, ok=(200,)), OrgOut)
     console.print(f"Created [bold]{organization.name}[/bold]. Add people with airllm orgs members add <user>.")
 
 
