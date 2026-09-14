@@ -38,7 +38,7 @@ from model_audit.catalog_ops import incomplete_model_modalities, retain_document
 ROOT = TAXONOMY
 OUT = ROOT / "models"
 CTX = ssl.create_default_context()
-UA = "airllm-taxonomy/1.0"
+UA = "tokkeeper-taxonomy/1.0"
 
 
 def main() -> int:

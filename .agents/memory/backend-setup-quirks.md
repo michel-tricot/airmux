@@ -1,28 +1,30 @@
 ---
-name: Backend setup quirks for Replit
-description: Key non-obvious facts for getting the Python control plane running on Replit the first time.
+name: Backend setup for local development and Replit
+description: Current plane commands, bootstrap authentication, and Replit-specific configuration
 ---
 
-## Python version
-The workspace requires Python >=3.13. Replit's default module is python-3.12. Install `python-base-3.13` via `installProgrammingLanguage` first; uv will then find it.
+## Commands and Python
 
-## taxonomy --file path
-`uv run airllmcp taxonomy` defaults to looking for `taxonomy.yml` next to `airllm.yml` (project root). The actual file lives at `taxonomy/taxonomy.yml`. The backend script (`scripts/replit-backend.sh`) must pass `--file taxonomy/taxonomy.yml`.
+The plane commands are `tokkeeper-control-plane` and `tokkeeper-data-plane`; the management CLI is `tokkeeper`. The workspace requires Python >=3.13. The checked-in `.replit` already selects `python-base-3.13`; installing a Python module is not a routine checkout step.
 
-**Why:** The taxonomy command's `--file` option is resolved next to the config file. The taxonomy directory is a subdirectory, not the root.
+## Taxonomy path
 
-**How to apply:** `uv run airllmcp taxonomy --file taxonomy/taxonomy.yml` in `scripts/replit-backend.sh`.
+`uv run tokkeeper-control-plane taxonomy` defaults to `taxonomy.yml`, resolved next to the config file. The repository catalog is `taxonomy/taxonomy.yml`. With the root `tokkeeper.yml`, use `uv run tokkeeper-control-plane taxonomy --file taxonomy/taxonomy.yml`. The Replit backend helper already passes this option.
 
-## Control plane port
-`scripts/replit-backend.sh` starts the server on port 8101 (`--port 8101`), not the default 8000. The console's Vite proxy defaults to `http://127.0.0.1:8000`. Set `CONTROL_PLANE_URL=http://127.0.0.1:8101` as a shared env var so the proxy reaches the backend.
+## Ports
 
-**Why:** Port 8101 is loopback-only to stay invisible to Replit's port detector (prevents preview routing to API instead of console).
+The control-plane command defaults to `127.0.0.1:8000`, matching the Vite proxy default. The Replit helper deliberately uses `127.0.0.1:8101`, and `.replit` already sets `CONTROL_PLANE_URL=http://127.0.0.1:8101` for the console proxy. Loopback binding alone does not guarantee preview routing; see [preview port routing](preview-port-routing.md).
 
-## DATABASE_URL normalization
-Run the backend via `scripts/replit-backend.sh` (not raw `uv run airllmcp migrate`) — the script normalizes `sslmode` → `ssl` in the DATABASE_URL for asyncpg compatibility.
+## Replit database URL
 
-## Signing keys
-`uv run airllmcp keygen` writes `.airllm/signing.key` and `.airllm/signing.pub`. These are file-based secrets read by `airllm.yml` directly — not environment variables. The backend script runs keygen if they don't exist.
+`scripts/replit-backend.sh` converts the managed `DATABASE_URL` to asyncpg syntax for the application and derives libpq syntax for `psql`. Keep this normalization in the Replit helper, not generic application configuration.
 
-## Fixture accounts (dev only)
-After fixtures seed successfully, the backend logs a table of fixture login credentials directly to stdout. Read those from the workflow log — do not store credentials here.
+## Bootstrap token, not signing keys
+
+`uv run tokkeeper-control-plane bootstrap-keygen` creates `.tokkeeper/dataplane.key`, a shared bootstrap authentication token. The root `tokkeeper.yml` reads it through a file reference, and the Replit helper generates it when missing.
+
+Policy bundles are published as JSON. The data plane fetches them using bearer authentication, validates their schema and contents, and caches them. There is no bundle signing or signature verification, no `keygen` command, and no `signing.key`/`signing.pub` setup. Provider reasoning signatures are opaque provider values passed through the adapters, separate from bundle authentication.
+
+## Fixture accounts
+
+Fixtures are for fresh development databases. The helper skips seeding when users already exist. A successful seed prints fixture login credentials; do not store those credentials in memory.

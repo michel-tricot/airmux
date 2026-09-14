@@ -3,4 +3,4 @@
 # CI re-exports and fails on drift; never hand-edit them.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-uv run airllmdp schema --out taxonomy/schemas/completion
+uv run tokkeeper-data-plane schema --out taxonomy/schemas/completion

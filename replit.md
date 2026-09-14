@@ -1,4 +1,4 @@
-# airllm
+# tokkeeper
 
 An LLM gateway prototype with a strict control plane / data plane split, plus the console (Bun workspace) that serves both the org and instance admin views.
 
@@ -7,7 +7,7 @@ An LLM gateway prototype with a strict control plane / data plane split, plus th
 - **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles policy bundles
 - **Data plane** (bare Starlette): serves `POST /v1/chat/completions` and `POST /v1/messages` (Anthropic API) with zero I/O on the hot path
 - **Console** (`apps/console`): React/Vite admin and org console
-- **CLI** (`apps/cli`): `airllm` and `airllmcp` commands for managing the gateway
+- **CLI** (`apps/cli`): `tokkeeper` and `tokkeeper-control-plane` commands for managing the gateway
 
 ## Stack
 
@@ -23,12 +23,12 @@ See README.md for the full getting-started guide. The short version:
 ```bash
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-uv run airllmcp bootstrap-keygen # shared data-plane pool key
+uv run tokkeeper-control-plane bootstrap-keygen # shared data-plane pool key
 # add OPENAI_API_KEY to .env
-uv run airllmcp serve --dev     # control plane on :8000
+uv run tokkeeper-control-plane serve --dev     # control plane on :8000
 # sign up at the console: the first account claims the instance
-uv run airllmcp taxonomy        # load and publish the catalog
-uv run airllmdp --dev           # data plane on :8080
+uv run tokkeeper-control-plane taxonomy        # load and publish the catalog
+uv run tokkeeper-data-plane --dev           # data plane on :8080
 ```
 
 ## Required secrets / env vars
@@ -38,17 +38,17 @@ See `.env.example`. Key variables:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `AIRLLM_MANAGEMENT_KEY` | Bearer for control-plane APIs |
-| `AIRLLM_DATAPLANE_TOKEN` | Data plane → control plane bearer |
-| `AIRLLM_INFERENCE_KEY` | Caller inference key |
+| `TOKKEEPER_MANAGEMENT_KEY` | Bearer for control-plane APIs |
+| `TOKKEEPER_DATAPLANE_TOKEN` | Data plane → control plane bearer |
+| `TOKKEEPER_INFERENCE_KEY` | Caller inference key |
 
-`uv run airllmcp bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
+`uv run tokkeeper-control-plane bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
 
 ## Project layout
 
 ```
 apps/
-  cli/           # airllm / airllmcp CLI
+  cli/           # tokkeeper / tokkeeper-control-plane CLI
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
 packages/
@@ -92,7 +92,7 @@ on `http://127.0.0.1:8000` by default and proxies `/v1` requests there.
 
 When the backend is needed for local console development, Replit's managed
 PostgreSQL provides the runtime-managed `DATABASE_URL` connection string.
-`airllm.yml` reads that variable directly; without it the config falls back to
+`tokkeeper.yml` reads that variable directly; without it the config falls back to
 the local `docker-compose.dev.yml` database. Run the bootstrap from the
 repository root:
 
@@ -102,11 +102,11 @@ repository root:
 
 That script runs the required sequence:
 
-1. `uv run airllmcp bootstrap-keygen` (when `.airllm/dataplane.key` does not exist)
-2. `uv run airllmcp migrate`
-3. `uv run airllmcp taxonomy`
-4. `uv run airllmcp fixtures`
-5. `uv run airllmcp serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
+1. `uv run tokkeeper-control-plane bootstrap-keygen` (when `.tokkeeper/dataplane.key` does not exist)
+2. `uv run tokkeeper-control-plane migrate`
+3. `uv run tokkeeper-control-plane taxonomy`
+4. `uv run tokkeeper-control-plane fixtures`
+5. `uv run tokkeeper-control-plane serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
 
 If there is any migration incompatibility, the script must start the Replit
 development database from scratch: drop and recreate it, then run the full

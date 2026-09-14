@@ -3,7 +3,7 @@ title: "Call tools"
 description: "Define functions, assemble streamed arguments, return tool results, and continue a conversation."
 ---
 
-Tools are translated through AirLLM's canonical model. The selected catalog model must advertise the `tools` capability.
+Tools are translated through TokKeeper's canonical model. The selected catalog model must advertise the `tools` capability.
 
 ## Request a tool call
 
@@ -14,8 +14,8 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
 )
 
 tools = [
@@ -36,7 +36,7 @@ tools = [
 
 messages = [{"role": "user", "content": "What is the weather in Paris?"}]
 first = client.chat.completions.create(
-    model=os.environ["AIRLLM_MODEL"],
+    model=os.environ["TOKKEEPER_MODEL"],
     messages=messages,
     tools=tools,
     tool_choice={"type": "function", "function": {"name": "get_weather"}},
@@ -62,7 +62,7 @@ messages.append(
 )
 
 final = client.chat.completions.create(
-    model=os.environ["AIRLLM_MODEL"],
+    model=os.environ["TOKKEEPER_MODEL"],
     messages=messages,
     tools=tools,
 )
@@ -70,7 +70,7 @@ final = client.chat.completions.create(
 print(final.choices[0].message.content)
 ```
 
-AirLLM does not execute tools. Your application validates the arguments, invokes the function, and returns the result.
+TokKeeper does not execute tools. Your application validates the arguments, invokes the function, and returns the result.
 
 ## Streamed tool calls
 

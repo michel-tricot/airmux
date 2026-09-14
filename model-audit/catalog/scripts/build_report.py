@@ -97,9 +97,9 @@ HTML = """<title>Completion request field support</title>
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">airllm taxonomy &middot; completion request surface</div>
-    <h1>Which request fields AirLLM and providers support</h1>
-    <p class="lede">Every JSONPath found in AirLLM's canonical request schema or a provider's published completion request schema, to two levels of nesting. Green means the field appears in that schema; red means it does not. Absence is evidence about the schema, not proof the API rejects the field.</p>
+    <div class="eyebrow">tokkeeper taxonomy &middot; completion request surface</div>
+    <h1>Which request fields TokKeeper and providers support</h1>
+    <p class="lede">Every JSONPath found in TokKeeper's canonical request schema or a provider's published completion request schema, to two levels of nesting. Green means the field appears in that schema; red means it does not. Absence is evidence about the schema, not proof the API rejects the field.</p>
   </header>
 
   <div class="stats" id="stats"></div>

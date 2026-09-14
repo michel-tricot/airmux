@@ -18,13 +18,13 @@ def https_deployment(tmp_path_factory):
     if "DEPLOYMENT_PROJECT" not in os.environ:
         pytest.skip("set DEPLOYMENT_PROJECT and DEPLOYMENT_FILE to test built deployment images")
     directory = tmp_path_factory.mktemp("https-proxy")
-    project = f"airllm-https-{uuid.uuid4().hex[:10]}"
+    project = f"tokkeeper-https-{uuid.uuid4().hex[:10]}"
     compose_file = os.environ["DEPLOYMENT_FILE"]
     compact = compose_file == "docker-compose.yml"
-    gateway = "airllm" if compact else "console"
-    control_plane = "airllm" if compact else "control-plane"
+    gateway = "tokkeeper" if compact else "console"
+    control_plane = "tokkeeper" if compact else "control-plane"
     compose = ("compose", "-p", project, "-f", compose_file)
-    environment = {**os.environ, "AIRLLM_PORT": "127.0.0.1:0", "AIRLLM_PUBLIC_URL": "https://localhost"}
+    environment = {**os.environ, "TOKKEEPER_PORT": "127.0.0.1:0", "TOKKEEPER_PUBLIC_URL": "https://localhost"}
     certificate = directory / "certificate.pem"
     private_key = directory / "key.pem"
     openssl = shutil.which("openssl")
@@ -136,7 +136,7 @@ def test_https_session_cookie_is_secure_despite_forged_forwarding(https_deployme
     client, signup, _, _, direct = https_deployment
     cookies = SimpleCookie()
     cookies.load(signup.headers["set-cookie"])
-    session = cookies["airllm_session"]
+    session = cookies["tokkeeper_session"]
     assert session["secure"]
     assert session["httponly"]
     assert session["samesite"].lower() == "lax"
@@ -194,7 +194,7 @@ def test_forged_forwarded_host_cannot_change_redirect_origin(https_deployment):
 
 def test_internal_plane_ports_are_not_published(https_deployment):
     _, _, compose, control_plane, _ = https_deployment
-    services = (control_plane,) if control_plane == "airllm" else (control_plane, "data-plane-1", "data-plane-2")
+    services = (control_plane,) if control_plane == "tokkeeper" else (control_plane, "data-plane-1", "data-plane-2")
     for service in services:
         container = docker(*compose, "ps", "-q", service)
         bindings = json.loads(docker("inspect", "--format", "{{json .HostConfig.PortBindings}}", container))

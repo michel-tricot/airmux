@@ -1,14 +1,14 @@
 ---
 title: "Security checklist"
-description: "Harden a public AirLLM deployment and protect its management, inference, provider, and state credentials."
+description: "Harden a public TokKeeper deployment and protect its management, inference, provider, and state credentials."
 ---
 
 ## Before exposing the service
 
 - Terminate HTTPS at the public origin
-- Set `AIRLLM_CONSOLE_URL` to that exact origin
+- Set `TOKKEEPER_CONSOLE_URL` to that exact origin
 - Claim the instance immediately
-- Keep `AIRLLM_PUBLIC_SIGNUP=false` unless open registration is intentional
+- Keep `TOKKEEPER_PUBLIC_SIGNUP=false` unless open registration is intentional
 - Use a strong URL-safe Postgres password set before database initialization
 - Restrict access to Postgres, the secret store, gateway state, and backups
 - Keep control-plane synchronization traffic on a private or otherwise protected network
@@ -19,7 +19,7 @@ description: "Harden a public AirLLM deployment and protect its management, infe
 - Give each application its own workspace inference key
 - Give automation a service account and a management key with the minimum scope and permissions
 - Never use a management key for inference or expose a provider credential to an application
-- Store one-time tokens immediately; AirLLM does not return them again
+- Store one-time tokens immediately; TokKeeper does not return them again
 - Rotate provider credentials through the API so their version invalidates gateway caches
 - Revoke unused inference and management keys
 

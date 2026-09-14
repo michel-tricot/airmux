@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from contract.secrets.base import SecretRef
 
 _NOT_NAMEABLE = re.compile(r"[^A-Z0-9]+")
-DEFAULT_PREFIX = "AIRLLM_SECRET"
+DEFAULT_PREFIX = "TOKKEEPER_SECRET"
 CONVENTIONAL_SUFFIX = "API_KEY"
 
 

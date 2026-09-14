@@ -1,9 +1,9 @@
 ---
 title: "Stream responses"
-description: "Consume incremental text, reasoning, tool calls, usage, and terminal events from AirLLM."
+description: "Consume incremental text, reasoning, tool calls, usage, and terminal events from TokKeeper."
 ---
 
-Set `stream: true` on any inference surface. AirLLM translates the provider stream into the caller's dialect while
+Set `stream: true` on any inference surface. TokKeeper translates the provider stream into the caller's dialect while
 preserving incremental text, reasoning, and tool-call arguments.
 
 ## SDK streaming
@@ -14,12 +14,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["AIRLLM_INFERENCE_KEY"],
+    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
 )
 
 stream = client.chat.completions.create(
-    model=os.environ["AIRLLM_MODEL"],
+    model=os.environ["TOKKEEPER_MODEL"],
     messages=[{"role": "user", "content": "Count from one to five."}],
     stream=True,
 )
@@ -33,9 +33,9 @@ for chunk in stream:
 
 ```bash
 curl --no-buffer http://localhost:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'x-airllm-dialect: canonical' \
+  -H 'x-tokkeeper-dialect: canonical' \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Count from one to five"}],"stream":true}'
 ```
 
@@ -66,7 +66,7 @@ Canonical streaming emits:
 
 ## Cancellation and failures
 
-When a client disconnects, AirLLM closes the upstream connection and records the partial attempt with
+When a client disconnects, TokKeeper closes the upstream connection and records the partial attempt with
 `status=cancelled`. If the provider fails after streaming has started, the HTTP status is already committed, so the
 stream carries a dialect-shaped error event instead.
 

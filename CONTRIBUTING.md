@@ -1,6 +1,6 @@
-# Contributing to AirLLM
+# Contributing to TokKeeper
 
-AirLLM is pre-1.0, so focused contributions that strengthen the current design are easier to review than broad
+TokKeeper is pre-1.0, so focused contributions that strengthen the current design are easier to review than broad
 compatibility layers or unrelated cleanup.
 
 ## Start with context

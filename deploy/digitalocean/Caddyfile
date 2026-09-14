@@ -1,5 +1,5 @@
-{$AIRLLM_DOMAIN} {
-	reverse_proxy airllm:8080 {
+{$TOKKEEPER_DOMAIN} {
+	reverse_proxy tokkeeper:8080 {
 		flush_interval -1
 	}
 }

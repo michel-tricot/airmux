@@ -7,7 +7,7 @@ Run commands from the repository root. Development requires Python 3.13+, uv, Bu
 
 ## Contribution workflow
 
-Before changing code, read the [contributor guide](https://github.com/michel-tricot/airllm/blob/main/CONTRIBUTING.md),
+Before changing code, read the [contributor guide](https://github.com/michel-tricot/tokkeeper/blob/main/CONTRIBUTING.md),
 `AGENTS.md`, and the relevant record under `notes/design/`. Add a failing behavior test first, keep the implementation
 focused, and update every affected schema, generated client, example, and document in the same change.
 
@@ -23,12 +23,12 @@ bun install --frozen-lockfile
 uv run pre-commit install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
-uv run airllmcp bootstrap-keygen
-uv run airllmcp migrate
-uv run airllmcp taxonomy --file taxonomy/taxonomy.yml
+uv run tokkeeper-control-plane bootstrap-keygen
+uv run tokkeeper-control-plane migrate
+uv run tokkeeper-control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-Run `bootstrap-keygen` once. It creates `.airllm/dataplane.key`; keep it with the matching local database. This leaves
+Run `bootstrap-keygen` once. It creates `.tokkeeper/dataplane.key`; keep it with the matching local database. This leaves
 the instance unclaimed so the normal onboarding flow remains available.
 
 ## Start the services
@@ -37,14 +37,14 @@ Run each process in a separate terminal:
 
 | Process | Command | Address |
 | --- | --- | --- |
-| Control plane | `uv run airllmcp serve --dev` | `http://127.0.0.1:8000` |
-| Data plane | `uv run airllmdp serve --config airllm.yml --dev` | `http://127.0.0.1:8080` |
+| Control plane | `uv run tokkeeper-control-plane serve --dev` | `http://127.0.0.1:8000` |
+| Data plane | `uv run tokkeeper-data-plane serve --config tokkeeper.yml --dev` | `http://127.0.0.1:8080` |
 | Console | `bun run dev` | `http://127.0.0.1:5000` |
 
 Complete setup through Vite's public development origin:
 
 ```bash
-uv run --package cli airllm quickstart --url http://127.0.0.1:5000
+uv run --package cli tokkeeper quickstart --url http://127.0.0.1:5000
 ```
 
 Vite forwards `/api` and `/inf` to the Python services. Use the same hostname throughout a browser session.
@@ -53,7 +53,7 @@ Vite forwards `/api` and `/inf` to the Python services. Use the same hostname th
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-uv run airllmdp serve --config airllm.standalone.yml --dev
+uv run tokkeeper-data-plane serve --config tokkeeper.standalone.yml --dev
 ```
 
 `bundle.standalone.yml` reloads after edits. This mode uses environment provider keys, a public development inference
@@ -76,7 +76,7 @@ uv run pytest apps/control-plane/tests/unit
 ```
 
 Integration tests start one throwaway Postgres server and clone a migrated template database per test. Docker must be
-running. `AIRLLM_TEST_PG_URL` can point to a disposable long-lived Postgres server whose user may create databases.
+running. `TOKKEEPER_TEST_PG_URL` can point to a disposable long-lived Postgres server whose user may create databases.
 
 Request-path changes also require black-box scenarios and a real request against a running data plane:
 
@@ -128,7 +128,7 @@ Stop the three source processes, then run:
 
 ```bash
 docker compose -f docker-compose.dev.yml down -v
-rm -rf .airllm
+rm -rf .tokkeeper
 ```
 
 This permanently deletes the development database, runtime key, provider credentials, bundle cache, and usage outbox. Repeat initialization afterward.

@@ -25,7 +25,7 @@ from typing import Any
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 
 CTX = ssl.create_default_context()
-UA = {"User-Agent": "airllm-taxonomy/1.0", "Accept": "application/json"}
+UA = {"User-Agent": "tokkeeper-taxonomy/1.0", "Accept": "application/json"}
 
 
 def per_mtok(value: Any) -> float | None:
@@ -97,7 +97,7 @@ class ModelSource:
         """Map one vendor record to a catalog record, or None to drop it.
 
         Return None for anything the account cannot call without provisioning: that is the
-        whole point of the catalog, so a model in it is a model airllm can route to today.
+        whole point of the catalog, so a model in it is a model tokkeeper can route to today.
         """
         raise NotImplementedError
 

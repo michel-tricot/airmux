@@ -50,7 +50,7 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
       return HttpResponse.json({ data: { ...key, token: 'workspace-management-secret' } });
     }),
   );
-  window.localStorage.setItem('airllm_org_id', ORG.id);
+  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
   window.history.replaceState(null, '', `/org/workspaces/${workspace.slug}/settings`);
   render(<App />);
   const user = userEvent.setup();
@@ -74,7 +74,7 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
 
 it('hides management key settings without permission', async () => {
   server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['workspaces.read', 'workspaces.update'] } })));
-  window.localStorage.setItem('airllm_org_id', ORG.id);
+  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
   window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/settings`);
   render(<App />);
   expect(await screen.findByRole('tab', { name: 'General' })).toBeInTheDocument();

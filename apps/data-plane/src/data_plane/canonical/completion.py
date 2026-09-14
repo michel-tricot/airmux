@@ -2,7 +2,7 @@
 
 Requests arrive in this shape, responses and stream chunks leave in it; adapters translate
 outward to whatever the upstream provider speaks. The three faces (request, response, stream)
-are published as JSON Schema into taxonomy/schemas/completion via `airllmdp schema`, where they
+are published as JSON Schema into taxonomy/schemas/completion via `tokkeeper-data-plane schema`, where they
 sit beside the provider schemas they are translated into.
 
 The request is open at the top level: a caller who swapped a provider's base URL for the

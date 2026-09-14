@@ -91,7 +91,7 @@ Anthropic ingress before those checks, so every error on that route is Anthropic
 
 ### Canonical request
 
-The canonical request is `CanonicalRequest` and is published as `airllm.request.yaml`. Its modeled
+The canonical request is `CanonicalRequest` and is published as `tokkeeper.request.yaml`. Its modeled
 fields are:
 
 - `model`, `messages`, and `stream`
@@ -104,7 +104,7 @@ A minimal canonical call is:
 curl http://127.0.0.1:8080/inf/v1/chat/completions \
   -H 'Authorization: Bearer sk-inf-...' \
   -H 'Content-Type: application/json' \
-  -H 'x-airllm-dialect: canonical' \
+  -H 'x-tokkeeper-dialect: canonical' \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
 ```
 
@@ -126,7 +126,7 @@ inside a message, part, or tool has no faithful generic translation.
 
 ### Canonical response
 
-The canonical response is `CanonicalResponse` and is published as `airllm.response.yaml`. It carries:
+The canonical response is `CanonicalResponse` and is published as `tokkeeper.response.yaml`. It carries:
 
 - `id` and the caller-facing `model`
 - Typed assistant `content`
@@ -147,7 +147,7 @@ their dialect's native wire shape.
 ### Canonical streaming
 
 A canonical request with `stream: true` receives `text/event-stream`. Each data frame contains one
-`CanonicalChunk` from `airllm.stream.yaml`:
+`CanonicalChunk` from `tokkeeper.stream.yaml`:
 
 - Ordinary chunks carry one typed `text`, `reasoning`, or `tool_call` delta
 - Tool-call fragments use an index; the opening fragment carries the id and name, and argument text accumulates across fragments
@@ -163,7 +163,7 @@ Anthropic streams emit an Anthropic error event.
 The chat route supports both the canonical shape and unmodified OpenAI SDKs. `resolve()` selects the
 ingress adapter in this order:
 
-1. A recognized `x-airllm-dialect` override
+1. A recognized `x-tokkeeper-dialect` override
 2. Each non-canonical adapter's `claims()` result in registry-name order
 3. Canonical as the unclaimed default
 
@@ -285,7 +285,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`airllmdp serve` sets `AIRLLM_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`tokkeeper-data-plane serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -345,13 +345,13 @@ The checked-in deployment uses a YAML anchor to avoid repeating a shared link:
 
 ```yaml
 vars:
-  cache_dir: .airllm
+  cache_dir: .tokkeeper
 
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
-      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
@@ -392,13 +392,13 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `AIRLLM_CONFIG`, defaulting to `airllm.yml`.
+The config loader reads the `data_plane` section from `TOKKEEPER_CONFIG`, defaulting to `tokkeeper.yml`.
 Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
 `:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`airllmdp serve --dev` sets `AIRLLM_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`tokkeeper-data-plane serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state
@@ -703,7 +703,7 @@ A canonical change affects every caller and provider family:
 2. Map the field or part by hand in every relevant format
 3. Decide explicit reject, adjustment, or support behavior for families that cannot carry it
 4. Add the case to the shared canonical corpus
-5. Run `uv run airllmdp schema` and review the committed schema diff
+5. Run `uv run tokkeeper-data-plane schema` and review the committed schema diff
 6. Prove buffered and streamed behavior where applicable
 
 Never replace explicit mappings with reflection. A shared field name is not a protocol guarantee.

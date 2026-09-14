@@ -6,7 +6,7 @@ from contract import UnknownVarError, UnsupportedRefSchemeError, load_config_sec
 
 
 def _write_config(tmp_path, text):
-    path = tmp_path / "airllm.yml"
+    path = tmp_path / "tokkeeper.yml"
     path.write_text(text, encoding="utf-8")
     return path
 
@@ -85,7 +85,7 @@ def test_gw_config_selects_the_file(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     path = tmp_path / "other.yml"
     path.write_text("app:\n  a: 1\n", encoding="utf-8")
-    monkeypatch.setenv("AIRLLM_CONFIG", str(path))
+    monkeypatch.setenv("TOKKEEPER_CONFIG", str(path))
     assert load_config_section("app") == {"a": 1}
 
 

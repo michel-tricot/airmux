@@ -1,17 +1,17 @@
 services:
   - type: web
-    name: airllm
+    name: tokkeeper
     runtime: docker
     plan: 1c-2g
     region: oregon
     numInstances: 1
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerCommand: sh -ec 'export AIRLLM_CONSOLE_URL="${AIRLLM_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh all-in-one'
+    dockerCommand: sh -ec 'export TOKKEEPER_CONSOLE_URL="${TOKKEEPER_CONSOLE_URL:-$RENDER_EXTERNAL_URL}"; exec /app/deploy/docker/start.sh all-in-one'
     healthCheckPath: /healthz
     autoDeployTrigger: "off"
     disk:
-      name: airllm-state
+      name: tokkeeper-state
       mountPath: /state
       sizeGB: 1
     envVars:
@@ -19,13 +19,13 @@ services:
         value: "8080"
       - key: DATABASE_URL
         fromDatabase:
-          name: airllm-postgres
+          name: tokkeeper-postgres
           property: connectionString
 
 databases:
-  - name: airllm-postgres
-    databaseName: airllm
-    user: airllm
+  - name: tokkeeper-postgres
+    databaseName: tokkeeper
+    user: tokkeeper
     plan: 0.5c-1g
     region: oregon
     postgresMajorVersion: "16"

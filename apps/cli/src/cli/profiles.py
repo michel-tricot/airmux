@@ -49,9 +49,9 @@ class InvalidConfigError(ValueError):
 
 
 def config_path() -> Path:
-    if override := os.environ.get("AIRLLM_CLI_CONFIG"):
+    if override := os.environ.get("TOKKEEPER_CLI_CONFIG"):
         return Path(override)
-    return Path.home() / ".airllm" / "config.toml"
+    return Path.home() / ".tokkeeper" / "config.toml"
 
 
 def load_config() -> CliConfig:

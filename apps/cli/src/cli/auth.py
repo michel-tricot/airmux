@@ -50,7 +50,7 @@ MINE_COLS = [
 
 HTTP_GONE = 410
 
-CSRF = {"X-Requested-With": "airllm-cli"}
+CSRF = {"X-Requested-With": "tokkeeper-cli"}
 DEFAULT_GATEWAY_URL = "http://localhost:8080"
 
 
@@ -273,10 +273,10 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
             try:
                 response = gateway.post(
                     "/inf/v1/chat/completions",
-                    headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
+                    headers={"authorization": f"Bearer {token}", "x-tokkeeper-dialect": "canonical"},
                     json={
                         "model": model,
-                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
+                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: tokkeeper ready"}]}],
                         "stream": False,
                     },
                 )
@@ -296,7 +296,7 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
         f"curl {gateway_url.rstrip('/')}/inf/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {token}' \\\n"
         "  -H 'Content-Type: application/json' \\\n"
-        "  -H 'x-airllm-dialect: canonical' \\\n"
+        "  -H 'x-tokkeeper-dialect: canonical' \\\n"
         f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": [{{"type": "text", "text": "hi"}}]}}]}}\''
     )
 
@@ -317,7 +317,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     control_plane_url, console_url, gateway_url = resolve_deployment_urls(url, control_plane_url, console_url, gateway_url)
-    console.print("[bold]airllm quickstart[/bold]")
+    console.print("[bold]tokkeeper quickstart[/bold]")
     with httpx.Client(base_url=control_plane_url, timeout=10.0, headers=CSRF) as c:
         claimed = _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check", ClaimOut).claimed
         _login_or_signup(c, claimed, email, password)
@@ -344,7 +344,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         key = _inference_key(c, str(org_id), workspace, bearer)
         _step("Inference key created")
         console.print(f"\nYour inference key for [bold]{org_name}[/bold], shown once:")
-        console.print(Panel(key.token, title="AIRLLM_INFERENCE_KEY", border_style="cyan", expand=False))
+        console.print(Panel(key.token, title="TOKKEEPER_INFERENCE_KEY", border_style="cyan", expand=False))
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Global provider keys. Press enter to skip a provider.[/dim]")
         results = seed_provider_credentials(c, overrides)
@@ -359,12 +359,12 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
 
     if model is None:
         console.print("\n[red]Setup is incomplete: no model has a configured provider credential.[/red]")
-        console.print("Enable or add a provider key, then run [bold]airllm quickstart[/bold] again.")
+        console.print("Enable or add a provider key, then run [bold]tokkeeper quickstart[/bold] again.")
         raise typer.Exit(1)
     error = verify_gateway(gateway_url, key.token, model)
     if error:
         console.print(f"\n[red]Setup is incomplete: the gateway request failed: {error}[/red]")
-        console.print("Run [bold]airllm doctor[/bold] after resolving the reported gateway issue.")
+        console.print("Run [bold]tokkeeper doctor[/bold] after resolving the reported gateway issue.")
         raise typer.Exit(1)
 
     console.print(f"\n[green]Ready.[/green] Verified [bold]{model}[/bold] through the gateway.")
@@ -401,7 +401,7 @@ def login(
                 headers={"authorization": f"Bearer {existing_management_key}"} if existing_management_key else None,
             )
             if poll.status_code == HTTP_GONE:
-                console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
+                console.print("[red]Login expired before it was approved. Run [bold]tokkeeper login[/bold] again.[/red]")
                 raise typer.Exit(1)
             ensure_ok(poll)
             done = payload(poll, CliAuthPollOut)
@@ -432,15 +432,15 @@ def login(
                 profile_name = upsert_url_profile(target_name, profile)
                 console.print(f"Signed in to [bold]{target_name}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
                 return
-    console.print("[red]Login timed out. Run [bold]airllm login[/bold] again.[/red]")
+    console.print("[red]Login timed out. Run [bold]tokkeeper login[/bold] again.[/red]")
     raise typer.Exit(1)
 
 
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
     """Switch to another organization."""
-    if os.environ.get("AIRLLM_MANAGEMENT_KEY"):
-        console.print("[yellow]AIRLLM_MANAGEMENT_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
+    if os.environ.get("TOKKEEPER_MANAGEMENT_KEY"):
+        console.print("[yellow]TOKKEEPER_MANAGEMENT_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in config.profiles:
         set_active(name)

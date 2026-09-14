@@ -238,7 +238,7 @@ class Stack:
         self.stub_port = _free_port()
         self.cp_url = f"http://127.0.0.1:{self.cp_port}"
         self.dp_url = f"http://127.0.0.1:{self.dp_port}"
-        self.cache_dir = tmp / ".airllm"
+        self.cache_dir = tmp / ".tokkeeper"
         self.config_path = tmp / "config.yml"
         self.caller_api_key = ""
         self.org_id = ""
@@ -258,9 +258,9 @@ class Stack:
         self._write_taxonomy()
         self.env = {
             **os.environ,
-            "AIRLLM_CONFIG": str(self.config_path),
+            "TOKKEEPER_CONFIG": str(self.config_path),
             "OPENAI_API_KEY": "sk-stub",
-            "AIRLLM_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
+            "TOKKEEPER_DATAPLANE_TOKEN": f"sk-cp-{secrets.token_urlsafe(32)}",
         }
 
     def _bootstrap(self) -> None:
@@ -290,14 +290,14 @@ class Stack:
                     json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
-            self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
+            self._run([_bin("tokkeeper-control-plane"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
 
         secrets = {
-            "AIRLLM_INFERENCE_KEY": caller["token"],
-            "AIRLLM_MANAGEMENT_KEY": management_key["token"],
-            "AIRLLM_DATAPLANE_TOKEN": self.env["AIRLLM_DATAPLANE_TOKEN"],
+            "TOKKEEPER_INFERENCE_KEY": caller["token"],
+            "TOKKEEPER_MANAGEMENT_KEY": management_key["token"],
+            "TOKKEEPER_DATAPLANE_TOKEN": self.env["TOKKEEPER_DATAPLANE_TOKEN"],
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
         self.env = {**self.env, **secrets}
@@ -361,7 +361,7 @@ class Stack:
         secrets_store = (
             {"kind": "file", "root": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
         )
-        control_plane_link = {"url": self.cp_url, "token": "env:AIRLLM_DATAPLANE_TOKEN"}
+        control_plane_link = {"url": self.cp_url, "token": "env:TOKKEEPER_DATAPLANE_TOKEN"}
         outbox_config = (
             {"kind": "devnull"}
             if outbox_kind == "devnull"
@@ -375,7 +375,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
-                "bootstrap": {"token": "env:AIRLLM_DATAPLANE_TOKEN"},
+                "bootstrap": {"token": "env:TOKKEEPER_DATAPLANE_TOKEN"},
                 "secrets": secrets_store,
             },
             "data_plane": {
@@ -396,10 +396,10 @@ class Stack:
         """Collect the credentials the bootstrap created in .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
-        token = secrets.get("AIRLLM_INFERENCE_KEY")
+        token = secrets.get("TOKKEEPER_INFERENCE_KEY")
         assert token, "bootstrap did not create a caller api key"
-        assert secrets.get("AIRLLM_MANAGEMENT_KEY"), "bootstrap did not create a management key"
-        assert secrets.get("AIRLLM_DATAPLANE_TOKEN"), "bootstrap did not create a data plane token"
+        assert secrets.get("TOKKEEPER_MANAGEMENT_KEY"), "bootstrap did not create a management key"
+        assert secrets.get("TOKKEEPER_DATAPLANE_TOKEN"), "bootstrap did not create a data plane token"
         self.caller_api_key = token
 
     # processes ------------------------------------------------------------
@@ -407,14 +407,16 @@ class Stack:
     def start_cp(self) -> None:
         if not self.env:
             self._provision_keys()
-        self._run([_bin("airllmcp"), "migrate", "--config", str(self.config_path)], self.env)
-        self._spawn("cp", [_bin("airllmcp"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
+        self._run([_bin("tokkeeper-control-plane"), "migrate", "--config", str(self.config_path)], self.env)
+        self._spawn(
+            "cp", [_bin("tokkeeper-control-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)]
+        )
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
         if not self.provisioned:
             self._bootstrap()  # a restart keeps the deployment it already provisioned
 
     def start_dp(self, workers: int = 1) -> None:
-        cmd = [_bin("airllmdp"), "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
+        cmd = [_bin("tokkeeper-data-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
         self._spawn("dp", [*cmd, "--workers", str(workers)])
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 
@@ -460,7 +462,7 @@ class Stack:
         while True:
             response = httpx.get(
                 f"{self.cp_url}/api/v1/organizations/{self.org_id}/events",
-                headers={"authorization": f"Bearer {self.env['AIRLLM_MANAGEMENT_KEY']}"},
+                headers={"authorization": f"Bearer {self.env['TOKKEEPER_MANAGEMENT_KEY']}"},
                 params=page_query,
                 timeout=10.0,
             )

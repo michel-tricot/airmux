@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
-beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
+beforeEach(() => window.localStorage.setItem('tokkeeper_org_id', ORG.id));
 describe('playground', () => {
   it('labels playground sessions in recent activity without exposing their ids', async () => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
@@ -87,7 +87,7 @@ describe('playground', () => {
         });
       }),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
-        dialect = request.headers.get('x-airllm-dialect') ?? '';
+        dialect = request.headers.get('x-tokkeeper-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
@@ -135,8 +135,8 @@ describe('playground', () => {
     await user.click(screen.getByRole('button', { name: 'View cURL' }));
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
-    expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRLLM_INFERENCE_KEY');
-    expect(curlDialog).toHaveTextContent('x-airllm-dialect: canonical');
+    expect(curlDialog).toHaveTextContent('Authorization: Bearer $TOKKEEPER_INFERENCE_KEY');
+    expect(curlDialog).toHaveTextContent('x-tokkeeper-dialect: canonical');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"text": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');

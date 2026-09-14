@@ -30,7 +30,7 @@ OUT = ROOT / "icons"
 VERSION = "1.94.0"
 BASE = f"https://unpkg.com/@lobehub/icons-static-svg@{VERSION}/icons"
 CTX = ssl.create_default_context()
-UA = {"User-Agent": "airllm-taxonomy/1.0"}
+UA = {"User-Agent": "tokkeeper-taxonomy/1.0"}
 
 
 def normalize(svg: str, slug: str) -> str:
@@ -42,7 +42,7 @@ def normalize(svg: str, slug: str) -> str:
     # namespace every locally defined id so marks can share a document
     local_ids = set(re.findall(r'\bid="([^"]+)"', svg))
     for raw in sorted(local_ids, key=len, reverse=True):
-        safe = f"airllm-{slug}-{raw}"
+        safe = f"tokkeeper-{slug}-{raw}"
         svg = svg.replace(f'id="{raw}"', f'id="{safe}"')
         svg = svg.replace(f"url(#{raw})", f"url(#{safe})")
         svg = svg.replace(f'href="#{raw}"', f'href="#{safe}"')

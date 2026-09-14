@@ -97,7 +97,7 @@ def test_invalid_stream_mode_returns_a_json_error(dialect, api_key, dp_app):
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airllm-dialect": dialect},
+            headers={"Authorization": f"Bearer {api_key}", "x-tokkeeper-dialect": dialect},
             json={**request_body(dialect), "stream": "false"},
         )
     assert response.status_code == 400

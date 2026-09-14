@@ -42,7 +42,7 @@ def deployment():
     url = os.environ["DEPLOYMENT_URL"]
     compose = ("compose", "-p", project, "-f", compose_file)
     compact = compose_file == "docker-compose.yml"
-    gateways = ("airllm",) if compact else ("data-plane-1", "data-plane-2")
+    gateways = ("tokkeeper",) if compact else ("data-plane-1", "data-plane-2")
     gateway = gateways[0]
     container = docker(*compose, "ps", "-q", gateway)
     image = docker("inspect", "--format", "{{.Config.Image}}", container)
@@ -79,20 +79,24 @@ def service_action(compose, action, service):
 def assert_unprivileged(compose, service, expected):
     container = docker(*compose, "ps", "-q", service)
     processes = docker("top", container, "-eo", "pid,user,args")
-    servers = [process for process in processes.splitlines()[1:] if any(name in process for name in ("airllmcp", "airllmdp", "nginx:"))]
+    servers = [
+        process
+        for process in processes.splitlines()[1:]
+        if any(name in process for name in ("tokkeeper-control-plane", "tokkeeper-data-plane", "nginx:"))
+    ]
     assert servers
-    assert all(server.split()[1] in {"airllm", "10001"} for server in servers), processes
+    assert all(server.split()[1] in {"tokkeeper", "10001"} for server in servers), processes
     assert all(sum(command in server for server in servers) == 1 for command in expected), processes
 
 
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     if compact:
-        assert_unprivileged(compose, gateways[0], ("airllmcp serve", "airllmdp serve", "nginx: master"))
+        assert_unprivileged(compose, gateways[0], ("tokkeeper-control-plane serve", "tokkeeper-data-plane serve", "nginx: master"))
         return
-    assert_unprivileged(compose, "control-plane", ("airllmcp serve",))
+    assert_unprivileged(compose, "control-plane", ("tokkeeper-control-plane serve",))
     for gateway in gateways:
-        assert_unprivileged(compose, gateway, ("airllmdp serve",))
+        assert_unprivileged(compose, gateway, ("tokkeeper-data-plane serve",))
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
@@ -107,7 +111,7 @@ def assert_quickstart(public_url, config_path):
             "cli",
             "--no-dev",
             "--frozen",
-            "airllm",
+            "tokkeeper",
             "quickstart",
             "--url",
             public_url,
@@ -117,7 +121,7 @@ def assert_quickstart(public_url, config_path):
             "deployment-password",
         ],
         cwd=ROOT,
-        env={**os.environ, "AIRLLM_CLI_CONFIG": str(config_path), "DEPLOYMENT_API_KEY": "deployment-test-key"},
+        env={**os.environ, "TOKKEEPER_CLI_CONFIG": str(config_path), "DEPLOYMENT_API_KEY": "deployment-test-key"},
         capture_output=True,
         text=True,
         check=True,
@@ -162,7 +166,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         )
     )
     payload(client.post(f"{base}/provider-credentials", json={"provider": provider, "value": "deployment-test-key"}))
-    headers = {"Authorization": f"Bearer {key['token']}", "x-airllm-dialect": "openai_native"}
+    headers = {"Authorization": f"Bearer {key['token']}", "x-tokkeeper-dialect": "openai_native"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
     eventually(lambda: client.post(path, headers=headers, json=request).status_code == 200)

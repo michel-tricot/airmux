@@ -21,7 +21,7 @@ kill_timeout = "40s"
     timeout = "5s"
 
 [mounts]
-  source = "airllm_state"
+  source = "tokkeeper_state"
   destination = "/state"
   initial_size = "1gb"
   snapshot_retention = 7

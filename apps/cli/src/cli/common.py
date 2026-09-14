@@ -7,7 +7,7 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
-app = typer.Typer(name="airllm", no_args_is_help=True)
+app = typer.Typer(name="tokkeeper", no_args_is_help=True)
 console = Console()
 
 
@@ -32,7 +32,7 @@ def _show_version(value: bool) -> bool:
             release = version("cli")
         except PackageNotFoundError:
             release = "unknown"
-        typer.echo(f"airllm {release}")
+        typer.echo(f"tokkeeper {release}")
         raise typer.Exit
     return value
 

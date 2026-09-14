@@ -20,12 +20,12 @@ from dotenv import find_dotenv, load_dotenv
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("AIRLLM_INFERENCE_KEY")
+    api_key = os.environ.get("TOKKEEPER_INFERENCE_KEY")
     if not api_key:
-        print("AIRLLM_INFERENCE_KEY is not set, run `uv run airllm quickstart` first")
+        print("TOKKEEPER_INFERENCE_KEY is not set, run `uv run tokkeeper quickstart` first")
         return 1
-    gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "anthropic/claude-sonnet-4-6")
+    gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("TOKKEEPER_MODEL", "anthropic/claude-sonnet-4-6")
     prompt = " ".join(sys.argv[1:]) or "In one sentence, what makes Claude different from other assistants?"
 
     resp = httpx.post(

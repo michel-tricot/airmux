@@ -1,14 +1,14 @@
 ---
 title: "Use the Anthropic SDK"
-description: "Send Messages API requests through AirLLM, including cross-provider routing and streaming."
+description: "Send Messages API requests through TokKeeper, including cross-provider routing and streaming."
 ---
 
 The Messages API is available at `/inf/v1/messages`. The client base URL ends at `/inf`; the SDK appends `/v1/messages`.
 
 ```bash
-export AIRLLM_URL='http://localhost:8080'
-export AIRLLM_INFERENCE_KEY='sk-inf-your-key'
-export AIRLLM_MODEL='anthropic/claude-sonnet-4-6'
+export TOKKEEPER_URL='http://localhost:8080'
+export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
+export TOKKEEPER_MODEL='anthropic/claude-sonnet-4-6'
 ```
 
 ```python
@@ -17,13 +17,13 @@ import os
 from anthropic import Anthropic
 
 client = Anthropic(
-    base_url=f"{os.environ['AIRLLM_URL'].rstrip('/')}/inf",
+    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf",
     api_key="unused",
-    auth_token=os.environ["AIRLLM_INFERENCE_KEY"],
+    auth_token=os.environ["TOKKEEPER_INFERENCE_KEY"],
 )
 
 message = client.messages.create(
-    model=os.environ["AIRLLM_MODEL"],
+    model=os.environ["TOKKEEPER_MODEL"],
     max_tokens=256,
     messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
 )
@@ -31,13 +31,13 @@ message = client.messages.create(
 print(message.content[0].text)
 ```
 
-`auth_token` places the AirLLM inference key in the `Authorization: Bearer` header. The SDK requires `api_key`, but
-AirLLM does not read the provider-specific key header.
+`auth_token` places the TokKeeper inference key in the `Authorization: Bearer` header. The SDK requires `api_key`, but
+TokKeeper does not read the provider-specific key header.
 
 ## Route to another provider family
 
 The request dialect and provider route are independent. Keep the Messages request shape and set `model` to any
-compatible catalog model, such as `openai/gpt-4o-mini`. AirLLM translates the request and renders the response back in
+compatible catalog model, such as `openai/gpt-4o-mini`. TokKeeper translates the request and renders the response back in
 Messages format.
 
 Capability checks happen before the provider call. A request with tools, reasoning, structured output, images, or PDFs
@@ -47,7 +47,7 @@ is rejected when the selected model does not advertise the required capability o
 
 ```python
 with client.messages.stream(
-    model=os.environ["AIRLLM_MODEL"],
+    model=os.environ["TOKKEEPER_MODEL"],
     max_tokens=256,
     messages=[{"role": "user", "content": "Count from one to five."}],
 ) as stream:

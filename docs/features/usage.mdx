@@ -3,7 +3,7 @@ title: "Usage and activity"
 description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
 ---
 
-AirLLM records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways queue events
+TokKeeper records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways queue events
 locally and export them to the control plane in batches.
 
 ## Usage event fields
@@ -21,13 +21,13 @@ locally and export them to the control plane in batches.
 | `credential_id`, `credential_scope` | Credential metadata without the secret value |
 | `bundle_id` | Configuration version that governed the request |
 
-Costs use the prices stored in the catalog at request time. When complete provider usage is unavailable, AirLLM marks the event's usage as estimated.
+Costs use the prices stored in the catalog at request time. When complete provider usage is unavailable, TokKeeper marks the event's usage as estimated.
 
 ## Inspect usage
 
 ```bash
-airllm events list
-airllm events tail --interval 2 --keep 30
+tokkeeper events list
+tokkeeper events tail --interval 2 --keep 30
 ```
 
 The console shows workspace usage and instance or organization activity where the current principal has permission. The
@@ -36,7 +36,7 @@ management API supports cursor pagination with an `(occurred_at, event_id)` pair
 ## Gateway health
 
 ```bash
-airllm data-planes list
+tokkeeper data-planes list
 curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```

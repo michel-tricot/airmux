@@ -1,11 +1,11 @@
-# AirLLM
+# TokKeeper
 
-AirLLM is a self-hosted LLM gateway. Applications use one endpoint across providers while AirLLM handles request
+TokKeeper is a self-hosted LLM gateway. Applications use one endpoint across providers while TokKeeper handles request
 translation, workspace policies, scoped provider credentials, inference keys, failover, and usage accounting.
 
 ## Architecture
 
-AirLLM separates mutable management work from the inference request path:
+TokKeeper separates mutable management work from the inference request path:
 
 | Plane | Responsibility |
 | --- | --- |
@@ -23,8 +23,8 @@ See [Architecture](docs/concepts/architecture.mdx) for the full data flow and fa
 You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
 
 ```sh
-git clone https://github.com/michel-tricot/airllm.git
-cd airllm
+git clone https://github.com/michel-tricot/tokkeeper.git
+cd tokkeeper
 cp .env.example .env
 ```
 
@@ -32,7 +32,7 @@ Add a provider key to `.env`, then run:
 
 ```sh
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
+uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
 `quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
@@ -45,8 +45,8 @@ the console.
 | --- | --- |
 | Start or update the local stack | `docker compose up -d --build --wait` |
 | Check gateway readiness | `curl --fail http://localhost:8080/readyz` |
-| Inspect the installation | `uv run --package cli --no-dev --frozen airllm doctor` |
-| Follow service logs | `docker compose logs -f airllm` |
+| Inspect the installation | `uv run --package cli --no-dev --frozen tokkeeper doctor` |
+| Follow service logs | `docker compose logs -f tokkeeper` |
 | Stop while preserving state | `docker compose down` |
 | Validate documentation | `uv run pytest tests/documentation` |
 
@@ -71,4 +71,4 @@ validation expectations. Significant design changes should update the relevant r
 
 ## License and stability
 
-AirLLM is pre-1.0. APIs, configuration, and migrations may change before the first stable release. Licensed under the [Elastic License 2.0](LICENSE).
+TokKeeper is pre-1.0. APIs, configuration, and migrations may change before the first stable release. Licensed under the [Elastic License 2.0](LICENSE).

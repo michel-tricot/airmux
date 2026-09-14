@@ -1,9 +1,9 @@
 ---
 title: "Canonical API"
-description: "Reference AirLLM's provider-neutral request, response, content parts, and streaming chunk schema."
+description: "Reference TokKeeper's provider-neutral request, response, content parts, and streaming chunk schema."
 ---
 
-Send canonical JSON to `POST /inf/v1/chat/completions` with `x-airllm-dialect: canonical`. Canonical is also the default
+Send canonical JSON to `POST /inf/v1/chat/completions` with `x-tokkeeper-dialect: canonical`. Canonical is also the default
 for raw requests that no other ingress adapter claims.
 
 ## Request
@@ -104,4 +104,4 @@ An image needs exactly one of `url` or `data`; inline data also requires `media_
 Incremental chunks carry one `delta` of type `text`, `reasoning`, or `tool_call`. The closing chunk carries
 `finish_reason`, `usage`, and `gateway` with no `delta`, followed by `[DONE]`.
 
-The generated JSON Schemas are committed at `taxonomy/schemas/completion/airllm.request.yaml`, `airllm.response.yaml`, and `airllm.stream.yaml`.
+The generated JSON Schemas are committed at `taxonomy/schemas/completion/tokkeeper.request.yaml`, `tokkeeper.response.yaml`, and `tokkeeper.stream.yaml`.

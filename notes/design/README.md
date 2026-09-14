@@ -1,6 +1,6 @@
 # Design records
 
-The files in this directory capture the reasoning behind AirLLM's main architectural boundaries. They explain why a
+The files in this directory capture the reasoning behind TokKeeper's main architectural boundaries. They explain why a
 design exists, which constraints it protects, and what consequences a change must preserve.
 
 These are named, living design records rather than numbered chronological ADRs. Match that convention when updating the

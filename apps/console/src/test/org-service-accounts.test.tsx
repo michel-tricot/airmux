@@ -13,7 +13,7 @@ function renderAt(path: string) {
 
 describe('organization service accounts', () => {
   it('creates an admin service account with a show-once management key', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     const now = '2026-08-18T12:00:00Z';
     let members: Api.OrgMemberOut[] = [];
     let submitted: unknown;
@@ -39,7 +39,7 @@ describe('organization service accounts', () => {
         submitted = await request.json();
         const serviceAccount = {
           id: 'service-account-1',
-          email: 'deploy-bot-12345678@service-account.airllm.invalid',
+          email: 'deploy-bot-12345678@service-account.tokkeeper.invalid',
           name: 'Deploy Bot',
           instance_role: null,
           service_account: true,

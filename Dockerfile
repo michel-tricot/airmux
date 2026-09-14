@@ -26,13 +26,13 @@ RUN bun install --frozen-lockfile
 RUN bun run --filter '@workspace/gateway-console' build
 
 FROM python:3.13-slim-bookworm AS runtime
-RUN groupadd --system --gid 10001 airllm && useradd --system --uid 10001 --gid airllm --home-dir /state --shell /usr/sbin/nologin airllm \
+RUN groupadd --system --gid 10001 tokkeeper && useradd --system --uid 10001 --gid tokkeeper --home-dir /state --shell /usr/sbin/nologin tokkeeper \
     && mkdir -p /state/runtime /state/secrets /state/data-plane \
-    && chown -R airllm:airllm /state
+    && chown -R tokkeeper:tokkeeper /state
 COPY --from=python-build /app /app
 COPY deploy/docker /app/deploy/docker
 COPY taxonomy/taxonomy.yml /app/taxonomy/taxonomy.yml
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRLLM_CONFIG=/app/deploy/docker/airllm.yml
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 TOKKEEPER_CONFIG=/app/deploy/docker/tokkeeper.yml
 WORKDIR /state
 USER 10001:10001
 
@@ -48,7 +48,7 @@ FROM nginx:stable-bookworm AS console
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
 COPY deploy/docker/nginx.conf.template /app/deploy/docker/nginx.conf.template
 COPY deploy/docker/start.sh /app/deploy/docker/start.sh
-ENV CONTROL_PLANE_UPSTREAM=control-plane:8000 DATA_PLANE_UPSTREAM=data-plane:8081 AIRLLM_CONSOLE_URL=http://localhost:8080
+ENV CONTROL_PLANE_UPSTREAM=control-plane:8000 DATA_PLANE_UPSTREAM=data-plane:8081 TOKKEEPER_CONSOLE_URL=http://localhost:8080
 USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["/app/deploy/docker/start.sh"]
@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends nginx gettext-b
     && rm -rf /var/lib/apt/lists/*
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
 ENV CONTROL_PLANE_UPSTREAM=127.0.0.1:8000 DATA_PLANE_UPSTREAM=127.0.0.1:8081 \
-    AIRLLM_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
+    TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 EXPOSE 8080
 ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
 CMD ["/app/deploy/docker/start.sh", "all-in-one"]

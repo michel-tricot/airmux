@@ -4,8 +4,8 @@
 
 Proves the gateway speaks Anthropic's Messages API well enough for the
 real SDK, including its streaming helper. The model can be any provider
-in the catalog: set AIRLLM_MODEL=openai/gpt-4o-mini to route an Anthropic-SDK
-call to OpenAI. Needs AIRLLM_INFERENCE_KEY in .env and a running data plane.
+in the catalog: set TOKKEEPER_MODEL=openai/gpt-4o-mini to route an Anthropic-SDK
+call to OpenAI. Needs TOKKEEPER_INFERENCE_KEY in .env and a running data plane.
 """
 
 from __future__ import annotations
@@ -18,12 +18,12 @@ from dotenv import find_dotenv, load_dotenv
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("AIRLLM_INFERENCE_KEY")
+    api_key = os.environ.get("TOKKEEPER_INFERENCE_KEY")
     if not api_key:
-        print("AIRLLM_INFERENCE_KEY is not set, run `uv run airllm quickstart` first")
+        print("TOKKEEPER_INFERENCE_KEY is not set, run `uv run tokkeeper quickstart` first")
         return 1
-    gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "anthropic/claude-sonnet-4-6")
+    gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("TOKKEEPER_MODEL", "anthropic/claude-sonnet-4-6")
 
     # api_key is required by the SDK but unused; the gateway reads auth_token as the bearer.
     client = Anthropic(base_url=f"{gateway.rstrip('/')}/inf", api_key="unused", auth_token=api_key)

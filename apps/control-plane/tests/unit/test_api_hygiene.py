@@ -121,7 +121,7 @@ def test_permission_requirements_are_machine_readable():
         ]
         for route in api_routes(app)
     }
-    assert {name: operation.get("x-airllm-authority", []) for name, operation in operations.items()} == expected
+    assert {name: operation.get("x-tokkeeper-authority", []) for name, operation in operations.items()} == expected
 
 
 def test_every_endpoint_declares_one_throttle_group():

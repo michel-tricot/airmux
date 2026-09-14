@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "AirLLM",
+  "name": "TokKeeper",
   "description": "A self-hosted LLM gateway with provider routing, scoped credentials, policies, and usage accounting.",
   "colors": {
     "primary": "#2563EB",

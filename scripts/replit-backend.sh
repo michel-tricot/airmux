@@ -67,16 +67,16 @@ reset_database() {
 require_database_url
 normalize_database_url
 
-if [[ ! -f .airllm/dataplane.key ]]; then
-  uv run airllmcp bootstrap-keygen
+if [[ ! -f .tokkeeper/dataplane.key ]]; then
+  uv run tokkeeper-control-plane bootstrap-keygen
 fi
 
-if ! uv run airllmcp migrate; then
+if ! uv run tokkeeper-control-plane migrate; then
   reset_database
-  uv run airllmcp migrate
+  uv run tokkeeper-control-plane migrate
 fi
 
-uv run airllmcp taxonomy --file taxonomy/taxonomy.yml
+uv run tokkeeper-control-plane taxonomy --file taxonomy/taxonomy.yml
 
 # Fixtures are intentionally fresh-database-only. Keep the workflow restartable
 # after the first successful seed without hiding real fixture errors.
@@ -87,10 +87,10 @@ if [[ "$(psql "$libpq_url" -tAc \
   "SELECT EXISTS (SELECT 1 FROM public.\"user\" LIMIT 1);" | tr -d '[:space:]')" == "t" ]]; then
   printf '%s\n' 'fixtures already loaded; skipping fresh-database seed.'
 else
-  uv run airllmcp fixtures
+  uv run tokkeeper-control-plane fixtures
 fi
 
 # Loopback-only on purpose: the console's Vite proxy reaches the backend at
 # 127.0.0.1:8101, and keeping the port invisible to Replit's port detector
 # guarantees the preview can never route to the API instead of the console.
-exec uv run airllmcp serve --dev --host 127.0.0.1 --port 8101
+exec uv run tokkeeper-control-plane serve --dev --host 127.0.0.1 --port 8101

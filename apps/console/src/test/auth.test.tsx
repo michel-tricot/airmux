@@ -115,7 +115,7 @@ describe('sign-in gate', () => {
   });
 
   it('signs in without requiring the signup-only name field', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     server.use(
       http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: true, public_signup: true } })),
@@ -200,7 +200,7 @@ describe('sign-in gate', () => {
 
   it('clears the selected organization when signing out', async () => {
     let signedIn = true;
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     server.use(
       http.get('/api/v1/auth/me', () =>
         signedIn
@@ -221,13 +221,13 @@ describe('sign-in gate', () => {
     await user.click(await screen.findByRole('button', { name: 'Sign out' }));
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('airllm_org_id')).toBeNull();
+    expect(window.localStorage.getItem('tokkeeper_org_id')).toBeNull();
   });
 });
 
 describe('sign-in landing', () => {
   it('lands in the last-selected org', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     renderAt('/');
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
@@ -241,7 +241,7 @@ describe('sign-in landing', () => {
 
 describe('instance admin gate', () => {
   it('redirects non-admin users from /instance to the org console', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     renderAt('/instance');
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
     expect(window.location.pathname).not.toBe('/instance');
@@ -250,7 +250,7 @@ describe('instance admin gate', () => {
 
 describe('organization picker', () => {
   it('shows an enrollment error instead of an empty organization picker', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     server.use(http.get('/api/v1/enroll', () => new HttpResponse(null, { status: 503 })));
     renderAt('/org');
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load your organizations');
@@ -259,10 +259,10 @@ describe('organization picker', () => {
 
   it('falls back to the picker when the stored org is no longer a membership', async () => {
     withTwoOrgs();
-    window.localStorage.setItem('airllm_org_id', 'org-gone');
+    window.localStorage.setItem('tokkeeper_org_id', 'org-gone');
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
-    await waitFor(() => expect(window.localStorage.getItem('airllm_org_id')).toBeNull());
+    await waitFor(() => expect(window.localStorage.getItem('tokkeeper_org_id')).toBeNull());
     expect(screen.getByText(ORG.name)).toBeInTheDocument();
     expect(screen.getByText(ORG2.name)).toBeInTheDocument();
   });
@@ -273,20 +273,20 @@ describe('organization picker', () => {
     renderAt('/org');
     await user.click(await screen.findByRole('button', { name: new RegExp(ORG.name) }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('airllm_org_id')).toBe(ORG.id);
+    expect(window.localStorage.getItem('tokkeeper_org_id')).toBe(ORG.id);
   });
 
   it('auto-selects the org when the user belongs to exactly one', async () => {
     renderAt('/org');
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('airllm_org_id')).toBe(ORG.id);
+    expect(window.localStorage.getItem('tokkeeper_org_id')).toBe(ORG.id);
   });
 });
 
 describe('switching organizations', () => {
   it("returns to the picker and drops the previous org's data", async () => {
     withTwoOrgs();
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     const user = userEvent.setup();
     renderAt('/org');
 
@@ -294,7 +294,7 @@ describe('switching organizations', () => {
 
     await user.click(screen.getByRole('button', { name: 'Switch organization' }));
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
-    expect(window.localStorage.getItem('airllm_org_id')).toBeNull();
+    expect(window.localStorage.getItem('tokkeeper_org_id')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: new RegExp(ORG2.name) }));
 

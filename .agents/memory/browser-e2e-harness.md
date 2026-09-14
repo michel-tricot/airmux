@@ -1,10 +1,12 @@
 ---
-name: Browser e2e verification approach
-description: How to do real-browser verification of the console when no e2e framework is installed
+name: Console browser verification
+description: Current verification workflow and historical Replit browser setup
 ---
 
-No Playwright/Cypress is installed and Playwright's browser download does not work on NixOS. For real-browser passes, drive a Chromium already present in the Nix store with puppeteer-core (headless, no sandbox) against the console dev server, signing in with the fixture admin account.
+Use the [console UI audit skill](../skills/console-ui-audit/SKILL.md) for scenario coverage and evidence against a real control plane. Choose the browser automation backend available in the current environment. The repository does not install a Playwright, Cypress, or Puppeteer end-to-end harness.
 
-**Why:** unit tests (vitest + MSW) cannot catch rendering/interaction regressions; this is the lightest reliable way to get a true end-to-end pass here.
+The default local ports are control plane `8000` and console `5000`; an isolated verification deployment can use separate ports with `CONTROL_PLANE_URL` and `PORT` configured accordingly. Seed disposable test accounts through the CLI or API. Do not save passwords or minted secrets in memory.
 
-**How to apply:** match visible text case-insensitively (labels are CSS-uppercased), and drive Radix triggers (tabs, selects) with a full pointer-event sequence rather than a bare programmatic click.
+Vitest and mocked API tests do not replace real-browser verification. Report browser-tooling blockers separately from product failures and do not claim a manual pass without observing the scenarios.
+
+Historical Replit verification used `puppeteer-core` with Chromium from the Nix store after a browser download failed. That was an environment-specific workaround, not a prerequisite for macOS or other development environments. Prefer semantic locators and supported click actions; only investigate CSS casing or Radix pointer events when a concrete interaction fails.

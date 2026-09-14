@@ -1,38 +1,38 @@
 ---
 title: "CLI reference"
-description: "Reference AirLLM CLI contexts, environment precedence, output formats, and resource commands."
+description: "Reference TokKeeper CLI contexts, environment precedence, output formats, and resource commands."
 ---
 
 Run the CLI from a checkout:
 
 ```bash
-uv run --package cli --no-dev --frozen airllm --help
+uv run --package cli --no-dev --frozen tokkeeper --help
 ```
 
-Or use `airllm` directly in an environment where the workspace CLI package is installed.
+Or use `tokkeeper` directly in an environment where the workspace CLI package is installed.
 
 ## Authentication and context
 
-`airllm login` uses a browser device flow and saves a private profile to `~/.airllm/config.toml`. Override the file with `AIRLLM_CLI_CONFIG`.
+`tokkeeper login` uses a browser device flow and saves a private profile to `~/.tokkeeper/config.toml`. Override the file with `TOKKEEPER_CLI_CONFIG`.
 
 ```bash
-airllm login --url https://llm.example.com
-airllm profiles list
-airllm profiles use my-org
-airllm workspaces use production
-airllm status
-airllm doctor
+tokkeeper login --url https://llm.example.com
+tokkeeper profiles list
+tokkeeper profiles use my-org
+tokkeeper workspaces use production
+tokkeeper status
+tokkeeper doctor
 ```
 
 Resolution order is explicit option, `--dev` where supported, environment, active profile, then local default.
 
 | Environment variable | Purpose |
 | --- | --- |
-| `AIRLLM_CONTROL_PLANE_URL` | Override the management origin |
-| `AIRLLM_GATEWAY_URL` | Override the inference origin used by diagnostics |
-| `AIRLLM_MANAGEMENT_KEY` | Override the saved profile token |
-| `AIRLLM_ORG_ID` | Override the selected organization |
-| `AIRLLM_CLI_CONFIG` | Override the profile file path |
+| `TOKKEEPER_CONTROL_PLANE_URL` | Override the management origin |
+| `TOKKEEPER_GATEWAY_URL` | Override the inference origin used by diagnostics |
+| `TOKKEEPER_MANAGEMENT_KEY` | Override the saved profile token |
+| `TOKKEEPER_ORG_ID` | Override the selected organization |
+| `TOKKEEPER_CLI_CONFIG` | Override the profile file path |
 
 ## Output formats
 
@@ -40,12 +40,12 @@ Commands returning resource data accept `-f/--format table|json|text`. Table is 
 intended for automation, and text is tab-separated.
 
 ```bash
-airllm models list -f json
-airllm events list -f text
-airllm commands -f table
+tokkeeper models list -f json
+tokkeeper events list -f text
+tokkeeper commands -f table
 ```
 
-`airllm commands` is the source-backed inventory for the installed CLI version.
+`tokkeeper commands` is the source-backed inventory for the installed CLI version.
 
 ## Setup commands
 
@@ -84,17 +84,17 @@ airllm commands -f table
 | `events` | `list`, `tail` |
 | `taxonomy` | `apply` |
 
-Run `airllm <group> <command> --help` for the exact options installed on your machine.
+Run `tokkeeper <group> <command> --help` for the exact options installed on your machine.
 
 ## Automation pattern
 
 ```bash
-export AIRLLM_CONTROL_PLANE_URL='https://llm.example.com'
-export AIRLLM_MANAGEMENT_KEY='sk-cp-your-key'
-export AIRLLM_ORG_ID='your-org-id'
+export TOKKEEPER_CONTROL_PLANE_URL='https://llm.example.com'
+export TOKKEEPER_MANAGEMENT_KEY='sk-cp-your-key'
+export TOKKEEPER_ORG_ID='your-org-id'
 
-airllm workspaces list -f json
-airllm inference-keys create deployment --workspace production
+tokkeeper workspaces list -f json
+tokkeeper inference-keys create deployment --workspace production
 ```
 
 Use a service account and a management key limited to the required scope and permissions. One-time secret output should

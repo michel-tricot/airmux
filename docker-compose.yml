@@ -2,29 +2,29 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: airllm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airllm}
-      POSTGRES_DB: airllm
+      POSTGRES_USER: tokkeeper
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tokkeeper}
+      POSTGRES_DB: tokkeeper
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "airllm"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "tokkeeper"]
       interval: 5s
       timeout: 3s
       retries: 20
     restart: unless-stopped
 
-  airllm:
-    image: ${AIRLLM_IMAGE:-airllm:local}
+  tokkeeper:
+    image: ${TOKKEEPER_IMAGE:-tokkeeper:local}
     build:
       context: .
       target: all-in-one
     environment:
-      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
-      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      AIRLLM_PUBLIC_SIGNUP: ${AIRLLM_PUBLIC_SIGNUP:-false}
+      DATABASE_URL: postgresql+asyncpg://tokkeeper:${POSTGRES_PASSWORD:-tokkeeper}@postgres:5432/tokkeeper
+      TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
+      TOKKEEPER_PUBLIC_SIGNUP: ${TOKKEEPER_PUBLIC_SIGNUP:-false}
     ports:
-      - "${AIRLLM_PORT:-8080}:8080"
+      - "${TOKKEEPER_PORT:-8080}:8080"
     volumes:
       - state:/state
     depends_on:

@@ -30,13 +30,13 @@ from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-app = typer.Typer(name="airllmcp", no_args_is_help=True)
+app = typer.Typer(name="tokkeeper-control-plane", no_args_is_help=True)
 
 console = Console()
 
 
 def _table(title: str, headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> Table:
-    """The airllm CLI renders resource listings through cli.output; this is the same look for the one
+    """The tokkeeper CLI renders resource listings through cli.output; this is the same look for the one
     control-plane command with rows to show, which cannot import across apps."""
     table = Table(title=title, box=box.ROUNDED, header_style="bold", title_justify="left")
     for header in headers:
@@ -48,12 +48,12 @@ def _table(title: str, headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]
 
 def _database_url(config: str) -> str:
     """Load the database alone for commands that do not need full application settings."""
-    os.environ["AIRLLM_CONFIG"] = config
+    os.environ["TOKKEEPER_CONFIG"] = config
     return database_url()
 
 
 @app.command()
-def bootstrap_keygen(out: str = typer.Option(".airllm/dataplane.key", "--out", help="Data-plane bootstrap key file")) -> None:
+def bootstrap_keygen(out: str = typer.Option(".tokkeeper/dataplane.key", "--out", help="Data-plane bootstrap key file")) -> None:
     """Generate the shared pool key used to bootstrap control and data planes."""
     key_path = Path(out)
     if key_path.exists():
@@ -66,8 +66,8 @@ def bootstrap_keygen(out: str = typer.Option(".airllm/dataplane.key", "--out", h
 
 
 @app.command()
-def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: str = "airllm.yml") -> None:
-    os.environ["AIRLLM_CONFIG"] = config
+def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: str = "tokkeeper.yml") -> None:
+    os.environ["TOKKEEPER_CONFIG"] = config
     if dev:
         run_migrations()
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
@@ -76,7 +76,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: 
 @app.command()
 def owner(
     email: str = typer.Option(..., "--email", help="Existing account to promote"),
-    config: str = "airllm.yml",
+    config: str = "tokkeeper.yml",
 ) -> None:
     """Grant instance authority to a human account that has already signed up."""
     submitted_email = email
@@ -111,7 +111,7 @@ def owner(
 
 
 @app.command()
-def fixtures(config: str = "airllm.yml") -> None:
+def fixtures(config: str = "tokkeeper.yml") -> None:
     """Seed a fresh instance with development data: orgs, workspaces, keys, and recorded usage for frontend work.
 
     Seeds an empty database only, and refuses one that already holds accounts. There is no merge
@@ -137,10 +137,10 @@ def fixtures(config: str = "airllm.yml") -> None:
 
     typer.echo(f"seeded; bundles: {', '.join(f'{name} v{version}' for name, version in versions)}")
     if models == 0:
-        typer.echo("catalog is empty, so the bundles route nothing; run `airllmcp taxonomy` to fill it")
+        typer.echo("catalog is empty, so the bundles route nothing; run `tokkeeper-control-plane taxonomy` to fill it")
     if seeded.unresolved_providers:
         names = ", ".join(seeded.unresolved_providers)
-        typer.echo(f"no key behind the seeded {names} credentials; supply one with `airllm provider-credentials add <provider>`")
+        typer.echo(f"no key behind the seeded {names} credentials; supply one with `tokkeeper provider-credentials add <provider>`")
 
     logins = [(email, seeded.password, "instance owner" if email == seeded.admin_email else "member") for email in seeded.emails]
     keys = [
@@ -170,7 +170,7 @@ def openapi(out: str = typer.Option("-", "--out", help="Write the spec here; - w
 
 
 @app.command()
-def migrate(config: str = "airllm.yml") -> None:
+def migrate(config: str = "tokkeeper.yml") -> None:
     url = _database_url(config)
     shown = make_url(url).render_as_string(hide_password=True)
     before = current_revision(url)
@@ -184,7 +184,7 @@ def migrate(config: str = "airllm.yml") -> None:
 
 @app.command()
 def taxonomy(
-    config: str = "airllm.yml",
+    config: str = "tokkeeper.yml",
     file: str = typer.Option("taxonomy.yml", "--file", help="Models taxonomy path, resolved next to the config"),
 ) -> None:
     """Apply the models taxonomy to the instance catalog and publish changed organization configurations."""

@@ -1,6 +1,6 @@
 ---
 title: "Fly.io"
-description: "Deploy one AirLLM Machine with a persistent volume and Managed Postgres."
+description: "Deploy one TokKeeper Machine with a persistent volume and Managed Postgres."
 ---
 
 The checked-in `deploy/fly/fly.toml` runs the all-in-one image on one Machine. Keep the application, volume, and database in the same region.
@@ -10,20 +10,20 @@ The checked-in `deploy/fly/fly.toml` runs the all-in-one image on one Machine. K
 Install and authenticate `flyctl`, choose an app name, and change `primary_region` in `deploy/fly/fly.toml` if you do not want `sjc`.
 
 ```bash
-flyctl launch --config deploy/fly/fly.toml --name my-airllm --no-deploy --no-db
-flyctl mpg create --name my-airllm --region sjc
+flyctl launch --config deploy/fly/fly.toml --name my-tokkeeper --no-deploy --no-db
+flyctl mpg create --name my-tokkeeper --region sjc
 ```
 
 Attach the cluster ID returned by the second command:
 
 ```bash
-flyctl mpg attach CLUSTER_ID --app my-airllm --config deploy/fly/fly.toml
+flyctl mpg attach CLUSTER_ID --app my-tokkeeper --config deploy/fly/fly.toml
 ```
 
 The attachment sets the pooled `DATABASE_URL`. Copy the direct connection URL from the database dashboard and stage it for migrations:
 
 ```bash
-flyctl secrets set --app my-airllm --stage \
+flyctl secrets set --app my-tokkeeper --stage \
   DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE'
 ```
 
@@ -32,11 +32,11 @@ Keep Managed Postgres in session pooling mode. Startup uses the direct URL for m
 ## Deploy and claim
 
 ```bash
-flyctl deploy --config deploy/fly/fly.toml --app my-airllm --ha=false \
-  --env AIRLLM_CONSOLE_URL=https://my-airllm.fly.dev
+flyctl deploy --config deploy/fly/fly.toml --app my-tokkeeper --ha=false \
+  --env TOKKEEPER_CONSOLE_URL=https://my-tokkeeper.fly.dev
 
-uv run --package cli --no-dev --frozen airllm quickstart \
-  --url https://my-airllm.fly.dev
+uv run --package cli --no-dev --frozen tokkeeper quickstart \
+  --url https://my-tokkeeper.fly.dev
 ```
 
 Keep `--ha=false`: this layout owns one `/state` volume and runs one gateway. Use [separate services](/docs/deployment/scaling) to design replicas.

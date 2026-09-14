@@ -46,7 +46,7 @@ def test_service_account_gets_a_derived_email(tmp_path):
         created = c.post("/api/v1/service-accounts", json={"name": "Data Plane"}, headers=root).json()["data"]
         assert created["service_account"] is True
         assert created["name"] == "Data Plane"
-        assert re.fullmatch(r"data-plane-[0-9a-f]{8}@service-account\.airllm\.invalid", created["email"])
+        assert re.fullmatch(r"data-plane-[0-9a-f]{8}@service-account\.tokkeeper\.invalid", created["email"])
         again = c.post("/api/v1/service-accounts", json={"name": "Data Plane"}, headers=root).json()["data"]
         assert again["email"] != created["email"]
         assert c.post("/api/v1/service-accounts", json={"name": "!!"}, headers=root).status_code == 422

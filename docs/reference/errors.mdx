@@ -3,7 +3,7 @@ title: "Errors"
 description: "Handle stable gateway error codes, provider errors, and failures that arrive after streaming begins."
 ---
 
-AirLLM keeps the error envelope native to the caller surface.
+TokKeeper keeps the error envelope native to the caller surface.
 
 <CodeGroup>
 
@@ -26,7 +26,7 @@ AirLLM keeps the error envelope native to the caller surface.
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
-| 400 | `invalid_dialect` | Unknown `x-airllm-dialect` value |
+| 400 | `invalid_dialect` | Unknown `x-tokkeeper-dialect` value |
 | 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
 | 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
 | 401 | `missing_bearer_token` | No bearer token and no valid playground cookie |

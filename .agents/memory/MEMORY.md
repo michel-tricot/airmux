@@ -1,10 +1,12 @@
-- [Backend setup quirks](backend-setup-quirks.md) — Python 3.13 module, taxonomy --file path, port 8101 + CONTROL_PLANE_URL, signing keys are files not env vars.
-- [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
-- [Replit workflow host binding](replit-workflow-host-binding.md) — waitForPort needs 0.0.0.0; internal services should bind loopback with no waitForPort.
-- [Preview port routing pinning](preview-port-routing.md) — only the .replit [[ports]] pin (20383→80) keeps the preview on the console; loopback binding alone doesn't; post-merge.sh restores it.
-- [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md) — normalize managed sslmode URL parameters for asyncpg while keeping DATABASE_URL as the sole source.
-- [Managed Postgres reset](managed-postgres-reset.md) — dropdb/createdb silently no-op on managed Postgres; reset via DROP SCHEMA public CASCADE instead.
-- [Browser e2e harness](browser-e2e-harness.md) — puppeteer-core + Nix-store chromium for console browser passes; uppercase labels and Radix tab quirks.
-- [zod vitest interop](zod-vitest-interop.md) — use `import * as z from 'zod'` in console; named `z` export vanishes under vitest when the generated api client loads first.
-- [OpenAPI param descriptions](openapi-param-descriptions.md) — query param descriptions are centralized by name in the control plane's openapi module; new endpoints can inherit wrong text.
-- [Bun lockfile validation](bun-lockfile-validation.md) — Bun lockfiles allow trailing commas; validate with Bun's frozen install instead of a strict JSON parser.
+Reviewed against the repository on 2026-09-14. Replit notes apply to that deployment environment, not every local checkout.
+
+- [Backend setup](backend-setup-quirks.md): current commands, Python configuration, taxonomy path, ports, and bootstrap authentication token
+- [Orval Zod v4 import](orval-zod-v4.md): preserve the generated `zod/v4` import rewrite before type checking
+- [Replit workflow host binding](replit-workflow-host-binding.md): current loopback binding and historical workflow-monitor behavior
+- [Preview port routing](preview-port-routing.md): the Replit 20383-to-80 port mapping and its post-merge restoration
+- [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md): helper-local conversion between asyncpg and libpq URL parameters
+- [Managed Postgres reset](managed-postgres-reset.md): existing Replit development reset behavior and its environment-specific scope
+- [Browser verification](browser-e2e-harness.md): use the available browser backend against a real deployment; historical Nix setup is not a prerequisite
+- [Zod Vitest interop](zod-vitest-interop.md): retain the namespace-import convention; the historical failure has not been revalidated
+- [OpenAPI parameter descriptions](openapi-param-descriptions.md): explicit descriptions take precedence over centralized fallback descriptions
+- [Bun lockfile validation](bun-lockfile-validation.md): validate with Bun's frozen install instead of a strict JSON parser

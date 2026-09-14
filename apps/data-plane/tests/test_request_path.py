@@ -127,7 +127,7 @@ def test_unknown_explicit_dialect_is_rejected_instead_of_falling_back(api_key, d
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "X-Airllm-Dialect": "unknown"},
+            headers={"Authorization": f"Bearer {api_key}", "X-TokKeeper-Dialect": "unknown"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert response.status_code == 400
@@ -139,10 +139,10 @@ def test_same_origin_playground_cookie_authenticates(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()
     with TestClient(dp_app) as client:
-        client.cookies.set("airllm_playground", api_key)
+        client.cookies.set("tokkeeper_playground", api_key)
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"X-Requested-With": "airllm-console", "Sec-Fetch-Site": "same-origin"},
+            headers={"X-Requested-With": "tokkeeper-console", "Sec-Fetch-Site": "same-origin"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
         )
     assert response.status_code == 200
@@ -152,10 +152,10 @@ def test_same_origin_playground_cookie_authenticates(api_key, dp_app):
 def test_playground_cookie_rejects_cross_site_requests(api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
-        client.cookies.set("airllm_playground", api_key)
+        client.cookies.set("tokkeeper_playground", api_key)
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"X-Requested-With": "airllm-console", "Sec-Fetch-Site": "cross-site"},
+            headers={"X-Requested-With": "tokkeeper-console", "Sec-Fetch-Site": "cross-site"},
             json={"model": "gpt-test", "messages": []},
         )
     assert response.status_code == 403

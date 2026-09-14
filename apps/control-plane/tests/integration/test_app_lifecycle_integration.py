@@ -13,7 +13,7 @@ def test_serve_refuses_an_unmigrated_database(tmp_path):
     """Fail at startup with the fix named, never one 500 per request against a schemaless database."""
     url = ensure_database(db_name_for(tmp_path))
     settings = Settings(database=DatabaseConfig(url=url))
-    with pytest.raises(RuntimeError, match="airllmcp migrate"), TestClient(create_app(settings)):
+    with pytest.raises(RuntimeError, match="tokkeeper-control-plane migrate"), TestClient(create_app(settings)):
         pass
 
 

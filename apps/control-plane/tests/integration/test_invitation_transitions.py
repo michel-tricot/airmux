@@ -23,7 +23,7 @@ def test_invitation_terminal_states_have_consistent_preview_and_redemption(tmp_p
         signup = client.post("/api/v1/auth/signup", json={"email": "owner@transition.test", "password": PASSWORD})
         assert signup.status_code == 200
         owner_id = UUID(signup.json()["data"]["user_id"])
-        owner_headers = {**CSRF, "cookie": f"airllm_session={client.cookies['airllm_session']}"}
+        owner_headers = {**CSRF, "cookie": f"tokkeeper_session={client.cookies['tokkeeper_session']}"}
         org = client.post("/api/v1/enroll/org", json={"name": "Transitions"}, headers=owner_headers).json()["data"]
         invited = client.post(
             f"/api/v1/organizations/{org['id']}/invitations", json={"email": "member@transition.test", "org_role": "member"}, headers=owner_headers

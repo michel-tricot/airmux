@@ -9,7 +9,7 @@ from typing import cast
 
 import httpx
 
-USER_AGENT = {"User-Agent": "airllm-taxonomy/1.0", "Accept": "text/markdown,text/plain,text/html"}
+USER_AGENT = {"User-Agent": "tokkeeper-taxonomy/1.0", "Accept": "text/markdown,text/plain,text/html"}
 
 
 @dataclass(frozen=True)

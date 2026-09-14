@@ -1,17 +1,17 @@
 vars:
-  cache_dir: .airllm
+  cache_dir: .tokkeeper
 
 control_plane:
   database:
     # DATABASE_URL when the host sets one, as Replit's managed PostgreSQL and docker-compose.yml do;
     # otherwise the docker-compose.dev.yml database named after :-. A managed postgresql:// url gains
     # the asyncpg driver on load and can be used as handed over.
-    url: ${env:DATABASE_URL:-postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm}
+    url: ${env:DATABASE_URL:-postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper}
   bootstrap:
-    # Generate once with: uv run airllmcp bootstrap-keygen
+    # Generate once with: uv run tokkeeper-control-plane bootstrap-keygen
     token: ${file:${var:cache_dir}/dataplane.key}
-  console_url: ${env:AIRLLM_CONSOLE_URL:-http://127.0.0.1:5000}
-  public_signup: ${env:AIRLLM_PUBLIC_SIGNUP:-false}
+  console_url: ${env:TOKKEEPER_CONSOLE_URL:-http://127.0.0.1:5000}
+  public_signup: ${env:TOKKEEPER_PUBLIC_SIGNUP:-false}
   secrets:
     # One file per credential under root, owner-readable only. Both planes must name the same
     # store, because the control plane writes what the data plane reads, so root has to be a
@@ -24,7 +24,7 @@ data_plane:
   bundle:
     kind: remote # or local, with path pointing at a hand-written bundle file
     control_plane: &control_plane
-      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       # Authorized by the control plane before it reports healthy
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}

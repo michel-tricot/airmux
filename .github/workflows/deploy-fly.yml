@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      AIRLLM_PUBLIC_URL: ${{ vars.AIRLLM_PUBLIC_URL }}
+      TOKKEEPER_PUBLIC_URL: ${{ vars.TOKKEEPER_PUBLIC_URL }}
       FLY_APP: ${{ vars.FLY_APP }}
     steps:
       - uses: actions/checkout@v7
@@ -20,7 +20,7 @@ jobs:
       - run: >-
           flyctl deploy --config deploy/fly/fly.toml --app "$FLY_APP"
           --remote-only --ha=false
-          --env "AIRLLM_CONSOLE_URL=${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}"
+          --env "TOKKEEPER_CONSOLE_URL=${TOKKEEPER_PUBLIC_URL:-https://$FLY_APP.fly.dev}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - run: AIRLLM_PUBLIC_URL="${AIRLLM_PUBLIC_URL:-https://$FLY_APP.fly.dev}" ./deploy/smoke.sh
+      - run: TOKKEEPER_PUBLIC_URL="${TOKKEEPER_PUBLIC_URL:-https://$FLY_APP.fly.dev}" ./deploy/smoke.sh

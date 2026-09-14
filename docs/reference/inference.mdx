@@ -19,7 +19,7 @@ Content-Type: application/json
 | Messages | `POST /inf/v1/messages` | Messages clients and named SSE events |
 
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
-Chat Completions request can target an Anthropic model. AirLLM returns the response and errors in the caller's dialect.
+Chat Completions request can target an Anthropic model. TokKeeper returns the response and errors in the caller's dialect.
 
 ## Shared behavior
 
@@ -38,7 +38,7 @@ Every surface uses the same:
 Managed catalog model IDs use `provider/model` form. List the models visible to the active organization:
 
 ```bash
-airllm models list -f json
+tokkeeper models list -f json
 ```
 
 The model must support every required input modality and capability. Streaming, tools, reasoning, and structured output
@@ -46,7 +46,7 @@ are inferred from the request rather than trusted as caller metadata.
 
 ## Base URLs
 
-If the public AirLLM origin is `https://llm.example.com`:
+If the public TokKeeper origin is `https://llm.example.com`:
 
 | Client | Base URL |
 | --- | --- |

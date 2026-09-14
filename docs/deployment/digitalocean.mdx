@@ -3,7 +3,7 @@ title: "DigitalOcean"
 description: "Run Docker Compose on a Droplet with the checked-in Caddy overlay for automatic HTTPS."
 ---
 
-Use an Ubuntu Docker Droplet with at least 2 GB of memory. The `deploy/digitalocean/compose.yml` overlay keeps AirLLM's
+Use an Ubuntu Docker Droplet with at least 2 GB of memory. The `deploy/digitalocean/compose.yml` overlay keeps TokKeeper's
 port private and publishes Caddy on ports 80 and 443.
 
 ## Prepare the host
@@ -16,8 +16,8 @@ port private and publishes Caddy on ports 80 and 443.
 Set these values in `.env`:
 
 ```bash
-AIRLLM_DOMAIN=llm.example.com
-AIRLLM_PUBLIC_URL=https://llm.example.com
+TOKKEEPER_DOMAIN=llm.example.com
+TOKKEEPER_PUBLIC_URL=https://llm.example.com
 POSTGRES_PASSWORD=replace-with-a-url-safe-random-value
 ```
 
@@ -31,7 +31,7 @@ docker compose \
   -f deploy/digitalocean/compose.yml \
   up -d --build --wait
 
-uv run --package cli --no-dev --frozen airllm quickstart \
+uv run --package cli --no-dev --frozen tokkeeper quickstart \
   --url https://llm.example.com
 ```
 
@@ -39,6 +39,6 @@ Caddy obtains a certificate after DNS and ports 80 and 443 are reachable. Claim 
 
 ## Update
 
-Back up Postgres and AirLLM state, check out the intended release, and repeat the Compose command. Preserve `.env` and
-the named volumes for Postgres, AirLLM, and Caddy certificates. Use the same two `-f` arguments for `logs`, `down`, and
+Back up Postgres and TokKeeper state, check out the intended release, and repeat the Compose command. Preserve `.env` and
+the named volumes for Postgres, TokKeeper, and Caddy certificates. Use the same two `-f` arguments for `logs`, `down`, and
 every later Compose operation.

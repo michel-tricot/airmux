@@ -29,10 +29,10 @@ def test_password_change_rotates_the_current_browser_and_ends_other_sessions(sta
     ):
         for browser in (current, other):
             browser.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}).raise_for_status()
-        original_cookie = current.cookies["airllm_session"]
+        original_cookie = current.cookies["tokkeeper_session"]
         changed = current.post("/api/v1/auth/password", json={"current_password": ADMIN_PASSWORD, "new_password": "new-acceptance-password"})
         changed.raise_for_status()
-        assert current.cookies["airllm_session"] != original_cookie
+        assert current.cookies["tokkeeper_session"] != original_cookie
         assert current.get("/api/v1/auth/me").status_code == 200
         assert other.get("/api/v1/auth/me").status_code == 401
         assert stack.request().status_code == 200
