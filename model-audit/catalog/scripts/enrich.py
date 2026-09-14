@@ -52,7 +52,7 @@ from model_kind import classify, text_only
 from paths import TAXONOMY
 
 CTX = ssl.create_default_context()
-UA = {"User-Agent": "airllm-taxonomy/1.0", "Accept": "application/json"}
+UA = {"User-Agent": "tokkeeper-taxonomy/1.0", "Accept": "application/json"}
 MODELS_DEV = "https://models.dev/api.json"
 OPENROUTER = "https://openrouter.ai/api/v1/models"
 

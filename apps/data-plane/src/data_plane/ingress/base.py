@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         def error(self, err: CanonicalError) -> list[bytes]: ...
 
 
-DIALECT_HEADER = "x-airllm-dialect"
+DIALECT_HEADER = "x-tokkeeper-dialect"
 DONE = b"data: [DONE]\n\n"
 
 

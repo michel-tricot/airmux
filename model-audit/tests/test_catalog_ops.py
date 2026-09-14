@@ -184,13 +184,13 @@ def test_every_active_model_has_schema_discovery_evidence():
             assert all("model_discovery" in model.get("parameter_evidence", {}) for model in models), path.stem
 
 
-def test_request_field_reports_keep_airllm_first_and_exclude_router_evidence():
+def test_request_field_reports_keep_tokkeeper_first_and_exclude_router_evidence():
     taxonomy = Path(__file__).parents[2] / "taxonomy"
 
     for ingress in ("oai", "anthropic"):
         report = json.loads((taxonomy / "reports" / f"{ingress}-request-fields.json").read_text(encoding="utf-8"))
         column_ids = [column["id"] for column in report["columns"]]
-        assert column_ids[0] == "airllm"
+        assert column_ids[0] == "tokkeeper"
         assert "openrouter" not in column_ids
         assert b"\r" not in (taxonomy / "reports" / f"{ingress}-request-fields.csv").read_bytes()
 

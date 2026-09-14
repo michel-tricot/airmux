@@ -137,7 +137,7 @@ def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(api
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airllm-dialect": "openai_native"},
+            headers={"Authorization": f"Bearer {api_key}", "x-tokkeeper-dialect": "openai_native"},
             json={
                 **TEXT_BODY,
                 "reasoning_effort": "low",

@@ -19,7 +19,7 @@ from model_audit.gateway import Gateway
 def test_raw_gateway_connections_select_the_requested_dialect(endpoint, dialect):
     connection = Gateway(base_url="http://gateway", api_key="key").connection(endpoint)
 
-    assert connection.headers == {"x-airllm-dialect": dialect}
+    assert connection.headers == {"x-tokkeeper-dialect": dialect}
 
 
 def test_provider_forbidden_response_does_not_invalidate_gateway_authentication():

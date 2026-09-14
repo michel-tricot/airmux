@@ -28,7 +28,7 @@ class Gateway:
             base_url=f"{self.base_url.rstrip('/')}/inf/v1",
             api_key=self.api_key,
             auth="bearer",
-            headers={"x-airllm-dialect": DIALECTS[endpoint]},
+            headers={"x-tokkeeper-dialect": DIALECTS[endpoint]},
             route="gateway",
             timeout_seconds=self.request_timeout_seconds,
         )

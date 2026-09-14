@@ -1,16 +1,16 @@
 worker_processes auto;
-pid /tmp/airllm-nginx.pid;
+pid /tmp/tokkeeper-nginx.pid;
 error_log /dev/stderr warn;
 events { worker_connections 1024; }
 http {
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
   access_log /dev/stdout;
-  client_body_temp_path /tmp/airllm-client;
-  proxy_temp_path /tmp/airllm-proxy;
-  fastcgi_temp_path /tmp/airllm-fastcgi;
-  uwsgi_temp_path /tmp/airllm-uwsgi;
-  scgi_temp_path /tmp/airllm-scgi;
+  client_body_temp_path /tmp/tokkeeper-client;
+  proxy_temp_path /tmp/tokkeeper-proxy;
+  fastcgi_temp_path /tmp/tokkeeper-fastcgi;
+  uwsgi_temp_path /tmp/tokkeeper-uwsgi;
+  scgi_temp_path /tmp/tokkeeper-scgi;
   resolver ${NGINX_RESOLVER} valid=5s ipv6=off;
   map $uri $private_cache_control {
     default "";

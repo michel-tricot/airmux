@@ -129,11 +129,11 @@ PATCH replaces `definition` as a whole; omitted fields are unchanged and explici
 rejected. CLI commands use the same generated request and response types:
 
 ```sh
-airllm policies list -w production -f json
-airllm rules create rule.json -w production
-airllm policies create policy.json -w production
-airllm policies update POLICY_ID changes.json -w production
-airllm policies delete POLICY_ID -w production
+tokkeeper policies list -w production -f json
+tokkeeper rules create rule.json -w production
+tokkeeper policies create policy.json -w production
+tokkeeper policies update POLICY_ID changes.json -w production
+tokkeeper policies delete POLICY_ID -w production
 ```
 
 ## Performance and extension

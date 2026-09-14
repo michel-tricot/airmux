@@ -62,7 +62,7 @@ data_plane:
     port = _free_port()
     log = (tmp_path / "dp.log").open("a", encoding="utf-8")
     process = subprocess.Popen(  # noqa: S603 trusted local console script
-        [_bin("airllmdp"), "serve", "--host", "127.0.0.1", "--port", str(port), "--config", str(tmp_path / "config.yml")],
+        [_bin("tokkeeperdp"), "serve", "--host", "127.0.0.1", "--port", str(port), "--config", str(tmp_path / "config.yml")],
         cwd=tmp_path,
         env={"PATH": "/usr/bin:/bin", "STUB_API_KEY": "sk-local-upstream", "HOME": str(tmp_path)},
         stdout=log,

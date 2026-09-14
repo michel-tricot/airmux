@@ -3,7 +3,7 @@ title: "Workspace policies"
 description: "Match inference requests and compose model, provider, credential, price, parameter, request, denial, and fallback rules."
 ---
 
-Workspace policies control which inference requests AirLLM accepts, which routes and credentials are eligible, and when it may try a fallback model.
+Workspace policies control which inference requests TokKeeper accepts, which routes and credentials are eligible, and when it may try a fallback model.
 
 ## Policy model
 
@@ -99,8 +99,8 @@ Allow credentials from one or more scopes:
 }
 ```
 
-Multiple matching credential rules intersect. After filtering, AirLLM chooses the most specific populated allowed scope
-in workspace, organization, instance order. If that scope has candidates, AirLLM does not fall through to a broader
+Multiple matching credential rules intersect. After filtering, TokKeeper chooses the most specific populated allowed scope
+in workspace, organization, instance order. If that scope has candidates, TokKeeper does not fall through to a broader
 scope.
 
 ### Require parameter support
@@ -109,7 +109,7 @@ scope.
 {"kind": "strict_parameters"}
 ```
 
-This rejects a route when AirLLM would otherwise remove a caller-supplied parameter because the selected model or
+This rejects a route when TokKeeper would otherwise remove a caller-supplied parameter because the selected model or
 provider does not support it. Model capability and input-modality checks always run, with or without this action.
 
 ### Model price limit
@@ -176,7 +176,7 @@ Invalid requests, policy denials, and authentication failures do not trigger a m
 authentication failure may try another credential in the same selected scope.
 
 <Info>
-  A provider may continue generation after a timeout. AirLLM records every attempted route separately, so fallback does
+  A provider may continue generation after a timeout. TokKeeper records every attempted route separately, so fallback does
   not provide exactly-once generation.
 </Info>
 

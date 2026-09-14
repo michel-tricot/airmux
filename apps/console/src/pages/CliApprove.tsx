@@ -17,8 +17,8 @@ const INSTANCE_SCOPE = 'instance';
 
 function lookupError(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 404) return 'No pending login with this code. Check your terminal, or run airllm login again.';
-    if (error.status === 410) return 'This login request expired. Run airllm login again.';
+    if (error.status === 404) return 'No pending login with this code. Check your terminal, or run tokkeeper login again.';
+    if (error.status === 410) return 'This login request expired. Run tokkeeper login again.';
     if (error.status === 409) return 'This login request was already approved.';
   }
   return 'Could not look up the login request.';
@@ -56,7 +56,7 @@ export default function CliApprove() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Authorize CLI login</h1>
           <p className="text-muted-foreground text-sm mt-1 text-center">
-            Continue only if you just ran <code>airllm login</code>.
+            Continue only if you just ran <code>tokkeeper login</code>.
           </p>
         </div>
 

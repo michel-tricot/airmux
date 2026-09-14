@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-airllmcp = "control_plane.main:app"
+tokkeepercp = "control_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

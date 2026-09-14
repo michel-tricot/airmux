@@ -134,7 +134,7 @@ def test_documentation_does_not_name_comparison_products() -> None:
 
 def test_quickstart_runs_the_project_cli_against_the_public_url() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^uv run --package cli --no-dev --frozen airllm quickstart --url \S+$", documents, re.MULTILINE)
+    commands = re.findall(r"^uv run --package cli --no-dev --frozen tokkeeper quickstart --url \S+$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents

@@ -3,7 +3,7 @@ title: "Render"
 description: "Deploy the checked-in Blueprint with one Docker service, a persistent disk, and Managed Postgres."
 ---
 
-[Deploy to Render](https://render.com/deploy?repo=https://github.com/michel-tricot/airllm)
+[Deploy to Render](https://render.com/deploy?repo=https://github.com/michel-tricot/tokkeeper)
 
 The `render.yaml` Blueprint creates:
 
@@ -21,7 +21,7 @@ managed database and defaults the public origin to `RENDER_EXTERNAL_URL`.
 As soon as the service becomes reachable, claim it:
 
 ```bash
-uv run --package cli --no-dev --frozen airllm quickstart \
+uv run --package cli --no-dev --frozen tokkeeper quickstart \
   --url https://your-service.onrender.com
 ```
 
@@ -29,7 +29,7 @@ Provider keys remain on the machine running `quickstart` until the CLI stores th
 
 ## Custom domain and updates
 
-For a custom domain, set `AIRLLM_CONSOLE_URL` to its exact HTTPS origin and redeploy. Trigger updates manually after
+For a custom domain, set `TOKKEEPER_CONSOLE_URL` to its exact HTTPS origin and redeploy. Trigger updates manually after
 backing up the database and persistent disk. Migrations run during startup.
 
 Keep one application instance in this layout because its gateway owns one persistent disk. Use the

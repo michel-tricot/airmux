@@ -67,7 +67,7 @@ describe('organization invitations', () => {
   });
 
   it('creates a share link once and refreshes the pending list', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     let invitations: OrgInvitationOut[] = [];
     server.use(
       http.get('/api/v1/auth/permissions', () =>
@@ -97,7 +97,7 @@ describe('organization invitations', () => {
   });
 
   it('accepts a matching invitation and selects its workspace', async () => {
-    window.localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
     let accepted = false;
     server.use(
       http.post('/api/v1/enroll/invitations/preview', () =>
@@ -130,7 +130,7 @@ describe('organization invitations', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
     expect(accepted).toBe(true);
-    expect(window.localStorage.getItem('airllm_org_id')).toBe(ORG.id);
+    expect(window.localStorage.getItem('tokkeeper_org_id')).toBe(ORG.id);
   });
 
   it('locks a signed-out recipient to the invited email', async () => {

@@ -251,7 +251,7 @@ def a_platform_ref(service="openai", name="default"):
 async def test_an_env_store_resolves_a_provider_by_its_conventional_variable(monkeypatch):
     """OPENAI_API_KEY is the name every provider SDK documents and the one taxonomy.yml already
     used, so an operator running on the environment configures nothing new."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
     assert (await store.get(a_platform_ref())).reveal() == "sk-openai"
@@ -262,7 +262,7 @@ async def test_every_credential_for_one_provider_resolves_to_the_same_variable(m
     """The environment holds one key per provider and cannot hold more, so scope and name do not
     enter the lookup. An instance on this store has one upstream account per provider, whatever its
     credential rows say."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-the-only-one")
     workspace_key = a_ref(name="primary")
     other_workspace_key = a_ref(name="backup", workspace_id=uuid4())
@@ -274,15 +274,15 @@ async def test_every_credential_for_one_provider_resolves_to_the_same_variable(m
 async def test_a_prefixed_variable_overrides_the_conventional_one(monkeypatch):
     """The escape hatch for an operator whose environment already means something else by
     OPENAI_API_KEY, and the only name a non-provider purpose would ever answer to."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI", "sk-explicit")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
+    monkeypatch.setenv("TOKKEEPER_SECRET_PROVIDER_OPENAI", "sk-explicit")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-conventional")
     assert (await store.get(a_platform_ref())).reveal() == "sk-explicit"
     assert (await store.get(a_ref())).reveal() == "sk-explicit"
 
 
 async def test_a_missing_env_secret_is_not_found(monkeypatch):
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     ref = a_platform_ref(service="nowhere")
     for variable in store.variables_for(ref):
         monkeypatch.delenv(variable, raising=False)
@@ -294,7 +294,7 @@ async def test_the_env_store_accepts_a_key_it_already_holds(monkeypatch):
     """In env mode a value is not written, it already exists: the operator exported it and the ref
     resolves to it. Storing one is therefore a declaration that it is in use, not a write, and
     refusing it would leave an instance that cannot record a key it can already read."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
     ref = a_platform_ref()
 
@@ -306,9 +306,9 @@ async def test_the_env_store_accepts_a_key_it_already_holds(monkeypatch):
 async def test_the_env_store_says_which_variable_is_missing(monkeypatch):
     """The one case it cannot accept: nothing to declare. A row whose value resolves to nothing is
     one the data plane answers 502 for, so the refusal names the variable that would fix it."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("AIRLLM_SECRET_PROVIDER_OPENAI", raising=False)
+    monkeypatch.delenv("TOKKEEPER_SECRET_PROVIDER_OPENAI", raising=False)
 
     with pytest.raises(SecretRejectedError, match="OPENAI_API_KEY"):
         await store.put(a_platform_ref(), Secret("sk-anything"))
@@ -317,7 +317,7 @@ async def test_the_env_store_says_which_variable_is_missing(monkeypatch):
 async def test_the_env_store_refuses_to_diverge_from_the_environment(monkeypatch):
     """Accepting a different value silently would mean the credential the operator thinks they
     stored is not the one their traffic spends."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
 
     with pytest.raises(SecretRejectedError, match="environment"):
@@ -327,7 +327,7 @@ async def test_the_env_store_refuses_to_diverge_from_the_environment(monkeypatch
 async def test_deleting_an_env_credential_leaves_the_variable(monkeypatch):
     """The store does not own the variable, so removing a credential removes the row that named it.
     Nothing resolves it afterwards because nothing names it."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    store = EnvSecretStore(prefix="TOKKEEPER_SECRET")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
 
     await store.delete(a_platform_ref())

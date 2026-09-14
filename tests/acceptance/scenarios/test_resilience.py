@@ -36,7 +36,7 @@ def test_bounded_malformed_inputs_and_disconnects_preserve_service_recovery(stac
         for malformed in auth_inputs:
             response = control.post("/api/v1/auth/login", json=malformed)
             assert response.status_code == 422, response.text
-        headers = {"Authorization": f"Bearer {stack.caller_api_key}", "x-airllm-dialect": "canonical"}
+        headers = {"Authorization": f"Bearer {stack.caller_api_key}", "x-tokkeeper-dialect": "canonical"}
         body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
         malformed_parameters = [
             (field, value) for field, values in {"messages": [[]], "stream": ["true"], "max_tokens": [0]}.items() for value in values

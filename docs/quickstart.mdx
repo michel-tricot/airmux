@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-description: "Start AirLLM with Docker, claim the instance, import a provider credential, and make a verified inference request."
+description: "Start TokKeeper with Docker, claim the instance, import a provider credential, and make a verified inference request."
 ---
 
 This path runs the console, control plane, gateway, and Postgres on one machine.
@@ -14,8 +14,8 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 <Steps>
   <Step title="Clone and configure">
     ```bash
-    git clone https://github.com/michel-tricot/airllm.git
-    cd airllm
+    git clone https://github.com/michel-tricot/tokkeeper.git
+    cd tokkeeper
     cp .env.example .env
     ```
 
@@ -32,7 +32,7 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 
   <Step title="Claim and verify the instance">
     ```bash
-    uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
+    uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
     ```
 
     Enter an email and password when prompted. The command creates or resumes an owner account, organization, and
@@ -40,21 +40,21 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
   </Step>
 
   <Step title="Save the inference key">
-    The secret shown as `AIRLLM_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
+    The secret shown as `TOKKEEPER_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
 
     ```bash
-    export AIRLLM_INFERENCE_KEY='sk-inf-your-key'
+    export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
     ```
   </Step>
 
   <Step title="Make a request">
-    Use a model served by the provider you configured. `airllm models list` shows the catalog.
+    Use a model served by the provider you configured. `tokkeeper models list` shows the catalog.
 
     ```bash
     curl http://localhost:8080/inf/v1/chat/completions \
-      -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+      -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
       -H 'Content-Type: application/json' \
-      -H 'x-airllm-dialect: canonical' \
+      -H 'x-tokkeeper-dialect: canonical' \
       -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}]}'
     ```
   </Step>
@@ -90,7 +90,7 @@ For adapter development or a local provider-neutral endpoint without Postgres or
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-uv run --package data-plane --no-dev --frozen airllmdp serve --config airllm.standalone.yml
+uv run --package data-plane --no-dev --frozen tokkeeperdp serve --config tokkeeper.standalone.yml
 ```
 
 Standalone mode reads `bundle.standalone.yml`, reloads it after changes, resolves provider credentials from environment

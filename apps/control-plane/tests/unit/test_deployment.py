@@ -10,10 +10,10 @@ def test_default_deployment_is_one_application_and_postgres():
     compose = yaml.safe_load((root / "docker-compose.yml").read_text())
     services = compose["services"]
     assert "name" not in compose
-    assert set(services) == {"airllm", "postgres"}
-    assert services["airllm"]["build"]["target"] == "all-in-one"
-    assert "env_file" not in services["airllm"]
-    assert services["airllm"]["environment"]["AIRLLM_PUBLIC_SIGNUP"] == "${AIRLLM_PUBLIC_SIGNUP:-false}"
+    assert set(services) == {"tokkeeper", "postgres"}
+    assert services["tokkeeper"]["build"]["target"] == "all-in-one"
+    assert "env_file" not in services["tokkeeper"]
+    assert services["tokkeeper"]["environment"]["TOKKEEPER_PUBLIC_SIGNUP"] == "${TOKKEEPER_PUBLIC_SIGNUP:-false}"
 
 
 def test_split_gateways_have_independent_state_and_no_provider_environment():
@@ -37,7 +37,7 @@ def test_split_gateways_have_independent_state_and_no_provider_environment():
     assert "DATABASE_URL" not in first.get("environment", {})
     assert "DATABASE_URL" not in second.get("environment", {})
     assert services["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
-    assert services["control-plane"]["environment"]["AIRLLM_PUBLIC_SIGNUP"] == "${AIRLLM_PUBLIC_SIGNUP:-false}"
+    assert services["control-plane"]["environment"]["TOKKEEPER_PUBLIC_SIGNUP"] == "${TOKKEEPER_PUBLIC_SIGNUP:-false}"
 
 
 def test_compose_layouts_do_not_share_database_volumes():

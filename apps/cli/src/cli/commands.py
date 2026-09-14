@@ -56,7 +56,7 @@ def _sort_key(row: dict) -> tuple[int, str]:
 def commands(fmt: FormatOption = OutputFormat.table) -> None:
     """List every command in one place, instead of one --help at a time."""
     root = typer.main.get_command(app)
-    found = [row for row in walk(root, "airllm", UNCATEGORISED) if row["command"] != "airllm commands"]
+    found = [row for row in walk(root, "tokkeeper", UNCATEGORISED) if row["command"] != "tokkeeper commands"]
     rows = sorted(found, key=_sort_key)
     if fmt is not OutputFormat.table:
         print_rows("commands", rows, COMMAND_COLS, fmt)

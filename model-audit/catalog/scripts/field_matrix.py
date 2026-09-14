@@ -1,4 +1,4 @@
-"""Build a field support matrix across AirLLM and every provider request schema.
+"""Build a field support matrix across TokKeeper and every provider request schema.
 
 Flattens each provider's request schema into JSONPaths and reports, per path, which
 providers accept it. Emits a CSV for spreadsheet use and a JSON blob for the HTML report.
@@ -103,9 +103,9 @@ def paths_for(rel: str) -> set[str]:
 def main() -> int:
     providers = yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]
 
-    airllm_paths = paths_for("schemas/completion/airllm.request.yaml")
-    columns = [{"id": "airllm", "name": "AirLLM", "kind": "gateway", "standin": False, "count": len(airllm_paths)}]
-    support = {"airllm": airllm_paths}
+    tokkeeper_paths = paths_for("schemas/completion/tokkeeper.request.yaml")
+    columns = [{"id": "tokkeeper", "name": "TokKeeper", "kind": "gateway", "standin": False, "count": len(tokkeeper_paths)}]
+    support = {"tokkeeper": tokkeeper_paths}
     for entry in providers:
         parts = (entry["schema"] or {}).get("completion", {}).get(INGRESS)
         if not parts:

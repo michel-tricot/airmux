@@ -74,7 +74,7 @@ def test_refused_requests_explain_themselves(tmp_path):
         assert resp.json()["detail"] == "Missing one of workspaces.read, organizations.read permissions for org scope"
 
         # Expired/invalid session cookie through the cookie door
-        c.cookies.set("airllm_session", "bogus")
+        c.cookies.set("tokkeeper_session", "bogus")
         resp = c.get("/api/v1/auth/me", headers={"X-Requested-With": "fetch"})
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Your session has expired; sign in again"

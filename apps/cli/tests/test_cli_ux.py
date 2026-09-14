@@ -19,16 +19,16 @@ def test_version_is_available_without_a_command():
     result = runner.invoke(app, ["--version"])
 
     assert result.exit_code == 0, result.output
-    assert result.stdout.startswith("airllm ")
+    assert result.stdout.startswith("tokkeeper ")
 
 
 def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch):
-    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
         Profile(
             scope="org",
-            control_plane_url="https://airllm.example.com",
+            control_plane_url="https://tokkeeper.example.com",
             gateway_url="https://gateway.example.com",
             org_id="org-1",
             org_name="Acme",
@@ -43,7 +43,7 @@ def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch
     assert json.loads(result.stdout) == [
         {
             "profile": "acme",
-            "control_plane": "https://airllm.example.com",
+            "control_plane": "https://tokkeeper.example.com",
             "gateway": "https://gateway.example.com",
             "organization": "Acme",
             "workspace": "production",
@@ -54,7 +54,7 @@ def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch
 
 
 def test_doctor_renders_every_check_and_fails_when_one_is_unhealthy(tmp_path, monkeypatch):
-    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr(
         diagnostics,
         "diagnostic_rows",
@@ -74,8 +74,8 @@ def test_doctor_renders_every_check_and_fails_when_one_is_unhealthy(tmp_path, mo
 
 
 def test_doctor_accepts_environment_credentials_without_a_profile(tmp_path, monkeypatch):
-    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("AIRLLM_MANAGEMENT_KEY", "environment-token")
+    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("TOKKEEPER_MANAGEMENT_KEY", "environment-token")
     client_class = httpx.Client
     transport = httpx.MockTransport(lambda _request: httpx.Response(200, json={"data": {}}))
     monkeypatch.setattr(diagnostics.httpx, "Client", lambda **_kwargs: client_class(transport=transport))

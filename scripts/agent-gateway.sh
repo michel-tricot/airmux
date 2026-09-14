@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch a coding agent against the airllm gateway, on any model registered in the catalog.
+# Launch a coding agent against the tokkeeper gateway, on any model registered in the catalog.
 #
 # Claude Code speaks the Anthropic Messages API, served at /inf/v1/messages. Codex speaks the
 # OpenAI Responses API, served at /inf/v1/responses. The gateway routes both through the same
@@ -10,14 +10,14 @@
 #   scripts/agent-gateway.sh claude gpt-5.2 -p "hi"        # extra args pass through to the agent
 #   scripts/agent-gateway.sh --list                        # show registered models
 #
-# Env overrides: AIRLLM_URL (default http://127.0.0.1:8080),
-#                AIRLLM_SMALL_MODEL (Claude Code background model, default = the main model).
+# Env overrides: TOKKEEPER_URL (default http://127.0.0.1:8080),
+#                TOKKEEPER_SMALL_MODEL (Claude Code background model, default = the main model).
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-gateway="${AIRLLM_URL:-http://127.0.0.1:8080}"
+gateway="${TOKKEEPER_URL:-http://127.0.0.1:8080}"
 
 die() {
   echo "error: $*" >&2
@@ -31,7 +31,7 @@ env_value() {
 }
 
 list_models() {
-  uv run airllm models list -f text 2>/dev/null | cut -f1
+  uv run tokkeeper models list -f text 2>/dev/null | cut -f1
 }
 
 usage() {
@@ -56,8 +56,8 @@ model="${1:-}"
 [ -n "$model" ] || usage
 shift
 
-api_key="$(env_value AIRLLM_INFERENCE_KEY)"
-[ -n "$api_key" ] || die "AIRLLM_INFERENCE_KEY not in .env — run 'uv run airllm quickstart' first"
+api_key="$(env_value TOKKEEPER_INFERENCE_KEY)"
+[ -n "$api_key" ] || die "TOKKEEPER_INFERENCE_KEY not in .env — run 'uv run tokkeeper quickstart' first"
 
 if models="$(list_models)" && [ -n "$models" ] && ! grep -qxF "$model" <<<"$models"; then
   echo "warning: '$model' is not in the catalog; starting anyway (requests may 404)" >&2
@@ -66,7 +66,7 @@ fi
 case "$agent" in
   claude)
     command -v claude >/dev/null || die "claude not found on PATH (install Claude Code)"
-    small="${AIRLLM_SMALL_MODEL:-$model}"
+    small="${TOKKEEPER_SMALL_MODEL:-$model}"
     # Claude Code appends /v1/messages to ANTHROPIC_BASE_URL and sends the auth token as a
     # bearer, which is what the gateway's Messages surface expects. x-api-key auth is unset so
     # it does not shadow the bearer.
@@ -83,14 +83,14 @@ case "$agent" in
     # Codex reaches custom providers through a model_providers entry; the -c overrides build it
     # per run, so no config file changes. Codex 0.147 dropped the chat wire, so this needs the
     # gateway's /inf/v1/responses surface (the Responses dialect).
-    export AIRLLM_INFERENCE_KEY="$api_key"
+    export TOKKEEPER_INFERENCE_KEY="$api_key"
     echo "codex -> $gateway/inf/v1/responses | model: $model" >&2
     exec codex \
-      -c model_provider=airllm \
-      -c model_providers.airllm.name=airllm \
-      -c "model_providers.airllm.base_url=$gateway/inf/v1" \
-      -c model_providers.airllm.env_key=AIRLLM_INFERENCE_KEY \
-      -c model_providers.airllm.wire_api=responses \
+      -c model_provider=tokkeeper \
+      -c model_providers.tokkeeper.name=tokkeeper \
+      -c "model_providers.tokkeeper.base_url=$gateway/inf/v1" \
+      -c model_providers.tokkeeper.env_key=TOKKEEPER_INFERENCE_KEY \
+      -c model_providers.tokkeeper.wire_api=responses \
       -m "$model" "$@"
     ;;
 esac

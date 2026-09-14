@@ -1,16 +1,16 @@
 ---
 title: "Docker Compose"
-description: "Run the all-in-one AirLLM image and Postgres with persistent named volumes."
+description: "Run the all-in-one TokKeeper image and Postgres with persistent named volumes."
 ---
 
-The default `docker-compose.yml` runs two containers: AirLLM and Postgres.
+The default `docker-compose.yml` runs two containers: TokKeeper and Postgres.
 
 ## Start
 
 ```bash
 cp .env.example .env
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:8080
+uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
 The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
@@ -21,12 +21,12 @@ application container does not receive the provider-key variables from that file
 For another local port:
 
 ```bash
-AIRLLM_PORT=9000
-AIRLLM_PUBLIC_URL=http://localhost:9000
+TOKKEEPER_PORT=9000
+TOKKEEPER_PUBLIC_URL=http://localhost:9000
 ```
 
 Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For a public deployment, terminate TLS at a
-reverse proxy and set `AIRLLM_PUBLIC_URL` to the exact HTTPS origin.
+reverse proxy and set `TOKKEEPER_PUBLIC_URL` to the exact HTTPS origin.
 
 The packaged proxy replaces incoming forwarding headers and uses the configured public URL for the request scheme. API
 and inference responses carry `Cache-Control: no-store`, including errors. When an external TLS proxy sits in front of
@@ -66,11 +66,11 @@ application processes as UID `10001`.
 The deployment suite uses a local test provider and a disposable project:
 
 ```bash
-AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
-  docker compose -p airllm-test up -d --build --wait
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  docker compose -p tokkeeper-test up -d --build --wait
 
-AIRLLM_PORT=18080 AIRLLM_PUBLIC_URL=http://localhost:18080 \
-  DEPLOYMENT_PROJECT=airllm-test \
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  DEPLOYMENT_PROJECT=tokkeeper-test \
   DEPLOYMENT_FILE=docker-compose.yml \
   DEPLOYMENT_URL=http://localhost:18080 \
   uv run pytest tests/deployment

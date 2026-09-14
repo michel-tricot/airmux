@@ -286,7 +286,7 @@ def check_applied() -> None:
 
     _, _, changed = write(ROOT.parent, check=True)
     if changed:
-        fail("applied", "taxonomy.yml is out of date; run airllm-audit taxonomy build")
+        fail("applied", "taxonomy.yml is out of date; run tokkeeper-audit taxonomy build")
 
 
 def check_seed(all_entries: list[dict]) -> None:

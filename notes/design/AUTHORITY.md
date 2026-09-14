@@ -71,7 +71,7 @@ applies to that organization's workspaces, and a workspace grant applies only to
 | `auditor` | Read-only organization, principal, membership, workspace, catalog, credential, key, bundle, usage, data-plane, and audit access |
 | `data_plane` | `bundles.read`, `usage.ingest`, and `data-planes.heartbeat` only |
 
-The first human signup becomes the instance owner. The `airllmcp owner` command is the local recovery
+The first human signup becomes the instance owner. The `tokkeepercp owner` command is the local recovery
 path for promoting an existing human account.
 
 ### Organization roles

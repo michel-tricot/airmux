@@ -1,5 +1,5 @@
 # Providers tracked for future onboarding. Identity only; no derived catalog data.
-# Promote through a typed provider source and airllm-audit providers onboard.
+# Promote through a typed provider source and tokkeeper-audit providers onboard.
 
 candidates:
 - id: gemini

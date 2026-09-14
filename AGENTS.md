@@ -1,4 +1,4 @@
-# airllm gateway prototype
+# tokkeeper gateway prototype
 
 ## Boundary rules, non-negotiable
 - data_plane may never import sqlalchemy, sqlmodel, asyncpg, alembic, fastapi, or control_plane.
@@ -146,7 +146,7 @@ Line length is 150. Do not reformat unrelated lines to fit; run `ruff format` an
 - The database is Postgres only. Tests share one throwaway server (testcontainers, started once per run in conftest);
   each test clones the template database keyed on tmp_path through tests/pg.py, so tests run in parallel with -n auto.
   The template is built by the alembic chain, so tests run on exactly the deployed schema; test_schema proves the
-  models and create_all agree with it. Set AIRLLM_TEST_PG_URL to reuse a long-lived local server and skip the container start.
+  models and create_all agree with it. Set TOKKEEPER_TEST_PG_URL to reuse a long-lived local server and skip the container start.
 - Write the failing test first, in the same commit.
 - No test that asserts a function was called. Assert behaviour or observable output.
 - Adapter tests are parameterized over all registered adapters. Do not write per-adapter suites.

@@ -9,7 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "acceptance",
-    "airllm",
+    "tokkeeper",
     "api-models",
     "cli",
     "contract",
@@ -40,7 +40,7 @@ requires-dist = [
 ]
 
 [[package]]
-name = "airllm"
+name = "tokkeeper"
 version = "0.1.0"
 source = { virtual = "." }
 

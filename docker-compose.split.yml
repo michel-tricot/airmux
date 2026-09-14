@@ -1,5 +1,5 @@
 x-gateway: &gateway
-  image: ${AIRLLM_DATA_PLANE_IMAGE:-airllm-data-plane:local}
+  image: ${TOKKEEPER_DATA_PLANE_IMAGE:-tokkeeper-data-plane:local}
   init: true
   depends_on:
     control-plane:
@@ -24,14 +24,14 @@ services:
       - split-pgdata:/var/lib/postgresql/data
 
   control-plane:
-    image: ${AIRLLM_CONTROL_PLANE_IMAGE:-airllm-control-plane:local}
+    image: ${TOKKEEPER_CONTROL_PLANE_IMAGE:-tokkeeper-control-plane:local}
     build:
       context: .
       target: control-plane
     environment:
-      DATABASE_URL: postgresql+asyncpg://airllm:${POSTGRES_PASSWORD:-airllm}@postgres:5432/airllm
-      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
-      AIRLLM_PUBLIC_SIGNUP: ${AIRLLM_PUBLIC_SIGNUP:-false}
+      DATABASE_URL: postgresql+asyncpg://tokkeeper:${POSTGRES_PASSWORD:-tokkeeper}@postgres:5432/tokkeeper
+      TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
+      TOKKEEPER_PUBLIC_SIGNUP: ${TOKKEEPER_PUBLIC_SIGNUP:-false}
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - runtime-credentials:/state/runtime
@@ -65,14 +65,14 @@ services:
       - gateway-2:/state/data-plane
 
   console:
-    image: ${AIRLLM_CONSOLE_IMAGE:-airllm-console:local}
+    image: ${TOKKEEPER_CONSOLE_IMAGE:-tokkeeper-console:local}
     build:
       context: .
       target: console
     environment:
-      AIRLLM_CONSOLE_URL: ${AIRLLM_PUBLIC_URL:-http://localhost:8080}
+      TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
     ports:
-      - "${AIRLLM_PORT:-8080}:8080"
+      - "${TOKKEEPER_PORT:-8080}:8080"
     depends_on:
       control-plane:
         condition: service_healthy

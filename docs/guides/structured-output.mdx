@@ -3,16 +3,16 @@ title: "Generate structured output"
 description: "Request a JSON object or strict JSON Schema output and understand capability enforcement."
 ---
 
-Structured output is available when the selected catalog model advertises `structured_output`. AirLLM rejects an
+Structured output is available when the selected catalog model advertises `structured_output`. TokKeeper rejects an
 unsupported route before contacting the provider.
 
 ## Canonical request
 
 ```bash
 curl http://localhost:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'x-airllm-dialect: canonical' \
+  -H 'x-tokkeeper-dialect: canonical' \
   -d '{
     "model": "openai/gpt-4o-mini",
     "messages": [{"role": "user", "content": "Return the population of Paris"}],

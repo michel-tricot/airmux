@@ -8,15 +8,15 @@ POST /inf/v1/chat/completions
 ```
 
 This route accepts Chat Completions or canonical JSON. Official SDK requests are detected from their user-agent and
-unambiguous request fields. Raw text-only requests should set `x-airllm-dialect: openai_native`.
+unambiguous request fields. Raw text-only requests should set `x-tokkeeper-dialect: openai_native`.
 
 ## Request
 
 ```bash
 curl https://llm.example.com/inf/v1/chat/completions \
-  -H "Authorization: Bearer $AIRLLM_INFERENCE_KEY" \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'x-airllm-dialect: openai_native' \
+  -H 'x-tokkeeper-dialect: openai_native' \
   -d '{
     "model": "openai/gpt-4o-mini",
     "messages": [{"role": "user", "content": "Say hello"}],

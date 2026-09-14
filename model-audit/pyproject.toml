@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-airllm-audit = "model_audit.cli:app"
+tokkeeper-audit = "model_audit.cli:app"
 
 [build-system]
 requires = ["hatchling"]

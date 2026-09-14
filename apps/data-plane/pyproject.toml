@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-airllmdp = "data_plane.main:app"
+tokkeeperdp = "data_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

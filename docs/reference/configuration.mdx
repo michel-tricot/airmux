@@ -3,20 +3,20 @@ title: "Configuration reference"
 description: "Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores."
 ---
 
-AirLLM servers read YAML from `airllm.yml` by default or the path in `AIRLLM_CONFIG`. The all-in-one image uses `deploy/docker/airllm.yml`.
+TokKeeper servers read YAML from `tokkeeper.yml` by default or the path in `TOKKEEPER_CONFIG`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
 
 ## Docker Compose variables
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `AIRLLM_PORT` | `8080` | Published host port |
-| `AIRLLM_PUBLIC_URL` | `http://localhost:8080` | Compose value mapped to the console origin |
-| `AIRLLM_PUBLIC_SIGNUP` | `false` | Allow account creation after instance claim |
-| `POSTGRES_PASSWORD` | `airllm` | Initial local Postgres password |
-| `AIRLLM_IMAGE` | `airllm:local` | All-in-one image override |
-| `AIRLLM_CONTROL_PLANE_IMAGE` | `airllm-control-plane:local` | Split control-plane image override |
-| `AIRLLM_DATA_PLANE_IMAGE` | `airllm-data-plane:local` | Split gateway image override |
-| `AIRLLM_CONSOLE_IMAGE` | `airllm-console:local` | Split console image override |
+| `TOKKEEPER_PORT` | `8080` | Published host port |
+| `TOKKEEPER_PUBLIC_URL` | `http://localhost:8080` | Compose value mapped to the console origin |
+| `TOKKEEPER_PUBLIC_SIGNUP` | `false` | Allow account creation after instance claim |
+| `POSTGRES_PASSWORD` | `tokkeeper` | Initial local Postgres password |
+| `TOKKEEPER_IMAGE` | `tokkeeper:local` | All-in-one image override |
+| `TOKKEEPER_CONTROL_PLANE_IMAGE` | `tokkeeper-control-plane:local` | Split control-plane image override |
+| `TOKKEEPER_DATA_PLANE_IMAGE` | `tokkeeper-data-plane:local` | Split gateway image override |
+| `TOKKEEPER_CONSOLE_IMAGE` | `tokkeeper-console:local` | Split console image override |
 
 Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
 migration while the application keeps the pooled URL.
@@ -25,15 +25,15 @@ migration while the application keeps the pooled URL.
 
 ```yaml
 vars:
-  cache_dir: .airllm
+  cache_dir: .tokkeeper
 
 control_plane:
   database:
-    url: ${env:DATABASE_URL:-postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm}
+    url: ${env:DATABASE_URL:-postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper}
   bootstrap:
     token: ${file:${var:cache_dir}/dataplane.key}
-  console_url: ${env:AIRLLM_CONSOLE_URL:-http://127.0.0.1:5000}
-  public_signup: ${env:AIRLLM_PUBLIC_SIGNUP:-false}
+  console_url: ${env:TOKKEEPER_CONSOLE_URL:-http://127.0.0.1:5000}
+  public_signup: ${env:TOKKEEPER_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
     root: ${var:cache_dir}/secrets
@@ -42,7 +42,7 @@ data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane_link
-      url: ${env:AIRLLM_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
@@ -98,5 +98,5 @@ SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory 
 | `insecure_database` | Postgres-backed prototype store |
 | `memory` | Tests and ephemeral development |
 
-The environment store checks `AIRLLM_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
+The environment store checks `TOKKEEPER_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
 are not part of its lookup, so it cannot isolate tenant-specific values.

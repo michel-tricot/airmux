@@ -25,7 +25,7 @@ const key: Api.ManagementKeyOut = {
 };
 
 function open() {
-  window.localStorage.setItem('airllm_org_id', ORG.id);
+  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
   window.history.replaceState(null, '', '/org/settings');
   render(<App />);
 }

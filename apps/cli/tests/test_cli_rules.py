@@ -17,10 +17,10 @@ def test_rule_create_preserves_typed_configuration(tmp_path, monkeypatch):
     org_id = str(uuid4())
     rule_id = str(uuid4())
     workspace_id = str(uuid4())
-    monkeypatch.setenv("AIRLLM_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("AIRLLM_MANAGEMENT_KEY", "sk-test-rules")
-    monkeypatch.setenv("AIRLLM_ORG_ID", org_id)
-    monkeypatch.setenv("AIRLLM_CONTROL_PLANE_URL", "http://cp.test")
+    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("TOKKEEPER_MANAGEMENT_KEY", "sk-test-rules")
+    monkeypatch.setenv("TOKKEEPER_ORG_ID", org_id)
+    monkeypatch.setenv("TOKKEEPER_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "match": {"kind": "all_requests"},
         "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},

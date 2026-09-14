@@ -13,7 +13,7 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
     image = os.environ.get("DEPLOYMENT_COMPACT_IMAGE")
     if image is None:
         pytest.skip("set DEPLOYMENT_COMPACT_IMAGE to a built all-in-one image")
-    volume = f"airllm-volume-test-{uuid.uuid4().hex}"
+    volume = f"tokkeeper-volume-test-{uuid.uuid4().hex}"
     docker("volume", "create", volume)
     try:
         output = docker(
@@ -45,7 +45,7 @@ def test_console_accepts_flys_ipv6_resolver():
         "--env",
         "NGINX_RESOLVER=fdaa::3",
         "--env",
-        "AIRLLM_CONSOLE_URL=https://airllm.example.com",
+        "TOKKEEPER_CONSOLE_URL=https://tokkeeper.example.com",
         "--entrypoint",
         "/app/deploy/docker/start.sh",
         image,

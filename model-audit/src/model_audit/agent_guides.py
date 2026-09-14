@@ -25,7 +25,7 @@ Use this guide when a provider is not active in the catalog. Research current fa
 vendor-owned APIs, OpenAPI documents, and documentation. Do not infer endpoints,
 authentication, surfaces, limits, prices, or capabilities from another provider.
 
-1. Run `uv run airllm-audit cases coverage` and `uv run airllm-audit taxonomy validate`
+1. Run `uv run tokkeeper-audit cases coverage` and `uv run tokkeeper-audit taxonomy validate`
 2. Locate the provider model listing, inference base URL, authentication method, supported
    surfaces, schemas, pricing, homepage, documentation, and icon
 3. Add or update one auto-discovered provider source under `model-audit/catalog/scripts/sources/`
@@ -34,7 +34,7 @@ authentication, surfaces, limits, prices, or capabilities from another provider.
    modality for every retained model
 5. Add schema acquisition metadata for each supported surface when the provider publishes a usable specification
 6. Set the credential named by the definition
-7. Run `uv run airllm-audit providers onboard <provider>`
+7. Run `uv run tokkeeper-audit providers onboard <provider>`
 8. Review added models, exclusions, prices, schema coverage, provenance, and generated taxonomy
 9. Run a bounded direct-provider audit before accepting behavioral evidence
 10. Run the validation commands again and review the complete diff
@@ -65,10 +65,10 @@ directions. Onboarding fails with every incomplete provider/model field named ex
 Use the deterministic CLI when the provider source still matches the upstream API.
 
 1. Set the provider credential
-2. Run `uv run airllm-audit providers sync <provider>`
+2. Run `uv run tokkeeper-audit providers sync <provider>`
 3. Use repeated `--only` options to limit work to `models`, `pricing`, `schemas`, `parameters`, or `icons`
 4. Review additions, removals, changed limits, price provenance, schema changes, skipped steps, and failures
-5. Run `uv run airllm-audit taxonomy validate`
+5. Run `uv run tokkeeper-audit taxonomy validate`
 
 Model and pricing synchronization both reacquire the provider model catalog before applying
 enrichment. This makes an incremental refresh converge with a clean rebuild and prevents
@@ -96,9 +96,9 @@ then update the provider source with vendor-owned evidence or exclude it deliber
         use_when="One model is missing or has incorrect source-backed metadata",
         body="""# Model update
 
-Prefer `uv run airllm-audit providers sync <provider> --only models` when the provider lists
+Prefer `uv run tokkeeper-audit providers sync <provider> --only models` when the provider lists
 the model. If the model is absent from the listing, verify it against a current vendor-owned
-source and run `uv run airllm-audit models add <provider> <model> --source <url>`. Supply both
+source and run `uv run tokkeeper-audit models add <provider> <model> --source <url>`. Supply both
 `--input-modality` and `--output-modality` at least once, supply both token limits or neither,
 and pass `--replace` for a correction.
 
@@ -116,12 +116,12 @@ the manual record.
         use_when="Capability, option, modality, interaction, or rejection behavior must be established",
         body="""# Behavior audit
 
-1. Inspect the plan with `uv run airllm-audit runs plan`
-2. Execute raw HTTP comparisons against an already running gateway with `uv run airllm-audit runs execute`
+1. Inspect the plan with `uv run tokkeeper-audit runs plan`
+2. Execute raw HTTP comparisons against an already running gateway with `uv run tokkeeper-audit runs execute`
 3. Treat matching success and matching explicit rejection as parity
 4. Retry transient failures; exhausted transients are not evaluated and cannot become evidence
 5. Keep access, generic, and harness failures unknown
-6. Review the report before running `uv run airllm-audit evidence accept <report>`
+6. Review the report before running `uv run tokkeeper-audit evidence accept <report>`
 7. Validate the generated taxonomy
 
 Only direct raw API observations can define provider behavior. SDK runs check client
@@ -162,12 +162,12 @@ a strict majority for feature and parity; without a majority, leave parity not e
         use_when="Catalog metadata or accepted behavioral evidence changed",
         body="""# Taxonomy generation
 
-Run `uv run airllm-audit taxonomy build`, then `uv run airllm-audit cases coverage` and
-`uv run airllm-audit taxonomy validate`. Review `taxonomy/behavior.json` and
+Run `uv run tokkeeper-audit taxonomy build`, then `uv run tokkeeper-audit cases coverage` and
+`uv run tokkeeper-audit taxonomy validate`. Review `taxonomy/behavior.json` and
 `taxonomy/taxonomy.yml` as generated projections; never edit them directly.
 
-For a clean source audit, run `uv run airllm-audit taxonomy rebuild --preserve-as <name>`.
-Compare every field with `uv run airllm-audit taxonomy diff <name> taxonomy`; use
+For a clean source audit, run `uv run tokkeeper-audit taxonomy rebuild --preserve-as <name>`.
+Compare every field with `uv run tokkeeper-audit taxonomy diff <name> taxonomy`; use
 `--summary` for counts and `--format json` for machine review.
 
 Provider identity and declared metadata come from the catalog. Behavioral support comes only

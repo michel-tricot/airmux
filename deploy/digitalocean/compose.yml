@@ -1,13 +1,13 @@
 services:
-  airllm:
+  tokkeeper:
     ports: !reset []
     environment:
-      AIRLLM_CONSOLE_URL: https://${AIRLLM_DOMAIN:?Set the public domain}
+      TOKKEEPER_CONSOLE_URL: https://${TOKKEEPER_DOMAIN:?Set the public domain}
 
   caddy:
     image: caddy:2
     environment:
-      AIRLLM_DOMAIN: ${AIRLLM_DOMAIN:?Set the public domain}
+      TOKKEEPER_DOMAIN: ${TOKKEEPER_DOMAIN:?Set the public domain}
     ports:
       - "80:80"
       - "443:443"
@@ -17,7 +17,7 @@ services:
       - certificates:/data
       - caddy-config:/config
     depends_on:
-      airllm:
+      tokkeeper:
         condition: service_healthy
     restart: unless-stopped
 

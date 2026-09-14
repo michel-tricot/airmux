@@ -3,4 +3,4 @@
 # CI re-exports and fails on drift; never hand-edit the spec.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-uv run airllmcp openapi --out lib/api-spec/openapi.yaml
+uv run tokkeepercp openapi --out lib/api-spec/openapi.yaml

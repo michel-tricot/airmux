@@ -25,46 +25,46 @@ def test_every_command_is_listed_once():
 
     assert len(paths) == len(set(paths))
     for path in (
-        "airllm quickstart",
-        "airllm status",
-        "airllm doctor",
-        "airllm profiles list",
-        "airllm profiles use",
-        "airllm orgs mine",
-        "airllm provider-credentials add",
-        "airllm management-keys create",
-        "airllm taxonomy apply",
+        "tokkeeper quickstart",
+        "tokkeeper status",
+        "tokkeeper doctor",
+        "tokkeeper profiles list",
+        "tokkeeper profiles use",
+        "tokkeeper orgs mine",
+        "tokkeeper provider-credentials add",
+        "tokkeeper management-keys create",
+        "tokkeeper taxonomy apply",
     ):
         assert path in paths
 
-    assert "airllm bundles republish" in paths
-    assert "airllm bundles compile" not in paths
-    assert "airllm test verify" not in paths
-    assert "airllm test loadgen" not in paths
+    assert "tokkeeper bundles republish" in paths
+    assert "tokkeeper bundles compile" not in paths
+    assert "tokkeeper test verify" not in paths
+    assert "tokkeeper test loadgen" not in paths
 
 
 def test_the_listing_does_not_list_itself():
-    assert "airllm commands" not in [row["command"] for row in listed()]
+    assert "tokkeeper commands" not in [row["command"] for row in listed()]
 
 
 def test_a_command_takes_its_category_from_its_group():
     """Most commands never name a category; the group they sit in is the answer."""
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["airllm orgs mine"] == RESOURCES
-    assert rows["airllm workspaces create"] == RESOURCES
-    assert rows["airllm users list"] == RESOURCES
+    assert rows["tokkeeper orgs mine"] == RESOURCES
+    assert rows["tokkeeper workspaces create"] == RESOURCES
+    assert rows["tokkeeper users list"] == RESOURCES
 
 
 def test_all_resource_commands_share_one_category():
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["airllm orgs list"] == RESOURCES
-    assert rows["airllm orgs create"] == RESOURCES
-    assert rows["airllm providers list"] == RESOURCES
-    assert rows["airllm models list"] == RESOURCES
-    assert "airllm providers create" not in rows
-    assert "airllm models create" not in rows
+    assert rows["tokkeeper orgs list"] == RESOURCES
+    assert rows["tokkeeper orgs create"] == RESOURCES
+    assert rows["tokkeeper providers list"] == RESOURCES
+    assert rows["tokkeeper models list"] == RESOURCES
+    assert "tokkeeper providers create" not in rows
+    assert "tokkeeper models create" not in rows
 
 
 def test_every_command_says_what_it_does():

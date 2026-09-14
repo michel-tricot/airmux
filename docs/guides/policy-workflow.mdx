@@ -24,7 +24,7 @@ This example limits every request in the active workspace to 1,024 output tokens
 
   <Step title="Create the reusable rule">
     ```bash
-    airllm rules create output-limit-rule.json -f json
+    tokkeeper rules create output-limit-rule.json -f json
     ```
 
     Copy the returned rule `id`.
@@ -48,14 +48,14 @@ This example limits every request in the active workspace to 1,024 output tokens
 
   <Step title="Create and inspect the policy">
     ```bash
-    airllm policies create output-limit-policy.json
-    airllm policies list
+    tokkeeper policies create output-limit-policy.json
+    tokkeeper policies list
     ```
   </Step>
 
   <Step title="Verify behavior">
     After a gateway adopts the new bundle, a request with `max_tokens` greater than `1024` returns `403 policy_denied`.
-    A request that omits `max_tokens` is allowed because AirLLM does not invent a caller limit.
+    A request that omits `max_tokens` is allowed because TokKeeper does not invent a caller limit.
   </Step>
 </Steps>
 

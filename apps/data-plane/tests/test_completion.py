@@ -197,5 +197,5 @@ def test_a_stream_of_typed_deltas_reassembles_the_response():
 def test_the_committed_schema_matches_the_definition(face):
     """taxonomy/schemas/completion is the published word on what the gateway accepts and emits;
     scripts/export-completion-schemas.sh regenerates it when this fails."""
-    committed = yaml.safe_load((SCHEMA_DIR / f"airllm.{face}.yaml").read_text(encoding="utf-8"))
+    committed = yaml.safe_load((SCHEMA_DIR / f"tokkeeper.{face}.yaml").read_text(encoding="utf-8"))
     assert committed == json_schemas()[face]

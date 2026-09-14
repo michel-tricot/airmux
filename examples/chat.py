@@ -2,8 +2,8 @@
 
     uv run python examples/chat.py [prompt ...]
 
-Reads AIRLLM_INFERENCE_KEY from .env (run `airllm quickstart` to mint one).
-Override the defaults with AIRLLM_URL and AIRLLM_MODEL env vars.
+Reads TOKKEEPER_INFERENCE_KEY from .env (run `tokkeeper quickstart` to mint one).
+Override the defaults with TOKKEEPER_URL and TOKKEEPER_MODEL env vars.
 """
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ from dotenv import find_dotenv, load_dotenv
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("AIRLLM_INFERENCE_KEY")
+    api_key = os.environ.get("TOKKEEPER_INFERENCE_KEY")
     if not api_key:
-        print("AIRLLM_INFERENCE_KEY is not set, run `uv run airllm quickstart` first")
+        print("TOKKEEPER_INFERENCE_KEY is not set, run `uv run tokkeeper quickstart` first")
         return 1
-    gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "openai/gpt-4o-mini")
+    gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("TOKKEEPER_MODEL", "openai/gpt-4o-mini")
     prompt = " ".join(sys.argv[1:]) or "Say hi and share one fun fact."
 
     resp = httpx.post(
