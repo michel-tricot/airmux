@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy import CheckConstraint
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import Field
+from sqlmodel import Field, select
 
 from control_plane.authz import OrgRole
 from control_plane.db import current_session
@@ -14,6 +14,11 @@ from control_plane.models.audit import audited
 from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RequestModel
+
+
+class LastOrgOwnerError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("An organization must keep at least one owner")
 
 
 @audited
@@ -32,11 +37,26 @@ class OrgMembership(Record, Tombstonable, table=True):
         statement = insert(cls).values(user_id=user_id, org_id=org_id, role=role).on_conflict_do_nothing(index_elements=["user_id", "org_id"])
         await current_session().execute(statement)
 
-    async def is_only_owner(self) -> bool:
-        if self.role != OrgRole.owner:
-            return False
-        owners = await OrgMembership.find(OrgMembership.org_id == self.org_id, OrgMembership.role == OrgRole.owner)
-        return len(owners) == 1
+    async def _lock_org(self) -> None:
+        from control_plane.models.org import Org  # noqa: PLC0415 org imports membership, so the two only meet at call time
+
+        await current_session().execute(select(Org.id).where(Org.id == self.org_id).with_for_update())
+
+    async def _refuse_last_owner_removal(self) -> None:
+        await self._lock_org()
+        owners = await OrgMembership.find(OrgMembership.org_id == self.org_id, OrgMembership.role == OrgRole.owner, limit=2)
+        if len(owners) == 1 and owners[0].user_id == self.user_id:
+            raise LastOrgOwnerError
+
+    async def change_role(self, role: OrgRole) -> OrgMembership:
+        if role != OrgRole.owner:
+            await self._refuse_last_owner_removal()
+        self.role = role
+        return await self.save()
+
+    async def remove(self) -> None:
+        await self._refuse_last_owner_removal()
+        await self.delete()
 
 
 class OrgMembershipIn(RequestModel):

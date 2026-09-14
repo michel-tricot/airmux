@@ -99,8 +99,7 @@ def owner(
             if user.instance_role == InstanceRole.owner:
                 return email, True
             await set_actor(user.id)
-            user.instance_role = InstanceRole.owner
-            await user.save()
+            await User.change_instance_role(user.id, InstanceRole.owner)
             return email, False
 
     try:

@@ -15,7 +15,7 @@ from control_plane.authz import Permission
 from control_plane.deps import instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
+from control_plane.models.user import InstanceRoleIn, LastInstanceOwnerError, ServiceAccountIn, UserOut
 
 router = APIRouter()
 
@@ -57,7 +57,10 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
         raise HTTPException(status_code=409, detail="user owns a personal org; delete the org first")
     if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
         raise HTTPException(status_code=409, detail="user created inference keys that outlive them; delete those workspaces first")
-    await user.delete_with_contents()
+    try:
+        await user.delete_with_contents()
+    except LastInstanceOwnerError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     return Envelope(data=DeletedOut.of(user_id))
 
 
