@@ -14,12 +14,13 @@ ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
 FENCE = re.compile(r"^[ \t]*```(?P<language>[A-Za-z0-9_+-]+)[^\n]*\n(?P<body>.*?)^[ \t]*```[ \t]*$", re.MULTILINE | re.DOTALL)
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
+LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^)#?]+)(?:#[^)]+)?\)")
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
 
 
 def documentation_files() -> list[Path]:
-    return sorted([*DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
+    return sorted([ROOT / "CONTRIBUTING.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
 
 
 def navigation_pages(node: object) -> list[str]:
@@ -82,6 +83,26 @@ def test_internal_documentation_links_resolve() -> None:
         for route in LINK.findall(path.read_text(encoding="utf-8"))
         if not route_exists(route)
     ]
+    assert missing == []
+
+
+def test_contributor_documentation_has_a_repository_entry_point() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    contributing_path = ROOT / "CONTRIBUTING.md"
+    design_index_path = ROOT / "notes" / "design" / "README.md"
+
+    assert contributing_path.exists()
+    assert design_index_path.exists()
+    assert "[Contributing](CONTRIBUTING.md)" in readme
+
+    contributing = contributing_path.read_text(encoding="utf-8")
+    assert "docs/development.mdx" in contributing
+    assert "notes/design/README.md" in contributing
+
+
+@pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
+def test_repository_documentation_links_resolve(path: Path) -> None:
+    missing = [target for target in LOCAL_LINK.findall(path.read_text(encoding="utf-8")) if not (path.parent / target).resolve().exists()]
     assert missing == []
 
 
