@@ -97,8 +97,20 @@ def test_taxonomy_apply_requires_manage_and_rejects_the_whole_invalid_document(t
 
         invalid = client.post(
             "/api/v1/instance/taxonomy",
-            json={"providers": [PROVIDER], "models": [MODEL, {**MODEL, "model_id": "orphan", "provider_id": "missing"}]},
+            json={
+                "providers": [PROVIDER],
+                "models": [
+                    MODEL,
+                    {**MODEL, "model_id": "orphan", "provider_id": "missing"},
+                    {**MODEL, "model_id": "another-orphan", "provider_id": "also-missing"},
+                ],
+            },
             headers=root,
         )
         assert invalid.status_code == 404
+        assert invalid.json() == {
+            "detail": (
+                "Unknown provider references: model 'orphan' requires provider 'missing'; model 'another-orphan' requires provider 'also-missing'"
+            )
+        }
         assert client.get("/api/v1/instance/taxonomy", headers=root).json()["data"] == {"providers": [], "models": []}

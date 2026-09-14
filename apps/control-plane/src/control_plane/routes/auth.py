@@ -39,7 +39,6 @@ from control_plane.models import (
     User,
     set_actor,
 )
-from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
 from control_plane.models.org_invitation import InvitationEmailMismatchError, InvitationUnavailableError
@@ -182,10 +181,7 @@ async def signup(
     user = User(email=body.email, name=body.name or body.email, instance_role=instance_role, service_account=False)
     await set_actor(user.id)
     await user.save()
-    try:
-        await AuthIdentity.set_password_hash(user, await request.app.state.password_workers.hash(body.password))
-    except IdentityConflictError as e:
-        raise HTTPException(status_code=409, detail="An account with this email already exists") from e
+    await AuthIdentity.set_password_hash(user, await request.app.state.password_workers.hash(body.password))
     _, token = await mint_session(user.id)
     _set_session_cookie(response, token, request)
     return Envelope(data=await _me_out(user))

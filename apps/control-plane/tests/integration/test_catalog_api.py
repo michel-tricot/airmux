@@ -37,4 +37,6 @@ def test_model_and_provider_upsert_converge(tmp_path):
 def test_model_with_unknown_provider_is_not_found(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
-        assert c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "provider_id": "nope"}, headers=cp.headers()).status_code == 404
+        response = c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "provider_id": "nope"}, headers=cp.headers())
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Unknown provider reference: model 'gpt-test' requires provider 'nope'"}

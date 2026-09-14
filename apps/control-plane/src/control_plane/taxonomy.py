@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -22,8 +23,18 @@ def _default_capabilities() -> list[Capability]:
     return ["streaming", "tools"]
 
 
+@dataclass(frozen=True)
+class UnknownProviderReference:
+    provider_id: str
+    model_id: str
+
+
 class UnknownProviderError(ValueError):
-    pass
+    def __init__(self, reference: UnknownProviderReference, *additional_references: UnknownProviderReference) -> None:
+        self.references = (reference, *additional_references)
+        label = "reference" if not additional_references else "references"
+        requirements = "; ".join(f"model '{missing.model_id}' requires provider '{missing.provider_id}'" for missing in self.references)
+        super().__init__(f"Unknown provider {label}: {requirements}")
 
 
 class ProviderIn(RequestModel):
@@ -152,7 +163,7 @@ async def upsert_model(m: ModelIn) -> Model:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == m.provider_id)
     if provider is None:
-        raise UnknownProviderError(m.provider_id)
+        raise UnknownProviderError(UnknownProviderReference(provider_id=m.provider_id, model_id=m.model_id))
     model = await Model.first(Model.name == m.model_id)
     if model is None:
         model = Model(
@@ -238,8 +249,13 @@ async def plan_taxonomy(spec: TaxonomySpec) -> tuple[TaxonomyChangeCounts, Taxon
     providers_by_name = {provider.name.casefold(): provider for provider in providers}
     provider_names = {provider.id: provider.name.casefold() for provider in providers}
     available_providers = providers_by_name.keys() | {provider.provider_id for provider in spec.providers}
-    if missing := sorted({model.provider_id for model in spec.models} - available_providers):
-        raise UnknownProviderError(", ".join(missing))
+    missing = tuple(
+        UnknownProviderReference(provider_id=model.provider_id, model_id=model.model_id)
+        for model in spec.models
+        if model.provider_id not in available_providers
+    )
+    if missing:
+        raise UnknownProviderError(missing[0], *missing[1:])
     models_by_name = {model.name: model for model in models}
     provider_counts = _change_counts(spec.providers, providers_by_name, lambda provider: provider.provider_id, _provider_matches)
     model_counts = _change_counts(

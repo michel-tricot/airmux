@@ -17,6 +17,12 @@ from control_plane.db import make_engine, make_session_factory, transaction
 from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
+from control_plane.models.auth_identity import IdentityConflictError
+from control_plane.models.org import OrgSlugTakenError
+from control_plane.models.org_membership import LastOrgOwnerError
+from control_plane.models.policy import InvalidPolicyError
+from control_plane.models.rule import InvalidRuleError, RuleInUseError
+from control_plane.models.user import LastInstanceOwnerError, ManagedServiceAccountInstanceRoleError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
 from control_plane.passwords import PasswordWorkers
 from control_plane.routes.auth import router as auth_router
@@ -35,6 +41,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
+from control_plane.taxonomy import UnknownProviderError
 from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, compile_routes, denied_response
 
 if TYPE_CHECKING:
@@ -97,6 +104,26 @@ async def integrity_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": "Request conflicts with existing state"})
 
 
+async def domain_validation_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+
+async def domain_conflict_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
+async def org_slug_taken_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": "slug is already taken"})
+
+
+async def identity_conflict_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": "An account with this email already exists"})
+
+
+async def unknown_provider_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
 async def authorization_handler(_request: Request, exc: Exception) -> JSONResponse:
     error = cast("AuthorizationError", exc)
     return JSONResponse(status_code=403, content={"detail": error.detail})
@@ -140,6 +167,15 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(IntegrityError, integrity_handler)
     app.add_exception_handler(AuthorizationError, authorization_handler)
     app.add_exception_handler(CredentialError, credential_handler)
+    app.add_exception_handler(InvalidPolicyError, domain_validation_handler)
+    app.add_exception_handler(InvalidRuleError, domain_validation_handler)
+    app.add_exception_handler(RuleInUseError, domain_conflict_handler)
+    app.add_exception_handler(OrgSlugTakenError, org_slug_taken_handler)
+    app.add_exception_handler(LastOrgOwnerError, domain_conflict_handler)
+    app.add_exception_handler(LastInstanceOwnerError, domain_conflict_handler)
+    app.add_exception_handler(ManagedServiceAccountInstanceRoleError, domain_conflict_handler)
+    app.add_exception_handler(IdentityConflictError, identity_conflict_handler)
+    app.add_exception_handler(UnknownProviderError, unknown_provider_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     routers = (

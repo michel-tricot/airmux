@@ -16,7 +16,7 @@ from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.org_membership import LastOrgOwnerError, MembershipOut, OrgMemberOut, OrgMembershipIn
+from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
@@ -62,10 +62,7 @@ async def add_org_user(user_id: UUID, body: OrgMembershipIn, org_id: OrgDep, act
         membership = OrgMembership(user_id=user_id, org_id=org_id, role=body.role)
         await membership.save()
     elif membership.role != body.role:
-        try:
-            await membership.change_role(body.role)
-        except LastOrgOwnerError as error:
-            raise HTTPException(status_code=409, detail=str(error)) from error
+        await membership.change_role(body.role)
     return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, role=membership.role, status="member"))
 
 
@@ -79,10 +76,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
     if user is not None and user.managing_org_id == org_id:
         raise HTTPException(status_code=409, detail="Delete an organization-managed service account instead of removing its membership")
     await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
-    try:
-        await membership.remove()
-    except LastOrgOwnerError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
+    await membership.remove()
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
 

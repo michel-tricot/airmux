@@ -9,7 +9,7 @@ from control_plane.authz import Permission
 from control_plane.deps import OrgDep, instance_scope, org_scope, require
 from control_plane.models import Org
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.org import OrgCreate, OrgOut, OrgSlugTakenError, OrgUpdate
+from control_plane.models.org import OrgCreate, OrgOut, OrgUpdate
 from control_plane.routes.provider_credentials import secret_store
 
 router = APIRouter(prefix="/organizations")
@@ -18,10 +18,7 @@ router = APIRouter(prefix="/organizations")
 @router.post("", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_create)])
 async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     """Create an organization."""
-    try:
-        org = await Org.create(body.name, body.slug)
-    except OrgSlugTakenError as error:
-        raise HTTPException(status_code=409, detail="slug is already taken") from error
+    org = await Org.create(body.name, body.slug)
     return Envelope(data=OrgOut.model_validate(org))
 
 

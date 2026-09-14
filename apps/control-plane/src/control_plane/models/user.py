@@ -30,6 +30,11 @@ class LastInstanceOwnerError(ValueError):
         super().__init__("An instance must keep at least one owner")
 
 
+class ManagedServiceAccountInstanceRoleError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Organization-managed service accounts cannot hold an instance role")
+
+
 @audited
 class User(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
@@ -160,8 +165,7 @@ class User(Record, Identified, Tombstonable, table=True):
         if user is None:
             return None
         if user.managing_org_id is not None:
-            msg = "Organization-managed service accounts cannot hold an instance role"
-            raise ValueError(msg)
+            raise ManagedServiceAccountInstanceRoleError
         if user.instance_role == InstanceRole.owner and instance_role != InstanceRole.owner:
             cls._refuse_last_owner_removal(owner_ids, user_id)
         user.instance_role = instance_role

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 from sqlmodel import col
 
 from control_plane.authz import Permission
@@ -20,7 +20,6 @@ from control_plane.taxonomy import (
     TaxonomyOut,
     TaxonomyPublicationOut,
     TaxonomySpec,
-    UnknownProviderError,
     apply_taxonomy,
     plan_taxonomy,
     upsert_model,
@@ -51,10 +50,7 @@ async def apply_instance_taxonomy(
     dry_run: Annotated[bool, Query(description="Validate and report changes without applying them")] = False,
 ) -> Envelope[TaxonomyApplyOut]:
     """Apply a complete provider and model taxonomy atomically."""
-    try:
-        provider_counts, model_counts = await plan_taxonomy(body)
-    except UnknownProviderError:
-        raise HTTPException(status_code=404, detail="Provider not found; include it in the taxonomy or create it first") from None
+    provider_counts, model_counts = await plan_taxonomy(body)
     if dry_run:
         return Envelope(data=TaxonomyApplyOut(dry_run=True, providers=provider_counts, models=model_counts, published=[]))
     await apply_taxonomy(body)
@@ -98,8 +94,4 @@ async def create_provider(body: ProviderIn) -> Envelope[ProviderOut]:
 @router.post("/instance/taxonomy/models", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_manage)])
 async def create_model(body: ModelIn) -> Envelope[ModelOut]:
     """Create a model or replace the catalog entry with the same name."""
-    try:
-        model = await upsert_model(body)
-    except UnknownProviderError:
-        raise HTTPException(status_code=404, detail="Provider not found; create it before its models") from None
-    return Envelope(data=ModelOut.model_validate(model))
+    return Envelope(data=ModelOut.model_validate(await upsert_model(body)))
