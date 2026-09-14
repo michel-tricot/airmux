@@ -18,6 +18,42 @@ flowchart LR
   G -->|Queued usage and heartbeat| M
 ```
 
+## Why the planes are separate
+
+Management operations need transactions, durable state, audit attribution, and secret writes. Inference needs a small,
+predictable path that can keep serving while the management service is unavailable. The control plane therefore compiles
+versioned organization bundles, and each data-plane worker validates a bundle before atomically replacing its in-memory
+indexes.
+
+A request captures one bundle snapshot and uses it for its entire lifetime. Management changes take effect only after a
+new bundle is admitted, so an in-flight request never observes a partially updated policy or catalog. Features that need
+management state on the request path must add that state to the bundle. Cold provider-secret resolution is the only
+database-capable exception, and resolved values remain outside the bundle.
+
+## Canonical adapter waist
+
+```mermaid
+flowchart LR
+  O[OpenAI callers] --> I[Ingress adapters]
+  A[Anthropic callers] --> I
+  C[Canonical callers] --> I
+  I --> W[Canonical request and response]
+  W --> P[Policy, routing, and metering]
+  P --> E[Egress adapters]
+  E --> X[OpenAI-compatible providers]
+  E --> Y[Anthropic providers]
+  E --> Z[Responses providers]
+```
+
+With `N` caller dialects and `M` provider families, the canonical waist needs `N + M` translators rather than a
+translator for every caller-provider pair. Request reconciliation, policy, routing, adjustments, usage, and cancellation
+accounting are implemented once against canonical types.
+
+Ingress adapters decide whether a request belongs to their dialect, parse it into canonical, and render canonical output
+for the caller. Egress adapters translate canonical requests to a provider family and fold buffered or streaming output
+back into canonical. Adapter modules are discovered automatically, so adding a dialect or provider family does not
+require editing a central registry.
+
 ## Control plane
 
 The control plane owns organizations, workspaces, users, roles, management keys, inference keys, provider-credential

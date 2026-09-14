@@ -5,6 +5,16 @@ description: "Run the Python services and console from source, execute checks, r
 
 Run commands from the repository root. Development requires Python 3.13+, uv, Bun, and Docker with Compose.
 
+## Contribution workflow
+
+Before changing code, read the [contributor guide](https://github.com/michel-tricot/airllm/blob/main/CONTRIBUTING.md),
+`AGENTS.md`, and the relevant record under `notes/design/`. Add a failing behavior test first, keep the implementation
+focused, and update every affected schema, generated client, example, and document in the same change.
+
+Run focused tests while iterating. Before opening a pull request, run the full checks for the areas touched and describe
+the user impact, design tradeoffs, and verification in the pull request body. Inference request-path changes require both
+the acceptance scenarios and a real request through a running data plane.
+
 ## Install and initialize
 
 ```bash

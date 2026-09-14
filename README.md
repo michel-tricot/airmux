@@ -3,6 +3,21 @@
 AirLLM is a self-hosted LLM gateway. Applications use one endpoint across providers while AirLLM handles request
 translation, workspace policies, scoped provider credentials, inference keys, failover, and usage accounting.
 
+## Architecture
+
+AirLLM separates mutable management work from the inference request path:
+
+| Plane | Responsibility |
+| --- | --- |
+| Control plane | Organizations, workspaces, users, credentials, policies, catalog data, bundles, usage, and audit activity |
+| Data plane | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering |
+
+Caller dialects and provider protocols meet at one canonical model. Adding a caller dialect requires one ingress adapter;
+adding a provider family requires one egress adapter. Policy, routing, and metering remain provider-neutral and are
+evaluated against an immutable configuration bundle instead of querying management state on the request path.
+
+See [Architecture](docs/concepts/architecture.mdx) for the full data flow and failure boundaries.
+
 ## Quickstart
 
 You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
@@ -24,6 +39,17 @@ uv run --package cli --no-dev --frozen airllm quickstart --url http://localhost:
 prints a new inference key; and verifies it with a real model request. Open [localhost:8080](http://localhost:8080) for
 the console.
 
+## Common commands
+
+| Goal | Command |
+| --- | --- |
+| Start or update the local stack | `docker compose up -d --build --wait` |
+| Check gateway readiness | `curl --fail http://localhost:8080/readyz` |
+| Inspect the installation | `uv run --package cli --no-dev --frozen airllm doctor` |
+| Follow service logs | `docker compose logs -f airllm` |
+| Stop while preserving state | `docker compose down` |
+| Validate documentation | `uv run pytest tests/documentation` |
+
 ## Documentation
 
 - [Quickstart](docs/quickstart.mdx)
@@ -36,6 +62,12 @@ the console.
 - [Development](docs/development.mdx)
 
 The complete management API is generated from [`lib/api-spec/openapi.yaml`](lib/api-spec/openapi.yaml) in the Mintlify reference navigation.
+
+## Contributing
+
+See [Contributing](CONTRIBUTING.md) for the development workflow, architectural boundaries, generated contracts, and
+validation expectations. Significant design changes should update the relevant record in
+[`notes/design`](notes/design/README.md).
 
 ## License and stability
 
