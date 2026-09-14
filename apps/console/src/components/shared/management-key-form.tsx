@@ -3,7 +3,7 @@ import { Check, Plus } from 'lucide-react';
 import { SearchField } from '@/components/shared/search-field';
 import type { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
-import { Permission, type ManagementKeyGrantIn, type Permission as PermissionName } from '@workspace/api-client-react';
+import { Permission, type ManagementKeyIn, type Permission as PermissionName } from '@workspace/api-client-react';
 import { Button, Dropdown, Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ export const managementKeyFormSchema = z.object({
 
 export type ManagementKeyFormValues = z.infer<typeof managementKeyFormSchema>;
 
-export function managementKeyPayload(values: ManagementKeyFormValues, now = new Date()): ManagementKeyGrantIn {
+export function managementKeyPayload(values: ManagementKeyFormValues, now = new Date()): ManagementKeyIn {
   return {
     label: values.label,
     permissions: values.permissions,

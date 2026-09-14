@@ -70,15 +70,7 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         viewer = make_user(tmp_path, "viewer@example.com")
         assert client.put(f"/api/v1/orgs/{org_id}/users/{viewer.id}", json={"role": "member"}, headers=org).status_code == 200
         assert client.put(f"/api/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "viewer"}, headers=org).status_code == 200
-        management_key = client.post(
-            f"/api/v1/orgs/{org_id}/workspaces/{first}/management-keys",
-            json={
-                "label": "workspace-usage",
-                "user_id": str(viewer.id),
-                "permissions": [Permission.usage_read],
-            },
-            headers=root,
-        ).json()["data"]
+        key = cp.headers_for(org_id, viewer.id, first, permissions=frozenset({Permission.usage_read}))
         events = [
             {
                 "event_id": str(uuid7()),
@@ -103,7 +95,6 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         ]
         assert client.post("/api/v1/events", json=events, headers=root).status_code == 200
 
-        key = {"authorization": f"Bearer {management_key['token']}"}
         visible = client.get(f"/api/v1/orgs/{org_id}/workspaces/{first}/events", headers=key)
         assert visible.status_code == 200, visible.text
         assert {event["workspace_id"] for event in visible.json()["data"]} == {str(first)}

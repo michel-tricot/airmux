@@ -11,11 +11,13 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, HTTPException
 from sqlmodel import col
 
-from control_plane.authz import Permission
-from control_plane.deps import instance_scope, require
+from control_plane.authz import Permission, Scope
+from control_plane.deps import ActorDep, instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.user import InstanceRoleIn, LastInstanceOwnerError, ServiceAccountIn, UserOut
+from control_plane.routes.management_keys import issue_management_key
 
 router = APIRouter()
 
@@ -25,6 +27,23 @@ async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     """Create a machine principal with an optional instance role."""
     user = User.new_service_account(body.name, body.instance_role)
     return Envelope(data=_user_out(await user.save(), []))
+
+
+@router.post(
+    "/service-accounts/{user_id}/management-keys",
+    tags=["Instance Users"],
+    dependencies=[require("api", instance_scope, Permission.management_keys_issue)],
+)
+async def create_instance_service_account_management_key(
+    user_id: UUID,
+    body: ManagementKeyIn,
+    actor: ActorDep,
+) -> Envelope[ManagementKeyCreatedOut]:
+    """Issue an instance key for an instance-managed service account."""
+    service_account = await User.instance_service_account(user_id)
+    if service_account is None:
+        raise HTTPException(status_code=404, detail="Instance service account not found")
+    return Envelope(data=await issue_management_key(body, actor, Scope.instance(), principal_id=service_account.id))
 
 
 def _user_out(u: User, orgs: list[UUID]) -> UserOut:

@@ -112,19 +112,27 @@ class ControlPlane:
             headers["X-Test-Org-Id"] = str(org_id)
         return headers
 
-    def headers_for(self, org_id: UUID, user_id: UUID | str, workspace_id: UUID | None = None) -> dict[str, str]:
+    def headers_for(
+        self, org_id: UUID | None, user_id: UUID | str, workspace_id: UUID | None = None, *, permissions: frozenset[Permission] | None = None
+    ) -> dict[str, str]:
         """An org key bound to a named user, for the checks an instance owner bypasses."""
 
         async def create() -> str:
             async with standalone_transaction(self.db_url):
                 await set_actor(UUID(str(user_id)))
                 principal_id = UUID(str(user_id))
-                scope = Scope.workspace(org_id, workspace_id) if workspace_id is not None else Scope.org(org_id)
+                scope = (
+                    Scope.workspace(org_id, workspace_id)
+                    if workspace_id is not None and org_id is not None
+                    else Scope.org(org_id)
+                    if org_id is not None
+                    else Scope.instance()
+                )
                 _, token = await create_management_key(
                     ManagementKeyGrant(
                         principal_id=principal_id,
                         scope=scope,
-                        permissions=await principal_permissions(principal_id, scope),
+                        permissions=permissions if permissions is not None else await principal_permissions(principal_id, scope),
                         label="member",
                     )
                 )

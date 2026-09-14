@@ -26,6 +26,4 @@ export interface ManagementKeyIn {
   label: string;
   /** Optional expiration timestamp with a timezone */
   expires_at?: Date | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
 }

@@ -1967,36 +1967,6 @@ class HTTPValidationError(BaseModel):
     detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
 
 
-class ManagementKeyGrantIn(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    permissions: Annotated[
-        list[Permission],
-        Field(
-            description="Explicit maximum permissions carried by the key",
-            min_length=1,
-            title="Permissions",
-        ),
-    ]
-    label: Annotated[
-        str,
-        Field(
-            description="Where this key lives, such as ci, laptop, or data-plane",
-            max_length=80,
-            min_length=1,
-            title="Label",
-        ),
-    ]
-    expires_at: Annotated[
-        AwareDatetime | None,
-        Field(
-            description="Optional expiration timestamp with a timezone",
-            title="Expires At",
-        ),
-    ] = None
-
-
 class ManagementKeyIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2023,13 +1993,6 @@ class ManagementKeyIn(BaseModel):
         Field(
             description="Optional expiration timestamp with a timezone",
             title="Expires At",
-        ),
-    ] = None
-    user_id: Annotated[
-        UUID | None,
-        Field(
-            description="Principal the key authenticates; defaults to the authenticated principal",
-            title="User Id",
         ),
     ] = None
 
@@ -2105,7 +2068,7 @@ class OrgServiceAccountIn(BaseModel):
         ),
     ]
     management_key: Annotated[
-        ManagementKeyGrantIn,
+        ManagementKeyIn,
         Field(description="Initial organization-scoped management key to create for the service account"),
     ]
 

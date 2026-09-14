@@ -868,22 +868,6 @@ export interface ManagementKeyCreatedOut {
   token: string;
 }
 
-export interface ManagementKeyGrantIn {
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
-  /**
-     * Where this key lives, such as ci, laptop, or data-plane
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /** Optional expiration timestamp with a timezone */
-  expires_at?: string | null;
-}
-
 export interface ManagementKeyIn {
   /**
      * Explicit maximum permissions carried by the key
@@ -898,8 +882,6 @@ export interface ManagementKeyIn {
   label: string;
   /** Optional expiration timestamp with a timezone */
   expires_at?: string | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
 }
 
 export type ManagementKeyOutStatus = typeof ManagementKeyOutStatus[keyof typeof ManagementKeyOutStatus];
@@ -1252,7 +1234,7 @@ export interface OrgServiceAccountIn {
      */
   name: string;
   /** Initial organization-scoped management key to create for the service account */
-  management_key: ManagementKeyGrantIn;
+  management_key: ManagementKeyIn;
 }
 
 export interface OrgUpdate {

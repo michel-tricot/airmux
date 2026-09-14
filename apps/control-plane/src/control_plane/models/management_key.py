@@ -169,7 +169,7 @@ class ManagementKeyPermissionsIn(RequestModel):
         return sorted(permissions, key=str)
 
 
-class ManagementKeyGrantIn(ManagementKeyPermissionsIn):
+class ManagementKeyIn(ManagementKeyPermissionsIn):
     label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
     expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
@@ -182,7 +182,3 @@ class ManagementKeyGrantIn(ManagementKeyPermissionsIn):
             msg = "expires_at must include a timezone"
             raise ValueError(msg)
         return expires_at.astimezone(UTC)
-
-
-class ManagementKeyIn(ManagementKeyGrantIn):
-    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")

@@ -136,6 +136,7 @@
                     "group": "Users",
                     "pages": [
                       "POST /api/v1/service-accounts",
+                      "POST /api/v1/service-accounts/{user_id}/management-keys",
                       "GET /api/v1/users/{user_id}",
                       "DELETE /api/v1/users/{user_id}",
                       "GET /api/v1/users",
@@ -201,6 +202,7 @@
                     "group": "Service Accounts",
                     "pages": [
                       "POST /api/v1/orgs/{org_id}/service-accounts",
+                      "POST /api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys",
                       "DELETE /api/v1/orgs/{org_id}/service-accounts/{user_id}"
                     ]
                   },

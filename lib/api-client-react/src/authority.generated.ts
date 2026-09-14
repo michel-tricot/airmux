@@ -98,6 +98,14 @@ export const operationAuthority = {
       },
     ],
   },
+  createInstanceServiceAccountManagementKey: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["management-keys.issue"],
+      },
+    ],
+  },
   getUser: {
     checks: [
       {
@@ -496,6 +504,14 @@ export const operationAuthority = {
         scope: "org_scope",
         anyOf: ["members.manage"],
       },
+      {
+        scope: "org_scope",
+        anyOf: ["management-keys.issue"],
+      },
+    ],
+  },
+  createOrgServiceAccountManagementKey: {
+    checks: [
       {
         scope: "org_scope",
         anyOf: ["management-keys.issue"],

@@ -1020,6 +1020,55 @@ paths:
       - scope: instance_scope
         anyOf:
         - principals.manage
+  /api/v1/service-accounts/{user_id}/management-keys:
+    post:
+      tags:
+      - Instance Users
+      summary: Create Instance Service Account Management Key
+      description: 'Issue an instance key for an instance-managed service account.
+
+
+        Required permission: `management-keys.issue`.'
+      operationId: create_instance_service_account_management_key
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+        description: User or service-account ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagementKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - management-keys.issue
   /api/v1/users/{user_id}:
     get:
       tags:
@@ -3489,6 +3538,62 @@ paths:
       - scope: org_scope
         anyOf:
         - members.manage
+      - scope: org_scope
+        anyOf:
+        - management-keys.issue
+  /api/v1/orgs/{org_id}/service-accounts/{user_id}/management-keys:
+    post:
+      tags:
+      - Organization Service Accounts
+      summary: Create Org Service Account Management Key
+      description: 'Issue a replacement key for an organization-managed service account.
+
+
+        Required permission: `management-keys.issue`.'
+      operationId: create_org_service_account_management_key
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+        description: User or service-account ID
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagementKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ManagementKeyCreatedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
       - scope: org_scope
         anyOf:
         - management-keys.issue
@@ -6056,34 +6161,6 @@ components:
       - status
       - token
       title: ManagementKeyCreatedOut
-    ManagementKeyGrantIn:
-      properties:
-        permissions:
-          items:
-            $ref: '#/components/schemas/Permission'
-          type: array
-          minItems: 1
-          title: Permissions
-          description: Explicit maximum permissions carried by the key
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, such as ci, laptop, or data-plane
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-          description: Optional expiration timestamp with a timezone
-      additionalProperties: false
-      type: object
-      required:
-      - permissions
-      - label
-      title: ManagementKeyGrantIn
     ManagementKeyIn:
       properties:
         permissions:
@@ -6106,13 +6183,6 @@ components:
           - type: 'null'
           title: Expires At
           description: Optional expiration timestamp with a timezone
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Principal the key authenticates; defaults to the authenticated principal
       additionalProperties: false
       type: object
       required:
@@ -6946,7 +7016,7 @@ components:
           title: Name
           description: Display name for the service account
         management_key:
-          $ref: '#/components/schemas/ManagementKeyGrantIn'
+          $ref: '#/components/schemas/ManagementKeyIn'
           description: Initial organization-scoped management key to create for the service account
       additionalProperties: false
       type: object

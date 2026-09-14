@@ -7,6 +7,7 @@ import {
   useRemoveMember,
   useCreateOrgServiceAccount,
   useDeleteOrgServiceAccount,
+  useCreateOrgServiceAccountManagementKey,
   getListOrgUsersQueryKey,
   getListOrgManagementKeysQueryKey,
   getListMembersQueryKey,
@@ -47,6 +48,16 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
         void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
+    },
+  });
+}
+
+export function useCreateOrgServiceAccountManagementKeyMutation(orgId: string) {
+  const queryClient = useQueryClient();
+  return useCreateOrgServiceAccountManagementKey({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) }),
+      meta: { errorMessage: 'We couldn’t generate the service account key. Please try again.' },
     },
   });
 }

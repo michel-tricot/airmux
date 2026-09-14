@@ -6,12 +6,17 @@ import { useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useOrgManagementKeys, useCreateOrgManagementKeyMutation, useRevokeOrgManagementKeyMutation } from '@/features/keys/hooks';
-import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
+import {
+  useCreateOrgServiceAccountManagementKeyMutation,
+  useCreateOrgServiceAccountMutation,
+  useDeleteOrgServiceAccountMutation,
+  useOrgMembers,
+} from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
 import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
-import { Plus, KeyRound, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
+import { Plus, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
@@ -67,10 +72,10 @@ export default function AppOrgSettings() {
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [keyTarget, setKeyTarget] = useState<{ userId: string; name: string } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
+  const [serviceAccountKeyTarget, setServiceAccountKeyTarget] = useState<NonNullable<typeof members>[number] | null>(null);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
@@ -83,6 +88,7 @@ export default function AppOrgSettings() {
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const createServiceAccount = useCreateOrgServiceAccountMutation(orgId);
   const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
+  const mintServiceAccountKey = useCreateOrgServiceAccountManagementKeyMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
 
   const memberActions = (
@@ -130,7 +136,6 @@ export default function AppOrgSettings() {
               {canIssueKey && (
                 <Button
                   onClick={() => {
-                    setKeyTarget(null);
                     setKeyOpen(true);
                   }}
                   size="sm"
@@ -204,16 +209,12 @@ export default function AppOrgSettings() {
                               <span className="inline-flex items-center gap-1">
                                 {canIssueKey && (
                                   <Button
-                                    size="icon"
-                                    variant="ghost"
+                                    size="sm"
+                                    variant="outline"
                                     aria-label={`Generate replacement key for ${member.name}`}
-                                    disabled={createKey.isPending}
-                                    onClick={() => {
-                                      setKeyTarget({ userId: member.user_id, name: member.name });
-                                      setKeyOpen(true);
-                                    }}
+                                    onClick={() => setServiceAccountKeyTarget(member)}
                                   >
-                                    <KeyRound className="w-4 h-4" />
+                                    <RefreshCw className="w-4 h-4" /> Generate key
                                   </Button>
                                 )}
                                 {canDeleteServiceAccount && (
@@ -356,29 +357,19 @@ export default function AppOrgSettings() {
       {canIssueKey && (
         <FormDialog
           open={keyOpen}
-          onOpenChange={(open) => {
-            setKeyOpen(open);
-            if (!open) setKeyTarget(null);
-          }}
-          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Generate Management Key'}
-          description={
-            keyTarget
-              ? 'The new key is shown once and does not revoke any existing keys for this service account.'
-              : 'The key is bound to this organization and carries only the permissions you name.'
-          }
+          onOpenChange={setKeyOpen}
+          title="Generate Management Key"
+          description="The key represents you in this organization and carries only the permissions you name."
           schema={managementKeyFormSchema}
           defaultValues={{ label: '', permissions: [], expiry: 'never' }}
           onSubmit={async (values) => {
             const key = await createKey.mutateAsync({
               orgId,
-              data: {
-                ...(keyTarget ? { user_id: keyTarget.userId } : {}),
-                ...managementKeyPayload(values),
-              },
+              data: managementKeyPayload(values),
             });
             setToken(key.token);
           }}
-          submitLabel={keyTarget ? 'Generate replacement key' : 'Generate'}
+          submitLabel="Generate"
           pending={createKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
@@ -394,6 +385,38 @@ export default function AppOrgSettings() {
       )}
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
+
+      {canIssueKey && (
+        <FormDialog
+          open={serviceAccountKeyTarget !== null}
+          onOpenChange={(open) => !open && setServiceAccountKeyTarget(null)}
+          title="Generate service account key"
+          description={`Issue a new organization key for ${serviceAccountKeyTarget?.name ?? 'this service account'}.`}
+          schema={managementKeyFormSchema}
+          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
+          onSubmit={async (values) => {
+            if (!serviceAccountKeyTarget) return;
+            const minted = await mintServiceAccountKey.mutateAsync({
+              orgId,
+              userId: serviceAccountKeyTarget.user_id,
+              data: managementKeyPayload(values),
+            });
+            setServiceAccountKeyTarget(null);
+            setToken(minted.token);
+          }}
+          submitLabel="Generate"
+          pending={mintServiceAccountKey.isPending}
+        >
+          {(form) => (
+            <ManagementKeyFormFields
+              form={form}
+              availablePermissions={authorization.permissions}
+              canIssue={canIssueKey}
+              permissionsLoading={authorization.isFetching}
+            />
+          )}
+        </FormDialog>
+      )}
 
       {canCreateServiceAccount && (
         <FormDialog

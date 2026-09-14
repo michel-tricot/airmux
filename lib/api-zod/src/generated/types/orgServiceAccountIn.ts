@@ -10,7 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { ManagementKeyGrantIn } from './managementKeyGrantIn';
+import type { ManagementKeyIn } from './managementKeyIn';
 
 export interface OrgServiceAccountIn {
   /**
@@ -20,5 +20,5 @@ export interface OrgServiceAccountIn {
      */
   name: string;
   /** Initial organization-scoped management key to create for the service account */
-  management_key: ManagementKeyGrantIn;
+  management_key: ManagementKeyIn;
 }
