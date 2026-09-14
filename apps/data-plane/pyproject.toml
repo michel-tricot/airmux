@@ -1,9 +1,11 @@
 [project]
 name = "data-plane"
 version = "0.1.0"
+description = "TokKeeper standalone and connected LLM inference gateway"
+readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "contract",
+  "contract==0.1.0",
   "starlette",
   "uvicorn[standard]",
   "httpx[http2]",

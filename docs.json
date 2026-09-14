@@ -53,6 +53,7 @@
             "group": "Deployment",
             "pages": [
               "docs/deployment/index",
+              "docs/deployment/gateway",
               "docs/deployment/docker",
               "docs/deployment/fly",
               "docs/deployment/render",

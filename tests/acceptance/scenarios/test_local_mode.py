@@ -28,22 +28,23 @@ def test_local_mode_serves_without_a_control_plane(tmp_path: Path) -> None:
         f"""
 keys:
   - sk-inf-local
-providers:
-  - provider_id: stub
-    kind: openai_compatible
-    base_url: http://127.0.0.1:{stub_port}
-models:
-  - model_id: echo
-    provider_id: stub
-    upstream_model: echo
-    input_price_per_mtok: 2.0
-    output_price_per_mtok: 5.0
-    cache_read_price_per_mtok: 0.25
-    cache_write_price_per_mtok: 2.5
-    context_window: 128000
-    input_modalities: [text]
-    output_modalities: [text]
-    capabilities: [streaming]
+taxonomy:
+  providers:
+    - provider_id: stub
+      kind: openai_compatible
+      base_url: http://127.0.0.1:{stub_port}
+  models:
+    - model_id: echo
+      provider_id: stub
+      upstream_model: echo
+      input_price_per_mtok: 2.0
+      output_price_per_mtok: 5.0
+      cache_read_price_per_mtok: 0.25
+      cache_write_price_per_mtok: 2.5
+      context_window: 128000
+      input_modalities: [text]
+      output_modalities: [text]
+      capabilities: [streaming]
 """,
         encoding="utf-8",
     )

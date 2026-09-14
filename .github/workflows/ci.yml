@@ -50,6 +50,34 @@ jobs:
           DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock
       - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
 
+  gateway:
+    runs-on: ubuntu-latest
+    env:
+      UV_TOOL_DIR: ${{ runner.temp }}/gateway-tools
+      UV_TOOL_BIN_DIR: ${{ runner.temp }}/gateway-bin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - run: uv build --package contract --wheel && uv build --package data-plane --wheel
+      - run: uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
+      - name: Verify independent installation
+        run: |
+          "$UV_TOOL_DIR/data-plane/bin/python" -c 'from importlib.util import find_spec; assert all(find_spec(name) is None for name in ("control_plane", "fastapi", "sqlalchemy", "sqlmodel", "alembic"))'
+      - run: uv run pytest tests/gateway
+        env:
+          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/gateway-bin/tokkeeper-data-plane
+          DOCKER_HOST: unix:///no-docker.sock
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gateway-distribution
+          path: |
+            dist/*.whl
+            taxonomy/taxonomy.yml
+            apps/data-plane/README.md
+
   acceptance:
     runs-on: ubuntu-latest
     steps:

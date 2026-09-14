@@ -1,0 +1,149 @@
+---
+title: "Gateway only"
+description: "Install the inference gateway as a Python service with a local taxonomy and no Docker, Postgres, or control plane."
+---
+
+Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
+You supply the model taxonomy and inference keys through files. Provider credentials resolve from your environment.
+
+## Install
+
+You need Python 3.13+ and uv. From a checkout, build and install the two matching wheels:
+
+```bash
+uv build --package contract --wheel
+uv build --package data-plane --wheel
+uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
+```
+
+The `gateway` CI job also publishes a `gateway-distribution` artifact containing these wheels, the taxonomy, and package
+instructions. After extracting it, use the same `uv tool install` command. This project does not require a PyPI release
+for installation. The installed gateway runs outside the checkout; keep your configuration and referenced taxonomy files.
+
+If your shell cannot find `tokkeeper-data-plane`, run `uv tool update-shell` and restart the shell.
+
+## Initialize and start
+
+Choose the shipped taxonomy or your own file in the same format:
+
+```bash
+tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory gateway
+export TOKKEEPER_INFERENCE_KEY="$(cat gateway/inference.key)"
+export OPENAI_API_KEY='your-provider-key'
+tokkeeper-data-plane validate --config gateway/tokkeeper.yml
+tokkeeper-data-plane serve --config gateway/tokkeeper.yml
+```
+
+`init` checks taxonomy and adapter validity, creates a private directory and random inference key, and refuses to overwrite
+an existing directory. It does not copy the taxonomy or print the key. Set the provider variable for each provider you use:
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a request.
+
+The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener. Put a streaming-capable HTTPS
+proxy in front of it when exposing it beyond localhost.
+
+`validate` checks the configuration, taxonomy, inference keys, adapter support, references, and policy compilation.
+It does not contact providers or prove that their credentials work. A real inference request is the final verification.
+
+## Make a request
+
+Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
+
+```bash
+curl --fail http://127.0.0.1:8080/readyz
+curl --fail http://127.0.0.1:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Tokkeeper-Dialect: openai_native' \
+  -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, Anthropic Messages,
+and canonical callers use the same gateway. See the [inference reference](/docs/reference/inference).
+
+## Configuration and taxonomy
+
+`gateway/tokkeeper.yml` selects the local bundle, environment secret store, and usage event sink:
+
+```yaml
+data_plane:
+  bundle:
+    kind: local
+    path: bundle.yml
+    reload_interval_s: 2
+  secrets:
+    kind: env
+  events:
+    kind: devnull
+```
+
+The bundle path is relative to this configuration file. `gateway/bundle.yml` contains deployment choices:
+
+```yaml
+keys:
+  - ${env:TOKKEEPER_INFERENCE_KEY}
+taxonomy: ../taxonomy/taxonomy.yml
+rules: []
+policies: []
+```
+
+The taxonomy path is relative to the bundle file, so starting the service from another directory works. Both planes use
+the same taxonomy schema. The file contains `providers` and `models`; pricing, capabilities, parameter support, adapter
+overrides, and upstream names are used directly from it. Provider icons are accepted as catalog metadata but do not enter
+the inference bundle. Unknown fields and duplicate taxonomy entries are rejected.
+
+For a small custom deployment, `taxonomy` can instead contain those two lists inline. Choose one source: there is no
+implicit merge or precedence between an external file and inline definitions. Every model in the selected taxonomy is
+available to every local inference key unless restricted by your policies. Use a smaller taxonomy to expose fewer models.
+
+The gateway checks bundle and taxonomy content at the reload interval. A valid edit replaces the active snapshot. Invalid
+or missing files are logged while the last good snapshot keeps serving. If no valid snapshot has ever loaded, inference and
+`/readyz` return `503`. Restarting requires valid files again; local mode does not persist a separate last-good cache.
+
+You can add plaintext inference tokens to `keys` or use environment references. Tokens must start with `sk-inf-`, contain
+no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
+are fixed for a running process; changing an environment-based key or provider credential requires restarting the service.
+Keep plaintext key files private and out of version control.
+
+## Run as a host service
+
+Run `serve` under your host's process manager. For example, a Linux user systemd unit can use:
+
+```ini
+[Unit]
+Description=TokKeeper inference gateway
+After=network-online.target
+
+[Service]
+EnvironmentFile=%h/gateway/gateway.env
+ExecStartPre=%h/.local/bin/tokkeeper-data-plane validate --config %h/gateway/tokkeeper.yml
+ExecStart=%h/.local/bin/tokkeeper-data-plane serve --config %h/gateway/tokkeeper.yml
+Restart=on-failure
+TimeoutStopSec=40
+UMask=0077
+
+[Install]
+WantedBy=default.target
+```
+
+Adjust paths to your installation. The private `gateway.env` file contains `TOKKEEPER_INFERENCE_KEY` and the provider
+variables as `NAME=value` entries. Systemd does not evaluate shell commands in that file. Install the unit under
+`~/.config/systemd/user/tokkeeper-gateway.service`, then use `systemctl --user daemon-reload` and
+`systemctl --user enable --now tokkeeper-gateway`. Use `journalctl --user -u tokkeeper-gateway -f` for logs.
+Configure user lingering if the service must continue after logout.
+
+## Operations and limits
+
+- `/healthz` reports process health; `/readyz` confirms an admitted bundle, not upstream availability
+- The generated `devnull` event sink discards usage events; there is no local usage history or dashboard
+- Keys share one local organization and workspace, and the environment store uses one credential per provider
+- There is no management API, console, account onboarding, or multi-tenant credential management
+- Bundle and taxonomy reloads apply to new requests; active streams retain their captured snapshot
+- Back up the configuration, taxonomy, and credentials; validate changes before restarting
+
+To upgrade, build or obtain matching wheels for the desired revision, then repeat `uv tool install --reinstall` with
+both wheel paths. Validate the existing configuration, restart the service, and verify buffered and streaming requests.
+The taxonomy is a separately managed file: installing a new wheel does not silently change your model catalog.
+
+For centralized management, usage collection, and tenant-scoped credentials, use the
+[full platform](/docs/deployment/index). Switching to remote bundles requires management-side setup; local keys and
+policies are not automatically imported.

@@ -5,7 +5,7 @@ requires-python = ">=3.13"
 
 [tool.uv.workspace]
 members = ["lib/api-models", "lib/contract", "apps/*", "model-audit", "tests/*"]
-exclude = ["apps/console", "tests/deployment", "tests/documentation"]
+exclude = ["apps/console", "tests/deployment", "tests/documentation", "tests/gateway"]
 
 [tool.uv.sources]
 api-models = { workspace = true }

@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from data_plane.bundle.config import BundleConfig
+from data_plane.bundle.config import BundleConfig, LocalBundleConfig
 from data_plane.control_plane_link import ControlPlaneLink
 
 
@@ -38,6 +38,10 @@ class Config(BaseModel):
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
-def load_config() -> Config:
-    section = load_config_section("data_plane")
-    return Config.model_validate({**section, "dev": os.environ.get("TOKKEEPER_DEV") == "1"})
+def load_config(config_path: str | Path | None = None) -> Config:
+    path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
+    section = load_config_section("data_plane", path)
+    config = Config.model_validate({**section, "dev": os.environ.get("TOKKEEPER_DEV") == "1"})
+    if isinstance(config.bundle, LocalBundleConfig):
+        return config.model_copy(update={"bundle": config.bundle.model_copy(update={"path": path.parent / config.bundle.path})})
+    return config

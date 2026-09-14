@@ -6,9 +6,10 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
+from contract.taxonomy import TaxonomySpec
 from control_plane.main import app
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
-from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
+from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
 

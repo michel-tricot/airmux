@@ -16,6 +16,7 @@ from rich.table import Table
 from sqlalchemy.engine import make_url
 
 from contract.secrets.file import write_private_text
+from contract.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.compiler import publish_changes
@@ -25,7 +26,7 @@ from control_plane.fixtures import Fixtures, apply_fixtures
 from control_plane.keys import new_management_key
 from control_plane.migrate import current_revision, head_revision, run_migrations
 from control_plane.models import Model, Org, User, set_actor
-from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
+from control_plane.taxonomy import apply_taxonomy
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

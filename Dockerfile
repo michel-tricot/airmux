@@ -5,7 +5,7 @@ COPY pyproject.toml uv.lock ./
 COPY lib/api-models/pyproject.toml lib/api-models/
 COPY lib/contract/pyproject.toml lib/contract/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
-COPY apps/data-plane/pyproject.toml apps/data-plane/
+COPY apps/data-plane/pyproject.toml apps/data-plane/README.md apps/data-plane/
 RUN uv sync --only-group backend --frozen --no-install-workspace
 COPY lib/api-models lib/api-models
 COPY lib/contract lib/contract

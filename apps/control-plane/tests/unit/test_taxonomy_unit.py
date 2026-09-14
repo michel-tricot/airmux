@@ -6,8 +6,8 @@ import pytest
 import yaml
 
 import control_plane
+from contract.taxonomy import TaxonomySpec
 from control_plane.fixtures import ROUTED_MODELS
-from control_plane.taxonomy import TaxonomySpec
 
 REPO_ROOT = Path(control_plane.__file__).resolve().parents[4]
 

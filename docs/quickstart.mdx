@@ -86,13 +86,15 @@ local database, credentials, cached bundles, and pending usage.
 
 ## Gateway-only mode
 
-For adapter development or a local provider-neutral endpoint without Postgres or the console:
+For an inference endpoint managed through local files, without Docker, Postgres, or the console:
 
 ```bash
+uv run --package data-plane --no-dev --frozen tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory .tokkeeper-gateway
+export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper-gateway/inference.key)"
 export OPENAI_API_KEY='your-provider-key'
-uv run --package data-plane --no-dev --frozen tokkeeper-data-plane serve --config tokkeeper.standalone.yml
+uv run --package data-plane --no-dev --frozen tokkeeper-data-plane serve --config .tokkeeper-gateway/tokkeeper.yml
 ```
 
-Standalone mode reads `bundle.standalone.yml`, reloads it after changes, resolves provider credentials from environment
-variables, and discards usage events. Its built-in inference key is `sk-inf-standalone-dev`; keep this mode on a
-development machine.
+This creates a private inference key and references your taxonomy without copying it. The gateway reloads bundle and
+taxonomy changes, resolves provider credentials from environment variables, and discards usage events by default.
+See [Gateway only](/docs/deployment/gateway) for independent wheel installation and host service operation.

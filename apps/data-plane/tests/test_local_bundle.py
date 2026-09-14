@@ -29,22 +29,23 @@ NOW = datetime.now(tz=UTC)
 BUNDLE_YML = """
 keys:
   - sk-inf-local-dev
-providers:
-  - provider_id: p1
-    kind: openai_compatible
-    base_url: https://api.openai.com/v1
-models:
-  - model_id: gpt-test
-    provider_id: p1
-    upstream_model: gpt-real
-    input_price_per_mtok: 1.0
-    output_price_per_mtok: 2.0
-    cache_read_price_per_mtok: 0.1
-    cache_write_price_per_mtok: 1.25
-    context_window: 128000
-    input_modalities: [text]
-    output_modalities: [text]
-    capabilities: [streaming]
+taxonomy:
+  providers:
+    - provider_id: p1
+      kind: openai_compatible
+      base_url: https://api.openai.com/v1
+  models:
+    - model_id: gpt-test
+      provider_id: p1
+      upstream_model: gpt-real
+      input_price_per_mtok: 1.0
+      output_price_per_mtok: 2.0
+      cache_read_price_per_mtok: 0.1
+      cache_write_price_per_mtok: 1.25
+      context_window: 128000
+      input_modalities: [text]
+      output_modalities: [text]
+      capabilities: [streaming]
 """
 
 UPSTREAM_REPLY = {
@@ -136,8 +137,8 @@ def test_local_mode_drops_a_model_parameter_before_the_upstream_request(tmp_path
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
     bundle = BUNDLE_YML.replace(
-        "    capabilities: [streaming]\n",
-        "    capabilities: [streaming]\n    parameter_support: {temperature: unsupported}\n",
+        "      capabilities: [streaming]\n",
+        "      capabilities: [streaming]\n      parameter_support: {temperature: unsupported}\n",
     )
     config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path, bundle)))
     with TestClient(create_app(config)) as client:

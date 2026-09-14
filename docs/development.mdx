@@ -52,12 +52,21 @@ Vite forwards `/api` and `/inf` to the Python services. Use the same hostname th
 ## Gateway-only development
 
 ```bash
+uv run --package data-plane tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory .tokkeeper-gateway
+export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper-gateway/inference.key)"
 export OPENAI_API_KEY='your-provider-key'
-uv run tokkeeper-data-plane serve --config tokkeeper.standalone.yml --dev
+uv run --package data-plane tokkeeper-data-plane serve --config .tokkeeper-gateway/tokkeeper.yml --dev
 ```
 
-`bundle.standalone.yml` reloads after edits. This mode uses environment provider keys, a public development inference
-key, and a `devnull` usage outbox.
+The generated bundle references the existing taxonomy file. Both reload after edits. This mode uses environment provider
+keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
+for wheel installation without a source checkout at runtime.
+
+The Docker-free subprocess suite verifies setup, authentication, buffered and streaming requests, taxonomy reloads, and restarts:
+
+```bash
+uv run pytest tests/gateway
+```
 
 ## Python checks
 

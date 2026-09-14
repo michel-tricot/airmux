@@ -9,21 +9,22 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid5
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
 from contract.policies import PolicyEntry, RuleEntry
+from contract.refs import resolve_refs
+from contract.taxonomy import TaxonomySpec, parse_taxonomy
 from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from data_plane.bundle.config import LocalBundleConfig
     from data_plane.bundle.holder import BundleHolder
 
@@ -37,23 +38,29 @@ _NAMESPACE = UUID("6c1a8f7e-4b62-4b8e-9f0d-2a52e07f1a11")
 
 
 class LocalBundleSpec(BaseModel):
-    """What an operator writes. Providers and models are the contract entries themselves, so
-    provider profiles work here exactly as they do in a compiled bundle.
+    """Local inference keys and policies with an inline or file-backed taxonomy."""
 
-    Keys are plaintext tokens; the compile step hashes them. Credentials are synthesized: one
-    platform credential per provider, which the env store resolves as {PROVIDER}_API_KEY."""
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
-    model_config = ConfigDict(extra="forbid")
-
-    keys: list[str] = Field(min_length=1)
-    providers: list[ProviderEntry]
-    models: list[ModelEntry]
+    keys: list[Annotated[str, Field(pattern=r"^sk-inf-\S+$", max_length=512)]] = Field(min_length=1)
+    taxonomy: Path | TaxonomySpec
     rules: tuple[RuleEntry, ...] = ()
     policies: tuple[PolicyEntry, ...] = ()
 
+    @field_validator("keys")
+    @classmethod
+    def unique_keys(cls, keys: list[str]) -> list[str]:
+        if len(keys) != len(set(keys)):
+            message = "inference keys must be unique"
+            raise ValueError(message)
+        return keys
 
-def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
+
+def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: datetime) -> BundleV1:
     """Pure, like the control plane's compiler: all nondeterminism comes in through the arguments."""
+    if not taxonomy.providers or not taxonomy.models:
+        message = "a local taxonomy must contain providers and models"
+        raise ValueError(message)
     keys = [
         KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, token_hash=token_hash(token))
         for position, token in enumerate(spec.keys)
@@ -71,7 +78,7 @@ def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
             priority=100,
             version=1,
         )
-        for provider in spec.providers
+        for provider in taxonomy.providers
     ]
     return BundleV1(
         bundle_id=uuid5(_NAMESPACE, raw),
@@ -80,14 +87,48 @@ def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
         keys=keys,
         rules=spec.rules,
         policies=spec.policies,
-        catalog=Catalog(providers=spec.providers, models=spec.models, credentials=credentials),
+        catalog=Catalog(
+            providers=[
+                ProviderEntry(
+                    provider_id=provider.provider_id,
+                    kind=provider.kind,
+                    base_url=provider.base_url,
+                    param_aliases=provider.param_aliases,
+                    accepted_params=provider.accepted_params,
+                    params_closed=provider.params_closed,
+                )
+                for provider in taxonomy.providers
+            ],
+            models=[
+                ModelEntry(
+                    model_id=model.model_id,
+                    provider_id=model.provider_id,
+                    upstream_model=model.upstream_model or model.model_id,
+                    egress_kind=model.egress_kind,
+                    input_price_per_mtok=model.input_price_per_mtok,
+                    output_price_per_mtok=model.output_price_per_mtok,
+                    cache_read_price_per_mtok=model.cache_read_price_per_mtok,
+                    cache_write_price_per_mtok=model.cache_write_price_per_mtok,
+                    context_window=model.context_window,
+                    max_output_tokens=model.max_output_tokens,
+                    input_modalities=model.input_modalities,
+                    output_modalities=model.output_modalities,
+                    capabilities=model.capabilities,
+                    parameter_support=model.parameter_support,
+                )
+                for model in taxonomy.models
+            ],
+            credentials=credentials,
+        ),
     )
 
 
 def load_local(path: Path, now: datetime) -> BundleV1:
     raw = path.read_text(encoding="utf-8")
-    spec = LocalBundleSpec.model_validate(yaml.safe_load(raw) or {})
-    return compile_local(spec, raw, now)
+    spec = LocalBundleSpec.model_validate(resolve_refs(yaml.safe_load(raw) or {}))
+    taxonomy = parse_taxonomy(path.parent / spec.taxonomy) if isinstance(spec.taxonomy, Path) else spec.taxonomy
+    identity = spec.model_dump_json() + "\n" + taxonomy.model_dump_json()
+    return compile_local(spec, taxonomy, identity, now)
 
 
 class LocalBundleSource(BundleSource):
@@ -96,15 +137,14 @@ class LocalBundleSource(BundleSource):
     def __init__(self, config: LocalBundleConfig, holder: BundleHolder) -> None:
         self._config = config
         self._holder = holder
-        self._served_mtime: float | None = None
+        self._served_bundle: UUID | None = None
 
     def load(self) -> None:
-        mtime = self._config.path.stat().st_mtime
-        if mtime == self._served_mtime:
-            return
         bundle = load_local(self._config.path, datetime.now(tz=UTC))
+        if bundle.bundle_id == self._served_bundle:
+            return
         self._holder.swap(BundleSet.from_bundles((bundle,)), source="local")
-        self._served_mtime = mtime
+        self._served_bundle = bundle.bundle_id
 
     async def once(self) -> None:
         await asyncio.to_thread(self.load)

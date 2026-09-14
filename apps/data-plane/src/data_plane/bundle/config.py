@@ -23,7 +23,7 @@ class RemoteBundleConfig(BaseModel):
 class LocalBundleConfig(BaseModel):
     """The bundle is a file the operator writes, no control plane anywhere."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["local"]
     path: Path

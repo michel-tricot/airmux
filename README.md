@@ -18,7 +18,25 @@ evaluated against an immutable configuration bundle instead of querying manageme
 
 See [Architecture](docs/concepts/architecture.mdx) for the full data flow and failure boundaries.
 
-## Quickstart
+## Gateway only
+
+From a checkout, install the inference gateway without Docker, Postgres, or the control plane:
+
+```bash
+uv build --package contract --wheel
+uv build --package data-plane --wheel
+uv tool install --with ./dist/contract-0.1.0-py3-none-any.whl ./dist/data_plane-0.1.0-py3-none-any.whl
+tokkeeper-data-plane init --taxonomy taxonomy/taxonomy.yml --directory gateway
+export TOKKEEPER_INFERENCE_KEY="$(cat gateway/inference.key)"
+export OPENAI_API_KEY='your-provider-key'
+tokkeeper-data-plane validate --config gateway/tokkeeper.yml
+tokkeeper-data-plane serve --config gateway/tokkeeper.yml
+```
+
+The bundle references the existing taxonomy file, which reloads after edits. The default event sink discards usage.
+See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
+
+## Full-platform quickstart
 
 You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
 
