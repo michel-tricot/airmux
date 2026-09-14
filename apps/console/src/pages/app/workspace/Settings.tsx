@@ -5,19 +5,10 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import {
-  useWorkspaceMembers,
-  useChangeWorkspaceRoleMutation,
-  useWorkspaceMemberCandidates,
-  useAddWorkspaceMemberMutation,
-  useRemoveWorkspaceMemberMutation,
-  workspaceRoleOptions,
-} from '@/features/members/hooks';
-import type { WorkspaceRole } from '@workspace/api-client-react';
 import { Card, Button, ConfirmButton, Input, Label, TabsContent } from '@/components/ui/elements';
 import { Trash2, UserPlus, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
-import { MembersPanel } from '@/components/shared/members-panel';
+import { WorkspaceMembersPanel } from '@/components/shared/workspace-members-panel';
 import { useRequiredParam } from '@/lib/route';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useCreateInvitationMutation } from '@/features/invitations/hooks';
@@ -40,10 +31,9 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const workspace = workspaceQuery.data;
   const workspaceAuthorization = useAuthorization('workspace');
   const orgAuthorization = useAuthorization('org');
-  const changeRole = useChangeWorkspaceRoleMutation(orgId, workspaceRef);
   const canReadMembers = workspaceAuthorization.can(workspaceMemberAccess.read);
   const canListCandidates = workspaceAuthorization.can(workspaceMemberAccess.listCandidates);
-  const canAddMembers = workspaceAuthorization.can(workspaceMemberAccess.add);
+  const canManageMembers = workspaceAuthorization.can(workspaceMemberAccess.add);
   const canRemoveMembers = workspaceAuthorization.can(workspaceMemberAccess.remove);
   const canUpdate = workspaceAuthorization.can(workspaceAccess.update);
   const canReadManagementKeys = workspaceAuthorization.can(managementKeyAccess.workspace.read);
@@ -53,13 +43,6 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, { enabled: canListCandidates });
-  const members = membersQuery.data;
-  const candidates = candidatesQuery.data;
-
-  const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
-  const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
@@ -117,28 +100,14 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
         )}
         {canReadMembers && (
           <TabsContent value="members" className="mt-0 space-y-3">
-            <MembersPanel
-              editRole={
-                canAddMembers
-                  ? {
-                      roles: workspaceRoleOptions,
-                      pending: changeRole.isPending,
-                      onSave: (member, role) =>
-                        changeRole.mutateAsync({ orgId, workspaceRef, userId: member.user_id, data: { role: role as WorkspaceRole } }),
-                    }
-                  : undefined
-              }
+            <WorkspaceMembersPanel
+              orgId={orgId}
+              workspaceRef={workspaceRef}
               heading={
                 <span className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-muted-foreground" /> Members
                 </span>
               }
-              members={members}
-              isLoading={membersQuery.isLoading}
-              isError={membersQuery.isError || candidatesQuery.isError}
-              error={membersQuery.error ?? candidatesQuery.error}
-              onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
-              emptyText="No members in this workspace."
               actions={
                 canInvite ? (
                   <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
@@ -146,30 +115,9 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
                   </Button>
                 ) : undefined
               }
-              add={
-                canAddMembers
-                  ? {
-                      candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
-                      dialogTitle: 'Add Member',
-                      dialogDescription: 'Choose someone who already belongs to this organization.',
-                      placeholder: 'Select an org member',
-                      roles: workspaceRoleOptions,
-                      defaultRole: 'member',
-                      onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
-                      pending: addMember.isPending || candidates === undefined,
-                    }
-                  : undefined
-              }
-              remove={
-                canRemoveMembers
-                  ? {
-                      title: (member) => `Remove ${member.name} from the workspace?`,
-                      description: 'They lose access to this workspace but stay in the organization.',
-                      onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
-                      pending: removeMember.isPending,
-                    }
-                  : undefined
-              }
+              canListCandidates={canListCandidates}
+              canManageMembers={canManageMembers}
+              canRemoveMembers={canRemoveMembers}
             />
           </TabsContent>
         )}

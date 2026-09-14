@@ -7,17 +7,9 @@ import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'luc
 import { Link, useLocation } from 'wouter';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
 import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
-import {
-  useWorkspaceMembers,
-  useWorkspaceMemberCandidates,
-  useAddWorkspaceMemberMutation,
-  useRemoveWorkspaceMemberMutation,
-  workspaceRoleOptions,
-} from '@/features/members/hooks';
-import type { WorkspaceRole } from '@workspace/api-client-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { MembersPanel } from '@/components/shared/members-panel';
+import { WorkspaceMembersPanel } from '@/components/shared/workspace-members-panel';
 import { KeysTable } from '@/components/shared/keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
@@ -49,23 +41,17 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
   const canReadMembers = authorization.can(workspaceMemberAccess.read);
   const canListCandidates = authorization.can(workspaceMemberAccess.listCandidates);
-  const canAddMembers = authorization.can(workspaceMemberAccess.add);
+  const canManageMembers = authorization.can(workspaceMemberAccess.add);
   const canRemoveMembers = authorization.can(workspaceMemberAccess.remove);
   const canUpdate = authorization.can(workspaceAccess.update);
   const canDelete = authorization.can(workspaceAccess.delete);
   const keysQuery = useInferenceKeys(orgId, workspaceRef, { enabled: canReadKeys });
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, { enabled: canListCandidates });
-  const members = membersQuery.data;
-  const candidates = candidatesQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
-  const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
-  const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
   const defaultTab = canReadKeys ? 'keys' : canReadManagementKeys ? 'management-keys' : 'members';
@@ -171,38 +157,13 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
 
         {canReadMembers && (
           <TabsContent value="members" className="space-y-4 mt-0">
-            <MembersPanel
+            <WorkspaceMembersPanel
+              orgId={orgId}
+              workspaceRef={workspaceRef}
               heading="Workspace Members"
-              members={members}
-              isLoading={membersQuery.isLoading}
-              isError={membersQuery.isError || candidatesQuery.isError}
-              error={membersQuery.error ?? candidatesQuery.error}
-              onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
-              emptyText="No members in this workspace."
-              add={
-                canAddMembers
-                  ? {
-                      candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
-                      dialogTitle: 'Add Member',
-                      dialogDescription: 'Members are drawn from the org; the user must already belong to it.',
-                      placeholder: 'Select an org member',
-                      roles: workspaceRoleOptions,
-                      defaultRole: 'member',
-                      onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
-                      pending: addMember.isPending || candidates === undefined,
-                    }
-                  : undefined
-              }
-              remove={
-                canRemoveMembers
-                  ? {
-                      title: (member) => `Remove ${member.name} from the workspace?`,
-                      description: 'They lose access to this workspace but stay in the organization.',
-                      onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
-                      pending: removeMember.isPending,
-                    }
-                  : undefined
-              }
+              canListCandidates={canListCandidates}
+              canManageMembers={canManageMembers}
+              canRemoveMembers={canRemoveMembers}
             />
           </TabsContent>
         )}
