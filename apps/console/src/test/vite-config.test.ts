@@ -1,13 +1,37 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { resolveAllowedHosts } from '@/lib/allowed-hosts';
+
+function configuredAllowedHosts({ allowedHosts, replId }: { allowedHosts?: string; replId?: string } = {}) {
+  const configUrl = pathToFileURL(path.resolve(import.meta.dirname, '../../vite.config.ts')).href;
+  const source = `
+    const { default: config } = await import(${JSON.stringify(configUrl)});
+    process.stdout.write(JSON.stringify({ server: config.server?.allowedHosts, preview: config.preview?.allowedHosts }));
+  `;
+  const output = execFileSync('bun', ['-e', source], {
+    encoding: 'utf8',
+    env: { ...process.env, NODE_ENV: 'production', ALLOWED_HOSTS: allowedHosts, REPL_ID: replId },
+  });
+  return JSON.parse(output) as { server: string[] | true; preview: string[] | true };
+}
 
 describe('Vite host allowlist', () => {
-  it('keeps host validation enabled outside Replit', async () => {
-    expect(resolveAllowedHosts(undefined, false)).toEqual(['localhost', '127.0.0.1']);
+  it('uses Vite host validation defaults outside Replit', () => {
+    expect(configuredAllowedHosts()).toEqual({
+      server: [],
+      preview: [],
+    });
   });
 
-  it('allows Replit preview hosts unless an explicit allowlist is configured', async () => {
-    expect(resolveAllowedHosts(undefined, true)).toBe(true);
-    expect(resolveAllowedHosts('console.example.com, api.example.com', true)).toEqual(['console.example.com', 'api.example.com']);
+  it('allows Replit preview hosts', () => {
+    expect(configuredAllowedHosts({ replId: 'test' })).toEqual({ server: true, preview: true });
+  });
+
+  it('applies an explicit allowlist in every environment', () => {
+    expect(configuredAllowedHosts({ allowedHosts: 'console.example.com, api.example.com', replId: 'test' })).toEqual({
+      server: ['console.example.com', 'api.example.com'],
+      preview: ['console.example.com', 'api.example.com'],
+    });
   });
 });
