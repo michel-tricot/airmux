@@ -472,13 +472,6 @@ class Stack:
             oldest = page[-1]
             page_query = {"limit": 200, "before": oldest["occurred_at"], "before_event_id": oldest["event_id"]}
 
-    def dp_log_contains(self, needle: str) -> bool:
-        log = self.tmp / "dp.log"
-        return log.exists() and needle in log.read_text(encoding="utf-8")
-
-    def wait_dp_log(self, needle: str) -> bool:
-        return _poll(lambda: self.dp_log_contains(needle), READY_TIMEOUT)
-
     # internals ------------------------------------------------------------
 
     def _run(self, cmd: list[str], env: dict[str, str]) -> None:
@@ -552,9 +545,6 @@ class Bench:
     @staticmethod
     def percentile(xs: list[float], q: float) -> float:
         return _pct(xs, q)
-
-    def pct(self, name: str, q: float) -> float:
-        return _pct(self._series[name], q)
 
     def overhead(self, treatment: str, baseline: str, q: float = 50) -> float:
         return _pct(self._series[treatment], q) - _pct(self._series[baseline], q)

@@ -21,11 +21,11 @@ from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 from contract import MemoryStoreConfig
 from control_plane.app import create_app
 from control_plane.authority import principal_permissions
-from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
+from control_plane.authz import ALL_PERMISSIONS, InstanceRole, Permission, Scope
 from control_plane.config import DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import ManagementKeyGrant, create_management_key
-from control_plane.models import Org, OrgMembership, User, set_actor
+from control_plane.models import User, set_actor
 from control_plane.throttling import ThrottleConfig
 
 PROVIDER = {
@@ -45,8 +45,6 @@ MODEL = {
     "output_modalities": ["text"],
     "parameter_support": {"temperature": "unsupported"},
 }
-
-EMAIL = "michel@example.com"
 
 FIXTURE_ADMIN_EMAIL = "fixture-admin@example.com"
 
@@ -224,22 +222,6 @@ def write_config(tmp_path, _cp: ControlPlane) -> str:
     cfg = tmp_path / "airllm.yml"
     cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
     return str(cfg)
-
-
-async def seed_admin(email: str = "admin@example.com") -> User:
-    user = User(email=email, name=email, instance_role=InstanceRole.owner)
-    await set_actor(user.id)
-    return await user.save()
-
-
-async def seed_member(email: str = "member@example.com", org_name: str = "o1") -> tuple[User, UUID]:
-    """A plain user with a membership, and the org they belong to."""
-    user = User(email=email, name=email)
-    await set_actor(user.id)
-    await user.save()
-    org = await Org.create(org_name)
-    await OrgMembership(user_id=user.id, org_id=org.id, role=OrgRole.member).save()
-    return user, org.id
 
 
 def api_routes(app):
