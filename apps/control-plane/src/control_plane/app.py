@@ -41,6 +41,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
+from control_plane.taxonomy import UnknownProviderError
 from control_plane.throttling import LocalThrottleBackend, ThrottleBackend, ThrottledError, ThrottleMiddleware, compile_routes, denied_response
 
 if TYPE_CHECKING:
@@ -119,6 +120,10 @@ async def identity_conflict_handler(_request: Request, _exc: Exception) -> JSONR
     return JSONResponse(status_code=409, content={"detail": "An account with this email already exists"})
 
 
+async def unknown_provider_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
 async def authorization_handler(_request: Request, exc: Exception) -> JSONResponse:
     error = cast("AuthorizationError", exc)
     return JSONResponse(status_code=403, content={"detail": error.detail})
@@ -170,6 +175,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(LastInstanceOwnerError, domain_conflict_handler)
     app.add_exception_handler(ManagedServiceAccountInstanceRoleError, domain_conflict_handler)
     app.add_exception_handler(IdentityConflictError, identity_conflict_handler)
+    app.add_exception_handler(UnknownProviderError, unknown_provider_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     routers = (
