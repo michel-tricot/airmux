@@ -70,13 +70,6 @@ jobs:
         env:
           TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/gateway-bin/tokkeeper-data-plane
           DOCKER_HOST: unix:///no-docker.sock
-      - uses: actions/upload-artifact@v7
-        with:
-          name: gateway-distribution
-          path: |
-            dist/*.whl
-            taxonomy/taxonomy.yml
-            apps/data-plane/README.md
 
   acceptance:
     runs-on: ubuntu-latest

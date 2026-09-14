@@ -27,4 +27,4 @@ with the generated inference key. The model name must match a `model_id` in your
 `init` references the taxonomy without copying it and refuses to overwrite an existing directory. Provider credentials
 resolve from environment variables such as `OPENAI_API_KEY`. The default `devnull` event sink discards usage events.
 
-The repository's `docs/deployment/gateway.mdx` describes configuration, reloads, host services, upgrades, and limitations.
+The repository's `docs/deployment/gateway.mdx` describes configuration, taxonomy reloads, and standalone limits.
