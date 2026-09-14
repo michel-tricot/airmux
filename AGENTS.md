@@ -65,7 +65,7 @@ registry, the registry is wrong; fix the registry.
   instance_id) through contract.uuid7 too. Org, provider, and model are Identified with the caller-facing identifier
   in `name` (unique for provider and model as catalog keys, free-form for org); bundles and events reference orgs by
   id and providers/models by name. audit_log keeps an integer sequence because uuid7 cannot totally order rows within
-  one millisecond; Bundle passes its id explicitly because it is signed into the payload.
+  one millisecond; Bundle passes its id explicitly so the stored id matches the bundle_id in its JSON payload.
 - Models list Record first, then capability mixins: Identified, OrgOwned, Tombstonable, future ones. Mixins are plain SQLModel classes
   and never subclass Record; they live in models/common.
 - Tombstonable provides created_at, updated_at, and deleted_at. The database owns the values through touch triggers installed

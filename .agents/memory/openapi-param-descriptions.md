@@ -1,10 +1,10 @@
 ---
-name: OpenAPI query param descriptions are centralized
-description: Where query parameter descriptions come from when adding control-plane endpoints
+name: OpenAPI parameter description fallbacks
+description: Explicit descriptions take precedence over centralized defaults
 ---
 
-Query parameter descriptions in the exported OpenAPI spec come from `_parameter_description` in the control plane's openapi module, keyed by parameter name (and sometimes path), not from the route signature.
+The control plane starts with FastAPI's generated OpenAPI schema. It fills missing parameter descriptions with `parameter.setdefault("description", _parameter_description(...))` in `control_plane/openapi.py`. Descriptions already supplied by a route or dependency are preserved.
 
-**Why:** a new endpoint reusing a common param name (e.g. `org_id`) silently inherits another route's description, which then flows into the generated clients.
+The fallback uses parameter name, path, and location. A new endpoint without an explicit description can inherit text intended for another route with the same parameter name.
 
-**How to apply:** after adding a control-plane endpoint with query params, check the exported spec's description text and add a path-specific branch when the shared description is wrong.
+After adding parameters, inspect the exported spec. Supply an explicit description or refine the centralized fallback when needed, then regenerate the affected clients.

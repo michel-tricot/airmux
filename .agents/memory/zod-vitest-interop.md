@@ -1,9 +1,10 @@
 ---
-name: zod named-export interop under vitest
-description: Why `import { z } from 'zod'` breaks in console vitest runs and the safe import pattern.
+name: Zod namespace imports in console code
+description: Current import convention and an unverified historical Vitest interop workaround
 ---
-Rule: in apps/console (and any package that also loads the generated api client), import zod as `import * as z from 'zod'`, never `import { z } from 'zod'`.
 
-**Why:** When `@workspace/api-client-react` is in the module graph, vitest loads zod through a CJS interop path where the flattened exports (`object`, `string`, `ZodType`, ...) survive but the `z` named re-export is `undefined`. Tests then fail with `undefined is not an object (evaluating 'z.object')` while the app works fine under vite.
+Console code uses namespace imports such as `import * as z from 'zod'` and `import type * as z from 'zod'`. Preserve that convention when touching existing code.
 
-**How to apply:** Namespace imports (`import * as z` / `import type * as z`) work in both vite and vitest. If a suite fails with `z.object` undefined, check the import style first.
+An earlier Vitest environment reportedly exposed `z` as undefined for `import { z } from 'zod'` when the generated API client was loaded, while namespace exports remained available. That failure has not been reproduced against the current dependency versions, so it should not be stated as a universal limitation of named imports.
+
+Before removing the workaround, reproduce the relevant import order under the current console Vitest configuration and verify both tests and the Vite build. This is separate from the generated API validators' required `zod/v4` import rewrite.
