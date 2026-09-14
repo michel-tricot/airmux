@@ -1,6 +1,5 @@
 import { SettingsLayout } from '@/components/shared/settings-layout';
 import { BundleHistory } from '@/components/shared/bundle-history';
-import type { OrgRole } from '@workspace/api-client-react';
 import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -24,12 +23,12 @@ import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import {
-  ManagementKeyFormFields,
   managementKeyPayload,
   managementKeyExpiryOptions,
   PermissionChecklist,
   managementKeyFormSchema,
 } from '@/components/shared/management-key-form';
+import { ManagementKeyDialog } from '@/components/shared/management-key-dialog';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -72,7 +71,7 @@ export default function AppOrgSettings() {
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
+  const [serviceAccountToken, setServiceAccountToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
   const [serviceAccountKeyTarget, setServiceAccountKeyTarget] = useState<NonNullable<typeof members>[number] | null>(null);
@@ -99,7 +98,7 @@ export default function AppOrgSettings() {
         </Button>
       )}
       {canCreateInvitations && (
-        <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
+        <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading}>
           <UserPlus className="w-4 h-4" /> Invite by email
         </Button>
       )}
@@ -176,7 +175,7 @@ export default function AppOrgSettings() {
                     ? {
                         roles: orgRoleOptions,
                         pending: changeRole.isPending,
-                        onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                        onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role }),
                       }
                     : undefined
                 }
@@ -355,67 +354,46 @@ export default function AppOrgSettings() {
       </SettingsLayout>
 
       {canIssueKey && (
-        <FormDialog
+        <ManagementKeyDialog
           open={keyOpen}
           onOpenChange={setKeyOpen}
           title="Generate Management Key"
           description="The key represents you in this organization and carries only the permissions you name."
-          schema={managementKeyFormSchema}
-          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
-          onSubmit={async (values) => {
-            const key = await createKey.mutateAsync({
-              orgId,
-              data: managementKeyPayload(values),
-            });
-            setToken(key.token);
-          }}
-          submitLabel="Generate"
+          availablePermissions={authorization.permissions}
+          canIssue={canIssueKey}
+          permissionsLoading={authorization.isFetching}
+          permissionsError={authorization.error}
+          onPermissionsRetry={() => authorization.refetch()}
+          onSubmit={async (data) => (await createKey.mutateAsync({ orgId, data })).token}
           pending={createKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
-        >
-          {(form) => (
-            <ManagementKeyFormFields
-              form={form}
-              availablePermissions={authorization.permissions}
-              canIssue={canIssueKey}
-              permissionsLoading={authorization.isFetching}
-            />
-          )}
-        </FormDialog>
+        />
       )}
 
-      <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
-
       {canIssueKey && (
-        <FormDialog
+        <ManagementKeyDialog
           open={serviceAccountKeyTarget !== null}
           onOpenChange={(open) => !open && setServiceAccountKeyTarget(null)}
           title="Generate service account key"
           description={`Issue a new organization key for ${serviceAccountKeyTarget?.name ?? 'this service account'}.`}
-          schema={managementKeyFormSchema}
-          defaultValues={{ label: '', permissions: [], expiry: 'never' }}
-          onSubmit={async (values) => {
-            if (!serviceAccountKeyTarget) return;
+          availablePermissions={authorization.permissions}
+          canIssue={canIssueKey}
+          permissionsLoading={authorization.isFetching}
+          permissionsError={authorization.error}
+          onPermissionsRetry={() => authorization.refetch()}
+          onSubmit={async (data) => {
+            if (!serviceAccountKeyTarget) throw new Error('No service account selected');
             const minted = await mintServiceAccountKey.mutateAsync({
               orgId,
               userId: serviceAccountKeyTarget.user_id,
-              data: managementKeyPayload(values),
+              data,
             });
             setServiceAccountKeyTarget(null);
-            setToken(minted.token);
+            return minted.token;
           }}
-          submitLabel="Generate"
           pending={mintServiceAccountKey.isPending}
-        >
-          {(form) => (
-            <ManagementKeyFormFields
-              form={form}
-              availablePermissions={authorization.permissions}
-              canIssue={canIssueKey}
-              permissionsLoading={authorization.isFetching}
-            />
-          )}
-        </FormDialog>
+          submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
+        />
       )}
 
       {canCreateServiceAccount && (
@@ -431,7 +409,7 @@ export default function AppOrgSettings() {
               orgId,
               data: { name: values.name, management_key: managementKeyPayload(values) },
             });
-            setToken(serviceAccount.management_key.token);
+            setServiceAccountToken(serviceAccount.management_key.token);
           }}
           submitLabel="Create service account"
           pendingLabel="Creating..."
@@ -503,11 +481,19 @@ export default function AppOrgSettings() {
         </FormDialog>
       )}
 
+      <KeyRevealDialog
+        open={serviceAccountToken !== null}
+        onOpenChange={(open) => !open && setServiceAccountToken(null)}
+        token={serviceAccountToken}
+      />
+
       {canCreateInvitations && (
         <InvitationDialog
           open={inviteOpen}
           onOpenChange={setInviteOpen}
           workspaces={workspacesQuery.data ?? []}
+          workspacesError={workspacesQuery.error}
+          onWorkspacesRetry={() => workspacesQuery.refetch()}
           pending={createInvitation.isPending}
           onSubmit={async (values) => {
             const minted = await createInvitation.mutateAsync({ orgId, data: invitationRequest(values) });

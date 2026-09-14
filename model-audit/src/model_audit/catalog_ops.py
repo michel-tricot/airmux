@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import importlib
 import json
-import subprocess
-import sys
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, Protocol, cast
 
@@ -62,7 +59,7 @@ class SchemaDefinition(BaseModel):
 
 
 class ProviderSource(Protocol):
-    id: str
+    provider_id: str
     url: str
     open_access: bool
     definition: ProviderDefinition | None
@@ -96,20 +93,10 @@ class ModelDefinition(BaseModel):
         return self
 
 
-def run_catalog_script(root: Path, script: str, *arguments: str) -> subprocess.CompletedProcess[str]:
-    path = root / "model-audit" / "catalog" / "scripts" / script
-    return subprocess.run(  # noqa: S603 repository-owned catalog scripts are selected by the CLI
-        [sys.executable, str(path), *arguments], cwd=root, capture_output=True, text=True, check=False
-    )
+def provider_sources() -> dict[str, ProviderSource]:
+    from model_audit.catalog_tasks.sources import registry  # noqa: PLC0415 avoids a definition-time import cycle with provider modules
 
-
-def provider_sources(root: Path) -> dict[str, ProviderSource]:
-    scripts = root / "model-audit" / "catalog" / "scripts"
-    location = str(scripts)
-    if location not in sys.path:
-        sys.path.insert(0, location)
-    module = importlib.import_module("sources")
-    return cast("dict[str, ProviderSource]", module.registry())
+    return cast("dict[str, ProviderSource]", registry())
 
 
 def incomplete_model_modalities(provider_id: str, models: list[dict[str, object]]) -> tuple[str, ...]:
@@ -136,7 +123,7 @@ def preflight_source(source: ProviderSource, key: str | None) -> int:
     if not models:
         message = "the model endpoint returned an empty or unrecognized payload"
         raise RuntimeError(message)
-    incomplete = incomplete_model_modalities(source.id, models)
+    incomplete = incomplete_model_modalities(source.provider_id, models)
     if incomplete:
         message = f"models without required modalities: {', '.join(incomplete)}"
         raise RuntimeError(message)

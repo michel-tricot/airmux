@@ -27,7 +27,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/console/vite.config.ts', 'apps/console/vitest.config.ts', 'lib/api-client-react/vitest.config.ts'],
+    files: ['apps/console/vite.config.ts', 'apps/console/vitest.config.ts', 'lib/api-client-react/vitest.config.ts', 'lib/api-spec/orval.config.ts'],
     languageOptions: { globals: globals.node },
   },
 );

@@ -136,7 +136,7 @@ explicitly.
 ## Provider sources
 
 Each provider has one auto-discovered source under
-`model-audit/catalog/scripts/sources/`. The source is the reproducible recipe for provider
+`model-audit/src/model_audit/catalog_tasks/sources/`. The source is the reproducible recipe for provider
 identity, model acquisition, pricing supplied by the model endpoint, and schema acquisition.
 `providers.yml` and the derived files are applied projections of that recipe.
 

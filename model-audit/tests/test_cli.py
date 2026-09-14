@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from click import unstyle
 from typer.testing import CliRunner
 
+from model_audit.catalog_ops import provider_sources
 from model_audit.cli import _sync_steps, app
 
 
@@ -178,6 +180,15 @@ def test_provider_sources_report_onboarding_readiness():
     assert anthropic["schemas"] == 1
 
 
+def test_provider_source_discovery_does_not_mutate_python_import_paths():
+    import_paths = tuple(sys.path)
+
+    sources = provider_sources()
+
+    assert tuple(sys.path) == import_paths
+    assert sources["anthropic"].__class__.__module__ == "model_audit.catalog_tasks.sources.anthropic"
+
+
 def test_unknown_provider_sync_component_is_rejected_before_acquisition():
     result = CliRunner().invoke(app, ["providers", "sync", "anthropic", "--only", "unknown"])
 
@@ -189,5 +200,5 @@ def test_model_and_pricing_sync_rebuild_enrichment_from_current_provider_data():
     pricing_steps = _sync_steps("stub", ("pricing",))
     model_steps = _sync_steps("stub", ("models",))
 
-    assert [script for _, script, _ in pricing_steps] == ["fetch_models.py", "enrich.py"]
-    assert [script for _, script, _ in model_steps] == ["fetch_models.py", "enrich.py", "discover_parameters.py"]
+    assert [task for _, task, _ in pricing_steps] == ["fetch_models", "enrich"]
+    assert [task for _, task, _ in model_steps] == ["fetch_models", "enrich", "discover_parameters"]

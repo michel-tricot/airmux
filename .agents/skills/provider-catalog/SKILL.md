@@ -26,7 +26,7 @@ uv run tokkeeper-audit agent guide <guide> --format text
 
 Follow the returned guide as the authority for the workflow. Use the root `tokkeeper-audit`
 CLI for every catalog mutation, live experiment, evidence promotion, generation, and
-validation. Do not run the individual scripts under `model-audit/catalog/scripts/`.
+validation. Do not run the internal task modules under `model-audit/src/model_audit/catalog_tasks/`.
 
 Every retained model must have non-empty canonical input and output modality lists. When a
 provider omits them, establish a conservative chat baseline from its surface, enrich it from

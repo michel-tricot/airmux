@@ -30,7 +30,7 @@ describe('MembersPanel', () => {
 
 it('edits an existing member role and displays the saved role', async () => {
   function Roster() {
-    const [role, setRole] = useState('member');
+    const [role, setRole] = useState<'member' | 'admin'>('member');
     return (
       <MembersPanel
         heading="Members"

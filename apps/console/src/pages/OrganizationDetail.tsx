@@ -20,7 +20,6 @@ import { ManagementKeysTable } from '@/components/shared/management-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import type { OrgRole } from '@workspace/api-client-react';
 import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
@@ -226,16 +225,16 @@ export default function OrganizationDetail() {
                   ? {
                       roles: orgRoleOptions,
                       pending: changeRole.isPending,
-                      onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role: role as OrgRole }),
+                      onSave: (member, role) => changeRole.mutateAsync({ orgId, userId: member.user_id, role }),
                     }
                   : undefined
               }
               heading="Organization Members"
               members={members}
               isLoading={membersQuery.isLoading}
-              isError={membersQuery.isError || usersQuery.isError}
-              error={membersQuery.error ?? usersQuery.error}
-              onRetry={() => Promise.all([membersQuery.refetch(), usersQuery.refetch()])}
+              isError={membersQuery.isError}
+              error={membersQuery.error}
+              onRetry={() => membersQuery.refetch()}
               emptyText="No members yet."
               renderName={(member) => (
                 <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">
@@ -243,14 +242,14 @@ export default function OrganizationDetail() {
                 </Link>
               )}
               add={
-                canAddMembers
+                canAddMembers && !usersQuery.isError
                   ? {
                       candidates: outsiders?.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` })) ?? [],
                       dialogTitle: 'Add Member',
                       placeholder: 'Select a user',
                       roles: orgRoleOptions,
                       defaultRole: 'member',
-                      onAdd: (userId, role) => addMember.mutateAsync({ userId, orgId: org.id, role: role as OrgRole }),
+                      onAdd: (userId, role) => addMember.mutateAsync({ userId, orgId: org.id, role }),
                       pending: addMember.isPending || outsiders === undefined,
                     }
                   : undefined
@@ -266,6 +265,14 @@ export default function OrganizationDetail() {
                   : undefined
               }
             />
+            {canListUsers && usersQuery.isError && (
+              <ErrorState
+                error={usersQuery.error}
+                message="Member candidates are unavailable. Existing members are still shown."
+                onRetry={() => usersQuery.refetch()}
+                className="p-0"
+              />
+            )}
           </TabsContent>
         )}
         {canReadBundles && (

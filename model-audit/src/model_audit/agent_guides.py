@@ -28,7 +28,7 @@ authentication, surfaces, limits, prices, or capabilities from another provider.
 1. Run `uv run tokkeeper-audit cases coverage` and `uv run tokkeeper-audit taxonomy validate`
 2. Locate the provider model listing, inference base URL, authentication method, supported
    surfaces, schemas, pricing, homepage, documentation, and icon
-3. Add or update one auto-discovered provider source under `model-audit/catalog/scripts/sources/`
+3. Add or update one auto-discovered provider source under `model-audit/src/model_audit/catalog_tasks/sources/`
 4. Declare its typed `ProviderDefinition`; map provider model fields explicitly, including
    directional input modalities and output modalities, with at least one input and one output
    modality for every retained model
