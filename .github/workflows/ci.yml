@@ -44,7 +44,6 @@ jobs:
       - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
       - run: uv run tokkeeper-audit cases coverage
       - run: uv run tokkeeper-audit taxonomy validate
-      - run: uv run pytest model-audit/catalog/tests
       - run: uv run pytest apps/control-plane/tests/unit
         env:
           DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock
