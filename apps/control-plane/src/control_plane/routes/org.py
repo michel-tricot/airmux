@@ -118,7 +118,7 @@ async def create_org_service_account(
 @router.post(
     "/service-accounts/{user_id}/management-keys",
     tags=["Organization Service Accounts"],
-    dependencies=[require(org_scope, Permission.management_keys_issue)],
+    dependencies=[require("api", org_scope, Permission.management_keys_issue)],
 )
 async def create_org_service_account_management_key(
     user_id: UUID,

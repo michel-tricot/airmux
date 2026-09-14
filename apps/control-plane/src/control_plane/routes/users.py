@@ -32,7 +32,7 @@ async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
 @router.post(
     "/service-accounts/{user_id}/management-keys",
     tags=["Instance Users"],
-    dependencies=[require(instance_scope, Permission.management_keys_issue)],
+    dependencies=[require("api", instance_scope, Permission.management_keys_issue)],
 )
 async def create_instance_service_account_management_key(
     user_id: UUID,
