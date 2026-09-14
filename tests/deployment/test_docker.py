@@ -21,6 +21,11 @@ def payload(response):
     return response.json()["data"]
 
 
+def assert_completion(response):
+    assert response.status_code == 200, response.text
+    assert response.json()["choices"][0]["message"]["content"] == "deployment ready", response.text
+
+
 def eventually(check, timeout=45):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -82,7 +87,8 @@ def assert_unprivileged(compose, service, expected):
     servers = [
         process
         for process in processes.splitlines()[1:]
-        if any(name in process for name in ("tokkeeper control-plane", "tokkeeper gateway", "nginx:"))
+        if not process.split()[2].endswith("/docker-init")
+        and any(name in process for name in ("tokkeeper control-plane", "tokkeeper gateway", "nginx:"))
     ]
     assert servers
     assert all(server.split()[1] in {"tokkeeper", "10001"} for server in servers), processes
@@ -167,9 +173,9 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     headers = {"Authorization": f"Bearer {key['token']}", "x-tokkeeper-dialect": "openai_native"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
-    eventually(lambda: client.post(path, headers=headers, json=request).status_code == 200)
+    eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))
     response = client.post(path, headers=headers, json=request)
-    assert response.json()["choices"][0]["message"]["content"] == "deployment ready", response.text
+    assert_completion(response)
     started = time.monotonic()
     with client.stream("POST", path, headers=headers, json={**request, "stream": True}) as response:
         assert response.status_code == 200

@@ -9,7 +9,7 @@ from uuid import uuid4
 import httpx
 import pytest
 import yaml
-from test_docker import ROOT, docker, eventually
+from test_docker import ROOT, assert_completion, docker, eventually
 
 
 def test_gateway_container_serves_a_native_configuration_without_a_control_plane(tmp_path):
@@ -83,8 +83,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             headers = {"Authorization": f"Bearer {key}", "X-Tokkeeper-Dialect": "openai_native"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401
             response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
-            assert response.status_code == 200, response.text
-            assert response.json()["choices"][0]["message"]["content"] == "deployment ready"
+            assert_completion(response)
             with client.stream("POST", "/inf/v1/chat/completions", headers=headers, json={**body, "stream": True}) as stream:
                 assert stream.status_code == 200
                 assert "data: [DONE]" in list(stream.iter_lines())

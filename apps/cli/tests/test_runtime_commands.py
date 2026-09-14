@@ -4,6 +4,7 @@ import shlex
 
 import pytest
 import yaml
+from rich.text import Text
 from typer.testing import CliRunner
 
 from cli.main import app
@@ -61,7 +62,7 @@ def test_explicit_missing_configuration_is_an_actionable_error(tmp_path, monkeyp
 def test_serve_rejects_invalid_ports_before_starting(group, port):
     result = runner.invoke(app, [group, "serve", "--port", port])
     assert result.exit_code == 2
-    assert "--port" in result.output
+    assert "--port" in Text.from_ansi(result.output).plain
 
 
 def test_control_plane_init_prepares_connected_configuration_without_a_database(tmp_path, monkeypatch):
@@ -139,8 +140,8 @@ def test_runtime_subcommand_help_is_available_without_the_extra(tmp_path, monkey
     monkeypatch.setattr("cli.runtime.find_spec", lambda _: None)
     result = runner.invoke(app, [group, "serve", "--help"])
     assert result.exit_code == 0, result.output
-    assert "--config" in result.output
-    assert "--port" in result.output
+    assert "--config" in Text.from_ansi(result.output).plain
+    assert "--port" in Text.from_ansi(result.output).plain
     result = runner.invoke(app, [group, "serve"])
     assert result.exit_code == 1
     assert f"tokkeeper[{group}]" in result.output
