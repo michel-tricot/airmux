@@ -18,6 +18,7 @@ from sqlalchemy.engine import make_url
 from contract.secrets.file import write_private_text
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
+from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.compiler import publish_changes
 from control_plane.config import Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
@@ -123,6 +124,8 @@ def fixtures(config: str = "tokkeeper.yml") -> None:
 
     async def run() -> tuple[Fixtures, list[tuple[str, int]], int]:
         async with settings.secrets.build() as secret_store, standalone_transaction(settings.database.url):
+            if settings.bootstrap is not None:
+                await bootstrap_data_plane(settings.bootstrap)
             seeded = await apply_fixtures(datetime.now(tz=UTC), secret_store)
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}

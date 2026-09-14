@@ -1,8 +1,8 @@
 # Taxonomy maintenance
 
 This directory is generated provider catalog data consumed by TokKeeper. Maintain it from the
-repository root through `tokkeeper-audit`. Do not invoke scripts under
-`model-audit/catalog/scripts/` directly and do not edit `taxonomy.yml` or `behavior.json`.
+repository root through `tokkeeper-audit`. Do not invoke internal task modules under
+`model-audit/src/model_audit/catalog_tasks/` directly and do not edit `taxonomy.yml` or `behavior.json`.
 
 ## Choose the workflow
 
@@ -56,7 +56,7 @@ onboarding a provider or repairing an acquisition recipe.
 
 | Path | Ownership |
 | --- | --- |
-| `../model-audit/catalog/scripts/sources/` | Auto-discovered typed provider definitions and acquisition recipes |
+| `../model-audit/src/model_audit/catalog_tasks/sources/` | Auto-discovered typed provider definitions and acquisition recipes |
 | `providers.yml` | Applied provider endpoints, authentication, surfaces, and schema references |
 | `models/<provider>.json` | Provider-listed text models, metadata, and provenance |
 | `schemas/` | Provider request, response, and stream schemas |

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button, Dropdown, Modal } from '@/components/ui/elements';
 
-export function RoleSelect({
+export function RoleSelect<Role extends string>({
   value,
   options,
   label,
@@ -9,14 +9,14 @@ export function RoleSelect({
   pending,
   onSave,
 }: {
-  value: string;
-  options: Array<{ value: string; label: string }>;
+  value: Role;
+  options: Array<{ value: Role; label: string }>;
   label: string;
   name: string;
   pending: boolean;
-  onSave: (role: string) => Promise<unknown>;
+  onSave: (role: Role) => Promise<unknown>;
 }) {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const currentLabel = options.find((option) => option.value === value)?.label ?? value;
   const selectedLabel = options.find((option) => option.value === selectedRole)?.label;
 
@@ -29,7 +29,8 @@ export function RoleSelect({
         className="w-auto h-auto border-transparent bg-transparent px-2 py-1 shadow-none"
         disabled={pending}
         onValueChange={(role) => {
-          if (role !== value) setSelectedRole(role);
+          const selected = options.find((option) => option.value === role);
+          if (selected && selected.value !== value) setSelectedRole(selected.value);
         }}
       />
       <Modal

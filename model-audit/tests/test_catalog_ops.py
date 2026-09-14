@@ -44,7 +44,7 @@ def provider_definition() -> ProviderDefinition:
 
 
 class OfflineSource:
-    id = "offline"
+    provider_id = "offline"
     url = "https://offline.example/models"
     open_access = False
     definition: ProviderDefinition | None = None
@@ -68,7 +68,7 @@ class OfflineSource:
 
 
 class IncompleteSource(OfflineSource):
-    id = "incomplete"
+    provider_id = "incomplete"
 
     def fetch(self, key: str | None) -> object:
         return [{"id": "model"}]
@@ -167,7 +167,7 @@ def test_replacing_a_provider_is_explicit(tmp_path):
 def test_every_active_provider_has_an_auto_discovered_typed_source():
     root = Path(__file__).parents[2]
     active = {provider["id"] for provider in yaml.safe_load((root / "taxonomy" / "providers.yml").read_text(encoding="utf-8"))["providers"]}
-    sources = provider_sources(root)
+    sources = provider_sources()
 
     assert active <= set(sources)
     assert all(sources[provider].definition is not None for provider in active)
@@ -274,7 +274,7 @@ def test_replacing_a_model_is_explicit_and_preserves_existing_metadata(tmp_path)
 
 
 def test_together_source_starts_chat_models_at_text_to_text():
-    source = provider_sources(Path(__file__).parents[2])["together"]
+    source = provider_sources()["together"]
 
     model = source.normalize({"id": "org/model", "type": "chat", "pricing": {"input": 1, "output": 2}})
 
@@ -284,7 +284,7 @@ def test_together_source_starts_chat_models_at_text_to_text():
 
 
 def test_together_source_adds_documented_vision_input(monkeypatch):
-    source = provider_sources(Path(__file__).parents[2])["together"]
+    source = provider_sources()["together"]
     module = sys.modules[type(source).__module__]
     monkeypatch.setattr(
         module,
@@ -307,7 +307,7 @@ def test_together_source_adds_documented_vision_input(monkeypatch):
 
 @pytest.mark.parametrize("model_id", ["gpt-3.5-turbo-16k", "gpt-5-search-api", "gpt-5-search-api-2025-10-14"])
 def test_openai_source_keeps_directly_verified_text_models_complete(model_id):
-    source = provider_sources(Path(__file__).parents[2])["openai"]
+    source = provider_sources()["openai"]
 
     model = source.normalize({"id": model_id})
 

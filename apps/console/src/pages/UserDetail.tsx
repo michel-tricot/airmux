@@ -21,7 +21,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import { InstanceRole, type OrgOut, type OrgRole } from '@workspace/api-client-react';
+import { InstanceRole, type OrgOut } from '@workspace/api-client-react';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
@@ -212,7 +212,11 @@ export default function UserDetail() {
           title="Add to Organization"
           schema={addToOrgSchema}
           defaultValues={{ orgId: '', role: 'member' }}
-          onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId, role: values.role as OrgRole })}
+          onSubmit={(values) => {
+            const role = orgRoleOptions.find((option) => option.value === values.role);
+            if (!role) throw new Error('Selected role is unavailable');
+            return addMember.mutateAsync({ userId: user.id, orgId: values.orgId, role: role.value });
+          }}
           submitLabel="Add"
           pending={addMember.isPending}
         >

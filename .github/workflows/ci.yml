@@ -19,7 +19,7 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run codegen && git diff --exit-code lib/api-client-react lib/api-zod
+      - run: bun run codegen && git diff --exit-code lib/api-client-react
       - run: bun run format:check
       - run: bun run lint
       - run: bun run typecheck

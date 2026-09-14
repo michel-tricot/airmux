@@ -3,6 +3,7 @@ import type { WorkspaceOut } from '@workspace/api-client-react';
 import { Dropdown, Input } from '@/components/ui/elements';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { ErrorState } from '@/components/shared/states';
 
 const NO_WORKSPACE = '__none__';
 
@@ -19,6 +20,8 @@ export function InvitationDialog({
   open,
   onOpenChange,
   workspaces,
+  workspacesError,
+  onWorkspacesRetry,
   initialWorkspaceId,
   onSubmit,
   pending,
@@ -26,6 +29,8 @@ export function InvitationDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaces: WorkspaceOut[];
+  workspacesError?: unknown;
+  onWorkspacesRetry?: () => void;
   initialWorkspaceId?: string;
   onSubmit: (values: InvitationValues) => Promise<unknown>;
   pending: boolean;
@@ -47,6 +52,14 @@ export function InvitationDialog({
         const workspaceSelected = form.watch('workspaceId') !== NO_WORKSPACE;
         return (
           <>
+            {workspacesError && (
+              <ErrorState
+                error={workspacesError}
+                message="Workspaces are unavailable. You can still create an organization-only invitation."
+                onRetry={onWorkspacesRetry}
+                className="p-0"
+              />
+            )}
             <FormField
               control={form.control}
               name="email"

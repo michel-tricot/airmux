@@ -239,6 +239,7 @@ describe('workspace policies', () => {
     await user.click(await screen.findByRole('button', { name: 'Create rule' }));
     expect(screen.getByRole('heading', { name: 'Choose a rule type' })).toBeVisible();
     expect(screen.queryByLabelText('Rule name')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Budget' })).toHaveTextContent('Coming soon');
 
     await user.click(screen.getByRole('button', { name: 'Allowed models' }));
     expect(screen.getByRole('heading', { name: 'Create allowed models rule' })).toBeVisible();

@@ -5,8 +5,10 @@ import { format } from 'prettier';
 
 const root = path.resolve(__dirname, '..', '..');
 const apiClientReactSrc = path.resolve(root, 'lib', 'api-client-react', 'src');
-const apiZodSrc = path.resolve(root, 'lib', 'api-zod', 'src');
 const authorityTarget = path.resolve(apiClientReactSrc, 'authority.generated.ts');
+
+const objectOf = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 
 const camelCase = (value: string) => value.replace(/_([a-z0-9])/g, (_, character: string) => character.toUpperCase());
 
@@ -51,7 +53,8 @@ const transformer: InputTransformerFn = async (config) => {
 
   const schemas = config.components?.schemas ?? {};
   const envelopeName = (schema: unknown): string | null => {
-    const ref = (schema as { $ref?: string } | undefined)?.$ref;
+    const ref = objectOf(schema)?.$ref;
+    if (typeof ref !== 'string') return null;
     const name = ref?.startsWith('#/components/schemas/') ? ref.slice('#/components/schemas/'.length) : null;
 
     return name?.startsWith('Envelope_') ? name : null;
@@ -59,9 +62,12 @@ const transformer: InputTransformerFn = async (config) => {
 
   for (const operations of Object.values(config.paths ?? {})) {
     for (const operation of Object.values(operations ?? {})) {
-      const content = (operation as any)?.responses?.['200']?.content?.['application/json'];
+      const responses = objectOf(objectOf(operation)?.responses);
+      const response = objectOf(responses?.['200']);
+      const content = objectOf(objectOf(response?.content)?.['application/json']);
       const name = envelopeName(content?.schema);
-      if (name) content.schema = (schemas as any)[name].properties.data;
+      const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
+      if (content && properties && 'data' in properties) content.schema = properties.data;
     }
   }
 
@@ -84,7 +90,6 @@ export default defineConfig({
       client: 'react-query',
       mode: 'split',
       clean: true,
-      prettier: true,
       override: {
         query: {
           version: 5,
@@ -96,36 +101,6 @@ export default defineConfig({
           path: path.resolve(apiClientReactSrc, 'custom-fetch.ts'),
           name: 'customFetch',
         },
-      },
-    },
-  },
-  zod: {
-    input: {
-      target: './openapi.yaml',
-      override: {
-        transformer,
-      },
-    },
-    output: {
-      workspace: apiZodSrc,
-      client: 'zod',
-      target: 'generated',
-      schemas: { path: 'generated/types', type: 'typescript' },
-      mode: 'split',
-      clean: true,
-      indexFiles: false,
-      prettier: true,
-      override: {
-        zod: {
-          coerce: {
-            query: ['boolean', 'number', 'string'],
-            param: ['boolean', 'number', 'string'],
-            body: ['bigint', 'date'],
-            response: ['bigint', 'date'],
-          },
-        },
-        useDates: true,
-        useBigInt: true,
       },
     },
   },

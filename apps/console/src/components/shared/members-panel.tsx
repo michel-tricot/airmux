@@ -7,16 +7,16 @@ import { RoleSelect } from '@/components/shared/role-select';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-interface MemberRow {
+interface MemberRow<Role extends string> {
   user_id: string;
   name?: string | null;
   email?: string | null;
-  role: string;
+  role: Role;
 }
 
 const addMemberSchema = z.object({ userId: z.string().min(1, 'Select a user'), role: z.string().min(1, 'Select a role') });
 
-interface MembersPanelProps<T extends MemberRow> {
+interface MembersPanelProps<Role extends string, T extends MemberRow<Role>> {
   heading: ReactNode;
   members: T[] | undefined;
   isLoading?: boolean;
@@ -33,14 +33,14 @@ interface MembersPanelProps<T extends MemberRow> {
     dialogTitle: string;
     dialogDescription?: string;
     placeholder: string;
-    roles: Array<{ value: string; label: string }>;
-    defaultRole: string;
-    onAdd: (userId: string, role: string) => Promise<unknown>;
+    roles: Array<{ value: Role; label: string }>;
+    defaultRole: Role;
+    onAdd: (userId: string, role: Role) => Promise<unknown>;
     pending: boolean;
   };
   editRole?: {
-    roles: Array<{ value: string; label: string }>;
-    onSave: (member: T, role: string) => Promise<unknown>;
+    roles: Array<{ value: Role; label: string }>;
+    onSave: (member: T, role: Role) => Promise<unknown>;
     pending: boolean;
   };
   remove?: {
@@ -51,7 +51,7 @@ interface MembersPanelProps<T extends MemberRow> {
   };
 }
 
-export function MembersPanel<T extends MemberRow>({
+export function MembersPanel<Role extends string, T extends MemberRow<Role>>({
   heading,
   members,
   isLoading,
@@ -66,7 +66,7 @@ export function MembersPanel<T extends MemberRow>({
   add,
   remove,
   editRole,
-}: MembersPanelProps<T>) {
+}: MembersPanelProps<Role, T>) {
   const [addOpen, setAddOpen] = useState(false);
 
   const columns: Array<Column<T>> = [
@@ -158,7 +158,11 @@ export function MembersPanel<T extends MemberRow>({
           description={add.dialogDescription}
           schema={addMemberSchema}
           defaultValues={{ userId: '', role: add.defaultRole }}
-          onSubmit={(values) => add.onAdd(values.userId, values.role)}
+          onSubmit={(values) => {
+            const role = add.roles.find((option) => option.value === values.role);
+            if (!role) throw new Error('Selected role is unavailable');
+            return add.onAdd(values.userId, role.value);
+          }}
           submitLabel="Add"
           pending={add.pending}
         >
