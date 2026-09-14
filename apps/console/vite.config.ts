@@ -20,11 +20,14 @@ const dataPlaneUrl = process.env.DATA_PLANE_URL ?? 'http://127.0.0.1:8080';
 // Replit's preview proxies through a dynamic *.replit.dev host, so host
 // filtering must be disabled in this environment; ALLOWED_HOSTS can still
 // pin an explicit list elsewhere.
-const allowedHosts: string[] | true = process.env.ALLOWED_HOSTS
-  ? process.env.ALLOWED_HOSTS.split(',')
-      .map((host) => host.trim())
-      .filter(Boolean)
-  : true;
+const configuredHosts = process.env.ALLOWED_HOSTS;
+const allowedHosts: string[] | true =
+  configuredHosts === undefined && process.env.REPL_ID !== undefined
+    ? true
+    : (configuredHosts ?? '')
+        .split(',')
+        .map((host) => host.trim())
+        .filter(Boolean);
 
 export default defineConfig({
   base: basePath,
