@@ -4,6 +4,13 @@ A parking lot for work that is intentionally deferred. This is neither a roadmap
 features that already shipped. Move an idea out when implementation starts, and delete it when the
 current architecture makes it irrelevant.
 
+## Pass migration configuration to alembic explicitly
+
+`control_plane.operations.migrate` hands the selected configuration to the alembic environment through the
+`TOKKEEPER_CONFIG` environment variable, because `load_settings` falls back to it when no explicit path arrives.
+The context manager restores the previous value, but the channel is still process-global mutable state. Pass the
+configuration path through alembic `-x` arguments instead, then delete the environment round trip.
+
 ## Anthropic token counting
 
 Add `POST /inf/v1/messages/count_tokens` to the Anthropic ingress so Claude Code can populate its

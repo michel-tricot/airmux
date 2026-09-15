@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class GatewayProviderGuide:
     provider_id: str
-    variables: tuple[str, ...]
     configured_variable: str | None
+    suggested_variable: str
     models: tuple[str, ...]
 
 
@@ -68,6 +68,16 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
     )
 
 
+def _provider_guide(provider_id: str, variables: tuple[str, ...], models: tuple[str, ...]) -> GatewayProviderGuide:
+    configured = next((variable for variable in variables if os.environ.get(variable)), None)
+    return GatewayProviderGuide(
+        provider_id=provider_id,
+        configured_variable=configured,
+        suggested_variable=configured or variables[-1],
+        models=models,
+    )
+
+
 def describe_configuration(config_path: Path) -> GatewayGuide:
     config = load_config(config_path)
     if not isinstance(config.bundle, LocalBundleConfig) or not isinstance(config.secrets, EnvStoreConfig):
@@ -76,15 +86,11 @@ def describe_configuration(config_path: Path) -> GatewayGuide:
     bundle = load_local(config.bundle.path, datetime.now(tz=UTC))
     secret_store = config.secrets.build()
     credentials = {credential.ref.service: credential for credential in bundle.catalog.credentials}
-    provider_variables = {
-        provider.provider_id: secret_store.variables_for(credentials[provider.provider_id].ref) for provider in bundle.catalog.providers
-    }
     return GatewayGuide(
         providers=tuple(
-            GatewayProviderGuide(
+            _provider_guide(
                 provider_id=provider.provider_id,
-                variables=provider_variables[provider.provider_id],
-                configured_variable=next((variable for variable in provider_variables[provider.provider_id] if os.environ.get(variable)), None),
+                variables=secret_store.variables_for(credentials[provider.provider_id].ref),
                 models=tuple(model.model_id for model in bundle.catalog.models if model.provider_id == provider.provider_id),
             )
             for provider in bundle.catalog.providers

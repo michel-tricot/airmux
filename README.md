@@ -30,10 +30,9 @@ tokkeeper gateway validate
 tokkeeper gateway serve
 ```
 
-The initializer copies the shipped taxonomy into `.tokkeeper`, then prints these next steps with a real model, the matching
-provider variable, and a copyable first request. It references the private inference-key file without printing the secret.
-Pass `--taxonomy PATH` to use an existing taxonomy file instead. Taxonomy edits reload while the gateway runs. The default
-event sink discards usage.
+The initializer copies the shipped taxonomy into `.tokkeeper` and prints copyable next steps through a first real request,
+without printing the inference key. Pass `--taxonomy PATH` to use an existing taxonomy file instead. Taxonomy edits reload
+while the gateway runs. The default event sink discards usage.
 See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
 
 ## Full-platform quickstart

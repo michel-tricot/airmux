@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 import yaml
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
@@ -26,6 +28,13 @@ INTERNAL_DISTRIBUTIONS = {
     "tokkeeper-control-plane",
     "tokkeeper-data-plane",
 }
+BUNDLED_PROJECTS = (
+    "apps/cli/pyproject.toml",
+    "apps/control-plane/pyproject.toml",
+    "apps/data-plane/pyproject.toml",
+    "lib/api-models/pyproject.toml",
+    "lib/contract/pyproject.toml",
+)
 
 
 def documentation_files() -> list[Path]:
@@ -125,6 +134,55 @@ def test_tokkeeper_is_the_only_published_python_distribution() -> None:
     assert project["urls"]["Repository"] == PUBLIC_REPOSITORY
     dependencies = {re.split(r"[\[<>=!~]", dependency, maxsplit=1)[0] for dependency in project["dependencies"]}
     assert dependencies.isdisjoint(INTERNAL_DISTRIBUTIONS)
+
+
+def bundled_projects() -> dict[str, dict[str, object]]:
+    return {path: tomllib.loads((ROOT / path).read_text(encoding="utf-8"))["project"] for path in BUNDLED_PROJECTS}
+
+
+def project_dependencies(project: dict[str, object]) -> list[str]:
+    dependencies = project["dependencies"]
+    assert isinstance(dependencies, list)
+    return [str(dependency) for dependency in dependencies]
+
+
+def merged_requirements(dependencies: list[str]) -> dict[str, tuple[frozenset[str], frozenset[str]]]:
+    requirements = [Requirement(dependency) for dependency in dependencies]
+    return {
+        name: (
+            frozenset(extra for requirement in requirements if canonicalize_name(requirement.name) == name for extra in requirement.extras),
+            frozenset(
+                str(specifier) for requirement in requirements if canonicalize_name(requirement.name) == name for specifier in requirement.specifier
+            ),
+        )
+        for name in {canonicalize_name(requirement.name) for requirement in requirements}
+    }
+
+
+def test_published_dependencies_match_the_bundled_projects() -> None:
+    published = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]["dependencies"]
+    bundled = [
+        dependency
+        for project in bundled_projects().values()
+        for dependency in project_dependencies(project)
+        if canonicalize_name(Requirement(dependency).name) not in INTERNAL_DISTRIBUTIONS
+    ]
+
+    assert merged_requirements(published) == merged_requirements(bundled)
+
+
+def test_published_version_matches_every_bundled_project() -> None:
+    version = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]["version"]
+
+    for path, project in bundled_projects().items():
+        assert project["version"] == version, path
+        internal_pins = [
+            Requirement(dependency)
+            for dependency in project_dependencies(project)
+            if canonicalize_name(Requirement(dependency).name) in INTERNAL_DISTRIBUTIONS
+        ]
+        for pin in internal_pins:
+            assert str(pin.specifier) == f"=={version}", (path, pin.name)
 
 
 @pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
