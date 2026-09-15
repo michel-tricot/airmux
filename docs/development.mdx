@@ -52,9 +52,9 @@ Vite forwards `/api` and `/inf` to the Python services. Use the same hostname th
 ## Gateway-only development
 
 ```bash
-uv run --package tokkeeper --extra gateway tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory .tokkeeper-gateway
+uv run --package tokkeeper tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory .tokkeeper-gateway
 export OPENAI_API_KEY='your-provider-key'
-uv run --package tokkeeper --extra gateway tokkeeper gateway serve --config .tokkeeper-gateway/tokkeeper.yml --dev
+uv run --package tokkeeper tokkeeper gateway serve --config .tokkeeper-gateway/tokkeeper.yml --dev
 ```
 
 The generated bundle references the existing taxonomy file. Both reload after edits. This mode uses environment provider
@@ -147,11 +147,10 @@ For an unreleased checkout, build the workspace packages and install the CLI int
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --reinstall --find-links dist 'tokkeeper[all]'
+uv tool install --reinstall --find-links dist tokkeeper
 ```
 
-Choose `tokkeeper` for remote management, `tokkeeper[gateway]` for gateway-only use, or `tokkeeper[control-plane]`
-for the control plane. After installation, invoke `tokkeeper` directly from any directory.
+The installation includes both runtimes. Invoke `tokkeeper` directly from any directory.
 
 ## Run deployment tests
 

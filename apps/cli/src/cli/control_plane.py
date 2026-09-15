@@ -15,13 +15,13 @@ from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, c
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def init(
     directory: DirectoryOption = Path(),
     console_url: Annotated[str, typer.Option("--console-url", help="Public console origin")] = "http://127.0.0.1:5000",
 ) -> None:
     """Create connected-plane configuration and a private bootstrap key."""
-    from control_plane.operations import initialize  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import initialize  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     initialize(directory, console_url)
     typer.echo(f"Created {directory / 'tokkeeper.yml'} and the private data-plane bootstrap key")
@@ -31,12 +31,12 @@ def init(
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def bootstrap_keygen(
     out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".tokkeeper/dataplane.key"),
 ) -> None:
     """Create a private bootstrap key for an existing configuration."""
-    from control_plane.operations import (  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import (  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
         bootstrap_keygen as generate_bootstrap_key,
     )
 
@@ -45,10 +45,10 @@ def bootstrap_keygen(
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def validate(config: ConfigOption = None) -> None:
     """Validate control-plane settings without connecting to the database."""
-    from control_plane.config import load_settings  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     load_settings(path)
@@ -57,7 +57,7 @@ def validate(config: ConfigOption = None) -> None:
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def serve(
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
@@ -65,8 +65,8 @@ def serve(
     dev: Annotated[bool, typer.Option("--dev", help="Apply migrations and reload Python code during development")] = False,
 ) -> None:
     """Run the management API in the foreground."""
-    from control_plane.config import load_settings  # noqa: PLC0415 load the optional runtime only when its command runs
-    from control_plane.operations import serve as serve_control_plane  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
+    from control_plane.operations import serve as serve_control_plane  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     load_settings(path)
@@ -74,10 +74,10 @@ def serve(
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def migrate(config: ConfigOption = None) -> None:
     """Apply database migrations and report the schema revision."""
-    from control_plane.operations import migrate as migrate_database  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import migrate as migrate_database  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     result = migrate_database(configuration_path(config, "control-plane"))
     if result.before == result.after:
@@ -87,22 +87,22 @@ def migrate(config: ConfigOption = None) -> None:
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def owner(email: Annotated[str, typer.Option("--email", help="Existing human account to promote")], config: ConfigOption = None) -> None:
     """Recover instance access by promoting an existing account to owner."""
-    from control_plane.operations import promote_owner  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import promote_owner  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     email, already = asyncio.run(promote_owner(email, configuration_path(config, "control-plane")))
     typer.echo(f"{email} is already an instance owner" if already else f"{email} is now an instance owner")
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def taxonomy(
     file: Annotated[Path, typer.Option("--file", help="Taxonomy path, relative to the configuration file")], config: ConfigOption = None
 ) -> None:
     """Apply a taxonomy file to the database and publish changed bundles."""
-    from control_plane.operations import apply_catalog  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import apply_catalog  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     result = asyncio.run(apply_catalog(path, path.parent / file))
@@ -111,10 +111,10 @@ def taxonomy(
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def openapi(out: Annotated[str, typer.Option("--out", help="Output file; - writes YAML to stdout")] = "-") -> None:
     """Export the management API schema without configuration or a database."""
-    from control_plane.operations import export_openapi  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.operations import export_openapi  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     schema = export_openapi()
     if out == "-":
@@ -125,11 +125,11 @@ def openapi(out: Annotated[str, typer.Option("--out", help="Output file; - write
 
 
 @control_plane_app.command()
-@runtime_command("control-plane")
+@runtime_command
 def fixtures(config: ConfigOption = None, fmt: FormatOption = OutputFormat.table) -> None:
     """Seed an empty database with development accounts and print their access details."""
-    from control_plane.config import load_settings  # noqa: PLC0415 load the optional runtime only when its command runs
-    from control_plane.operations import seed_fixtures  # noqa: PLC0415 load the optional runtime only when its command runs
+    from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
+    from control_plane.operations import seed_fixtures  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     result = asyncio.run(seed_fixtures(path))

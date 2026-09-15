@@ -136,15 +136,11 @@ def test_initialization_prints_shell_safe_next_steps(tmp_path):
 
 
 @pytest.mark.parametrize("group", ["gateway", "control-plane"])
-def test_runtime_subcommand_help_is_available_without_the_extra(tmp_path, monkeypatch, group):
-    monkeypatch.setattr("cli.runtime.find_spec", lambda _: None)
+def test_runtime_subcommand_help_is_available(group):
     result = runner.invoke(app, [group, "serve", "--help"])
     assert result.exit_code == 0, result.output
     assert "--config" in Text.from_ansi(result.output).plain
     assert "--port" in Text.from_ansi(result.output).plain
-    result = runner.invoke(app, [group, "serve"])
-    assert result.exit_code == 1
-    assert f"tokkeeper[{group}]" in result.output
 
 
 def test_unknown_configuration_variable_has_an_actionable_error(tmp_path):

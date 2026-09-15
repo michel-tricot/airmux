@@ -14,21 +14,11 @@ With Python 3.13+ and uv:
 uv tool install tokkeeper
 ```
 
-Choose the extras needed by this machine when installing:
-
-| Package requirement               | Capabilities                                    |
-| --------------------------------- | ----------------------------------------------- |
-| `tokkeeper`                       | Remote management and diagnostics               |
-| `tokkeeper[gateway]`              | Remote management and a local inference gateway |
-| `tokkeeper[control-plane]`        | Remote management and a local control plane     |
-| `tokkeeper[all]`                  | Both local runtimes and remote management       |
-
-Quote a package requirement containing brackets in your shell. Add `--reinstall` to change the extras of an existing tool installation.
-All TokKeeper packages are versioned together.
+The installation includes remote management, the gateway, and the control plane. Installing the package starts no services.
+A standalone gateway does not require a running control plane or database.
 
 If `tokkeeper` is not on your PATH, run `uv tool update-shell` and restart your shell.
-`tokkeeper --version` prints the installed CLI version. Every command's `--help` works without installing its runtime;
-running a missing runtime command explains which extra to install.
+`tokkeeper --version` prints the installed CLI version. Use `tokkeeper --help` to see all commands.
 
 For source checkouts and unreleased builds, see [Development](/docs/development).
 
@@ -56,7 +46,7 @@ tokkeeper control-plane serve --config deployment/tokkeeper.yml
 ```
 
 In another terminal, run `tokkeeper gateway serve --config deployment/tokkeeper.yml`. The generated configuration shares a
-private bootstrap key and file secret store between the planes. The gateway extra must also be installed on that machine.
+private bootstrap key and file secret store between the planes. The same installation can run both services.
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
 

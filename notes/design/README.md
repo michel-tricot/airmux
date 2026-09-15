@@ -12,7 +12,7 @@ architecture or adding a decision with no existing home.
 | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | [Control-plane authority](AUTHORITY.md) | Principals, standing grants, credential ceilings, tenancy scopes, and delegated management keys |
 | [Provider credentials](BYOK.md)         | Credential scopes, secret-store boundaries, selection rules, rotation, and failure behavior     |
-| [Command line](CLI.md)                  | One public entry point, optional runtimes, installation, and local configuration                |
+| [Command line](CLI.md)                  | One public entry point, runtime packages, installation, and local configuration                |
 | [Data plane](DATAPLANE.md)              | Canonical contracts, adapters, streaming, policy evaluation, metering, and the request path     |
 | [Workspace policies](POLICIES.md)       | Rule composition, request matching, actions, fallback semantics, and extension boundaries       |
 

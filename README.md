@@ -23,7 +23,7 @@ See [Architecture](docs/concepts/architecture.mdx) for the full data flow and fa
 Install the inference gateway without Docker, Postgres, or the control plane:
 
 ```bash
-uv tool install 'tokkeeper[gateway]'
+uv tool install tokkeeper
 tokkeeper gateway init --taxonomy /path/to/taxonomy.yml --directory gateway
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway validate --config gateway/tokkeeper.yml

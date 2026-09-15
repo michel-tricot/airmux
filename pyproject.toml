@@ -15,7 +15,7 @@ tokkeeper-control-plane = { workspace = true }
 tokkeeper-data-plane = { workspace = true }
 
 [dependency-groups]
-backend = ["tokkeeper[all]"]
+backend = ["tokkeeper"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",

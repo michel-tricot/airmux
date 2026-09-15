@@ -19,14 +19,13 @@ from testcontainers.core.container import DockerContainer
 def installation(tmp_path):
     executable = os.environ.get("TOKKEEPER_INSTALL_BIN")
     if executable is None:
-        pytest.skip("set TOKKEEPER_INSTALL_BIN and TOKKEEPER_INSTALL_EXTRA to test an isolated installation")
-    extra = os.environ.get("TOKKEEPER_INSTALL_EXTRA", "")
+        pytest.skip("set TOKKEEPER_INSTALL_BIN to test an isolated installation")
     environment = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "NO_COLOR": "1"}
-    return executable, extra, environment
+    return executable, environment
 
 
 def run_cli(installation, directory, *args, check=True):
-    executable, _, environment = installation
+    executable, environment = installation
     return subprocess.run(  # noqa: S603 the installed executable is supplied by the packaging test job
         [executable, *args], cwd=directory, env=environment, text=True, capture_output=True, check=check, timeout=30
     )
@@ -40,11 +39,6 @@ def test_help_inventory_and_version_work_in_every_installation(installation, tmp
         help_text = run_cli(installation, tmp_path, group, "serve", "--help").stdout
         assert "--config" in help_text
         assert "--port" in help_text
-        if installation[1] not in {group, "all"}:
-            missing = run_cli(installation, tmp_path, group, "serve", check=False)
-            assert missing.returncode == 1
-            assert f"tokkeeper[{group}]" in missing.stderr
-            assert "Traceback" not in missing.stderr
 
 
 def wait_ready(client, process):
@@ -74,8 +68,6 @@ async def wait_for_database(url):
 
 
 def test_installed_control_plane_migrates_and_serves_outside_the_checkout(installation, tmp_path):
-    if installation[1] not in {"control-plane", "all"}:
-        pytest.skip("requires the control-plane installation")
     schema = yaml.safe_load(run_cli(installation, tmp_path, "control-plane", "openapi").stdout)
     assert "/api/v1/instance/oss/claim" in schema["paths"]
     initialized = run_cli(installation, tmp_path, "control-plane", "init")
@@ -90,10 +82,10 @@ def test_installed_control_plane_migrates_and_serves_outside_the_checkout(instal
         .with_tmpfs_mount("/var/lib/postgresql/data")
     )
     with postgres:
-        executable, extra, environment = installation
+        executable, environment = installation
         database = f"postgresql://test:test@{postgres.get_container_host_ip()}:{postgres.get_exposed_port(5432)}/tokkeeper"
         asyncio.run(wait_for_database(database))
-        installation = executable, extra, {**environment, "DATABASE_URL": database}
+        installation = executable, {**environment, "DATABASE_URL": database}
         migrated = run_cli(installation, tmp_path, "control-plane", "migrate")
         assert "migrated empty ->" in migrated.stdout
         assert database not in migrated.stdout
@@ -105,7 +97,7 @@ def test_installed_control_plane_migrates_and_serves_outside_the_checkout(instal
             process = subprocess.Popen(  # noqa: S603 the installed executable is supplied by the packaging test job
                 [executable, "control-plane", "serve", "--port", str(port)],
                 cwd=tmp_path,
-                env=installation[2],
+                env=installation[1],
                 stdout=log,
                 stderr=subprocess.STDOUT,
             )

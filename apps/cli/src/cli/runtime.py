@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from functools import wraps
-from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -22,36 +21,25 @@ PortOption = Annotated[int, typer.Option("--port", min=1, max=65535, help="Port 
 HostOption = Annotated[str, typer.Option("--host", help="Address to listen on")]
 
 
-def runtime_command[**P](runtime: Runtime) -> Callable[[Callable[P, None]], Callable[P, None]]:
-    def decorate(command: Callable[P, None]) -> Callable[P, None]:
-        @wraps(command)
-        def invoke(*args: P.args, **kwargs: P.kwargs) -> None:
-            try:
-                require_runtime(runtime)
-                command(*args, **kwargs)
-            except ValidationError as error:
-                details = "; ".join(f"{'.'.join(str(part) for part in issue['loc'])}: {issue['msg']}" for issue in error.errors(include_input=False))
-                typer.echo(f"Error: Invalid configuration: {details}", err=True)
-                raise typer.Exit(1) from None
-            except yaml.YAMLError as error:
-                location = getattr(error, "problem_mark", None)
-                detail = f" at line {location.line + 1}" if location else ""
-                typer.echo(f"Error: Invalid YAML{detail}; check the configuration file", err=True)
-                raise typer.Exit(1) from None
-            except (OSError, TypeError, ValueError, UnknownVarError) as error:
-                typer.echo(f"Error: {error}", err=True)
-                raise typer.Exit(1) from None
+def runtime_command[**P](command: Callable[P, None]) -> Callable[P, None]:
+    @wraps(command)
+    def invoke(*args: P.args, **kwargs: P.kwargs) -> None:
+        try:
+            command(*args, **kwargs)
+        except ValidationError as error:
+            details = "; ".join(f"{'.'.join(str(part) for part in issue['loc'])}: {issue['msg']}" for issue in error.errors(include_input=False))
+            typer.echo(f"Error: Invalid configuration: {details}", err=True)
+            raise typer.Exit(1) from None
+        except yaml.YAMLError as error:
+            location = getattr(error, "problem_mark", None)
+            detail = f" at line {location.line + 1}" if location else ""
+            typer.echo(f"Error: Invalid YAML{detail}; check the configuration file", err=True)
+            raise typer.Exit(1) from None
+        except (OSError, TypeError, ValueError, UnknownVarError) as error:
+            typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(1) from None
 
-        return invoke
-
-    return decorate
-
-
-def require_runtime(runtime: Runtime) -> None:
-    module = "data_plane" if runtime == "gateway" else "control_plane"
-    if find_spec(module) is None:
-        message = f"The {runtime} runtime is not installed. Install it with: uv tool install --reinstall 'tokkeeper[{runtime}]'"
-        raise ValueError(message)
+    return invoke
 
 
 def configuration_path(config: Path | None, runtime: Runtime) -> Path:

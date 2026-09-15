@@ -1707,20 +1707,10 @@ dependencies = [
     { name = "rich" },
     { name = "tokkeeper-api-models" },
     { name = "tokkeeper-contract" },
+    { name = "tokkeeper-control-plane" },
+    { name = "tokkeeper-data-plane" },
     { name = "tomli-w" },
     { name = "typer" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "tokkeeper-control-plane" },
-    { name = "tokkeeper-data-plane" },
-]
-control-plane = [
-    { name = "tokkeeper-control-plane" },
-]
-gateway = [
-    { name = "tokkeeper-data-plane" },
 ]
 
 [package.metadata]
@@ -1731,14 +1721,11 @@ requires-dist = [
     { name = "rich" },
     { name = "tokkeeper-api-models", editable = "lib/api-models" },
     { name = "tokkeeper-contract", editable = "lib/contract" },
-    { name = "tokkeeper-control-plane", marker = "extra == 'all'", editable = "apps/control-plane" },
-    { name = "tokkeeper-control-plane", marker = "extra == 'control-plane'", editable = "apps/control-plane" },
-    { name = "tokkeeper-data-plane", marker = "extra == 'all'", editable = "apps/data-plane" },
-    { name = "tokkeeper-data-plane", marker = "extra == 'gateway'", editable = "apps/data-plane" },
+    { name = "tokkeeper-control-plane", editable = "apps/control-plane" },
+    { name = "tokkeeper-data-plane", editable = "apps/data-plane" },
     { name = "tomli-w", specifier = ">=1.2.0" },
     { name = "typer" },
 ]
-provides-extras = ["all", "gateway", "control-plane"]
 
 [[package]]
 name = "tokkeeper-api-models"
@@ -1837,7 +1824,7 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 backend = [
-    { name = "tokkeeper", extra = ["all"] },
+    { name = "tokkeeper" },
 ]
 dev = [
     { name = "anthropic" },
@@ -1859,7 +1846,7 @@ dev = [
 [package.metadata]
 
 [package.metadata.requires-dev]
-backend = [{ name = "tokkeeper", extras = ["all"], editable = "apps/cli" }]
+backend = [{ name = "tokkeeper", editable = "apps/cli" }]
 dev = [
     { name = "anthropic" },
     { name = "anyio" },

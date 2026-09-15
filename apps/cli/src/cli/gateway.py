@@ -11,7 +11,7 @@ from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, c
 
 
 @gateway_app.command()
-@runtime_command("gateway")
+@runtime_command
 def init(
     taxonomy: Annotated[
         Path, typer.Option("--taxonomy", exists=True, dir_okay=False, readable=True, help="Existing provider and model taxonomy YAML")
@@ -19,7 +19,7 @@ def init(
     directory: DirectoryOption = Path(),
 ) -> None:
     """Create standalone configuration and a private inference key."""
-    from data_plane.setup import initialize  # noqa: PLC0415 load the optional runtime only when its command runs
+    from data_plane.setup import initialize  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     initialize(directory, taxonomy)
     typer.echo(f"Created {directory / 'tokkeeper.yml'} and {directory / '.tokkeeper/inference.key'}")
@@ -28,10 +28,10 @@ def init(
 
 
 @gateway_app.command()
-@runtime_command("gateway")
+@runtime_command
 def validate(config: ConfigOption = None) -> None:
     """Check configuration and local bundle admission without contacting providers."""
-    from data_plane.setup import validate_configuration  # noqa: PLC0415 load the optional runtime only when its command runs
+    from data_plane.setup import validate_configuration  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "gateway")
     validate_configuration(path)
@@ -40,7 +40,7 @@ def validate(config: ConfigOption = None) -> None:
 
 
 @gateway_app.command()
-@runtime_command("gateway")
+@runtime_command
 def serve(
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
@@ -49,8 +49,8 @@ def serve(
     workers: Annotated[int, typer.Option("--workers", min=1, help="Worker processes sharing one gateway state directory")] = 1,
 ) -> None:
     """Run the inference gateway in the foreground."""
-    from data_plane.operations import serve as serve_gateway  # noqa: PLC0415 load the optional runtime only when its command runs
-    from data_plane.setup import validate_configuration  # noqa: PLC0415 load the optional runtime only when its command runs
+    from data_plane.operations import serve as serve_gateway  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
+    from data_plane.setup import validate_configuration  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     if dev and workers != 1:
         message = "--dev requires --workers 1"
@@ -61,14 +61,14 @@ def serve(
 
 
 @gateway_app.command()
-@runtime_command("gateway")
+@runtime_command
 def schema(
     out: Annotated[Path, typer.Option("--out", help="Directory for the canonical request, response, and stream schemas")] = Path(
         "taxonomy/schemas/completion"
     ),
 ) -> None:
     """Export the canonical inference JSON schemas."""
-    from data_plane.operations import export_schema  # noqa: PLC0415 load the optional runtime only when its command runs
+    from data_plane.operations import export_schema  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     export_schema(out)
     typer.echo(f"Wrote inference schemas to {out}")

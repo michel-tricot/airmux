@@ -11,14 +11,14 @@ request and response boundaries.
 
 ## Installation boundary
 
-The `tokkeeper` distribution provides remote management without installing either server. The `gateway` and `control-plane`
-extras add the corresponding runtime; the `all` extra installs both. Workspace distributions use the `tokkeeper-` prefix and exact matching versions;
-Python import names remain `cli`, `contract`, `control_plane`, and `data_plane`. The workspace root is not the CLI distribution.
+The `tokkeeper` distribution installs the CLI and both runtimes. One installation supports remote management,
+standalone gateways, and control planes without choosing extras. Installation starts no services and does not require
+a database. Workspace distributions use the `tokkeeper-` prefix and exact matching versions; Python import names remain
+`cli`, `contract`, `control_plane`, and `data_plane`. The workspace root is not the CLI distribution.
 
-Runtime imports happen only when their commands execute. Help and command inventory are available in every installation.
-Missing extras produce a direct installation instruction. Separate server executables and subprocess forwarding would
-create multiple public interfaces and inconsistent errors, so neither is retained. Control-plane migrations ship inside
-its package, allowing an installed wheel to migrate a database without a checkout.
+Runtime imports happen only when their commands execute to keep CLI startup fast. Runtime packages remain independent
+of the CLI and each other. Control-plane migrations ship inside its package, allowing an installed wheel to migrate a
+database without a checkout.
 
 ## Local configuration
 
@@ -37,9 +37,9 @@ only deployment preparation and process supervision. Containers update through i
 
 ## Verification
 
-CLI tests exercise initialization, overwrite refusal, error privacy, help without optional runtimes, and configuration
-validation. Installation tests build and install wheels into isolated tool environments. They verify the base CLI, live
-standalone inference with the gateway extra, and migration plus HTTP serving with the control-plane extra. Import-linter
+CLI tests exercise initialization, overwrite refusal, error privacy, runtime help, and configuration
+validation. Installation tests build and install wheels into isolated tool environments. They verify the installed CLI, live
+standalone inference, and control-plane migration plus HTTP serving. Import-linter
 prevents the runtimes from importing the CLI and continues to enforce data-plane isolation.
 
 See the [CLI reference](../../docs/reference/cli.mdx) for commands and the [standalone guide](../../docs/deployment/gateway.mdx)

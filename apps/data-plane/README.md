@@ -6,7 +6,7 @@ Postgres, the control plane, and the console are not required. Python 3.13 or ne
 Install the CLI with the gateway runtime:
 
 ```bash
-uv tool install 'tokkeeper[gateway]'
+uv tool install tokkeeper
 ```
 
 Initialize against your existing taxonomy file:

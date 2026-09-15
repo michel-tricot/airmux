@@ -5,6 +5,8 @@ requires-python = ">=3.13"
 dependencies = [
   "tokkeeper-api-models==0.1.0",
   "tokkeeper-contract==0.1.0",
+  "tokkeeper-data-plane==0.1.0",
+  "tokkeeper-control-plane==0.1.0",
   "httpx",
   "typer",
   "python-dotenv",
@@ -12,11 +14,6 @@ dependencies = [
   "rich",
   "tomli-w>=1.2.0",
 ]
-
-[project.optional-dependencies]
-all = ["tokkeeper-data-plane==0.1.0", "tokkeeper-control-plane==0.1.0"]
-gateway = ["tokkeeper-data-plane==0.1.0"]
-control-plane = ["tokkeeper-control-plane==0.1.0"]
 
 [project.scripts]
 tokkeeper = "cli.main:main"

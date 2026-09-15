@@ -51,9 +51,6 @@ jobs:
 
   installation:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        extra: ['', gateway, control-plane, all]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -63,18 +60,13 @@ jobs:
       - run: uv build --all-packages --wheel
       - name: Install from built wheels
         env:
-          EXTRA: ${{ matrix.extra }}
           UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: |
-          wheel=$(find dist -name 'tokkeeper-*.whl')
-          uv tool install --find-links dist "${wheel}${EXTRA:+[${EXTRA}]}"
+        run: uv tool install --find-links dist tokkeeper
       - run: uv run pytest tests/installation
         env:
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
-          TOKKEEPER_INSTALL_EXTRA: ${{ matrix.extra }}
-      - if: matrix.extra == 'gateway' || matrix.extra == 'all'
-        run: uv run pytest tests/gateway
+      - run: uv run pytest tests/gateway
         env:
           TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
           DOCKER_HOST: unix:///no-docker.sock
