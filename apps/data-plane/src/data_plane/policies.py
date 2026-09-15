@@ -85,12 +85,24 @@ def matching_rules(request: CanonicalRequest, key: KeyEntry, index: PolicyIndex)
     return tuple(entry for entry in candidates if _matches(entry, request, key, capabilities))
 
 
+def matching_model_rules(model_id: str, key: KeyEntry, index: PolicyIndex) -> tuple[CompiledRule, ...]:
+    return tuple(
+        entry
+        for entry in index.get(key.workspace_id, ())
+        if _matches_model(entry, model_id, key)
+        and (not isinstance(match := entry.rule.definition.match, RequestMatch) or (match.stream is None and not entry.capabilities))
+    )
+
+
 def _matches(entry: CompiledRule, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[Capability]) -> bool:
-    if entry.selected_key_ids is not None and key.key_id not in entry.selected_key_ids:
+    if not _matches_model(entry, request.model, key):
         return False
     match = entry.rule.definition.match
     if not isinstance(match, RequestMatch):
         return True
-    model_matches = not entry.models or request.model in entry.models
     stream_matches = match.stream is None or request.stream is match.stream
-    return model_matches and stream_matches and entry.capabilities <= capabilities
+    return stream_matches and entry.capabilities <= capabilities
+
+
+def _matches_model(entry: CompiledRule, model_id: str, key: KeyEntry) -> bool:
+    return (entry.selected_key_ids is None or key.key_id in entry.selected_key_ids) and (not entry.models or model_id in entry.models)

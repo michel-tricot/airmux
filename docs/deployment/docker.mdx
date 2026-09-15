@@ -31,7 +31,8 @@ Set these in `.env`, restart Compose, and pass the same URL to `quickstart`. For
 reverse proxy and set `TOKKEEPER_PUBLIC_URL` to the exact HTTPS origin.
 
 The packaged proxy replaces incoming forwarding headers and uses the configured public URL for the request scheme. API
-and inference responses carry `Cache-Control: no-store`, including errors. When an external TLS proxy sits in front of
+and inference responses carry `Cache-Control: no-store`, including errors. The standalone data plane also applies these
+headers; SSE responses carry `no-store, no-transform`, which the packaged proxy preserves. When an external TLS proxy sits in front of
 the packaged proxy, its address is the observed client address. Client-specific throttling behind that edge requires an
 explicitly configured trusted-edge integration; incoming client forwarding chains are never trusted by default. Keep the
 split deployment's control-plane port private to its Docker network.

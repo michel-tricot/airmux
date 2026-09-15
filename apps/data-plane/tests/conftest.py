@@ -36,7 +36,23 @@ from data_plane.outbox import SqliteOutbox
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from starlette.applications import Starlette
+    from starlette.testclient import TestClient
+    from starlette.types import ASGIApp
+
+
+class GatewayTransport(httpx.BaseTransport):
+    def __init__(self, client: TestClient) -> None:
+        self.client = client
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        response = self.client.request(
+            request.method,
+            request.url.raw_path.decode(),
+            headers=request.headers,
+            content=request.read(),
+        )
+        return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
 
 NOW = datetime.now(tz=UTC)
 ORG = uuid7()
@@ -169,7 +185,7 @@ TEXT_NONSTREAM = {
 
 @dataclass(frozen=True)
 class BootedApp:
-    app: Starlette
+    app: ASGIApp
     api_key: str
 
 
@@ -199,7 +215,7 @@ def api_key(booted: BootedApp) -> str:
 
 
 @pytest.fixture
-def dp_app(booted: BootedApp) -> Starlette:
+def dp_app(booted: BootedApp) -> ASGIApp:
     return booted.app
 
 

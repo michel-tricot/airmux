@@ -74,13 +74,24 @@ currently reachable.
 
 ### Authentication
 
-Inference routes require `Authorization: Bearer sk-inf-...`. The bearer is an opaque inference key
+Inference routes accept `Authorization: Bearer sk-inf-...` or `x-api-key: sk-inf-...`. The token is an opaque inference key
 minted by the control plane, or declared as plaintext in a trusted local bundle. The data plane:
 
 1. Captures the worker's current `BundleSnapshot`
 2. Rejects with `503 bundle_unavailable` if no snapshot exists
 3. Verifies the `sk-inf-` prefix
 4. Hashes the presented token and looks it up in the snapshot's key index
+
+`InferenceRoute` owns authentication for inference and discovery. It supplies a required `InferenceContext` containing
+the key, captured snapshot, and request start. It selects the first non-empty credential in order: bearer token,
+`x-api-key`, then the protected playground cookie. The selected key is authenticated once; an invalid key does not
+fall back to lower-priority credentials. Cookie authentication retains the requested-with and fetch-site checks.
+
+`ResponseHeadersMiddleware` wraps the entire Starlette application, including its server-error boundary. It mints the
+UUIDv7 request ID and monotonic start time once, sets `X-Request-ID`, `X-Content-Type-Options: nosniff`, and
+`Cache-Control: no-store` on all HTTP responses, and adds the bearer challenge on `401`. SSE receives
+`Cache-Control: no-store, no-transform` and `X-Accel-Buffering: no`. It changes only response-start headers and never
+consumes the stream. Metering uses that same request ID; provider completion IDs remain independent.
 
 The bundle contains only token hashes. Revocation is absence from a later bundle, so a request made
 after the new bundle is admitted fails without a database or cache invalidation call.
@@ -207,16 +218,14 @@ tool blocks, thinking blocks, signatures, stop reasons, and errors are rendered 
 shape regardless of the upstream provider family. `gateway` is an extra field on the buffered
 message and on the stream's usage-bearing `message_delta` event.
 
-The Anthropic SDK needs its normal `api_key` argument for construction, but the gateway bearer is
-passed as `auth_token`:
+The Anthropic SDK sends the inference key through its normal `api_key` argument:
 
 ```python
 from anthropic import Anthropic
 
 client = Anthropic(
     base_url="http://127.0.0.1:8080/inf",
-    api_key="unused",
-    auth_token=inference_key,
+    api_key=inference_key,
 )
 message = client.messages.create(
     model="anthropic/claude-sonnet-4-6",
@@ -481,7 +490,7 @@ With the environment secret store, a synthesized provider ref resolves through t
 3. Rejects duplicate organizations and token hashes
 
 Each snapshot contains its bundle plus model, provider, credential, and compiled-profile indexes. A
-handler captures one `BundleSet`, hashes the bearer once, resolves its key from the global index, and
+authenticated route captures one `BundleSet`, hashes the token once, resolves its key from the global index, and
 uses the key's organization id to select the snapshot. A concurrent manifest swap therefore cannot
 mix an old key index with a new catalog or price table.
 
@@ -537,9 +546,9 @@ meaning.
 
 ## Request execution
 
-All caller/provider combinations use the same orchestration in `proxy.py`:
+The HTTP boundary and orchestration in `proxy.py` serve every caller/provider combination:
 
-1. Capture the current bundle snapshot and authenticate the bearer
+1. Mint the request ID and start time, capture the current bundle snapshot, and authenticate the caller
 2. Read a JSON object and resolve or bind the ingress dialect
 3. Parse the caller body into `CanonicalRequest` and collect translation adjustments
 4. Call pure `evaluate()` with the request, authenticated key, and captured snapshot
