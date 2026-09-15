@@ -18,8 +18,7 @@ from anthropic import Anthropic
 
 client = Anthropic(
     base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf",
-    api_key="unused",
-    auth_token=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
 )
 
 message = client.messages.create(
@@ -31,8 +30,7 @@ message = client.messages.create(
 print(message.content[0].text)
 ```
 
-`auth_token` places the TokKeeper inference key in the `Authorization: Bearer` header. The SDK requires `api_key`, but
-TokKeeper does not read the provider-specific key header.
+The SDK sends the TokKeeper inference key in `x-api-key`. Provider credentials are resolved separately by the gateway.
 
 ## Route to another provider family
 

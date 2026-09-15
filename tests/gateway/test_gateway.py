@@ -11,6 +11,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import httpx
 import yaml
@@ -86,9 +87,30 @@ def initialize_gateway(executable, taxonomy_path, directory, tmp_path, environme
 def verify_stream(client, headers, body):
     with client.stream("POST", "/inf/v1/chat/completions", headers=headers, json={**body, "stream": True}) as stream:
         assert stream.status_code == 200
+        assert stream.headers["cache-control"] == "no-store, no-transform"
+        assert stream.headers["x-accel-buffering"] == "no"
+        assert UUID(stream.headers["x-request-id"]).version == 7
         events = list(stream.iter_lines())
     assert "data: [DONE]" in events
     assert any('"content":"hello"' in event.replace(" ", "") for event in events)
+
+
+def verify_gateway_requests(client, headers, body, key):
+    health = client.get("/healthz")
+    assert health.status_code == 200
+    assert health.headers["cache-control"] == "no-store"
+    unauthorized = client.post("/inf/v1/chat/completions", json=body)
+    assert unauthorized.status_code == 401
+    assert unauthorized.headers["cache-control"] == "no-store"
+    assert unauthorized.headers["www-authenticate"] == 'Bearer realm="tokkeeper"'
+    assert client.get("/inf/v1/models", headers={"x-api-key": key}).status_code == 200
+    response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert UUID(response.headers["x-request-id"]).version == 7
+    assert response.json()["choices"][0]["message"]["content"] == "hello"
+    verify_stream(client, headers, body)
 
 
 def test_installed_gateway_with_external_taxonomy(tmp_path):
@@ -121,12 +143,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
                 eventually(lambda: client.get("/readyz").status_code == 200)
                 headers = {"Authorization": f"Bearer {key}", "X-Tokkeeper-Dialect": "openai_native"}
                 body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
-                assert client.get("/healthz").status_code == 200
-                assert client.post("/inf/v1/chat/completions", json=body).status_code == 401
-                response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
-                assert response.status_code == 200, response.text
-                assert response.json()["choices"][0]["message"]["content"] == "hello"
-                verify_stream(client, headers, body)
+                verify_gateway_requests(client, headers, body, key)
                 taxonomy["models"][0]["model_id"] = "changed"
                 taxonomy_path.write_text(yaml.safe_dump(taxonomy))
                 changed = {**body, "model": "changed"}

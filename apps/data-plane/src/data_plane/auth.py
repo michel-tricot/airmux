@@ -33,19 +33,33 @@ def authenticate_request(request: Request, holder: BundleHolder) -> tuple[KeyEnt
     bundle_set = holder.current
     if not bundle_set.snapshots:
         raise RequestRejectedError(503, "bundle_unavailable")
-    auth_header = request.headers.get("authorization", "")
-    scheme, separator, value = auth_header.partition(" ")
-    if separator and scheme.casefold() == "bearer":
-        token = value.strip()
-    else:
-        token = request.cookies.get(PLAYGROUND_COOKIE, "")
-        if not token:
-            raise RequestRejectedError(401, "missing_bearer_token")
-        if request.headers.get("x-requested-with") is None:
-            raise RequestRejectedError(403, "missing_requested_with")
-        if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
-            raise RequestRejectedError(403, "cross_site_request")
+    token = _request_token(request)
     key = authenticate(token, bundle_set.key_index, datetime.now(tz=UTC))
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
     return key, bundle_set.snapshots[key.org_id]
+
+
+def _request_token(request: Request) -> str:
+    if any(len(request.headers.getlist(name)) > 1 for name in ("authorization", "x-api-key")):
+        raise RequestRejectedError(400, "ambiguous_credentials", "Use a single inference credential")
+    auth_header = request.headers.get("authorization", "")
+    scheme, separator, value = auth_header.partition(" ")
+    if "authorization" in request.headers and (not separator or scheme.casefold() != "bearer" or not value.strip()):
+        raise RequestRejectedError(401, "invalid_token")
+    bearer = value.strip()
+    api_key = request.headers.get("x-api-key", "").strip()
+    if "x-api-key" in request.headers and not api_key:
+        raise RequestRejectedError(401, "invalid_token")
+    if bearer and api_key and bearer != api_key:
+        raise RequestRejectedError(400, "ambiguous_credentials", "Use a single inference credential")
+    if token := bearer or api_key:
+        return token
+    token = request.cookies.get(PLAYGROUND_COOKIE, "")
+    if not token:
+        raise RequestRejectedError(401, "missing_bearer_token")
+    if request.headers.get("x-requested-with") is None:
+        raise RequestRejectedError(403, "missing_requested_with")
+    if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
+        raise RequestRejectedError(403, "cross_site_request")
+    return token
