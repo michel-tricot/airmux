@@ -51,6 +51,10 @@ jobs:
 
   installation:
     runs-on: ubuntu-latest
+    env:
+      TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+      TOKKEEPER_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+      DOCKER_HOST: unix:///no-docker.sock
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -71,10 +75,29 @@ jobs:
         env:
           TOKKEEPER_DISTRIBUTION_DIR: dist
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
-      - run: uv run pytest tests/gateway
-        env:
-          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
-          DOCKER_HOST: unix:///no-docker.sock
+      - name: Gateway level 1 - basics
+        run: uv run pytest tests/gateway/test_01_basic.py -n auto --junitxml=gateway-results/01-basic.xml
+      - name: Gateway level 2 - protocols
+        run: uv run pytest tests/gateway/test_02_protocols.py -n auto --junitxml=gateway-results/02-protocols.xml
+      - name: Gateway level 3 - features
+        run: uv run pytest tests/gateway/test_03_features.py -n auto --junitxml=gateway-results/03-features.xml
+      - name: Gateway level 4 - policies
+        run: uv run pytest tests/gateway/test_04_policies.py -n auto --junitxml=gateway-results/04-policies.xml
+      - name: Gateway level 5 - advanced policies
+        run: uv run pytest tests/gateway/test_05_advanced_policies.py -n auto --junitxml=gateway-results/05-advanced-policies.xml
+      - name: Gateway level 6 - failures and fallback
+        run: uv run pytest tests/gateway/test_06_failures.py -n auto --junitxml=gateway-results/06-failures.xml
+      - name: Gateway level 7 - runtime and CLI lifecycle
+        run: uv run pytest tests/gateway/test_07_runtime.py tests/gateway/test_gateway.py -n auto --junitxml=gateway-results/07-runtime.xml
+      - name: Upload gateway results and diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: gateway-integration
+          path: |
+            gateway-results
+            ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7
 
   acceptance:
     runs-on: ubuntu-latest

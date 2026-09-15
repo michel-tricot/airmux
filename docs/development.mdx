@@ -61,11 +61,17 @@ The generated bundle references the existing taxonomy file. Both reload after ed
 keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
 for installation without a source checkout at runtime.
 
-The Docker-free subprocess suite verifies setup, authentication, buffered and streaming requests, taxonomy reloads, and restarts:
+The Docker-free subprocess suite progresses through basics, protocol pairs, features, simple policies, advanced policy
+composition, failures and fallback, and runtime changes. It starts real gateways and scripted upstream HTTP servers,
+then validates their JSON Lines usage events against the shared contract:
 
 ```bash
-uv run pytest tests/gateway
+uv run pytest tests/gateway -n auto
 ```
+
+PR CI runs the levels in order against the rebuilt, installed public wheel and uploads JUnit results, sanitized
+configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
+For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/gateway/README.md).
 
 ## Python checks
 
