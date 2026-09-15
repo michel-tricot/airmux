@@ -1,91 +1,188 @@
-# TokKeeper
+<div align="center">
+  <h1>TokKeeper</h1>
+  <p><strong>The self-hosted LLM gateway for multi-provider applications</strong></p>
+  <p>
+    Keep using familiar SDKs while TokKeeper centralizes provider translation, routing, policy, credentials,
+    failover, and usage accounting behind one inference endpoint.
+  </p>
+  <p>
+    <a href="https://github.com/michel-tricot/tokkeeper/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michel-tricot/tokkeeper/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="https://pypi.org/project/tokkeeper/"><img alt="PyPI" src="https://img.shields.io/pypi/v/tokkeeper?logo=pypi&logoColor=white"></a>
+    <a href="https://www.python.org/downloads/"><img alt="Python 3.13+" src="https://img.shields.io/badge/python-3.13%2B-3776AB?logo=python&logoColor=white"></a>
+    <a href="LICENSE"><img alt="Elastic License 2.0" src="https://img.shields.io/badge/license-Elastic--2.0-4C1?logo=elastic&logoColor=white"></a>
+  </p>
+  <p>
+    <a href="#quickstart">Quickstart</a> ·
+    <a href="docs/index.mdx">Documentation</a> ·
+    <a href="CONTRIBUTING.md">Contributing</a> ·
+    <a href="https://github.com/michel-tricot/tokkeeper/issues/new">Report a bug</a>
+  </p>
+</div>
 
-TokKeeper is a self-hosted LLM gateway. Applications use one endpoint across providers while TokKeeper handles request
-translation, workspace policies, scoped provider credentials, inference keys, failover, and usage accounting.
+TokKeeper gives OpenAI and Anthropic clients one self-hosted origin for calling multiple provider families. Applications
+send a standard Chat Completions, Responses, Messages, or canonical request. TokKeeper authenticates the workspace,
+applies policy, selects a model and scoped provider credential, translates the request, and records the result.
 
-## Architecture
+## Quickstart
 
-TokKeeper separates mutable management work from the inference request path:
+Run a local gateway with no Docker, Postgres, or control plane. You need Python 3.13+, [uv](https://docs.astral.sh/uv/),
+and an OpenAI API key.
 
-| Plane         | Responsibility                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------- |
-| Control plane | Organizations, workspaces, users, credentials, policies, catalog data, bundles, usage, and audit activity |
-| Data plane    | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering      |
-
-Caller dialects and provider protocols meet at one canonical model. Adding a caller dialect requires one ingress adapter;
-adding a provider family requires one egress adapter. Policy, routing, and metering remain provider-neutral and are
-evaluated against an immutable configuration bundle instead of querying management state on the request path.
-
-See [Architecture](docs/concepts/architecture.mdx) for the full data flow and failure boundaries.
-
-## Gateway only
-
-Install the inference gateway without Docker, Postgres, or the control plane:
+### 1. Install and start the gateway
 
 ```bash
 uv tool install tokkeeper
+mkdir tokkeeper-demo
+cd tokkeeper-demo
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway init
-tokkeeper gateway validate
 tokkeeper gateway serve
 ```
 
-The initializer copies the shipped taxonomy into `.tokkeeper` and prints copyable next steps through a first real request,
-without printing the inference key. Pass `--taxonomy PATH` to use an existing taxonomy file instead. Taxonomy edits reload
-while the gateway runs. The default event sink discards usage.
-See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
+`init` creates a local configuration, a model taxonomy, and a private inference key under `.tokkeeper/`. The gateway
+reads provider credentials from the environment and reloads taxonomy edits while it runs.
+
+### 2. Make a real model request
+
+In another terminal:
+
+```bash
+cd tokkeeper-demo
+export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper/inference.key)"
+curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+  -H 'Content-Type: application/json' \
+  -H 'X-Tokkeeper-Dialect: openai_native' \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Reply with exactly: tokkeeper ready"}]}'
+```
+
+The same gateway accepts streaming requests, tool calls, structured output, reasoning, images, and PDF inputs when the
+selected model supports them. Continue with the [gateway-only guide](docs/deployment/gateway.mdx) for configuration and
+operation.
+
+## Use your existing SDK
+
+Point an OpenAI client at `/inf/v1` and replace the upstream key with a TokKeeper inference key:
+
+```python
+import os
+
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://127.0.0.1:8080/inf/v1",
+    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+)
+
+response = client.chat.completions.create(
+    model="openai/gpt-4o-mini",
+    messages=[{"role": "user", "content": "Why use an LLM gateway?"}],
+)
+
+print(response.choices[0].message.content)
+```
+
+TokKeeper also supports the OpenAI Responses API, the Anthropic Messages API, and its provider-neutral canonical API.
+See the [OpenAI SDK](docs/guides/openai-sdk.mdx) and [Anthropic SDK](docs/guides/anthropic-sdk.mdx) guides for complete
+examples, including cross-provider routing and streaming.
+
+## Why TokKeeper
+
+- **One application interface:** keep OpenAI or Anthropic request shapes while routing to compatible provider families
+- **Policy at the gateway:** compose model and provider allowlists, price ceilings, request limits, credential rules, denials, strict parameters, and fallbacks
+- **Scoped provider secrets:** separate instance, organization, and workspace credentials without exposing secret values to configuration bundles
+- **Predictable failover:** retry eligible credentials and route to bounded backup models without escaping workspace policy
+- **Complete request records:** capture tokens, cost, latency, status, credential scope, configuration version, and every fallback attempt
+- **A resilient request path:** gateways evaluate immutable local bundles and can keep serving through a control-plane outage
+
+The shipped catalog includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and xAI. Model
+IDs, prices, context windows, modalities, capabilities, and parameter support are explicit, inspectable data in the
+[taxonomy](taxonomy/taxonomy.yml).
 
 ## Full-platform quickstart
 
-You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
+Use the complete stack when you want the web console, organizations and workspaces, managed credentials, live policy,
+usage history, and audit activity. You need Docker with Compose 2.24.4+, Python 3.13+, uv, and at least one provider API
+key.
 
-```sh
+```bash
 git clone https://github.com/michel-tricot/tokkeeper.git
 cd tokkeeper
 cp .env.example .env
 ```
 
-Add a provider key to `.env`, then run:
+Add a provider key such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to `.env`, then run:
 
-```sh
+```bash
 uv tool install tokkeeper
 docker compose up -d --build --wait
 tokkeeper quickstart --url http://localhost:8080
 ```
 
 `quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
-prints a new inference key; and verifies it with a real model request. Open [localhost:8080](http://localhost:8080) for
-the console.
+mints an inference key; and proves the installation with a real model request. Open
+[localhost:8080](http://localhost:8080) for the console.
 
-## Common commands
+| Goal | Command |
+| --- | --- |
+| List catalog models | `tokkeeper models list` |
+| Inspect the installation | `tokkeeper doctor` |
+| Follow gateway activity | `tokkeeper events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f tokkeeper` |
+| Stop while preserving state | `docker compose down` |
 
-| Goal                            | Command                                                         |
-| ------------------------------- | --------------------------------------------------------------- |
-| Start or update the local stack | `docker compose up -d --build --wait`                           |
-| Check gateway readiness         | `curl --fail http://localhost:8080/readyz`                      |
-| Inspect the installation        | `tokkeeper doctor`                                              |
-| Follow service logs             | `docker compose logs -f tokkeeper`                              |
-| Stop while preserving state     | `docker compose down`                                           |
+## Architecture
+
+TokKeeper separates mutable management work from the inference request path.
+
+```mermaid
+flowchart LR
+  A[Application] -->|Inference key| G[Data plane]
+  U[Operator] --> C[Console or CLI]
+  C --> M[Control plane]
+  M --> P[(Postgres)]
+  M --> S[(Secret store)]
+  M -->|Versioned bundles| G
+  G -->|Cold secret resolution| S
+  G -->|Provider request| L[LLM provider]
+  G -->|Usage and health| M
+```
+
+Caller dialects and provider protocols cross through one canonical model. Adding a caller dialect requires one ingress
+adapter; adding a provider family requires one egress adapter. Policy, routing, streaming, and metering stay
+provider-neutral instead of multiplying into a translator for every caller and provider pair.
+
+The control plane compiles complete, versioned organization bundles. Data-plane workers validate them, build immutable
+indexes, and atomically adopt them. Inference therefore avoids management database reads and an in-flight request never
+observes partially updated policy. Cold provider-secret resolution is the only database-capable exception, and secret
+values never enter a bundle.
+
+Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment
+shapes.
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.mdx)
-- [Tutorials](docs/guides/openai-sdk.mdx)
-- [Features and policies](docs/features/model-routing.mdx)
-- [Concepts and architecture](docs/concepts/architecture.mdx)
-- [Deployment](docs/deployment/index.mdx)
-- [Inference reference](docs/reference/inference.mdx)
-- [Management API](docs/reference/management-api.mdx)
-- [Development](docs/development.mdx)
+| I want to... | Start here |
+| --- | --- |
+| Try the complete stack | [Quickstart](docs/quickstart.mdx) |
+| Connect an application | [OpenAI SDK](docs/guides/openai-sdk.mdx) or [Anthropic SDK](docs/guides/anthropic-sdk.mdx) |
+| Add routing and access rules | [Policy workflow](docs/guides/policy-workflow.mdx) |
+| Understand supported inference shapes | [Inference reference](docs/reference/inference.mdx) |
+| Deploy TokKeeper | [Deployment overview](docs/deployment/index.mdx) |
+| Call the management API | [Management API](docs/reference/management-api.mdx) |
+| Work on the project | [Development guide](docs/development.mdx) |
 
-The complete management API is generated from [`lib/api-spec/openapi.yaml`](lib/api-spec/openapi.yaml) in the Mintlify reference navigation.
+The complete management API is generated from [`lib/api-spec/openapi.yaml`](lib/api-spec/openapi.yaml).
 
-## Contributing
+## Contributing and support
 
-See [Contributing](CONTRIBUTING.md) for the development workflow, architectural boundaries, generated contracts, and
-validation expectations. Significant design changes should update the relevant record in
+Contributions are welcome. Read [Contributing](CONTRIBUTING.md) for the development workflow, architectural boundaries,
+generated contracts, and validation expectations. Significant design changes should update the relevant record in
 [`notes/design`](notes/design/README.md).
 
-## License and stability
+Use [GitHub Issues](https://github.com/michel-tricot/tokkeeper/issues) to report a bug or propose a focused feature.
 
-TokKeeper is pre-1.0. APIs, configuration, and migrations may change before the first stable release. Licensed under the [Elastic License 2.0](LICENSE).
+## License and project status
+
+TokKeeper is pre-1.0. APIs, configuration, and migrations may change before the first stable release. The project is
+licensed under the [Elastic License 2.0](LICENSE).

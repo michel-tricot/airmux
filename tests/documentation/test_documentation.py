@@ -118,6 +118,27 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
     assert "notes/design/README.md" in contributing
 
 
+def test_readme_is_a_complete_oss_entry_point() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    expected_badges = (
+        "actions/workflows/ci.yml/badge.svg",
+        "img.shields.io/pypi/v/tokkeeper",
+        "img.shields.io/badge/python-3.13%2B",
+        "img.shields.io/badge/license-Elastic--2.0",
+    )
+    quickstart_commands = (
+        "uv tool install tokkeeper",
+        "tokkeeper gateway init",
+        "tokkeeper gateway serve",
+        "/inf/v1/chat/completions",
+    )
+    headings = re.findall(r"^## (.+)$", readme, re.MULTILINE)
+
+    assert all(badge in readme for badge in expected_badges)
+    assert all(command in readme for command in quickstart_commands)
+    assert headings.index("Quickstart") < headings.index("Architecture")
+
+
 def test_public_links_use_the_current_repository() -> None:
     stale_repository = "https://github.com/michel-tricot/airllm"
     public_documents = [ROOT / "README.md", PUBLISHED_PROJECT.parent / "README.md", *documentation_files()]
