@@ -20,6 +20,9 @@ A standalone gateway does not require a running control plane or database.
 If `tokkeeper` is not on your PATH, run `uv tool update-shell` and restart your shell.
 `tokkeeper --version` prints the installed CLI version. Use `tokkeeper --help` to see all commands.
 
+Install command completion for the current shell with `tokkeeper completion`. Use `--shell` to select
+`bash`, `zsh`, `fish`, `powershell`, or `pwsh` instead of detecting it automatically.
+
 For source checkouts and unreleased builds, see [Development](/docs/development).
 
 ## Local runtimes
@@ -104,6 +107,7 @@ Top-level help groups commands by task:
 | --- | --- |
 | Getting started | `quickstart`, `commands` |
 | Connection | `login`, `profiles`, `status`, `doctor` |
+| Goodies | `completion` |
 | Services | `gateway`, `control-plane` |
 | Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, bundles, and events |
 

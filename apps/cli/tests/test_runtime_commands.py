@@ -39,6 +39,8 @@ def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monke
     assert key not in result.output
     result = runner.invoke(app, ["gateway", "validate"])
     assert result.exit_code == 0, result.output
+    assert "A real inference request verifies provider credentials and connectivity" in result.output
+    assert "verified when serving" not in result.output
     assert key not in result.output
     contents = {path: path.read_bytes() for path in (tmp_path / "tokkeeper.yml", tmp_path / "bundle.yml", tmp_path / ".tokkeeper/inference.key")}
     result = runner.invoke(app, ["gateway", "init", "--taxonomy", str(taxonomy)])

@@ -51,6 +51,7 @@ GETTING_STARTED = "Getting started"
 CONNECTION = "Connection"
 SERVICES = "Services"
 RESOURCES = "Manage resources"
+GOODIES = "Goodies"
 
 orgs_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")

@@ -36,7 +36,8 @@ def validate(config: ConfigOption = None) -> None:
     path = configuration_path(config, "gateway")
     validate_configuration(path)
     typer.echo(f"Gateway configuration is valid: {path}")
-    typer.echo("Provider credentials, connectivity, and remote bundles are verified when serving")
+    typer.echo("A real inference request verifies provider credentials and connectivity")
+    typer.echo("Remote bundles are fetched and admitted while serving")
 
 
 @gateway_app.command()
