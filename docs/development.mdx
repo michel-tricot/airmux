@@ -143,14 +143,22 @@ This permanently deletes the development database, runtime key, provider credent
 
 ## Install a local build
 
-For an unreleased checkout, build the workspace packages and install the CLI into an isolated tool environment:
+For an unreleased checkout, build the public distribution and install it into an isolated tool environment:
 
 ```bash
-uv build --all-packages --wheel
-uv tool install --reinstall --find-links dist tokkeeper
+./scripts/build-python-distribution.sh
+uv tool install --reinstall dist/tokkeeper-*.whl
 ```
 
 The installation includes both runtimes. Invoke `tokkeeper` directly from any directory.
+
+## Publish the Python distribution
+
+The repository publishes one `tokkeeper` distribution containing the CLI, contract, generated API models, and both
+runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
+Publishing a GitHub release with a tag such as `v0.1.0` runs `publish-python.yml`. The workflow rejects a tag that differs
+from the public distribution version, builds one wheel and source distribution, rebuilds the wheel from its source
+distribution, and runs the installed behavior suite before publishing from a separate job.
 
 ## Run deployment tests
 

@@ -4,6 +4,7 @@ import ast
 import json
 import re
 import subprocess
+import tomllib
 from collections import Counter
 from pathlib import Path
 
@@ -17,6 +18,14 @@ LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
 LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^)#?]+)(?:#[^)]+)?\)")
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
+PUBLIC_REPOSITORY = "https://github.com/michel-tricot/tokkeeper"
+PUBLISHED_PROJECT = ROOT / "packaging/tokkeeper/pyproject.toml"
+INTERNAL_DISTRIBUTIONS = {
+    "tokkeeper-api-models",
+    "tokkeeper-contract",
+    "tokkeeper-control-plane",
+    "tokkeeper-data-plane",
+}
 
 
 def documentation_files() -> list[Path]:
@@ -98,6 +107,24 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
     contributing = contributing_path.read_text(encoding="utf-8")
     assert "docs/development.mdx" in contributing
     assert "notes/design/README.md" in contributing
+
+
+def test_public_links_use_the_current_repository() -> None:
+    stale_repository = "https://github.com/michel-tricot/airllm"
+    public_documents = [ROOT / "README.md", PUBLISHED_PROJECT.parent / "README.md", *documentation_files()]
+    occurrences = [str(path.relative_to(ROOT)) for path in public_documents if stale_repository in path.read_text()]
+
+    assert occurrences == []
+
+
+def test_tokkeeper_is_the_only_published_python_distribution() -> None:
+    project = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]
+
+    assert project["name"] == "tokkeeper"
+    assert project["description"]
+    assert project["urls"]["Repository"] == PUBLIC_REPOSITORY
+    dependencies = {re.split(r"[\[<>=!~]", dependency, maxsplit=1)[0] for dependency in project["dependencies"]}
+    assert dependencies.isdisjoint(INTERNAL_DISTRIBUTIONS)
 
 
 @pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])

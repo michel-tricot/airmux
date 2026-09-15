@@ -13,8 +13,9 @@ request and response boundaries.
 
 The `tokkeeper` distribution installs the CLI and both runtimes. One installation supports remote management,
 standalone gateways, and control planes without choosing extras. Installation starts no services and does not require
-a database. Workspace distributions use the `tokkeeper-` prefix and exact matching versions; Python import names remain
-`cli`, `contract`, `control_plane`, and `data_plane`. The workspace root is not the CLI distribution.
+a database. Its wheel contains the `cli`, `api_models`, `contract`, `control_plane`, and `data_plane` import packages.
+The corresponding workspace projects remain local development units so their dependencies and boundaries stay explicit.
+They are not published or resolved when installing TokKeeper.
 
 Runtime imports happen only when their commands execute to keep CLI startup fast. Runtime packages remain independent
 of the CLI and each other. Control-plane migrations ship inside its package, allowing an installed wheel to migrate a
@@ -24,6 +25,10 @@ can initialize without repository files. The taxonomy build writes both the repo
 Shell completion is an explicit `completion` command in the `Goodies` help section. Keeping installation behind a command
 avoids permanent root options while making the large resource command tree practical to explore. The command detects the
 current shell by default and also accepts an explicit shell for automated setup.
+
+One public distribution avoids exposing the repository decomposition as an installation or release concern. A GitHub
+release builds and verifies its wheel and source distribution before publishing them. The release tag must match the public
+distribution version, and the installed behavior suite exercises the same artifact users receive.
 
 ## Local configuration
 

@@ -57,12 +57,16 @@ jobs:
         with:
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
-      - run: uv build --all-packages --wheel
-      - name: Install from built wheels
+      - run: ./scripts/build-python-distribution.sh
+      - name: Rebuild wheel from source distribution
+        run: |
+          mkdir dist-from-sdist
+          uv build --wheel --out-dir dist-from-sdist dist/tokkeeper-*.tar.gz
+      - name: Install rebuilt release
         env:
           UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: uv tool install --find-links dist tokkeeper
+        run: uv tool install dist-from-sdist/tokkeeper-*.whl
       - run: uv run pytest tests/installation
         env:
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
