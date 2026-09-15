@@ -4,16 +4,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from contract.taxonomy import TaxonomySpec as SharedTaxonomySpec
 from control_plane.models import Model, Provider
-from control_plane.models.model import ModelOut
-from control_plane.models.provider import ProviderOut
+from control_plane.models.common.wire import RequestModel
+from control_plane.models.model import ModelIn, ModelOut
+from control_plane.models.provider import ProviderIn, ProviderOut
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from contract.taxonomy import ModelIn, ProviderIn, TaxonomySpec
+    from contract.taxonomy import ModelSpec, ProviderSpec
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,11 @@ class UnknownProviderError(ValueError):
         label = "reference" if not additional_references else "references"
         requirements = "; ".join(f"model '{missing.model_id}' requires provider '{missing.provider_id}'" for missing in self.references)
         super().__init__(f"Unknown provider {label}: {requirements}")
+
+
+class TaxonomySpec(SharedTaxonomySpec, RequestModel):
+    providers: list[ProviderIn] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
+    models: list[ModelIn] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
 
 
 class TaxonomyOut(BaseModel):
@@ -53,7 +60,7 @@ class TaxonomyApplyOut(BaseModel):
     published: list[TaxonomyPublicationOut]
 
 
-async def upsert_provider(p: ProviderIn) -> Provider:
+async def upsert_provider(p: ProviderSpec) -> Provider:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == p.provider_id)
     if provider is None:
@@ -68,7 +75,7 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     return await provider.save()
 
 
-async def upsert_model(m: ModelIn) -> Model:
+async def upsert_model(m: ModelSpec) -> Model:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == m.provider_id)
     if provider is None:
@@ -108,7 +115,7 @@ async def upsert_model(m: ModelIn) -> Model:
     return await model.save()
 
 
-async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
+async def apply_taxonomy(spec: SharedTaxonomySpec) -> tuple[int, int]:
     """Create or update every provider and model present in the taxonomy."""
     for p in spec.providers:
         await upsert_provider(p)
@@ -117,7 +124,7 @@ async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
     return len(spec.providers), len(spec.models)
 
 
-def _provider_matches(provider: Provider, desired: ProviderIn) -> bool:
+def _provider_matches(provider: Provider, desired: ProviderSpec) -> bool:
     return (
         provider.kind == desired.kind
         and provider.base_url == str(desired.base_url)
@@ -128,7 +135,7 @@ def _provider_matches(provider: Provider, desired: ProviderIn) -> bool:
     )
 
 
-def _model_matches(model: Model, desired: ModelIn, provider_names: dict[UUID, str]) -> bool:
+def _model_matches(model: Model, desired: ModelSpec, provider_names: dict[UUID, str]) -> bool:
     return (
         provider_names[model.provider_id] == desired.provider_id
         and model.upstream_model == (desired.upstream_model or desired.model_id)
@@ -152,7 +159,7 @@ def _change_counts[T, U](desired: list[T], existing: dict[str, U], key: Callable
     return TaxonomyChangeCounts(created=created, updated=len(desired) - created - unchanged, unchanged=unchanged)
 
 
-async def plan_taxonomy(spec: TaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
+async def plan_taxonomy(spec: SharedTaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
     providers = await Provider.find()
     models = await Model.find()
     providers_by_name = {provider.name.casefold(): provider for provider in providers}

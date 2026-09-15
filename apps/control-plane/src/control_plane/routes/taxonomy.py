@@ -6,15 +6,23 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from sqlmodel import col
 
-from contract.taxonomy import ModelIn, ProviderIn, TaxonomySpec  # noqa: TC001 FastAPI resolves request schemas at runtime
 from control_plane.authz import Permission
 from control_plane.compiler import publish_changes
 from control_plane.deps import instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import Envelope
-from control_plane.models.model import ModelOut
-from control_plane.models.provider import ProviderOut
-from control_plane.taxonomy import TaxonomyApplyOut, TaxonomyOut, TaxonomyPublicationOut, apply_taxonomy, plan_taxonomy, upsert_model, upsert_provider
+from control_plane.models.model import ModelIn, ModelOut
+from control_plane.models.provider import ProviderIn, ProviderOut
+from control_plane.taxonomy import (
+    TaxonomyApplyOut,
+    TaxonomyOut,
+    TaxonomyPublicationOut,
+    TaxonomySpec,
+    apply_taxonomy,
+    plan_taxonomy,
+    upsert_model,
+    upsert_provider,
+)
 
 router = APIRouter()
 

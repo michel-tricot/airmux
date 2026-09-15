@@ -4,6 +4,11 @@ TokKeeper has one public executable, `tokkeeper`. It manages remote installation
 `gateway` and `control-plane` command groups. The CLI owns Typer, help, output, and actionable command errors. Each runtime
 owns typed operations and its application factory. Neither runtime imports the CLI, and the planes still share only `contract`.
 
+Shared taxonomy definitions live in `contract` as `ProviderSpec`, `ModelSpec`, and `TaxonomySpec`, so standalone file loading
+has no control-plane dependency. Control-plane `ProviderIn`, `ModelIn`, and `TaxonomySpec` retain `RequestModel` inheritance
+and reuse those definitions. API responses retain their `RecordOut` models. Sharing file validation does not remove the
+request and response boundaries.
+
 ## Installation boundary
 
 The `tokkeeper` distribution provides remote management without installing either server. The `gateway` and `control-plane`

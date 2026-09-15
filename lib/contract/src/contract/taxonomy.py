@@ -21,7 +21,7 @@ def _default_capabilities() -> list[Capability]:
     return ["streaming", "tools"]
 
 
-class ProviderIn(_TaxonomyInput):
+class ProviderSpec(_TaxonomyInput):
     """An upstream provider endpoint and its request-profile settings."""
 
     provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
@@ -45,7 +45,7 @@ class ProviderIn(_TaxonomyInput):
         return provider_id.strip().casefold() if isinstance(provider_id, str) else provider_id
 
 
-class ModelIn(_TaxonomyInput):
+class ModelSpec(_TaxonomyInput):
     model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
     provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
@@ -74,8 +74,8 @@ class ModelIn(_TaxonomyInput):
 
 
 class TaxonomySpec(_TaxonomyInput):
-    providers: list[ProviderIn] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
-    models: list[ModelIn] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
+    providers: list[ProviderSpec] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
+    models: list[ModelSpec] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
 
     @model_validator(mode="after")
     def unique_entries(self) -> Self:
