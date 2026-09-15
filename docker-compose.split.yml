@@ -9,9 +9,6 @@ x-gateway: &gateway
     interval: 5s
     timeout: 3s
     retries: 20
-  networks:
-    default:
-      aliases: [data-plane]
   stop_grace_period: 40s
   restart: unless-stopped
 
@@ -64,6 +61,19 @@ services:
       - provider-secrets:/state/secrets:ro
       - gateway-2:/state/data-plane
 
+  inference-router:
+    image: ${TOKKEEPER_INFERENCE_ROUTER_IMAGE:-haproxy:3.2-alpine}
+    user: "10001:10001"
+    read_only: true
+    volumes:
+      - ./deploy/docker/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      data-plane-1:
+        condition: service_started
+      data-plane-2:
+        condition: service_started
+    restart: unless-stopped
+
   console:
     image: ${TOKKEEPER_CONSOLE_IMAGE:-tokkeeper-console:local}
     build:
@@ -71,11 +81,14 @@ services:
       target: console
     environment:
       TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
+      DATA_PLANE_UPSTREAM: inference-router:8081
     ports:
       - "${TOKKEEPER_PORT:-8080}:8080"
     depends_on:
       control-plane:
         condition: service_healthy
+      inference-router:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
       interval: 5s

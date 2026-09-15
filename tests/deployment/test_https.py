@@ -194,7 +194,7 @@ def test_forged_forwarded_host_cannot_change_redirect_origin(https_deployment):
 
 def test_internal_plane_ports_are_not_published(https_deployment):
     _, _, compose, control_plane, _ = https_deployment
-    services = (control_plane,) if control_plane == "tokkeeper" else (control_plane, "data-plane-1", "data-plane-2")
+    services = (control_plane,) if control_plane == "tokkeeper" else (control_plane, "data-plane-1", "data-plane-2", "inference-router")
     for service in services:
         container = docker(*compose, "ps", "-q", service)
         bindings = json.loads(docker("inspect", "--format", "{{json .HostConfig.PortBindings}}", container))

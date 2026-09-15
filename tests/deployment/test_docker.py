@@ -76,6 +76,14 @@ def service_action(compose, action, service):
     docker(action, container)
 
 
+def service_status(compose, service, url):
+    container = docker(*compose, "ps", "-q", service)
+    try:
+        return docker("exec", container, "curl", "--silent", "--output", "/dev/null", "--write-out", "%{http_code}", url)
+    except subprocess.CalledProcessError:
+        return ""
+
+
 def assert_unprivileged(compose, service, expected):
     container = docker(*compose, "ps", "-q", service)
     processes = docker("top", container, "-eo", "pid,user,args")
@@ -89,6 +97,14 @@ def assert_unprivileged(compose, service, expected):
     assert all(sum(command in server for server in servers) == 1 for command in expected), processes
 
 
+def assert_router_unprivileged(compose):
+    container = docker(*compose, "ps", "-q", "inference-router")
+    processes = docker("top", container, "-eo", "pid,user,args")
+    routers = [process for process in processes.splitlines()[1:] if "haproxy" in process]
+    assert routers
+    assert all(router.split()[1] == "10001" for router in routers), processes
+
+
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     if compact:
@@ -97,6 +113,7 @@ def assert_process_layout(compose, gateways, compact):
     assert_unprivileged(compose, "control-plane", ("tokkeeper-control-plane serve",))
     for gateway in gateways:
         assert_unprivileged(compose, gateway, ("tokkeeper-data-plane serve",))
+    assert_router_unprivileged(compose)
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
@@ -146,6 +163,19 @@ def assert_control_plane_outage(client, compose, path, headers, request):
     assert all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10))
 
 
+def assert_unready_gateway_is_not_routed(client, compose, gateway, headers, request):
+    path = "/inf/v1/chat/completions"
+    container = docker(*compose, "ps", "-q", gateway)
+    docker("exec", container, "python", "-c", "from pathlib import Path; (Path('/state/data-plane') / 'bundles.json').unlink()")
+    service_action(compose, "stop", "control-plane")
+    service_action(compose, "restart", gateway)
+    eventually(lambda: service_status(compose, "console", f"http://{gateway}:8081/readyz") == "503")
+    eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))
+    service_action(compose, "start", "control-plane")
+    eventually(lambda: service_status(compose, "console", f"http://{gateway}:8081/readyz") == "200")
+    service_action(compose, "stop", gateway)
+
+
 def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     client, compose, gateways, compact = deployment
     gateway = gateways[0]
@@ -188,7 +218,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
 
     assert_quickstart(str(client.base_url).rstrip("/"), tmp_path / "cli.toml")
     if len(gateways) == 2:
-        service_action(compose, "stop", gateways[1])
+        assert_unready_gateway_is_not_routed(client, compose, gateways[1], headers, request)
     if not compact:
         assert_control_plane_outage(client, compose, path, headers, request)
     service_action(compose, "restart", gateway)

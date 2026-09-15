@@ -72,6 +72,11 @@ The health routes require no authentication. Readiness means only that a bundle 
 It does not prove that the control plane, secret store, event exporter, or any upstream provider is
 currently reachable.
 
+The split Compose deployment puts a readiness-aware inference router between the console proxy and
+the data-plane replicas. It actively checks each replica's `/readyz` endpoint and sends inference only
+to ready replicas. The router uses `/readyz`, while container supervision uses `/healthz`, so a live
+replica can continue polling for its first valid bundle without receiving inference traffic.
+
 ### Authentication
 
 Inference routes require `Authorization: Bearer sk-inf-...`. The bearer is an opaque inference key

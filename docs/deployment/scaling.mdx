@@ -3,14 +3,16 @@ title: "Separate services and scale gateways"
 description: "Run the console, control plane, and multiple data planes independently with distinct persistent state."
 ---
 
-The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, and two gateways on one Docker host.
+The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, a readiness-aware inference router,
+and two gateways on one Docker host.
 
 ```bash
 docker compose -p tokkeeper-split -f docker-compose.split.yml up -d --build --wait
 uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
 ```
 
-The console proxy distributes `/inf/` requests between both gateways.
+The inference router distributes `/inf/` requests only to gateways whose `/readyz` check succeeds. A gateway remains out of
+rotation while it has no bundle or has rejected the latest manifest. `/healthz` remains the process liveness check.
 
 ## Volume ownership
 
@@ -21,7 +23,8 @@ The console proxy distributes `/inf/` requests between both gateways.
 | `provider-secrets` | Control plane writes; gateways read |
 | `gateway-1`, `gateway-2` | One gateway each; identity, bundle cache, usage outbox |
 
-Every additional gateway needs a new persistent state volume. Sharing one SQLite outbox or cloning a running gateway identity is invalid.
+Every additional gateway needs a new persistent state volume and a server entry in `deploy/docker/haproxy.cfg`. Sharing one
+SQLite outbox or cloning a running gateway identity is invalid.
 
 ## Multi-host requirements
 
