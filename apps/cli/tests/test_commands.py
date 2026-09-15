@@ -33,10 +33,13 @@ def test_every_command_is_listed_once():
         "tokkeeper orgs mine",
         "tokkeeper provider-credentials add",
         "tokkeeper management-keys create",
-        "tokkeeper taxonomy apply",
+        "tokkeeper catalog apply",
+        "tokkeeper gateways list",
     ):
         assert path in paths
 
+    assert "tokkeeper taxonomy apply" not in paths
+    assert "tokkeeper data-planes list" not in paths
     assert "tokkeeper bundles republish" in paths
     assert "tokkeeper bundles compile" not in paths
     assert "tokkeeper test verify" not in paths

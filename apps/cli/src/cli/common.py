@@ -65,10 +65,10 @@ provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
 rules_app = typer.Typer(help="Reusable workspace inference rules")
 policies_app = typer.Typer(help="Workspace inference restrictions, fallbacks, and budgets")
-taxonomy_app = typer.Typer(help="Apply the instance provider and model catalog")
+catalog_app = typer.Typer(help="Apply the instance provider and model catalog")
 bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")
-data_planes_app = typer.Typer(help="Gateways connected to this instance")
+gateways_app = typer.Typer(help="Gateways connected to this instance")
 profiles_app = typer.Typer(help="Saved deployment and organization contexts")
 
 for name, sub in (
@@ -80,13 +80,13 @@ for name, sub in (
     ("models", models_app),
     ("rules", rules_app),
     ("policies", policies_app),
-    ("taxonomy", taxonomy_app),
+    ("catalog", catalog_app),
     ("providers", providers_app),
     ("bundles", bundles_app),
     ("events", events_app),
     ("users", users_app),
     ("service-accounts", service_accounts_app),
-    ("data-planes", data_planes_app),
+    ("gateways", gateways_app),
 ):
     app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
 app.add_typer(profiles_app, name="profiles", rich_help_panel=SETUP, no_args_is_help=True)

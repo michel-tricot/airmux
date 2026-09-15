@@ -65,7 +65,7 @@ The console and public reverse proxy are deployed separately. `--console-url` na
 `control-plane serve --dev` applies them before starting the development reloader. `gateway serve --dev` reloads Python code
 and cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
 
-`control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `taxonomy apply` instead uses
+`control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `catalog apply` instead uses
 the authenticated management API. `control-plane owner` is local recovery through database access; it promotes an existing
 human account. `control-plane fixtures` is for development databases without human accounts and prints access details through
 `--format table|json|text`.
@@ -142,9 +142,9 @@ tokkeeper commands -f table
 | `rules`                | `create`, `list`, `update`, `delete`     |
 | `policies`             | `create`, `list`, `update`, `delete`     |
 | `bundles`              | `list`, `republish`                      |
-| `data-planes`          | `list`                                   |
+| `gateways`             | `list`                                   |
 | `events`               | `list`, `tail`                           |
-| `taxonomy`             | `apply`                                  |
+| `catalog`              | `apply`                                  |
 
 Run `tokkeeper <group> <command> --help` for the exact options installed on your machine.
 
