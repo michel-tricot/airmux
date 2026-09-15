@@ -4,10 +4,10 @@ import json
 from typing import TYPE_CHECKING
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, _payload, _poll
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, _payload, _poll
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:

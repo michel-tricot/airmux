@@ -8,7 +8,7 @@ The `bench` fixture warms up, samples and prints the table. Asserted against a l
 so it catches a gross regression without flaking on a shared CI runner. To see the table on a
 passing run:
 
-    uv run pytest tests/acceptance/benchmarks -s
+    uv run pytest tests/acceptance/full_stack/benchmarks -s
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Bench, Stack
+    from stack_harness import Bench, Stack
 
 MAX_MEDIAN_OVERHEAD_MS = 50.0
 MAX_P99_OVERHEAD_MS = 250.0

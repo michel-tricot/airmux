@@ -7,7 +7,7 @@ completed requests over elapsed time. Sweeping concurrency shows the saturation 
 one figure. The absolute number is machine and contention bound (the data plane, the stub and
 the load threads share this host), so only a low floor is asserted; read the table for the shape.
 
-    uv run pytest tests/acceptance/benchmarks/test_throughput.py -s
+    uv run pytest tests/acceptance/full_stack/benchmarks/test_throughput.py -s
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Bench, Stack
+    from stack_harness import Bench, Stack
 
 CONCURRENCY = (1, 8, 32, 64)
 DURATION_S = 2.0

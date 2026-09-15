@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import httpx
 import yaml
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_authentication_throttles_without_starving_health_or_inference(stack: Stack) -> None:

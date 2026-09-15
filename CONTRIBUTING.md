@@ -94,7 +94,7 @@ uv run pytest tests/documentation
 Changes on the inference request path also require the acceptance scenarios and a real request against a running data plane:
 
 ```bash
-uv run pytest tests/acceptance/scenarios
+uv run pytest tests/acceptance/full_stack/scenarios
 ```
 
 ## Open the pull request

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 
 def test_enrollment_hides_foreign_invitation_metadata_over_http(stack):

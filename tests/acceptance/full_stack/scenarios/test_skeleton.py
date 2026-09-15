@@ -14,12 +14,12 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def _wait(predicate: Callable[[], bool], timeout: float = 30.0) -> bool:

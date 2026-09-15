@@ -66,12 +66,12 @@ composition, failures and fallback, runtime changes, and metering prices and cos
 upstream HTTP servers, then validates their JSON Lines usage events against the shared contract:
 
 ```bash
-uv run pytest tests/gateway -n auto
+uv run pytest tests/acceptance/gateway -n auto
 ```
 
 PR CI runs the levels in order against the rebuilt, installed public wheel and uploads JUnit results, sanitized
 configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
-For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/gateway/README.md).
+For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/acceptance/gateway/README.md).
 
 ## Python checks
 
@@ -95,7 +95,7 @@ running. `TOKKEEPER_TEST_PG_URL` can point to a disposable long-lived Postgres s
 Request-path changes also require black-box scenarios and a real request against a running data plane:
 
 ```bash
-uv run pytest tests/acceptance/scenarios
+uv run pytest tests/acceptance/full_stack/scenarios
 ```
 
 ## Console checks
@@ -133,7 +133,7 @@ Commit generated files with their source. Do not edit generated API models, clie
 | `lib/api-models` | Generated Python management API models |
 | `lib/api-client-react` | Generated console client |
 | `taxonomy`, `model-audit` | Provider catalog and direct API evidence |
-| `tests/acceptance` | Running-gateway behavior |
+| `tests/acceptance` | Standalone gateway and full-stack behavior |
 | `tests/deployment` | Fresh Docker deployment verification |
 
 ## Reset development state

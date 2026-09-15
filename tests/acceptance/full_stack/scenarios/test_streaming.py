@@ -16,7 +16,7 @@ import httpx
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 @contextlib.contextmanager

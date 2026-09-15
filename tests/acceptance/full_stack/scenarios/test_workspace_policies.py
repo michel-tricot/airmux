@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _payload, _poll
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _payload, _poll
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def _create_rule(admin: httpx.Client, rules_path: str, name: str, match: dict[str, object], action: dict[str, object]) -> str:

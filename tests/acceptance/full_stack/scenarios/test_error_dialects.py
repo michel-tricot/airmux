@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_upstream_errors_return_in_the_callers_dialect(stack: Stack) -> None:

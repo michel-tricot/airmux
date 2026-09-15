@@ -4,12 +4,12 @@ import time
 from typing import TYPE_CHECKING
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def _wait(predicate: Callable[[], bool], timeout: float = 30.0) -> bool:

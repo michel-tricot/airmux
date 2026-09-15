@@ -24,10 +24,10 @@ PR CI runs levels in order, parallelizes variations within each level, and stops
 
 ```bash
 uv sync --all-packages --frozen
-uv run pytest tests/gateway -n auto
-uv run pytest tests/gateway/test_04_policies.py -n auto
-uv run pytest tests/gateway/test_08_metering.py -n auto
-uv run pytest tests/gateway -k 'fallback and stream' -n auto
+uv run pytest tests/acceptance/gateway -n auto
+uv run pytest tests/acceptance/gateway/test_04_policies.py -n auto
+uv run pytest tests/acceptance/gateway/test_08_metering.py -n auto
+uv run pytest tests/acceptance/gateway -k 'fallback and stream' -n auto
 ```
 
 By default, the harness uses the `tokkeeper` beside the test Python interpreter.
@@ -36,7 +36,7 @@ Set `TOKKEEPER_GATEWAY_ARTIFACTS` to collect sanitized diagnostics in a director
 
 ```bash
 TOKKEEPER_GATEWAY_ARTIFACTS=/tmp/gateway-artifacts \
-  uv run pytest tests/gateway -n auto --junitxml=/tmp/gateway-results.xml
+  uv run pytest tests/acceptance/gateway -n auto --junitxml=/tmp/gateway-results.xml
 ```
 
 ## Add a scenario
@@ -112,7 +112,7 @@ before comparing absolute numbers from different machines. This does not create 
 To compare any two installed gateways locally, choose a fresh output directory:
 
 ```bash
-uv run python tests/gateway/performance.py \
+uv run python tests/acceptance/gateway/performance.py \
   --base-bin /path/to/base/bin/tokkeeper \
   --candidate-bin /path/to/candidate/bin/tokkeeper \
   --base-revision BASE_SHA --candidate-revision CANDIDATE_SHA \
@@ -121,7 +121,7 @@ uv run python tests/gateway/performance.py \
 
 Use `--rounds 3 --duration-s 0.1 --warmup 1` for a harness smoke check. Short runs are not useful regression evidence.
 Run benchmarks alone, without pytest parallelization or other local load. The older full-stack benchmarks under
-`tests/acceptance/benchmarks` remain manual and include control-plane setup.
+`tests/acceptance/full_stack/benchmarks` remain manual and include control-plane setup.
 
 ## CI failure display
 
@@ -134,7 +134,7 @@ Summary details are bounded to the first 50 failures and 10,000 escaped characte
 `ci_report.py` reads pytest's JUnit output without changing pytest's exit status or test behavior. To preview it locally:
 
 ```bash
-uv run python tests/gateway/ci_report.py /tmp/gateway-results --summary /tmp/gateway-summary.md
+uv run python tests/acceptance/gateway/ci_report.py /tmp/gateway-results --summary /tmp/gateway-summary.md
 ```
 
 ## Event collection
@@ -146,4 +146,4 @@ It is an inspectable local log, with no export, deduplication, rotation, or `fsy
 Events describe metered routes: authentication and parsing failures produce no event, policy denial produces a denied
 event, and each fallback attempt produces its own event sharing one request ID. A fallback deadline cancels the active
 attempt, which currently records `cancelled`; client disconnects record partial estimated usage where counts are absent.
-Control-plane ingestion, durable export replay, and organization/workspace isolation remain in `tests/acceptance`.
+Control-plane ingestion, durable export replay, and organization/workspace isolation remain in `tests/acceptance/full_stack`.

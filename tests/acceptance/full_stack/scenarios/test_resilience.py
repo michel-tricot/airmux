@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 import yaml
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, _poll
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, _poll
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def _start(stack: Stack) -> None:

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:

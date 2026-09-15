@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_invalid_upstream_successes_are_rejected(stack: Stack) -> None:

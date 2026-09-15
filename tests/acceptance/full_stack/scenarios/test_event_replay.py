@@ -7,7 +7,7 @@ import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 REQUESTS = 50
 

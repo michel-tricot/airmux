@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from openai import OpenAI
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_the_unmodified_sdk_round_trips(stack: Stack) -> None:

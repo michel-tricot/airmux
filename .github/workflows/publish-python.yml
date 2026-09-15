@@ -48,7 +48,7 @@ jobs:
         env:
           TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
           DOCKER_HOST: unix:///no-docker.sock
-        run: uv run pytest tests/gateway
+        run: uv run pytest tests/acceptance/gateway
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: python-distributions

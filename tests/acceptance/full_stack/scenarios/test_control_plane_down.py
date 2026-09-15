@@ -7,7 +7,7 @@ import signal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 
 def test_serves_from_disk_through_outage_and_cold_restart(stack: Stack) -> None:

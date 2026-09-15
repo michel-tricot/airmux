@@ -8,12 +8,12 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 import yaml
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from conftest import Stack
+    from stack_harness import Stack
 
 CSRF = {"X-Requested-With": "XMLHttpRequest"}
 MEMBER_EMAIL = "lifecycle@acceptance.test"

@@ -118,7 +118,7 @@ changes remain console-only.
 
 ```bash
 uv run pytest                    # unit tests
-uv run pytest tests/acceptance   # black-box acceptance tests
+uv run pytest tests/acceptance/full_stack/scenarios   # black-box acceptance tests
 uv run ruff format --check .     # formatting
 uv run ruff check .              # lint
 uv run ty check .                # type checking

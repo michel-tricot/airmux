@@ -11,7 +11,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 import httpx
-from conftest import _bin, _free_port, _poll, _StubServer
+from stack_harness import _bin, _free_port, _poll, _StubServer
 
 if TYPE_CHECKING:
     from pathlib import Path

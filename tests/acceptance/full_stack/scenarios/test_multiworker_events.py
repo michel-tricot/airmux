@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
-    from conftest import Stack
+    from stack_harness import Stack
 
 WORKERS = 4
 CONCURRENCY = 16

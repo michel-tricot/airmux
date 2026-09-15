@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 CSRF = {"X-Requested-With": "XMLHttpRequest"}
 

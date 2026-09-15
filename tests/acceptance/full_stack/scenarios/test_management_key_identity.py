@@ -3,7 +3,7 @@ from __future__ import annotations
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 
 from contract import uuid7
 
