@@ -54,10 +54,11 @@ the adapter discovery tests fail if a registered adapter lacks a protocol fixtur
 authored response and stream fixtures in `upstream.py`. Never generate expectations with the production adapters.
 Unsupported combinations get an explicit rejection assertion rather than a skip.
 
-Feature inputs and provider expectations live in `feature_cases.py` as separate handwritten tables. Attachment filename
-and structured-output naming differences select explicit variants. Scenarios compare complete designated fields without
-branching on the caller dialect or provider family. Native response readers remain explicit; the tool-history reader
-requires string arguments in OpenAI wire formats and compares their decoded JSON, preserving all other fields exactly.
+Feature inputs and provider expectations are handwritten beside each scenario in `test_03_features.py`. Attachment
+tables contain only the differing native parts; filenames and schema naming metadata are direct expected values.
+Surrounding messages are constructed once for the caller and once independently for the provider expectation.
+Scenarios compare complete designated fields. Native response readers remain explicit; the tool-history reader requires
+string arguments in OpenAI wire formats and compares their decoded JSON, preserving all other fields exactly.
 Protocol cases declare expected auth headers, usage, costs, and stream terminal lines/events. Policy cases declare input
 and output token-limit field names; adjustment metadata is checked in every caller dialect.
 
