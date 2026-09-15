@@ -18,6 +18,9 @@ Content-Type: application/json
 | Responses | `POST /inf/v1/responses` | Responses clients and item-based input/output |
 | Messages | `POST /inf/v1/messages` | Messages clients and named SSE events |
 
+Discover models with `GET /inf/v1/models` and retrieve one with `GET /inf/v1/models/{model_id}` using the same inference key.
+These routes return the OpenAI Models shape. See [model discovery](/docs/reference/models-and-providers#inference-model-discovery) for details.
+
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
 Chat Completions request can target an Anthropic model. TokKeeper returns the response and errors in the caller's dialect.
 
@@ -35,14 +38,17 @@ Every surface uses the same:
 
 ## Model selection
 
-Managed catalog model IDs use `provider/model` form. List the models visible to the active organization:
+Managed catalog model IDs use `provider/model` form. List the models visible to your inference key:
 
 ```bash
-tokkeeper models list -f json
+curl --fail-with-body "$TOKKEEPER_URL/inf/v1/models" \
+  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY"
 ```
 
 The model must support every required input modality and capability. Streaming, tools, reasoning, and structured output
 are inferred from the request rather than trusted as caller metadata.
+
+The management command `tokkeeper models list -f json` lists the organization catalog with a management key; it does not apply inference-key policies.
 
 ## Base URLs
 

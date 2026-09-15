@@ -16,6 +16,7 @@ from starlette.routing import Route
 from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
+from data_plane.discovery import models
 from data_plane.outbox import build_outbox
 from data_plane.proxy import complete, messages, responses
 from data_plane.runtime import Runtime, runtime_of
@@ -107,6 +108,8 @@ def create_app(config: Config) -> Starlette:
             Route("/inf/v1/chat/completions", complete, methods=["POST"]),
             Route("/inf/v1/responses", responses, methods=["POST"]),
             Route("/inf/v1/messages", messages, methods=["POST"]),
+            Route("/inf/v1/models", models, methods=["GET"]),
+            Route("/inf/v1/models/{model_id:path}", models, methods=["GET"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
         ],
