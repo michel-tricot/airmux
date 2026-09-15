@@ -21,8 +21,7 @@ tokkeeper gateway serve --config gateway/tokkeeper.yml
 The gateway listens on `127.0.0.1:8080`. Call `/inf/v1/chat/completions`, `/inf/v1/responses`, or `/inf/v1/messages`
 with the generated inference key from `gateway/.tokkeeper/inference.key`. The model name must match a `model_id` in your taxonomy.
 
-`init` copies the shipped taxonomy to `gateway/taxonomy.yml` and refuses to overwrite existing files. Pass `--taxonomy PATH`
-to reference an existing taxonomy without copying it. Provider credentials
-resolve from environment variables such as `OPENAI_API_KEY`. The default `devnull` event sink discards usage events.
+The standalone gateway loads the default taxonomy and ignores usage events. Provider credentials resolve from environment
+variables such as `OPENAI_API_KEY`.
 
 The repository's `docs/deployment/gateway.mdx` describes configuration, taxonomy reloads, and standalone limits.

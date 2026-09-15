@@ -30,8 +30,7 @@ tokkeeper gateway validate --config gateway/tokkeeper.yml
 tokkeeper gateway serve --config gateway/tokkeeper.yml
 ```
 
-The command copies the shipped taxonomy into `gateway/taxonomy.yml`, which reloads after edits. Pass `--taxonomy PATH` to
-reference an existing taxonomy instead. The default event sink discards usage.
+The standalone gateway loads the default taxonomy and ignores usage events.
 See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
 
 ## Full-platform quickstart
