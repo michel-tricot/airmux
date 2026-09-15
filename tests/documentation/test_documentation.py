@@ -253,3 +253,9 @@ def test_runnable_examples_use_the_public_inference_prefix() -> None:
     sources = {path: path.read_text(encoding="utf-8") for path in (ROOT / "examples").glob("*.py")}
     assert all("/v1/chat/completions" not in source.replace("/inf/v1/chat/completions", "") for source in sources.values())
     assert "/inf" in sources[ROOT / "examples" / "anthropic_sdk.py"]
+
+
+def test_canonical_examples_do_not_require_a_dialect_override() -> None:
+    paths = [ROOT / "README.md", *documentation_files(), *(ROOT / "notes").rglob("*.md"), *(ROOT / "examples").rglob("*.py")]
+    override = re.compile(r"x-tokkeeper-dialect[\"']?\s*:\s*[\"']?canonical", re.IGNORECASE)
+    assert [str(path.relative_to(ROOT)) for path in paths if override.search(path.read_text(encoding="utf-8"))] == []

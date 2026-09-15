@@ -104,7 +104,6 @@ A minimal canonical call is:
 curl http://127.0.0.1:8080/inf/v1/chat/completions \
   -H 'Authorization: Bearer sk-inf-...' \
   -H 'Content-Type: application/json' \
-  -H 'x-tokkeeper-dialect: canonical' \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
 ```
 

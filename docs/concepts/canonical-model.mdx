@@ -44,7 +44,9 @@ provider-specific parameters can travel to a compatible provider profile.
 2. Unambiguous request shape or SDK user-agent
 3. Canonical as the default
 
-For raw text-only Chat Completions requests, set `x-tokkeeper-dialect: openai_native`. Official SDK requests are recognized automatically.
+Official SDK requests and unambiguous OpenAI fields such as `max_completion_tokens` are recognized automatically. Only
+raw requests without either signal need `x-tokkeeper-dialect: openai_native` to select Chat Completions rather than the
+canonical default.
 
 ## Visible translation
 

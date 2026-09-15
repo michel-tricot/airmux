@@ -63,8 +63,9 @@ For a client that already constructs the same SDK, only two values change:
 | API key | A workspace inference key beginning with `sk-inf-` |
 | Model | A catalog model ID from `tokkeeper models list` |
 
-The official SDK identifies its dialect automatically. If you send raw HTTP to `/chat/completions`, set
-`x-tokkeeper-dialect: openai_native` when a text-only request could also be valid canonical JSON.
+The official SDK identifies its dialect automatically. Raw requests with unambiguous OpenAI fields such as
+`max_completion_tokens` also need no override. Set `x-tokkeeper-dialect: openai_native` only when a raw request lacks
+either signal and you need a Chat Completions-shaped response rather than the canonical default.
 
 <Info>
   Inference keys authorize model requests only. Management keys beginning with `sk-cp-` are rejected by the gateway.

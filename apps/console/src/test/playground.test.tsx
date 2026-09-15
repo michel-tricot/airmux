@@ -136,7 +136,7 @@ describe('playground', () => {
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $TOKKEEPER_INFERENCE_KEY');
-    expect(curlDialog).toHaveTextContent('x-tokkeeper-dialect: canonical');
+    expect(curlDialog).not.toHaveTextContent('x-tokkeeper-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"text": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
@@ -144,6 +144,7 @@ describe('playground', () => {
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
     await user.click(copyCurl);
     expect(await navigator.clipboard.readText()).toContain('/inf/v1/chat/completions');
+    expect(await navigator.clipboard.readText()).not.toContain('x-tokkeeper-dialect');
     expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();

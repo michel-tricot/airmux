@@ -34,7 +34,6 @@ function curlFor(request: PlaygroundRequest) {
     "curl '" + window.location.origin + prepared.path + "' \\",
     '  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\',
     "  -H 'Content-Type: application/json' \\",
-    "  -H 'x-tokkeeper-dialect: " + prepared.dialect + "' \\",
     "  --data-raw '" + body + "'",
   ].join('\n');
 }

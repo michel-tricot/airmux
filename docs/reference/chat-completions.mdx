@@ -7,8 +7,9 @@ description: "Reference the Chat Completions-compatible request, response, strea
 POST /inf/v1/chat/completions
 ```
 
-This route accepts Chat Completions or canonical JSON. Official SDK requests are detected from their user-agent and
-unambiguous request fields. Raw text-only requests should set `x-tokkeeper-dialect: openai_native`.
+This route accepts Chat Completions or canonical JSON. Official SDK user-agents and unambiguous OpenAI fields such as
+`max_completion_tokens` select Chat Completions automatically. Set `x-tokkeeper-dialect: openai_native` only for raw
+requests with neither signal when you need a Chat Completions-shaped response.
 
 ## Request
 
