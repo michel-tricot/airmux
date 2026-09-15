@@ -234,6 +234,12 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
         json.loads(match.group("body"))
 
 
+def test_public_examples_use_a_neutral_smoke_prompt() -> None:
+    documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
+    assert "Reply with exactly: tokkeeper ready" not in documents
+    assert "Say hello in one word." in documents
+
+
 def test_documentation_does_not_name_comparison_products() -> None:
     forbidden = re.compile(r"openrouter|litellm", re.IGNORECASE)
     occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if forbidden.search(path.read_text())]

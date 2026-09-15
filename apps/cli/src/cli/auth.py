@@ -276,7 +276,7 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
                     headers={"authorization": f"Bearer {token}", "x-tokkeeper-dialect": "canonical"},
                     json={
                         "model": model,
-                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: tokkeeper ready"}]}],
+                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hello in one word."}]}],
                         "stream": False,
                     },
                 )

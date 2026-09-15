@@ -177,6 +177,8 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
     assert "x-tokkeeper-dialect" not in result.output.lower()
     assert '"model":"echo"' in result.output
+    assert '"content":"Say hello in one word."' in result.output
+    assert "tokkeeper ready" not in result.output
     assert '"max_completion_tokens":16' in result.output
 
 

@@ -22,7 +22,7 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
     body = json.dumps(
         {
             "model": model_id,
-            "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}],
+            "messages": [{"role": "user", "content": "Say hello in one word."}],
             "max_completion_tokens": 16,
         },
         separators=(",", ":"),

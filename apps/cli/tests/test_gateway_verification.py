@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -23,6 +25,11 @@ def test_verification_waits_for_bundle_inputs_but_does_not_retry_provider_reques
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/readyz":
             return httpx.Response(200)
+        assert json.loads(request.content) == {
+            "model": "test-model",
+            "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hello in one word."}]}],
+            "stream": False,
+        }
         status, code = next(pending)
         return httpx.Response(status, json={"error": {"code": code}})
 
