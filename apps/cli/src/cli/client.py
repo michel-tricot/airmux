@@ -124,11 +124,3 @@ def resolve_workspace(workspace: str) -> str:
         return str(default)
     console.print("[red]No workspace selected. Pass --workspace, or set a default with [bold]tokkeeper workspaces use <name>[/bold].[/red]")
     raise typer.Exit(1)
-
-
-def post_expecting(client: httpx.Client, path: str, body: Mapping[str, object], ok: tuple[int, ...]) -> httpx.Response:
-    resp = client.post(path, json=body)
-    if resp.status_code not in ok:
-        console.print(f"[red]Request failed ({resp.status_code}): {api_error(resp)}[/red]")
-        raise typer.Exit(1)
-    return resp

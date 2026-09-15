@@ -38,7 +38,7 @@ class CredentialError(Exception):
         self.detail = detail
 
 
-async def standing_grants(principal_id: UUID, targets: Iterable[Scope]) -> tuple[Grant, ...]:
+async def _standing_grants(principal_id: UUID, targets: Iterable[Scope]) -> tuple[Grant, ...]:
     scopes = frozenset(targets)
     user = await User.find_by_id(principal_id)
     if user is None:
@@ -70,16 +70,6 @@ async def standing_grants(principal_id: UUID, targets: Iterable[Scope]) -> tuple
     return grants
 
 
-async def decision(actor: Actor, permission: Permission, target: Scope) -> Decision:
-    return decide(actor, await standing_grants(actor.principal_id, (target,)), AccessRequest(permission=permission, target=target))
-
-
-async def decisions(actor: Actor, permission: Permission, targets: Iterable[Scope]) -> dict[Scope, Decision]:
-    scopes = frozenset(targets)
-    grants = await standing_grants(actor.principal_id, scopes)
-    return {scope: decide(actor, grants, AccessRequest(permission=permission, target=scope)) for scope in scopes}
-
-
 async def readable_workspaces(actor: Actor, org_id: UUID) -> list[Workspace]:
     if Permission.workspaces_read not in actor.grant.permissions or not actor.grant.scope.covers(Scope.org(org_id)):
         return []
@@ -93,7 +83,8 @@ async def readable_workspaces(actor: Actor, org_id: UUID) -> list[Workspace]:
 
 
 async def is_allowed(actor: Actor, permission: Permission, target: Scope) -> bool:
-    return await decision(actor, permission, target) is Decision.allow
+    grants = await _standing_grants(actor.principal_id, (target,))
+    return decide(actor, grants, AccessRequest(permission=permission, target=target)) is Decision.allow
 
 
 async def ensure_allowed(actor: Actor, permission: Permission, target: Scope) -> None:
@@ -103,15 +94,18 @@ async def ensure_allowed(actor: Actor, permission: Permission, target: Scope) ->
 
 
 async def ensure_allowed_for_scopes(actor: Actor, permission: Permission, targets: Iterable[Scope]) -> None:
-    results = await decisions(actor, permission, targets)
-    denied = next((scope for scope, result in results.items() if result is not Decision.allow), None)
+    scopes = frozenset(targets)
+    grants = await _standing_grants(actor.principal_id, scopes)
+    denied = next(
+        (scope for scope in scopes if decide(actor, grants, AccessRequest(permission=permission, target=scope)) is not Decision.allow), None
+    )
     if denied is not None:
         detail = f"Missing {permission.value} permission for {denied.level.value} scope"
         raise AuthorizationError(detail)
 
 
 async def principal_permissions(principal_id: UUID, target: Scope) -> frozenset[Permission]:
-    grants = await standing_grants(principal_id, (target,))
+    grants = await _standing_grants(principal_id, (target,))
     return frozenset(permission for grant in grants if grant.scope.covers(target) for permission in grant.permissions)
 
 

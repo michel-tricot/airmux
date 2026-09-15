@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import typer
 import yaml
@@ -18,7 +18,7 @@ from model_audit.catalog_ops import (
     preflight_source,
     provider_sources,
 )
-from model_audit.catalog_runner import CatalogTask, run_catalog_task
+from model_audit.catalog_runner import CatalogSyncStep, CatalogTask, SyncComponent, run_catalog_task, sync_catalog
 from model_audit.diagnostics import execution_display, feature_display, gap_kind, parity_display, stability_display, validation_failed
 from model_audit.drivers import supported_endpoints
 from model_audit.evidence import accept, load_ledger, reduce
@@ -32,6 +32,9 @@ from model_audit.run_service import RunContext, execute_checkpointed
 from model_audit.surfaces import discover as discover_surfaces
 from model_audit.taxonomy import write as write_taxonomy
 from model_audit.taxonomy_diff import compare_taxonomies, summarize_taxonomy_diff
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "model-audit"
@@ -56,7 +59,6 @@ TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option
 ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1, max=100, help="Maximum experiments to run concurrently")]
 GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running TokKeeper data plane")]
 GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
-SyncComponent = Literal["models", "pricing", "schemas", "parameters", "icons"]
 SyncOption = Annotated[
     list[str] | None,
     typer.Option("--only", help="Synchronize only this component; repeat to combine components"),
@@ -106,11 +108,6 @@ def _run_task(task: CatalogTask, *arguments: str) -> None:
         raise typer.Exit(result.returncode)
 
 
-def _catalog_detail(stdout: str, stderr: str) -> str:
-    lines = [line.strip() for line in (stdout or stderr).splitlines() if line.strip()]
-    return "; ".join(lines[-3:]) or "completed"
-
-
 def _provider_entries() -> dict[str, dict[str, object]]:
     document = yaml.safe_load((ROOT / "taxonomy" / "providers.yml").read_text(encoding="utf-8"))
     return {str(provider["id"]): provider for provider in document["providers"]}
@@ -126,66 +123,8 @@ def _sync_components(values: list[str] | None) -> tuple[SyncComponent, ...]:
     return tuple(component for component in allowed if component in requested)
 
 
-def _sync_steps(provider: str, components: tuple[SyncComponent, ...]) -> tuple[tuple[str, CatalogTask, tuple[str, ...]], ...]:
-    selected = set(components)
-    steps: list[tuple[str, CatalogTask, tuple[str, ...]]] = []
-    if "schemas" in selected:
-        steps.extend(
-            (
-                ("schemas", CatalogTask.extract_schemas, (provider,)),
-                ("schemas", CatalogTask.doc_schemas, (provider,)),
-                ("schemas", CatalogTask.bootstrap, ("--yaml",)),
-            )
-        )
-    if selected & {"models", "pricing"}:
-        steps.append(("models", CatalogTask.fetch_models, (provider,)))
-        steps.append(("pricing", CatalogTask.enrich, (provider,)))
-    if "parameters" in selected or selected & {"models", "schemas"}:
-        steps.append(("parameters", CatalogTask.discover_parameters, (provider,)))
-    if "icons" in selected:
-        steps.append(("icons", CatalogTask.fetch_icons, (provider,)))
-    return tuple(steps)
-
-
-def _finish_sync(provider: str) -> tuple[list[dict[str, object]], bool]:
-    providers, models, changed = write_taxonomy(ROOT)
-    validation = run_catalog_task(CatalogTask.validate)
-    return (
-        [
-            {
-                "provider": provider,
-                "component": "taxonomy",
-                "status": "completed",
-                "detail": f"{providers} providers, {models} models; {'written' if changed else 'current'}",
-            },
-            {
-                "provider": provider,
-                "component": "validation",
-                "status": "completed" if validation.returncode == 0 else "failed",
-                "detail": _catalog_detail(validation.stdout, validation.stderr),
-            },
-        ],
-        validation.returncode != 0,
-    )
-
-
-def _sync_provider(provider: str, components: tuple[SyncComponent, ...], *, finalize: bool = True) -> tuple[list[dict[str, object]], bool]:
-    rows: list[dict[str, object]] = []
-    failed = False
-    for component, task, arguments in _sync_steps(provider, components):
-        result = run_catalog_task(task, *arguments)
-        status = "completed" if result.returncode == 0 else "failed"
-        rows.append({"provider": provider, "component": component, "status": status, "detail": _catalog_detail(result.stdout, result.stderr)})
-        if result.returncode:
-            failed = True
-            break
-    if not failed and finalize:
-        final_rows, failed = _finish_sync(provider)
-        rows.extend(final_rows)
-    return rows, failed
-
-
-def _print_sync(rows: list[dict[str, object]], output_format: OutputFormat) -> None:
+def _print_sync(steps: Sequence[CatalogSyncStep], output_format: OutputFormat) -> None:
+    rows = [{"provider": step.provider, "component": step.component, "status": step.status, "detail": step.detail} for step in steps]
     print_rows(
         "provider sync steps",
         rows,
@@ -342,24 +281,18 @@ def providers_onboard(
         provider = add_provider(ROOT, definition, replace=replace)
     except (RuntimeError, ValueError) as error:
         raise typer.BadParameter(str(error)) from error
-    seed = run_catalog_task(CatalogTask.make_seed)
-    rows: list[dict[str, object]] = [
-        {
-            "provider": provider.id,
-            "component": "definition",
-            "status": "completed",
-            "detail": f"source verified with {model_count} models",
-        }
+    steps = [
+        CatalogSyncStep(provider=provider.id, component="definition", detail=f"source verified with {model_count} models"),
+        *sync_catalog(
+            ROOT,
+            (provider.id,),
+            ("models", "pricing", "schemas", "parameters", "icons"),
+            refresh_definitions=False,
+        ),
     ]
-    if seed.returncode:
-        rows.append({"provider": provider.id, "component": "seed", "status": "failed", "detail": _catalog_detail(seed.stdout, seed.stderr)})
-        _print_sync(rows, output_format)
-        raise typer.Exit(seed.returncode)
-    synced, failed = _sync_provider(provider.id, ("models", "pricing", "schemas", "parameters", "icons"))
-    rows.extend(synced)
-    _print_sync(rows, output_format)
-    if failed:
-        raise typer.Exit(1)
+    _print_sync(steps, output_format)
+    if failed := next((step for step in steps if step.returncode), None):
+        raise typer.Exit(failed.returncode if failed.component == "seed" else 1)
 
 
 @providers_app.command("sync")
@@ -375,27 +308,9 @@ def providers_sync(
         raise typer.BadParameter(message)
     selected = (provider,) if provider is not None else tuple(sorted(entries))
     components = _sync_components(only)
-    sources = provider_sources()
-    rows: list[dict[str, object]] = []
-    failed = False
-    for provider_id in selected:
-        source = sources.get(provider_id)
-        if source is not None and source.definition is not None:
-            add_provider(ROOT, source.definition, replace=True)
-        seed = run_catalog_task(CatalogTask.make_seed)
-        if seed.returncode:
-            rows.append({"provider": provider_id, "component": "seed", "status": "failed", "detail": _catalog_detail(seed.stdout, seed.stderr)})
-            failed = True
-            continue
-        synced, provider_failed = _sync_provider(provider_id, components, finalize=provider is not None)
-        rows.extend(synced)
-        failed = failed or provider_failed
-    if provider is None:
-        final_rows, final_failed = _finish_sync("all")
-        rows.extend(final_rows)
-        failed = failed or final_failed
-    _print_sync(rows, output_format)
-    if failed:
+    steps = sync_catalog(ROOT, selected, components)
+    _print_sync(steps, output_format)
+    if any(step.returncode for step in steps):
         raise typer.Exit(1)
 
 

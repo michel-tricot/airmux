@@ -36,7 +36,6 @@ from cli.client import (
     org_path,
     payload,
     payload_rows,
-    post_expecting,
     resolve_org_id,
     resolve_workspace,
 )
@@ -279,7 +278,7 @@ def service_accounts_create(
     if not name:
         name = typer.prompt("name")
     with access_client(control_plane_url) as c:
-        account = payload(post_expecting(c, "/api/v1/service-accounts", {"name": name}, ok=(200,)), UserOut)
+        account = payload(ensure_ok(c.post("/api/v1/service-accounts", json={"name": name})), UserOut)
     console.print(f"Created service account [bold]{account.email}[/bold]")
     console.print(f"[dim]Add it to your organization: tokkeeper orgs members add {account.id}[/dim]")
 
@@ -382,7 +381,7 @@ def management_keys_create(  # noqa: PLR0913, PLR0917 command flags define the C
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:
-        key = payload(post_expecting(c, path, body, ok=(200,)), ManagementKeyCreatedOut)
+        key = payload(ensure_ok(c.post(path, json=body)), ManagementKeyCreatedOut)
     console.print(f"Management key [bold]{key.id}[/bold] created at [bold]{key.scope.level}[/bold] scope, shown once:")
     console.print(key.token)
 
@@ -457,7 +456,7 @@ def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.t
 def bundles_republish(control_plane_url: str = "") -> None:
     """Republish your current configuration for recovery or key rotation."""
     with access_client(control_plane_url) as c:
-        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)), BundleOut)
+        published = payload(ensure_ok(c.post(org_path("/bundles/republish"), json={})), BundleOut)
     console.print(f"Published v{published.version}")
 
 
@@ -555,7 +554,7 @@ def orgs_create(
     """Create an organization."""
     body = {"name": name, "slug": slug}
     with access_client(control_plane_url) as client:
-        organization = payload(post_expecting(client, "/api/v1/organizations", body, ok=(200,)), OrgOut)
+        organization = payload(ensure_ok(client.post("/api/v1/organizations", json=body)), OrgOut)
     console.print(f"Created [bold]{organization.name}[/bold]. Add people with tokkeeper orgs members add <user>.")
 
 
@@ -569,7 +568,7 @@ def inference_keys_create(
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
         _key_created(
-            payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,)), InferenceKeyCreatedOut)
+            payload(ensure_ok(c.post(org_path(f"/workspaces/{workspace_ref}/inference-keys"), json={"label": label})), InferenceKeyCreatedOut)
         )
 
 
@@ -582,7 +581,7 @@ def workspaces_create(
     """Create a workspace. You become its first member."""
     with access_client(control_plane_url) as c:
         body = {"name": name, "slug": slug} if slug else {"name": name}
-        created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)), WorkspaceOut)
+        created = payload(ensure_ok(c.post(org_path("/workspaces"), json=body)), WorkspaceOut)
     console.print(f"Created [bold]{created.slug}[/bold]. Select it with tokkeeper workspaces use {created.slug}.")
 
 
@@ -630,7 +629,7 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
     body = {"provider": provider, "name": name, "value": secret, "priority": priority}
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
     with access_client(control_plane_url) as c:
-        credential = payload(post_expecting(c, path, body, ok=(200,)), ProviderCredentialOut)
+        credential = payload(ensure_ok(c.post(path, json=body)), ProviderCredentialOut)
     console.print(f"Added [bold]{provider}[/bold] key [bold]{credential.name}[/bold] to this {credential.scope} (...{credential.fingerprint})")
 
 
