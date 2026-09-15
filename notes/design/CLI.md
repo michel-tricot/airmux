@@ -27,10 +27,19 @@ current shell by default and also accepts an explicit shell for automated setup.
 
 ## Local configuration
 
-Runtime commands resolve `--config`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`. Initialization writes into the current
-or selected directory and refuses to overwrite existing files. Generated configuration and keys are private. Standalone
-inference keys and the connected bootstrap key use file references, avoiding an additional environment export before startup.
-Standalone initialization copies the shipped taxonomy unless the operator supplies an existing file with `--taxonomy`.
+Runtime commands resolve `--config`, then `TOKKEEPER_CONFIG`. Gateway commands use `./.tokkeeper/tokkeeper.yml`, falling back to
+a shared `./tokkeeper.yml` when the standalone file is absent; control-plane commands use `./tokkeeper.yml`. Gateway
+initialization writes into `.tokkeeper` by default; control-plane initialization writes into the current directory. Both accept
+an explicit directory and refuse to overwrite existing files.
+Generated configuration and keys are private. Standalone inference keys and the connected bootstrap key use file references,
+avoiding an additional environment export before startup. Standalone initialization copies the shipped taxonomy unless the
+operator supplies an existing file with `--taxonomy`. After writing the files, the CLI reads the complete saved catalog and
+selects the first model backed by a provider variable in the current environment, falling back to the first model for a
+deterministic walkthrough. It prints the matching provider variable and copyable commands through a real request, referring to
+the inference-key file without exposing its value.
+
+Initializers place a `.gitignore` with generated state. It excludes key files, the file secret store, and gateway runtime state
+while leaving configuration and taxonomy visible for operators who intentionally version them.
 
 Relative runtime paths resolve against the configuration file; taxonomy and secret references in a local bundle resolve
 against that bundle. Moving the working directory cannot select a different key or state directory. Provider credentials

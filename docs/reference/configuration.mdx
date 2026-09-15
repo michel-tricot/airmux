@@ -3,7 +3,9 @@ title: 'Configuration reference'
 description: 'Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores.'
 ---
 
-TokKeeper runtime commands read YAML from `--config`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
+TokKeeper runtime commands read YAML from `--config`, then `TOKKEEPER_CONFIG`. Gateway commands use
+`./.tokkeeper/tokkeeper.yml`, falling back to a shared `./tokkeeper.yml` when the standalone file is absent. Control-plane
+commands use `./tokkeeper.yml`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
 
 ## Docker Compose variables
 

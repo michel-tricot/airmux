@@ -11,7 +11,7 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from contract.initialization import write_new_configuration
+from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
 from contract.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
@@ -90,7 +90,14 @@ def initialize(directory: Path, console_url: str) -> None:
             "secrets": secrets,
         },
     }
-    write_new_configuration(directory, {".tokkeeper/dataplane.key": token, "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False)})
+    write_new_configuration(
+        directory,
+        {
+            ".tokkeeper/.gitignore": GENERATED_STATE_GITIGNORE,
+            ".tokkeeper/dataplane.key": token,
+            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+        },
+    )
 
 
 def serve(config: Path, *, host: str, port: int, dev: bool) -> None:

@@ -95,9 +95,9 @@ local database, credentials, cached bundles, and pending usage.
 For an inference endpoint managed through local files, without Docker, Postgres, or the console:
 
 ```bash
-tokkeeper gateway init --directory .tokkeeper-gateway
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper gateway serve --config .tokkeeper-gateway/tokkeeper.yml
+tokkeeper gateway init
+tokkeeper gateway serve
 ```
 
 The standalone gateway loads the default taxonomy and ignores usage events.

@@ -32,11 +32,15 @@ For source checkouts and unreleased builds, see [Development](/docs/development)
 | `gateway`       | `init`, `validate`, `serve`, `schema`                                                                  |
 | `control-plane` | `init`, `validate`, `serve`, `migrate`, `bootstrap-keygen`, `owner`, `taxonomy`, `fixtures`, `openapi` |
 
-Configuration resolution is `--config/-c`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`.
+Configuration resolution is `--config/-c`, then `TOKKEEPER_CONFIG`. The gateway uses `./.tokkeeper/tokkeeper.yml`, falling back
+to a shared `./tokkeeper.yml` when the standalone file is absent; the control plane uses `./tokkeeper.yml`.
 Relative runtime paths and `${file:...}` references resolve against their containing configuration file.
-`init` defaults to the current directory; `--directory/-d` selects another. It creates private keys, never prints them,
-and refuses to overwrite any generated file. Gateway initialization copies the shipped taxonomy by default; `--taxonomy PATH`
-references an existing file without copying it. `validate` checks local configuration without contacting providers or the database.
+`gateway init` defaults to `.tokkeeper`; `control-plane init` defaults to the current directory. `--directory/-d` selects another.
+Initialization creates private keys, never prints their values, and refuses to overwrite any generated file. `gateway init`
+copies the shipped taxonomy by default; `--taxonomy PATH` references an existing file without copying it. It finishes with
+copyable start, readiness, and inference commands for a real model from the selected taxonomy, preferring one whose provider
+variable is already set. Initialization writes ignore rules for generated keys and runtime secret state. `validate` checks local
+configuration without contacting providers or the database.
 
 For a standalone gateway, follow [Gateway only](/docs/deployment/gateway). For a connected deployment with existing Postgres:
 

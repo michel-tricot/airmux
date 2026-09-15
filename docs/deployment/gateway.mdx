@@ -23,19 +23,28 @@ If your shell cannot find `tokkeeper`, run `uv tool update-shell` and restart th
 Initialize a directory with the shipped taxonomy:
 
 ```bash
-tokkeeper gateway init --directory gateway
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper gateway validate --config gateway/tokkeeper.yml
-tokkeeper gateway serve --config gateway/tokkeeper.yml
+tokkeeper gateway init
+tokkeeper gateway validate
+tokkeeper gateway serve
 ```
 
 `init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
-existing files. Omit `--directory` to initialize the current directory. It copies the shipped taxonomy to `taxonomy.yml` and does not print the key.
-Pass `--taxonomy PATH` to reference an existing taxonomy without copying it. Set the provider variable for each provider you use:
-`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a request.
+existing files. The default directory is `.tokkeeper`; `--directory` selects another. It copies the shipped taxonomy to
+`taxonomy.yml` and does not print the key. Pass `--taxonomy PATH` to reference an existing taxonomy without copying it. The
+initializer finishes with copyable commands that select the first model backed by a provider variable already in the
+environment, or the taxonomy's first model when none is set. The commands start the gateway, check readiness, load the
+inference key from its private file, and make a real request. You can replace that model with any other `model_id` and set its
+provider variable: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a
+request.
 
-`--config` takes precedence over `TOKKEEPER_CONFIG`, then defaults to `./tokkeeper.yml`. File references resolve relative to the
-file containing them, so starting from another directory is safe.
+Initialization writes a `.gitignore` beside the standalone files. It excludes generated `*.key` files plus the `secrets/` and
+`gateway/` runtime directories, so local credentials and state do not appear in Git while configuration and taxonomy changes
+remain visible.
+
+`--config` takes precedence over `TOKKEEPER_CONFIG`, then defaults to `./.tokkeeper/tokkeeper.yml`. If that file is absent, gateway
+commands use a shared `./tokkeeper.yml` created by `control-plane init`. File references resolve relative to the file containing
+them, so starting from another directory is safe.
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
 
@@ -47,7 +56,7 @@ It does not contact providers or prove that their credentials work. A real infer
 Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
 
 ```bash
-export TOKKEEPER_INFERENCE_KEY="$(cat gateway/.tokkeeper/inference.key)"
+export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper/inference.key)"
 curl --fail http://127.0.0.1:8080/readyz
 curl --fail http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
@@ -61,7 +70,7 @@ and canonical callers use the same gateway. See the [inference reference](/docs/
 
 ## Configuration and taxonomy
 
-`gateway/tokkeeper.yml` selects the local bundle, environment secret store, and usage event sink:
+`.tokkeeper/tokkeeper.yml` selects the local bundle, environment secret store, and usage event sink:
 
 ```yaml
 data_plane:
@@ -75,11 +84,11 @@ data_plane:
     kind: devnull
 ```
 
-The bundle path is relative to this configuration file. `gateway/bundle.yml` contains the keys, taxonomy reference, and policies:
+The bundle path is relative to this configuration file. `.tokkeeper/bundle.yml` contains the keys, taxonomy reference, and policies:
 
 ```yaml
 keys:
-  - ${file:.tokkeeper/inference.key}
+  - ${file:inference.key}
 taxonomy: taxonomy.yml
 rules: []
 policies: []
@@ -90,13 +99,17 @@ the same taxonomy schema. The file contains `providers` and `models`; pricing, c
 overrides, and upstream names are used directly from it. Provider icons are accepted as catalog metadata but do not enter
 the inference bundle. Unknown fields and duplicate taxonomy entries are rejected.
 
+With the default setup, edit `.tokkeeper/taxonomy.yml`. When initialized with `--taxonomy PATH`, edit that supplied file instead.
+
 For a small custom catalog, `taxonomy` can instead contain those two lists inline. Choose one source: there is no
 implicit merge or precedence between an external file and inline definitions. Every model in the selected taxonomy is
 available to every local inference key unless restricted by your policies. Use a smaller taxonomy to expose fewer models.
 
-The gateway checks bundle and taxonomy content at the reload interval. A valid edit replaces the active snapshot. Invalid
-or missing files are logged while the last good snapshot keeps serving. If no valid snapshot has ever loaded, inference and
-`/readyz` return `503`. Restarting requires valid files again; local mode does not persist a separate last-good cache.
+The gateway checks bundle and taxonomy content at the reload interval. A valid edit replaces the active snapshot for new
+requests: added models become routable, removed models stop being routable, and changed provider or model settings take effect.
+Requests already in progress finish against the snapshot they started with. Invalid or missing files are logged while the last
+good snapshot keeps serving. If no valid snapshot has ever loaded, inference and `/readyz` return `503`. Restarting requires
+valid files again; local mode does not persist a separate last-good cache.
 
 You can add plaintext inference tokens to `keys` or use file or environment references. Tokens must start with `sk-inf-`, contain
 no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
@@ -105,14 +118,14 @@ Keep plaintext key files private and out of version control.
 
 ## Run the same configuration in a container
 
-After initialization above, run from the checkout containing `gateway/` and `taxonomy/`:
+After initialization above, run from the directory containing `.tokkeeper/` and the referenced taxonomy:
 
 ```bash
 docker build --target data-plane -t tokkeeper-gateway:local .
 docker run --rm --user "$(id -u):$(id -g)" \
   --mount "type=bind,source=$PWD,target=/config,readonly" \
   -e OPENAI_API_KEY -p 8080:8081 \
-  tokkeeper-gateway:local serve --config /config/gateway/tokkeeper.yml --host 0.0.0.0 --port 8081
+  tokkeeper-gateway:local serve --config /config/.tokkeeper/tokkeeper.yml --host 0.0.0.0 --port 8081
 ```
 
 The image entry point is `tokkeeper gateway`, so `validate --config ...` and `serve --help` work as container arguments.

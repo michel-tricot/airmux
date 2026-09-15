@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import shlex
+import shutil
+import subprocess
 
 import pytest
 import yaml
@@ -14,6 +16,20 @@ TAXONOMY = {
     "providers": [{"provider_id": "stub", "base_url": "http://127.0.0.1:9000"}],
     "models": [{"model_id": "echo", "provider_id": "stub", "input_modalities": ["text"], "output_modalities": ["text"]}],
 }
+
+
+def git_status(directory):
+    git = shutil.which("git")
+    assert git is not None
+    subprocess.run([git, "init", "--quiet"], cwd=directory, check=True)  # noqa: S603 git is the test environment executable
+    result = subprocess.run(  # noqa: S603 git is the test environment executable
+        [git, "-c", "core.excludesFile=/dev/null", "status", "--porcelain", "--untracked-files=all"],
+        cwd=directory,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
 
 
 @pytest.mark.parametrize("command", [[], ["gateway"], ["control-plane"]])
@@ -32,9 +48,14 @@ def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["gateway", "init"])
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "tokkeeper.yml").is_file()
-    assert (tmp_path / "taxonomy.yml").is_file()
-    key = (tmp_path / ".tokkeeper/inference.key").read_text().strip()
+    directory = tmp_path / ".tokkeeper"
+    assert (directory / "tokkeeper.yml").is_file()
+    assert (directory / "taxonomy.yml").is_file()
+    assert ".tokkeeper/taxonomy.yml" in result.output
+    key = (directory / "inference.key").read_text().strip()
+    status = git_status(tmp_path)
+    assert ".tokkeeper/inference.key" not in status
+    assert ".tokkeeper/taxonomy.yml" in status
     assert key not in result.output
     result = runner.invoke(app, ["gateway", "validate"])
     assert result.exit_code == 0, result.output
@@ -43,7 +64,13 @@ def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monke
     assert key not in result.output
     contents = {
         path: path.read_bytes()
-        for path in (tmp_path / "tokkeeper.yml", tmp_path / "bundle.yml", tmp_path / "taxonomy.yml", tmp_path / ".tokkeeper/inference.key")
+        for path in (
+            directory / ".gitignore",
+            directory / "tokkeeper.yml",
+            directory / "bundle.yml",
+            directory / "taxonomy.yml",
+            directory / "inference.key",
+        )
     }
     result = runner.invoke(app, ["gateway", "init"])
     assert result.exit_code != 0
@@ -77,6 +104,9 @@ def test_control_plane_init_prepares_connected_configuration_without_a_database(
     assert config["data_plane"]["bundle"]["kind"] == "remote"
     assert config["control_plane"]["database"]["url"] == "${env:DATABASE_URL}"
     key = (tmp_path / ".tokkeeper/dataplane.key").read_text().strip()
+    status = git_status(tmp_path)
+    assert ".tokkeeper/dataplane.key" not in status
+    assert "tokkeeper.yml" in status
     assert key not in result.output
     assert (tmp_path / ".tokkeeper/dataplane.key").stat().st_mode & 0o777 == 0o600
     monkeypatch.setenv("DATABASE_URL", "postgresql://owner:password@127.0.0.1/example")
@@ -129,14 +159,46 @@ def test_control_plane_init_requires_database_url_when_validating(tmp_path, monk
     assert "database.url" in result.output
 
 
-def test_initialization_prints_shell_safe_next_steps(tmp_path):
+def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
+    monkeypatch.delenv("STUB_API_KEY", raising=False)
     directory = tmp_path / "my gateway"
     taxonomy = tmp_path / "taxonomy.yml"
     taxonomy.write_text(yaml.safe_dump(TAXONOMY))
     result = runner.invoke(app, ["gateway", "init", "--taxonomy", str(taxonomy), "--directory", str(directory)])
     assert result.exit_code == 0, result.output
-    command = next(line.removeprefix("Start with: ") for line in result.output.splitlines() if line.startswith("Start with: "))
-    assert shlex.split(command) == ["tokkeeper", "gateway", "serve", "--config", str(directory / "tokkeeper.yml")]
+    lines = [line.strip() for line in result.output.splitlines()]
+    provider = next(line for line in lines if line.startswith("export STUB_API_KEY="))
+    serve = next(line for line in lines if line.startswith("tokkeeper gateway serve"))
+    inference_key = next(line for line in lines if line.startswith("export TOKKEEPER_INFERENCE_KEY="))
+    assert shlex.split(provider) == ["export", "STUB_API_KEY=your-provider-key"]
+    assert shlex.split(serve) == ["tokkeeper", "gateway", "serve", "--config", str(directory / "tokkeeper.yml")]
+    assert inference_key == f'export TOKKEEPER_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
+    assert "curl --fail http://127.0.0.1:8080/readyz" in lines
+    assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
+    assert "X-Tokkeeper-Dialect: openai_native" in result.output
+    assert '"model":"echo"' in result.output
+
+
+def test_initialization_uses_a_model_with_an_existing_provider_key(tmp_path, monkeypatch):
+    taxonomy = {
+        "providers": [
+            {"provider_id": "missing", "base_url": "http://127.0.0.1:9000"},
+            {"provider_id": "configured", "base_url": "http://127.0.0.1:9001"},
+        ],
+        "models": [
+            {"model_id": "missing-model", "provider_id": "missing", "input_modalities": ["text"], "output_modalities": ["text"]},
+            {"model_id": "configured-model", "provider_id": "configured", "input_modalities": ["text"], "output_modalities": ["text"]},
+        ],
+    }
+    taxonomy_path = tmp_path / "taxonomy.yml"
+    taxonomy_path.write_text(yaml.safe_dump(taxonomy))
+    monkeypatch.setenv("CONFIGURED_API_KEY", "private-provider-key")
+    result = runner.invoke(app, ["gateway", "init", "--taxonomy", str(taxonomy_path), "--directory", str(tmp_path / "gateway")])
+    assert result.exit_code == 0, result.output
+    assert 'CONFIGURED_API_KEY is set for "configured-model"' in result.output
+    assert "export CONFIGURED_API_KEY=" not in result.output
+    assert '"model":"configured-model"' in result.output
+    assert "private-provider-key" not in result.output
 
 
 @pytest.mark.parametrize("group", ["gateway", "control-plane"])
