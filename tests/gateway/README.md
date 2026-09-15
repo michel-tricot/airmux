@@ -78,6 +78,65 @@ The scenario functions select a case for each family without translating usage o
 cases reuse native payloads but declare their partial expectations separately. Every scenario remains parameterized over
 the full applicable protocol matrix; a missing family or case fails instead of falling back to shared defaults.
 
+## Performance and regression tracking
+
+The `gateway-performance` CI job compares independently built base and candidate wheels on the same runner.
+For a PR, the base is its target commit and the candidate is the merge commit tested by CI. A push to `main` compares
+with the preceding commit; a manual run compares with `main`. Both gateways run the candidate checkout's benchmark,
+so changes to the workload apply equally to both versions.
+
+`performance.py` measures buffered latency, streaming time to the first non-empty text delta, throughput at concurrency
+1, 8 and 32, and latency with 100 applicable policies. Direct upstream calls at concurrency 1 and 32 reveal changes in
+the load generator or stub. These are representative OpenAI Chat Completions workloads; the correctness suite covers
+the full protocol matrix. Longer prompts, sustained token streams, worker scaling and real providers need separate
+workloads before drawing conclusions about those paths.
+
+Each workload warms persistent connections before a two-second closed-loop load window. Five rounds alternate
+base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first
+content latency and completed requests per second. Request failures, incorrect text, incomplete streams and lost usage
+events fail the job. Both versions use one gateway worker and the existing durable SQLite event queue; event writes
+are included, periodic export is excluded, and bundle polling runs every five seconds. The lightweight provider runs
+in its own async process, reuses the handwritten native response fixtures, supports persistent connections and captures
+no request history during load.
+
+Performance changes start as warnings, not PR gates. A warning requires more than 20% slower latency or lower
+throughput, plus more than 1ms absolute change for latency. These initial thresholds are investigation triggers, not
+statistical significance tests. Inspect direct-upstream changes and individual rounds, and rerun a suspicious result.
+Once runner noise and normal variation are known, we can choose blocking thresholds for specific workloads.
+
+Every run shows its comparison in the Actions summary and uploads `measurements.json` and `summary.md` as the
+`gateway-performance` artifact for 90 days. JSON contains raw per-request timings, both commit identities, runner
+metadata, workload settings and comparisons. Main-branch runs provide a bounded history; compare PR/base ratios
+before comparing absolute numbers from different machines. This does not create a permanent metrics store or chart.
+
+To compare any two installed gateways locally, choose a fresh output directory:
+
+```bash
+uv run python tests/gateway/performance.py \
+  --base-bin /path/to/base/bin/tokkeeper \
+  --candidate-bin /path/to/candidate/bin/tokkeeper \
+  --base-revision BASE_SHA --candidate-revision CANDIDATE_SHA \
+  --output "$(mktemp -d)"
+```
+
+Use `--rounds 3 --duration-s 0.1 --warmup 1` for a harness smoke check. Short runs are not useful regression evidence.
+Run benchmarks alone, without pytest parallelization or other local load. The older full-stack benchmarks under
+`tests/acceptance/benchmarks` remain manual and include control-plane setup.
+
+## CI failure display
+
+The installation job's Actions summary shows test counts by level and expandable assertion/setup-error tracebacks
+with the complete parameterized test name. Its `always()` reporting step runs after a failing test level; later levels
+remain stopped. Up to ten failures also produce error annotations. Full pytest tracebacks stay in the original step
+logs, and the `gateway-integration` artifact retains XML plus sanitized caller, gateway and upstream diagnostics.
+Summary details are bounded to the first 50 failures and 10,000 escaped characters per failure.
+
+`ci_report.py` reads pytest's JUnit output without changing pytest's exit status or test behavior. To preview it locally:
+
+```bash
+uv run python tests/gateway/ci_report.py /tmp/gateway-results --summary /tmp/gateway-summary.md
+```
+
 ## Event collection
 
 The harness configures `events: {kind: file, path: usage/events.jsonl}`. The sink appends complete JSON Lines, flushes
