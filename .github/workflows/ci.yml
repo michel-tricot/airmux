@@ -51,8 +51,6 @@ jobs:
 
   installation:
     runs-on: ubuntu-latest
-    env:
-      DOCKER_HOST: unix:///no-docker.sock
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -73,12 +71,14 @@ jobs:
           UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
         run: uv tool install dist-from-sdist/tokkeeper-*.whl
-      - run: uv run pytest tests/installation
+      - run: uv run pytest tests/installation --junitxml=gateway-results/00-installation.xml
         env:
           TOKKEEPER_DISTRIBUTION_DIR: dist
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+      - name: Disable Docker for standalone gateway tests
+        run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
-        run: uv run pytest tests/gateway/test_ci_report.py tests/gateway/test_performance.py
+        run: uv run pytest tests/gateway/test_ci_report.py tests/gateway/test_performance.py --junitxml=gateway-results/00-reporting.xml
       - name: Gateway level 1 - basics
         run: uv run pytest tests/gateway/test_01_basic.py -n auto --junitxml=gateway-results/01-basic.xml
       - name: Gateway level 2 - protocols

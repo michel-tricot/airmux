@@ -125,7 +125,7 @@ Run benchmarks alone, without pytest parallelization or other local load. The ol
 
 ## CI failure display
 
-The installation job's Actions summary shows test counts by level and expandable assertion/setup-error tracebacks
+The installation job's Actions summary shows installation checks, reporting checks, counts by level and expandable assertion/setup-error tracebacks
 with the complete parameterized test name. Its `always()` reporting step runs after a failing test level; later levels
 remain stopped. Up to ten failures also produce error annotations. Full pytest tracebacks stay in the original step
 logs, and the `gateway-integration` artifact retains XML plus sanitized caller, gateway and upstream diagnostics.
