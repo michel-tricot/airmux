@@ -3,12 +3,45 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from shlex import quote as shell_quote
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 from cli.common import gateway_app
 from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, configuration_path, runtime_command
+
+if TYPE_CHECKING:
+    from data_plane.setup import GatewayGuide
+
+
+def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[str, ...]:
+    providers = tuple(provider for provider in guide.providers if provider.models)
+    provider = next((candidate for candidate in providers if candidate.configured_variable), providers[0])
+    model_id = provider.models[0]
+    model = json.dumps(model_id, ensure_ascii=False)
+    body = json.dumps(
+        {"model": model_id, "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}]},
+        separators=(",", ":"),
+    )
+    provider_step = (
+        (f"  1. Provider key: {provider.configured_variable} is set for {model}",)
+        if provider.configured_variable
+        else (f"  1. Set the provider key used by {model}:", f"     export {provider.suggested_variable}='your-provider-key'")
+    )
+    return (
+        "Next:",
+        *provider_step,
+        "  2. Start the gateway:",
+        f"     tokkeeper gateway serve --config {shell_quote(str(config))}",
+        "  3. In another terminal, verify inference:",
+        f'     export TOKKEEPER_INFERENCE_KEY="$(cat {shell_quote(str(inference_key))})"',
+        "     curl --fail http://127.0.0.1:8080/readyz",
+        "     curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \\",
+        '       -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\',
+        "       -H 'Content-Type: application/json' \\",
+        "       -H 'X-Tokkeeper-Dialect: openai_native' \\",
+        f"       -d {shell_quote(body)}",
+    )
 
 
 @gateway_app.command()
@@ -27,35 +60,12 @@ def init(
     config = directory / "tokkeeper.yml"
     inference_key = directory / "inference.key"
     guide = describe_configuration(config)
-    providers = tuple(provider for provider in guide.providers if provider.models)
-    provider = next((provider for provider in providers if provider.configured_variable), providers[0])
-    provider_variable = provider.configured_variable or provider.variables[-1]
-    model_id = provider.models[0]
-    model = json.dumps(model_id, ensure_ascii=False)
-    body = json.dumps(
-        {"model": model_id, "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}]},
-        separators=(",", ":"),
-    )
     if taxonomy is None:
         typer.echo(f"Created {config}, {directory / 'taxonomy.yml'}, and {inference_key}")
     else:
         typer.echo(f"Created {config} and {inference_key}")
-    typer.echo("Next:")
-    if provider.configured_variable:
-        typer.echo(f"  1. Provider key: {provider_variable} is set for {model}")
-    else:
-        typer.echo(f"  1. Set the provider key used by {model}:")
-        typer.echo(f"     export {provider_variable}='your-provider-key'")
-    typer.echo("  2. Start the gateway:")
-    typer.echo(f"     tokkeeper gateway serve --config {shell_quote(str(config))}")
-    typer.echo("  3. In another terminal, verify inference:")
-    typer.echo(f'     export TOKKEEPER_INFERENCE_KEY="$(cat {shell_quote(str(inference_key))})"')
-    typer.echo("     curl --fail http://127.0.0.1:8080/readyz")
-    typer.echo("     curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \\")
-    typer.echo('       -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\')
-    typer.echo("       -H 'Content-Type: application/json' \\")
-    typer.echo("       -H 'X-Tokkeeper-Dialect: openai_native' \\")
-    typer.echo(f"       -d {shell_quote(body)}")
+    for line in next_steps(guide, config, inference_key):
+        typer.echo(line)
 
 
 @gateway_app.command()

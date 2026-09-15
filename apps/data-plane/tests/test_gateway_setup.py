@@ -119,9 +119,10 @@ def test_describe_configuration_includes_every_provider_and_model(tmp_path, monk
         ("first", ("first-a", "first-b")),
         ("second", ("second-a",)),
     ]
-    assert guide.providers[0].variables[-1] == "FIRST_API_KEY"
     assert guide.providers[0].configured_variable is None
+    assert guide.providers[0].suggested_variable == "FIRST_API_KEY"
     assert guide.providers[1].configured_variable == "SECOND_API_KEY"
+    assert guide.providers[1].suggested_variable == "SECOND_API_KEY"
 
 
 def test_init_rejects_invalid_taxonomy_before_writing(tmp_path):

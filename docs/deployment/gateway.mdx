@@ -42,9 +42,8 @@ Initialization writes a `.gitignore` beside the standalone files. It excludes ge
 `gateway/` runtime directories, so local credentials and state do not appear in Git while configuration and taxonomy changes
 remain visible.
 
-`--config` takes precedence over `TOKKEEPER_CONFIG`, then defaults to `./.tokkeeper/tokkeeper.yml`. If that file is absent, gateway
-commands use a shared `./tokkeeper.yml` created by `control-plane init`. File references resolve relative to the file containing
-them, so starting from another directory is safe.
+Configuration resolution follows the [configuration reference](/docs/reference/configuration). File references resolve
+relative to the file containing them, so starting from another directory is safe.
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
 
@@ -58,7 +57,7 @@ Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
 ```bash
 export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper/inference.key)"
 curl --fail http://127.0.0.1:8080/readyz
-curl --fail http://127.0.0.1:8080/inf/v1/chat/completions \
+curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
   -H 'X-Tokkeeper-Dialect: openai_native' \

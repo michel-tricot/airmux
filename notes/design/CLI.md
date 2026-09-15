@@ -17,6 +17,11 @@ a database. Its wheel contains the `cli`, `api_models`, `contract`, `control_pla
 The corresponding workspace projects remain local development units so their dependencies and boundaries stay explicit.
 They are not published or resolved when installing TokKeeper.
 
+The distribution name `tokkeeper` resolves to two different projects: the CLI workspace project in a development checkout
+and the published distribution in an installation. Runtime version reporting reads that name, so both must carry the same
+version, and the published dependency list must equal the union of the bundled projects' external dependencies. Repository
+tests in `tests/documentation` enforce both invariants.
+
 Runtime imports happen only when their commands execute to keep CLI startup fast. Runtime packages remain independent
 of the CLI and each other. Control-plane migrations ship inside its package, allowing an installed wheel to migrate a
 database without a checkout. The data-plane package ships the generated routing taxonomy so a standalone installation
