@@ -7,6 +7,7 @@ import signal
 import socket
 import subprocess
 import time
+from pathlib import Path
 
 import asyncpg
 import httpx
@@ -49,6 +50,45 @@ def test_installed_gateway_initializes_with_the_shipped_taxonomy(installation, t
     assert taxonomy["models"]
     assert yaml.safe_load((tmp_path / "bundle.yml").read_text(encoding="utf-8"))["taxonomy"] == "taxonomy.yml"
     assert run_cli(installation, tmp_path, "gateway", "validate").returncode == 0
+
+
+def test_internal_modules_are_bundled_in_one_distribution(installation, tmp_path):
+    executable, environment = installation
+    python = Path(executable).read_text(encoding="utf-8").splitlines()[0].removeprefix("#!")
+    result = subprocess.run(  # noqa: S603 isolated tool interpreter built by the packaging test job
+        [
+            python,
+            "-c",
+            """
+from importlib.metadata import PackageNotFoundError, distribution
+
+tokkeeper = distribution("tokkeeper")
+for name in ("tokkeeper-api-models", "tokkeeper-contract", "tokkeeper-control-plane", "tokkeeper-data-plane"):
+    try:
+        distribution(name)
+    except PackageNotFoundError:
+        pass
+    else:
+        raise AssertionError(f"unexpected internal distribution: {name}")
+
+import api_models
+import cli
+import contract
+import control_plane
+import data_plane
+from data_plane.heartbeat import VERSION
+
+assert VERSION == tokkeeper.version
+""",
+        ],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def wait_ready(client, process):
