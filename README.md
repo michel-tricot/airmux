@@ -62,7 +62,8 @@ operation.
 
 ## Use your existing client
 
-Any client that can target one of TokKeeper's exposed HTTP APIs and send a bearer token can connect. That includes SDKs,
+Any client that can target one of TokKeeper's exposed HTTP APIs and send an inference key through
+`Authorization: Bearer` or `x-api-key` can connect. That includes SDKs,
 agent frameworks, CLIs, services, and raw HTTP integrations.
 
 | API | Endpoint |

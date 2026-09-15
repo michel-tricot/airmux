@@ -27,6 +27,9 @@ an invalid key returns `401 invalid_token` without trying lower-priority credent
 Discover models with `GET /inf/v1/models` and retrieve one with `GET /inf/v1/models/{model_id}` using the same inference key.
 These routes return the OpenAI Models shape. See [model discovery](/docs/reference/models-and-providers#inference-model-discovery) for details.
 
+The generated OpenAPI spec covers the [management API](/docs/reference/management-api). Inference endpoints and their
+shared behavior are described in these reference pages.
+
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
 Chat Completions request can target an Anthropic model. TokKeeper returns the response and errors in the caller's dialect.
 
@@ -59,6 +62,9 @@ unexpected server errors. Health and readiness checks remain public.
 `X-Request-ID` matches the request ID in usage events when an event is recorded. Provider completion IDs in response
 bodies retain their own meaning. Caller-supplied request IDs do not replace the gateway ID. The response renderer owns
 `Content-Type`; middleware forwards streaming bytes without buffering. Existing `Retry-After` headers are preserved.
+
+The `401` challenge advertises bearer authentication. `realm="tokkeeper"` labels the authentication scope and does not
+change key validation.
 
 The packaged Nginx proxy preserves the SSE cache directive and disables inference buffering. Nginx consumes
 `X-Accel-Buffering`, so that header may be absent at the public edge.
