@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from contract.taxonomy import TaxonomySpec as SharedTaxonomySpec
+from contract import taxonomy
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import RequestModel
 from control_plane.models.model import ModelIn, ModelOut
@@ -32,7 +32,7 @@ class UnknownProviderError(ValueError):
         super().__init__(f"Unknown provider {label}: {requirements}")
 
 
-class TaxonomySpec(SharedTaxonomySpec, RequestModel):
+class TaxonomySpec(taxonomy.TaxonomySpec, RequestModel):
     providers: list[ProviderIn] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
     models: list[ModelIn] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
 
@@ -115,7 +115,7 @@ async def upsert_model(m: ModelSpec) -> Model:
     return await model.save()
 
 
-async def apply_taxonomy(spec: SharedTaxonomySpec) -> tuple[int, int]:
+async def apply_taxonomy(spec: taxonomy.TaxonomySpec) -> tuple[int, int]:
     """Create or update every provider and model present in the taxonomy."""
     for p in spec.providers:
         await upsert_provider(p)
@@ -159,7 +159,7 @@ def _change_counts[T, U](desired: list[T], existing: dict[str, U], key: Callable
     return TaxonomyChangeCounts(created=created, updated=len(desired) - created - unchanged, unchanged=unchanged)
 
 
-async def plan_taxonomy(spec: SharedTaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
+async def plan_taxonomy(spec: taxonomy.TaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
     providers = await Provider.find()
     models = await Model.find()
     providers_by_name = {provider.name.casefold(): provider for provider in providers}
