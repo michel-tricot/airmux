@@ -13,7 +13,7 @@ gateway_app = typer.Typer(help="Initialize, validate, and run a local or connect
 app.add_typer(gateway_app, name="gateway", rich_help_panel=SETUP)
 
 
-@gateway_app.command(rich_help_panel="Setup")
+@gateway_app.command()
 @runtime_command("gateway")
 def init(
     taxonomy: Annotated[
@@ -30,7 +30,7 @@ def init(
     typer.echo(f"Start with: tokkeeper gateway serve --config {shell_quote(str(directory / 'tokkeeper.yml'))}")
 
 
-@gateway_app.command(rich_help_panel="Testing")
+@gateway_app.command()
 @runtime_command("gateway")
 def validate(config: ConfigOption = None) -> None:
     """Check configuration and local bundle admission without contacting providers."""
@@ -42,7 +42,7 @@ def validate(config: ConfigOption = None) -> None:
     typer.echo("Provider credentials, connectivity, and remote bundles are verified when serving")
 
 
-@gateway_app.command(rich_help_panel="Resources")
+@gateway_app.command()
 @runtime_command("gateway")
 def serve(
     config: ConfigOption = None,
@@ -63,7 +63,7 @@ def serve(
     serve_gateway(path, host=host, port=port, dev=dev, workers=workers)
 
 
-@gateway_app.command(rich_help_panel="Testing")
+@gateway_app.command()
 @runtime_command("gateway")
 def schema(
     out: Annotated[Path, typer.Option("--out", help="Directory for the canonical request, response, and stream schemas")] = Path(

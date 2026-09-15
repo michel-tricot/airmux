@@ -17,7 +17,7 @@ control_plane_app = typer.Typer(help="Initialize and run the control plane, mana
 app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SETUP)
 
 
-@control_plane_app.command(rich_help_panel="Setup")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def init(
     directory: DirectoryOption = Path(),
@@ -33,7 +33,7 @@ def init(
     typer.echo(f"  tokkeeper control-plane serve --config {shell_quote(str(directory / 'tokkeeper.yml'))}")
 
 
-@control_plane_app.command(rich_help_panel="Setup")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def bootstrap_keygen(
     out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".tokkeeper/dataplane.key"),
@@ -47,7 +47,7 @@ def bootstrap_keygen(
     typer.echo(f"Wrote {out}")
 
 
-@control_plane_app.command(rich_help_panel="Testing")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def validate(config: ConfigOption = None) -> None:
     """Validate control-plane settings without connecting to the database."""
@@ -59,7 +59,7 @@ def validate(config: ConfigOption = None) -> None:
     typer.echo("Database connectivity is verified by migrate and serve")
 
 
-@control_plane_app.command(rich_help_panel="Resources")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def serve(
     config: ConfigOption = None,
@@ -76,7 +76,7 @@ def serve(
     serve_control_plane(path, host=host, port=port, dev=dev)
 
 
-@control_plane_app.command(rich_help_panel="Setup")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def migrate(config: ConfigOption = None) -> None:
     """Apply database migrations and report the schema revision."""
@@ -89,7 +89,7 @@ def migrate(config: ConfigOption = None) -> None:
         typer.echo(f"{result.database} migrated {result.before or 'empty'} -> {result.after}")
 
 
-@control_plane_app.command(rich_help_panel="Setup")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def owner(email: Annotated[str, typer.Option("--email", help="Existing human account to promote")], config: ConfigOption = None) -> None:
     """Recover instance access by promoting an existing account to owner."""
@@ -99,7 +99,7 @@ def owner(email: Annotated[str, typer.Option("--email", help="Existing human acc
     typer.echo(f"{email} is already an instance owner" if already else f"{email} is now an instance owner")
 
 
-@control_plane_app.command(rich_help_panel="Resources")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def taxonomy(
     file: Annotated[Path, typer.Option("--file", help="Taxonomy path, relative to the configuration file")], config: ConfigOption = None
@@ -113,7 +113,7 @@ def taxonomy(
     typer.echo(f"Applied {file.name}: {result.providers} providers, {result.models} models; published: {publications}")
 
 
-@control_plane_app.command(rich_help_panel="Testing")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def openapi(out: Annotated[str, typer.Option("--out", help="Output file; - writes YAML to stdout")] = "-") -> None:
     """Export the management API schema without configuration or a database."""
@@ -127,7 +127,7 @@ def openapi(out: Annotated[str, typer.Option("--out", help="Output file; - write
         typer.echo(f"Wrote {out}")
 
 
-@control_plane_app.command(rich_help_panel="Testing")
+@control_plane_app.command()
 @runtime_command("control-plane")
 def fixtures(config: ConfigOption = None, fmt: FormatOption = OutputFormat.table) -> None:
     """Seed an empty database with development accounts and print their access details."""
