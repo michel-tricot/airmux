@@ -41,6 +41,7 @@ jobs:
         run: uv tool install dist-from-sdist/tokkeeper-*.whl
       - name: Verify installed release
         env:
+          TOKKEEPER_DISTRIBUTION_DIR: dist
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
         run: uv run pytest tests/installation
       - name: Verify installed gateway

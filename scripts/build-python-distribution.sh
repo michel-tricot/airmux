@@ -10,6 +10,7 @@ trap 'rm -rf "$stage"' EXIT
 
 cp -R "$root/packaging/tokkeeper/." "$stage"
 cp "$root/LICENSE" "$stage/LICENSE"
+cp "$root/README.md" "$stage/README.md"
 mkdir -p "$stage/src"
 cp -R "$root/lib/api-models/src/api_models" "$stage/src/api_models"
 cp -R "$root/apps/cli/src/cli" "$stage/src/cli"
