@@ -24,7 +24,7 @@ From a checkout, install the inference gateway without Docker, Postgres, or the 
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --find-links dist './dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]'
+uv tool install --find-links dist 'tokkeeper[gateway]'
 tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory gateway
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway validate --config gateway/tokkeeper.yml

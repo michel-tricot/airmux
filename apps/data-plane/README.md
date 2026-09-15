@@ -7,7 +7,7 @@ Build the workspace wheels and install the CLI with its gateway extra:
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --find-links dist './dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]'
+uv tool install --find-links dist 'tokkeeper[gateway]'
 ```
 
 Initialize against your existing taxonomy file:

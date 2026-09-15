@@ -12,7 +12,7 @@ You need Python 3.13+ and uv. From a checkout, build the workspace wheels and in
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --find-links dist './dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]'
+uv tool install --find-links dist 'tokkeeper[gateway]'
 ```
 
 The installed gateway runs outside the checkout. Keep your configuration and referenced taxonomy files.

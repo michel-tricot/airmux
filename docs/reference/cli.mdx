@@ -12,19 +12,19 @@ From a checkout with Python 3.13+ and uv:
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --find-links dist ./dist/tokkeeper-0.1.0-py3-none-any.whl
+uv tool install --find-links dist tokkeeper
 ```
 
 Choose the extras needed by this machine when installing:
 
-| Wheel requirement                                                | Capabilities                                    |
-| ---------------------------------------------------------------- | ----------------------------------------------- |
-| `./dist/tokkeeper-0.1.0-py3-none-any.whl`                        | Remote management and diagnostics               |
-| `./dist/tokkeeper-0.1.0-py3-none-any.whl[gateway]`               | Remote management and a local inference gateway |
-| `./dist/tokkeeper-0.1.0-py3-none-any.whl[control-plane]`         | Remote management and a local control plane     |
-| `./dist/tokkeeper-0.1.0-py3-none-any.whl[gateway,control-plane]` | Both local runtimes and remote management       |
+| Package requirement               | Capabilities                                    |
+| --------------------------------- | ----------------------------------------------- |
+| `tokkeeper`                       | Remote management and diagnostics               |
+| `tokkeeper[gateway]`              | Remote management and a local inference gateway |
+| `tokkeeper[control-plane]`        | Remote management and a local control plane     |
+| `tokkeeper[gateway,control-plane]` | Both local runtimes and remote management       |
 
-Quote a wheel requirement containing brackets in your shell. Add `--reinstall` to change the extras of an existing tool installation.
+Quote a package requirement containing brackets in your shell. Add `--reinstall` to change the extras of an existing tool installation.
 All TokKeeper packages are versioned together. These commands install locally built wheels; they do not require a published release.
 
 If `tokkeeper` is not on your PATH, run `uv tool update-shell` and restart your shell.
