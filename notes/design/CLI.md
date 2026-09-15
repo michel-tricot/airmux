@@ -18,13 +18,15 @@ a database. Workspace distributions use the `tokkeeper-` prefix and exact matchi
 
 Runtime imports happen only when their commands execute to keep CLI startup fast. Runtime packages remain independent
 of the CLI and each other. Control-plane migrations ship inside its package, allowing an installed wheel to migrate a
-database without a checkout.
+database without a checkout. The data-plane package ships the generated routing taxonomy so a standalone installation
+can initialize without repository files. The taxonomy build writes both the repository projection and the packaged copy.
 
 ## Local configuration
 
 Runtime commands resolve `--config`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`. Initialization writes into the current
 or selected directory and refuses to overwrite existing files. Generated configuration and keys are private. Standalone
 inference keys and the connected bootstrap key use file references, avoiding an additional environment export before startup.
+Standalone initialization copies the shipped taxonomy unless the operator supplies an existing file with `--taxonomy`.
 
 Relative runtime paths resolve against the configuration file; taxonomy and secret references in a local bundle resolve
 against that bundle. Moving the working directory cannot select a different key or state directory. Provider credentials

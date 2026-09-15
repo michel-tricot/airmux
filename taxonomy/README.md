@@ -65,6 +65,7 @@ onboarding a provider or repairing an acquisition recipe.
 | `../model-audit/evidence/accepted.json` | Deliberately accepted direct HTTP observations |
 | `behavior.json` | Generated provider behavior projection |
 | `taxonomy.yml` | Generated applied routing taxonomy |
+| `../apps/data-plane/src/data_plane/resources/taxonomy.yml.gz` | Packaged copy generated with `taxonomy.yml` |
 | `../model-audit/reports/` | Checkpointed runs and gateway gap reports |
 
 Provider declarations and observed behavior are distinct. Provider APIs, official specs,

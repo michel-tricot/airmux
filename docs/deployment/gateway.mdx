@@ -14,23 +14,24 @@ You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
 uv tool install tokkeeper
 ```
 
-The installed gateway runs outside the checkout. Keep your configuration and referenced taxonomy files.
+The installed gateway runs outside the checkout and includes a starter taxonomy.
 
 If your shell cannot find `tokkeeper`, run `uv tool update-shell` and restart the shell.
 
 ## Initialize and start
 
-Choose the shipped taxonomy or your own file in the same format:
+Initialize a directory with the shipped taxonomy:
 
 ```bash
-tokkeeper gateway init --taxonomy /path/to/taxonomy.yml --directory gateway
+tokkeeper gateway init --directory gateway
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway validate --config gateway/tokkeeper.yml
 tokkeeper gateway serve --config gateway/tokkeeper.yml
 ```
 
 `init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
-existing files. Omit `--directory` to initialize the current directory. It does not copy the taxonomy or print the key. Set the provider variable for each provider you use:
+existing files. Omit `--directory` to initialize the current directory. It copies the shipped taxonomy to `taxonomy.yml` and does not print the key.
+Pass `--taxonomy PATH` to reference an existing taxonomy without copying it. Set the provider variable for each provider you use:
 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a request.
 
 `--config` takes precedence over `TOKKEEPER_CONFIG`, then defaults to `./tokkeeper.yml`. File references resolve relative to the
@@ -79,7 +80,7 @@ The bundle path is relative to this configuration file. `gateway/bundle.yml` con
 ```yaml
 keys:
   - ${file:.tokkeeper/inference.key}
-taxonomy: ../taxonomy/taxonomy.yml
+taxonomy: taxonomy.yml
 rules: []
 policies: []
 ```

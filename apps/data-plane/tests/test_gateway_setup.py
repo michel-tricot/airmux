@@ -82,6 +82,7 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     assert (directory / ".tokkeeper/inference.key").stat().st_mode & 0o777 == 0o600
     assert directory.stat().st_mode & 0o777 == 0o700
     assert "providers:" not in (directory / "bundle.yml").read_text()
+    assert not (directory / "taxonomy.yml").exists()
     monkeypatch.setenv("TOKKEEPER_CONFIG", str(directory / "tokkeeper.yml"))
     monkeypatch.chdir(tmp_path.parent)
     config = load_config()
@@ -104,10 +105,13 @@ def test_init_rejects_invalid_taxonomy_before_writing(tmp_path):
     assert not directory.exists()
 
 
-def test_shipped_taxonomy_is_admitted_without_a_control_plane(tmp_path):
-    taxonomy = Path(__file__).resolve().parents[3] / "taxonomy/taxonomy.yml"
-    result = CliRunner().invoke(app, ["init", "--directory", str(tmp_path / "gateway"), "--taxonomy", str(taxonomy)])
+def test_init_copies_the_shipped_taxonomy_without_a_control_plane(tmp_path):
+    directory = tmp_path / "gateway"
+    result = CliRunner().invoke(app, ["init", "--directory", str(directory)])
     assert result.exit_code == 0, result.output
+    taxonomy = directory / "taxonomy.yml"
+    assert taxonomy.read_text(encoding="utf-8") == (Path(__file__).resolve().parents[3] / "taxonomy/taxonomy.yml").read_text(encoding="utf-8")
+    assert yaml.safe_load((directory / "bundle.yml").read_text(encoding="utf-8"))["taxonomy"] == "taxonomy.yml"
 
 
 @pytest.mark.parametrize(

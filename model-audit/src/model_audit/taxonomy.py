@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from gzip import compress
 from typing import TYPE_CHECKING, cast
 
 import yaml
@@ -201,10 +202,20 @@ def render(specification: dict[str, list[dict[str, object]]]) -> str:
 def write(root: Path, *, check: bool = False) -> tuple[int, int, bool]:
     specification = build(root)
     text = render(specification)
-    path = root / "taxonomy" / "taxonomy.yml"
-    changed = not path.exists() or path.read_text(encoding="utf-8") != text
+    taxonomy_path = root / "taxonomy" / "taxonomy.yml"
+    resource_path = root / "apps" / "data-plane" / "src" / "data_plane" / "resources" / "taxonomy.yml.gz"
+    resource = compress(text.encode("utf-8"), mtime=0)
+    changed = (
+        not taxonomy_path.exists()
+        or taxonomy_path.read_text(encoding="utf-8") != text
+        or not resource_path.exists()
+        or resource_path.read_bytes() != resource
+    )
     if check:
         return len(specification["providers"]), len(specification["models"]), changed
-    if changed:
-        path.write_text(text, encoding="utf-8")
+    if not taxonomy_path.exists() or taxonomy_path.read_text(encoding="utf-8") != text:
+        taxonomy_path.write_text(text, encoding="utf-8")
+    if not resource_path.exists() or resource_path.read_bytes() != resource:
+        resource_path.parent.mkdir(parents=True, exist_ok=True)
+        resource_path.write_bytes(resource)
     return len(specification["providers"]), len(specification["models"]), changed

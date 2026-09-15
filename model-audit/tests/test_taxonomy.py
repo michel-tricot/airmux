@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from gzip import decompress
 from pathlib import Path
 
 import pytest
@@ -119,6 +120,13 @@ def test_gpt_5_6_models_route_through_responses():
 
     for model_id in ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra"):
         assert models[model_id]["egress_kind"] == "openai_responses"
+
+
+def test_shipped_gateway_taxonomy_matches_the_generated_taxonomy():
+    generated = ROOT / "taxonomy/taxonomy.yml"
+    shipped = ROOT / "apps/data-plane/src/data_plane/resources/taxonomy.yml.gz"
+
+    assert decompress(shipped.read_bytes()) == generated.read_bytes()
 
 
 def test_gpt_5_3_codex_routes_through_responses():

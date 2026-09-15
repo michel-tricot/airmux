@@ -24,13 +24,14 @@ Install the inference gateway without Docker, Postgres, or the control plane:
 
 ```bash
 uv tool install tokkeeper
-tokkeeper gateway init --taxonomy /path/to/taxonomy.yml --directory gateway
+tokkeeper gateway init --directory gateway
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway validate --config gateway/tokkeeper.yml
 tokkeeper gateway serve --config gateway/tokkeeper.yml
 ```
 
-The bundle references the existing taxonomy file, which reloads after edits. The default event sink discards usage.
+The command copies the shipped taxonomy into `gateway/taxonomy.yml`, which reloads after edits. Pass `--taxonomy PATH` to
+reference an existing taxonomy instead. The default event sink discards usage.
 See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
 
 ## Full-platform quickstart

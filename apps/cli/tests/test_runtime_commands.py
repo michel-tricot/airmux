@@ -30,18 +30,20 @@ def test_runtime_commands_are_discoverable(command):
 
 def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    taxonomy = tmp_path / "taxonomy.yml"
-    taxonomy.write_text(yaml.safe_dump(TAXONOMY))
-    result = runner.invoke(app, ["gateway", "init", "--taxonomy", str(taxonomy)])
+    result = runner.invoke(app, ["gateway", "init"])
     assert result.exit_code == 0, result.output
     assert (tmp_path / "tokkeeper.yml").is_file()
+    assert (tmp_path / "taxonomy.yml").is_file()
     key = (tmp_path / ".tokkeeper/inference.key").read_text().strip()
     assert key not in result.output
     result = runner.invoke(app, ["gateway", "validate"])
     assert result.exit_code == 0, result.output
     assert key not in result.output
-    contents = {path: path.read_bytes() for path in (tmp_path / "tokkeeper.yml", tmp_path / "bundle.yml", tmp_path / ".tokkeeper/inference.key")}
-    result = runner.invoke(app, ["gateway", "init", "--taxonomy", str(taxonomy)])
+    contents = {
+        path: path.read_bytes()
+        for path in (tmp_path / "tokkeeper.yml", tmp_path / "bundle.yml", tmp_path / "taxonomy.yml", tmp_path / ".tokkeeper/inference.key")
+    }
+    result = runner.invoke(app, ["gateway", "init"])
     assert result.exit_code != 0
     assert "already exists" in result.output
     assert all(path.read_bytes() == original for path, original in contents.items())

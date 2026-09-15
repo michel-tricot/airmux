@@ -14,15 +14,19 @@ from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, c
 @runtime_command
 def init(
     taxonomy: Annotated[
-        Path, typer.Option("--taxonomy", exists=True, dir_okay=False, readable=True, help="Existing provider and model taxonomy YAML")
-    ],
+        Path | None,
+        typer.Option("--taxonomy", exists=True, dir_okay=False, readable=True, help="Existing taxonomy YAML; defaults to the shipped taxonomy"),
+    ] = None,
     directory: DirectoryOption = Path(),
 ) -> None:
     """Create standalone configuration and a private inference key."""
     from data_plane.setup import initialize  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     initialize(directory, taxonomy)
-    typer.echo(f"Created {directory / 'tokkeeper.yml'} and {directory / '.tokkeeper/inference.key'}")
+    if taxonomy is None:
+        typer.echo(f"Created {directory / 'tokkeeper.yml'}, {directory / '.tokkeeper/inference.key'}, and {directory / 'taxonomy.yml'}")
+    else:
+        typer.echo(f"Created {directory / 'tokkeeper.yml'} and {directory / '.tokkeeper/inference.key'}")
     typer.echo("Set your provider environment variables, such as OPENAI_API_KEY")
     typer.echo(f"Start with: tokkeeper gateway serve --config {shell_quote(str(directory / 'tokkeeper.yml'))}")
 
