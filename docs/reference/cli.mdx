@@ -35,7 +35,8 @@ For source checkouts and unreleased builds, see [Development](/docs/development)
 Configuration resolution is `--config/-c`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`.
 Relative runtime paths and `${file:...}` references resolve against their containing configuration file.
 `init` defaults to the current directory; `--directory/-d` selects another. It creates private keys, never prints them,
-and refuses to overwrite any generated file. `validate` checks local configuration without contacting providers or the database.
+and refuses to overwrite any generated file. Gateway initialization copies the shipped taxonomy by default; `--taxonomy PATH`
+references an existing file without copying it. `validate` checks local configuration without contacting providers or the database.
 
 For a standalone gateway, follow [Gateway only](/docs/deployment/gateway). For a connected deployment with existing Postgres:
 
