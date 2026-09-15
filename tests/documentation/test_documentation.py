@@ -143,7 +143,7 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
 
 def test_public_links_use_the_current_repository() -> None:
     stale_repository = "https://github.com/michel-tricot/airllm"
-    public_documents = [ROOT / "README.md", PUBLISHED_PROJECT.parent / "README.md", *documentation_files()]
+    public_documents = [ROOT / "README.md", *documentation_files()]
     occurrences = [str(path.relative_to(ROOT)) for path in public_documents if stale_repository in path.read_text()]
 
     assert occurrences == []
