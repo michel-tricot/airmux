@@ -62,8 +62,8 @@ keys, a private generated inference key, and a `devnull` usage outbox. See [gate
 for installation without a source checkout at runtime.
 
 The Docker-free subprocess suite progresses through basics, protocol pairs, features, simple policies, advanced policy
-composition, failures and fallback, and runtime changes. It starts real gateways and scripted upstream HTTP servers,
-then validates their JSON Lines usage events against the shared contract:
+composition, failures and fallback, runtime changes, and metering prices and costs. It starts real gateways and scripted
+upstream HTTP servers, then validates their JSON Lines usage events against the shared contract:
 
 ```bash
 uv run pytest tests/gateway -n auto

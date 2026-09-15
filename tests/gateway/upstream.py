@@ -12,9 +12,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 Family = Literal["openai_compatible", "openai_responses", "anthropic"]
+ReportedUsage = dict[str, object] | Literal["default"] | None
 UPSTREAM_KEY = "upstream-integration-secret"
 TEXT = "hello 🌍"
 ARGUMENTS = '{"city":"Paris"}'
+DEFAULT_USAGE: dict[Family, dict[str, object]] = {
+    "openai_compatible": {"prompt_tokens": 11, "completion_tokens": 3, "prompt_tokens_details": {"cached_tokens": 4}},
+    "openai_responses": {"input_tokens": 11, "output_tokens": 3, "input_tokens_details": {"cached_tokens": 4}},
+    "anthropic": {"input_tokens": 5, "output_tokens": 3, "cache_read_input_tokens": 4, "cache_creation_input_tokens": 2},
+}
 
 
 @dataclass(frozen=True)
@@ -22,7 +28,7 @@ class Reply:
     status: int = 200
     text: str = TEXT
     content: Literal["text", "tool", "reasoning"] = "text"
-    usage: bool = True
+    usage: ReportedUsage = "default"
     terminal: bool = True
     malformed: Literal["none", "json", "event"] = "none"
     delay_s: float = 0
@@ -44,6 +50,7 @@ def sse(event: dict[str, object]) -> bytes:
 
 
 def buffered(family: Family, reply: Reply) -> dict[str, object]:
+    usage = DEFAULT_USAGE[family] if reply.usage == "default" else reply.usage
     if family == "openai_compatible":
         message: dict[str, object] = {"role": "assistant", "content": reply.text}
         if reply.content == "tool":
@@ -57,7 +64,7 @@ def buffered(family: Family, reply: Reply) -> dict[str, object]:
         return {
             "id": "upstream-response",
             "choices": [{"index": 0, "message": message, "finish_reason": "tool_calls" if reply.content == "tool" else "stop"}],
-            **({"usage": {"prompt_tokens": 11, "completion_tokens": 3, "prompt_tokens_details": {"cached_tokens": 4}}} if reply.usage else {}),
+            **({"usage": usage} if usage is not None else {}),
         }
     if family == "anthropic":
         content: list[dict[str, object]] = [{"type": "text", "text": reply.text}]
@@ -71,11 +78,7 @@ def buffered(family: Family, reply: Reply) -> dict[str, object]:
             "role": "assistant",
             "content": content,
             "stop_reason": "tool_use" if reply.content == "tool" else "end_turn",
-            **(
-                {"usage": {"input_tokens": 5, "output_tokens": 3, "cache_read_input_tokens": 4, "cache_creation_input_tokens": 2}}
-                if reply.usage
-                else {}
-            ),
+            **({"usage": usage} if usage is not None else {}),
         }
     output: list[dict[str, object]] = [
         {"type": "message", "id": "msg-test", "role": "assistant", "content": [{"type": "output_text", "text": reply.text}]}
@@ -88,11 +91,12 @@ def buffered(family: Family, reply: Reply) -> dict[str, object]:
         "id": "upstream-response",
         "status": "completed",
         "output": output,
-        **({"usage": {"input_tokens": 11, "output_tokens": 3, "input_tokens_details": {"cached_tokens": 4}}} if reply.usage else {}),
+        **({"usage": usage} if usage is not None else {}),
     }
 
 
 def stream_events(family: Family, reply: Reply) -> list[bytes]:
+    usage = DEFAULT_USAGE[family] if reply.usage == "default" else reply.usage
     if family == "openai_compatible":
         if reply.content == "tool":
             deltas = [
@@ -103,12 +107,12 @@ def stream_events(family: Family, reply: Reply) -> list[bytes]:
             deltas = ([{"reasoning_content": "Think carefully"}] if reply.content == "reasoning" else []) + [{"content": reply.text}]
         events = [sse({"id": "upstream-response", "choices": [{"index": 0, "delta": delta, "finish_reason": None}]}) for delta in deltas]
         events.append(sse({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls" if reply.content == "tool" else "stop"}]}))
-        if reply.usage:
-            events.append(sse({"choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 3, "prompt_tokens_details": {"cached_tokens": 4}}}))
+        if usage is not None:
+            events.append(sse({"choices": [], "usage": usage}))
         return [*events, *([b"data: [DONE]\n\n"] if reply.terminal else [])]
     if family == "anthropic":
-        usage = {"input_tokens": 5, "output_tokens": 0, "cache_read_input_tokens": 4, "cache_creation_input_tokens": 2} if reply.usage else {}
-        events = [sse({"type": "message_start", "message": {"id": "upstream-response", "content": [], "usage": usage}})]
+        opened_usage = {**usage, "output_tokens": 0} if usage is not None else {}
+        events = [sse({"type": "message_start", "message": {"id": "upstream-response", "content": [], "usage": opened_usage}})]
         if reply.content == "tool":
             block = {"type": "tool_use", "id": "call-weather", "name": "get_weather", "input": {}}
             deltas = [{"type": "input_json_delta", "partial_json": part} for part in ('{"city":', '"Paris"}')]
@@ -132,7 +136,7 @@ def stream_events(family: Family, reply: Reply) -> list[bytes]:
                     {
                         "type": "message_delta",
                         "delta": {"stop_reason": "tool_use" if reply.content == "tool" else "end_turn"},
-                        **({"usage": {"output_tokens": 3}} if reply.usage else {}),
+                        **({"usage": {"output_tokens": usage.get("output_tokens", 0)}} if usage is not None else {}),
                     }
                 ),
             ]

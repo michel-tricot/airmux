@@ -239,7 +239,7 @@ class Gateway:
         assert len({event.event_id for event in events}) == count
         assert all(event.event_id.version == 7 and event.request_id.version == 7 for event in events)
         assert all(event.org_id == UUID(int=0) and event.workspace_id == UUID(int=0) for event in events)
-        assert all(event.cost_usd == pytest.approx(event.cost_input_usd + event.cost_output_usd) for event in events)
+        assert all(event.cost_usd == pytest.approx(event.cost_input_usd + event.cost_output_usd, rel=1e-12, abs=1e-15) for event in events)
         assert all(secret not in contents for secret in (UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY))
         return events
 

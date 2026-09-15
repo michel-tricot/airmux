@@ -34,8 +34,8 @@ def test_every_protocol_pair_preserves_content_and_usage(gateway: Gateway, diale
         4,
         2 if family == "anthropic" else 0,
     )
-    assert event.cost_input_usd == pytest.approx(0.000016 if family == "anthropic" else 0.000015)
-    assert event.cost_output_usd == pytest.approx(0.000015)
+    assert event.cost_input_usd == pytest.approx(0.000016 if family == "anthropic" else 0.000015, rel=1e-12, abs=1e-15)
+    assert event.cost_output_usd == pytest.approx(0.000015, rel=1e-12, abs=1e-15)
     assert event.credential_id is not None
     assert event.credential_scope == "platform"
     assert event.stream == stream

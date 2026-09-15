@@ -14,6 +14,7 @@ No control plane, Postgres, Docker, external provider API, or gateway implementa
 | 5 | `test_05_advanced_policies.py` | Selected keys, overlapping policies, model/stream conditions, intersecting allowlists |
 | 6 | `test_06_failures.py` | Provider errors, malformed responses, truncated streams, fallback restrictions, attempt limits, deadlines |
 | 7 | `test_07_runtime.py` | Client disconnects, estimated usage, restart persistence, concurrent workers, key/policy reloads, invalid files and recovery |
+| 8 | `test_08_metering.py` | Input/output and cache prices, free models/caches, fractional and tiny costs, token counts, fallback costs, partial usage, pricing reloads |
 
 `test_gateway.py` retains the installed CLI setup, validation, taxonomy reload, and restart smoke scenario.
 Levels describe increasing complexity, not dependencies. Every test owns its deployment and can run alone.
@@ -25,6 +26,7 @@ PR CI runs levels in order, parallelizes variations within each level, and stops
 uv sync --all-packages --frozen
 uv run pytest tests/gateway -n auto
 uv run pytest tests/gateway/test_04_policies.py -n auto
+uv run pytest tests/gateway/test_08_metering.py -n auto
 uv run pytest tests/gateway -k 'fallback and stream' -n auto
 ```
 
@@ -56,6 +58,13 @@ Use events to hold upstream streams and bounded polling to observe reloads. Avoi
 assertions, and complete-response snapshots containing minted IDs or timestamps.
 Invalid reloads have no public acknowledgement: the recovery scenario checks successful inference, readiness, and the
 original event bundle identity throughout ten configured reload intervals before publishing a valid replacement.
+
+Metering expectations are explicit dollar amounts calculated independently of the gateway. Cost comparisons use
+`rel=1e-12, abs=1e-15`: pytest's default absolute tolerance would let sub-microdollar charges disappear. The provider
+fixture accepts native usage JSON in `Reply(usage=...)`; omit the argument for its default counts, or use `None` for
+absent usage. Cache-write counts are exercised where the provider protocol reports them. Fixed estimation fixtures use
+the unknown upstream model's `o200k_base` encoding: `user: hi` is three tokens and `one two` is two.
+Partial usage retains reported cache-only prompts on disconnect; it estimates only counts the provider has not supplied.
 
 ## Event collection
 

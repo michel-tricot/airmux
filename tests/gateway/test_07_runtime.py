@@ -12,7 +12,7 @@ from upstream import TEXT, Reply
 
 if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
-    from upstream import Family
+    from upstream import Family, ReportedUsage
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)
@@ -42,9 +42,9 @@ def test_client_disconnect_records_partial_usage_and_other_requests_still_comple
 
 
 @pytest.mark.parametrize("family", FAMILIES)
-@pytest.mark.parametrize("usage", [False, True], ids=["estimated", "reported"])
+@pytest.mark.parametrize("usage", [None, "default"], ids=["estimated", "reported"])
 @pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
-def test_usage_is_estimated_when_absent_and_appended_across_restart(gateway: Gateway, family: Family, usage: bool, stream: bool):
+def test_usage_is_estimated_when_absent_and_appended_across_restart(gateway: Gateway, family: Family, usage: ReportedUsage, stream: bool):
     provider = gateway.add_provider(family)
     provider.replies["upstream-model-a"] = Reply(usage=usage)
     gateway.start()

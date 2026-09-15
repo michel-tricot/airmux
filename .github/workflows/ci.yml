@@ -89,6 +89,8 @@ jobs:
         run: uv run pytest tests/gateway/test_06_failures.py -n auto --junitxml=gateway-results/06-failures.xml
       - name: Gateway level 7 - runtime and CLI lifecycle
         run: uv run pytest tests/gateway/test_07_runtime.py tests/gateway/test_gateway.py -n auto --junitxml=gateway-results/07-runtime.xml
+      - name: Gateway level 8 - metering and pricing
+        run: uv run pytest tests/gateway/test_08_metering.py -n auto --junitxml=gateway-results/08-metering.xml
       - name: Upload gateway results and diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
