@@ -20,6 +20,10 @@ Runtime imports happen only when their commands execute to keep CLI startup fast
 of the CLI and each other. Control-plane migrations ship inside its package, allowing an installed wheel to migrate a
 database without a checkout.
 
+Shell completion is an explicit `completion` command in the `Goodies` help section. Keeping installation behind a command
+avoids permanent root options while making the large resource command tree practical to explore. The command detects the
+current shell by default and also accepts an explicit shell for automated setup.
+
 ## Local configuration
 
 Runtime commands resolve `--config`, then `TOKKEEPER_CONFIG`, then `./tokkeeper.yml`. Initialization writes into the current

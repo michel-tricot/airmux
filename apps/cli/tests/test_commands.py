@@ -6,7 +6,7 @@ import json
 
 from typer.testing import CliRunner
 
-from cli.common import RESOURCES
+from cli.common import GOODIES, RESOURCES
 from cli.main import app
 
 runner = CliRunner()
@@ -92,9 +92,22 @@ def test_categories_follow_the_user_task():
         assert categories[f"tokkeeper {command}"] == "Services"
     for command in ("catalog apply", "gateways list", "orgs list"):
         assert categories[f"tokkeeper {command}"] == "Manage resources"
+    assert categories["tokkeeper completion"] == GOODIES
 
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    headings = ("Getting started", "Connection", "Services", "Manage resources")
+    headings = ("Getting started", "Connection", GOODIES, "Services", "Manage resources")
     positions = [result.stdout.index(heading) for heading in headings]
     assert positions == sorted(positions)
+
+
+def test_completion_installs_for_the_selected_shell(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    result = runner.invoke(app, ["completion", "--shell", "fish"])
+
+    assert result.exit_code == 0, result.output
+    completion = tmp_path / ".config/fish/completions/tokkeeper.fish"
+    assert completion.is_file()
+    assert "tokkeeper" in completion.read_text()
+    assert f"Installed fish completion at {completion}" in result.output

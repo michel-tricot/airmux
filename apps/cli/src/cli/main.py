@@ -5,6 +5,7 @@ import typer
 from cli import (  # noqa: F401 importing registers the commands on the shared app
     auth,
     commands,
+    completion,
     control_plane,
     diagnostics,
     gateway,
