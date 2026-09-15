@@ -5,12 +5,14 @@ description: "Run the all-in-one TokKeeper image and Postgres with persistent na
 
 The default `docker-compose.yml` runs two containers: TokKeeper and Postgres.
 
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
 ## Start
 
 ```bash
 cp .env.example .env
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+tokkeeper quickstart --url http://localhost:8080
 ```
 
 The CLI reads provider keys from the checkout's `.env` and stores missing credentials through the management API. The
@@ -60,21 +62,3 @@ docker compose up -d --build --wait
 
 Startup applies the baseline migration and shipped catalog before serving. The image prepares volume ownership and runs
 application processes as UID `10001`.
-
-## Run deployment tests
-
-The deployment suite uses a local test provider and a disposable project:
-
-```bash
-TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
-  docker compose -p tokkeeper-test up -d --build --wait
-
-TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
-  DEPLOYMENT_PROJECT=tokkeeper-test \
-  DEPLOYMENT_FILE=docker-compose.yml \
-  DEPLOYMENT_URL=http://localhost:18080 \
-  uv run pytest tests/deployment
-```
-
-The suite creates accounts, makes buffered and streaming requests, checks usage export, restarts services, and verifies
-persistent state. Use only a disposable installation.

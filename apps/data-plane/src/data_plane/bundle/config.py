@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from contract.config import ConfigPath
 from data_plane.control_plane_link import ControlPlaneLink
 
 
@@ -15,7 +16,7 @@ class RemoteBundleConfig(BaseModel):
 
     kind: Literal["remote"] = "remote"
     control_plane: ControlPlaneLink
-    cache_dir: Path = Path(".tokkeeper")
+    cache_dir: ConfigPath = Path(".tokkeeper")
     poll_interval_s: float = Field(default=30.0, gt=0)
     heartbeat_interval_s: float = Field(default=30.0, gt=0)
 
@@ -23,10 +24,10 @@ class RemoteBundleConfig(BaseModel):
 class LocalBundleConfig(BaseModel):
     """The bundle is a file the operator writes, no control plane anywhere."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     kind: Literal["local"]
-    path: Path
+    path: ConfigPath
     reload_interval_s: float = Field(default=2.0, gt=0)
 
 

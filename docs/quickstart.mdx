@@ -12,6 +12,12 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 - An API key for at least one provider in the shipped catalog
 
 <Steps>
+  <Step title="Install the CLI">
+    ```bash
+    uv tool install tokkeeper
+    ```
+  </Step>
+
   <Step title="Clone and configure">
     ```bash
     git clone https://github.com/michel-tricot/tokkeeper.git
@@ -32,7 +38,7 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 
   <Step title="Claim and verify the instance">
     ```bash
-    uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+    tokkeeper quickstart --url http://localhost:8080
     ```
 
     Enter an email and password when prompted. The command creates or resumes an owner account, organization, and
@@ -86,13 +92,13 @@ local database, credentials, cached bundles, and pending usage.
 
 ## Gateway-only mode
 
-For adapter development or a local provider-neutral endpoint without Postgres or the console:
+For an inference endpoint managed through local files, without Docker, Postgres, or the console:
 
 ```bash
+tokkeeper gateway init --directory .tokkeeper-gateway
 export OPENAI_API_KEY='your-provider-key'
-uv run --package data-plane --no-dev --frozen tokkeeper-data-plane serve --config tokkeeper.standalone.yml
+tokkeeper gateway serve --config .tokkeeper-gateway/tokkeeper.yml
 ```
 
-Standalone mode reads `bundle.standalone.yml`, reloads it after changes, resolves provider credentials from environment
-variables, and discards usage events. Its built-in inference key is `sk-inf-standalone-dev`; keep this mode on a
-development machine.
+The standalone gateway loads the default taxonomy and ignores usage events.
+See [Gateway only](/docs/deployment/gateway) for independent installation and standalone configuration.

@@ -12,9 +12,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 
 def _config() -> AlembicConfig:
-    ini = Path(__file__).resolve().parents[2] / "alembic.ini"
-    cfg = AlembicConfig(str(ini))
-    cfg.set_main_option("script_location", str(ini.parent / "migrations"))
+    cfg = AlembicConfig()
+    cfg.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
     return cfg
 
 

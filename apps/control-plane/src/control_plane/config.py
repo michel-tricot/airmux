@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import os
+from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 
 from contract import EnvStoreConfig, SecretsConfig, load_config_section
+from contract.config import ConfigContext
 from control_plane.keys import validate_management_key_token
 from control_plane.throttling import ThrottleConfig
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 DEFAULT_DATABASE_URL = "postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper"
 """The local database, for a checkout where the host sets no DATABASE_URL."""
@@ -19,7 +18,7 @@ DEFAULT_CONSOLE_URL = "http://127.0.0.1:5000"
 
 
 class DatabaseConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     url: str = DEFAULT_DATABASE_URL
 
@@ -47,7 +46,7 @@ class DataPlaneBootstrap(BaseModel):
 
 
 class Settings(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     throttling: ThrottleConfig = Field(default_factory=ThrottleConfig)
@@ -56,6 +55,15 @@ class Settings(BaseModel):
 
     console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
     public_signup: bool = False
+
+    @field_validator("console_url")
+    @classmethod
+    def console_origin(cls, value: str) -> str:
+        url = HttpUrl(value)
+        if url.path not in {None, "/"} or url.query is not None or url.fragment is not None or url.username is not None:
+            message = "console_url must be an HTTP or HTTPS origin without a path, query, fragment, or credentials"
+            raise ValueError(message)
+        return str(url).rstrip("/")
 
 
 def database_url() -> str:
@@ -66,5 +74,6 @@ def database_url() -> str:
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from an explicit config path, falling back to TOKKEEPER_CONFIG for the serve/migrate contexts that pass it via env."""
-    section = load_config_section("control_plane", config_path)
-    return Settings.model_validate(section)
+    path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
+    section = load_config_section("control_plane", path)
+    return Settings.model_validate(section, context=ConfigContext(base_dir=path.parent))

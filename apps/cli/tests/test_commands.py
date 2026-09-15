@@ -6,7 +6,7 @@ import json
 
 from typer.testing import CliRunner
 
-from cli.common import RESOURCES
+from cli.common import GOODIES, RESOURCES
 from cli.main import app
 
 runner = CliRunner()
@@ -33,10 +33,13 @@ def test_every_command_is_listed_once():
         "tokkeeper orgs mine",
         "tokkeeper provider-credentials add",
         "tokkeeper management-keys create",
-        "tokkeeper taxonomy apply",
+        "tokkeeper catalog apply",
+        "tokkeeper gateways list",
     ):
         assert path in paths
 
+    assert "tokkeeper taxonomy apply" not in paths
+    assert "tokkeeper data-planes list" not in paths
     assert "tokkeeper bundles republish" in paths
     assert "tokkeeper bundles compile" not in paths
     assert "tokkeeper test verify" not in paths
@@ -77,3 +80,34 @@ def test_the_table_groups_by_category():
 
     assert result.exit_code == 0, result.output
     assert RESOURCES in result.stdout
+
+
+def test_categories_follow_the_user_task():
+    categories = {command["command"]: command["category"] for command in listed()}
+
+    assert categories["tokkeeper quickstart"] == "Getting started"
+    for command in ("login", "profiles list", "status", "doctor"):
+        assert categories[f"tokkeeper {command}"] == "Connection"
+    for command in ("gateway init", "gateway serve", "control-plane init", "control-plane serve"):
+        assert categories[f"tokkeeper {command}"] == "Services"
+    for command in ("catalog apply", "gateways list", "orgs list"):
+        assert categories[f"tokkeeper {command}"] == "Manage resources"
+    assert categories["tokkeeper completion"] == GOODIES
+
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    headings = ("Getting started", "Connection", GOODIES, "Services", "Manage resources")
+    positions = [result.stdout.index(heading) for heading in headings]
+    assert positions == sorted(positions)
+
+
+def test_completion_installs_for_the_selected_shell(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    result = runner.invoke(app, ["completion", "--shell", "fish"])
+
+    assert result.exit_code == 0, result.output
+    completion = tmp_path / ".config/fish/completions/tokkeeper.fish"
+    assert completion.is_file()
+    assert "tokkeeper" in completion.read_text()
+    assert f"Installed fish completion at {completion}" in result.output

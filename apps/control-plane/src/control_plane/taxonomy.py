@@ -4,23 +4,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-import yaml
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from pydantic import BaseModel, Field
 
-from contract import Capability, Modality, ParameterSupport  # noqa: TC001 pydantic resolves these annotations at runtime
+from contract import taxonomy
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import RequestModel
-from control_plane.models.model import ModelOut
-from control_plane.models.provider import ProviderOut
+from control_plane.models.model import ModelIn, ModelOut
+from control_plane.models.provider import ProviderIn, ProviderOut
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
-    from pathlib import Path
-    from typing import Self
+    from collections.abc import Callable
 
-
-def _default_capabilities() -> list[Capability]:
-    return ["streaming", "tools"]
+    from contract.taxonomy import ModelSpec, ProviderSpec
 
 
 @dataclass(frozen=True)
@@ -37,74 +32,9 @@ class UnknownProviderError(ValueError):
         super().__init__(f"Unknown provider {label}: {requirements}")
 
 
-class ProviderIn(RequestModel):
-    """An upstream provider endpoint and its request-profile settings."""
-
-    provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    kind: str = Field("openai_compatible", description="Adapter kind", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$")
-    base_url: HttpUrl = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
-    icon: str = Field(
-        "",
-        max_length=65536,
-        description=(
-            "Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. "
-            "Clients must sanitize this untrusted markup before rendering it"
-        ),
-    )
-    param_aliases: dict[str, str] = Field(default_factory=dict, max_length=256, description="Canonical param name to this provider's spelling")
-    accepted_params: list[str] | None = Field(None, max_length=256, description="Params known accepted beyond the core; consulted when params_closed")
-    params_closed: bool = Field(False, description="True when the provider's request schema rejects unknown params")
-
-    @field_validator("provider_id", mode="before")
-    @classmethod
-    def normalize_provider_id(cls, provider_id: object) -> object:
-        return provider_id.strip().casefold() if isinstance(provider_id, str) else provider_id
-
-
-class ModelIn(RequestModel):
-    model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
-    provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
-    egress_kind: str | None = Field(
-        None, description="Per-model egress adapter override", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$"
-    )
-    input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
-    output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
-    cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")
-    cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
-    context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
-    max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
-    input_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Accepted input modalities")
-    output_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Produced output modalities")
-    capabilities: list[Capability] = Field(default_factory=_default_capabilities, max_length=4, description="Capabilities supported by the model")
-    parameter_support: dict[str, ParameterSupport] = Field(
-        default_factory=dict,
-        max_length=128,
-        description="Known support for canonical request parameters; an absent parameter is unknown",
-    )
-
-    @field_validator("provider_id", mode="before")
-    @classmethod
-    def normalize_provider_id(cls, provider_id: object) -> object:
-        return provider_id.strip().casefold() if isinstance(provider_id, str) else provider_id
-
-
-class TaxonomySpec(RequestModel):
+class TaxonomySpec(taxonomy.TaxonomySpec, RequestModel):
     providers: list[ProviderIn] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
     models: list[ModelIn] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
-
-    @model_validator(mode="after")
-    def unique_entries(self) -> Self:
-        duplicate_providers = _duplicates(provider.provider_id for provider in self.providers)
-        duplicate_models = _duplicates(model.model_id for model in self.models)
-        if duplicate_providers or duplicate_models:
-            parts = [
-                f"duplicate {kind}: {', '.join(values)}"
-                for kind, values in (("providers", duplicate_providers), ("models", duplicate_models))
-                if values
-            ]
-            raise ValueError("; ".join(parts))
-        return self
 
 
 class TaxonomyOut(BaseModel):
@@ -130,21 +60,7 @@ class TaxonomyApplyOut(BaseModel):
     published: list[TaxonomyPublicationOut]
 
 
-def _duplicates(values: Iterable[str]) -> list[str]:
-    seen: set[str] = set()
-    duplicates: set[str] = set()
-    for value in values:
-        if value in seen:
-            duplicates.add(value)
-        seen.add(value)
-    return sorted(duplicates)
-
-
-def parse_taxonomy(path: Path) -> TaxonomySpec:
-    return TaxonomySpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
-
-
-async def upsert_provider(p: ProviderIn) -> Provider:
+async def upsert_provider(p: ProviderSpec) -> Provider:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == p.provider_id)
     if provider is None:
@@ -159,7 +75,7 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     return await provider.save()
 
 
-async def upsert_model(m: ModelIn) -> Model:
+async def upsert_model(m: ModelSpec) -> Model:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == m.provider_id)
     if provider is None:
@@ -199,7 +115,7 @@ async def upsert_model(m: ModelIn) -> Model:
     return await model.save()
 
 
-async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
+async def apply_taxonomy(spec: taxonomy.TaxonomySpec) -> tuple[int, int]:
     """Create or update every provider and model present in the taxonomy."""
     for p in spec.providers:
         await upsert_provider(p)
@@ -208,7 +124,7 @@ async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
     return len(spec.providers), len(spec.models)
 
 
-def _provider_matches(provider: Provider, desired: ProviderIn) -> bool:
+def _provider_matches(provider: Provider, desired: ProviderSpec) -> bool:
     return (
         provider.kind == desired.kind
         and provider.base_url == str(desired.base_url)
@@ -219,7 +135,7 @@ def _provider_matches(provider: Provider, desired: ProviderIn) -> bool:
     )
 
 
-def _model_matches(model: Model, desired: ModelIn, provider_names: dict[UUID, str]) -> bool:
+def _model_matches(model: Model, desired: ModelSpec, provider_names: dict[UUID, str]) -> bool:
     return (
         provider_names[model.provider_id] == desired.provider_id
         and model.upstream_model == (desired.upstream_model or desired.model_id)
@@ -243,7 +159,7 @@ def _change_counts[T, U](desired: list[T], existing: dict[str, U], key: Callable
     return TaxonomyChangeCounts(created=created, updated=len(desired) - created - unchanged, unchanged=unchanged)
 
 
-async def plan_taxonomy(spec: TaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
+async def plan_taxonomy(spec: taxonomy.TaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
     providers = await Provider.find()
     models = await Model.find()
     providers_by_name = {provider.name.casefold(): provider for provider in providers}

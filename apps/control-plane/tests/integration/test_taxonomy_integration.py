@@ -6,9 +6,10 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
-from control_plane.main import app
+from cli.control_plane import control_plane_app as app
+from contract.taxonomy import TaxonomySpec
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
-from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
+from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
 
@@ -229,11 +230,11 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
     _seed_orgs(tmp_path, "org-dev")
     tax_path = tmp_path / "taxonomy.yml"
     tax_path.write_text(TAXONOMY, encoding="utf-8")
-    assert runner.invoke(app, ["taxonomy", "--config", cfg]).exit_code == 0
+    assert runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg]).exit_code == 0
     doc = yaml.safe_load(tax_path.read_text(encoding="utf-8"))
     doc["models"].append({"model_id": "echo-2", "provider_id": "stub", "input_modalities": ["text"], "output_modalities": ["text"]})
     tax_path.write_text(yaml.safe_dump(doc), encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", cfg])
+    result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
     models = run_in_db(tmp_path, Model.find)
     assert "echo-2" in {m.name for m in models}
@@ -245,7 +246,7 @@ def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
     cfg = write_config(tmp_path, cp)
     _seed_orgs(tmp_path, "org-one", "org-two")
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", cfg])
+    result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
     bundles = run_in_db(tmp_path, Bundle.find)
     orgs = run_in_db(tmp_path, Org.find)
@@ -257,7 +258,7 @@ def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", cfg])
+    result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
     assert [p.name for p in run_in_db(tmp_path, Provider.find)] == ["stub"]
     assert {entry.user_id for entry in run_in_db(tmp_path, AuditLog.find)} == {"root"}
@@ -267,7 +268,7 @@ def test_taxonomy_command_applies_without_orgs(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", cfg])
+    result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
     assert [p.name for p in run_in_db(tmp_path, Provider.find)] == ["stub"]
     assert run_in_db(tmp_path, Bundle.find) == []

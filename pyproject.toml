@@ -1,21 +1,21 @@
 [project]
-name = "tokkeeper"
+name = "tokkeeper-workspace"
 version = "0.1.0"
 requires-python = ">=3.13"
 
 [tool.uv.workspace]
 members = ["lib/api-models", "lib/contract", "apps/*", "model-audit", "tests/*"]
-exclude = ["apps/console", "tests/deployment", "tests/documentation"]
+exclude = ["apps/console", "tests/deployment", "tests/documentation", "tests/gateway", "tests/installation"]
 
 [tool.uv.sources]
-api-models = { workspace = true }
-cli = { workspace = true }
-contract = { workspace = true }
-control-plane = { workspace = true }
-data-plane = { workspace = true }
+tokkeeper-api-models = { workspace = true }
+tokkeeper = { workspace = true }
+tokkeeper-contract = { workspace = true }
+tokkeeper-control-plane = { workspace = true }
+tokkeeper-data-plane = { workspace = true }
 
 [dependency-groups]
-backend = ["control-plane", "data-plane"]
+backend = ["tokkeeper"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",

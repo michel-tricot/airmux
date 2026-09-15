@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import httpx
 
 from cli.client import api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
-from cli.common import SETUP, app, console, orgs_app
+from cli.common import CONNECTION, GETTING_STARTED, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import (
     DEFAULT_CONSOLE_URL,
@@ -301,7 +301,7 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
     )
 
 
-@app.command(rich_help_panel=SETUP)
+@app.command(rich_help_panel=GETTING_STARTED)
 def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     url: str = typer.Option("", "--url", help="URL serving the control plane, web console, and gateway"),
     control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
@@ -373,7 +373,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     console.print(f"\n[dim]Console:[/dim] {console_url}")
 
 
-@app.command(rich_help_panel=SETUP)
+@app.command(rich_help_panel=CONNECTION)
 def login(
     url: str = typer.Option("", "--url", help="URL serving both the control plane API and web console"),
     control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),

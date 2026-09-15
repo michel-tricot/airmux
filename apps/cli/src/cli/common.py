@@ -7,7 +7,7 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
-app = typer.Typer(name="tokkeeper", no_args_is_help=True)
+app = typer.Typer(name="tokkeeper", help="Run an LLM gateway or manage a TokKeeper installation", no_args_is_help=True, add_completion=False)
 console = Console()
 
 
@@ -29,7 +29,7 @@ invocation = Invocation()
 def _show_version(value: bool) -> bool:
     if value:
         try:
-            release = version("cli")
+            release = version("tokkeeper")
         except PackageNotFoundError:
             release = "unknown"
         typer.echo(f"tokkeeper {release}")
@@ -47,8 +47,11 @@ def _main(
     invocation.version = version_
 
 
-SETUP = "Setup"
-RESOURCES = "Resources"
+GETTING_STARTED = "Getting started"
+CONNECTION = "Connection"
+SERVICES = "Services"
+RESOURCES = "Manage resources"
+GOODIES = "Goodies"
 
 orgs_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
@@ -65,11 +68,17 @@ provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
 rules_app = typer.Typer(help="Reusable workspace inference rules")
 policies_app = typer.Typer(help="Workspace inference restrictions, fallbacks, and budgets")
-taxonomy_app = typer.Typer(help="Apply the instance provider and model catalog")
+catalog_app = typer.Typer(help="Apply the instance provider and model catalog")
 bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")
-data_planes_app = typer.Typer(help="Gateways connected to this instance")
+gateways_app = typer.Typer(help="Gateways connected to this instance")
 profiles_app = typer.Typer(help="Saved deployment and organization contexts")
+
+gateway_app = typer.Typer(help="Initialize, validate, and run a local or connected gateway", no_args_is_help=True)
+app.add_typer(gateway_app, name="gateway", rich_help_panel=SERVICES)
+
+control_plane_app = typer.Typer(help="Initialize and run the control plane, manage its database, and recover access", no_args_is_help=True)
+app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SERVICES)
 
 for name, sub in (
     ("orgs", orgs_app),
@@ -80,13 +89,13 @@ for name, sub in (
     ("models", models_app),
     ("rules", rules_app),
     ("policies", policies_app),
-    ("taxonomy", taxonomy_app),
+    ("catalog", catalog_app),
     ("providers", providers_app),
     ("bundles", bundles_app),
     ("events", events_app),
     ("users", users_app),
     ("service-accounts", service_accounts_app),
-    ("data-planes", data_planes_app),
+    ("gateways", gateways_app),
 ):
     app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
-app.add_typer(profiles_app, name="profiles", rich_help_panel=SETUP, no_args_is_help=True)
+app.add_typer(profiles_app, name="profiles", rich_help_panel=CONNECTION, no_args_is_help=True)

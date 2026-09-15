@@ -54,8 +54,8 @@ request and rejects a route with a missing capability.
 The repository taxonomy is generated from the model-audit evidence. Apply it to an instance with a dry run first:
 
 ```bash
-tokkeeper taxonomy apply --file taxonomy/taxonomy.yml --dry-run
-tokkeeper taxonomy apply --file taxonomy/taxonomy.yml
+tokkeeper catalog apply --file taxonomy/taxonomy.yml --dry-run
+tokkeeper catalog apply --file taxonomy/taxonomy.yml
 ```
 
 Catalog changes publish new bundles for affected organizations. They do not mutate requests already executing on an older snapshot.

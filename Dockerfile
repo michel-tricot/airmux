@@ -5,14 +5,14 @@ COPY pyproject.toml uv.lock ./
 COPY lib/api-models/pyproject.toml lib/api-models/
 COPY lib/contract/pyproject.toml lib/contract/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
-COPY apps/data-plane/pyproject.toml apps/data-plane/
+COPY apps/cli/pyproject.toml apps/cli/
+COPY apps/data-plane/pyproject.toml apps/data-plane/README.md apps/data-plane/
 RUN uv sync --only-group backend --frozen --no-install-workspace
 COPY lib/api-models lib/api-models
 COPY lib/contract lib/contract
-COPY apps/control-plane/alembic.ini apps/control-plane/
-COPY apps/control-plane/migrations apps/control-plane/migrations
 COPY apps/control-plane/src apps/control-plane/src
 COPY apps/data-plane/src apps/data-plane/src
+COPY apps/cli/src apps/cli/src
 RUN uv sync --only-group backend --frozen
 
 FROM oven/bun:1 AS console-build
@@ -41,7 +41,8 @@ CMD ["/app/deploy/docker/start.sh", "control-plane"]
 
 FROM runtime AS data-plane
 EXPOSE 8081
-CMD ["/app/deploy/docker/start.sh", "data-plane"]
+ENTRYPOINT ["tokkeeper", "gateway"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8081"]
 
 FROM nginx:stable-bookworm AS console
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html

@@ -159,3 +159,15 @@ def test_an_unknown_var_fails_loudly(tmp_path):
     path.write_text("app:\n  cache_dir: ${var:missing}\n", encoding="utf-8")
     with pytest.raises(UnknownVarError):
         load_config_section("app", path)
+
+
+@pytest.mark.parametrize("reference", ["file:password.txt", "${file:password.txt}", "prefix-${file:password.txt}"])
+def test_file_references_are_relative_to_the_configuration(tmp_path, monkeypatch, reference):
+    configuration = tmp_path / "config"
+    configuration.mkdir()
+    (configuration / "password.txt").write_text("correct\n")
+    (tmp_path / "password.txt").write_text("wrong\n")
+    monkeypatch.chdir(tmp_path)
+    path = _write_config(configuration, f"app:\n  token: {reference}\n")
+    expected = "prefix-correct" if reference.startswith("prefix") else "correct"
+    assert load_config_section("app", path)["token"] == expected

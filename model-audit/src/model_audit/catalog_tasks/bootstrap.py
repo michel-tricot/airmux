@@ -117,9 +117,9 @@ def run_task(name: str, task: Callable[[Sequence[str]], int], *arguments: str) -
 
 
 def export_canonical_schemas() -> int:
-    executable = Path(sys.executable).with_name("tokkeeper-data-plane")
-    emit("\n=== tokkeeper-data-plane schema")
-    return run_command([str(executable), "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
+    executable = Path(sys.executable).with_name("tokkeeper")
+    emit("\n=== tokkeeper gateway schema")
+    return run_command([str(executable), "gateway", "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
 
 
 def derive(seed: dict) -> int:

@@ -31,6 +31,8 @@ jobs:
       - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
       - if: matrix.compose-file == 'docker-compose.yml'
         run: echo 'DEPLOYMENT_COMPACT_IMAGE=tokkeeper:local' >> "$GITHUB_ENV"
+      - if: matrix.compose-file == 'docker-compose.split.yml'
+        run: echo 'DEPLOYMENT_GATEWAY_IMAGE=tokkeeper-data-plane:local' >> "$GITHUB_ENV"
       - run: uv run pytest tests/deployment
       - if: failure()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color

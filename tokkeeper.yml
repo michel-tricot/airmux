@@ -8,7 +8,7 @@ control_plane:
     # the asyncpg driver on load and can be used as handed over.
     url: ${env:DATABASE_URL:-postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper}
   bootstrap:
-    # Generate once with: uv run tokkeeper-control-plane bootstrap-keygen
+    # Generate once with: uv run tokkeeper control-plane bootstrap-keygen
     token: ${file:${var:cache_dir}/dataplane.key}
   console_url: ${env:TOKKEEPER_CONSOLE_URL:-http://127.0.0.1:5000}
   public_signup: ${env:TOKKEEPER_PUBLIC_SIGNUP:-false}

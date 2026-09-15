@@ -23,9 +23,9 @@ bun install --frozen-lockfile
 uv run pre-commit install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
-uv run tokkeeper-control-plane bootstrap-keygen
-uv run tokkeeper-control-plane migrate
-uv run tokkeeper-control-plane taxonomy --file taxonomy/taxonomy.yml
+uv run tokkeeper control-plane bootstrap-keygen
+uv run tokkeeper control-plane migrate
+uv run tokkeeper control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
 Run `bootstrap-keygen` once. It creates `.tokkeeper/dataplane.key`; keep it with the matching local database. This leaves
@@ -37,14 +37,14 @@ Run each process in a separate terminal:
 
 | Process | Command | Address |
 | --- | --- | --- |
-| Control plane | `uv run tokkeeper-control-plane serve --dev` | `http://127.0.0.1:8000` |
-| Data plane | `uv run tokkeeper-data-plane serve --config tokkeeper.yml --dev` | `http://127.0.0.1:8080` |
+| Control plane | `uv run tokkeeper control-plane serve --dev` | `http://127.0.0.1:8000` |
+| Data plane | `uv run tokkeeper gateway serve --config tokkeeper.yml --dev` | `http://127.0.0.1:8080` |
 | Console | `bun run dev` | `http://127.0.0.1:5000` |
 
 Complete setup through Vite's public development origin:
 
 ```bash
-uv run --package cli tokkeeper quickstart --url http://127.0.0.1:5000
+uv run --package tokkeeper tokkeeper quickstart --url http://127.0.0.1:5000
 ```
 
 Vite forwards `/api` and `/inf` to the Python services. Use the same hostname throughout a browser session.
@@ -52,12 +52,20 @@ Vite forwards `/api` and `/inf` to the Python services. Use the same hostname th
 ## Gateway-only development
 
 ```bash
+uv run --package tokkeeper tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory .tokkeeper-gateway
 export OPENAI_API_KEY='your-provider-key'
-uv run tokkeeper-data-plane serve --config tokkeeper.standalone.yml --dev
+uv run --package tokkeeper tokkeeper gateway serve --config .tokkeeper-gateway/tokkeeper.yml --dev
 ```
 
-`bundle.standalone.yml` reloads after edits. This mode uses environment provider keys, a public development inference
-key, and a `devnull` usage outbox.
+The generated bundle references the existing taxonomy file. Both reload after edits. This mode uses environment provider
+keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
+for installation without a source checkout at runtime.
+
+The Docker-free subprocess suite verifies setup, authentication, buffered and streaming requests, taxonomy reloads, and restarts:
+
+```bash
+uv run pytest tests/gateway
+```
 
 ## Python checks
 
@@ -132,3 +140,32 @@ rm -rf .tokkeeper
 ```
 
 This permanently deletes the development database, runtime key, provider credentials, bundle cache, and usage outbox. Repeat initialization afterward.
+
+## Install a local build
+
+For an unreleased checkout, build the workspace packages and install the CLI into an isolated tool environment:
+
+```bash
+uv build --all-packages --wheel
+uv tool install --reinstall --find-links dist tokkeeper
+```
+
+The installation includes both runtimes. Invoke `tokkeeper` directly from any directory.
+
+## Run deployment tests
+
+The deployment suite uses a local test provider and a disposable project:
+
+```bash
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  docker compose -p tokkeeper-test up -d --build --wait
+
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  DEPLOYMENT_PROJECT=tokkeeper-test \
+  DEPLOYMENT_FILE=docker-compose.yml \
+  DEPLOYMENT_URL=http://localhost:18080 \
+  uv run pytest tests/deployment
+```
+
+The suite creates accounts, makes buffered and streaming requests, checks usage export, restarts services, and verifies
+persistent state. Use only a disposable installation.

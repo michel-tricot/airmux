@@ -7,10 +7,12 @@ The `docker-compose.split.yml` example runs Postgres, one control plane, the con
 
 ```bash
 docker compose -p tokkeeper-split -f docker-compose.split.yml up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+tokkeeper quickstart --url http://localhost:8080
 ```
 
 The console proxy distributes `/inf/` requests between both gateways.
+
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
 ## Volume ownership
 

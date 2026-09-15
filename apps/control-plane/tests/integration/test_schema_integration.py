@@ -39,7 +39,7 @@ def pg_db(tmp_path):
 def _migrated_url(pg_db) -> str:
     url = pg_db("migrated")
     config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
-    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "src" / "control_plane" / "migrations"))
     config.set_main_option("sqlalchemy.url", url)
     command.upgrade(config, "head")
     return url

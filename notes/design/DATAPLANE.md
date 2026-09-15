@@ -285,7 +285,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`tokkeeper-data-plane serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`tokkeeper gateway serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -398,7 +398,7 @@ Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`tokkeeper-data-plane serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`tokkeeper gateway serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state
@@ -443,18 +443,31 @@ zero or multiple bundles; readiness remains the authority for whether it can ser
 
 ### Local source
 
-A local bundle file contains plaintext inference tokens plus provider and model entries. Compilation:
+A local bundle file contains inference tokens (plaintext or environment references), rules, policies, and a required
+`taxonomy` field. The taxonomy is either inline `providers` and `models` or a path relative to the bundle. The local bundle
+path itself is relative to the data-plane configuration file. Both planes parse `contract.taxonomy.TaxonomySpec`, so catalog
+validation has one home without introducing a cross-plane import. Database application remains control-plane-owned.
+
+There is no merge between file and inline taxonomy definitions. This prevents hidden precedence and duplicated catalog
+facts. Compilation:
 
 - Hashes each inference token into a `KeyEntry`
 - Assigns the fixed local org and workspace ids
 - Synthesizes one platform-scoped credential reference per provider
-- Derives stable secret ids from provider ids and the bundle id from file content
+- Derives stable secret ids from provider ids and the bundle id from resolved bundle and taxonomy content
 - Produces the same `BundleV1` used by remote mode
 
-The initial file load happens during startup. Later reloads run in a worker thread when the file
-modification time changes. A malformed edit is logged and retried while the last good snapshot keeps
-serving. The local file is trusted because the operator controls its filesystem and contains
-plaintext caller tokens.
+The initial file load happens during startup. Later reloads read both inputs in a worker thread and compare semantic
+content, including resolved inference tokens. This detects taxonomy-only edits and replacements with unchanged timestamps.
+An unchanged bundle retains its existing snapshot. A malformed or missing input is logged and retried while the last good
+snapshot keeps serving. On a fresh start, invalid inputs leave readiness unavailable until repaired. Local mode does not
+persist a last-good snapshot across restarts. The operator owns and protects these files.
+
+The independently installable data-plane wheel and matching contract wheel require neither the control plane nor its ORM
+packages. `tokkeeper gateway init` admits the chosen taxonomy before creating a private directory, generates a random
+inference key, and writes a bundle referring to the taxonomy. `validate` performs local admission without network access.
+These commands and the file source are supported deployment interfaces, documented in `docs/deployment/gateway.mdx`.
+The `tests/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
 
 With the environment secret store, a synthesized provider ref resolves through the conventional
 `{PROVIDER_ID}_API_KEY` environment variable.
@@ -703,7 +716,7 @@ A canonical change affects every caller and provider family:
 2. Map the field or part by hand in every relevant format
 3. Decide explicit reject, adjustment, or support behavior for families that cannot carry it
 4. Add the case to the shared canonical corpus
-5. Run `uv run tokkeeper-data-plane schema` and review the committed schema diff
+5. Run `uv run tokkeeper gateway schema` and review the committed schema diff
 6. Prove buffered and streamed behavior where applicable
 
 Never replace explicit mappings with reflection. A shared field name is not a protocol guarantee.

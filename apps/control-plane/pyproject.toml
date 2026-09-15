@@ -1,25 +1,20 @@
 [project]
-name = "control-plane"
+name = "tokkeeper-control-plane"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-  "contract",
+  "tokkeeper-contract==0.1.0",
   "fastapi",
   "sqlmodel",
   "sqlalchemy[asyncio]>=2",
   "asyncpg",
   "alembic",
   "uvicorn[standard]",
-  "typer",
-  "rich",
   "python-dotenv",
   "pyyaml",
   "argon2-cffi>=23.1",
   "httpx",
 ]
-
-[project.scripts]
-tokkeeper-control-plane = "control_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

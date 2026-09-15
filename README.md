@@ -7,10 +7,10 @@ translation, workspace policies, scoped provider credentials, inference keys, fa
 
 TokKeeper separates mutable management work from the inference request path:
 
-| Plane | Responsibility |
-| --- | --- |
+| Plane         | Responsibility                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
 | Control plane | Organizations, workspaces, users, credentials, policies, catalog data, bundles, usage, and audit activity |
-| Data plane | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering |
+| Data plane    | Inference authentication, canonical translation, policy evaluation, routing, streaming, and metering      |
 
 Caller dialects and provider protocols meet at one canonical model. Adding a caller dialect requires one ingress adapter;
 adding a provider family requires one egress adapter. Policy, routing, and metering remain provider-neutral and are
@@ -18,7 +18,22 @@ evaluated against an immutable configuration bundle instead of querying manageme
 
 See [Architecture](docs/concepts/architecture.mdx) for the full data flow and failure boundaries.
 
-## Quickstart
+## Gateway only
+
+Install the inference gateway without Docker, Postgres, or the control plane:
+
+```bash
+uv tool install tokkeeper
+tokkeeper gateway init --directory gateway
+export OPENAI_API_KEY='your-provider-key'
+tokkeeper gateway validate --config gateway/tokkeeper.yml
+tokkeeper gateway serve --config gateway/tokkeeper.yml
+```
+
+The standalone gateway loads the default taxonomy and ignores usage events.
+See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration, and operation.
+
+## Full-platform quickstart
 
 You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
 
@@ -31,8 +46,9 @@ cp .env.example .env
 Add a provider key to `.env`, then run:
 
 ```sh
+uv tool install tokkeeper
 docker compose up -d --build --wait
-uv run --package cli --no-dev --frozen tokkeeper quickstart --url http://localhost:8080
+tokkeeper quickstart --url http://localhost:8080
 ```
 
 `quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
@@ -41,14 +57,13 @@ the console.
 
 ## Common commands
 
-| Goal | Command |
-| --- | --- |
-| Start or update the local stack | `docker compose up -d --build --wait` |
-| Check gateway readiness | `curl --fail http://localhost:8080/readyz` |
-| Inspect the installation | `uv run --package cli --no-dev --frozen tokkeeper doctor` |
-| Follow service logs | `docker compose logs -f tokkeeper` |
-| Stop while preserving state | `docker compose down` |
-| Validate documentation | `uv run pytest tests/documentation` |
+| Goal                            | Command                                                         |
+| ------------------------------- | --------------------------------------------------------------- |
+| Start or update the local stack | `docker compose up -d --build --wait`                           |
+| Check gateway readiness         | `curl --fail http://localhost:8080/readyz`                      |
+| Inspect the installation        | `tokkeeper doctor`                                              |
+| Follow service logs             | `docker compose logs -f tokkeeper`                              |
+| Stop while preserving state     | `docker compose down`                                           |
 
 ## Documentation
 

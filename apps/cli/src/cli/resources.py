@@ -42,9 +42,10 @@ from cli.client import (
 )
 from cli.common import (
     bundles_app,
+    catalog_app,
     console,
-    data_planes_app,
     events_app,
+    gateways_app,
     inference_keys_app,
     management_keys_app,
     models_app,
@@ -53,7 +54,6 @@ from cli.common import (
     provider_credentials_app,
     providers_app,
     service_accounts_app,
-    taxonomy_app,
     users_app,
     workspace_members_app,
     workspaces_app,
@@ -422,8 +422,8 @@ def _change_summary(changes: TaxonomyChangeCounts) -> str:
     return f"{changes.created} created, {changes.updated} updated, {changes.unchanged} unchanged"
 
 
-@taxonomy_app.command("apply")
-def taxonomy_apply(
+@catalog_app.command("apply")
+def catalog_apply(
     file: Annotated[Path, typer.Option("--file", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True)],
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate and report changes without applying them")] = False,
     control_plane_url: str = "",
@@ -471,8 +471,8 @@ INSTANCE_COLS = [
 ]
 
 
-@data_planes_app.command("list")
-def data_planes_list(
+@gateways_app.command("list")
+def gateways_list(
     all_: bool = typer.Option(False, "--all", help="Include gateways that are offline"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
@@ -482,7 +482,7 @@ def data_planes_list(
     with access_client(control_plane_url) as c:
         resp = c.get("/api/v1/instance/data-planes", params={"include_offline": all_})
         ensure_ok(resp)
-        print_rows("data planes", payload_rows(resp, DataPlaneInstanceOut), INSTANCE_COLS, fmt)
+        print_rows("gateways", payload_rows(resp, DataPlaneInstanceOut), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")

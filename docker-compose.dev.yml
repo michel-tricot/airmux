@@ -1,5 +1,5 @@
-# Dependencies only, for local development: the planes run from source (uv run tokkeeper-control-plane serve,
-# uv run tokkeeper-data-plane) against these. Matches the default database url in tokkeeper.yml.
+# Dependencies only, for local development: the planes run from source (uv run tokkeeper control-plane serve,
+# uv run tokkeeper gateway serve) against these. Matches the default database url in tokkeeper.yml.
 #   docker compose -f docker-compose.dev.yml up -d --wait
 services:
   postgres:

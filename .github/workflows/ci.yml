@@ -49,6 +49,28 @@ jobs:
           DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock
       - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
 
+  installation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - run: uv build --all-packages --wheel
+      - name: Install from built wheels
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
+        run: uv tool install --find-links dist tokkeeper
+      - run: uv run pytest tests/installation
+        env:
+          TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+      - run: uv run pytest tests/gateway
+        env:
+          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          DOCKER_HOST: unix:///no-docker.sock
+
   acceptance:
     runs-on: ubuntu-latest
     steps:

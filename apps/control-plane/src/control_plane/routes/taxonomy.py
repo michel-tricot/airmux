@@ -11,11 +11,9 @@ from control_plane.compiler import publish_changes
 from control_plane.deps import instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import Envelope
-from control_plane.models.model import ModelOut
-from control_plane.models.provider import ProviderOut
+from control_plane.models.model import ModelIn, ModelOut
+from control_plane.models.provider import ProviderIn, ProviderOut
 from control_plane.taxonomy import (
-    ModelIn,
-    ProviderIn,
     TaxonomyApplyOut,
     TaxonomyOut,
     TaxonomyPublicationOut,

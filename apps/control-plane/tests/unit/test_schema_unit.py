@@ -10,7 +10,7 @@ CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 
 
 def test_pre_release_schema_has_one_baseline_migration():
-    migrations = list((CONTROL_PLANE_DIR / "migrations" / "versions").glob("*.py"))
+    migrations = list((CONTROL_PLANE_DIR / "src" / "control_plane" / "migrations" / "versions").glob("*.py"))
     assert [migration.name for migration in migrations] == ["a9f3c6e1d8b4_initial_schema.py"]
 
 

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from data_plane.control_plane_link import ControlPlaneLink
 
 try:
-    VERSION = version("data-plane")
+    VERSION = version("tokkeeper-data-plane")
 except PackageNotFoundError:  # pragma: no cover - only when running from a non-installed tree
     VERSION = "unknown"
 
