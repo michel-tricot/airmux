@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 
-from contract import EnvStoreConfig, FileStoreConfig, SecretsConfig, load_config_section
+from contract import EnvStoreConfig, SecretsConfig, load_config_section
+from contract.config import ConfigContext
 from control_plane.keys import validate_management_key_token
 from control_plane.throttling import ThrottleConfig
 
@@ -75,7 +76,4 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from an explicit config path, falling back to TOKKEEPER_CONFIG for the serve/migrate contexts that pass it via env."""
     path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
     section = load_config_section("control_plane", path)
-    settings = Settings.model_validate(section)
-    if isinstance(settings.secrets, FileStoreConfig):
-        return settings.model_copy(update={"secrets": settings.secrets.model_copy(update={"root": path.parent / settings.secrets.root})})
-    return settings
+    return Settings.model_validate(section, context=ConfigContext(base_dir=path.parent))

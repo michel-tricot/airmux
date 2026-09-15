@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from contract import FileStoreConfig
+from contract.config import ConfigContext
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, load_config
 
@@ -195,3 +196,50 @@ def test_container_config_separates_gateway_state_from_shared_credentials(tmp_pa
     assert config.events.control_plane == config.bundle.control_plane
     assert config.events.cache_dir == config.bundle.cache_dir
     assert config.secrets == FileStoreConfig(root=tmp_path / "secrets")
+
+
+@pytest.mark.parametrize("configured_path", [None, "state", "/absolute/state"])
+def test_nested_paths_resolve_during_validation(tmp_path, configured_path):
+    paths = {} if configured_path is None else {"cache_dir": configured_path}
+    secrets = {} if configured_path is None else {"root": configured_path}
+    link = {"url": "http://cp.test", "token": "dp-token"}
+    config = Config.model_validate(
+        {
+            "bundle": {"kind": "remote", "control_plane": link, **paths},
+            "events": {"kind": "sqlite", "control_plane": link, **paths},
+            "secrets": {"kind": "file", **secrets},
+        },
+        context=ConfigContext(base_dir=tmp_path),
+    )
+    assert isinstance(config.bundle, RemoteBundleConfig)
+    assert isinstance(config.events, SqliteOutboxConfig)
+    assert isinstance(config.secrets, FileStoreConfig)
+    assert config.bundle.cache_dir == tmp_path / (configured_path or ".tokkeeper")
+    assert config.events.cache_dir == tmp_path / (configured_path or ".tokkeeper")
+    assert config.secrets.root == tmp_path / (configured_path or ".tokkeeper/secrets")
+
+
+def test_local_bundle_path_resolves_during_validation(tmp_path):
+    config = Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}}, context=ConfigContext(base_dir=tmp_path))
+    assert isinstance(config.bundle, LocalBundleConfig)
+    assert config.bundle.path == tmp_path / "bundle.yml"
+
+
+def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
+    directory = tmp_path / "deployment"
+    directory.mkdir()
+    config_file = directory / "tokkeeper.yml"
+    config_file.write_text(
+        "data_plane:\n"
+        "  bundle: {kind: local, path: bundle.yml}\n"
+        "  secrets: {kind: file}\n"
+        "  events: {kind: sqlite, control_plane: {url: 'http://cp.test', token: dp-token}}\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    config = load_config(config_file)
+    assert isinstance(config.bundle, LocalBundleConfig)
+    assert isinstance(config.events, SqliteOutboxConfig)
+    assert isinstance(config.secrets, FileStoreConfig)
+    assert config.bundle.path == directory / "bundle.yml"
+    assert config.events.cache_dir == directory / ".tokkeeper"
+    assert config.secrets.root == directory / ".tokkeeper/secrets"

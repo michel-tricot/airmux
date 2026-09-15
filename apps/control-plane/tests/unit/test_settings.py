@@ -157,3 +157,16 @@ def test_shared_migration_config_uses_the_selected_database_url(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
 
     assert database_url() == "postgresql+asyncpg://someone:secret@direct.db.internal:5432/app"
+
+
+@pytest.mark.parametrize("root", [None, "credentials", "/absolute/credentials"])
+def test_secret_store_paths_resolve_from_config_directory(tmp_path, monkeypatch, root):
+    directory = tmp_path / "deployment"
+    directory.mkdir()
+    config_file = directory / "tokkeeper.yml"
+    explicit_root = "" if root is None else f"    root: {root}\n"
+    config_file.write_text("control_plane:\n  secrets:\n    kind: file\n" + explicit_root)
+    monkeypatch.chdir(tmp_path)
+    settings = load_settings(config_file)
+    assert isinstance(settings.secrets, FileStoreConfig)
+    assert settings.secrets.root == directory / (root or ".tokkeeper/secrets")

@@ -44,3 +44,10 @@ prevents the runtimes from importing the CLI and continues to enforce data-plane
 
 See the [CLI reference](../../docs/reference/cli.mdx) for commands and the [standalone guide](../../docs/deployment/gateway.mdx)
 for a complete gateway setup.
+
+## Configuration paths
+
+Filesystem settings use the shared `ConfigPath` type. Each file loader supplies its containing directory through
+`ConfigContext`, and Pydantic resolves explicit and default paths during validation. Absolute paths stay unchanged.
+Loaders return the validated configuration directly; they do not inspect storage variants or copy nested settings to
+rewrite paths. New storage implementations declare their path fields using the same type.

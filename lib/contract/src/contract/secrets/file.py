@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 from anyio.to_thread import run_sync
 
+from contract.config import ConfigPath
 from contract.secrets.base import (
     Secret,
     SecretNotFoundError,
@@ -19,7 +20,8 @@ from contract.secrets.base import (
 )
 
 if TYPE_CHECKING:
-    from contract.secrets.base import SecretRef
+    from contract.config import ConfigPath
+from contract.secrets.base import SecretRef
 
 DIRECTORY_MODE = 0o700
 FILE_MODE = 0o600
@@ -52,7 +54,7 @@ def write_private_text(path: Path, value: str) -> None:
 
 class FileStoreConfig(SecretStoreConfig):
     kind: Literal["file"] = "file"
-    root: Path = DEFAULT_ROOT
+    root: ConfigPath = DEFAULT_ROOT
 
     def build(self) -> FileSecretStore:
         return FileSecretStore(root=self.root)
