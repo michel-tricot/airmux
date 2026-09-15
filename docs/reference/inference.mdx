@@ -11,9 +11,9 @@ Authorization: Bearer sk-inf-your-key
 Content-Type: application/json
 ```
 
-Explicit header credentials take precedence over the playground cookie. Repeated credential headers or different keys
-in the two headers return `400 ambiguous_credentials`; matching keys are accepted. Malformed authorization returns
-`401 invalid_token` without falling back to the cookie. Cookie authentication requires `X-Requested-With`; when
+Credentials are selected in order: a non-empty bearer token, a non-empty `x-api-key`, then the playground cookie.
+Authorization headers using another scheme and empty header values are skipped. The selected key is authenticated once;
+an invalid key returns `401 invalid_token` without trying lower-priority credentials. Cookie authentication requires `X-Requested-With`; when
 `Sec-Fetch-Site` is present, only `same-origin` and `none` are accepted.
 
 ## Surfaces

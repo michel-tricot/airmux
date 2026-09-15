@@ -41,19 +41,10 @@ def authenticate_request(request: Request, holder: BundleHolder) -> tuple[KeyEnt
 
 
 def _request_token(request: Request) -> str:
-    if any(len(request.headers.getlist(name)) > 1 for name in ("authorization", "x-api-key")):
-        raise RequestRejectedError(400, "ambiguous_credentials", "Use a single inference credential")
-    auth_header = request.headers.get("authorization", "")
-    scheme, separator, value = auth_header.partition(" ")
-    if "authorization" in request.headers and (not separator or scheme.casefold() != "bearer" or not value.strip()):
-        raise RequestRejectedError(401, "invalid_token")
-    bearer = value.strip()
-    api_key = request.headers.get("x-api-key", "").strip()
-    if "x-api-key" in request.headers and not api_key:
-        raise RequestRejectedError(401, "invalid_token")
-    if bearer and api_key and bearer != api_key:
-        raise RequestRejectedError(400, "ambiguous_credentials", "Use a single inference credential")
-    if token := bearer or api_key:
+    scheme, _, bearer = request.headers.get("authorization", "").partition(" ")
+    if scheme.casefold() == "bearer" and (token := bearer.strip()):
+        return token
+    if token := request.headers.get("x-api-key", "").strip():
         return token
     token = request.cookies.get(PLAYGROUND_COOKIE, "")
     if not token:

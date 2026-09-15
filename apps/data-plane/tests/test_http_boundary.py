@@ -84,46 +84,30 @@ def test_native_anthropic_key_header_authenticates_inference(dp_app, api_key):
 
 
 @respx.mock
-@pytest.mark.parametrize("scheme", ["Bearer", "bearer", "bEaReR"])
-def test_matching_explicit_credentials_have_one_identity(dp_app, api_key, scheme):
-    mock_control_plane()
-    with TestClient(dp_app) as client:
-        response = client.get("/inf/v1/models", headers={"authorization": f"{scheme} {api_key}", "x-api-key": api_key})
-    assert response.status_code == 200
-    assert_private_headers(response)
-
-
-@respx.mock
 @pytest.mark.parametrize(
-    "headers",
+    ("credentials", "cookie", "status"),
     [
-        [("authorization", "Bearer {key}"), ("x-api-key", "sk-inf-different")],
-        [("authorization", "Bearer {key}"), ("authorization", "Bearer {key}")],
-        [("x-api-key", "{key}"), ("x-api-key", "{key}")],
+        ({"authorization": "Bearer {key}", "x-api-key": "sk-inf-other"}, "sk-inf-other", 200),
+        ({"authorization": "Basic ignored", "x-api-key": "{key}"}, "sk-inf-other", 200),
+        ({}, "{key}", 200),
+        ({"authorization": "Bearer sk-inf-other", "x-api-key": "{key}"}, "{key}", 401),
+        ({"authorization": "Bearer ", "x-api-key": "{key}"}, "sk-inf-other", 200),
+        ({"authorization": "", "x-api-key": ""}, "{key}", 200),
     ],
 )
-def test_conflicting_or_duplicate_credentials_are_rejected(dp_app, api_key, headers):
+def test_credentials_use_bearer_then_api_key_then_cookie(dp_app, api_key, credentials, cookie, status):
     mock_control_plane()
+    credentials = {name: value.format(key=api_key) for name, value in credentials.items()}
     with TestClient(dp_app) as client:
-        response = client.get("/inf/v1/models", headers=[(name, value.format(key=api_key)) for name, value in headers])
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "ambiguous_credentials"
-    assert api_key not in response.text
-    assert_private_headers(response)
-
-
-@respx.mock
-@pytest.mark.parametrize("credentials", [{"authorization": "Basic invalid"}, {"authorization": ""}, {"x-api-key": ""}])
-def test_malformed_credentials_do_not_fall_back_to_a_cookie(dp_app, api_key, credentials):
-    mock_control_plane()
-    with TestClient(dp_app) as client:
-        client.cookies.set("tokkeeper_playground", api_key)
+        client.cookies.set("tokkeeper_playground", cookie.format(key=api_key))
         response = client.get(
             "/inf/v1/models",
             headers={**credentials, "x-requested-with": "console", "sec-fetch-site": "same-origin"},
         )
-    assert response.status_code == 401
-    assert response.json()["error"]["code"] == "invalid_token"
+    assert response.status_code == status
+    if status == 401:
+        assert response.json()["error"]["code"] == "invalid_token"
+    assert_private_headers(response)
 
 
 @respx.mock

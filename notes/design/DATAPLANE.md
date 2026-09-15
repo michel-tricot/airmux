@@ -83,9 +83,9 @@ minted by the control plane, or declared as plaintext in a trusted local bundle.
 4. Hashes the presented token and looks it up in the snapshot's key index
 
 `InferenceRoute` owns authentication for inference and discovery. It supplies a required `InferenceContext` containing
-the key, captured snapshot, and request start. Repeated credential headers or conflicting explicit keys return
-`400 ambiguous_credentials`. Matching keys are accepted. Explicit credentials take precedence over the protected
-playground cookie; malformed authorization never falls back to cookie authentication.
+the key, captured snapshot, and request start. It selects the first non-empty credential in order: bearer token,
+`x-api-key`, then the protected playground cookie. The selected key is authenticated once; an invalid key does not
+fall back to lower-priority credentials. Cookie authentication retains the requested-with and fetch-site checks.
 
 `ResponseHeadersMiddleware` wraps the entire Starlette application, including its server-error boundary. It mints the
 UUIDv7 request ID and monotonic start time once, sets `X-Request-ID`, `X-Content-Type-Options: nosniff`, and
@@ -245,7 +245,6 @@ dialect's error body. The canonical body is `{"error": {"code": "...", "message"
 | Status | Gateway code | Meaning |
 |---|---|---|
 | `400` | `invalid_request` | The body is not a JSON object or does not parse into the selected ingress |
-| `400` | `ambiguous_credentials` | Repeated credential headers or conflicting explicit keys |
 | `401` | `missing_bearer_token`, `invalid_token` | The caller did not present a live inference key |
 | `402` | `credential_unavailable` | No provider credential exists at any eligible scope |
 | `404` | `unknown_model` | The requested model is absent from the bundle |

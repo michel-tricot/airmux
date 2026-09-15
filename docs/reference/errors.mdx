@@ -27,11 +27,10 @@ TokKeeper keeps the error envelope native to the caller surface.
 | --- | --- | --- |
 | 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
 | 400 | `invalid_dialect` | Unknown `x-tokkeeper-dialect` value |
-| 400 | `ambiguous_credentials` | A credential header is repeated or bearer and API-key headers contain different keys |
 | 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
 | 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
 | 401 | `missing_bearer_token` | No bearer token, API-key header, or valid playground cookie |
-| 401 | `invalid_token` | Authorization is malformed or the inference key is unknown, expired, revoked, or not adopted yet |
+| 401 | `invalid_token` | The selected inference key is unknown, expired, revoked, or not adopted yet |
 | 402 | `credential_unavailable` | Policy and scope selection left no eligible credential |
 | 403 | `policy_denied` | A matching workspace restriction rejected the request |
 | 404 | `unknown_model` | Catalog model ID does not exist in the active bundle |
