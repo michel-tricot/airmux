@@ -8,11 +8,10 @@ Local runtime commands do not require a saved login profile. Remote resource com
 
 ## Installation
 
-From a checkout with Python 3.13+ and uv:
+With Python 3.13+ and uv:
 
 ```bash
-uv build --all-packages --wheel
-uv tool install --find-links dist tokkeeper
+uv tool install tokkeeper
 ```
 
 Choose the extras needed by this machine when installing:
@@ -25,13 +24,13 @@ Choose the extras needed by this machine when installing:
 | `tokkeeper[gateway,control-plane]` | Both local runtimes and remote management       |
 
 Quote a package requirement containing brackets in your shell. Add `--reinstall` to change the extras of an existing tool installation.
-All TokKeeper packages are versioned together. These commands install locally built wheels; they do not require a published release.
+All TokKeeper packages are versioned together.
 
 If `tokkeeper` is not on your PATH, run `uv tool update-shell` and restart your shell.
 `tokkeeper --version` prints the installed CLI version. Every command's `--help` works without installing its runtime;
 running a missing runtime command explains which extra to install.
 
-For development, `uv sync --all-packages` followed by `uv run tokkeeper` uses the checkout.
+For source checkouts and unreleased builds, see [Development](/docs/development).
 
 ## Local runtimes
 

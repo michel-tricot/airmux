@@ -59,7 +59,7 @@ uv run --package tokkeeper --extra gateway tokkeeper gateway serve --config .tok
 
 The generated bundle references the existing taxonomy file. Both reload after edits. This mode uses environment provider
 keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
-for wheel installation without a source checkout at runtime.
+for installation without a source checkout at runtime.
 
 The Docker-free subprocess suite verifies setup, authentication, buffered and streaming requests, taxonomy reloads, and restarts:
 
@@ -140,3 +140,33 @@ rm -rf .tokkeeper
 ```
 
 This permanently deletes the development database, runtime key, provider credentials, bundle cache, and usage outbox. Repeat initialization afterward.
+
+## Install a local build
+
+For an unreleased checkout, build the workspace packages and install the CLI into an isolated tool environment:
+
+```bash
+uv build --all-packages --wheel
+uv tool install --reinstall --find-links dist 'tokkeeper[gateway,control-plane]'
+```
+
+Choose `tokkeeper` for remote management, `tokkeeper[gateway]` for gateway-only use, or `tokkeeper[control-plane]`
+for the control plane. After installation, invoke `tokkeeper` directly from any directory.
+
+## Run deployment tests
+
+The deployment suite uses a local test provider and a disposable project:
+
+```bash
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  docker compose -p tokkeeper-test up -d --build --wait
+
+TOKKEEPER_PORT=18080 TOKKEEPER_PUBLIC_URL=http://localhost:18080 \
+  DEPLOYMENT_PROJECT=tokkeeper-test \
+  DEPLOYMENT_FILE=docker-compose.yml \
+  DEPLOYMENT_URL=http://localhost:18080 \
+  uv run pytest tests/deployment
+```
+
+The suite creates accounts, makes buffered and streaming requests, checks usage export, restarts services, and verifies
+persistent state. Use only a disposable installation.

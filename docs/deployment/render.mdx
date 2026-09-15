@@ -13,6 +13,8 @@ The `render.yaml` Blueprint creates:
 
 The selected plans use paid compute and storage. Review the price shown before creation.
 
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
 ## Deploy
 
 Use the deploy link, or choose **New > Blueprint** and connect your fork. The Blueprint sets `DATABASE_URL` from the
@@ -21,7 +23,7 @@ managed database and defaults the public origin to `RENDER_EXTERNAL_URL`.
 As soon as the service becomes reachable, claim it:
 
 ```bash
-uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart \
+tokkeeper quickstart \
   --url https://your-service.onrender.com
 ```
 

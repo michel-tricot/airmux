@@ -8,11 +8,10 @@ You supply the model taxonomy and inference keys through files. Provider credent
 
 ## Install
 
-You need Python 3.13+ and uv. From a checkout, build the workspace wheels and install the CLI with its gateway extra:
+You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
 
 ```bash
-uv build --all-packages --wheel
-uv tool install --find-links dist 'tokkeeper[gateway]'
+uv tool install 'tokkeeper[gateway]'
 ```
 
 The installed gateway runs outside the checkout. Keep your configuration and referenced taxonomy files.
@@ -24,7 +23,7 @@ If your shell cannot find `tokkeeper`, run `uv tool update-shell` and restart th
 Choose the shipped taxonomy or your own file in the same format:
 
 ```bash
-tokkeeper gateway init --taxonomy taxonomy/taxonomy.yml --directory gateway
+tokkeeper gateway init --taxonomy /path/to/taxonomy.yml --directory gateway
 export OPENAI_API_KEY='your-provider-key'
 tokkeeper gateway validate --config gateway/tokkeeper.yml
 tokkeeper gateway serve --config gateway/tokkeeper.yml

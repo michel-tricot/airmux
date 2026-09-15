@@ -3,11 +3,10 @@
 Run TokKeeper's inference gateway as a Python service with a local taxonomy, inference keys, and policies. Docker,
 Postgres, the control plane, and the console are not required. Python 3.13 or newer is required.
 
-Build the workspace wheels and install the CLI with its gateway extra:
+Install the CLI with the gateway runtime:
 
 ```bash
-uv build --all-packages --wheel
-uv tool install --find-links dist 'tokkeeper[gateway]'
+uv tool install 'tokkeeper[gateway]'
 ```
 
 Initialize against your existing taxonomy file:

@@ -5,6 +5,8 @@ description: "Deploy one TokKeeper Machine with a persistent volume and Managed 
 
 The checked-in `deploy/fly/fly.toml` runs the all-in-one image on one Machine. Keep the application, volume, and database in the same region.
 
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
 ## Provision
 
 Install and authenticate `flyctl`, choose an app name, and change `primary_region` in `deploy/fly/fly.toml` if you do not want `sjc`.
@@ -35,7 +37,7 @@ Keep Managed Postgres in session pooling mode. Startup uses the direct URL for m
 flyctl deploy --config deploy/fly/fly.toml --app my-tokkeeper --ha=false \
   --env TOKKEEPER_CONSOLE_URL=https://my-tokkeeper.fly.dev
 
-uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart \
+tokkeeper quickstart \
   --url https://my-tokkeeper.fly.dev
 ```
 

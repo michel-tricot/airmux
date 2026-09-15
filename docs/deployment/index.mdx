@@ -23,6 +23,8 @@ For the full platform, start with the all-in-one image unless you need to size o
   </Card>
 </Columns>
 
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
 ## Full-platform production requirements
 
 | Requirement | Purpose |
@@ -41,7 +43,7 @@ The all-in-one container listens on port `8080` and serves the console, `/api/v1
 The first human account becomes the instance owner. Claim a new public instance immediately after it becomes reachable:
 
 ```bash
-uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart --url https://llm.example.com
+tokkeeper quickstart --url https://llm.example.com
 ```
 
 Until the first account is created, anyone who can reach the sign-up page can claim ownership. Public sign-up is

@@ -6,6 +6,8 @@ description: "Run Docker Compose on a Droplet with the checked-in Caddy overlay 
 Use an Ubuntu Docker Droplet with at least 2 GB of memory. The `deploy/digitalocean/compose.yml` overlay keeps TokKeeper's
 port private and publishes Caddy on ports 80 and 443.
 
+Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+
 ## Prepare the host
 
 1. Point the domain's DNS record to the Droplet
@@ -31,7 +33,7 @@ docker compose \
   -f deploy/digitalocean/compose.yml \
   up -d --build --wait
 
-uv run --package tokkeeper --no-dev --frozen tokkeeper quickstart \
+tokkeeper quickstart \
   --url https://llm.example.com
 ```
 
