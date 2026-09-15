@@ -47,8 +47,10 @@ def _main(
     invocation.version = version_
 
 
-SETUP = "Setup"
-RESOURCES = "Resources"
+GETTING_STARTED = "Getting started"
+CONNECTION = "Connection"
+SERVICES = "Services"
+RESOURCES = "Manage resources"
 
 orgs_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
@@ -71,6 +73,12 @@ events_app = typer.Typer(help="Requests, tokens and spend")
 gateways_app = typer.Typer(help="Gateways connected to this instance")
 profiles_app = typer.Typer(help="Saved deployment and organization contexts")
 
+gateway_app = typer.Typer(help="Initialize, validate, and run a local or connected gateway", no_args_is_help=True)
+app.add_typer(gateway_app, name="gateway", rich_help_panel=SERVICES)
+
+control_plane_app = typer.Typer(help="Initialize and run the control plane, manage its database, and recover access", no_args_is_help=True)
+app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SERVICES)
+
 for name, sub in (
     ("orgs", orgs_app),
     ("workspaces", workspaces_app),
@@ -89,4 +97,4 @@ for name, sub in (
     ("gateways", gateways_app),
 ):
     app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
-app.add_typer(profiles_app, name="profiles", rich_help_panel=SETUP, no_args_is_help=True)
+app.add_typer(profiles_app, name="profiles", rich_help_panel=CONNECTION, no_args_is_help=True)

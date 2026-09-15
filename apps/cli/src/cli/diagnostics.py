@@ -8,7 +8,7 @@ import httpx
 import typer
 
 from cli.client import resolve_control_plane_url
-from cli.common import SETUP, app, console, profiles_app
+from cli.common import CONNECTION, app, console, profiles_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import active_profile, config_path, load_active_profile, load_config, remove_profile, set_active
 
@@ -90,7 +90,7 @@ def profiles_remove(name: str) -> None:
     console.print(f"Removed profile [bold]{name}[/bold]")
 
 
-@app.command(rich_help_panel=SETUP)
+@app.command(rich_help_panel=CONNECTION)
 def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
     config = load_config()
@@ -146,7 +146,7 @@ def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, 
         ]
 
 
-@app.command(rich_help_panel=SETUP)
+@app.command(rich_help_panel=CONNECTION)
 def doctor(
     control_plane_url: str = typer.Option("", help="Control plane URL; defaults to the active context"),
     gateway_url: str = typer.Option("", help="Gateway URL; defaults to TOKKEEPER_GATEWAY_URL or the active context"),

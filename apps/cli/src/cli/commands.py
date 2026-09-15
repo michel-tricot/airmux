@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from cli.common import RESOURCES, SETUP, app, console
+from cli.common import CONNECTION, GETTING_STARTED, RESOURCES, SERVICES, app, console
 from cli.output import Col, FormatOption, OutputFormat, build_table, print_rows
 
 COMMAND_COLS = [
@@ -18,7 +18,7 @@ sentence do not fit a terminal and rich answers that by wrapping every summary o
 
 TABLE_COLS = [Col("command", "Command", style="bold", no_wrap=True), Col("summary", "What it does")]
 
-CATEGORY_ORDER = [SETUP, RESOURCES]
+CATEGORY_ORDER = [GETTING_STARTED, CONNECTION, SERVICES, RESOURCES]
 UNCATEGORISED = "Other"
 
 
@@ -52,7 +52,7 @@ def _sort_key(row: dict) -> tuple[int, str]:
     return order, row["command"]
 
 
-@app.command()
+@app.command(rich_help_panel=GETTING_STARTED)
 def commands(fmt: FormatOption = OutputFormat.table) -> None:
     """List every command in one place, instead of one --help at a time."""
     root = typer.main.get_command(app)

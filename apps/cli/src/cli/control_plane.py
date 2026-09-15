@@ -8,13 +8,10 @@ from urllib.parse import quote
 
 import typer
 
-from cli.common import SETUP, app
+from cli.common import control_plane_app
 from cli.output import Col, FormatOption, OutputFormat
 from cli.output import print_rows as _print_rows
 from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, configuration_path, runtime_command
-
-control_plane_app = typer.Typer(help="Initialize and run the control plane, manage its database, and recover access", no_args_is_help=True)
-app.add_typer(control_plane_app, name="control-plane", rich_help_panel=SETUP)
 
 
 @control_plane_app.command()

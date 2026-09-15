@@ -80,3 +80,21 @@ def test_the_table_groups_by_category():
 
     assert result.exit_code == 0, result.output
     assert RESOURCES in result.stdout
+
+
+def test_categories_follow_the_user_task():
+    categories = {command["command"]: command["category"] for command in listed()}
+
+    assert categories["tokkeeper quickstart"] == "Getting started"
+    for command in ("login", "profiles list", "status", "doctor"):
+        assert categories[f"tokkeeper {command}"] == "Connection"
+    for command in ("gateway init", "gateway serve", "control-plane init", "control-plane serve"):
+        assert categories[f"tokkeeper {command}"] == "Services"
+    for command in ("catalog apply", "gateways list", "orgs list"):
+        assert categories[f"tokkeeper {command}"] == "Manage resources"
+
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    headings = ("Getting started", "Connection", "Services", "Manage resources")
+    positions = [result.stdout.index(heading) for heading in headings]
+    assert positions == sorted(positions)

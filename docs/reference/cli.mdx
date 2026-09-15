@@ -109,7 +109,18 @@ tokkeeper commands -f table
 
 `tokkeeper commands` is the source-backed inventory for the installed CLI version.
 
-## Setup commands
+Top-level help groups commands by task:
+
+| Category | Commands |
+| --- | --- |
+| Getting started | `quickstart`, `commands` |
+| Connection | `login`, `profiles`, `status`, `doctor` |
+| Services | `gateway`, `control-plane` |
+| Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, bundles, and events |
+
+Each command group's help keeps its subcommands in one flat list.
+
+## Getting started and connection commands
 
 | Command                                            | Purpose                                                                                                       |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |

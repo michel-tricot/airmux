@@ -6,11 +6,8 @@ from typing import Annotated
 
 import typer
 
-from cli.common import SETUP, app
+from cli.common import gateway_app
 from cli.runtime import ConfigOption, DirectoryOption, HostOption, PortOption, configuration_path, runtime_command
-
-gateway_app = typer.Typer(help="Initialize, validate, and run a local or connected gateway", no_args_is_help=True)
-app.add_typer(gateway_app, name="gateway", rich_help_panel=SETUP)
 
 
 @gateway_app.command()
