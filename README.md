@@ -1,9 +1,9 @@
 <div align="center">
   <h1>TokKeeper</h1>
-  <p><strong>The self-hosted LLM gateway for multi-provider applications</strong></p>
+  <p><strong>One self-hosted LLM gateway. Any compatible client. Multiple providers.</strong></p>
   <p>
-    Keep using familiar SDKs while TokKeeper centralizes provider translation, routing, policy, credentials,
-    failover, and usage accounting behind one inference endpoint.
+    Connect through a supported inference API while TokKeeper centralizes provider translation, routing, policy,
+    credentials, failover, and usage accounting behind one endpoint.
   </p>
   <p>
     <a href="https://github.com/michel-tricot/tokkeeper/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michel-tricot/tokkeeper/actions/workflows/ci.yml/badge.svg"></a>
@@ -19,9 +19,10 @@
   </p>
 </div>
 
-TokKeeper gives OpenAI and Anthropic clients one self-hosted origin for calling multiple provider families. Applications
-send a standard Chat Completions, Responses, Messages, or canonical request. TokKeeper authenticates the workspace,
-applies policy, selects a model and scoped provider credential, translates the request, and records the result.
+TokKeeper gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
+Clients can send Chat Completions, Responses, Messages, or canonical requests through any SDK or integration that can
+target the corresponding HTTP API. TokKeeper authenticates the workspace, applies policy, selects a model and scoped
+provider credential, translates the request, and records the result.
 
 ## Quickstart
 
@@ -60,9 +61,19 @@ The same gateway accepts streaming requests, tool calls, structured output, reas
 selected model supports them. Continue with the [gateway-only guide](docs/deployment/gateway.mdx) for configuration and
 operation.
 
-## Use your existing SDK
+## Use your existing client
 
-Point an OpenAI client at `/inf/v1` and replace the upstream key with a TokKeeper inference key:
+Any client that can target one of TokKeeper's exposed HTTP APIs and send a bearer token can connect. That includes SDKs,
+agent frameworks, CLIs, services, and raw HTTP integrations.
+
+| API | Endpoint |
+| --- | --- |
+| Chat Completions | `POST /inf/v1/chat/completions` |
+| Responses | `POST /inf/v1/responses` |
+| Messages | `POST /inf/v1/messages` |
+| Canonical | `POST /inf/v1/chat/completions` with `x-tokkeeper-dialect: canonical` |
+
+The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with a TokKeeper inference key:
 
 ```python
 import os
@@ -82,13 +93,14 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-TokKeeper also supports the OpenAI Responses API, the Anthropic Messages API, and its provider-neutral canonical API.
-See the [OpenAI SDK](docs/guides/openai-sdk.mdx) and [Anthropic SDK](docs/guides/anthropic-sdk.mdx) guides for complete
-examples, including cross-provider routing and streaming.
+The client protocol does not constrain the provider route. A Messages request can target an OpenAI-compatible model,
+and a Chat Completions request can target an Anthropic model. TokKeeper translates the request and returns the response
+and errors in the caller's dialect. See the [OpenAI SDK](docs/guides/openai-sdk.mdx) and
+[Anthropic SDK](docs/guides/anthropic-sdk.mdx) guides for complete examples, including streaming.
 
 ## Why TokKeeper
 
-- **One application interface:** keep OpenAI or Anthropic request shapes while routing to compatible provider families
+- **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration that speaks an exposed API
 - **Policy at the gateway:** compose model and provider allowlists, price ceilings, request limits, credential rules, denials, strict parameters, and fallbacks
 - **Scoped provider secrets:** separate instance, organization, and workspace credentials without exposing secret values to configuration bundles
 - **Predictable failover:** retry eligible credentials and route to bounded backup models without escaping workspace policy
