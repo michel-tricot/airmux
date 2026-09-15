@@ -65,6 +65,10 @@ fixture accepts native usage JSON in `Reply(usage=...)`; omit the argument for i
 absent usage. Cache-write counts are exercised where the provider protocol reports them. Fixed estimation fixtures use
 the unknown upstream model's `o200k_base` encoding: `user: hi` is three tokens and `one two` is two.
 Partial usage retains reported cache-only prompts on disconnect; it estimates only counts the provider has not supplied.
+Metering case tables pair handwritten native usage JSON with independently written token counts and dollar amounts.
+The scenario functions select a case for each family without translating usage or calculating expectations. Disconnect
+cases reuse native payloads but declare their partial expectations separately. Every scenario remains parameterized over
+the full applicable protocol matrix; a missing family or case fails instead of falling back to shared defaults.
 
 ## Event collection
 
