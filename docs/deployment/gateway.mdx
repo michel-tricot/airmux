@@ -60,7 +60,6 @@ curl --fail http://127.0.0.1:8080/readyz
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'X-Tokkeeper-Dialect: openai_native' \
   -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
 

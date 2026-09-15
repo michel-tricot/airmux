@@ -35,7 +35,6 @@ for chunk in stream:
 curl --no-buffer http://localhost:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'x-tokkeeper-dialect: canonical' \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Count from one to five"}],"stream":true}'
 ```
 
