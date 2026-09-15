@@ -27,10 +27,8 @@ avoids permanent root options while making the large resource command tree pract
 current shell by default and also accepts an explicit shell for automated setup.
 
 One public distribution avoids exposing the repository decomposition as an installation or release concern. A GitHub
-release builds and verifies its wheel and source distribution before a separate, protected job publishes them through PyPI
-trusted publishing. The publishing job receives no stored package-index credential, and the release tag must match the
-public distribution version. Public installation documentation therefore describes the same artifact exercised by the
-installed behavior suite.
+release builds and verifies its wheel and source distribution before publishing them. The release tag must match the public
+distribution version, and the installed behavior suite exercises the same artifact users receive.
 
 ## Local configuration
 

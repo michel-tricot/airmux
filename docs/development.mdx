@@ -160,10 +160,6 @@ Publishing a GitHub release with a tag such as `v0.1.0` runs `publish-python.yml
 from the public distribution version, builds one wheel and source distribution, rebuilds the wheel from its source
 distribution, and runs the installed behavior suite before publishing from a separate job.
 
-Before the first release, create the protected `pypi` GitHub environment. Configure a PyPI pending trusted publisher for
-the `tokkeeper` project with owner `michel-tricot`, repository `airllm`, workflow `publish-python.yml`, and environment `pypi`.
-The workflow uses short-lived OpenID Connect credentials and stores no PyPI token.
-
 ## Run deployment tests
 
 The deployment suite uses a local test provider and a disposable project:
