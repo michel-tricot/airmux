@@ -20,7 +20,11 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
     model_id = provider.models[0]
     model = json.dumps(model_id, ensure_ascii=False)
     body = json.dumps(
-        {"model": model_id, "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}]},
+        {
+            "model": model_id,
+            "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}],
+            "max_completion_tokens": 16,
+        },
         separators=(",", ":"),
     )
     provider_step = (
@@ -39,7 +43,6 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
         "     curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \\",
         '       -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\',
         "       -H 'Content-Type: application/json' \\",
-        "       -H 'X-Tokkeeper-Dialect: openai_native' \\",
         f"       -d {shell_quote(body)}",
     )
 

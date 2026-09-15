@@ -137,6 +137,7 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
     assert "Any client that can target one of TokKeeper's exposed HTTP APIs" in readme
+    assert "x-tokkeeper-dialect: openai_native" not in readme.lower()
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
