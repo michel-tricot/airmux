@@ -147,7 +147,7 @@ For an unreleased checkout, build the workspace packages and install the CLI int
 
 ```bash
 uv build --all-packages --wheel
-uv tool install --reinstall --find-links dist 'tokkeeper[gateway,control-plane]'
+uv tool install --reinstall --find-links dist 'tokkeeper[all]'
 ```
 
 Choose `tokkeeper` for remote management, `tokkeeper[gateway]` for gateway-only use, or `tokkeeper[control-plane]`

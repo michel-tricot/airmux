@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        extra: ['', gateway, control-plane]
+        extra: ['', gateway, control-plane, all]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -73,7 +73,7 @@ jobs:
         env:
           TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
           TOKKEEPER_INSTALL_EXTRA: ${{ matrix.extra }}
-      - if: matrix.extra == 'gateway'
+      - if: matrix.extra == 'gateway' || matrix.extra == 'all'
         run: uv run pytest tests/gateway
         env:
           TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper

@@ -12,7 +12,7 @@ request and response boundaries.
 ## Installation boundary
 
 The `tokkeeper` distribution provides remote management without installing either server. The `gateway` and `control-plane`
-extras add the corresponding runtime. Workspace distributions use the `tokkeeper-` prefix and exact matching versions;
+extras add the corresponding runtime; the `all` extra installs both. Workspace distributions use the `tokkeeper-` prefix and exact matching versions;
 Python import names remain `cli`, `contract`, `control_plane`, and `data_plane`. The workspace root is not the CLI distribution.
 
 Runtime imports happen only when their commands execute. Help and command inventory are available in every installation.

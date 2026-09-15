@@ -40,7 +40,7 @@ def test_help_inventory_and_version_work_in_every_installation(installation, tmp
         help_text = run_cli(installation, tmp_path, group, "serve", "--help").stdout
         assert "--config" in help_text
         assert "--port" in help_text
-        if installation[1] != group:
+        if installation[1] not in {group, "all"}:
             missing = run_cli(installation, tmp_path, group, "serve", check=False)
             assert missing.returncode == 1
             assert f"tokkeeper[{group}]" in missing.stderr
@@ -74,7 +74,7 @@ async def wait_for_database(url):
 
 
 def test_installed_control_plane_migrates_and_serves_outside_the_checkout(installation, tmp_path):
-    if installation[1] != "control-plane":
+    if installation[1] not in {"control-plane", "all"}:
         pytest.skip("requires the control-plane installation")
     schema = yaml.safe_load(run_cli(installation, tmp_path, "control-plane", "openapi").stdout)
     assert "/api/v1/instance/oss/claim" in schema["paths"]

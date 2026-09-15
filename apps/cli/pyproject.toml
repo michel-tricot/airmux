@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+all = ["tokkeeper-data-plane==0.1.0", "tokkeeper-control-plane==0.1.0"]
 gateway = ["tokkeeper-data-plane==0.1.0"]
 control-plane = ["tokkeeper-control-plane==0.1.0"]
 
