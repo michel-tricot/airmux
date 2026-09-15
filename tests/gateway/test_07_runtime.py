@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import httpx
 import pytest
 from gateway_harness import DIALECTS, FAMILIES, PROTOCOLS, SECOND_KEY, eventually, request_body, text_of
-from upstream import Reply
+from upstream import TEXT, Reply
 
 if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
@@ -137,10 +138,20 @@ def test_bad_reload_preserves_snapshot_and_valid_replacement_recovers(gateway: G
         gateway.taxonomy_path.write_text("models: [{model_id: broken}]\n")
     else:
         gateway.taxonomy_path.unlink()
-    eventually(lambda: "local bundle reload" in (gateway.directory / "gateway.log").read_text())
-    assert gateway.request().status_code == 200
-    assert gateway.events(2)[1].bundle_id == first.bundle_id
-    assert httpx.get(f"{gateway.url}/readyz").status_code == 200
+    preserved = []
+    deadline = time.monotonic() + 10 * gateway.reload_interval_s
+
+    while True:
+        response = gateway.request()
+        preserved.append(response)
+        assert response.status_code == 200, response.text
+        assert text_of("canonical", response) == TEXT
+        assert gateway.events(1 + len(preserved))[-1].bundle_id == first.bundle_id
+        readiness = httpx.get(f"{gateway.url}/readyz", timeout=1)
+        assert readiness.status_code == 200
+        assert readiness.json() == {"status": "ready"}
+        if time.monotonic() >= deadline:
+            break
     gateway.taxonomy["models"][0]["model_id"] = "model-new"
     gateway.taxonomy["models"][0]["upstream_model"] = "upstream-model-new"
     gateway.write_files()
@@ -152,7 +163,7 @@ def test_bad_reload_preserves_snapshot_and_valid_replacement_recovers(gateway: G
 
     eventually(recovered)
     assert gateway.request().status_code == 404
-    events = gateway.events(3 + len(observed))
+    events = gateway.events(2 + len(preserved) + len(observed))
     assert events[-2].status == "ok"
     assert events[-2].model_id == "model-new"
     assert events[-2].bundle_id != first.bundle_id

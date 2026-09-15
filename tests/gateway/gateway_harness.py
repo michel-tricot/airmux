@@ -95,6 +95,7 @@ class Gateway:
         self.taxonomy_path = directory / "taxonomy.yml"
         self.bundle_path = directory / "bundle.yml"
         self.events_path = directory / "usage/events.jsonl"
+        self.reload_interval_s = 0.05
         self.executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper"))
         self.environment = {**os.environ, "STUB_API_KEY": UPSTREAM_KEY, "BACKUP_API_KEY": UPSTREAM_KEY, "DOCKER_HOST": "unix:///no-docker.sock"}
         self.providers: list[Upstream] = []
@@ -170,7 +171,7 @@ class Gateway:
             yaml.safe_dump(
                 {
                     "data_plane": {
-                        "bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": 0.05},
+                        "bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": self.reload_interval_s},
                         "secrets": {"kind": "env"},
                         "events": {"kind": "file", "path": "usage/events.jsonl"},
                     }

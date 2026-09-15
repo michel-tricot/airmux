@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 from gateway_harness import DIALECTS, FAMILIES, request_body, stream_payloads, streamed_text, text_of
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
     from upstream import Family
 
+Attachment = Literal["image", "document"]
 WEATHER: dict[str, object] = {
     "name": "get_weather",
     "description": "Weather in a city",
@@ -58,6 +59,30 @@ def streamed_tool_call(dialect: Dialect, response) -> tuple[str, str, str]:
     return tool["id"], tool["name"], arguments
 
 
+def streamed_reasoning(dialect: Dialect, response) -> str:
+    payloads = stream_payloads(response)
+    if dialect == "canonical":
+        return "".join(event["delta"]["text"] for event in payloads if event.get("delta", {}).get("type") == "reasoning")
+    if dialect == "openai_native":
+        return "".join(choice["delta"].get("reasoning_content", "") for event in payloads for choice in event.get("choices", []))
+    if dialect == "openai_responses":
+        return "".join(event["delta"] for event in payloads if event.get("type") == "response.reasoning_summary_text.delta")
+    return "".join(
+        event["delta"]["thinking"] for event in payloads if event.get("type") == "content_block_delta" and event["delta"]["type"] == "thinking_delta"
+    )
+
+
+def buffered_reasoning(dialect: Dialect, response) -> str:
+    body = response.json()
+    if dialect == "openai_native":
+        return body["choices"][0]["message"]["reasoning_content"]
+    if dialect == "openai_responses":
+        return "".join(part["text"] for item in body["output"] if item["type"] == "reasoning" for part in item["summary"])
+    if dialect == "anthropic":
+        return "".join(part["thinking"] for part in body["content"] if part["type"] == "thinking")
+    return "".join(part["text"] for part in body["content"] if part["type"] == "reasoning")
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("family", FAMILIES)
 @pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
@@ -70,8 +95,12 @@ def test_tool_names_ids_and_fragmented_arguments_survive_every_protocol_pair(gat
     tool_id, name, arguments = streamed_tool_call(dialect, response) if stream else buffered_tool_call(dialect, response)
     assert (tool_id, name, json.loads(arguments)) == ("call-weather", "get_weather", json.loads(ARGUMENTS))
     sent = provider.requests[0].body["tools"]
-    assert "get_weather" in json.dumps(sent)
-    assert "city" in json.dumps(sent)
+    if family == "anthropic":
+        assert sent == [{"name": "get_weather", "description": "Weather in a city", "input_schema": WEATHER["parameters"]}]
+    elif family == "openai_responses":
+        assert sent == [{"type": "function", **WEATHER, "strict": None}]
+    else:
+        assert sent == [{"type": "function", "function": WEATHER}]
     assert gateway.events(1)[0].status == "ok"
 
 
@@ -84,33 +113,67 @@ def test_reasoning_and_answer_survive_every_protocol_pair(gateway: Gateway, dial
     gateway.start()
     response = gateway.request(dialect, stream=stream)
     assert response.status_code == 200, response.text
-    assert "Think carefully" in response.text
+    assert (streamed_reasoning(dialect, response) if stream else buffered_reasoning(dialect, response)) == "Think carefully"
     assert (streamed_text(dialect, response) if stream else text_of(dialect, response)) == TEXT
     assert gateway.events(1)[0].output_tokens == 3
 
 
-def feature_request(dialect: Dialect, feature: str) -> dict[str, object]:
-    body = request_body(dialect)
-    if feature == "conversation":
-        messages = [
-            {"role": "user", "content": "Remember Paris"},
-            {"role": "assistant", "content": "Paris remembered"},
-            {"role": "user", "content": "What city?"},
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("family", FAMILIES)
+def test_conversation_preserves_every_role_and_turn(gateway: Gateway, dialect: Dialect, family: Family):
+    provider = gateway.add_provider(family)
+    gateway.start()
+    messages = [
+        {"role": "user", "content": "Remember Paris"},
+        {"role": "assistant", "content": "Paris remembered"},
+        {"role": "user", "content": "What city?"},
+    ]
+    response = gateway.request(dialect, body={**request_body(dialect), "input" if dialect == "openai_responses" else "messages": messages})
+    assert response.status_code == 200, response.text
+    sent = provider.requests[0].body
+    if family == "openai_responses":
+        assert sent["input"] == [
+            {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Remember Paris"}]},
+            {"type": "message", "role": "assistant", "content": "Paris remembered"},
+            {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "What city?"}]},
         ]
-        if dialect == "openai_responses":
-            body["input"] = messages
-        else:
-            body["messages"] = messages
-        return body
-    if feature == "system":
-        if dialect == "openai_responses":
-            body["instructions"] = "Answer tersely"
-        elif dialect == "anthropic":
-            body["system"] = "Answer tersely"
-        else:
-            body["messages"] = [{"role": "system", "content": "Answer tersely"}, {"role": "user", "content": "hi"}]
-        return body
-    image = feature == "image"
+    else:
+        assert sent["messages"] == messages
+    assert text_of(dialect, response) == TEXT
+    assert gateway.events(1)[0].status == "ok"
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("family", FAMILIES)
+def test_system_prompt_reaches_the_provider_in_its_designated_field(gateway: Gateway, dialect: Dialect, family: Family):
+    provider = gateway.add_provider(family)
+    gateway.start()
+    body = request_body(dialect)
+    if dialect == "openai_responses":
+        body["instructions"] = "Answer tersely"
+    elif dialect == "anthropic":
+        body["system"] = "Answer tersely"
+    else:
+        body["messages"] = [{"role": "system", "content": "Answer tersely"}, {"role": "user", "content": "hi"}]
+    response = gateway.request(dialect, body=body)
+    assert response.status_code == 200, response.text
+    sent = provider.requests[0].body
+    if family == "anthropic":
+        assert sent["system"] == "Answer tersely"
+        assert sent["messages"] == [{"role": "user", "content": "hi"}]
+    elif family == "openai_responses":
+        assert sent["input"] == [
+            {"type": "message", "role": "system", "content": [{"type": "input_text", "text": "Answer tersely"}]},
+            {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hi"}]},
+        ]
+    else:
+        assert sent["messages"] == [{"role": "system", "content": "Answer tersely"}, {"role": "user", "content": "hi"}]
+    assert text_of(dialect, response) == TEXT
+    assert gateway.events(1)[0].status == "ok"
+
+
+def attachment_request(dialect: Dialect, attachment: Attachment) -> dict[str, object]:
+    image = attachment == "image"
     data = "iVBORw0KGgo=" if image else "JVBERi0="
     media_type = "image/png" if image else "application/pdf"
     if dialect == "canonical":
@@ -129,23 +192,52 @@ def feature_request(dialect: Dialect, feature: str) -> dict[str, object]:
             if image
             else {"type": "file", "file": {"filename": "test.pdf", "file_data": f"data:{media_type};base64,{data}"}}
         )
-    body["input" if dialect == "openai_responses" else "messages"] = [{"role": "user", "content": [part]}]
-    return body
+    text_type = "input_text" if dialect == "openai_responses" else "text"
+    return {
+        **request_body(dialect),
+        "input" if dialect == "openai_responses" else "messages": [
+            {
+                "role": "user",
+                "content": [{"type": text_type, "text": "Before attachment"}, part, {"type": text_type, "text": "After attachment"}],
+            }
+        ],
+    }
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("family", FAMILIES)
-@pytest.mark.parametrize(
-    ("feature", "sentinel"), [("conversation", "Paris remembered"), ("system", "Answer tersely"), ("image", "iVBORw0KGgo="), ("document", "JVBERi0=")]
-)
-def test_conversations_system_prompts_and_inline_content_reach_the_provider(
-    gateway: Gateway, dialect: Dialect, family: Family, feature: str, sentinel: str
-):
+@pytest.mark.parametrize("attachment", ["image", "document"])
+def test_inline_content_preserves_type_media_data_and_order(gateway: Gateway, dialect: Dialect, family: Family, attachment: Attachment):
     provider = gateway.add_provider(family)
     gateway.start()
-    response = gateway.request(dialect, body=feature_request(dialect, feature))
+    response = gateway.request(dialect, body=attachment_request(dialect, attachment))
     assert response.status_code == 200, response.text
-    assert sentinel in json.dumps(provider.requests[0].body)
+    sent = provider.requests[0].body
+    filename = "test.pdf" if dialect in ("openai_native", "openai_responses") else "document.pdf"
+    if family == "anthropic":
+        part = (
+            {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBORw0KGgo="}}
+            if attachment == "image"
+            else {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": "JVBERi0="}}
+        )
+    elif family == "openai_responses":
+        part = (
+            {"type": "input_image", "image_url": "data:image/png;base64,iVBORw0KGgo=", "detail": "auto"}
+            if attachment == "image"
+            else {"type": "input_file", "filename": filename, "file_data": "data:application/pdf;base64,JVBERi0="}
+        )
+    else:
+        part = (
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgo="}}
+            if attachment == "image"
+            else {"type": "file", "file": {"filename": filename, "file_data": "data:application/pdf;base64,JVBERi0="}}
+        )
+    text_type = "input_text" if family == "openai_responses" else "text"
+    message = {"role": "user", "content": [{"type": text_type, "text": "Before attachment"}, part, {"type": text_type, "text": "After attachment"}]}
+    if family == "openai_responses":
+        assert sent["input"] == [{"type": "message", **message}]
+    else:
+        assert sent["messages"] == [message]
     assert text_of(dialect, response) == TEXT
     assert gateway.events(1)[0].status == "ok"
 
@@ -218,17 +310,36 @@ def test_tool_result_keeps_its_relationship_to_the_assistant_call(gateway: Gatew
     sent = provider.requests[0].body
     messages = TypeAdapter(list[dict[str, object]]).validate_python(sent["input" if family == "openai_responses" else "messages"])
     if family == "openai_compatible":
-        result = next(message for message in messages if message["role"] == "tool")
-        assert result["tool_call_id"] == "call-weather"
-        assert result["content"] == "18C"
+        calls = TypeAdapter(list[dict[str, object]]).validate_python(messages[1]["tool_calls"])
+        function = TypeAdapter(dict[str, object]).validate_python(calls[0]["function"])
+        arguments = TypeAdapter(str).validate_python(function["arguments"])
+        assert messages == [
+            {"role": "user", "content": "Weather in Paris?"},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "call-weather", "type": "function", "function": {"name": "get_weather", "arguments": arguments}}],
+            },
+            {"role": "tool", "tool_call_id": "call-weather", "content": "18C"},
+        ]
+        assert json.loads(arguments) == {"city": "Paris"}
     elif family == "openai_responses":
-        result = next(item for item in messages if item.get("type") == "function_call_output")
-        assert (result["call_id"], result["output"]) == ("call-weather", "18C")
+        arguments = TypeAdapter(str).validate_python(messages[1]["arguments"])
+        assert messages == [
+            {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Weather in Paris?"}]},
+            {"type": "function_call", "call_id": "call-weather", "name": "get_weather", "arguments": arguments},
+            {"type": "function_call_output", "call_id": "call-weather", "output": "18C"},
+        ]
+        assert json.loads(arguments) == {"city": "Paris"}
     else:
-        content = TypeAdapter(list[dict[str, object]]).validate_python(messages[-1]["content"])
-        result = next(part for part in content if part["type"] == "tool_result")
-        assert result["tool_use_id"] == "call-weather"
-        assert "18C" in json.dumps(result["content"])
+        assert messages == [
+            {"role": "user", "content": "Weather in Paris?"},
+            {"role": "assistant", "content": [{"type": "tool_use", "id": "call-weather", "name": "get_weather", "input": {"city": "Paris"}}]},
+            {
+                "role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": "call-weather", "content": [{"type": "text", "text": "18C"}]}],
+            },
+        ]
     assert gateway.events(1)[0].status == "ok"
 
 

@@ -44,6 +44,8 @@ their `Reply` values, add policies, then start.
 Assert the caller result, received upstream requests, and expected usage events. Rejected requests must not spend a
 provider credential. `gateway.events(count)` validates the full event contract, event/request UUID versions, local
 ownership, unique event IDs, cost totals, and absence of inference tokens or provider secrets.
+Check designated wire fields, complete message sequences, attachment types and media data, and tool-call/result
+relationships. A value appearing somewhere in serialized JSON does not prove that a provider can use it.
 
 Parameterize applicable protocol variations from `DIALECTS` and `FAMILIES`. `protocols.json` supplies the public routes;
 the adapter discovery tests fail if a registered adapter lacks a protocol fixture. A new family also needs independently
@@ -52,6 +54,8 @@ Unsupported combinations get an explicit rejection assertion rather than a skip.
 
 Use events to hold upstream streams and bounded polling to observe reloads. Avoid fixed sleeps, internal function-call
 assertions, and complete-response snapshots containing minted IDs or timestamps.
+Invalid reloads have no public acknowledgement: the recovery scenario checks successful inference, readiness, and the
+original event bundle identity throughout ten configured reload intervals before publishing a valid replacement.
 
 ## Event collection
 
