@@ -30,9 +30,9 @@ def distribution_readme(artifact):
             assert metadata_file is not None
             metadata = metadata_file.read()
 
-    readme = BytesParser(policy=default).parsebytes(metadata).get_payload()
-    assert isinstance(readme, str)
-    return readme
+    readme = BytesParser(policy=default).parsebytes(metadata).get_payload(decode=True)
+    assert isinstance(readme, bytes)
+    return readme.decode()
 
 
 def test_published_distributions_use_the_repository_readme(distributions):

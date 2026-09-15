@@ -1698,7 +1698,7 @@ wheels = [
 
 [[package]]
 name = "tokkeeper"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "apps/cli" }
 dependencies = [
     { name = "httpx" },
@@ -1729,7 +1729,7 @@ requires-dist = [
 
 [[package]]
 name = "tokkeeper-api-models"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "lib/api-models" }
 dependencies = [
     { name = "pydantic" },
@@ -1740,7 +1740,7 @@ requires-dist = [{ name = "pydantic", specifier = ">=2" }]
 
 [[package]]
 name = "tokkeeper-contract"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "lib/contract" }
 dependencies = [
     { name = "asyncpg" },
@@ -1759,7 +1759,7 @@ requires-dist = [
 
 [[package]]
 name = "tokkeeper-control-plane"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "apps/control-plane" }
 dependencies = [
     { name = "alembic" },
@@ -1788,7 +1788,7 @@ requires-dist = [
 
 [[package]]
 name = "tokkeeper-data-plane"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "apps/data-plane" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
