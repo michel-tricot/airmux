@@ -53,8 +53,7 @@ export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper/inference.key)"
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'X-Tokkeeper-Dialect: openai_native' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Reply with exactly: tokkeeper ready"}]}'
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Reply with exactly: tokkeeper ready"}],"max_completion_tokens":16}'
 ```
 
 The same gateway accepts streaming requests, tool calls, structured output, reasoning, images, and PDF inputs when the

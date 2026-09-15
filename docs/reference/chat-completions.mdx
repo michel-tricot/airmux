@@ -16,7 +16,6 @@ unambiguous request fields. Raw text-only requests should set `x-tokkeeper-diale
 curl https://llm.example.com/inf/v1/chat/completions \
   -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -H 'x-tokkeeper-dialect: openai_native' \
   -d '{
     "model": "openai/gpt-4o-mini",
     "messages": [{"role": "user", "content": "Say hello"}],
