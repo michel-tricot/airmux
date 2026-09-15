@@ -1766,8 +1766,6 @@ dependencies = [
     { name = "argon2-cffi" },
     { name = "asyncpg" },
     { name = "fastapi" },
-    { name = "httpx" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
@@ -1781,8 +1779,6 @@ requires-dist = [
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg" },
     { name = "fastapi" },
-    { name = "httpx" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "sqlmodel" },
@@ -1797,7 +1793,6 @@ source = { editable = "apps/data-plane" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "starlette" },
     { name = "tiktoken" },
@@ -1809,7 +1804,6 @@ dependencies = [
 requires-dist = [
     { name = "httpx", extras = ["http2"] },
     { name = "pydantic", specifier = ">=2" },
-    { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "starlette" },
     { name = "tiktoken" },

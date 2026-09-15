@@ -10,17 +10,10 @@ export type AuthorizationScope =
 
 type AuthorizationLevel = AuthorizationScope['level'];
 
-export function useEffectivePermissions({ orgId, workspaceRef, enabled = true }: { orgId?: string; workspaceRef?: string; enabled?: boolean }) {
-  const params = orgId ? { org_id: orgId, ...(workspaceRef ? { workspace_ref: workspaceRef } : {}) } : undefined;
-  return useMyPermissions(params, { query: { enabled } });
-}
-
 export function useScopedAuthorization(scope: AuthorizationScope, { enabled = true }: EnabledQueryOptions = {}) {
-  const query = useEffectivePermissions({
-    orgId: scope.level === 'instance' ? undefined : scope.orgId,
-    workspaceRef: scope.level === 'workspace' ? scope.workspaceRef : undefined,
-    enabled,
-  });
+  const params =
+    scope.level === 'instance' ? undefined : { org_id: scope.orgId, ...(scope.level === 'workspace' ? { workspace_ref: scope.workspaceRef } : {}) };
+  const query = useMyPermissions(params, { query: { enabled } });
   const permissions = query.data?.permissions ?? [];
   return {
     ...query,

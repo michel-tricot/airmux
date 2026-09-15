@@ -10,10 +10,8 @@ dependencies = [
   "asyncpg",
   "alembic",
   "uvicorn[standard]",
-  "python-dotenv",
   "pyyaml",
   "argon2-cffi>=23.1",
-  "httpx",
 ]
 
 [build-system]

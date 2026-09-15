@@ -12,16 +12,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge as BadgePrimitive } from '@/components/ui/badge';
 import { Button as ButtonPrimitive, type ButtonProps as ButtonPrimitiveProps } from '@/components/ui/button';
-import {
-  Card as CardPrimitive,
-  CardContent as CardContentPrimitive,
-  CardDescription as CardDescriptionPrimitive,
-  CardFooter as CardFooterPrimitive,
-  CardHeader as CardHeaderPrimitive,
-} from '@/components/ui/card';
+import { Card as CardPrimitive, CardContent as CardContentPrimitive, CardHeader as CardHeaderPrimitive } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -34,7 +28,7 @@ import {
 import { Input as InputPrimitive } from '@/components/ui/input';
 import { Label as LabelPrimitive } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Table as TablePrimitive,
   TableBody as TableBodyPrimitive,
@@ -50,20 +44,7 @@ import {
   TabsTrigger as TabsTriggerPrimitive,
 } from '@/components/ui/tabs';
 
-export {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-};
+export { Alert, AlertDescription, AlertTitle, Avatar, AvatarFallback, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle };
 
 type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary';
 type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
@@ -421,9 +402,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTM
 ));
 CardTitle.displayName = 'CardTitle';
 
-export const CardDescription = CardDescriptionPrimitive;
 export const CardContent = CardContentPrimitive;
-export const CardFooter = CardFooterPrimitive;
 
 export const Modal = ({
   open,
