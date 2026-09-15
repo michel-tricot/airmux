@@ -12,14 +12,18 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class ActionContext:
+class ModelActionContext:
     policy: PolicyEntry
     rule: RuleEntry
-    request: CanonicalRequest
     key: KeyEntry
     model: ModelEntry
     provider: ProviderEntry
     profile: CompiledProfile
+
+
+@dataclass(frozen=True)
+class ActionContext(ModelActionContext):
+    request: CanonicalRequest
 
 
 @dataclass(frozen=True)
@@ -30,7 +34,7 @@ class EvaluationState:
 
 
 @singledispatch
-def evaluate_action(action: object, _context: ActionContext, _state: EvaluationState) -> EvaluationState:
+def evaluate_action(action: object, _context: ModelActionContext, _state: EvaluationState) -> EvaluationState:
     msg = f"No policy evaluator registered for {type(action).__name__}"
     raise ValueError(msg)
 

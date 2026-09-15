@@ -8,7 +8,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
@@ -16,12 +15,12 @@ import httpx
 from pydantic import ValidationError
 from starlette.responses import Response, StreamingResponse
 
-from contract import PLAYGROUND_COOKIE, SecretStoreUnavailableError, uuid7
-from data_plane.auth import authenticate
+from contract import SecretStoreUnavailableError, uuid7
+from data_plane.auth import authenticate_request
 from data_plane.canonical import CanonicalAdjustment, CanonicalGatewayInfo, CanonicalRequest, CanonicalResponse, CanonicalUsage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
-from data_plane.errors import UnsupportedFeatureError
+from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.ingress import CANONICAL, UnknownDialectError, resolve
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metering import RequestStart, record_denied, record_usage, status_for_error, status_for_upstream
@@ -37,7 +36,7 @@ if TYPE_CHECKING:
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret
     from contract.policies import FallbackReason
-    from data_plane.bundle.holder import BundleHolder, BundleSnapshot
+    from data_plane.bundle.holder import BundleSnapshot
     from data_plane.credentials import CredentialResolver
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
@@ -46,14 +45,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("data_plane")
-
-
-class RequestRejectedError(Exception):
-    def __init__(self, status: int, code: str, message: str = "") -> None:
-        self.status = status
-        self.code = code
-        self.message = message
-        super().__init__(code)
 
 
 def _rejection(error: RequestRejectedError) -> CanonicalError:
@@ -65,7 +56,7 @@ async def complete(request: Request) -> Response:
     runtime = runtime_of(request)
     start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
     try:
-        key, snapshot = _authenticate(request, runtime.holder)
+        key, snapshot = authenticate_request(request, runtime.holder)
         body = await _body(request)
         try:
             ingress = resolve(request.headers, body)
@@ -82,7 +73,7 @@ async def messages(request: Request) -> Response:
     runtime = runtime_of(request)
     start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
     try:
-        key, snapshot = _authenticate(request, runtime.holder)
+        key, snapshot = authenticate_request(request, runtime.holder)
         body = await _body(request)
     except RequestRejectedError as error:
         return ingress.render_error(_rejection(error))
@@ -95,7 +86,7 @@ async def responses(request: Request) -> Response:
     runtime = runtime_of(request)
     start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
     try:
-        key, snapshot = _authenticate(request, runtime.holder)
+        key, snapshot = authenticate_request(request, runtime.holder)
         body = await _body(request)
     except RequestRejectedError as error:
         return ingress.render_error(_rejection(error))
@@ -136,28 +127,6 @@ async def _run(incoming: IncomingRequest, runtime: Runtime) -> Response:
         return await execution.run()
     except RequestRejectedError as error:
         return incoming.ingress.render_error(_rejection(error))
-
-
-def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
-    bundle_set = holder.current
-    if not bundle_set.snapshots:
-        raise RequestRejectedError(503, "bundle_unavailable")
-    auth_header = request.headers.get("authorization", "")
-    scheme, separator, value = auth_header.partition(" ")
-    if separator and scheme.casefold() == "bearer":
-        token = value.strip()
-    else:
-        token = request.cookies.get(PLAYGROUND_COOKIE, "")
-        if not token:
-            raise RequestRejectedError(401, "missing_bearer_token")
-        if request.headers.get("x-requested-with") is None:
-            raise RequestRejectedError(403, "missing_requested_with")
-        if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
-            raise RequestRejectedError(403, "cross_site_request")
-    key = authenticate(token, bundle_set.key_index, datetime.now(tz=UTC))
-    if key is None:
-        raise RequestRejectedError(401, "invalid_token")
-    return key, bundle_set.snapshots[key.org_id]
 
 
 def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:

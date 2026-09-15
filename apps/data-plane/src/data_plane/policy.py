@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
+from contract.policies import AllowedModels, AllowedProviders, CredentialAccess, DenyRequest, PriceLimit
 from data_plane.credentials import policy_candidates, preferred_candidates
-from data_plane.policies import matching_rules
-from data_plane.policy_actions import ActionContext, EvaluationState, evaluate_action
+from data_plane.policies import matching_model_rules, matching_rules
+from data_plane.policy_actions import ActionContext, EvaluationState, ModelActionContext, evaluate_action
 from data_plane.requirements import required_capabilities, required_input_modalities
 
 if TYPE_CHECKING:
@@ -51,6 +52,27 @@ class PolicyEvaluation:
 
 def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, rules: tuple[CompiledRule, ...] | None = None) -> Decision:
     return evaluate_policies(req, key, snap, rules).decision
+
+
+def model_allowed(model: ModelEntry, key: KeyEntry, snap: BundleSnapshot) -> bool:
+    provider = snap.provider_index[model.provider_id]
+    state = EvaluationState(candidates=policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id))
+    for compiled in matching_model_rules(model.model_id, key, snap.policy_index):
+        action = compiled.rule.definition.action
+        if not isinstance(action, (AllowedModels, AllowedProviders, CredentialAccess, DenyRequest, PriceLimit)):
+            continue
+        context = ModelActionContext(
+            policy=compiled.policy,
+            rule=compiled.rule,
+            key=key,
+            model=model,
+            provider=provider,
+            profile=snap.profile_index[provider.provider_id],
+        )
+        state = evaluate_action(action, context, state)
+        if state.denial is not None:
+            return False
+    return bool(preferred_candidates(state.candidates, key.workspace_id, key.org_id))
 
 
 def evaluate_policies(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, rules: tuple[CompiledRule, ...] | None = None) -> PolicyEvaluation:

@@ -70,6 +70,7 @@ agent frameworks, CLIs, services, and raw HTTP integrations.
 | Chat Completions | `POST /inf/v1/chat/completions` |
 | Responses | `POST /inf/v1/responses` |
 | Messages | `POST /inf/v1/messages` |
+| Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
 | Canonical | `POST /inf/v1/chat/completions` with `x-tokkeeper-dialect: canonical` |
 
 The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with a TokKeeper inference key:
