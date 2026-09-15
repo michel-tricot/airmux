@@ -66,6 +66,19 @@ def database_errors() -> Iterator[None]:
         raise ValueError(message) from None
 
 
+@contextmanager
+def configuration_environment(config: Path) -> Iterator[None]:
+    selected = os.environ.get("TOKKEEPER_CONFIG")
+    os.environ["TOKKEEPER_CONFIG"] = str(config)
+    try:
+        yield
+    finally:
+        if selected is None:
+            os.environ.pop("TOKKEEPER_CONFIG", None)
+        else:
+            os.environ["TOKKEEPER_CONFIG"] = selected
+
+
 def bootstrap_keygen(path: Path) -> None:
     token, _ = new_management_key()
     write_new_configuration(path.parent, {path.name: token})
@@ -108,16 +121,16 @@ def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
 
 
 def migrate(config: Path) -> MigrationResult:
-    os.environ["TOKKEEPER_CONFIG"] = str(config)
-    url = load_settings(config).database.url
-    with database_errors():
-        before = current_revision(url)
-        run_migrations()
-    head = head_revision()
-    if head is None:
-        message = "The installed control plane has no migration head"
-        raise ValueError(message)
-    return MigrationResult(make_url(url).render_as_string(hide_password=True), before, head)
+    with configuration_environment(config):
+        url = load_settings(config).database.url
+        with database_errors():
+            before = current_revision(url)
+            run_migrations()
+        head = head_revision()
+        if head is None:
+            message = "The installed control plane has no migration head"
+            raise ValueError(message)
+        return MigrationResult(make_url(url).render_as_string(hide_password=True), before, head)
 
 
 def export_openapi() -> str:
