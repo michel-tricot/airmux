@@ -29,10 +29,13 @@ OPENAI_RESPONSE = {
 }
 
 
-def test_inference_routes_use_the_inference_prefix(dp_app):
-    paths = {route.path for route in dp_app.routes}
-    assert {"/inf/v1/chat/completions", "/inf/v1/responses", "/inf/v1/messages"} <= paths
-    assert not any(path.startswith("/v1/") for path in paths)
+@respx.mock
+@pytest.mark.parametrize("path", ["chat/completions", "responses", "messages"])
+def test_inference_routes_use_the_inference_prefix(dp_app, path):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        assert client.post(f"/inf/v1/{path}").status_code == 401
+        assert client.post(f"/v1/{path}").status_code == 404
 
 
 def test_unrepresentable_egress_request_is_a_declared_rejection():

@@ -20,7 +20,7 @@ from data_plane.bundle import BundleSource, LocalBundleConfig
 from data_plane.config import Config
 
 if TYPE_CHECKING:
-    from starlette.applications import Starlette
+    from starlette.types import ASGIApp
 
     from data_plane.bundle import BundleConfig, BundleHolder
 
@@ -61,7 +61,7 @@ def test_unexpected_worker_failure_stops_the_app_and_cancels_its_siblings(tmp_pa
     assert terminated.is_set()
 
 
-def failing_app() -> Starlette:
+def failing_app() -> ASGIApp:
     source = FailingSource(delay_s=2.0)
 
     def build_source(

@@ -25,8 +25,7 @@ def main() -> int:
     gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
     model = os.environ.get("TOKKEEPER_MODEL", "anthropic/claude-sonnet-4-6")
 
-    # api_key is required by the SDK but unused; the gateway reads auth_token as the bearer.
-    client = Anthropic(base_url=f"{gateway.rstrip('/')}/inf", api_key="unused", auth_token=api_key)
+    client = Anthropic(base_url=f"{gateway.rstrip('/')}/inf", api_key=api_key)
 
     print(f"non-streaming ({model}):")
     msg = client.messages.create(model=model, max_tokens=128, messages=[{"role": "user", "content": "In one sentence, what is an LLM gateway?"}])
