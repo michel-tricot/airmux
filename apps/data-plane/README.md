@@ -12,16 +12,17 @@ uv tool install tokkeeper
 Initialize with the shipped taxonomy:
 
 ```bash
-tokkeeper gateway init --directory gateway
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper gateway validate --config gateway/tokkeeper.yml
-tokkeeper gateway serve --config gateway/tokkeeper.yml
+tokkeeper gateway init
+tokkeeper gateway validate
+tokkeeper gateway serve
 ```
 
 The gateway listens on `127.0.0.1:8080`. Call `/inf/v1/chat/completions`, `/inf/v1/responses`, or `/inf/v1/messages`
-with the generated inference key from `gateway/.tokkeeper/inference.key`. The model name must match a `model_id` in your taxonomy.
+with the generated inference key from `.tokkeeper/inference.key`. The model name must match a `model_id` in your taxonomy.
 
-The standalone gateway loads the default taxonomy and ignores usage events. Provider credentials resolve from environment
-variables such as `OPENAI_API_KEY`.
+The standalone gateway copies the shipped taxonomy to `.tokkeeper/taxonomy.yml` and ignores usage events. Pass
+`--taxonomy PATH` to reference an existing taxonomy instead. Provider credentials resolve from environment variables such as
+`OPENAI_API_KEY`.
 
 The repository's `docs/deployment/gateway.mdx` describes configuration, taxonomy reloads, and standalone limits.

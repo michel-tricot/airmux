@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from gzip import decompress
 from importlib.resources import files
@@ -9,7 +10,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from contract.initialization import write_new_configuration
+from contract import EnvStoreConfig
+from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
 from contract.taxonomy import TaxonomySpec, parse_taxonomy
 from data_plane.bundle.config import LocalBundleConfig
 from data_plane.bundle.holder import BundleSet
@@ -18,6 +20,19 @@ from data_plane.config import load_config
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@dataclass(frozen=True)
+class GatewayProviderGuide:
+    provider_id: str
+    variables: tuple[str, ...]
+    configured_variable: str | None
+    models: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class GatewayGuide:
+    providers: tuple[GatewayProviderGuide, ...]
 
 
 def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
@@ -40,15 +55,40 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
             "events": {"kind": "devnull"},
         }
     }
-    bundle = {"keys": ["${file:.tokkeeper/inference.key}"], "taxonomy": taxonomy_reference}
+    bundle = {"keys": ["${file:inference.key}"], "taxonomy": taxonomy_reference}
     write_new_configuration(
         directory,
         {
-            ".tokkeeper/inference.key": key + "\n",
+            ".gitignore": GENERATED_STATE_GITIGNORE,
+            "inference.key": key + "\n",
             "bundle.yml": yaml.safe_dump(bundle, sort_keys=False),
             "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
             **taxonomy_file,
         },
+    )
+
+
+def describe_configuration(config_path: Path) -> GatewayGuide:
+    config = load_config(config_path)
+    if not isinstance(config.bundle, LocalBundleConfig) or not isinstance(config.secrets, EnvStoreConfig):
+        message = "the standalone gateway guide requires a local bundle and environment secret store"
+        raise TypeError(message)
+    bundle = load_local(config.bundle.path, datetime.now(tz=UTC))
+    secret_store = config.secrets.build()
+    credentials = {credential.ref.service: credential for credential in bundle.catalog.credentials}
+    provider_variables = {
+        provider.provider_id: secret_store.variables_for(credentials[provider.provider_id].ref) for provider in bundle.catalog.providers
+    }
+    return GatewayGuide(
+        providers=tuple(
+            GatewayProviderGuide(
+                provider_id=provider.provider_id,
+                variables=provider_variables[provider.provider_id],
+                configured_variable=next((variable for variable in provider_variables[provider.provider_id] if os.environ.get(variable)), None),
+                models=tuple(model.model_id for model in bundle.catalog.models if model.provider_id == provider.provider_id),
+            )
+            for provider in bundle.catalog.providers
+        )
     )
 
 

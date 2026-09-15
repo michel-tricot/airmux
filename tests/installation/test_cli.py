@@ -45,10 +45,11 @@ def test_help_inventory_and_version_work_in_every_installation(installation, tmp
 def test_installed_gateway_initializes_with_the_shipped_taxonomy(installation, tmp_path):
     result = run_cli(installation, tmp_path, "gateway", "init")
     assert "taxonomy.yml" in result.stdout
-    taxonomy = yaml.safe_load((tmp_path / "taxonomy.yml").read_text(encoding="utf-8"))
+    directory = tmp_path / ".tokkeeper"
+    taxonomy = yaml.safe_load((directory / "taxonomy.yml").read_text(encoding="utf-8"))
     assert taxonomy["providers"]
     assert taxonomy["models"]
-    assert yaml.safe_load((tmp_path / "bundle.yml").read_text(encoding="utf-8"))["taxonomy"] == "taxonomy.yml"
+    assert yaml.safe_load((directory / "bundle.yml").read_text(encoding="utf-8"))["taxonomy"] == "taxonomy.yml"
     assert run_cli(installation, tmp_path, "gateway", "validate").returncode == 0
 
 

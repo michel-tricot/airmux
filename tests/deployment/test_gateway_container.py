@@ -33,7 +33,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
         check=True,
         capture_output=True,
     )
-    key = (tmp_path / "gateway/.tokkeeper/inference.key").read_text().strip()
+    key = (tmp_path / "gateway/inference.key").read_text().strip()
     docker("network", "create", network)
     try:
         docker(

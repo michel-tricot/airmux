@@ -73,7 +73,7 @@ def initialize_gateway(executable, taxonomy_path, directory, tmp_path, environme
         text=True,
         check=True,
     )
-    key = (directory / ".tokkeeper/inference.key").read_text().strip()
+    key = (directory / "inference.key").read_text().strip()
     assert key not in initialized.stdout
     config_path = directory / "tokkeeper.yml"
     config = yaml.safe_load(config_path.read_text())

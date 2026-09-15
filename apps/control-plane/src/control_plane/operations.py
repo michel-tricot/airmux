@@ -11,7 +11,7 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from contract.initialization import write_new_configuration
+from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
 from contract.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
@@ -66,6 +66,19 @@ def database_errors() -> Iterator[None]:
         raise ValueError(message) from None
 
 
+@contextmanager
+def configuration_environment(config: Path) -> Iterator[None]:
+    selected = os.environ.get("TOKKEEPER_CONFIG")
+    os.environ["TOKKEEPER_CONFIG"] = str(config)
+    try:
+        yield
+    finally:
+        if selected is None:
+            os.environ.pop("TOKKEEPER_CONFIG", None)
+        else:
+            os.environ["TOKKEEPER_CONFIG"] = selected
+
+
 def bootstrap_keygen(path: Path) -> None:
     token, _ = new_management_key()
     write_new_configuration(path.parent, {path.name: token})
@@ -90,7 +103,14 @@ def initialize(directory: Path, console_url: str) -> None:
             "secrets": secrets,
         },
     }
-    write_new_configuration(directory, {".tokkeeper/dataplane.key": token, "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False)})
+    write_new_configuration(
+        directory,
+        {
+            ".tokkeeper/.gitignore": GENERATED_STATE_GITIGNORE,
+            ".tokkeeper/dataplane.key": token,
+            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+        },
+    )
 
 
 def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
@@ -101,16 +121,16 @@ def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
 
 
 def migrate(config: Path) -> MigrationResult:
-    os.environ["TOKKEEPER_CONFIG"] = str(config)
-    url = load_settings(config).database.url
-    with database_errors():
-        before = current_revision(url)
-        run_migrations()
-    head = head_revision()
-    if head is None:
-        message = "The installed control plane has no migration head"
-        raise ValueError(message)
-    return MigrationResult(make_url(url).render_as_string(hide_password=True), before, head)
+    with configuration_environment(config):
+        url = load_settings(config).database.url
+        with database_errors():
+            before = current_revision(url)
+            run_migrations()
+        head = head_revision()
+        if head is None:
+            message = "The installed control plane has no migration head"
+            raise ValueError(message)
+        return MigrationResult(make_url(url).render_as_string(hide_password=True), before, head)
 
 
 def export_openapi() -> str:

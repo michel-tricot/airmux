@@ -13,6 +13,7 @@ from cli.gateway import gateway_app as app
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
 from data_plane.config import load_config
+from data_plane.setup import describe_configuration, initialize
 
 TAXONOMY = {
     "providers": [{"provider_id": "stub", "kind": "openai_compatible", "base_url": "http://localhost:9000", "icon": ""}],
@@ -75,11 +76,11 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     runner = CliRunner()
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
     assert result.exit_code == 0, result.output
-    key = (directory / ".tokkeeper/inference.key").read_text().strip()
+    key = (directory / "inference.key").read_text().strip()
     assert key.startswith("sk-inf-")
     assert len(key) >= 40
     assert key not in result.output
-    assert (directory / ".tokkeeper/inference.key").stat().st_mode & 0o777 == 0o600
+    assert (directory / "inference.key").stat().st_mode & 0o777 == 0o600
     assert directory.stat().st_mode & 0o777 == 0o700
     assert "providers:" not in (directory / "bundle.yml").read_text()
     assert not (directory / "taxonomy.yml").exists()
@@ -93,7 +94,34 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     assert key not in result.output
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
     assert result.exit_code != 0
-    assert (directory / ".tokkeeper/inference.key").read_text().strip() == key
+    assert (directory / "inference.key").read_text().strip() == key
+
+
+def test_describe_configuration_includes_every_provider_and_model(tmp_path, monkeypatch):
+    taxonomy = {
+        "providers": [
+            {"provider_id": "first", "base_url": "http://localhost:9000"},
+            {"provider_id": "second", "base_url": "http://localhost:9001"},
+        ],
+        "models": [
+            {"model_id": "first-a", "provider_id": "first", "input_modalities": ["text"], "output_modalities": ["text"]},
+            {"model_id": "second-a", "provider_id": "second", "input_modalities": ["text"], "output_modalities": ["text"]},
+            {"model_id": "first-b", "provider_id": "first", "input_modalities": ["text"], "output_modalities": ["text"]},
+        ],
+    }
+    taxonomy_path = tmp_path / "taxonomy.yml"
+    taxonomy_path.write_text(yaml.safe_dump(taxonomy))
+    directory = tmp_path / "gateway"
+    assert initialize(directory, taxonomy_path) is None
+    monkeypatch.setenv("SECOND_API_KEY", "private-provider-key")
+    guide = describe_configuration(directory / "tokkeeper.yml")
+    assert [(provider.provider_id, provider.models) for provider in guide.providers] == [
+        ("first", ("first-a", "first-b")),
+        ("second", ("second-a",)),
+    ]
+    assert guide.providers[0].variables[-1] == "FIRST_API_KEY"
+    assert guide.providers[0].configured_variable is None
+    assert guide.providers[1].configured_variable == "SECOND_API_KEY"
 
 
 def test_init_rejects_invalid_taxonomy_before_writing(tmp_path):

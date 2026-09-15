@@ -7,6 +7,8 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+GENERATED_STATE_GITIGNORE = "*.key\ngateway/\nsecrets/\n"
+
 
 def write_new_configuration(directory: Path, files: Mapping[str, str]) -> None:
     for name in files:
