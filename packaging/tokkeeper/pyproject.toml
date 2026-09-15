@@ -25,9 +25,9 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/michel-tricot/airllm/tree/main/docs"
-Repository = "https://github.com/michel-tricot/airllm"
-Issues = "https://github.com/michel-tricot/airllm/issues"
+Documentation = "https://github.com/michel-tricot/tokkeeper/tree/main/docs"
+Repository = "https://github.com/michel-tricot/tokkeeper"
+Issues = "https://github.com/michel-tricot/tokkeeper/issues"
 
 [project.scripts]
 tokkeeper = "cli.main:main"

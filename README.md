@@ -38,7 +38,7 @@ See [Gateway only](docs/deployment/gateway.mdx) for installation, configuration,
 You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/getting-started/installation/), and one provider API key.
 
 ```sh
-git clone https://github.com/michel-tricot/airllm.git tokkeeper
+git clone https://github.com/michel-tricot/tokkeeper.git
 cd tokkeeper
 cp .env.example .env
 ```

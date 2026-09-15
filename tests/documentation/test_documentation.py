@@ -18,7 +18,7 @@ LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
 LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^)#?]+)(?:#[^)]+)?\)")
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
-PUBLIC_REPOSITORY = "https://github.com/michel-tricot/airllm"
+PUBLIC_REPOSITORY = "https://github.com/michel-tricot/tokkeeper"
 PUBLISHED_PROJECT = ROOT / "packaging/tokkeeper/pyproject.toml"
 INTERNAL_DISTRIBUTIONS = {
     "tokkeeper-api-models",
@@ -110,8 +110,9 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 
 
 def test_public_links_use_the_current_repository() -> None:
-    stale_repository = "https://github.com/michel-tricot/tokkeeper"
-    occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if stale_repository in path.read_text()]
+    stale_repository = "https://github.com/michel-tricot/airllm"
+    public_documents = [ROOT / "README.md", PUBLISHED_PROJECT.parent / "README.md", *documentation_files()]
+    occurrences = [str(path.relative_to(ROOT)) for path in public_documents if stale_repository in path.read_text()]
 
     assert occurrences == []
 
