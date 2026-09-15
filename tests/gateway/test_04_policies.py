@@ -10,6 +10,19 @@ if TYPE_CHECKING:
     from upstream import Family
 
 
+INPUT_TOKEN_LIMITS: dict[Dialect, str] = {
+    "canonical": "max_tokens",
+    "openai_native": "max_completion_tokens",
+    "openai_responses": "max_output_tokens",
+    "anthropic": "max_tokens",
+}
+OUTPUT_TOKEN_LIMITS: dict[Family, str] = {
+    "openai_compatible": "max_tokens",
+    "openai_responses": "max_output_tokens",
+    "anthropic": "max_tokens",
+}
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("family", FAMILIES)
 @pytest.mark.parametrize(("limit", "expected"), [(7, 200), (8, 200), (9, 403)], ids=["below", "at", "above"])
@@ -17,13 +30,12 @@ def test_native_token_limits_are_enforced_before_upstream_translation(gateway: G
     provider = gateway.add_provider(family)
     gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 8}])
     gateway.start()
-    parameter = "max_completion_tokens" if dialect == "openai_native" else "max_output_tokens" if dialect == "openai_responses" else "max_tokens"
-    response = gateway.request(dialect, body={**request_body(dialect), parameter: limit})
+    response = gateway.request(dialect, body={**request_body(dialect), INPUT_TOKEN_LIMITS[dialect]: limit})
     assert response.status_code == expected, response.text
     (event,) = gateway.events(1)
     assert event.status == ("ok" if expected == 200 else "denied")
     if expected == 200:
-        assert provider.requests[0].body["max_output_tokens" if family == "openai_responses" else "max_tokens"] == limit
+        assert provider.requests[0].body[OUTPUT_TOKEN_LIMITS[family]] == limit
     else:
         assert error_of(dialect, response) == "policy_denied"
         assert provider.requests == []
@@ -71,8 +83,7 @@ def test_unsupported_parameters_are_adjusted_or_rejected_by_policy(gateway: Gate
         assert provider.requests == []
     else:
         assert "temperature" not in provider.requests[0].body
-        if dialect == "canonical":
-            assert response.json()["gateway"]["adjustments"][0]["param"] == "temperature"
+        assert response.json()["gateway"]["adjustments"][0]["param"] == "temperature"
     assert gateway.events(1)[0].status == ("denied" if strict else "ok")
 
 
@@ -83,6 +94,6 @@ def test_model_caps_clamp_a_permitted_limit_before_sending_it(gateway: Gateway, 
     gateway.start()
     response = gateway.request(max_tokens=9)
     assert response.status_code == 200, response.text
-    assert provider.requests[0].body["max_output_tokens" if family == "openai_responses" else "max_tokens"] == 8
+    assert provider.requests[0].body[OUTPUT_TOKEN_LIMITS[family]] == 8
     assert response.json()["gateway"]["adjustments"][0]["action"] == "clamped"
     assert gateway.events(1)[0].status == "ok"

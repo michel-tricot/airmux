@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from gateway_harness import DIALECTS, FAMILIES, error_of, stream_payloads, streamed_text, text_of
+from gateway_harness import DIALECTS, ERROR_FIELDS, FAMILIES, error_of, stream_payloads, streamed_text, text_of
 from upstream import TEXT, UPSTREAM_KEY, Reply
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ def test_malformed_provider_success_is_an_error_and_service_recovers(gateway: Ga
         assert response.status_code == 200
         errors = [event.get("error", event) for event in stream_payloads(response) if "error" in event or event.get("type") == "error"]
         assert len(errors) == 1
-        assert errors[0]["type" if dialect == "anthropic" else "code"] == "invalid_upstream_response"
+        assert errors[0][ERROR_FIELDS[dialect]] == "invalid_upstream_response"
     else:
         assert response.status_code == 502
         assert error_of(dialect, response) == "invalid_upstream_response"

@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import time
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TypedDict
 from uuid import UUID
@@ -30,6 +31,18 @@ FAMILIES = tuple(PROTOCOLS["egress"])
 INFERENCE_KEY = "sk-inf-integration-first"
 SECOND_KEY = "sk-inf-integration-second"
 LOCAL_WORKSPACE = str(UUID(int=0))
+REQUEST_INPUTS: dict[Dialect, dict[str, object]] = {
+    "canonical": {"messages": [{"role": "user", "content": "hi"}]},
+    "openai_native": {"messages": [{"role": "user", "content": "hi"}]},
+    "openai_responses": {"input": "hi"},
+    "anthropic": {"messages": [{"role": "user", "content": "hi"}]},
+}
+ERROR_FIELDS: dict[Dialect, str] = {
+    "canonical": "code",
+    "openai_native": "code",
+    "openai_responses": "code",
+    "anthropic": "type",
+}
 
 
 def eventually(check: Callable[[], bool], timeout: float = 15) -> None:
@@ -43,9 +56,7 @@ def eventually(check: Callable[[], bool], timeout: float = 15) -> None:
 
 
 def request_body(dialect: Dialect, model: str = "model-a", **parameters: object) -> dict[str, object]:
-    if dialect == "openai_responses":
-        return {"model": model, "input": "hi", **parameters}
-    return {"model": model, "messages": [{"role": "user", "content": "hi"}], **parameters}
+    return {"model": model, **deepcopy(REQUEST_INPUTS[dialect]), **parameters}
 
 
 def text_of(dialect: Dialect, response: httpx.Response) -> str:
@@ -76,7 +87,7 @@ def streamed_text(dialect: Dialect, response: httpx.Response) -> str:
 
 def error_of(dialect: Dialect, response: httpx.Response) -> str:
     error = response.json()["error"]
-    return error["type"] if dialect == "anthropic" else error["code"]
+    return error[ERROR_FIELDS[dialect]]
 
 
 class GatewayBundle(TypedDict):

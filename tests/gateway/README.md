@@ -54,6 +54,13 @@ the adapter discovery tests fail if a registered adapter lacks a protocol fixtur
 authored response and stream fixtures in `upstream.py`. Never generate expectations with the production adapters.
 Unsupported combinations get an explicit rejection assertion rather than a skip.
 
+Feature inputs and provider expectations live in `feature_cases.py` as separate handwritten tables. Attachment filename
+and structured-output naming differences select explicit variants. Scenarios compare complete designated fields without
+branching on the caller dialect or provider family. Native response readers remain explicit; the tool-history reader
+requires string arguments in OpenAI wire formats and compares their decoded JSON, preserving all other fields exactly.
+Protocol cases declare expected auth headers, usage, costs, and stream terminal lines/events. Policy cases declare input
+and output token-limit field names; adjustment metadata is checked in every caller dialect.
+
 Use events to hold upstream streams and bounded polling to observe reloads. Avoid fixed sleeps, internal function-call
 assertions, and complete-response snapshots containing minted IDs or timestamps.
 Invalid reloads have no public acknowledgement: the recovery scenario checks successful inference, readiness, and the
