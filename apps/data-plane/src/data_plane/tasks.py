@@ -16,5 +16,5 @@ async def run_periodic(once: Callable[[], Awaitable[object]], interval_s: float,
         try:
             await once()
         except recoverable:
-            logger.exception("%s failed, will retry", name)
+            logger.exception("periodic_task_failed", extra={"event": "periodic_task_failed", "fields": {"task": name, "outcome": "failed"}})
         await asyncio.sleep(interval_s)

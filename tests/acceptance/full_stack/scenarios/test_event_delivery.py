@@ -7,7 +7,7 @@ from uuid import UUID
 
 import httpx
 import pytest
-from stack_harness import _poll
+from stack_harness import _poll, metric
 
 if TYPE_CHECKING:
     from stack_harness import Stack
@@ -41,7 +41,7 @@ def test_success_disconnect_and_provider_failures_reach_the_control_plane(stack:
             response = stack.request(prompt)
             assert response.status_code == status, response.text
             request_ids.append(response.headers["x-request-id"])
-    assert _poll(lambda: httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == 0 and len(stack.events()) == 4, 15)
+    assert _poll(lambda: metric(stack.dp_url + "/metrics", "airmux_data_plane_metering_outbox_pending") == 0 and len(stack.events()) == 4, 15)
     events = stack.events()
     assert Counter(event["status"] for event in events) == Counter({"ok": 1, "cancelled": 1, "rate_limited": 1, "upstream_error": 1})
     assert {event["request_id"] for event in events} == set(request_ids)

@@ -9,11 +9,16 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from contract import UsageEvent
+    from data_plane.metrics import DataPlaneMetrics
 
 type OutboxStat = int | float | None
 
 
 class OutboxFullError(RuntimeError):
+    pass
+
+
+class OutboxClosedError(OutboxFullError):
     pass
 
 
@@ -64,8 +69,26 @@ class OutboxReservation:
 
 
 class EventOutbox(ABC):
+    def __init__(self, metrics: DataPlaneMetrics | None = None) -> None:
+        self._metrics = metrics
+
     def reserve(self) -> OutboxReservation:
-        self._reserve()
+        try:
+            self._reserve()
+        except OutboxClosedError:
+            if self._metrics is not None:
+                self._metrics.observe_metering_admission("closed")
+            raise
+        except OutboxFullError:
+            if self._metrics is not None:
+                self._metrics.observe_metering_admission("full")
+            raise
+        except Exception:
+            if self._metrics is not None:
+                self._metrics.observe_metering_admission("closed")
+            raise
+        if self._metrics is not None:
+            self._metrics.observe_metering_admission("accepted")
         return OutboxReservation(self._record_reserved, self._release_reserved, self._fail_reservation)
 
     def _reserve(self) -> None:

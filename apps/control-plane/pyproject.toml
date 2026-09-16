@@ -13,6 +13,7 @@ dependencies = [
   "uvicorn[standard]",
   "pyyaml",
   "argon2-cffi>=23.1",
+  "prometheus-client",
 ]
 
 [build-system]

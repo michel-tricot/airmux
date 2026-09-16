@@ -14,10 +14,15 @@ if TYPE_CHECKING:
 def test_ready_gateway_completes_and_records_usage(gateway: Gateway):
     provider = gateway.add_provider()
     gateway.start()
-    assert httpx.get(f"{gateway.url}/healthz").json() == {"status": "ok", "events": {"pending": 0, "oldest_age_s": None}}
+    assert httpx.get(f"{gateway.url}/healthz").json() == {"status": "ok"}
+    assert httpx.get(f"{gateway.url}/readyz").json() == {"status": "ready"}
     response = gateway.request()
     assert response.status_code == 200, response.text
     assert text_of("openai_chat_completions", response) == TEXT
+    metrics = httpx.get(f"{gateway.url}/metrics")
+    assert metrics.status_code == 200
+    assert "airmux_data_plane_http_requests_total" in metrics.text
+    assert 'route="/inf/v1/chat/completions"' in metrics.text
     assert provider.requests[0].body["model"] == "upstream-model-a"
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.key_id, event.stream) == ("ok", "model-a", "stub", "local-0", False)

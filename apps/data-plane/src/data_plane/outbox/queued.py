@@ -8,12 +8,13 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Never, TypeVar
 
-from data_plane.outbox.base import EventOutbox, OutboxFullError, OutboxStat
+from data_plane.outbox.base import EventOutbox, OutboxClosedError, OutboxFullError, OutboxStat
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
     from contract import UsageEvent
+    from data_plane.metrics import DataPlaneMetrics
 
 CAPACITY = 10_000
 
@@ -34,7 +35,8 @@ class _ReservationLeakError(RuntimeError):
 
 
 class QueuedOutbox(EventOutbox):
-    def __init__(self, thread_name: str) -> None:
+    def __init__(self, thread_name: str, metrics: DataPlaneMetrics | None = None) -> None:
+        super().__init__(metrics)
         self._lock = threading.RLock()
         self._accepting = True
         self._reserved = 0
@@ -54,15 +56,20 @@ class QueuedOutbox(EventOutbox):
         except BaseException:
             self._executor.shutdown()
             raise
+        self._update_queue_metrics()
 
     def _reserve(self) -> None:
         with self._lock:
             if self._failure is not None:
                 raise _StorageWorkerError from self._failure
-            if not self._accepting or self._reserved + self._filled >= CAPACITY:
+            if not self._accepting:
+                self._reservation_rejections += 1
+                raise OutboxClosedError
+            if self._reserved + self._filled >= CAPACITY:
                 self._reservation_rejections += 1
                 raise OutboxFullError
             self._reserved += 1
+            self._update_queue_metrics()
 
     def _record_reserved(self, event: UsageEvent, /) -> None:
         with self._lock:
@@ -73,6 +80,7 @@ class QueuedOutbox(EventOutbox):
             self._reserved -= 1
             self._filled += 1
             self._events.append(event)
+            self._update_queue_metrics()
             self._schedule_drain()
 
     def _release_reserved(self) -> None:
@@ -80,6 +88,7 @@ class QueuedOutbox(EventOutbox):
             if self._reserved == 0:
                 self._fail_reservation("outbox reservation accounting underflow")
             self._reserved -= 1
+            self._update_queue_metrics()
 
     def _fail_reservation(self, message: str) -> Never:
         error = RuntimeError(message)
@@ -116,6 +125,7 @@ class QueuedOutbox(EventOutbox):
             self._persisted_events += len(events)
             if self._closing:
                 self._gracefully_drained_events += len(events)
+            self._update_queue_metrics()
         return True
 
     def _fail(self, error: BaseException) -> None:
@@ -178,20 +188,30 @@ class QueuedOutbox(EventOutbox):
         return self._queue_stats()
 
     async def close(self) -> None:
+        outcome = "failed"
         with self._lock:
             self._accepting = False
             self._closing = True
             outstanding = self._reserved
             future = self._executor.submit(self._drain_and_close)
         try:
-            await asyncio.wrap_future(future)
+            try:
+                await asyncio.wrap_future(future)
+            finally:
+                self._executor.shutdown()
+            if outstanding:
+                raise _ReservationLeakError(outstanding)
+            with self._lock:
+                if self._failure is not None:
+                    raise _StorageWorkerError from self._failure
+            outcome = "success"
         finally:
-            self._executor.shutdown()
-        if outstanding:
-            raise _ReservationLeakError(outstanding)
-        with self._lock:
-            if self._failure is not None:
-                raise _StorageWorkerError from self._failure
+            if self._metrics is not None:
+                self._metrics.observe_metering_shutdown_drain(outcome)
+
+    def _update_queue_metrics(self) -> None:
+        if self._metrics is not None:
+            self._metrics.set_metering_queue(self._reserved + self._filled, CAPACITY)
 
     def _drain_and_close(self) -> None:
         try:

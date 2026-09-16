@@ -145,6 +145,20 @@ def test_public_signup_defaults_closed_and_can_be_opened_in_config(tmp_path, mon
     assert load_settings().public_signup is True
 
 
+def test_dev_uses_environment_then_config_then_default(tmp_path, monkeypatch):
+    config = tmp_path / "airmux.yml"
+    monkeypatch.setenv("AIRMUX_DEV", "1")
+    config.write_text("control_plane:\n  dev: false\n", encoding="utf-8")
+    assert load_settings(config).dev is True
+
+    monkeypatch.delenv("AIRMUX_DEV")
+    config.write_text("control_plane:\n  dev: true\n", encoding="utf-8")
+    assert load_settings(config).dev is True
+
+    config.write_text("control_plane: {}\n", encoding="utf-8")
+    assert load_settings(config).dev is False
+
+
 def test_supplied_bootstrap_token_is_validated_and_redacted():
     token = "sk-cp-one-shared-pool-secret-that-is-long-enough"
     bootstrap = DataPlaneBootstrap(token=token)

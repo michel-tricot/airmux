@@ -12,12 +12,14 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from airmux_runtime.observability import configure_logger, log_event
 from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
 from data_plane.ingress import REGISTRY as INGRESS
+from data_plane.metrics import DataPlaneMetrics, metrics_endpoint
 from data_plane.outbox import build_outbox
 from data_plane.proxy import complete
 from data_plane.runtime import Runtime, runtime_of
@@ -31,25 +33,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-async def healthz(request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok", "events": await runtime_of(request).outbox.backlog()})
+async def healthz(_request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
 
 
 async def readyz(request: Request) -> JSONResponse:
     holder = runtime_of(request).holder
-    if holder.rejected_manifest is not None:
-        return JSONResponse({"status": "bundle rejected"}, status_code=503)
     if not holder.current.snapshots:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
-
-
-def _configure_dev_logging() -> None:
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
 
 
 def _build_http_client() -> httpx.AsyncClient:
@@ -69,27 +61,33 @@ def _terminate_process_on_failure(task: asyncio.Task[None], /) -> None:
         return
     error = task.exception()
     if error is None:
-        logger.critical("background task %s stopped, terminating process", task.get_name())
+        log_event(logger, logging.CRITICAL, "background_task_stopped", task=task.get_name(), outcome="failed")
     else:
-        logger.critical("background task %s failed, terminating process", task.get_name(), exc_info=error)
+        logger.critical(
+            "background_task_failed",
+            extra={"event": "background_task_failed", "fields": {"task": task.get_name(), "outcome": "failed"}},
+            exc_info=error,
+        )
     _terminate_process()
 
 
 def create_app(config: Config) -> ASGIApp:
+    metrics = DataPlaneMetrics()
+
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
-        if config.dev:
-            _configure_dev_logging()
+        configure_logger(logger, dev=config.dev)
         async with config.secrets.build() as secret_store, _build_http_client() as http_client:
-            outbox = build_outbox(config.events, http_client)
+            outbox = build_outbox(config.events, http_client, metrics)
             try:
-                holder = BundleHolder()
+                holder = BundleHolder(metrics)
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,
-                    credentials=CredentialResolver(secret_store),
+                    credentials=CredentialResolver(secret_store, metrics=metrics),
                     http_client=http_client,
+                    metrics=metrics,
                 )
                 async with asyncio.TaskGroup() as task_group:
                     tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
@@ -110,10 +108,12 @@ def create_app(config: Config) -> ASGIApp:
             InferenceRoute("/inf/v1/models/{model_id:path}", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
+            Route("/metrics", metrics_endpoint),
         ],
         lifespan=lifespan,
     )
-    return ResponseHeadersMiddleware(app)
+    app.state.metrics = metrics
+    return ResponseHeadersMiddleware(app, metrics)
 
 
 def load_app() -> ASGIApp:

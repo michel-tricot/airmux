@@ -8,7 +8,7 @@ from http.client import HTTPResponse
 from typing import TYPE_CHECKING
 
 import httpx
-from stack_harness import STUB_API_KEY, _poll, _StubServer
+from stack_harness import STUB_API_KEY, _poll, _StubServer, metric
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,7 +41,7 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
         tuple(clients.map(requests, range(CONCURRENCY)))
     expected = CONCURRENCY * PER_CLIENT
     assert stack.upstream_requests == expected
-    assert _poll(lambda: httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == 0, 30)
+    assert _poll(lambda: metric(stack.dp_url + "/metrics", "airmux_data_plane_metering_outbox_pending") == 0, 30)
     events = stack.events()
     assert len(events) == expected
     assert {event["status"] for event in events} == {"ok"}

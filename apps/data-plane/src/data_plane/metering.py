@@ -13,6 +13,7 @@ import httpx
 import tiktoken
 from pydantic import BaseModel
 
+from airmux_runtime.observability import log_event
 from contract import DeniedUsageEventV1, RoutedUsageEventV1, UsdAmount, uuid7
 from contract.money import USD_AMOUNT_QUANTUM, ZERO_USD
 from data_plane.canonical import CanonicalTextPart, CanonicalUsage
@@ -159,21 +160,21 @@ def usage_event(
         credential_id=ctx.credential_id,
         credential_scope=ctx.credential_scope,
     )
-    logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d max_output_tokens=%s "
-        "cache_read=%d cache_write=%d estimated=%s cost_usd=%s latency_ms=%d",
-        ctx.request_id,
-        ctx.model.model_id,
-        ctx.provider.provider_id,
-        status,
-        ctx.stream,
-        usage.input_tokens,
-        usage.output_tokens,
-        request.max_output_tokens,
-        usage.cache_read_tokens,
-        usage.cache_write_tokens,
-        usage.estimated,
-        cost_in + cost_out,
-        latency_ms,
+    log_event(
+        logger,
+        logging.INFO,
+        "usage_recorded",
+        outcome=status,
+        model=ctx.model.model_id,
+        provider=ctx.provider.provider_id,
+        stream=ctx.stream,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        max_output_tokens=request.max_output_tokens,
+        cache_read_tokens=usage.cache_read_tokens,
+        cache_write_tokens=usage.cache_write_tokens,
+        estimated=usage.estimated,
+        cost_usd=cost_in + cost_out,
+        latency_ms=latency_ms,
     )
     return event

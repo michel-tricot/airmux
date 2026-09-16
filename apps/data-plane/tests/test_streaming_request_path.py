@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
@@ -17,6 +18,7 @@ from contract import uuid7
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import REGISTRY as INGRESS
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.streaming import StreamSession
 
 if TYPE_CHECKING:
@@ -107,6 +109,9 @@ async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox
             adjustments=(),
             reservation=reservation,
             http_client=http_client,
+            metrics=DataPlaneMetrics(),
+            egress_kind="openai_compatible",
+            attempt_started_at=time.monotonic(),
         )
         return await session.open(UPSTREAM)
 

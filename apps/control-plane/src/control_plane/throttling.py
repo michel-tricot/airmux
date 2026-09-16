@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.types import ASGIApp, Receive, Scope, Send
 
+    from control_plane.metrics import ControlPlaneMetrics
+
 
 class RateLimit(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
@@ -125,11 +127,20 @@ def denied_response(decision: Denied) -> JSONResponse:
 
 
 class ThrottleMiddleware:
-    def __init__(self, app: ASGIApp, *, backend: ThrottleBackend, config: ThrottleConfig, routes: tuple[ThrottleRoute, ...]) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        backend: ThrottleBackend,
+        config: ThrottleConfig,
+        routes: tuple[ThrottleRoute, ...],
+        metrics: ControlPlaneMetrics,
+    ) -> None:
         self.app = app
         self.backend = backend
         self.config = config
         self.routes = routes
+        self.metrics = metrics
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and scope["path"].startswith("/api/v1/"):
@@ -139,6 +150,7 @@ class ThrottleMiddleware:
             client = scope.get("client")
             identity = client[0] if client else "unknown"
             decision = await self.backend.consume(throttle_key(f"ip:{group}", identity), quota(self.config, group))
+            self.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
             if isinstance(decision, Denied):
                 await denied_response(decision)(scope, receive, send)
                 return
@@ -155,6 +167,7 @@ async def check_identity(request: Request, identity: UUID) -> None:
     decision = await request.app.state.throttle_backend.consume(
         throttle_key(f"principal:{group}", str(identity)), quota(request.app.state.settings.throttling, group)
     )
+    request.app.state.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
     if isinstance(decision, Denied):
         raise ThrottledError(decision)
 
@@ -164,5 +177,6 @@ async def check_account(request: Request, email: str) -> None:
     decision = await request.app.state.throttle_backend.consume(
         throttle_key("account", f"{client}:{email.strip().casefold()}"), request.app.state.settings.throttling.account
     )
+    request.app.state.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
     if isinstance(decision, Denied):
         raise ThrottledError(decision)

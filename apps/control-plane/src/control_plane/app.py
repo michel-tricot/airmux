@@ -2,20 +2,25 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
+from airmux_runtime.observability import configure_logger
 from control_plane.authority import AuthorizationError, CredentialError
 from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory, transaction
 from control_plane.deps import get_session
+from control_plane.http import ObservabilityMiddleware
+from control_plane.metrics import ControlPlaneMetrics, metrics_endpoint
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.models.auth_identity import IdentityConflictError
@@ -53,6 +58,8 @@ if TYPE_CHECKING:
 
     from control_plane.config import Settings
 
+logger = logging.getLogger("control_plane")
+
 
 async def _require_migrated_schema(engine: AsyncEngine) -> None:
     """Refuse to serve a database that is empty or behind: one clear startup error beats one 500 per request."""
@@ -71,6 +78,7 @@ async def _require_migrated_schema(engine: AsyncEngine) -> None:
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
+    configure_logger(logger, dev=settings.dev)
     engine = make_engine(settings.database.url)
     try:
         await _require_migrated_schema(engine)
@@ -80,7 +88,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 await bootstrap_data_plane(settings.bootstrap)
         async with settings.secrets.build() as secret_store:
             app.state.secret_store = secret_store
-            publisher = asyncio.create_task(run_publisher(app.state.session_factory), name="bundle-publisher")
+            publisher = asyncio.create_task(run_publisher(app.state.session_factory, app.state.metrics), name="bundle-publisher")
             try:
                 yield
             finally:
@@ -143,21 +151,33 @@ async def credential_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=401, content={"detail": error.detail})
 
 
-async def healthz(request: Request) -> JSONResponse:
-    """Unauthenticated probe for container orchestration; touches the database because process-up alone cannot serve a bundle poll."""
+async def healthz(_request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
+
+async def readyz(request: Request) -> JSONResponse:
     try:
         async with request.app.state.session_factory() as session:
             await session.execute(text("SELECT 1"))
     except SQLAlchemyError:
         return JSONResponse(status_code=503, content={"status": "unavailable"})
-    return JSONResponse({"status": "ok"})
+    return JSONResponse({"status": "ready"})
 
 
 async def throttled_handler(_request: Request, exc: Exception) -> JSONResponse:
     return denied_response(cast("ThrottledError", exc).decision)
 
 
+async def unexpected_handler(request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+        headers={"x-request-id": str(request.state.request_id)},
+    )
+
+
 def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBackend | None = None) -> FastAPI:
+    metrics = ControlPlaneMetrics()
     app = ControlPlaneApp(
         title="airmux Control Plane API",
         description=API_DESCRIPTION,
@@ -167,6 +187,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
         generate_unique_id_function=operation_id,
     )
     app.state.settings = settings if settings is not None else load_settings()
+    app.state.metrics = metrics
     throttling = app.state.settings.throttling
     app.state.throttle_backend = throttle_backend if throttle_backend is not None else LocalThrottleBackend(max_buckets=throttling.max_buckets)
     app.state.password_workers = PasswordWorkers(workers=throttling.password_workers, queue=throttling.password_queue)
@@ -184,7 +205,10 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(ManagedServiceAccountInstanceRoleError, domain_conflict_handler)
     app.add_exception_handler(IdentityConflictError, identity_conflict_handler)
     app.add_exception_handler(UnknownProviderError, unknown_provider_handler)
+    app.add_exception_handler(Exception, unexpected_handler)
     app.add_route("/healthz", healthz)
+    app.add_route("/readyz", readyz)
+    app.add_route("/metrics", metrics_endpoint)
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     routers = (
         management_keys_router,
@@ -206,5 +230,12 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     for router in routers:
         v1.include_router(router)
     app.include_router(v1)
-    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=compile_routes(routers))
+    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=compile_routes(routers), metrics=metrics)
+    metric_routes = (
+        "/healthz",
+        "/readyz",
+        "/metrics",
+        *(f"/api/v1{route.path}" for router in routers for route in router.routes if isinstance(route, APIRoute)),
+    )
+    app.add_middleware(ObservabilityMiddleware, metrics=metrics, routes=metric_routes)
     return app

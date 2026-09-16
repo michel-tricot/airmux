@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 import httpx
 import pytest
 import respx
 from anthropic import Anthropic
-from conftest import TEXT_LOG, TEXT_NONSTREAM, GatewayTransport, make_outbox, mock_control_plane, read_and_close_outbox
+from conftest import TEXT_LOG, TEXT_NONSTREAM, GatewayTransport, make_config, make_outbox, mock_control_plane, read_and_close_outbox
 from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
+from data_plane.app import create_app
 from data_plane.http import ResponseHeadersMiddleware
 
 INFERENCE_ROUTES = (
@@ -63,7 +66,7 @@ def test_all_inference_authentication_errors_have_common_headers(dp_app, method,
 
 
 @respx.mock
-@pytest.mark.parametrize("path", ["/healthz", "/readyz"])
+@pytest.mark.parametrize("path", ["/healthz", "/readyz", "/metrics"])
 def test_operational_routes_remain_public_and_disable_caching(dp_app, path):
     mock_control_plane()
     with TestClient(dp_app) as client:
@@ -71,6 +74,24 @@ def test_operational_routes_remain_public_and_disable_caching(dp_app, path):
     assert response.status_code == 200
     assert_private_headers(response)
     assert "www-authenticate" not in response.headers
+
+
+@respx.mock
+def test_metrics_are_prometheus_compatible_bounded_and_isolated(dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        client.get("/inf/v1/models")
+        metrics = client.get("/metrics").text
+
+    assert 'airmux_data_plane_http_requests_total{dialect="openai_chat_completions",method="GET",outcome="rejected",route="/inf/v1/models"' in metrics
+    assert "airmux_data_plane_bundle_snapshots 1.0" in metrics
+    assert not any(forbidden in metrics for forbidden in ("org_id=", "workspace_id=", "model=", "provider=", "bundle_id="))
+
+    other = cast("ResponseHeadersMiddleware", create_app(make_config(Path("unused"), "devnull")))
+    current = cast("ResponseHeadersMiddleware", dp_app)
+    assert other.metrics is not None
+    assert current.metrics is not None
+    assert other.metrics.registry is not current.metrics.registry
 
 
 @respx.mock

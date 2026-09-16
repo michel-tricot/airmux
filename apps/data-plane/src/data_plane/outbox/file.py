@@ -10,12 +10,13 @@ if TYPE_CHECKING:
 
     from contract import UsageEvent
     from data_plane.config import FileOutboxConfig
+    from data_plane.metrics import DataPlaneMetrics
 
 
 class FileOutbox(QueuedOutbox):
-    def __init__(self, config: FileOutboxConfig) -> None:
+    def __init__(self, config: FileOutboxConfig, metrics: DataPlaneMetrics | None = None) -> None:
         self._config = config
-        super().__init__("airmux-file-outbox")
+        super().__init__("airmux-file-outbox", metrics)
 
     def _open_storage(self) -> None:
         self._config.path.parent.mkdir(parents=True, exist_ok=True)

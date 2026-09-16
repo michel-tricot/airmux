@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Self
 
+from airmux_runtime.observability import log_event
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
 from data_plane.egress import REGISTRY
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
 
     from contract import BundleV1, KeyEntry, ModelEntry, ProviderEntry
     from data_plane.credentials import CredentialIndex
+    from data_plane.metrics import DataPlaneMetrics
     from data_plane.profiles import CompiledProfile
 
 logger = logging.getLogger("data_plane")
@@ -80,9 +83,10 @@ class BundleSet:
 
 
 class BundleHolder:
-    def __init__(self) -> None:
+    def __init__(self, metrics: DataPlaneMetrics | None = None) -> None:
         self._current = BundleSet.from_bundles(())
         self._rejected_manifest: str | None = None
+        self._metrics = metrics
 
     @property
     def current(self) -> BundleSet:
@@ -95,13 +99,28 @@ class BundleHolder:
     def swap(self, current: BundleSet, source: str) -> None:
         self._current = current
         self._rejected_manifest = None
+        if self._metrics is not None:
+            self._metrics.bundle_poll.labels("adopted").inc()
+            self._metrics.bundle_snapshots.set(len(current.snapshots))
+            self._metrics.bundle_manifest_rejected.set(0)
+            self._metrics.bundle_last_adopted.set(time.time())
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
 
     def reject_manifest(self, error: str) -> None:
         self._rejected_manifest = error
+        if self._metrics is not None:
+            self._metrics.bundle_poll.labels("rejected").inc()
+            self._metrics.bundle_manifest_rejected.set(1)
+        log_event(logger, logging.ERROR, "bundle_manifest_rejected", outcome="rejected")
 
     def accept_manifest(self) -> None:
         self._rejected_manifest = None
+        if self._metrics is not None:
+            self._metrics.bundle_manifest_rejected.set(0)
+
+    def record_poll(self, outcome: str) -> None:
+        if self._metrics is not None:
+            self._metrics.bundle_poll.labels(outcome).inc()
 
 
 def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) -> dict[str, T]:

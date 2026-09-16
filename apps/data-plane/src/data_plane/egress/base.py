@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, final
 import httpx
 from pydantic import BaseModel
 
+from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderErrorCode
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from uuid import UUID
@@ -16,12 +18,6 @@ if TYPE_CHECKING:
     from airmux_runtime.secrets import Secret
     from contract import CredentialScope, ModelEntry, ProviderEntry
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
-
-
-class CanonicalError(BaseModel):
-    status: int
-    code: str
-    message: str
 
 
 @dataclass(frozen=True)
@@ -194,18 +190,18 @@ class EgressAdapter[StateT: StreamState](ABC):
             rendered = (
                 self._provider_error(error.status, diagnostic)
                 if diagnostic is not None
-                else CanonicalError(status=error.status, code="upstream_error", message="upstream request failed")
+                else CanonicalError(status=error.status, code=GatewayErrorCode.upstream_error, message="upstream request failed")
             )
         elif isinstance(error, UpstreamProtocolError):
-            rendered = CanonicalError(status=502, code="invalid_upstream_response", message="invalid upstream response")
+            rendered = CanonicalError(status=502, code=GatewayErrorCode.invalid_upstream_response, message="invalid upstream response")
         elif isinstance(error, UpstreamStreamError):
             rendered = self._provider_error(502, ProviderDiagnostic(code=error.code, message=error.message))
         elif isinstance(error, httpx.TimeoutException):
-            rendered = CanonicalError(status=504, code="upstream_timeout", message="upstream request timed out")
+            rendered = CanonicalError(status=504, code=GatewayErrorCode.upstream_timeout, message="upstream request timed out")
         elif isinstance(error, httpx.ConnectError):
-            rendered = CanonicalError(status=502, code="upstream_unreachable", message="upstream service is unreachable")
+            rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_unreachable, message="upstream service is unreachable")
         else:
-            rendered = CanonicalError(status=502, code="upstream_error", message="upstream request failed")
+            rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_error, message="upstream request failed")
         return rendered
 
     def _provider_error(self, status: int, diagnostic: ProviderDiagnostic) -> CanonicalError:
@@ -214,6 +210,6 @@ class EgressAdapter[StateT: StreamState](ABC):
         message = diagnostic.message.replace(credential, "[REDACTED]") if credential else diagnostic.message
         return CanonicalError(
             status=status,
-            code=code[:128],
+            code=ProviderErrorCode(code[:128]),
             message=message[:1024],
         )

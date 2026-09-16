@@ -153,7 +153,7 @@ async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http
     assert read_cached_bundles(tmp_path) is None
 
 
-async def test_readiness_rejects_a_new_invalid_manifest_even_with_a_cached_bundle():
+async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
     holder = BundleHolder()
     holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
     request = Request({"type": "http"})
@@ -162,7 +162,7 @@ async def test_readiness_rejects_a_new_invalid_manifest_even_with_a_cached_bundl
     assert (await readyz(request)).status_code == 200
     holder.reject_manifest("manifest mismatch")
 
-    assert (await readyz(request)).status_code == 503
+    assert (await readyz(request)).status_code == 200
 
 
 @respx.mock

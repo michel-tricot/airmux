@@ -79,6 +79,20 @@ def test_defaults_apply_to_a_standalone_data_plane(clean_env):
     assert config.bundle.reload_interval_s == 2.0
 
 
+def test_dev_uses_environment_then_config_then_default(clean_env, monkeypatch):
+    config_file = clean_env / "airmux.yml"
+    monkeypatch.setenv("AIRMUX_DEV", "1")
+    config_file.write_text("data_plane:\n  bundle: {kind: local, path: bundle.yml}\n  dev: false\n", encoding="utf-8")
+    assert load_config().dev is True
+
+    monkeypatch.delenv("AIRMUX_DEV")
+    config_file.write_text("data_plane:\n  bundle: {kind: local, path: bundle.yml}\n  dev: true\n", encoding="utf-8")
+    assert load_config().dev is True
+
+    config_file.write_text("data_plane:\n  bundle: {kind: local, path: bundle.yml}\n", encoding="utf-8")
+    assert load_config().dev is False
+
+
 def test_outbox_kind_discriminates_the_config(clean_env):
     config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: devnull\n"
     (clean_env / "airmux.yml").write_text(config, encoding="utf-8")

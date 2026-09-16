@@ -10,5 +10,5 @@ def test_fly_uses_the_shared_application_image_and_persistent_state():
     assert (path.parent / config["build"]["dockerfile"]).is_file()
     assert config["build"]["build-target"] == "all-in-one"
     assert config["http_service"]["internal_port"] == 8080
-    assert config["http_service"]["checks"][0]["path"] == "/healthz"
+    assert config["http_service"]["checks"][0]["path"] == "/readyz"
     assert config["mounts"]["destination"] == "/state"

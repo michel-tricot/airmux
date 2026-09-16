@@ -13,6 +13,7 @@ dependencies = [
   "fastapi",
   "httpx[http2]",
   "pydantic>=2",
+  "prometheus-client",
   "python-dotenv",
   "pyyaml",
   "rich",

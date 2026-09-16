@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import anyio
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from data_plane.canonical import CanonicalAdjustment, CanonicalRequest
     from data_plane.egress.base import Ctx, EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
+    from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome
     from data_plane.outbox import OutboxReservation
 
 
@@ -33,6 +35,9 @@ class StreamSession:
     adjustments: tuple[CanonicalAdjustment, ...]
     reservation: OutboxReservation
     http_client: httpx.AsyncClient
+    metrics: DataPlaneMetrics
+    egress_kind: str
+    attempt_started_at: float
 
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
@@ -72,7 +77,7 @@ class _StreamResponse(StreamingResponse):
                     await super().__call__(scope, receive, send)
                 finally:
                     if not self._recorded:
-                        self._record(self._cancelled_event())
+                        self._record(self._cancelled_event(), "cancelled")
 
     async def _events(self) -> AsyncIterator[bytes]:
         try:
@@ -87,7 +92,7 @@ class _StreamResponse(StreamingResponse):
             final = self._session.adapter.finalize(self._stream_state)
             for frame in self._renderer.closing(final, list(self._session.adjustments)):
                 yield frame
-            self._record(usage_event(self._session.ctx, final, status="ok", request=self._session.request))
+            self._record(usage_event(self._session.ctx, final, status="ok", request=self._session.request), "success")
         except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
             for frame in self._renderer.error(self._session.adapter.map_error(error)):
                 yield frame
@@ -97,10 +102,11 @@ class _StreamResponse(StreamingResponse):
                     self._session.adapter.finalize(self._stream_state),
                     status=status_for_error(error),
                     request=self._session.request,
-                )
+                ),
+                _upstream_outcome(error),
             )
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            self._record(self._cancelled_event())
+            self._record(self._cancelled_event(), "cancelled")
             raise
 
     def _cancelled_event(self) -> UsageEvent:
@@ -111,6 +117,19 @@ class _StreamResponse(StreamingResponse):
             request=self._session.request,
         )
 
-    def _record(self, event: UsageEvent) -> None:
+    def _record(self, event: UsageEvent, outcome: UpstreamOutcome) -> None:
         self._reservation.record(event)
+        self._session.metrics.observe_upstream(self._session.egress_kind, outcome, self._session.attempt_started_at)
         self._recorded = True
+
+
+def _upstream_outcome(error: Exception) -> UpstreamOutcome:
+    if isinstance(error, httpx.TimeoutException):
+        return "timeout"
+    if isinstance(error, httpx.HTTPError):
+        return "unreachable"
+    if isinstance(error, (UpstreamProtocolError, UpstreamStreamError)):
+        return "protocol_error"
+    if isinstance(error, UpstreamResponseError) and error.status < HTTPStatus.INTERNAL_SERVER_ERROR:
+        return "rejected"
+    return "provider_error"

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from starlette.responses import Response
 
 from contract import Capability, Modality, ParameterSupport
+from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 from data_plane.policy import model_allowed
 
@@ -65,7 +66,7 @@ def _model_out(model: ModelEntry, snapshot: BundleSnapshot) -> ModelOut:
 def _retrieve_model(model_id: str, key: KeyEntry, snapshot: BundleSnapshot) -> ModelOut:
     model = snapshot.model_index.get(model_id)
     if model is None or not model_allowed(model, key, snapshot):
-        raise RequestRejectedError(404, "unknown_model")
+        raise RequestRejectedError(404, GatewayErrorCode.unknown_model)
     return _model_out(model, snapshot)
 
 
