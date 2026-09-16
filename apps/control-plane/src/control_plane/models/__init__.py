@@ -19,7 +19,6 @@ from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.policy import Policy
 from control_plane.models.provider import Provider
 from control_plane.models.provider_credential import ProviderCredential
-from control_plane.models.rule import Rule
 from control_plane.models.runtime_configuration import RuntimeConfiguration, bundle_input
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
@@ -48,7 +47,6 @@ __all__ = [
     "Provider",
     "ProviderCredential",
     "Record",
-    "Rule",
     "RuntimeConfiguration",
     "Tombstonable",
     "UsageEvent",

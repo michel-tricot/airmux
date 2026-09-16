@@ -338,38 +338,6 @@ export const operationAuthority = {
       },
     ],
   },
-  listRules: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.read"],
-      },
-    ],
-  },
-  createRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  updateRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  deleteRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
   listPolicies: {
     checks: [
       {
