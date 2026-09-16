@@ -36,7 +36,7 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-hook-form": "^7.55.0",
+    "react-hook-form": "^7.88.0",
     "tailwind-merge": "catalog:",
     "wouter": "catalog:",
     "zod": "catalog:"
