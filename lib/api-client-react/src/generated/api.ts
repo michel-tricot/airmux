@@ -35,6 +35,8 @@ import type {
   BundleLatestParams,
   BundleManifest,
   BundleOut,
+  BundlePublicationStatusOut,
+  BundleRepublishOut,
   BundleV1,
   ClaimOut,
   CliAuthApproveIn,
@@ -59,6 +61,7 @@ import type {
   InferenceKeyOut,
   InferenceKeyOwnerOut,
   InferenceKeyRevokedOut,
+  InstancePublicationStatusOut,
   InstanceRoleIn,
   InvitationAcceptedOut,
   InvitationPreviewOut,
@@ -2152,6 +2155,110 @@ export function useClaim<TData = Awaited<ReturnType<typeof claim>>, TError = Err
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getClaimQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetInstanceBundlePublicationStatusUrl = () => {
+
+
+
+
+  return `/api/v1/instance/bundles/status`
+}
+
+/**
+ * Summarize publication of the current global configuration revision.
+ *
+ * Required permission: `catalog.read`.
+ * @summary Get Instance Bundle Publication Status
+ */
+export const getInstanceBundlePublicationStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<InstancePublicationStatusOut> => {
+
+  return customFetch<InstancePublicationStatusOut>(getGetInstanceBundlePublicationStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInstanceBundlePublicationStatusQueryKey = () => {
+    return [
+    `/api/v1/instance/bundles/status`
+    ] as const;
+    }
+
+
+export const getGetInstanceBundlePublicationStatusQueryOptions = <TData = Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInstanceBundlePublicationStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>> = ({ signal }) => getInstanceBundlePublicationStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetInstanceBundlePublicationStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>>
+export type GetInstanceBundlePublicationStatusQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetInstanceBundlePublicationStatus<TData = Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetInstanceBundlePublicationStatus<TData = Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetInstanceBundlePublicationStatus<TData = Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Instance Bundle Publication Status
+ */
+
+export function useGetInstanceBundlePublicationStatus<TData = Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInstanceBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetInstanceBundlePublicationStatusQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -6939,14 +7046,14 @@ export const getRepublishBundleUrl = (orgId: string,) => {
 }
 
 /**
- * Request a fresh bundle for the organization's current configuration.
+ * Queue a fresh bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
  * @summary Republish Policy Bundle
  */
-export const republishBundle = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleOut> => {
+export const republishBundle = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleRepublishOut> => {
 
-  return customFetch<BundleOut>(getRepublishBundleUrl(orgId),
+  return customFetch<BundleRepublishOut>(getRepublishBundleUrl(orgId),
   {
     ...options,
     method: 'POST'
@@ -7003,6 +7110,110 @@ export const useRepublishBundle = <TError = ErrorType<void | HTTPValidationError
       > => {
       return useMutation(getRepublishBundleMutationOptions(options), queryClient);
     }
+
+export const getGetBundlePublicationStatusUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/v1/organizations/${orgId}/bundles/status`
+}
+
+/**
+ * Return the organization's control-plane bundle publication state.
+ *
+ * Required permission: `bundles.read`.
+ * @summary Get Bundle Publication Status
+ */
+export const getBundlePublicationStatus = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundlePublicationStatusOut> => {
+
+  return customFetch<BundlePublicationStatusOut>(getGetBundlePublicationStatusUrl(orgId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBundlePublicationStatusQueryKey = (orgId: string,) => {
+    return [
+    `/api/v1/organizations/${orgId}/bundles/status`
+    ] as const;
+    }
+
+
+export const getGetBundlePublicationStatusQueryOptions = <TData = Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBundlePublicationStatusQueryKey(orgId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBundlePublicationStatus>>> = ({ signal }) => getBundlePublicationStatus(orgId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetBundlePublicationStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getBundlePublicationStatus>>>
+export type GetBundlePublicationStatusQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetBundlePublicationStatus<TData = Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBundlePublicationStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getBundlePublicationStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBundlePublicationStatus<TData = Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBundlePublicationStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getBundlePublicationStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetBundlePublicationStatus<TData = Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Bundle Publication Status
+ */
+
+export function useGetBundlePublicationStatus<TData = Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getBundlePublicationStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetBundlePublicationStatusQueryOptions(orgId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListBundlesUrl = (orgId: string,) => {
 

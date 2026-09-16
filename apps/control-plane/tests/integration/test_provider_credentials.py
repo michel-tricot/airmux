@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
-from uuid import UUID  # noqa: TC003 NamedTuple resolves its annotations at runtime
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane, wait_for_publication
 from pg import db_url_for
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -43,6 +43,7 @@ def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
 
 
 def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
+    wait_for_publication(client, UUID(headers["X-Test-Org-Id"]), headers)
     return BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=headers).json()["data"])
 
 
@@ -135,6 +136,7 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
         response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         assert response.status_code == 200, response.text
         credential = response.json()["data"]
+        wait_for_publication(c, UUID(org["X-Test-Org-Id"]), org)
         bundle_response = c.get("/api/v1/bundle/latest", headers=org)
         entry = BundleV1.model_validate(bundle_response.json()["data"]).catalog.credentials[0]
         rotated = c.put(f"{_credential_path(credential)}/value", json={"value": "sk-rotated-9999"}, headers=org)
@@ -328,6 +330,7 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
+        wait_for_publication(c, org_id, org)
         payload = c.get("/api/v1/bundle/latest", headers=org).text
         assert KEY not in payload
         entry = _latest_bundle(c, org).catalog.credentials[0]

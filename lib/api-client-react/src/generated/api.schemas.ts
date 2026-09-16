@@ -71,6 +71,40 @@ export interface BundleOut {
   issued_at: string;
 }
 
+export type PublicationState = typeof PublicationState[keyof typeof PublicationState];
+
+
+export const PublicationState = {
+  current: 'current',
+  pending: 'pending',
+  failed: 'failed',
+} as const;
+
+export interface PublishedBundleOut {
+  id: string;
+  version: number;
+  issued_at: string;
+}
+
+export interface PublicationFailureOut {
+  category: string;
+  message: string;
+}
+
+export interface BundlePublicationStatusOut {
+  desired_revision: number;
+  published_revision: number;
+  status: PublicationState;
+  latest_bundle: PublishedBundleOut | null;
+  last_attempt_at: string | null;
+  failure: PublicationFailureOut | null;
+}
+
+export interface BundleRepublishOut {
+  queued_revision: number;
+  publication: BundlePublicationStatusOut;
+}
+
 /**
  * An active inference key included in a policy bundle.
  *
@@ -707,6 +741,12 @@ export interface InferenceKeyOwnerOut {
 export interface InferenceKeyRevokedOut {
   id: string;
   status: 'revoked';
+}
+
+export interface InstancePublicationStatusOut {
+  global_desired_revision: number;
+  pending_organization_count: number;
+  failed_organization_count: number;
 }
 
 export type InstanceRole = typeof InstanceRole[keyof typeof InstanceRole];
@@ -1631,16 +1671,11 @@ export interface TaxonomyChangeCounts {
   unchanged: number;
 }
 
-export interface TaxonomyPublicationOut {
-  org_id: string;
-  version: number;
-}
-
 export interface TaxonomyApplyOut {
   dry_run: boolean;
   providers: TaxonomyChangeCounts;
   models: TaxonomyChangeCounts;
-  published: TaxonomyPublicationOut[];
+  queued_revision: number | null;
 }
 
 export interface TaxonomyOut {

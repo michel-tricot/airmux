@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Protocol, cast
 from uuid import UUID
 
@@ -13,7 +12,6 @@ from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
-from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configuration_changes
 from control_plane.sessions import SESSION_COOKIE, verify_session
 from control_plane.throttling import TrafficGroup, check_identity
 
@@ -271,12 +269,6 @@ def browser_scoped(traffic_group: TrafficGroup) -> params.Depends:
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     async with transaction(request.app.state.session_factory) as session:
         yield session
-        changes = runtime_configuration_changes(session.sync_session)
-        if changes:
-            from control_plane.compiler import publish_pending  # noqa: PLC0415 compiler loads every projected model
-
-            await RuntimeConfiguration.advance(changes)
-            await publish_pending(datetime.now(tz=UTC))
 
 
 SessionDep = Annotated["AsyncSession", Depends(get_session, scope="function")]

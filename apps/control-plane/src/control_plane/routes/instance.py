@@ -8,12 +8,19 @@ from sqlmodel import col
 
 from control_plane.authz import Permission
 from control_plane.deps import instance_scope, require
-from control_plane.models import AuditLog, DataPlaneInstance
+from control_plane.models import AuditLog, DataPlaneInstance, RuntimeConfiguration
 from control_plane.models.audit import ActivityOut
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
+from control_plane.models.runtime_configuration import InstancePublicationStatusOut  # noqa: TC001 FastAPI resolves route annotations at runtime
 
 router = APIRouter(prefix="/instance")
+
+
+@router.get("/bundles/status", tags=["Instance Model Catalog"], dependencies=[require("api", instance_scope, Permission.catalog_read)])
+async def get_instance_bundle_publication_status() -> Envelope[InstancePublicationStatusOut]:
+    """Summarize publication of the current global configuration revision."""
+    return Envelope(data=await RuntimeConfiguration.instance_status())
 
 
 @router.get("/data-planes", tags=["Data Plane Instances"], dependencies=[require("api", instance_scope, Permission.data_planes_read)])

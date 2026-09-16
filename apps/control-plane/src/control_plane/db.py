@@ -27,12 +27,21 @@ def current_session() -> AsyncSession:
 
 
 @asynccontextmanager
-async def transaction(factory: async_sessionmaker[AsyncSession]) -> AsyncIterator[AsyncSession]:
+async def transaction(factory: async_sessionmaker[AsyncSession], *, isolation_level: str | None = None) -> AsyncIterator[AsyncSession]:
     """One unit of work: the body flushes, commit happens here on success, close rolls back on failure."""
     async with factory() as session:
         token = _session.set(session)
         try:
+            if isolation_level is not None:
+                await session.connection(execution_options={"isolation_level": isolation_level})
             yield session
+            await session.flush()
+            from control_plane.models.runtime_configuration import (  # noqa: PLC0415 transaction teardown owns durable revision recording
+                record_runtime_configuration_changes,
+                runtime_configuration_changes,
+            )
+
+            await record_runtime_configuration_changes(runtime_configuration_changes(session.sync_session))
             await session.commit()
         finally:
             _session.reset(token)
@@ -52,7 +61,7 @@ async def standalone_engine(database_url: str) -> AsyncIterator[async_sessionmak
 
 
 @asynccontextmanager
-async def standalone_transaction(database_url: str) -> AsyncIterator[AsyncSession]:
+async def standalone_transaction(database_url: str, *, isolation_level: str | None = None) -> AsyncIterator[AsyncSession]:
     """One unit of work for non-request code that needs exactly one transaction."""
-    async with standalone_engine(database_url) as factory, transaction(factory) as session:
+    async with standalone_engine(database_url) as factory, transaction(factory, isolation_level=isolation_level) as session:
         yield session

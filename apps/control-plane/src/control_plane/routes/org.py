@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
@@ -9,7 +8,6 @@ from sqlmodel import col
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
-from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
 from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
 from control_plane.models.audit import ActivityOut
@@ -17,6 +15,7 @@ from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
+from control_plane.models.runtime_configuration import BundlePublicationStatusOut, BundleRepublishOut
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
@@ -142,14 +141,22 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
     return Envelope(data=DeletedOut.of(user_id))
 
 
-@router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_publish)])
-async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
-    """Request a fresh bundle for the organization's current configuration."""
-    now = datetime.now(tz=UTC)
-    await RuntimeConfiguration.request_republication(org_id)
-    published = await publish_pending(now)
-    bundle = next(bundle for bundle in published if bundle.org_id == org_id)
-    return Envelope(data=BundleOut.model_validate(bundle))
+@router.post(
+    "/bundles/republish",
+    tags=["Organization Bundles"],
+    dependencies=[require("api", org_scope, Permission.bundles_publish)],
+    status_code=202,
+)
+async def republish_bundle(org_id: OrgDep) -> Envelope[BundleRepublishOut]:
+    """Queue a fresh bundle for the organization's current configuration."""
+    revision = await RuntimeConfiguration.request_republication(org_id)
+    return Envelope(data=BundleRepublishOut(queued_revision=revision, publication=await RuntimeConfiguration.status(org_id)))
+
+
+@router.get("/bundles/status", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])
+async def get_bundle_publication_status(org_id: OrgDep) -> Envelope[BundlePublicationStatusOut]:
+    """Return the organization's control-plane bundle publication state."""
+    return Envelope(data=await RuntimeConfiguration.status(org_id))
 
 
 @router.get("/bundles", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])

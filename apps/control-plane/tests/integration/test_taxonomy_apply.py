@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, setup_control_plane
+from helpers import MODEL, PROVIDER, make_org, setup_control_plane, wait_for_publication
 
 from control_plane.authz import Permission
 
@@ -25,9 +25,9 @@ def test_instance_admin_applies_a_taxonomy_atomically_and_publishes_once(tmp_pat
         assert applied["dry_run"] is False
         assert applied["providers"] == {"created": 1, "updated": 0, "unchanged": 0}
         assert applied["models"] == {"created": 1, "updated": 0, "unchanged": 0}
-        after = _bundles(client, org_id, org)
-        assert len(after) == len(before) + 1
-        assert applied["published"] == [{"org_id": str(org_id), "version": after[-1]["version"]}]
+        assert _bundles(client, org_id, org) == before
+        assert isinstance(applied["queued_revision"], int)
+        wait_for_publication(client, org_id, org, applied["queued_revision"])
         taxonomy = client.get("/api/v1/instance/taxonomy", headers=root).json()["data"]
         assert [provider["name"] for provider in taxonomy["providers"]] == ["openai"]
         assert [model["name"] for model in taxonomy["models"]] == ["gpt-test"]
@@ -53,7 +53,7 @@ def test_taxonomy_dry_run_is_read_only(tmp_path):
             "dry_run": True,
             "providers": {"created": 1, "updated": 0, "unchanged": 0},
             "models": {"created": 1, "updated": 0, "unchanged": 0},
-            "published": [],
+            "queued_revision": None,
         }
         assert client.get("/api/v1/instance/taxonomy", headers=root).json()["data"] == {"providers": [], "models": []}
         assert _bundles(client, org_id, org) == before
@@ -69,7 +69,7 @@ def test_taxonomy_apply_reports_unchanged_and_updated_entries(tmp_path):
         unchanged = client.post("/api/v1/instance/taxonomy", json=body, headers=root).json()["data"]
         assert unchanged["providers"] == {"created": 0, "updated": 0, "unchanged": 1}
         assert unchanged["models"] == {"created": 0, "updated": 0, "unchanged": 1}
-        assert unchanged["published"] == []
+        assert unchanged["queued_revision"] is None
 
         changed = client.post(
             "/api/v1/instance/taxonomy",

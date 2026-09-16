@@ -74,6 +74,14 @@ export const operationAuthority = {
       },
     ],
   },
+  getInstanceBundlePublicationStatus: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["catalog.read"],
+      },
+    ],
+  },
   listDataPlanes: {
     checks: [
       {
@@ -519,6 +527,14 @@ export const operationAuthority = {
       {
         scope: "org_scope",
         anyOf: ["bundles.publish"],
+      },
+    ],
+  },
+  getBundlePublicationStatus: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["bundles.read"],
       },
     ],
   },

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import TYPE_CHECKING, cast
 
@@ -24,6 +25,7 @@ from control_plane.models.policy import InvalidPolicyError
 from control_plane.models.user import LastInstanceOwnerError, ManagedServiceAccountInstanceRoleError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
 from control_plane.passwords import PasswordWorkers
+from control_plane.publisher import run_publisher
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
 from control_plane.routes.instance import router as instance_router
@@ -77,7 +79,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 await bootstrap_data_plane(settings.bootstrap)
         async with settings.secrets.build() as secret_store:
             app.state.secret_store = secret_store
-            yield
+            publisher = asyncio.create_task(run_publisher(app.state.session_factory), name="bundle-publisher")
+            try:
+                yield
+            finally:
+                publisher.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await publisher
     finally:
         app.state.password_workers.close()
         await engine.dispose()

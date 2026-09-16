@@ -101,13 +101,13 @@ def owner(email: Annotated[str, typer.Option("--email", help="Existing human acc
 def taxonomy(
     file: Annotated[Path, typer.Option("--file", help="Taxonomy path, relative to the configuration file")], config: ConfigOption = None
 ) -> None:
-    """Apply a taxonomy file to the database and publish changed bundles."""
+    """Apply a taxonomy file and queue changed bundles for publication."""
     from control_plane.operations import apply_catalog  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     result = asyncio.run(apply_catalog(path, path.parent / file))
-    publications = ", ".join(f"{publication.organization} v{publication.version}" for publication in result.publications) or "no bundle changes"
-    typer.echo(f"Applied {file.name}: {result.providers} providers, {result.models} models; published: {publications}")
+    queued = f"configuration revision {result.queued_revision}" if result.queued_revision is not None else "no configuration changes"
+    typer.echo(f"Applied {file.name}: {result.providers} providers, {result.models} models; queued: {queued}")
 
 
 @control_plane_app.command()

@@ -156,6 +156,7 @@
                   {
                     "group": "Model Catalog",
                     "pages": [
+                      "GET /api/v1/instance/bundles/status",
                       "GET /api/v1/instance/taxonomy",
                       "POST /api/v1/instance/taxonomy",
                       "POST /api/v1/instance/taxonomy/providers",
@@ -242,7 +243,11 @@
                   },
                   {
                     "group": "Bundles",
-                    "pages": ["POST /api/v1/organizations/{org_id}/bundles/republish", "GET /api/v1/organizations/{org_id}/bundles"]
+                    "pages": [
+                      "POST /api/v1/organizations/{org_id}/bundles/republish",
+                      "GET /api/v1/organizations/{org_id}/bundles/status",
+                      "GET /api/v1/organizations/{org_id}/bundles"
+                    ]
                   },
                   {
                     "group": "Usage Events",

@@ -83,6 +83,7 @@ def upgrade() -> None:
     if needs_uuidv7_shim(op.get_bind()):
         op.execute(UUIDV7_SHIM_DDL_V1)
     op.execute("CREATE EXTENSION IF NOT EXISTS citext")
+    op.execute("CREATE SEQUENCE configuration_revision_seq")
     op.create_table(
         "audit_log",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -240,8 +241,11 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["org_id"],
             ["org.id"],
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("org_id", "configuration_revision", name="bundle_org_id_configuration_revision_key"),
+        sa.UniqueConstraint("org_id", "version", name="bundle_org_id_version_key"),
     )
     op.create_table(
         "model",
@@ -497,10 +501,23 @@ def upgrade() -> None:
         postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
+        "global_runtime_configuration",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("desired_revision", sa.Integer(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.execute("INSERT INTO global_runtime_configuration (id, desired_revision) VALUES (1, 0)")
+    op.create_table(
         "runtime_configuration",
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("desired_revision", sa.Integer(), nullable=False),
         sa.Column("published_revision", sa.Integer(), nullable=False),
+        sa.Column("last_attempted_revision", sa.Integer(), nullable=True),
+        sa.Column("last_attempted_at", UTCDateTime(), nullable=True),
+        sa.Column("failure_count", sa.Integer(), nullable=False),
+        sa.Column("next_attempt_at", UTCDateTime(), nullable=True),
+        sa.Column("last_error_category", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
+        sa.Column("last_error_message", sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
         sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("org_id"),
     )
@@ -584,6 +601,7 @@ def downgrade() -> None:
     op.drop_table("policy")
     op.drop_table("playground_session")
     op.drop_table("runtime_configuration")
+    op.drop_table("global_runtime_configuration")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
     op.drop_table("org_invitation")
     op.drop_table("provider_credential")
@@ -608,6 +626,7 @@ def downgrade() -> None:
     op.drop_table("org")
     op.drop_table("user")
     op.drop_table("audit_log")
+    op.execute("DROP SEQUENCE configuration_revision_seq")
     op.execute("DROP EXTENSION IF EXISTS citext")
     if needs_uuidv7_shim(op.get_bind()):
         op.execute("DROP FUNCTION uuidv7()")

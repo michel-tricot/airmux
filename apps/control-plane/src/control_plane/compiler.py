@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func
@@ -7,9 +8,18 @@ from sqlmodel import col, or_, select
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, uuid7
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, RuntimeConfiguration
+from control_plane.models import (
+    Bundle,
+    GlobalRuntimeConfiguration,
+    InferenceKey,
+    Model,
+    Org,
+    PlaygroundSession,
+    Provider,
+    ProviderCredential,
+    RuntimeConfiguration,
+)
 from control_plane.models.policy import Policy
-from control_plane.models.runtime_configuration import runtime_configuration_changes
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -21,39 +31,47 @@ class UnknownOrgError(LookupError):
         super().__init__(str(org_id))
 
 
-async def publish_changes(now: datetime) -> tuple[Bundle, ...]:
-    await RuntimeConfiguration.advance(runtime_configuration_changes(current_session().sync_session))
-    return await publish_pending(now)
+@dataclass(frozen=True)
+class PublicationResult:
+    org_id: UUID
+    configuration_revision: int
+    bundle: Bundle
 
 
-async def publish_pending(now: datetime) -> tuple[Bundle, ...]:
-    published: tuple[Bundle, ...] = ()
-    configuration = await RuntimeConfiguration.next_pending()
-    while configuration is not None:
-        published = (*published, await _publish_revision(configuration, uuid7(), now))
-        configuration = await RuntimeConfiguration.next_pending()
-    return published
+class PublicationError(RuntimeError):
+    def __init__(self, org_id: UUID, configuration_revision: int) -> None:
+        self.org_id = org_id
+        self.configuration_revision = configuration_revision
+        super().__init__(f"bundle publication failed for organization {org_id}")
 
 
-async def _publish_revision(
-    configuration: RuntimeConfiguration,
-    bundle_id: UUID,
-    now: datetime,
-) -> Bundle:
-    org_id = configuration.org_id
-    bundle = await compile_bundle(org_id, bundle_id, now)
+async def publish_next(now: datetime) -> PublicationResult | None:
+    candidate = await RuntimeConfiguration.next_pending(now)
+    if candidate is None:
+        return None
+    org_id, _ = candidate
+    if not await RuntimeConfiguration.try_lock(org_id):
+        return None
+    configuration, target_revision = await RuntimeConfiguration.target(org_id)
+    if configuration.published_revision >= target_revision:
+        return None
+    bundle_id = uuid7()
+    try:
+        bundle = await compile_bundle(org_id, bundle_id, now)
+    except Exception as error:
+        raise PublicationError(org_id, target_revision) from error
+    await GlobalRuntimeConfiguration.lock_for_publication()
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
     stored = await Bundle(
         id=bundle_id,
         org_id=org_id,
         version=version + 1,
         issued_at=now,
-        configuration_revision=configuration.desired_revision,
+        configuration_revision=target_revision,
         payload=bundle.model_dump_json(),
     ).save()
-    configuration.published_revision = configuration.desired_revision
-    await configuration.save()
-    return stored
+    await configuration.mark_published(target_revision, now)
+    return PublicationResult(org_id=org_id, configuration_revision=target_revision, bundle=stored)
 
 
 async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> BundleV1:

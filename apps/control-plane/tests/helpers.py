@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
@@ -150,6 +151,21 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
     response = client.post(f"/api/v1/organizations/{org_id}/workspaces", json={"name": name}, headers=headers)
     assert response.status_code == 200, response.text
     return UUID(response.json()["data"]["id"])
+
+
+def wait_for_publication(client, org_id: UUID, headers: dict[str, str], revision: int | None = None, timeout: float = 5.0) -> dict:
+    deadline = time.monotonic() + timeout
+    while True:
+        response = client.get(f"/api/v1/organizations/{org_id}/bundles/status", headers=headers)
+        assert response.status_code == 200, response.text
+        publication = response.json()["data"]
+        reached_revision = revision is None or publication["published_revision"] >= revision
+        if publication["status"] == "current" and reached_revision:
+            return publication
+        if time.monotonic() >= deadline:
+            message = f"publication did not become current: {publication}"
+            raise AssertionError(message)
+        time.sleep(0.02)
 
 
 def inference_key_body(client, headers: dict[str, str], label: str) -> dict[str, str]:

@@ -31,7 +31,7 @@ class Client:
                     "dry_run": params["dry_run"],
                     "providers": {"created": 1, "updated": 0, "unchanged": 0},
                     "models": {"created": 1, "updated": 0, "unchanged": 0},
-                    "published": [],
+                    "queued_revision": None,
                 }
             },
         )

@@ -892,6 +892,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
+  /api/v1/instance/bundles/status:
+    get:
+      tags:
+      - Instance Model Catalog
+      summary: Get Instance Bundle Publication Status
+      description: 'Summarize publication of the current global configuration revision.
+
+
+        Required permission: `catalog.read`.'
+      operationId: get_instance_bundle_publication_status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InstancePublicationStatusOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - catalog.read
   /api/v1/instance/data-planes:
     get:
       tags:
@@ -3528,11 +3562,53 @@ paths:
       tags:
       - Organization Bundles
       summary: Republish Policy Bundle
-      description: 'Request a fresh bundle for the organization''s current configuration.
+      description: 'Queue a fresh bundle for the organization''s current configuration.
 
 
         Required permission: `bundles.publish`.'
       operationId: republish_bundle
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BundleRepublishOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: org_scope
+        anyOf:
+        - bundles.publish
+  /api/v1/organizations/{org_id}/bundles/status:
+    get:
+      tags:
+      - Organization Bundles
+      summary: Get Bundle Publication Status
+      description: 'Return the organization''s control-plane bundle publication state.
+
+
+        Required permission: `bundles.read`.'
+      operationId: get_bundle_publication_status
       security:
       - ManagementKey: []
       - SessionCookie: []
@@ -3550,7 +3626,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_BundleOut_'
+                $ref: '#/components/schemas/Envelope_BundlePublicationStatusOut_'
         '422':
           description: Validation Error
           content:
@@ -3564,7 +3640,7 @@ paths:
       x-airmux-authority:
       - scope: org_scope
         anyOf:
-        - bundles.publish
+        - bundles.read
   /api/v1/organizations/{org_id}/bundles:
     get:
       tags:
@@ -4462,6 +4538,51 @@ components:
       - version
       - issued_at
       title: BundleOut
+    BundlePublicationStatusOut:
+      properties:
+        desired_revision:
+          type: integer
+          title: Desired Revision
+        published_revision:
+          type: integer
+          title: Published Revision
+        status:
+          $ref: '#/components/schemas/PublicationState'
+        latest_bundle:
+          anyOf:
+          - $ref: '#/components/schemas/PublishedBundleOut'
+          - type: 'null'
+        last_attempt_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Attempt At
+        failure:
+          anyOf:
+          - $ref: '#/components/schemas/PublicationFailureOut'
+          - type: 'null'
+      type: object
+      required:
+      - desired_revision
+      - published_revision
+      - status
+      - latest_bundle
+      - last_attempt_at
+      - failure
+      title: BundlePublicationStatusOut
+    BundleRepublishOut:
+      properties:
+        queued_revision:
+          type: integer
+          title: Queued Revision
+        publication:
+          $ref: '#/components/schemas/BundlePublicationStatusOut'
+      type: object
+      required:
+      - queued_revision
+      - publication
+      title: BundleRepublishOut
     BundleV1:
       properties:
         schema_version:
@@ -5017,14 +5138,22 @@ components:
       required:
       - data
       title: Envelope[BundleManifest]
-    Envelope_BundleOut_:
+    Envelope_BundlePublicationStatusOut_:
       properties:
         data:
-          $ref: '#/components/schemas/BundleOut'
+          $ref: '#/components/schemas/BundlePublicationStatusOut'
       type: object
       required:
       - data
-      title: Envelope[BundleOut]
+      title: Envelope[BundlePublicationStatusOut]
+    Envelope_BundleRepublishOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/BundleRepublishOut'
+      type: object
+      required:
+      - data
+      title: Envelope[BundleRepublishOut]
     Envelope_BundleV1_:
       properties:
         data:
@@ -5129,6 +5258,14 @@ components:
       required:
       - data
       title: Envelope[InferenceKeyRevokedOut]
+    Envelope_InstancePublicationStatusOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InstancePublicationStatusOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InstancePublicationStatusOut]
     Envelope_InvitationAcceptedOut_:
       properties:
         data:
@@ -5725,6 +5862,23 @@ components:
       - id
       - status
       title: InferenceKeyRevokedOut
+    InstancePublicationStatusOut:
+      properties:
+        global_desired_revision:
+          type: integer
+          title: Global Desired Revision
+        pending_organization_count:
+          type: integer
+          title: Pending Organization Count
+        failed_organization_count:
+          type: integer
+          title: Failed Organization Count
+      type: object
+      required:
+      - global_desired_revision
+      - pending_organization_count
+      - failed_organization_count
+      title: InstancePublicationStatusOut
     InstanceRole:
       type: string
       enum:
@@ -7532,6 +7686,44 @@ components:
       - updated_at
       - deleted_at
       title: ProviderOut
+    PublicationFailureOut:
+      properties:
+        category:
+          type: string
+          title: Category
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - category
+      - message
+      title: PublicationFailureOut
+    PublicationState:
+      type: string
+      enum:
+      - current
+      - pending
+      - failed
+    PublishedBundleOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        version:
+          type: integer
+          title: Version
+        issued_at:
+          type: string
+          format: date-time
+          title: Issued At
+      type: object
+      required:
+      - id
+      - version
+      - issued_at
+      title: PublishedBundleOut
     RequestLimits:
       properties:
         kind:
@@ -8046,17 +8238,17 @@ components:
           $ref: '#/components/schemas/TaxonomyChangeCounts'
         models:
           $ref: '#/components/schemas/TaxonomyChangeCounts'
-        published:
-          items:
-            $ref: '#/components/schemas/TaxonomyPublicationOut'
-          type: array
-          title: Published
+        queued_revision:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Queued Revision
       type: object
       required:
       - dry_run
       - providers
       - models
-      - published
+      - queued_revision
       title: TaxonomyApplyOut
     TaxonomyChangeCounts:
       properties:
@@ -8092,20 +8284,6 @@ components:
       - providers
       - models
       title: TaxonomyOut
-    TaxonomyPublicationOut:
-      properties:
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        version:
-          type: integer
-          title: Version
-      type: object
-      required:
-      - org_id
-      - version
-      title: TaxonomyPublicationOut
     TaxonomySpec:
       properties:
         providers:

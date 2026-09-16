@@ -346,10 +346,6 @@ class DenyRequest(BaseModel):
     message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
 
 
-class EnvelopeBundleOut(BaseModel):
-    data: BundleOut
-
-
 class EnvelopeClaimOut(BaseModel):
     data: ClaimOut
 
@@ -500,6 +496,12 @@ class InferenceKeyOwnerOut(BaseModel):
 class InferenceKeyRevokedOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     status: Annotated[Literal["revoked"], Field(title="Status")]
+
+
+class InstancePublicationStatusOut(BaseModel):
+    global_desired_revision: Annotated[int, Field(title="Global Desired Revision")]
+    pending_organization_count: Annotated[int, Field(title="Pending Organization Count")]
+    failed_organization_count: Annotated[int, Field(title="Failed Organization Count")]
 
 
 class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
@@ -1319,6 +1321,21 @@ class ProviderOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
+class PublicationFailureOut(BaseModel):
+    category: Annotated[str, Field(title="Category")]
+    message: Annotated[str, Field(title="Message")]
+
+
+class PublicationState(RootModel[Literal["current", "pending", "failed"]]):
+    root: Literal["current", "pending", "failed"]
+
+
+class PublishedBundleOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    version: Annotated[int, Field(title="Version")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+
+
 class RequestLimits(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1646,11 +1663,6 @@ class TaxonomyOut(BaseModel):
     models: Annotated[list[ModelOut], Field(title="Models")]
 
 
-class TaxonomyPublicationOut(BaseModel):
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-
-
 class TaxonomySpec(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1809,6 +1821,20 @@ class BundleManifest(BaseModel):
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
 
 
+class BundlePublicationStatusOut(BaseModel):
+    desired_revision: Annotated[int, Field(title="Desired Revision")]
+    published_revision: Annotated[int, Field(title="Published Revision")]
+    status: PublicationState
+    latest_bundle: PublishedBundleOut | None
+    last_attempt_at: Annotated[AwareDatetime | None, Field(title="Last Attempt At")]
+    failure: PublicationFailureOut | None
+
+
+class BundleRepublishOut(BaseModel):
+    queued_revision: Annotated[int, Field(title="Queued Revision")]
+    publication: BundlePublicationStatusOut
+
+
 class CredentialEntry(BaseModel):
     """
     A provider credential reference, priority, and version included in a policy bundle.
@@ -1831,6 +1857,14 @@ class EnvelopeBundleManifest(BaseModel):
     data: BundleManifest
 
 
+class EnvelopeBundlePublicationStatusOut(BaseModel):
+    data: BundlePublicationStatusOut
+
+
+class EnvelopeBundleRepublishOut(BaseModel):
+    data: BundleRepublishOut
+
+
 class EnvelopeEnrollOut(BaseModel):
     data: EnrollOut
 
@@ -1849,6 +1883,10 @@ class EnvelopeInferenceKeyCreatedOut(BaseModel):
 
 class EnvelopeInferenceKeyRevokedOut(BaseModel):
     data: InferenceKeyRevokedOut
+
+
+class EnvelopeInstancePublicationStatusOut(BaseModel):
+    data: InstancePublicationStatusOut
 
 
 class EnvelopeInvitationAcceptedOut(BaseModel):
@@ -2089,7 +2127,7 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: Annotated[bool, Field(title="Dry Run")]
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    published: Annotated[list[TaxonomyPublicationOut], Field(title="Published")]
+    queued_revision: Annotated[int | None, Field(title="Queued Revision")]
 
 
 class WorkspaceMembershipIn(BaseModel):

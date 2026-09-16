@@ -63,11 +63,13 @@ const transformer: InputTransformerFn = async (config) => {
   for (const operations of Object.values(config.paths ?? {})) {
     for (const operation of Object.values(operations ?? {})) {
       const responses = objectOf(objectOf(operation)?.responses);
-      const response = objectOf(responses?.['200']);
-      const content = objectOf(objectOf(response?.content)?.['application/json']);
-      const name = envelopeName(content?.schema);
-      const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
-      if (content && properties && 'data' in properties) content.schema = properties.data;
+      for (const [status, response] of Object.entries(responses ?? {})) {
+        if (!status.startsWith('2')) continue;
+        const content = objectOf(objectOf(objectOf(response)?.content)?.['application/json']);
+        const name = envelopeName(content?.schema);
+        const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
+        if (content && properties && 'data' in properties) content.schema = properties.data;
+      }
     }
   }
 

@@ -8,6 +8,7 @@ from control_plane.models.cli_auth_request import CliAuthRequest
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.data_plane_instance import DataPlaneInstance
+from control_plane.models.global_runtime_configuration import GlobalRuntimeConfiguration
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.insecure_vault_secret import InsecureVaultSecret
 from control_plane.models.management_key import ManagementKey
@@ -32,6 +33,7 @@ __all__ = [
     "Bundle",
     "CliAuthRequest",
     "DataPlaneInstance",
+    "GlobalRuntimeConfiguration",
     "Identified",
     "InferenceKey",
     "InsecureVaultSecret",

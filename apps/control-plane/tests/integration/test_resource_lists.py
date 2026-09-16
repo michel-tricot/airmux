@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -29,6 +29,7 @@ def test_list_endpoints_read_back(tmp_path):
         taxonomy = c.get(f"/api/v1/organizations/{org_id}/taxonomy", headers=org).json()["data"]
         assert [p["name"] for p in taxonomy["providers"]] == ["openai"]
         assert [m["name"] for m in taxonomy["models"]] == ["gpt-test"]
+        wait_for_publication(c, org_id, org)
         bundles = c.get(f"/api/v1/organizations/{org_id}/bundles", headers=org).json()["data"]
-        assert [b["version"] for b in bundles] == [1, 2, 3]
+        assert [b["version"] for b in bundles] == [1]
         assert "payload" not in bundles[0]

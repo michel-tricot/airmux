@@ -13,6 +13,7 @@ from rich.live import Live
 
 from api_models import (
     BundleOut,
+    BundleRepublishOut,
     DataPlaneInstanceOut,
     InferenceKeyCreatedOut,
     InferenceKeyOut,
@@ -444,8 +445,8 @@ def catalog_apply(
     action = "Dry run" if applied.dry_run else "Applied"
     console.print(f"{action}: providers {_change_summary(applied.providers)}; models {_change_summary(applied.models)}")
     if not applied.dry_run:
-        publications = ", ".join(f"{bundle.org_id} v{bundle.version}" for bundle in applied.published)
-        console.print(f"Published: {publications or 'no bundle changes'}")
+        queued = f"configuration revision {applied.queued_revision}" if applied.queued_revision is not None else "no configuration changes"
+        console.print(f"Queued: {queued}")
 
 
 @bundles_app.command("list")
@@ -458,8 +459,8 @@ def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.t
 def bundles_republish(control_plane_url: str = "") -> None:
     """Republish your current configuration for recovery or key rotation."""
     with access_client(control_plane_url) as c:
-        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)), BundleOut)
-    console.print(f"Published v{published.version}")
+        queued = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(202,)), BundleRepublishOut)
+    console.print(f"Queued configuration revision {queued.queued_revision}")
 
 
 INSTANCE_COLS = [

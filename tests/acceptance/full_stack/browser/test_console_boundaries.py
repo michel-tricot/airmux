@@ -60,6 +60,17 @@ def test_instance_owner_login_navigation_dialogs_and_logout(stack: Stack) -> Non
         expect(page.get_by_role("row").filter(has_text="Created in browser")).to_have_count(0)
 
 
+def test_configuration_history_distinguishes_publication_from_data_plane_adoption(stack: Stack) -> None:
+    with running_console(stack) as console:
+        console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
+        page = console.page
+        page.goto(f"{console.url}/instance/organizations/{stack.org_id}")
+        page.get_by_role("tab", name="Configuration bundles", exact=True).click()
+        expect(page.get_by_role("heading", name="Configuration bundles", exact=True)).to_be_visible()
+        expect(page.get_by_text("Current", exact=True)).to_be_visible()
+        expect(page.get_by_text("Published by the control plane. Data planes adopt it on their next successful poll.", exact=True)).to_be_visible()
+
+
 @pytest.mark.parametrize("role", ["owner", "admin", "member"])
 def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: Stack, role: str) -> None:
     with (

@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query
 from sqlmodel import col
 
 from control_plane.authz import Permission
-from control_plane.compiler import publish_changes
+from control_plane.db import current_session
 from control_plane.deps import instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import Envelope
 from control_plane.models.model import ModelIn, ModelOut
 from control_plane.models.provider import ProviderIn, ProviderOut
+from control_plane.models.runtime_configuration import record_runtime_configuration_changes, runtime_configuration_changes
 from control_plane.taxonomy import (
     TaxonomyApplyOut,
     TaxonomyOut,
-    TaxonomyPublicationOut,
     TaxonomySpec,
     apply_taxonomy,
     plan_taxonomy,
@@ -50,15 +49,15 @@ async def apply_instance_taxonomy(
     """Apply a complete provider and model taxonomy atomically."""
     provider_counts, model_counts = await plan_taxonomy(body)
     if dry_run:
-        return Envelope(data=TaxonomyApplyOut(dry_run=True, providers=provider_counts, models=model_counts, published=[]))
+        return Envelope(data=TaxonomyApplyOut(dry_run=True, providers=provider_counts, models=model_counts, queued_revision=None))
     await apply_taxonomy(body)
-    published = await publish_changes(datetime.now(tz=UTC))
+    revision = await record_runtime_configuration_changes(runtime_configuration_changes(current_session().sync_session))
     return Envelope(
         data=TaxonomyApplyOut(
             dry_run=False,
             providers=provider_counts,
             models=model_counts,
-            published=[TaxonomyPublicationOut(org_id=bundle.org_id, version=bundle.version) for bundle in published],
+            queued_revision=revision,
         )
     )
 

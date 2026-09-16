@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import ClassVar
 from uuid import UUID
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
@@ -14,11 +15,16 @@ from control_plane.models.common.wire import RecordOut
 
 
 class Bundle(Record, OrgOwned, table=True):
+    __table_args__ = (
+        UniqueConstraint("org_id", "version", name="bundle_org_id_version_key"),
+        UniqueConstraint("org_id", "configuration_revision", name="bundle_org_id_configuration_revision_key"),
+    )
+
     id: UUID = Field(primary_key=True)
-    org_id: UUID = Field(foreign_key="org.id")
+    org_id: UUID = Field(foreign_key="org.id", ondelete="CASCADE")
     version: int
     issued_at: datetime = Field(sa_type=UTCDateTime)
-    configuration_revision: int = 0
+    configuration_revision: int
     payload: str
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"configuration_revision", "payload"})

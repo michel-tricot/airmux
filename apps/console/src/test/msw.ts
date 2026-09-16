@@ -62,6 +62,23 @@ export const server = setupServer(
   http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json<{ data: Api.BundleOut[] }>({ data: [] })),
+  http.get('/api/v1/organizations/:orgId/bundles/status', () =>
+    HttpResponse.json<{ data: Api.BundlePublicationStatusOut }>({
+      data: {
+        desired_revision: 0,
+        published_revision: 0,
+        status: 'current',
+        latest_bundle: null,
+        last_attempt_at: null,
+        failure: null,
+      },
+    }),
+  ),
+  http.get('/api/v1/instance/bundles/status', () =>
+    HttpResponse.json<{ data: Api.InstancePublicationStatusOut }>({
+      data: { global_desired_revision: 0, pending_organization_count: 0, failed_organization_count: 0 },
+    }),
+  ),
   http.get('/api/v1/organizations/:orgId/activity', () => HttpResponse.json<{ data: Api.ActivityOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [], models: [] } })),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/taxonomy', () =>

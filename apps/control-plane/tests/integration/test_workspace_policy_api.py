@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
 
 from contract import BundleV1
 from control_plane.authz import Permission
@@ -107,6 +107,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         assert [policy["id"] for policy in reordered.json()["data"]] == ordered_ids
         assert [policy["priority"] for policy in reordered.json()["data"]] == [0, 1, 2]
         assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
+        wait_for_publication(client, org, headers)
         bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=cp.headers(), params={"org_id": str(org)}).json()["data"])
         assert {str(policy.id): policy.priority for policy in bundle.policies} == dict(zip(ordered_ids, range(3), strict=True))
         assert len(client.get(f"/api/v1/organizations/{org}/bundles", headers=headers).json()["data"]) == len(bundles_before) + 1
@@ -212,6 +213,7 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
             for name in ("First", "Second")
         ]
         playground = client.put(f"{base}/playground-session", headers=session_headers).json()["data"]
+        wait_for_publication(client, org, headers)
         before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
         credential_ids = {key["id"] for key in keys} | {playground["id"]}
         assert {key.key_id for key in before.keys} == credential_ids
@@ -223,10 +225,12 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
         retained = client.get(f"{base}/policies", headers=headers).json()["data"]
         assert retained[0]["id"] == policy_id
         assert retained[0]["definition"]["target"] == body["definition"]["target"]
+        wait_for_publication(client, org, headers)
         after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
         assert after.keys == []
         assert after.policies == before.policies
         assert client.delete(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers).status_code == 200
+        wait_for_publication(client, org, headers)
         removed = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
         assert removed.keys == []
         assert removed.policies == after.policies

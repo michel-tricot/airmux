@@ -236,11 +236,14 @@ def test_response_schemas_are_pure_envelopes():
     offenders = []
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
-            schema = op["responses"]["200"]["content"]["application/json"]["schema"]
-            if "$ref" in schema:
-                schema = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
-            if set(schema.get("properties", {})) != {"data"}:
-                offenders.append(f"{method.upper()} {path}")
+            for status, response in op["responses"].items():
+                if not status.startswith("2") or "content" not in response:
+                    continue
+                schema = response["content"]["application/json"]["schema"]
+                if "$ref" in schema:
+                    schema = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
+                if set(schema.get("properties", {})) != {"data"}:
+                    offenders.append(f"{method.upper()} {path} {status}")
     assert offenders == []
 
 

@@ -1,5 +1,6 @@
 import { BundleHistory } from '@/components/shared/bundle-history';
-import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
+import { BundlePublicationStatus } from '@/components/shared/bundle-publication-status';
+import { useBundlePublication, useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -38,6 +39,7 @@ export default function OrganizationDetail() {
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
   const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
   const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
+  const publicationQuery = useBundlePublication(orgId, { enabled: canReadBundles });
   const republish = useRepublishBundleMutation(orgId);
   const canReadOrg = authorization.can(orgAccess.read);
   const orgQuery = useOrg(orgId, { enabled: canReadOrg });
@@ -282,15 +284,24 @@ export default function OrganizationDetail() {
               <div>
                 <h2 className="text-lg font-semibold">Configuration bundles</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Generated automatically from organization configuration. Republish to send a fresh snapshot to the data planes.
+                  Immutable snapshots published by the control plane. Data planes adopt them on their next successful poll.
                 </p>
               </div>
               {canPublishBundles && (
                 <Button disabled={republish.isPending} onClick={() => republish.mutate({ orgId })}>
-                  {republish.isPending ? 'Republishing...' : 'Republish configuration'}
+                  {republish.isPending ? 'Queueing...' : 'Republish configuration'}
                 </Button>
               )}
             </div>
+            <BundlePublicationStatus
+              publication={publicationQuery.data}
+              isLoading={publicationQuery.isLoading}
+              isError={publicationQuery.isError}
+              error={publicationQuery.error}
+              onRetry={() => publicationQuery.refetch()}
+              onRepublish={canPublishBundles ? () => republish.mutate({ orgId }) : undefined}
+              republishPending={republish.isPending}
+            />
             <BundleHistory
               bundles={bundlesQuery.data}
               isLoading={bundlesQuery.isLoading}

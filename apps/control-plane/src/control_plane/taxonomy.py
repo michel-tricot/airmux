@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +13,7 @@ from control_plane.models.provider import ProviderIn, ProviderOut
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from uuid import UUID
 
     from contract.taxonomy import ModelSpec, ProviderSpec
 
@@ -48,16 +48,11 @@ class TaxonomyChangeCounts(BaseModel):
     unchanged: int
 
 
-class TaxonomyPublicationOut(BaseModel):
-    org_id: UUID
-    version: int
-
-
 class TaxonomyApplyOut(BaseModel):
     dry_run: bool
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    published: list[TaxonomyPublicationOut]
+    queued_revision: int | None
 
 
 async def upsert_provider(p: ProviderSpec) -> Provider:

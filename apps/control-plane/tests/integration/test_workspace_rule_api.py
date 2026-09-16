@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import make_org, make_workspace, setup_control_plane, wait_for_publication
 
 RULE = {
     "match": {"kind": "all_requests"},
@@ -38,6 +38,7 @@ def test_rule_resource_is_removed_and_policy_rules_are_independent(tmp_path):
         persisted = client.get(f"{base}/policies", headers=headers).json()["data"]
         assert persisted[0]["definition"] == replacement
         assert persisted[1]["definition"] == {"target": {"kind": "workspace"}, "rules": [RULE]}
+        wait_for_publication(client, org_id, headers)
         bundle = client.get("/api/v1/bundle/latest", headers=control_plane.headers(), params={"org_id": str(org_id)}).json()["data"]
         assert "rules" not in bundle
         assert len(bundle["policies"]) == 2
