@@ -145,10 +145,11 @@ jobs:
         run: |
           ./scripts/build-python-distribution.sh "$RUNNER_TEMP/performance-candidate-dist"
           uv tool install --python 3.13 "$RUNNER_TEMP"/performance-candidate-dist/airmux-*.whl
-      - name: Compare gateway performance
+      - name: Compare gateway performance and incremental overhead
         working-directory: performance-candidate
         run: |
           uv run python tests/acceptance/gateway/performance.py \
+            --rounds 5 \
             --base-bin "$RUNNER_TEMP/performance-base-bin/airmux" \
             --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/airmux" \
             --base-revision "$(git -C ../performance-base rev-parse HEAD)" \

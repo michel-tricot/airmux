@@ -102,18 +102,54 @@ Each workload warms persistent connections before a two-second closed-loop load 
 base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first
 content latency and completed requests per second. Request failures, incorrect text, incomplete streams and lost usage
 events fail the job. Both versions use one gateway worker and the existing durable SQLite event queue; event writes
-are included, periodic export is excluded, and bundle polling runs every five seconds. The lightweight provider runs
+are included, periodic export is excluded, and periodic bundle polling is excluded with a one-hour interval. The lightweight provider runs
 in its own async process, reuses the handwritten native response fixtures, supports persistent connections and captures
 no request history during load.
 
+Each proxied workload also has its own direct-before and direct-after windows, including streaming and the policy
+workload. All three use the same request fields, fixed provider response, concurrency, HTTP/1.1 settings and one
+persistent connection per worker. Only the model name differs at ingress; direct requests use the translated upstream
+name. Streaming controls request usage just as the gateway does. The provider rejects mismatched payloads. The 100
+policies apply to the proxy and leave this request's token limit unchanged.
+
+For round r, the incremental HTTP proxy latency estimate is:
+
+```text
+direct_mean_r = (mean(direct_before_r) + mean(direct_after_r)) / 2
+overhead_r = mean(proxied_r) - direct_mean_r
+reported_overhead = median(overhead_r across rounds)
+```
+
+Buffered and policy workloads use completed request latency; streaming also applies the same calculation to time
+until the first non-empty content delta. These are differences in window means, not percentiles of paired per-request
+overhead. Direct and proxied windows have different request counts under closed-loop load; the two control means
+receive equal weight. No p95/p99 values are subtracted. Total proxied latency is still reported separately.
+
+This measures the incremental cost of the extra local HTTP hop, authentication, translation, applicable policy
+evaluation, metering, durable SQLite event collection, client parsing, scheduling and connection-pool/queueing effects.
+It does not isolate time executing gateway code. Model inference, external providers/network variability,
+control-plane traffic, periodic event export and bundle polling, startup and warmup are excluded. Provider waits occur
+in both paths. Windows run sequentially, so controls do not compete with proxy traffic; time-varying runner load can
+still bias their difference. At higher concurrency, each path's queueing and sustainable throughput can differ.
+
+Reports retain negative/zero estimates, show the range of round estimates and maximum absolute direct-before/after
+mean drift in milliseconds, and label latency estimates noisy if any round is non-positive or control drift reaches
+either version's median estimate. These diagnostics are not confidence intervals. Relative changes are N/A if either
+estimate is non-positive. Positive but noisy estimates can still trigger report-only warnings and need investigation.
+Direct and proxied requests per second are shown alongside `throughput_cost_pct = 100 * (1 - proxied_rps / direct_rps)`,
+using the mean of control-window RPS per round and then the median across rounds. Its absolute changes are percentage
+points. Throughput warnings use proxied RPS, not the derived cost.
+
 Performance changes start as warnings, not PR gates. A warning requires more than 20% slower latency or lower
 throughput, plus more than 1ms absolute change for latency. These initial thresholds are investigation triggers, not
-statistical significance tests. Inspect direct-upstream changes and individual rounds, and rerun a suspicious result.
+statistical significance tests. The 1ms floor misses sub-millisecond overhead regressions even when their percentage
+change is large; percentages near zero are unstable, and a non-positive baseline cannot trigger a relative warning. Inspect direct-upstream changes and individual rounds, and rerun a suspicious result.
 Once runner noise and normal variation are known, we can choose blocking thresholds for specific workloads.
 
 Every run shows its comparison in the Actions summary and uploads `measurements.json` and `summary.md` as the
 `gateway-performance` artifact for 90 days. JSON contains raw per-request timings, both commit identities, runner
-metadata, workload settings and comparisons. Main-branch runs provide a bounded history; compare PR/base ratios
+metadata, workload/connection settings, all direct controls, derived round estimates, exact verified metering event
+counts and comparisons. The methodology is included in both files, explicitly including durable SQLite event collection. Main-branch runs provide a bounded history; compare PR/base ratios
 before comparing absolute numbers from different machines. This does not create a permanent metrics store or chart.
 
 To compare any two installed gateways locally, choose a fresh output directory:
@@ -127,6 +163,13 @@ uv run python tests/acceptance/gateway/performance.py \
 ```
 
 Use `--rounds 3 --duration-s 0.1 --warmup 1` for a harness smoke check. Short runs are not useful regression evidence.
+Use `--upstream-delay-ms 50` to repeat the same experiment with 50ms of deterministic provider wait per request.
+`test_provider_wait_is_not_attributed_to_gateway_overhead` compares 0ms/50ms real HTTP runs for buffered, first-content
+and policy latency at concurrency 1: direct latency must rise by over 40ms while the overhead estimate changes by less
+than 15ms. This generous bound checks wait attribution, not sub-millisecond regression sensitivity. The installation
+job runs it against the independently installed candidate wheel. Repeating the benchmark with the flag checks both
+installed versions with the same controls and exact metering counts.
+
 Run benchmarks alone, without pytest parallelization or other local load. Full-stack scenarios protect durable export
 correctness; remote polling/export performance and worker scaling need separate benchmark workloads.
 
