@@ -5,7 +5,7 @@ requires-python = ">=3.13"
 
 [tool.uv.workspace]
 members = ["lib/api-models", "lib/contract", "apps/*", "model-audit", "tests/*"]
-exclude = ["apps/console", "tests/deployment", "tests/documentation", "tests/installation", "tests/workflows"]
+exclude = ["apps/console", "tests/ci", "tests/deployment", "tests/documentation", "tests/installation", "tests/workflows"]
 
 [tool.uv.sources]
 airmux-api-models = { workspace = true }
@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/documentation", "tests/workflows"]
+testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/ci", "tests/documentation", "tests/workflows"]
 asyncio_mode = "auto"
 pythonpath = [".", "tests/acceptance/gateway"]
 

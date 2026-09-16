@@ -7,15 +7,12 @@ from pathlib import Path
 
 import pytest
 import yaml
+from scripts.ci_policy import Selection, required_jobs, validate_results
 
 ROOT = Path(__file__).parents[2]
 GATES = (
-    (
-        "ci.yml",
-        "ci-correctness",
-        {"workflows", "frontend", "ci", "installation", "gateway-acceptance", "acceptance", "browser-acceptance"},
-    ),
-    ("docker-deployments.yml", "docker-correctness", {"deployment"}),
+    ("ci.yml", "ci-correctness", {"changes", *required_jobs(Selection(), "ci")}),
+    ("docker-deployments.yml", "docker-correctness", {"changes", *required_jobs(Selection(), "docker")}),
     ("dependency-security.yml", "dependency-security", {"python", "javascript"}),
 )
 
@@ -28,9 +25,20 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
     assert set(gate["needs"]) == dependencies
     assert gate.get("name", name) == name
     assert gate["if"] == "always()"
-    assert gate["steps"][0]["env"]["NEEDS"] == "${{ toJSON(needs) }}"
+    gate_step = gate["steps"][-2] if filename != "dependency-security.yml" else gate["steps"][-1]
+    assert gate_step["env"]["NEEDS"] == "${{ toJSON(needs) }}"
     for dependency in dependencies:
-        needs = {name: {"result": result if name == dependency else "success"} for name in dependencies}
+        needs = {name: {"result": result if name == dependency else "success", "outputs": {}} for name in dependencies}
+        if filename != "dependency-security.yml":
+            needs["changes"]["outputs"] = {"frontend": "true", "backend": "true", "deployment": "true"}
+            scope = "ci" if filename == "ci.yml" else "docker"
+            assert gate_step["run"] == f"uv run --no-sync python -m scripts.ci_policy gate {scope}"
+            if result == "success":
+                validate_results(json.dumps(needs), scope)
+            else:
+                with pytest.raises(ValueError, match=r"must succeed|results rejected|validation error"):
+                    validate_results(json.dumps(needs), scope)
+            continue
         completed = subprocess.run(
             ["/bin/bash", "-e", "-o", "pipefail"],
             input=gate["steps"][0]["run"],
@@ -44,6 +52,10 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
 
 @pytest.mark.parametrize(("filename", "name", "dependencies"), GATES)
 def test_required_gate_rejects_empty_results(filename, name, dependencies):
+    if filename != "dependency-security.yml":
+        with pytest.raises(ValueError, match="changes must succeed"):
+            validate_results("{}", "ci" if filename == "ci.yml" else "docker")
+        return
     workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
     completed = subprocess.run(
         ["/bin/bash", "-e", "-o", "pipefail"],

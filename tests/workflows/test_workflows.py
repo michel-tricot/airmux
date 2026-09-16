@@ -66,7 +66,7 @@ def test_workflow_security_boundaries(path):
         }.get(name, {"contents": "read"})
         assert permissions == expected_permissions
         if "uses" in job:
-            assert job["uses"] == "./.github/workflows/live-providers.yml"
+            assert job["uses"] in {"./.github/workflows/change-policy.yml", "./.github/workflows/live-providers.yml"}
             continue
         assert 0 < job["timeout-minutes"] <= 30
         for step in job["steps"]:
