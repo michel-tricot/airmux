@@ -28,26 +28,31 @@ jobs:
 
   ci:
     runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
-      - run: uv run ruff format --check .
-      - run: uv run ruff check .
-      - run: uv run ty check .
-      - run: uv run lint-imports
+      - run: uv sync --all-packages --locked
+      - run: uv run --no-sync ruff format --check .
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync ty check .
+      - run: uv run --no-sync lint-imports
       - run: ./scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml
       - run: ./scripts/generate-api-models.sh && git diff --exit-code lib/api-models
       - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
-      - run: uv run airmux-audit cases coverage
-      - run: uv run airmux-audit taxonomy validate
-      - run: uv run pytest apps/control-plane/tests/unit
+      - run: uv run --no-sync airmux-audit cases coverage
+      - run: uv run --no-sync airmux-audit taxonomy validate
+      - run: uv run --no-sync pytest apps/control-plane/tests/unit
         env:
           DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
-      - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
+      - run: uv run --no-sync pytest -n auto --ignore=apps/control-plane/tests/unit
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   installation:
     runs-on: ubuntu-latest
@@ -60,7 +65,7 @@ jobs:
         run: |
           echo "AIRMUX_GATEWAY_BIN=$RUNNER_TEMP/airmux-bin/airmux" >> "$GITHUB_ENV"
           echo "AIRMUX_GATEWAY_ARTIFACTS=$RUNNER_TEMP/gateway-artifacts" >> "$GITHUB_ENV"
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheel from source distribution
         run: |
@@ -71,17 +76,17 @@ jobs:
           UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
         run: uv tool install dist-from-sdist/airmux-*.whl
-      - run: uv run pytest tests/installation --junitxml=gateway-results/00-installation.xml
+      - run: uv run --no-sync pytest tests/installation --junitxml=gateway-results/00-installation.xml
         env:
           AIRMUX_DISTRIBUTION_DIR: dist
           AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
       - name: Disable Docker for standalone gateway tests
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
-        run: uv run pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
+        run: uv run --no-sync pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
       - name: Summarize gateway test results
         if: always()
-        run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload gateway results and diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -91,6 +96,9 @@ jobs:
             gateway-results
             ${{ runner.temp }}/gateway-artifacts
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   gateway-acceptance:
     runs-on: ubuntu-latest
@@ -122,7 +130,7 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheel from source distribution
         run: |
@@ -134,13 +142,13 @@ jobs:
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
         run: uv tool install dist-from-sdist/airmux-*.whl
       - name: Run gateway level
-        run: uv run pytest ${{ matrix.tests }} -n auto --junitxml=gateway-results/${{ matrix.level }}.xml
+        run: uv run --no-sync pytest ${{ matrix.tests }} -n auto --junitxml=gateway-results/${{ matrix.level }}.xml
         env:
           AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
           AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
       - name: Summarize gateway test results
         if: always()
-        run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload gateway results and diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -150,6 +158,9 @@ jobs:
             gateway-results
             ${{ runner.temp }}/gateway-artifacts
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   gateway-results:
     runs-on: ubuntu-latest
@@ -161,19 +172,22 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: gateway-integration-*
           path: gateway-results
       - name: Summarize all gateway test results
-        run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload combined gateway results and diagnostics
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: gateway-integration
           path: gateway-results
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   gateway-performance:
     runs-on: ubuntu-latest
@@ -194,7 +208,7 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
         working-directory: performance-candidate
       - name: Build and install base gateway
         working-directory: performance-base
@@ -215,7 +229,7 @@ jobs:
       - name: Compare gateway performance
         working-directory: performance-candidate
         run: |
-          uv run python tests/acceptance/gateway/performance.py \
+          uv run --no-sync python tests/acceptance/gateway/performance.py \
             --base-bin "$RUNNER_TEMP/performance-base-bin/airmux" \
             --base-harness ../performance-base/tests/acceptance/gateway \
             --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/airmux" \
@@ -231,6 +245,10 @@ jobs:
             ${{ runner.temp }}/performance-results/measurements.json
             ${{ runner.temp }}/performance-results/summary.md
           retention-days: 90
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
+        working-directory: performance-candidate
 
   acceptance:
     runs-on: ubuntu-latest
@@ -240,11 +258,11 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
-      - run: uv run pytest tests/acceptance/full_stack/scenarios --junitxml=acceptance-results/full-stack.xml
+      - run: uv sync --all-packages --locked
+      - run: uv run --no-sync pytest tests/acceptance/full_stack/scenarios --junitxml=acceptance-results/full-stack.xml
       - name: Summarize full-stack acceptance results
         if: always()
-        run: uv run python tests/acceptance/gateway/ci_report.py acceptance-results --summary "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py acceptance-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload full-stack acceptance results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -252,3 +270,6 @@ jobs:
           name: full-stack-acceptance
           path: acceptance-results
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock

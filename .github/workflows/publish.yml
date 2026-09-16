@@ -27,7 +27,7 @@ jobs:
           version="${RELEASE_TAG#v}"
           test "$RELEASE_TAG" = "v$version"
           test "$(uv version --short --project packaging/airmux --no-config)" = "$version"
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - name: Build release distributions
         run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheels from source distributions
@@ -43,17 +43,20 @@ jobs:
         env:
           AIRMUX_DISTRIBUTION_DIR: dist
           AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
-        run: uv run pytest tests/installation
+        run: uv run --no-sync pytest tests/installation
       - name: Verify installed gateway
         env:
           AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
           DOCKER_HOST: unix:///no-docker.sock
-        run: uv run pytest tests/acceptance/gateway
+        run: uv run --no-sync pytest tests/acceptance/gateway
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: python-distributions
           path: dist/airmux*
           if-no-files-found: error
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   live-providers:
     needs: build

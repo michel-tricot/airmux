@@ -27,14 +27,17 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
       - if: matrix.compose-file == 'docker-compose.yml'
         run: echo 'DEPLOYMENT_COMPACT_IMAGE=airmux:local' >> "$GITHUB_ENV"
       - if: matrix.compose-file == 'docker-compose.split.yml'
         run: echo 'DEPLOYMENT_GATEWAY_IMAGE=airmux-data-plane:local' >> "$GITHUB_ENV"
-      - run: uv run pytest tests/deployment
+      - run: uv run --no-sync pytest tests/deployment
       - if: failure()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color
       - if: always()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" down -v
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
