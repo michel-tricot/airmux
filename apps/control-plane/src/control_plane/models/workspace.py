@@ -146,7 +146,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         for playground_session in await PlaygroundSession.find(PlaygroundSession.workspace_id == self.id):
             await playground_session.delete()
         for membership in await WorkspaceMembership.find(WorkspaceMembership.workspace_id == self.id):
-            await Record.delete(membership)
+            await membership.delete()
         await self.delete()
 
 

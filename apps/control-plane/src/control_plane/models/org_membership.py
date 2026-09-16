@@ -4,9 +4,9 @@ from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, delete
 from sqlalchemy.dialects.postgresql import insert
-from sqlmodel import Field, select
+from sqlmodel import Field, col, select
 
 from control_plane.authz import OrgRole
 from control_plane.db import current_session
@@ -36,6 +36,10 @@ class OrgMembership(Record, Tombstonable, table=True):
     async def ensure(cls, *, user_id: UUID, org_id: UUID, role: str) -> None:
         statement = insert(cls).values(user_id=user_id, org_id=org_id, role=role).on_conflict_do_nothing(index_elements=["user_id", "org_id"])
         await current_session().execute(statement)
+
+    @classmethod
+    async def delete_with_org(cls, org_id: UUID) -> None:
+        await current_session().execute(delete(cls).where(col(cls.org_id) == org_id))
 
     async def _lock_org(self) -> None:
         from control_plane.models.org import Org  # noqa: PLC0415 org imports membership, so the two only meet at call time

@@ -104,8 +104,7 @@ class Org(Record, Identified, Tombstonable, table=True):
             await workspace.delete_with_contents(store)
         await ProviderCredential.delete_scoped(store, ProviderCredential.org_id == self.id)
         await ManagementKey.delete_scoped(ManagementKey.org_id == self.id)
-        for membership in await OrgMembership.find(OrgMembership.org_id == self.id):
-            await Record.delete(membership)
+        await OrgMembership.delete_with_org(self.id)
         for bundle in await Bundle.find(Bundle.org_id == self.id):
             await bundle.delete()
         from control_plane.models.user import User  # noqa: PLC0415 user imports org membership, so org-owned accounts meet it at deletion
