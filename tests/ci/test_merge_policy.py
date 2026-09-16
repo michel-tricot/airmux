@@ -96,6 +96,7 @@ def test_package_once_graph_feeds_every_black_box_job():
     jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
     for name in ("gateway", "full-stack", "browser", "docker"):
         assert "package" in jobs[name]["needs"]
+    assert jobs["browser"]["needs"] == "package"
     package = "\n".join(step.get("run", "") for step in jobs["package"]["steps"])
     assert "uv build --wheel" in package
     assert "SHA256SUMS" in package

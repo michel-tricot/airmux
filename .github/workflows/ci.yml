@@ -252,7 +252,7 @@ jobs:
           retention-days: 7
 
   browser:
-    needs: [package, frontend]
+    needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
