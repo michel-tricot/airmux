@@ -90,8 +90,13 @@ def error_of(dialect: Dialect, response: httpx.Response) -> str:
     return error[ERROR_FIELDS[dialect]]
 
 
+class GatewayKey(TypedDict):
+    token: str
+    user_id: str
+
+
 class GatewayBundle(TypedDict):
-    keys: list[str]
+    keys: list[GatewayKey]
     taxonomy: str
     rules: list[dict[str, object]]
     policies: list[dict[str, object]]
@@ -112,7 +117,12 @@ class Gateway:
         self.providers: list[Upstream] = []
         self.sensitive_values: tuple[str, ...] = ()
         self.taxonomy: dict[str, list[dict[str, object]]] = {"providers": [], "models": []}
-        self.bundle: GatewayBundle = {"keys": [INFERENCE_KEY, SECOND_KEY], "taxonomy": "taxonomy.yml", "rules": [], "policies": []}
+        self.bundle: GatewayBundle = {
+            "keys": [{"token": INFERENCE_KEY, "user_id": str(uuid7())}, {"token": SECOND_KEY, "user_id": str(uuid7())}],
+            "taxonomy": "taxonomy.yml",
+            "rules": [],
+            "policies": [],
+        }
         self.process: subprocess.Popen[bytes] | None = None
         self.log = (directory / "gateway.log").open("a", encoding="utf-8")
         with socket.socket() as listener:
@@ -170,7 +180,7 @@ class Gateway:
                 "workspace_id": LOCAL_WORKSPACE,
                 "name": f"Policy {priority}",
                 "priority": priority,
-                "definition": {"target": target or {"kind": "all_keys"}, "rule_ids": [rule["id"] for rule in rules]},
+                "definition": {"target": target or {"kind": "workspace"}, "rule_ids": [rule["id"] for rule in rules]},
             },
         ]
 
@@ -269,7 +279,7 @@ class Gateway:
         if artifacts:
             destination = Path(artifacts) / self.scenario
             destination.mkdir(parents=True, exist_ok=True)
-            secrets = (*self.sensitive_values, UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *self.bundle["keys"])
+            secrets = (*self.sensitive_values, UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *(key["token"] for key in self.bundle["keys"]))
             for path in self.directory.rglob("*"):
                 if path.is_file():
                     contents = path.read_text(encoding="utf-8")

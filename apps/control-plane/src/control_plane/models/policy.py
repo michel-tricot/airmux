@@ -14,6 +14,7 @@ from contract.policies import (
     PolicyDefinition,
     PolicyEntry,
     SelectedKeys,
+    SelectedUsers,
 )
 from control_plane.db import current_session
 from control_plane.models.audit import audited
@@ -22,6 +23,7 @@ from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.runtime_configuration import bundle_input
+from control_plane.models.user import User
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Dialect
@@ -118,6 +120,11 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             if set(target.key_ids) - {str(key.id) for key in keys}:
                 msg = "Selected inference keys must belong to this workspace"
                 raise InvalidPolicyError(msg)
+        if isinstance(target, SelectedUsers):
+            users = await User.policy_candidates(self.org_id, self.workspace_id)
+            if set(target.user_ids) - {user.id for user in users}:
+                msg = "Selected users must belong to this organization and be eligible for this workspace"
+                raise InvalidPolicyError(msg)
         from control_plane.models.rule import Rule  # noqa: PLC0415 policies reference reusable rules
 
         rules = await Rule.find(col(Rule.id).in_(self.definition.rule_ids))
@@ -152,7 +159,7 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Inference key target and reusable rules. Budgets are not yet enforced")
+    definition: PolicyDefinition = Field(description="Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced")
 
 
 class PolicyUpdate(RecordUpdate[Policy]):

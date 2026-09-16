@@ -22,11 +22,6 @@ export interface ActivityOut {
   occurred_at: string;
 }
 
-export const AllKeysValue = {
-  kind: 'all_keys',
-} as const;
-export type AllKeys = typeof AllKeysValue;
-
 export const AllRequestsValue = {
   kind: 'all_requests',
 } as const;
@@ -137,6 +132,7 @@ export interface KeyEntry {
   key_id: string;
   org_id: string;
   workspace_id: string;
+  user_id: string;
   token_hash: string;
   expires_at?: string | null;
 }
@@ -383,6 +379,20 @@ export interface RuleEntry {
   definition: RuleDefinitionOutput;
 }
 
+export const WorkspaceTargetValue = {
+  kind: 'workspace',
+} as const;
+export type WorkspaceTarget = typeof WorkspaceTargetValue;
+
+export interface SelectedUsers {
+  kind: 'selected_users';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  user_ids: string[];
+}
+
 export interface SelectedKeys {
   kind: 'selected_keys';
   /**
@@ -395,7 +405,7 @@ export interface SelectedKeys {
 }
 
 export interface PolicyDefinition {
-  target: AllKeys | SelectedKeys;
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
   /**
      * Unordered reusable rule references; a policy may contain at most one fallback rule
      * @minItems 1
@@ -1288,7 +1298,7 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Inference key target and reusable rules. Budgets are not yet enforced */
+  /** Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced */
   definition: PolicyDefinition;
 }
 

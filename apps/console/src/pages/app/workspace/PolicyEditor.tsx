@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useForm, useWatch, type Resolver, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { InferenceKeyOut, PolicyCreate, PolicyOut, RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
+import type {
+  InferenceKeyOut,
+  PolicyCreate,
+  PolicyOut,
+  RuleCreate,
+  RuleOut,
+  TaxonomyOut,
+  WorkspaceMemberCandidateOut,
+} from '@workspace/api-client-react';
 import { SearchPicker } from '@/components/shared/search-picker';
-import { Alert, AlertDescription, Badge, Button, CheckboxDropdown, Input, Modal, Switch } from '@/components/ui/elements';
+import { Alert, AlertDescription, Badge, Button, CheckboxDropdown, Dropdown, Input, Modal, Switch } from '@/components/ui/elements';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { policyDefaults, policyForm, policyFormSchema, policyPayload, type PolicyForm } from '@/features/policies/form';
 import { RuleActionSummary } from '@/features/rules/presentation';
@@ -51,6 +59,7 @@ function TextField({ form, label }: { form: UseFormReturn<PolicyForm>; label: st
 function PolicyFields({
   form,
   keys,
+  users,
   rules,
   newRuleIds,
   ruleNotice,
@@ -60,6 +69,7 @@ function PolicyFields({
 }: {
   form: UseFormReturn<PolicyForm>;
   keys: InferenceKeyOut[];
+  users: WorkspaceMemberCandidateOut[];
   rules: RuleOut[];
   newRuleIds: readonly string[];
   ruleNotice: string | null;
@@ -67,6 +77,7 @@ function PolicyFields({
   onCreateRule: () => void;
   onEditRule: (rule: RuleOut) => void;
 }) {
+  const targetKind = form.watch('targetKind');
   const selectedRuleIds = form.watch('ruleIds');
   const selectedRules = selectedRuleIds
     .map((ruleId) => ({ ruleId, rule: rules.find((candidate) => candidate.id === ruleId) }))
@@ -92,25 +103,80 @@ function PolicyFields({
       />
       <FormField
         control={form.control}
-        name="keyIds"
+        name="targetKind"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Applies to</FormLabel>
             <FormControl>
-              <CheckboxDropdown
+              <Dropdown
                 aria-label="Applies to"
-                label="Selected keys"
-                allLabel="All keys"
-                values={field.value}
-                onValuesChange={field.onChange}
-                options={keys.map((key) => ({ value: key.id, label: `${key.label}${key.revoked ? ' (revoked)' : ''}` }))}
+                value={field.value}
+                onValueChange={field.onChange}
+                options={[
+                  { value: 'workspace', label: 'Workspace' },
+                  { value: 'selected_users', label: 'Selected users' },
+                  { value: 'selected_keys', label: 'Selected keys' },
+                ]}
               />
             </FormControl>
             <FormMessage />
-            {field.value.length === 0 && <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>}
           </FormItem>
         )}
       />
+      {targetKind === 'workspace' && <p className="text-sm text-muted-foreground">Includes future inference keys and playground sessions.</p>}
+      {targetKind === 'selected_users' && (
+        <FormField
+          control={form.control}
+          name="userIds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Users</FormLabel>
+              <FormControl>
+                <CheckboxDropdown
+                  aria-label="Selected users"
+                  label="Selected users"
+                  emptyLabel="Select users"
+                  values={field.value}
+                  onValuesChange={field.onChange}
+                  options={[
+                    ...users.map((user) => ({
+                      value: user.user_id,
+                      label: `${user.name} (${user.service_account ? 'service account' : user.email})`,
+                    })),
+                    ...field.value
+                      .filter((id) => !users.some((user) => user.user_id === id))
+                      .map((id) => ({ value: id, label: `Unavailable user (${id})` })),
+                  ]}
+                />
+              </FormControl>
+              <FormMessage />
+              <p className="text-sm text-muted-foreground">Applies to each principal's inference keys and playground sessions in this workspace.</p>
+            </FormItem>
+          )}
+        />
+      )}
+      {targetKind === 'selected_keys' && (
+        <FormField
+          control={form.control}
+          name="keyIds"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Keys</FormLabel>
+              <FormControl>
+                <CheckboxDropdown
+                  aria-label="Selected keys"
+                  label="Selected keys"
+                  emptyLabel="Select keys"
+                  values={field.value}
+                  onValuesChange={field.onChange}
+                  options={keys.map((key) => ({ value: key.id, label: `${key.label}${key.revoked ? ' (revoked)' : ''}` }))}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
       <FormField
         control={form.control}
         name="ruleIds"
@@ -213,6 +279,7 @@ export function PolicyEditor({
   onSubmit,
   pending,
   keys,
+  users,
   rules,
   ruleComposer,
 }: {
@@ -222,6 +289,7 @@ export function PolicyEditor({
   onSubmit: (payload: PolicyCreate) => Promise<unknown>;
   pending: boolean;
   keys: InferenceKeyOut[];
+  users: WorkspaceMemberCandidateOut[];
   rules: RuleOut[];
   ruleComposer?: PolicyRuleComposer;
 }) {
@@ -314,6 +382,7 @@ export function PolicyEditor({
             <PolicyFields
               form={form}
               keys={keys}
+              users={users}
               rules={visibleRules}
               newRuleIds={newRuleIds}
               ruleNotice={ruleNotice}

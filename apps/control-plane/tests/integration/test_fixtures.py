@@ -246,7 +246,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
         "fallback",
         "budget",
     }
-    assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
+    assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
     streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match

@@ -31,7 +31,6 @@ from sqlmodel import col
 
 from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
 from contract.policies import (
-    AllKeys,
     AllowedModels,
     AllowedProviders,
     AllRequests,
@@ -47,6 +46,7 @@ from contract.policies import (
     RuleDefinition,
     SelectedKeys,
     StrictParameters,
+    WorkspaceTarget,
 )
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
 from control_plane.keys import MANAGEMENT_KEY_PREFIX, key_prefix
@@ -207,7 +207,7 @@ async def workspace_policy(  # noqa: PLR0913 target and rule references stay exp
     *,
     name: str,
     priority: int,
-    target: AllKeys | SelectedKeys,
+    target: WorkspaceTarget | SelectedKeys,
     rules: tuple[Rule, ...],
     enabled: bool = True,
 ) -> Policy:
@@ -384,7 +384,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="Streaming uses team credentials",
         priority=10,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(team_credentials,),
     )
     approved_models = await workspace_rule(
@@ -397,7 +397,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="Approved production models",
         priority=20,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(approved_models,),
     )
     fallback = await workspace_rule(
@@ -416,7 +416,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="GPT-4o fallback",
         priority=30,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(fallback,),
     )
     for priority, (name, action) in enumerate(
@@ -440,7 +440,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
             production,
             name=name,
             priority=priority,
-            target=AllKeys(kind="all_keys"),
+            target=WorkspaceTarget(kind="workspace"),
             rules=(configured_rule,),
         )
     maintenance = await workspace_rule(
@@ -454,7 +454,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         name="Maintenance window",
         priority=40,
         enabled=False,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(maintenance, team_credentials),
     )
     ci_provider = await workspace_rule(
@@ -480,7 +480,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         default,
         name="Monthly shared budget",
         priority=10,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(monthly_budget,),
     )
 

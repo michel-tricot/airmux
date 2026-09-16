@@ -27,7 +27,7 @@ def test_rule_is_shared_live_across_policies_and_cannot_be_deleted_while_referen
         rule = created_rule.json()["data"]
 
         for name, selected in (("All traffic", False), ("Customer traffic", True)):
-            target: dict[str, object] = {"kind": "all_keys"}
+            target: dict[str, object] = {"kind": "workspace"}
             if selected:
                 key = client.post(f"{base}/inference-keys", headers=headers, json={"label": "customer"}).json()["data"]
                 target = {"kind": "selected_keys", "key_ids": [key["id"]]}
@@ -65,7 +65,7 @@ def test_policy_rejects_rule_from_another_workspace(tmp_path):
         response = client.post(
             f"/api/v1/organizations/{org_id}/workspaces/{second}/policies",
             headers=headers,
-            json={"name": "Invalid", "definition": {"target": {"kind": "all_keys"}, "rule_ids": [rule["id"]]}},
+            json={"name": "Invalid", "definition": {"target": {"kind": "workspace"}, "rule_ids": [rule["id"]]}},
         )
 
         assert response.status_code == 422

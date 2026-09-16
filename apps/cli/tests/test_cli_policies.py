@@ -22,7 +22,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     monkeypatch.setenv("TOKKEEPER_ORG_ID", org_id)
     monkeypatch.setenv("TOKKEEPER_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
-        "target": {"kind": "all_keys"},
+        "target": {"kind": "workspace"},
         "rule_ids": [rule_id],
     }
     policy = {

@@ -86,7 +86,8 @@ The bundle path is relative to this configuration file. `.tokkeeper/bundle.yml` 
 
 ```yaml
 keys:
-  - ${file:inference.key}
+  - token: ${file:inference.key}
+    user_id: 00000000-0000-0000-0000-000000000001
 taxonomy: taxonomy.yml
 rules: []
 policies: []
@@ -109,7 +110,8 @@ Requests already in progress finish against the snapshot they started with. Inva
 good snapshot keeps serving. If no valid snapshot has ever loaded, inference and `/readyz` return `503`. Restarting requires
 valid files again; local mode does not persist a separate last-good cache.
 
-You can add plaintext inference tokens to `keys` or use file or environment references. Tokens must start with `sk-inf-`, contain
+Each entry in `keys` requires a `token` and a principal UUID in `user_id`. Use the same UUID for keys belonging to one principal.
+`init` mints the initial principal UUID. Tokens can be plaintext or file or environment references. Tokens must start with `sk-inf-`, contain
 no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
 are fixed for a running process; changing an environment-based key or provider credential requires restarting the service.
 Keep plaintext key files private and out of version control.

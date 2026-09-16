@@ -4,6 +4,7 @@ import {
   useCreatePolicy,
   useDeletePolicy,
   useListPolicies,
+  useListPolicyUsers,
   useReorderPolicies,
   useUpdatePolicy,
 } from '@workspace/api-client-react';
@@ -33,4 +34,8 @@ export function usePolicyMutations(orgId: string, workspaceRef: string) {
     remove: useDeletePolicy({ mutation: { onSuccess: invalidate, meta: { errorMessage: 'The policy could not be deleted. Try again.' } } }),
     reorder,
   };
+}
+
+export function usePolicyUsers(orgId: string, workspaceRef: string, enabled: boolean) {
+  return useListPolicyUsers(orgId, workspaceRef, { query: { enabled } });
 }

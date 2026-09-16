@@ -117,7 +117,7 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "enabled": true,
   "priority": 100,
   "definition": {
-    "target": { "kind": "all_keys" },
+    "target": { "kind": "workspace" },
     "rule_ids": ["fallback-rule-uuid"]
   }
 }
