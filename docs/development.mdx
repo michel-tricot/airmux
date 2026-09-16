@@ -73,6 +73,35 @@ PR CI runs the levels in order against the rebuilt, installed public wheel and u
 configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
 For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/gateway/README.md).
 
+CI builds the candidate distributions once on Linux, validates their README metadata, and rebuilds the wheel from the
+sdist. Four portable installation jobs install that same wheel with Python 3.13 and 3.14 on `ubuntu-latest` and
+`macos-latest`. They have no source checkout and use only pytest, HTTPX, and PyYAML in a separate test environment.
+They verify CLI help/version, bundled module locations and interpreter version, starter taxonomy initialization,
+real buffered and streaming requests through a local stub upstream, and SIGTERM shutdown. Missing executable paths,
+startup failures, and shutdown timeouts fail with diagnostics rather than skipping. This matrix does not cover Windows.
+Postgres/Docker installation checks, the full integration suite, and gateway acceptance levels remain Linux-only;
+the installation and gateway acceptance jobs reuse the candidate wheel.
+
+The change adds one Linux distribution job and four smoke jobs to each CI run. Each has a ten-minute timeout,
+so the added job time is capped at 30 Linux runner minutes and 20 macOS runner minutes before savings from removing
+nine repeated distribution builds. These are execution ceilings, not measured usage or billing estimates.
+The smoke matrix permits two concurrent jobs, requiring at least two scheduling waves after the distribution job;
+runner availability can add queue time. Each smoke job records elapsed runner seconds in its Actions summary;
+the Actions job timeline records queue time. Use those measurements to assess cost before expanding the matrix.
+
+To run the portable checks locally without installing the workspace:
+
+```bash
+uv tool install --python 3.13 dist/airmux-*.whl
+uv venv --python 3.13 /tmp/airmux-smoke-runner
+uv pip install --python /tmp/airmux-smoke-runner/bin/python pytest httpx pyyaml
+mkdir -p /tmp/airmux-installation-tests
+cp tests/installation/{conftest,test_cli,test_gateway}.py /tmp/airmux-installation-tests/
+cd /tmp
+AIRMUX_INSTALL_BIN="$(command -v airmux)" AIRMUX_INSTALL_PYTHON=3.13 \
+  /tmp/airmux-smoke-runner/bin/python -I -m pytest /tmp/airmux-installation-tests
+```
+
 ## Workflow checks
 
 PR CI has an independent five-minute workflow check. It runs actionlint 1.7.12 with ShellCheck for embedded shell,
