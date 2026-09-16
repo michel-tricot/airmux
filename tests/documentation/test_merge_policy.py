@@ -25,13 +25,14 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
     assert set(gate["needs"]) == dependencies
     assert gate.get("name", name) == name
     assert gate["if"] == "always()"
-    assert gate["steps"][-1]["env"]["NEEDS"] == "${{ toJSON(needs) }}"
+    gate_step = gate["steps"][-2] if filename != "dependency-security.yml" else gate["steps"][-1]
+    assert gate_step["env"]["NEEDS"] == "${{ toJSON(needs) }}"
     for dependency in dependencies:
         needs = {name: {"result": result if name == dependency else "success", "outputs": {}} for name in dependencies}
         if filename != "dependency-security.yml":
             needs["changes"]["outputs"] = {"frontend": "true", "backend": "true", "deployment": "true"}
             scope = "ci" if filename == "ci.yml" else "docker"
-            assert gate["steps"][-1]["run"] == f"uv run --frozen python -m scripts.ci_policy gate {scope}"
+            assert gate_step["run"] == f"uv run --no-sync python -m scripts.ci_policy gate {scope}"
             if result == "success":
                 validate_results(json.dumps(needs), scope)
             else:

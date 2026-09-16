@@ -55,7 +55,7 @@ def test_prepared_workspace_commands_cannot_relock():
                         command = shlex.split(line.rstrip("\\"))
                         if "--no-project" not in command:
                             assert expected in command
-    job = WORKFLOWS["ci.yml"]["jobs"]["ci"]
+    job = WORKFLOWS["ci.yml"]["jobs"]["backend"]
     assert job["env"]["UV_NO_SYNC"] == "true"
     for script in ("export-openapi.sh", "generate-api-models.sh", "export-completion-schemas.sh"):
         for line in (ROOT / "scripts" / script).read_text().splitlines():

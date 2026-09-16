@@ -34,7 +34,10 @@ jobs:
       - name: Validate required deployment results
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: uv run --locked python -m scripts.ci_policy gate docker
+        run: uv run --no-sync python -m scripts.ci_policy gate docker
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   deployment:
     needs: changes

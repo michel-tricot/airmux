@@ -36,4 +36,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-        run: uv run --locked python -m scripts.ci_policy classify "$EVENT" --base "$BASE" --head "$HEAD"
+        run: uv run --no-sync python -m scripts.ci_policy classify "$EVENT" --base "$BASE" --head "$HEAD"
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
