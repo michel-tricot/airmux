@@ -311,7 +311,10 @@ class Stack:
             _payload(session.put(f"/api/v1/organizations/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
             workspace = _payload(session.post(f"/api/v1/organizations/{self.org_id}/workspaces", json={"name": "acceptance"}))
             caller = _payload(
-                session.post(f"/api/v1/organizations/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"})
+                session.post(
+                    f"/api/v1/organizations/{self.org_id}/workspaces/{workspace['id']}/inference-keys",
+                    json={"label": "caller", "user_id": me["user_id"]},
+                )
             )
             management_key = _payload(
                 session.post(

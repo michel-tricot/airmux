@@ -43,6 +43,11 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () =>
     HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: [] }),
   ),
+  http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-key-owners', () =>
+    HttpResponse.json<{ data: Api.InferenceKeyOwnerOut[] }>({
+      data: [{ user_id: 'user-1', email: 'dev@example.com', name: 'Dev', service_account: false }],
+    }),
+  ),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policy-users', () =>
     HttpResponse.json<{ data: Api.WorkspaceMemberCandidateOut[] }>({ data: [] }),
   ),

@@ -33,11 +33,17 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
 
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
+        user_id = _payload(admin.get("/api/v1/auth/me"))["user_id"]
         workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
         policies_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/policies"
         rules_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/rules"
         sibling = _payload(admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces", json={"name": "sibling"}))
-        caller = _payload(admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces/{sibling['id']}/inference-keys", json={"label": "sibling"}))
+        caller = _payload(
+            admin.post(
+                f"/api/v1/organizations/{stack.org_id}/workspaces/{sibling['id']}/inference-keys",
+                json={"label": "sibling", "user_id": user_id},
+            )
+        )
         model_rule_id = _create_rule(
             admin,
             rules_path,
@@ -138,11 +144,14 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
         workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
         base = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}"
         first = _payload(admin.get(f"{base}/inference-keys"))[0]
-        second = _payload(admin.post(f"{base}/inference-keys", json={"label": "Second"}))
+        second = _payload(admin.post(f"{base}/inference-keys", json={"label": "Second", "user_id": user_id}))
         _payload(admin.put(f"{base}/playground-session"))
         sibling = _payload(admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces", json={"name": "Development"}))
         sibling_key = _payload(
-            admin.post(f"/api/v1/organizations/{stack.org_id}/workspaces/{sibling['id']}/inference-keys", json={"label": "Development"})
+            admin.post(
+                f"/api/v1/organizations/{stack.org_id}/workspaces/{sibling['id']}/inference-keys",
+                json={"label": "Development", "user_id": user_id},
+            )
         )
         rule_id = _create_rule(
             admin, f"{base}/rules", "User output limit", {"kind": "all_requests"}, {"kind": "request_limits", "max_output_tokens": 1024}
@@ -192,7 +201,7 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
         assert _poll(lambda: completion(stack.caller_api_key, 513).status_code == 403, 30)
         assert completion(stack.caller_api_key, 512).status_code == 200
         _payload(admin.patch(f"{base}/policies/{user_policy['id']}", json={"enabled": False}))
-        future = _payload(admin.post(f"{base}/inference-keys", json={"label": "Future"}))
+        future = _payload(admin.post(f"{base}/inference-keys", json={"label": "Future", "user_id": user_id}))
         assert _poll(lambda: completion(future["token"], 4097).status_code == 403, 30)
         assert completion(future["token"], 4096).status_code == 200
         assert completion(None, 4097).status_code == 403

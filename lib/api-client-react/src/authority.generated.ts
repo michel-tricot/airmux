@@ -322,6 +322,14 @@ export const operationAuthority = {
       },
     ],
   },
+  listInferenceKeyOwners: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["inference-keys.manage"],
+      },
+    ],
+  },
   revokeInferenceKey: {
     checks: [
       {

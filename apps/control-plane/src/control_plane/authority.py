@@ -110,6 +110,16 @@ async def ensure_allowed_for_scopes(actor: Actor, permission: Permission, target
         raise AuthorizationError(detail)
 
 
+async def ensure_inference_key_owner(actor: Actor, owner_user_id: UUID, target: Scope) -> None:
+    if owner_user_id == actor.principal_id:
+        return
+    owner = await User.find_by_id(owner_user_id)
+    if owner is None or not owner.service_account or owner.managing_org_id != target.org_id:
+        detail = "Inference keys can only be owned by you or an organization-managed service account"
+        raise AuthorizationError(detail)
+    await ensure_allowed(actor, Permission.members_manage, target)
+
+
 async def principal_permissions(principal_id: UUID, target: Scope) -> frozenset[Permission]:
     grants = await standing_grants(principal_id, (target,))
     return frozenset(permission for grant in grants if grant.scope.covers(target) for permission in grant.permissions)

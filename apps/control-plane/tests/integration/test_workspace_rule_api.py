@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_workspace, setup_control_plane
 
 from contract import BundleV1
 
@@ -50,7 +50,7 @@ def test_rule_is_shared_live_across_policies_and_cannot_be_deleted_while_referen
         for name, selected in (("All traffic", False), ("Customer traffic", True)):
             target: dict[str, object] = {"kind": "workspace"}
             if selected:
-                key = client.post(f"{base}/inference-keys", headers=headers, json={"label": "customer"}).json()["data"]
+                key = client.post(f"{base}/inference-keys", headers=headers, json=inference_key_body(client, headers, "customer")).json()["data"]
                 target = {"kind": "selected_keys", "key_ids": [key["id"]]}
             body = {"name": name, "definition": {"target": target, "rule_ids": [rule["id"]]}}
             response = client.post(f"{base}/policies", headers=headers, json=body)

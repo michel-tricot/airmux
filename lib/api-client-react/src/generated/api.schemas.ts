@@ -688,6 +688,8 @@ export interface InferenceKeyIn {
      * @maxLength 80
      */
   label: string;
+  /** Principal whose identity this key carries into policy evaluation */
+  user_id: string;
 }
 
 export interface InferenceKeyOut {
@@ -701,6 +703,13 @@ export interface InferenceKeyOut {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export interface InferenceKeyOwnerOut {
+  user_id: string;
+  email: string;
+  name: string;
+  service_account: boolean;
 }
 
 export interface InferenceKeyRevokedOut {

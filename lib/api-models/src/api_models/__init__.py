@@ -456,6 +456,13 @@ class InferenceKeyIn(BaseModel):
             title="Label",
         ),
     ]
+    user_id: Annotated[
+        UUID,
+        Field(
+            description="Principal whose identity this key carries into policy evaluation",
+            title="User Id",
+        ),
+    ]
 
 
 class InferenceKeyOut(BaseModel):
@@ -469,6 +476,13 @@ class InferenceKeyOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class InferenceKeyOwnerOut(BaseModel):
+    user_id: Annotated[UUID, Field(title="User Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    service_account: Annotated[bool, Field(title="Service Account")]
 
 
 class InferenceKeyRevokedOut(BaseModel):
@@ -1937,6 +1951,10 @@ class EnvelopeWorkspaceOut(BaseModel):
 
 class EnvelopeListInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(title="Data")]
+
+
+class EnvelopeListInferenceKeyOwnerOut(BaseModel):
+    data: Annotated[list[InferenceKeyOwnerOut], Field(title="Data")]
 
 
 class EnvelopeListOrgInvitationOut(BaseModel):
