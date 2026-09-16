@@ -1,21 +1,49 @@
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: /
+  - package-ecosystem: uv
+    directories:
+      - /
+      - /packaging/airmux
     schedule:
       interval: weekly
     groups:
       python-dependencies:
         patterns:
-          - "*"
-  - package-ecosystem: npm
+          - '*'
+        update-types:
+          - minor
+          - patch
+      python-major-dependencies:
+        patterns:
+          - '*'
+        update-types:
+          - major
+        group-by: dependency-name
+      python-security-dependencies:
+        applies-to: security-updates
+        patterns:
+          - '*'
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
     groups:
       javascript-dependencies:
         patterns:
-          - "*"
+          - '*'
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploy/digitalocean
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -23,4 +51,4 @@ updates:
     groups:
       workflow-dependencies:
         patterns:
-          - "*"
+          - '*'
