@@ -82,7 +82,7 @@ jobs:
               }
               core.info(`Validated ${run.html_url}`);
             }
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - name: Build release distributions
         run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheels from source distributions
@@ -98,12 +98,12 @@ jobs:
         env:
           AIRMUX_DISTRIBUTION_DIR: dist
           AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
-        run: uv run pytest tests/installation
+        run: uv run --no-sync pytest tests/installation
       - name: Verify installed gateway
         env:
           AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
           DOCKER_HOST: unix:///no-docker.sock
-        run: uv run pytest tests/acceptance/gateway
+        run: uv run --no-sync pytest tests/acceptance/gateway
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         id: distributions
         with:
@@ -111,6 +111,9 @@ jobs:
           path: dist/airmux*
           if-no-files-found: error
           retention-days: 30
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   live-providers:
     needs: build
@@ -157,7 +160,7 @@ jobs:
         with:
           enable-cache: false
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
@@ -166,7 +169,7 @@ jobs:
       - name: Download exact PyPI version and compare candidate hashes
         env:
           VERSION: ${{ needs.build.outputs.version }}
-        run: uv run python tests/installation/pypi_artifacts.py "$VERSION" dist "$RUNNER_TEMP/pypi-dist"
+        run: uv run --no-sync python tests/installation/pypi_artifacts.py "$VERSION" dist "$RUNNER_TEMP/pypi-dist"
       - name: Install verified PyPI wheel into a fresh isolated environment
         env:
           UV_TOOL_DIR: ${{ runner.temp }}/pypi-tools
@@ -184,7 +187,7 @@ jobs:
           AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/pypi-bin/airmux
           AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
           DOCKER_HOST: unix:///no-docker.sock
-        run: uv run pytest tests/acceptance/gateway/test_01_basic.py::test_ready_gateway_completes_and_records_usage
+        run: uv run --no-sync pytest tests/acceptance/gateway/test_01_basic.py::test_ready_gateway_completes_and_records_usage
       - name: Retain PyPI smoke diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -192,6 +195,9 @@ jobs:
           name: pypi-smoke-diagnostics
           path: ${{ runner.temp }}/gateway-artifacts
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   announce:
     needs: [build, verify-pypi]

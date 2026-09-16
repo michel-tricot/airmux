@@ -3,7 +3,7 @@
 # CI regenerates and fails on drift; never hand-edit the output file.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-uv run datamodel-codegen \
+uv run --locked datamodel-codegen \
   --input lib/api-spec/openapi.yaml \
   --input-file-type openapi \
   --output lib/api-models/src/api_models/__init__.py \
@@ -15,4 +15,4 @@ uv run datamodel-codegen \
   --use-annotated \
   --target-python-version 3.13 \
   --disable-timestamp
-uv run ruff format -q lib/api-models/src/api_models/__init__.py
+uv run --locked ruff format -q lib/api-models/src/api_models/__init__.py

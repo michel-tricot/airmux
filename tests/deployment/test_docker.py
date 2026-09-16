@@ -124,7 +124,7 @@ def assert_quickstart(public_url, config_path):
             "--package",
             "airmux",
             "--no-dev",
-            "--frozen",
+            "--no-sync",
             "airmux",
             "quickstart",
             "--url",
