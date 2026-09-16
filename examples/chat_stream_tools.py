@@ -41,7 +41,7 @@ def main() -> int:
     with httpx.stream(
         "POST",
         f"{gateway.rstrip('/')}/inf/v1/chat/completions",
-        headers={"authorization": f"Bearer {api_key}", "x-airmux-dialect": "canonical"},
+        headers={"authorization": f"Bearer {api_key}"},
         json={
             "model": model,
             "messages": [{"role": "user", "content": "What is the weather in Paris and in Tokyo, in celsius?"}],
