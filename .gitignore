@@ -9,7 +9,7 @@ dist/
 .idea/
 *.db
 
-.tokkeeper*
+.airmux*
 .secrets
 notes/model-metadata/
 

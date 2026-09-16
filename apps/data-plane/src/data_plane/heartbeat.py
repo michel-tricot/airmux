@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from data_plane.control_plane_link import ControlPlaneLink
 
 try:
-    VERSION = version("tokkeeper")
+    VERSION = version("airmux")
 except PackageNotFoundError:  # pragma: no cover - only when running from a non-installed tree
     VERSION = "unknown"
 

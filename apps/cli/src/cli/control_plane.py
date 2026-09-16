@@ -24,16 +24,16 @@ def init(
     from control_plane.operations import initialize  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     initialize(directory, console_url)
-    typer.echo(f"Created {directory / 'tokkeeper.yml'} and the private data-plane bootstrap key")
+    typer.echo(f"Created {directory / 'airmux.yml'} and the private data-plane bootstrap key")
     typer.echo("Set DATABASE_URL, then run:")
-    typer.echo(f"  tokkeeper control-plane migrate --config {shell_quote(str(directory / 'tokkeeper.yml'))}")
-    typer.echo(f"  tokkeeper control-plane serve --config {shell_quote(str(directory / 'tokkeeper.yml'))}")
+    typer.echo(f"  airmux control-plane migrate --config {shell_quote(str(directory / 'airmux.yml'))}")
+    typer.echo(f"  airmux control-plane serve --config {shell_quote(str(directory / 'airmux.yml'))}")
 
 
 @control_plane_app.command()
 @runtime_command
 def bootstrap_keygen(
-    out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".tokkeeper/dataplane.key"),
+    out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".airmux/dataplane.key"),
 ) -> None:
     """Create a private bootstrap key for an existing configuration."""
     from control_plane.operations import (  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
@@ -147,6 +147,6 @@ def fixtures(config: ConfigOption = None, fmt: FormatOption = OutputFormat.table
     ]
     _print_rows("fixture access", access, [Col("kind", "Kind"), Col("name", "Name"), Col("value", "Value")], fmt)
     if result.models == 0:
-        typer.echo("Catalog is empty; run 'tokkeeper control-plane taxonomy --file PATH'", err=True)
+        typer.echo("Catalog is empty; run 'airmux control-plane taxonomy --file PATH'", err=True)
     if seeded.unresolved_providers:
         typer.echo(f"Provider credentials need keys: {', '.join(seeded.unresolved_providers)}", err=True)

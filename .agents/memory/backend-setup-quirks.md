@@ -5,11 +5,11 @@ description: Current plane commands, bootstrap authentication, and Replit-specif
 
 ## Commands and Python
 
-The plane commands are `tokkeeper-control-plane` and `tokkeeper-data-plane`; the management CLI is `tokkeeper`. The workspace requires Python >=3.13. The checked-in `.replit` already selects `python-base-3.13`; installing a Python module is not a routine checkout step.
+The plane commands are `airmux-control-plane` and `airmux-data-plane`; the management CLI is `airmux`. The workspace requires Python >=3.13. The checked-in `.replit` already selects `python-base-3.13`; installing a Python module is not a routine checkout step.
 
 ## Taxonomy path
 
-`uv run tokkeeper-control-plane taxonomy` defaults to `taxonomy.yml`, resolved next to the config file. The repository catalog is `taxonomy/taxonomy.yml`. With the root `tokkeeper.yml`, use `uv run tokkeeper-control-plane taxonomy --file taxonomy/taxonomy.yml`. The Replit backend helper already passes this option.
+`uv run airmux-control-plane taxonomy` defaults to `taxonomy.yml`, resolved next to the config file. The repository catalog is `taxonomy/taxonomy.yml`. With the root `airmux.yml`, use `uv run airmux-control-plane taxonomy --file taxonomy/taxonomy.yml`. The Replit backend helper already passes this option.
 
 ## Ports
 
@@ -21,7 +21,7 @@ The control-plane command defaults to `127.0.0.1:8000`, matching the Vite proxy 
 
 ## Bootstrap token, not signing keys
 
-`uv run tokkeeper-control-plane bootstrap-keygen` creates `.tokkeeper/dataplane.key`, a shared bootstrap authentication token. The root `tokkeeper.yml` reads it through a file reference, and the Replit helper generates it when missing.
+`uv run airmux-control-plane bootstrap-keygen` creates `.airmux/dataplane.key`, a shared bootstrap authentication token. The root `airmux.yml` reads it through a file reference, and the Replit helper generates it when missing.
 
 Policy bundles are published as JSON. The data plane fetches them using bearer authentication, validates their schema and contents, and caches them. There is no bundle signing or signature verification, no `keygen` command, and no `signing.key`/`signing.pub` setup. Provider reasoning signatures are opaque provider values passed through the adapters, separate from bundle authentication.
 

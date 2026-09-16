@@ -16,7 +16,7 @@ class RemoteBundleConfig(BaseModel):
 
     kind: Literal["remote"] = "remote"
     control_plane: ControlPlaneLink
-    cache_dir: ConfigPath = Path(".tokkeeper")
+    cache_dir: ConfigPath = Path(".airmux")
     poll_interval_s: float = Field(default=30.0, gt=0)
     heartbeat_interval_s: float = Field(default=30.0, gt=0)
 

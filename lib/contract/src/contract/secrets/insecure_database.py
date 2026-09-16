@@ -131,7 +131,7 @@ class InsecureDatabaseSecretStore(SecretStore):
                         max_inactive_connection_lifetime=POOL_MAX_INACTIVE_S,
                         timeout=POOL_ACQUIRE_TIMEOUT_S,
                         command_timeout=POOL_ACQUIRE_TIMEOUT_S,
-                        server_settings={"application_name": "tokkeeper-insecure-vault"},
+                        server_settings={"application_name": "airmux-insecure-vault"},
                     )
                 except (OSError, TimeoutError, asyncpg.PostgresError) as error:
                     raise _DatabaseUnavailableError from error

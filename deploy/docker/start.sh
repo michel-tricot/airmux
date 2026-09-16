@@ -5,18 +5,18 @@ prepare_control_plane() {
   umask 077
   mkdir -p /state/runtime /state/secrets
   if [ ! -f /state/runtime/dataplane.key ]; then
-    tokkeeper control-plane bootstrap-keygen --out /state/runtime/dataplane.key
+    airmux control-plane bootstrap-keygen --out /state/runtime/dataplane.key
   fi
-  DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}" tokkeeper control-plane migrate --config /app/deploy/docker/migrate.yml
-  tokkeeper control-plane taxonomy --config "$TOKKEEPER_CONFIG" --file /app/taxonomy/taxonomy.yml
+  DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}" airmux control-plane migrate --config /app/deploy/docker/migrate.yml
+  airmux control-plane taxonomy --config "$AIRMUX_CONFIG" --file /app/taxonomy/taxonomy.yml
 }
 
 start_control_plane() {
-  exec tokkeeper control-plane serve --host "$1" --port 8000 --config "$TOKKEEPER_CONFIG"
+  exec airmux control-plane serve --host "$1" --port 8000 --config "$AIRMUX_CONFIG"
 }
 
 start_data_plane() {
-  exec tokkeeper gateway serve --host "$1" --port 8081 --config "$TOKKEEPER_CONFIG"
+  exec airmux gateway serve --host "$1" --port 8081 --config "$AIRMUX_CONFIG"
 }
 
 start_console() {
@@ -25,15 +25,15 @@ start_console() {
     \[*\]) ;;
     *:*) NGINX_RESOLVER="[$NGINX_RESOLVER]" ;;
   esac
-  PUBLIC_SCHEME=${TOKKEEPER_CONSOLE_URL%%:*}
+  PUBLIC_SCHEME=${AIRMUX_CONSOLE_URL%%:*}
   case "$PUBLIC_SCHEME" in
     http|https) ;;
-    *) echo 'TOKKEEPER_CONSOLE_URL must start with http:// or https://' >&2; exit 1 ;;
+    *) echo 'AIRMUX_CONSOLE_URL must start with http:// or https://' >&2; exit 1 ;;
   esac
   export NGINX_RESOLVER PUBLIC_SCHEME
   envsubst '${CONTROL_PLANE_UPSTREAM} ${DATA_PLANE_UPSTREAM} ${NGINX_RESOLVER} ${PUBLIC_SCHEME}' \
-    < /app/deploy/docker/nginx.conf.template > /tmp/tokkeeper-nginx.conf
-  exec nginx -c /tmp/tokkeeper-nginx.conf -g 'daemon off;'
+    < /app/deploy/docker/nginx.conf.template > /tmp/airmux-nginx.conf
+  exec nginx -c /tmp/airmux-nginx.conf -g 'daemon off;'
 }
 
 case "${1:-}" in

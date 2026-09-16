@@ -1,5 +1,5 @@
-# Applied provider catalog. Maintain through tokkeeper-audit providers onboard and sync.
-# Agent field guidance: tokkeeper-audit agent guide provider-onboarding
+# Applied provider catalog. Maintain through airmux-audit providers onboard and sync.
+# Agent field guidance: airmux-audit agent guide provider-onboarding
 
 routers:
 - id: openrouter

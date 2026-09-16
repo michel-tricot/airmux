@@ -146,7 +146,7 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
             authentication = (
                 {"authorization": f"Bearer {token}"}
                 if token is not None
-                else {**headers, "Cookie": f"tokkeeper_playground={admin.cookies.get('tokkeeper_playground')}"}
+                else {**headers, "Cookie": f"airmux_playground={admin.cookies.get('airmux_playground')}"}
             )
             return httpx.post(
                 f"{stack.dp_url}/inf/v1/chat/completions",

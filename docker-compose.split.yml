@@ -1,5 +1,5 @@
 x-gateway: &gateway
-  image: ${TOKKEEPER_DATA_PLANE_IMAGE:-tokkeeper-data-plane:local}
+  image: ${AIRMUX_DATA_PLANE_IMAGE:-airmux-data-plane:local}
   init: true
   depends_on:
     control-plane:
@@ -24,14 +24,14 @@ services:
       - split-pgdata:/var/lib/postgresql/data
 
   control-plane:
-    image: ${TOKKEEPER_CONTROL_PLANE_IMAGE:-tokkeeper-control-plane:local}
+    image: ${AIRMUX_CONTROL_PLANE_IMAGE:-airmux-control-plane:local}
     build:
       context: .
       target: control-plane
     environment:
-      DATABASE_URL: postgresql+asyncpg://tokkeeper:${POSTGRES_PASSWORD:-tokkeeper}@postgres:5432/tokkeeper
-      TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
-      TOKKEEPER_PUBLIC_SIGNUP: ${TOKKEEPER_PUBLIC_SIGNUP:-false}
+      DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
+      AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
+      AIRMUX_PUBLIC_SIGNUP: ${AIRMUX_PUBLIC_SIGNUP:-false}
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - runtime-credentials:/state/runtime
@@ -65,14 +65,14 @@ services:
       - gateway-2:/state/data-plane
 
   console:
-    image: ${TOKKEEPER_CONSOLE_IMAGE:-tokkeeper-console:local}
+    image: ${AIRMUX_CONSOLE_IMAGE:-airmux-console:local}
     build:
       context: .
       target: console
     environment:
-      TOKKEEPER_CONSOLE_URL: ${TOKKEEPER_PUBLIC_URL:-http://localhost:8080}
+      AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
     ports:
-      - "${TOKKEEPER_PORT:-8080}:8080"
+      - "${AIRMUX_PORT:-8080}:8080"
     depends_on:
       control-plane:
         condition: service_healthy

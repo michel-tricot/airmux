@@ -15,7 +15,7 @@ ORG_ID = "019c0000-0000-7000-8000-000000000001"
 
 @pytest.mark.parametrize("split_option", ["--control-plane-url", "--console-url", "--gateway-url"])
 def test_login_url_is_exclusive_with_split_urls(split_option):
-    result = runner.invoke(app, ["login", "--url", "https://tokkeeper.example.com", split_option, "https://other.example.com"])
+    result = runner.invoke(app, ["login", "--url", "https://airmux.example.com", split_option, "https://other.example.com"])
 
     assert result.exit_code == 2
     output = unstyle(result.output)
@@ -31,7 +31,7 @@ def test_login_url_is_exclusive_with_split_urls(split_option):
 )
 @respx.mock
 def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, monkeypatch, stored_url, expected_authorization):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     upsert_profile(
         "old",
@@ -88,7 +88,7 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
 
 @respx.mock
 def test_login_saves_instance_access_without_an_organization(tmp_path, monkeypatch):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     respx.post("https://cp.example/api/v1/auth/cli/start").mock(
         return_value=httpx.Response(

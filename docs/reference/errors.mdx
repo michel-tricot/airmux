@@ -3,7 +3,7 @@ title: "Errors"
 description: "Handle stable gateway error codes, provider errors, and failures that arrive after streaming begins."
 ---
 
-TokKeeper keeps the error envelope native to the caller surface.
+airmux keeps the error envelope native to the caller surface.
 
 <CodeGroup>
 
@@ -30,7 +30,7 @@ authentication; model discovery uses the OpenAI error shape.
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
-| 400 | `invalid_dialect` | Unknown `x-tokkeeper-dialect` value |
+| 400 | `invalid_dialect` | Unknown `x-airmux-dialect` value |
 | 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
 | 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
 | 401 | `missing_bearer_token` | No non-empty bearer token, API-key header, or playground cookie |
@@ -52,7 +52,7 @@ authentication; model discovery uses the OpenAI error shape.
 Provider HTTP errors may retain the provider status and normalized provider code. Do not branch only on the human
 message; prefer HTTP status and `code` or `type`.
 
-Every data-plane `401` response includes `WWW-Authenticate: Bearer realm="tokkeeper"`. All data-plane HTTP responses carry the shared
+Every data-plane `401` response includes `WWW-Authenticate: Bearer realm="airmux"`. All data-plane HTTP responses carry the shared
 [response headers](/docs/reference/inference#response-headers), including a gateway request ID.
 
 Unexpected server failures may return a plain-text `500` body; the shared response headers still apply.

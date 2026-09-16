@@ -4,7 +4,7 @@ Restores providers.yml and routers.yml from the seed, then runs the derivation c
 produces everything else. What comes back is the whole catalog minus the prose headers,
 which are documentation rather than data and live in git.
 
-    uv run tokkeeper-audit taxonomy rebuild
+    uv run airmux-audit taxonomy rebuild
 
 Schemas are wired up from what the extractors actually produced, so a vendor that has
 since removed or moved its spec yields a smaller catalog rather than a broken one.
@@ -117,8 +117,8 @@ def run_task(name: str, task: Callable[[Sequence[str]], int], *arguments: str) -
 
 
 def export_canonical_schemas() -> int:
-    executable = Path(sys.executable).with_name("tokkeeper")
-    emit("\n=== tokkeeper gateway schema")
+    executable = Path(sys.executable).with_name("airmux")
+    emit("\n=== airmux gateway schema")
     return run_command([str(executable), "gateway", "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
 
 

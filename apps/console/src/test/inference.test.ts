@@ -53,7 +53,7 @@ describe('inferenceCompletion', () => {
     expect(Object.fromEntries(new Headers(fetchMock.mock.calls[0]?.[1]?.headers))).toEqual({
       'content-type': 'application/json',
       'x-requested-with': 'fetch',
-      'x-tokkeeper-dialect': 'canonical',
+      'x-airmux-dialect': 'canonical',
     });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       model: 'model-1',

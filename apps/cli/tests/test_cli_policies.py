@@ -17,10 +17,10 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
     org_id = str(uuid4())
     policy_id = str(uuid4())
     rule_id = str(uuid4())
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("TOKKEEPER_MANAGEMENT_KEY", "sk-test-policies")
-    monkeypatch.setenv("TOKKEEPER_ORG_ID", org_id)
-    monkeypatch.setenv("TOKKEEPER_CONTROL_PLANE_URL", "http://cp.test")
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-policies")
+    monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
+    monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "target": {"kind": "workspace"},
         "rule_ids": [rule_id],

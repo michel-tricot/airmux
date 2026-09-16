@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 Runtime = Literal["gateway", "control-plane"]
-ConfigOption = Annotated[Path | None, typer.Option("--config", "-c", help="Configuration file; defaults to TOKKEEPER_CONFIG or the runtime default")]
+ConfigOption = Annotated[Path | None, typer.Option("--config", "-c", help="Configuration file; defaults to AIRMUX_CONFIG or the runtime default")]
 DirectoryOption = Annotated[Path, typer.Option("--directory", "-d", help="Configuration directory; existing files are never overwritten")]
 PortOption = Annotated[int, typer.Option("--port", min=1, max=65535, help="Port to listen on")]
 HostOption = Annotated[str, typer.Option("--host", help="Address to listen on")]
@@ -43,12 +43,12 @@ def runtime_command[**P](command: Callable[P, None]) -> Callable[P, None]:
 
 
 def configuration_path(config: Path | None, runtime: Runtime) -> Path:
-    environment = os.environ.get("TOKKEEPER_CONFIG")
-    defaults = (Path(".tokkeeper/tokkeeper.yml"), Path("tokkeeper.yml")) if runtime == "gateway" else (Path("tokkeeper.yml"),)
+    environment = os.environ.get("AIRMUX_CONFIG")
+    defaults = (Path(".airmux/airmux.yml"), Path("airmux.yml")) if runtime == "gateway" else (Path("airmux.yml"),)
     selected = config or (Path(environment) if environment else next((path for path in defaults if path.is_file()), defaults[0]))
     path = selected.expanduser().resolve()
     if not path.is_file():
-        message = f"Configuration file not found: {path}. Run 'tokkeeper {runtime} init' or provide --config PATH"
+        message = f"Configuration file not found: {path}. Run 'airmux {runtime} init' or provide --config PATH"
         raise ValueError(message)
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     section = "data_plane" if runtime == "gateway" else "control_plane"

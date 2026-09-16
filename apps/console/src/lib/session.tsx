@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe, useLogout, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
 
-const ORG_STORAGE_KEY = 'tokkeeper_org_id';
+const ORG_STORAGE_KEY = 'airmux_org_id';
 
 interface SessionContextType {
   user: MeOut | undefined;

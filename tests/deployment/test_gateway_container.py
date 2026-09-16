@@ -16,7 +16,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
     image = os.environ.get("DEPLOYMENT_GATEWAY_IMAGE")
     if image is None:
         pytest.skip("set DEPLOYMENT_GATEWAY_IMAGE to the built data-plane target")
-    network = f"tokkeeper-standalone-{uuid4().hex[:12]}"
+    network = f"airmux-standalone-{uuid4().hex[:12]}"
     upstream = f"{network}-upstream"
     gateway = f"{network}-gateway"
     taxonomy = tmp_path / "taxonomy.yml"
@@ -29,7 +29,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
         )
     )
     subprocess.run(  # noqa: S603 the test environment supplies the installed project CLI
-        [str(Path(sys.executable).parent / "tokkeeper"), "gateway", "init", "--taxonomy", str(taxonomy), "--directory", str(tmp_path / "gateway")],
+        [str(Path(sys.executable).parent / "airmux"), "gateway", "init", "--taxonomy", str(taxonomy), "--directory", str(tmp_path / "gateway")],
         check=True,
         capture_output=True,
     )
@@ -70,7 +70,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             image,
             "serve",
             "--config",
-            "/config/gateway/tokkeeper.yml",
+            "/config/gateway/airmux.yml",
             "--host",
             "0.0.0.0",  # noqa: S104 listen on the container interface behind a loopback-only published port
             "--port",
@@ -80,7 +80,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
             eventually(lambda: client.get("/readyz").status_code == 200)
             body = {"model": "echo", "messages": [{"role": "user", "content": "hello"}]}
-            headers = {"Authorization": f"Bearer {key}", "X-Tokkeeper-Dialect": "openai_native"}
+            headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401
             response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
             assert_completion(response)

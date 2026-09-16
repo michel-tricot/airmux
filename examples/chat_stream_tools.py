@@ -29,19 +29,19 @@ WEATHER_TOOL = {
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("TOKKEEPER_INFERENCE_KEY")
+    api_key = os.environ.get("AIRMUX_INFERENCE_KEY")
     if not api_key:
-        print("TOKKEEPER_INFERENCE_KEY is not set, run `uv run tokkeeper quickstart` first")
+        print("AIRMUX_INFERENCE_KEY is not set, run `uv run airmux quickstart` first")
         return 1
-    gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("TOKKEEPER_MODEL", "openai/gpt-4o-mini")
+    gateway = os.environ.get("AIRMUX_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("AIRMUX_MODEL", "openai/gpt-4o-mini")
 
     arguments: dict[int, str] = {}
     names: dict[int, str] = {}
     with httpx.stream(
         "POST",
         f"{gateway.rstrip('/')}/inf/v1/chat/completions",
-        headers={"authorization": f"Bearer {api_key}", "x-tokkeeper-dialect": "canonical"},
+        headers={"authorization": f"Bearer {api_key}", "x-airmux-dialect": "canonical"},
         json={
             "model": model,
             "messages": [{"role": "user", "content": "What is the weather in Paris and in Tokyo, in celsius?"}],

@@ -68,15 +68,15 @@ def database_errors() -> Iterator[None]:
 
 @contextmanager
 def configuration_environment(config: Path) -> Iterator[None]:
-    selected = os.environ.get("TOKKEEPER_CONFIG")
-    os.environ["TOKKEEPER_CONFIG"] = str(config)
+    selected = os.environ.get("AIRMUX_CONFIG")
+    os.environ["AIRMUX_CONFIG"] = str(config)
     try:
         yield
     finally:
         if selected is None:
-            os.environ.pop("TOKKEEPER_CONFIG", None)
+            os.environ.pop("AIRMUX_CONFIG", None)
         else:
-            os.environ["TOKKEEPER_CONFIG"] = selected
+            os.environ["AIRMUX_CONFIG"] = selected
 
 
 def bootstrap_keygen(path: Path) -> None:
@@ -87,8 +87,8 @@ def bootstrap_keygen(path: Path) -> None:
 def initialize(directory: Path, console_url: str) -> None:
     console_url = Settings(console_url=console_url).console_url
     token, _ = new_management_key()
-    bootstrap = "${file:.tokkeeper/dataplane.key}"
-    secrets = {"kind": "file", "root": ".tokkeeper/secrets"}
+    bootstrap = "${file:.airmux/dataplane.key}"
+    secrets = {"kind": "file", "root": ".airmux/secrets"}
     link = {"url": "http://127.0.0.1:8000", "token": bootstrap}
     config = {
         "control_plane": {
@@ -98,23 +98,23 @@ def initialize(directory: Path, console_url: str) -> None:
             "secrets": secrets,
         },
         "data_plane": {
-            "bundle": {"kind": "remote", "control_plane": link, "cache_dir": ".tokkeeper/gateway"},
-            "events": {"kind": "sqlite", "control_plane": link, "cache_dir": ".tokkeeper/gateway"},
+            "bundle": {"kind": "remote", "control_plane": link, "cache_dir": ".airmux/gateway"},
+            "events": {"kind": "sqlite", "control_plane": link, "cache_dir": ".airmux/gateway"},
             "secrets": secrets,
         },
     }
     write_new_configuration(
         directory,
         {
-            ".tokkeeper/.gitignore": GENERATED_STATE_GITIGNORE,
-            ".tokkeeper/dataplane.key": token,
-            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+            ".airmux/.gitignore": GENERATED_STATE_GITIGNORE,
+            ".airmux/dataplane.key": token,
+            "airmux.yml": yaml.safe_dump(config, sort_keys=False),
         },
     )
 
 
 def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
-    os.environ["TOKKEEPER_CONFIG"] = str(config)
+    os.environ["AIRMUX_CONFIG"] = str(config)
     if dev:
         run_migrations()
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)

@@ -18,7 +18,7 @@ jobs:
       matrix:
         compose-file: [docker-compose.yml, docker-compose.split.yml]
     env:
-      DEPLOYMENT_PROJECT: tokkeeper-test
+      DEPLOYMENT_PROJECT: airmux-test
       DEPLOYMENT_FILE: ${{ matrix.compose-file }}
       DEPLOYMENT_URL: http://localhost:8080
     steps:
@@ -30,9 +30,9 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
       - if: matrix.compose-file == 'docker-compose.yml'
-        run: echo 'DEPLOYMENT_COMPACT_IMAGE=tokkeeper:local' >> "$GITHUB_ENV"
+        run: echo 'DEPLOYMENT_COMPACT_IMAGE=airmux:local' >> "$GITHUB_ENV"
       - if: matrix.compose-file == 'docker-compose.split.yml'
-        run: echo 'DEPLOYMENT_GATEWAY_IMAGE=tokkeeper-data-plane:local' >> "$GITHUB_ENV"
+        run: echo 'DEPLOYMENT_GATEWAY_IMAGE=airmux-data-plane:local' >> "$GITHUB_ENV"
       - run: uv run pytest tests/deployment
       - if: failure()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color

@@ -12,7 +12,7 @@ function renderAt(path: string) {
 }
 
 const REQUEST = {
-  client_name: 'tokkeeper CLI',
+  client_name: 'airmux CLI',
   requester: 'devbox.local',
   expires_at: '2030-01-01T00:00:00Z',
   can_approve_instance: false,
@@ -91,7 +91,7 @@ describe('CLI device sign-in approval', () => {
   it('shows a clear error and the code form for an unknown code', async () => {
     withPendingRequest('GOOD-CODE');
     renderAt('/cli?code=WRONG-CODE');
-    expect(await screen.findByText('No pending login with this code. Check your terminal, or run tokkeeper login again.')).toBeInTheDocument();
+    expect(await screen.findByText('No pending login with this code. Check your terminal, or run airmux login again.')).toBeInTheDocument();
     expect(screen.getByLabelText('Code from your terminal')).toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe('CLI device sign-in approval', () => {
     );
     const user = userEvent.setup();
     renderAt('/cli?code=OLD-CODE');
-    expect(await screen.findByText('This login request expired. Run tokkeeper login again.')).toBeInTheDocument();
+    expect(await screen.findByText('This login request expired. Run airmux login again.')).toBeInTheDocument();
 
     const input = screen.getByLabelText('Code from your terminal');
     await user.clear(input);
@@ -121,7 +121,7 @@ describe('CLI device sign-in approval', () => {
   });
 
   it('does not treat routes that merely start with cli as approval routes', async () => {
-    window.localStorage.setItem('tokkeeper_org_id', ORG.id);
+    window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/client');
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/org/workspaces/production');

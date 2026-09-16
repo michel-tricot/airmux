@@ -42,11 +42,11 @@ jobs:
       - run: ./scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml
       - run: ./scripts/generate-api-models.sh && git diff --exit-code lib/api-models
       - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
-      - run: uv run tokkeeper-audit cases coverage
-      - run: uv run tokkeeper-audit taxonomy validate
+      - run: uv run airmux-audit cases coverage
+      - run: uv run airmux-audit taxonomy validate
       - run: uv run pytest apps/control-plane/tests/unit
         env:
-          DOCKER_HOST: unix:///tmp/tokkeeper-no-docker.sock
+          DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
       - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
 
   installation:
@@ -58,23 +58,23 @@ jobs:
           python-version: '3.13'
       - name: Configure installed gateway test paths
         run: |
-          echo "TOKKEEPER_GATEWAY_BIN=$RUNNER_TEMP/tokkeeper-bin/tokkeeper" >> "$GITHUB_ENV"
-          echo "TOKKEEPER_GATEWAY_ARTIFACTS=$RUNNER_TEMP/gateway-artifacts" >> "$GITHUB_ENV"
+          echo "AIRMUX_GATEWAY_BIN=$RUNNER_TEMP/airmux-bin/airmux" >> "$GITHUB_ENV"
+          echo "AIRMUX_GATEWAY_ARTIFACTS=$RUNNER_TEMP/gateway-artifacts" >> "$GITHUB_ENV"
       - run: uv sync --all-packages --frozen
       - run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheel from source distribution
         run: |
           mkdir dist-from-sdist
-          uv build --wheel --out-dir dist-from-sdist dist/tokkeeper-*.tar.gz
+          uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
       - name: Install rebuilt release
         env:
-          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
-          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: uv tool install dist-from-sdist/tokkeeper-*.whl
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+        run: uv tool install dist-from-sdist/airmux-*.whl
       - run: uv run pytest tests/installation --junitxml=gateway-results/00-installation.xml
         env:
-          TOKKEEPER_DISTRIBUTION_DIR: dist
-          TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          AIRMUX_DISTRIBUTION_DIR: dist
+          AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
       - name: Disable Docker for standalone gateway tests
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
@@ -127,17 +127,17 @@ jobs:
       - name: Rebuild wheel from source distribution
         run: |
           mkdir dist-from-sdist
-          uv build --wheel --out-dir dist-from-sdist dist/tokkeeper-*.tar.gz
+          uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
       - name: Install rebuilt release
         env:
-          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
-          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: uv tool install dist-from-sdist/tokkeeper-*.whl
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+        run: uv tool install dist-from-sdist/airmux-*.whl
       - name: Run gateway level
         run: uv run pytest ${{ matrix.tests }} -n auto --junitxml=gateway-results/${{ matrix.level }}.xml
         env:
-          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
-          TOKKEEPER_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+          AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
       - name: Summarize gateway test results
         if: always()
         run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
@@ -203,7 +203,7 @@ jobs:
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/performance-base-bin
         run: |
           ./scripts/build-python-distribution.sh "$RUNNER_TEMP/performance-base-dist"
-          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-base-dist/tokkeeper-*.whl
+          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-base-dist/airmux-*.whl
       - name: Build and install candidate gateway
         working-directory: performance-candidate
         env:
@@ -211,14 +211,14 @@ jobs:
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/performance-candidate-bin
         run: |
           ./scripts/build-python-distribution.sh "$RUNNER_TEMP/performance-candidate-dist"
-          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-candidate-dist/tokkeeper-*.whl
+          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-candidate-dist/airmux-*.whl
       - name: Compare gateway performance
         working-directory: performance-candidate
         run: |
           uv run python tests/acceptance/gateway/performance.py \
-            --base-bin "$RUNNER_TEMP/performance-base-bin/tokkeeper" \
+            --base-bin "$RUNNER_TEMP/performance-base-bin/airmux" \
             --base-harness ../performance-base/tests/acceptance/gateway \
-            --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/tokkeeper" \
+            --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/airmux" \
             --base-revision "$(git -C ../performance-base rev-parse HEAD)" \
             --candidate-revision "$CANDIDATE_REVISION" \
             --output "$RUNNER_TEMP/performance-results"

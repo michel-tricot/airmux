@@ -52,7 +52,7 @@ def test_all_inference_authentication_errors_have_common_headers(dp_app, method,
         response = client.request(method, path)
     assert response.status_code == 401
     assert_private_headers(response)
-    assert response.headers["www-authenticate"] == 'Bearer realm="tokkeeper"'
+    assert response.headers["www-authenticate"] == 'Bearer realm="airmux"'
     assert response.headers["content-type"].startswith("application/json")
     if path.endswith("/messages"):
         assert response.json()["type"] == "error"
@@ -99,7 +99,7 @@ def test_credentials_use_bearer_then_api_key_then_cookie(dp_app, api_key, creden
     mock_control_plane()
     credentials = {name: value.format(key=api_key) for name, value in credentials.items()}
     with TestClient(dp_app) as client:
-        client.cookies.set("tokkeeper_playground", cookie.format(key=api_key))
+        client.cookies.set("airmux_playground", cookie.format(key=api_key))
         response = client.get(
             "/inf/v1/models",
             headers={**credentials, "x-requested-with": "console", "sec-fetch-site": "same-origin"},

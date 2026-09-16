@@ -40,9 +40,9 @@ def cli(tmp_path, monkeypatch):
             return nullcontext(c)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
-        monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
-        monkeypatch.setenv("TOKKEEPER_MANAGEMENT_KEY", org["authorization"].removeprefix("Bearer "))
-        monkeypatch.setenv("TOKKEEPER_ORG_ID", str(org_id))
+        monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
+        monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", org["authorization"].removeprefix("Bearer "))
+        monkeypatch.setenv("AIRMUX_ORG_ID", str(org_id))
         yield cp, workspace["slug"]
 
 

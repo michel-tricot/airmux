@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
-  title: TokKeeper Control Plane API
-  description: 'Manage TokKeeper organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
+  title: airmux Control Plane API
+  description: 'Manage airmux organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
 
 
     Organization and workspace targets are part of each URL. Successful responses wrap their result in
@@ -54,7 +54,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - management-keys.read
@@ -93,7 +93,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - management-keys.issue
@@ -145,7 +145,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - management-keys.read
@@ -192,7 +192,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - management-keys.issue
@@ -251,7 +251,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - management-keys.read
@@ -305,7 +305,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - management-keys.issue
@@ -350,7 +350,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: management_key_scope
         anyOf:
         - management-keys.revoke
@@ -397,7 +397,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: management_key_scope
         anyOf:
         - management-keys.issue
@@ -931,7 +931,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - data-planes.read
@@ -976,7 +976,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - audit.read
@@ -1016,7 +1016,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - principals.manage
@@ -1065,7 +1065,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - management-keys.issue
@@ -1108,7 +1108,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - principals.read
@@ -1155,7 +1155,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - principals.manage
@@ -1199,7 +1199,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - principals.read
@@ -1244,7 +1244,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - principals.manage
@@ -1279,7 +1279,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - organizations.read
@@ -1318,7 +1318,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - organizations.create
@@ -1366,7 +1366,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - organizations.update
@@ -1407,7 +1407,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - organizations.read
@@ -1451,7 +1451,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - organizations.delete
@@ -1499,7 +1499,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -1540,7 +1540,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.read
@@ -1590,7 +1590,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -1640,7 +1640,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -1691,7 +1691,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - workspaces.create
@@ -1732,7 +1732,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - workspaces.read
@@ -1782,7 +1782,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - workspaces.read
@@ -1833,7 +1833,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - workspaces.delete
@@ -1887,7 +1887,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - workspaces.update
@@ -1982,7 +1982,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - members.read
@@ -2031,7 +2031,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - members.manage
@@ -2094,7 +2094,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - members.manage
@@ -2150,7 +2150,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - members.manage
@@ -2199,7 +2199,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - playground.execute
@@ -2247,7 +2247,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - playground.execute
@@ -2302,7 +2302,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
@@ -2350,7 +2350,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - inference-keys.read
@@ -2407,7 +2407,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
@@ -2456,7 +2456,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.read
@@ -2510,7 +2510,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2573,7 +2573,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2629,7 +2629,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2678,7 +2678,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.read
@@ -2732,7 +2732,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2787,7 +2787,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2850,7 +2850,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2906,7 +2906,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.manage
@@ -2940,7 +2940,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - provider-credentials.read
@@ -2979,7 +2979,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - provider-credentials.manage
@@ -3027,7 +3027,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - provider-credentials.manage
@@ -3068,7 +3068,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - provider-credentials.read
@@ -3123,7 +3123,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - provider-credentials.manage
@@ -3171,7 +3171,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - provider-credentials.read
@@ -3222,7 +3222,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - provider-credentials.read
@@ -3278,7 +3278,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
@@ -3328,7 +3328,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
@@ -3385,7 +3385,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
@@ -3427,7 +3427,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.read
@@ -3483,7 +3483,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -3532,7 +3532,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -3580,7 +3580,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -3639,7 +3639,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - management-keys.issue
@@ -3689,7 +3689,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - members.manage
@@ -3734,7 +3734,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - bundles.publish
@@ -3776,7 +3776,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - bundles.read
@@ -3868,7 +3868,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - usage.read
@@ -3967,7 +3967,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - usage.read
@@ -4019,7 +4019,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - audit.read
@@ -4053,7 +4053,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - bundles.read
@@ -4096,7 +4096,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: selected_bundle_scope
         anyOf:
         - bundles.read
@@ -4141,7 +4141,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: bundle_scope
         anyOf:
         - bundles.read
@@ -4197,7 +4197,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - usage.ingest
@@ -4237,7 +4237,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: credential_scope
         anyOf:
         - data-planes.heartbeat
@@ -4271,7 +4271,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - catalog.read
@@ -4320,7 +4320,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - catalog.manage
@@ -4362,7 +4362,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: org_scope
         anyOf:
         - catalog.read
@@ -4411,7 +4411,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - catalog.read
@@ -4451,7 +4451,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - catalog.manage
@@ -4491,7 +4491,7 @@ paths:
       security:
       - ManagementKey: []
       - SessionCookie: []
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - catalog.manage
@@ -8793,7 +8793,7 @@ components:
     SessionCookie:
       type: apiKey
       in: cookie
-      name: tokkeeper_session
+      name: airmux_session
       description: Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.
 tags:
 - name: Auth
@@ -8802,7 +8802,7 @@ tags:
 - name: Enrollment
   description: List a user's organizations and create their personal organization
 - name: Instance Organizations
-  description: List and create organizations on this TokKeeper instance
+  description: List and create organizations on this airmux instance
   x-displayName: Organizations
 - name: Instance Users
   description: Manage human users and service accounts across the instance
@@ -8811,10 +8811,10 @@ tags:
   description: List management keys across the instance, issue instance-scoped credentials, and revoke keys
   x-displayName: Management Keys
 - name: Instance Model Catalog
-  description: Manage the providers and models available through this TokKeeper instance
+  description: Manage the providers and models available through this airmux instance
   x-displayName: Model Catalog
 - name: Instance Provider Credentials
-  description: Manage provider API keys available across the TokKeeper instance
+  description: Manage provider API keys available across the airmux instance
   x-displayName: Provider Credentials
 - name: Data Plane Instances
   description: Inspect connected data-plane instances
@@ -8823,7 +8823,7 @@ tags:
   description: Inspect recent audited changes across the instance
   x-displayName: Activity
 - name: OSS
-  description: Bootstrap a new self-hosted TokKeeper deployment
+  description: Bootstrap a new self-hosted airmux deployment
   x-displayName: Self-hosting
 - name: Organization Settings
   description: View, update, and delete one organization

@@ -81,7 +81,7 @@ async function dragBelowNext(handle: HTMLElement) {
   fireEvent.pointerUp(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
 }
 
-beforeEach(() => window.localStorage.setItem('tokkeeper_org_id', ORG.id));
+beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 
 describe('workspace policies', () => {
   it('shows reusable rules and their policy usage in a focused library', async () => {

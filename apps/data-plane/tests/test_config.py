@@ -14,7 +14,7 @@ from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, l
 @pytest.fixture
 def clean_env(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for var in ("TOKKEEPER_CONFIG", "TOKKEEPER_DEV", "TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL"):
+    for var in ("AIRMUX_CONFIG", "AIRMUX_DEV", "AIRMUX_DATAPLANE_CONTROL_PLANE_URL"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
 
@@ -25,11 +25,11 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     Where the token comes from is the config file's business, so both sources are laid out with the
     same value: this stays green whether it names the keygen file or the environment variable.
     """
-    repo_config = Path(__file__).resolve().parents[3] / "tokkeeper.yml"
-    (clean_env / "tokkeeper.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
-    (clean_env / ".tokkeeper").mkdir()
-    (clean_env / ".tokkeeper" / "dataplane.key").write_text("dp-token", encoding="utf-8")
-    monkeypatch.setenv("TOKKEEPER_DATAPLANE_TOKEN", "dp-token")
+    repo_config = Path(__file__).resolve().parents[3] / "airmux.yml"
+    (clean_env / "airmux.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    (clean_env / ".airmux").mkdir()
+    (clean_env / ".airmux" / "dataplane.key").write_text("dp-token", encoding="utf-8")
+    monkeypatch.setenv("AIRMUX_DATAPLANE_TOKEN", "dp-token")
     config = load_config()
     assert isinstance(config.bundle, RemoteBundleConfig)
     assert config.bundle.control_plane.url == "http://127.0.0.1:8000"
@@ -71,11 +71,11 @@ def test_the_legacy_top_level_control_plane_link_is_rejected():
 
 def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_env, monkeypatch):
     """The same file serves a checkout and compose, so the address of the control plane moves with the environment."""
-    repo_config = Path(__file__).resolve().parents[3] / "tokkeeper.yml"
-    (clean_env / "tokkeeper.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
-    (clean_env / ".tokkeeper").mkdir()
-    (clean_env / ".tokkeeper" / "dataplane.key").write_text("dp-token", encoding="utf-8")
-    monkeypatch.setenv("TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
+    repo_config = Path(__file__).resolve().parents[3] / "airmux.yml"
+    (clean_env / "airmux.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    (clean_env / ".airmux").mkdir()
+    (clean_env / ".airmux" / "dataplane.key").write_text("dp-token", encoding="utf-8")
+    monkeypatch.setenv("AIRMUX_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
 
     bundle = load_config().bundle
     assert isinstance(bundle, RemoteBundleConfig)
@@ -88,13 +88,13 @@ def test_remote_bundle_rejects_a_configured_verify_key(clean_env):
         "    control_plane: {url: http://cp.test, token: dp-token}\n"
         "    verify_key: no-longer-configured-here\n"
     )
-    (clean_env / "tokkeeper.yml").write_text(config, encoding="utf-8")
+    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
     with pytest.raises((ValidationError, ValueError)):
         load_config()
 
 
 def test_defaults_apply_to_a_standalone_data_plane(clean_env):
-    (clean_env / "tokkeeper.yml").write_text("data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n", encoding="utf-8")
+    (clean_env / "airmux.yml").write_text("data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n", encoding="utf-8")
     config = load_config()
     assert not hasattr(config, "control_plane")
     assert isinstance(config.bundle, LocalBundleConfig)
@@ -104,14 +104,14 @@ def test_defaults_apply_to_a_standalone_data_plane(clean_env):
 
 def test_outbox_kind_discriminates_the_config(clean_env):
     config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: devnull\n"
-    (clean_env / "tokkeeper.yml").write_text(config, encoding="utf-8")
+    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
 
     assert isinstance(load_config().events, DevNullOutboxConfig)
 
 
 def test_remote_bundle_requires_a_control_plane(clean_env):
     config = "data_plane:\n  bundle:\n    kind: remote\n"
-    (clean_env / "tokkeeper.yml").write_text(config, encoding="utf-8")
+    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
 
     with pytest.raises(ValidationError, match="control_plane"):
         load_config()
@@ -132,7 +132,7 @@ def test_remote_bundle_rejects_the_removed_org_selector():
 
 def test_sqlite_outbox_requires_a_control_plane(clean_env):
     config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: sqlite\n"
-    (clean_env / "tokkeeper.yml").write_text(config, encoding="utf-8")
+    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
 
     with pytest.raises(ValidationError, match="control_plane"):
         load_config()
@@ -177,13 +177,13 @@ def test_local_reload_interval_must_be_positive():
 
 @pytest.mark.parametrize("control_plane_url", ["http://control-plane:8000", "http://127.0.0.1:8000"])
 def test_container_config_separates_gateway_state_from_shared_credentials(tmp_path, monkeypatch, control_plane_url):
-    container_config = Path(__file__).resolve().parents[3] / "deploy/docker/tokkeeper.yml"
-    (tmp_path / "tokkeeper.yml").write_text(container_config.read_text().replace("/state", str(tmp_path)))
+    container_config = Path(__file__).resolve().parents[3] / "deploy/docker/airmux.yml"
+    (tmp_path / "airmux.yml").write_text(container_config.read_text().replace("/state", str(tmp_path)))
     (tmp_path / "runtime").mkdir()
     (tmp_path / "runtime/dataplane.key").write_text("data-plane-token")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("TOKKEEPER_CONFIG", str(tmp_path / "tokkeeper.yml"))
-    monkeypatch.setenv("TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL", control_plane_url)
+    monkeypatch.setenv("AIRMUX_CONFIG", str(tmp_path / "airmux.yml"))
+    monkeypatch.setenv("AIRMUX_DATAPLANE_CONTROL_PLANE_URL", control_plane_url)
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     config = load_config()
@@ -214,9 +214,9 @@ def test_nested_paths_resolve_during_validation(tmp_path, configured_path):
     assert isinstance(config.bundle, RemoteBundleConfig)
     assert isinstance(config.events, SqliteOutboxConfig)
     assert isinstance(config.secrets, FileStoreConfig)
-    assert config.bundle.cache_dir == tmp_path / (configured_path or ".tokkeeper")
-    assert config.events.cache_dir == tmp_path / (configured_path or ".tokkeeper")
-    assert config.secrets.root == tmp_path / (configured_path or ".tokkeeper/secrets")
+    assert config.bundle.cache_dir == tmp_path / (configured_path or ".airmux")
+    assert config.events.cache_dir == tmp_path / (configured_path or ".airmux")
+    assert config.secrets.root == tmp_path / (configured_path or ".airmux/secrets")
 
 
 def test_local_bundle_path_resolves_during_validation(tmp_path):
@@ -228,7 +228,7 @@ def test_local_bundle_path_resolves_during_validation(tmp_path):
 def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
     directory = tmp_path / "deployment"
     directory.mkdir()
-    config_file = directory / "tokkeeper.yml"
+    config_file = directory / "airmux.yml"
     config_file.write_text(
         "data_plane:\n"
         "  bundle: {kind: local, path: bundle.yml}\n"
@@ -241,5 +241,5 @@ def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
     assert isinstance(config.events, SqliteOutboxConfig)
     assert isinstance(config.secrets, FileStoreConfig)
     assert config.bundle.path == directory / "bundle.yml"
-    assert config.events.cache_dir == directory / ".tokkeeper"
-    assert config.secrets.root == directory / ".tokkeeper/secrets"
+    assert config.events.cache_dir == directory / ".airmux"
+    assert config.secrets.root == directory / ".airmux/secrets"

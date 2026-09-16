@@ -18,7 +18,7 @@ class SqliteOutboxConfig(BaseModel):
     kind: Literal["sqlite"] = "sqlite"
     control_plane: ControlPlaneLink
     flush_interval_s: float = Field(default=5.0, gt=0)
-    cache_dir: ConfigPath = Path(".tokkeeper")  # where the sqlite outbox lives; workers sharing it share one queue
+    cache_dir: ConfigPath = Path(".airmux")  # where the sqlite outbox lives; workers sharing it share one queue
 
 
 class DevNullOutboxConfig(BaseModel):
@@ -47,6 +47,6 @@ class Config(BaseModel):
 
 
 def load_config(config_path: str | Path | None = None) -> Config:
-    path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
+    path = Path(config_path or os.environ.get("AIRMUX_CONFIG", "airmux.yml")).resolve()
     section = load_config_section("data_plane", path)
-    return Config.model_validate({**section, "dev": os.environ.get("TOKKEEPER_DEV") == "1"}, context=ConfigContext(base_dir=path.parent))
+    return Config.model_validate({**section, "dev": os.environ.get("AIRMUX_DEV") == "1"}, context=ConfigContext(base_dir=path.parent))

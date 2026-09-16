@@ -63,7 +63,7 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
             ".gitignore": GENERATED_STATE_GITIGNORE,
             "inference.key": key + "\n",
             "bundle.yml": yaml.safe_dump(bundle, sort_keys=False),
-            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+            "airmux.yml": yaml.safe_dump(config, sort_keys=False),
             **taxonomy_file,
         },
     )
