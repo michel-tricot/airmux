@@ -19,6 +19,7 @@ from __future__ import annotations
 import importlib
 import json
 import pkgutil
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -32,15 +33,14 @@ if TYPE_CHECKING:
 UA = {"User-Agent": "airmux-taxonomy/1.0", "Accept": "application/json"}
 
 
-def per_mtok(value: CatalogValue) -> float | None:
-    """Vendors quote per-token; the catalog stores per-million, rounded to the cent."""
+def per_mtok(value: CatalogValue) -> Decimal | None:
     if value in (None, "", "0", 0):
-        return 0.0 if value in ("0", 0) else None
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        return Decimal(0) if value in ("0", 0) else None
+    if isinstance(value, bool) or not isinstance(value, (str, int, Decimal)):
         return None
     try:
-        return round(float(value) * 1_000_000, 4)
-    except (TypeError, ValueError):
+        return Decimal(value) * 1_000_000
+    except InvalidOperation:
         return None
 
 
@@ -79,7 +79,7 @@ class ModelSource:
         return head
 
     def get(self, url: str, key: str | None) -> CatalogValue:
-        return json.loads(fetch_bytes(url, self.headers(key), timeout=90))
+        return json.loads(fetch_bytes(url, self.headers(key), timeout=90), parse_float=Decimal)
 
     def fetch(self, key: str | None) -> CatalogValue:
         return self.get(self.url, key)

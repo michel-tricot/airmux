@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
@@ -26,7 +27,7 @@ def _record_usage(tmp_path, org_id, workspace_id):
             bundle_id=uuid7(),
             input_tokens=1,
             output_tokens=1,
-            cost_usd=0.0,
+            cost_usd=Decimal(0),
             latency_ms=1,
             status="ok",
             stream=False,

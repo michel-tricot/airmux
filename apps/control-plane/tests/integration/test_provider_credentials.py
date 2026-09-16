@@ -72,7 +72,7 @@ def _usage_event(metered, status, occurred_at):
         "bundle_id": str(uuid7()),
         "input_tokens": 1,
         "output_tokens": 1,
-        "cost_usd": 0.0,
+        "cost_usd": "0.0",
         "latency_ms": 1,
         "status": status,
         "stream": False,

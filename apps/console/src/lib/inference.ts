@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export type InferenceMessage = { role: 'system' | 'user' | 'assistant'; content: string };
-export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
 export type InferenceResult = { content: string; usage?: InferenceUsage; finishReason?: string; firstTokenMs?: number; durationMs: number };
 
 export type InferenceRequestOptions = {
@@ -129,7 +129,12 @@ const chunkSchema = z
   .strict();
 
 function canonicalUsage(usage: z.infer<typeof usageSchema>): InferenceUsage {
-  return { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, cacheReadTokens: usage.cache_read_tokens };
+  return {
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    cacheReadTokens: usage.cache_read_tokens,
+    cacheWriteTokens: usage.cache_write_tokens,
+  };
 }
 
 export function prepareInferenceRequest(options: InferenceRequestOptions): PreparedInferenceRequest {

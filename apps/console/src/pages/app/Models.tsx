@@ -24,6 +24,7 @@ import { Badge, Button, Card, CheckboxDropdown } from '@/components/ui/elements'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredOrgId } from '@/lib/session';
 import { cn } from '@/lib/utils';
+import { formatUsdRate, parseUsdRate } from '@/lib/money';
 
 type SortKey =
   | 'name'
@@ -43,12 +44,6 @@ interface CatalogModel {
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 4,
-});
 const nameCollator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
 type Modality = ModelOut['input_modalities'][number] | ModelOut['output_modalities'][number];
 
@@ -105,9 +100,10 @@ function ModalityFlow({
   );
 }
 
-function modelSortValue(catalogModel: CatalogModel, key: SortKey): string | number | null {
+function modelSortValue(catalogModel: CatalogModel, key: SortKey): string | number | bigint | null {
   if (key === 'name') return catalogModel.model.name;
   if (key === 'provider') return catalogModel.provider?.name ?? '';
+  if (key.endsWith('_price_per_mtok')) return parseUsdRate(String(catalogModel.model[key]));
   return catalogModel.model[key];
 }
 
@@ -117,9 +113,15 @@ function compareModels(left: CatalogModel, right: CatalogModel, key: SortKey, di
   if (leftValue === null) return rightValue === null ? 0 : 1;
   if (rightValue === null) return -1;
   const comparison =
-    typeof leftValue === 'number' && typeof rightValue === 'number'
-      ? leftValue - rightValue
-      : nameCollator.compare(String(leftValue), String(rightValue));
+    typeof leftValue === 'bigint' && typeof rightValue === 'bigint'
+      ? leftValue < rightValue
+        ? -1
+        : leftValue > rightValue
+          ? 1
+          : 0
+      : typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : nameCollator.compare(String(leftValue), String(rightValue));
   return direction === 'ascending' ? comparison : -comparison;
 }
 
@@ -275,7 +277,7 @@ export default function Models() {
       sortDirection: sortDirectionFor('input_price_per_mtok'),
       headClassName: 'border-l border-warning/20 text-right',
       cellClassName: 'border-l border-warning/10 text-right font-mono text-sm tabular-nums',
-      cell: ({ model }) => priceFormatter.format(model.input_price_per_mtok),
+      cell: ({ model }) => `$${formatUsdRate(parseUsdRate(model.input_price_per_mtok))}`,
     },
     {
       key: 'output-price',
@@ -283,7 +285,7 @@ export default function Models() {
       sortDirection: sortDirectionFor('output_price_per_mtok'),
       headClassName: 'text-right',
       cellClassName: 'text-right font-mono text-sm tabular-nums',
-      cell: ({ model }) => priceFormatter.format(model.output_price_per_mtok),
+      cell: ({ model }) => `$${formatUsdRate(parseUsdRate(model.output_price_per_mtok))}`,
     },
     {
       key: 'cache-read-price',
@@ -291,7 +293,7 @@ export default function Models() {
       sortDirection: sortDirectionFor('cache_read_price_per_mtok'),
       headClassName: 'text-right',
       cellClassName: 'text-right font-mono text-sm tabular-nums',
-      cell: ({ model }) => priceFormatter.format(model.cache_read_price_per_mtok),
+      cell: ({ model }) => `$${formatUsdRate(parseUsdRate(model.cache_read_price_per_mtok))}`,
     },
     {
       key: 'cache-write-price',
@@ -299,7 +301,7 @@ export default function Models() {
       sortDirection: sortDirectionFor('cache_write_price_per_mtok'),
       headClassName: 'text-right',
       cellClassName: 'text-right font-mono text-sm tabular-nums',
-      cell: ({ model }) => priceFormatter.format(model.cache_write_price_per_mtok),
+      cell: ({ model }) => `$${formatUsdRate(parseUsdRate(model.cache_write_price_per_mtok))}`,
     },
   ];
 

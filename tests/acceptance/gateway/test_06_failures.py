@@ -141,8 +141,8 @@ def test_fallback_cannot_bypass_a_restriction_matched_on_the_original_request(ga
     elif restriction == "provider":
         action = {"kind": "providers", "names": ["stub"]}
     else:
-        gateway.taxonomy["models"][2]["input_price_per_mtok"] = 10
-        gateway.taxonomy["models"][3]["input_price_per_mtok"] = 10
+        gateway.taxonomy["models"][2]["input_price_per_mtok"] = "10"
+        gateway.taxonomy["models"][3]["input_price_per_mtok"] = "10"
         action = {"kind": "price_limit", "max_input_price_per_mtok": "2", "max_output_price_per_mtok": "5"}
     gateway.add_policy([action], match={"kind": "request", "models": ["model-a"]}, priority=200)
     gateway.start()

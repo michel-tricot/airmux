@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from decimal import Decimal
 
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox
 
@@ -13,10 +14,10 @@ from data_plane.metering import RequestStart, cost_breakdown, record_denied, rec
 def _model():
     return MODEL.model_copy(
         update={
-            "input_price_per_mtok": 2.0,
-            "output_price_per_mtok": 5.0,
-            "cache_read_price_per_mtok": 0.25,
-            "cache_write_price_per_mtok": 2.5,
+            "input_price_per_mtok": Decimal(2),
+            "output_price_per_mtok": Decimal(5),
+            "cache_read_price_per_mtok": Decimal("0.25"),
+            "cache_write_price_per_mtok": Decimal("2.5"),
         },
     )
 
@@ -24,14 +25,20 @@ def _model():
 def test_each_usage_bucket_has_a_direct_model_price():
     usage = CanonicalUsage(input_tokens=1000, output_tokens=40, cache_read_tokens=300, cache_write_tokens=200)
     cost_in, cost_out = cost_breakdown(usage, _model())
-    assert cost_in == (500 * 2.0 + 300 * 0.25 + 200 * 2.5) / 1_000_000
-    assert cost_out == 40 * 5.0 / 1_000_000
+    assert cost_in == Decimal("0.001575")
+    assert cost_out == Decimal("0.0002")
 
 
 def test_cache_counts_cannot_make_fresh_input_negative():
     usage = CanonicalUsage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
     cost_in, _ = cost_breakdown(usage, _model())
-    assert cost_in == (80 * 0.25 + 40 * 2.5) / 1_000_000
+    assert cost_in == Decimal("0.00012")
+
+
+def test_smallest_rate_one_token_cost_is_exact():
+    model = _model().model_copy(update={"input_price_per_mtok": Decimal("0.000001")})
+
+    assert cost_breakdown(CanonicalUsage(input_tokens=1), model) == (Decimal("0.000000000001"), Decimal(0))
 
 
 def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):

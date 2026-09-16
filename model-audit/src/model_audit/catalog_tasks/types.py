@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TypeGuard, cast
 
 type CatalogValue = object
@@ -41,8 +42,8 @@ def integer(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
-def number(value: object) -> int | float | None:
-    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+def number(value: object) -> int | Decimal | None:
+    return value if isinstance(value, (int, Decimal)) and not isinstance(value, bool) else None
 
 
 def boolean(value: object) -> bool | None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 from uuid import UUID
 
 import pytest
@@ -36,10 +37,10 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert [k.workspace_id for k in bundle.keys] == [ws]
         (model,) = bundle.catalog.models
         assert model.upstream_model == "gpt-real"
-        assert model.input_price_per_mtok == 1.0
-        assert model.output_price_per_mtok == 2.0
-        assert model.cache_read_price_per_mtok == 0.1
-        assert model.cache_write_price_per_mtok == 1.25
+        assert model.input_price_per_mtok == Decimal(1)
+        assert model.output_price_per_mtok == Decimal(2)
+        assert model.cache_read_price_per_mtok == Decimal("0.1")
+        assert model.cache_write_price_per_mtok == Decimal("1.25")
         assert model.parameter_support == {"temperature": "unsupported"}
 
 

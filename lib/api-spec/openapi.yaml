@@ -5067,22 +5067,22 @@ components:
           title: Output Tokens
           description: Total output tokens
         cost_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
           description: Total estimated cost in USD
         cost_input_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
           description: Estimated input cost in USD
-          default: 0.0
+          default: '0'
         cost_output_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
           description: Estimated output cost in USD
-          default: 0.0
+          default: '0'
         cache_read_tokens:
           type: integer
           maximum: 2147483647.0
@@ -6357,16 +6357,20 @@ components:
           type: string
           title: Upstream Model
         input_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
         output_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
         cache_read_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
         cache_write_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
@@ -6471,29 +6475,29 @@ components:
           title: Egress Kind
           description: Per-model egress adapter override
         input_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
           description: USD per million input tokens
-          default: 0.0
+          default: '0'
         output_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
           description: USD per million output tokens
-          default: 0.0
+          default: '0'
         cache_read_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
           description: USD per million cache-read input tokens
-          default: 0.0
+          default: '0'
         cache_write_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
           description: USD per million cache-write input tokens
-          default: 0.0
+          default: '0'
         context_window:
           type: integer
           maximum: 100000000.0
@@ -6589,16 +6593,20 @@ components:
           - type: 'null'
           title: Egress Kind
         input_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
         output_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
         cache_read_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
         cache_write_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
@@ -7301,34 +7309,7 @@ components:
       additionalProperties: false
       type: object
       title: PolicyUpdate
-    PriceLimit-Input:
-      properties:
-        kind:
-          type: string
-          const: price_limit
-          title: Kind
-        max_input_price_per_mtok:
-          anyOf:
-          - type: number
-            minimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Max Input Price Per Mtok
-        max_output_price_per_mtok:
-          anyOf:
-          - type: number
-            minimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Max Output Price Per Mtok
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      - max_input_price_per_mtok
-      - max_output_price_per_mtok
-      title: PriceLimit
-    PriceLimit-Output:
+    PriceLimit:
       properties:
         kind:
           type: string
@@ -7336,11 +7317,11 @@ components:
           title: Kind
         max_input_price_per_mtok:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          pattern: ^\d+(?:\.\d+)?$
           title: Max Input Price Per Mtok
         max_output_price_per_mtok:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          pattern: ^\d+(?:\.\d+)?$
           title: Max Output Price Per Mtok
       additionalProperties: false
       type: object
@@ -7834,22 +7815,22 @@ components:
           title: Output Tokens
           description: Total output tokens
         cost_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
           description: Total estimated cost in USD
         cost_input_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
           description: Estimated input cost in USD
-          default: 0.0
+          default: '0'
         cost_output_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
           description: Estimated output cost in USD
-          default: 0.0
+          default: '0'
         cache_read_tokens:
           type: integer
           maximum: 2147483647.0
@@ -7954,7 +7935,7 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Input'
+          - $ref: '#/components/schemas/PriceLimit'
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
@@ -7966,7 +7947,7 @@ components:
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Input'
+              price_limit: '#/components/schemas/PriceLimit'
               providers: '#/components/schemas/AllowedProviders'
               request_limits: '#/components/schemas/RequestLimits'
               strict_parameters: '#/components/schemas/StrictParameters'
@@ -7994,7 +7975,7 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Output'
+          - $ref: '#/components/schemas/PriceLimit'
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
@@ -8006,7 +7987,7 @@ components:
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Output'
+              price_limit: '#/components/schemas/PriceLimit'
               providers: '#/components/schemas/AllowedProviders'
               request_limits: '#/components/schemas/RequestLimits'
               strict_parameters: '#/components/schemas/StrictParameters'
@@ -8404,13 +8385,16 @@ components:
           type: integer
           title: Output Tokens
         cost_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
         cost_input_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
         cost_output_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
         cache_read_tokens:
           type: integer

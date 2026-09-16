@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import cast
 
 from model_audit.provider_docs import (
@@ -53,7 +54,11 @@ Model ID: `gpt-example`
     assert metadata.ids == ("gpt-example", "gpt-example-2026-01-01")
     assert metadata.values["context_length"] == 1_050_000
     assert metadata.values["max_output_tokens"] == 128_000
-    assert metadata.values["pricing"] == {"input_per_mtok": 2.5, "cached_input_per_mtok": 0.25, "output_per_mtok": 15.0}
+    assert metadata.values["pricing"] == {
+        "input_per_mtok": Decimal("2.5"),
+        "cached_input_per_mtok": Decimal("0.25"),
+        "output_per_mtok": Decimal(15),
+    }
     assert metadata.values["supports_tools"] is True
     assert metadata.values["supports_structured_output"] is True
 
@@ -70,9 +75,9 @@ def test_openai_pricing_page_fills_models_absent_from_model_index():
 
     assert documents[0].ids == ("gpt-search-api",)
     assert documents[0].values["pricing"] == {
-        "input_per_mtok": 1.25,
-        "cached_input_per_mtok": 0.125,
-        "output_per_mtok": 10.0,
+        "input_per_mtok": Decimal("1.25"),
+        "cached_input_per_mtok": Decimal("0.125"),
+        "output_per_mtok": Decimal("10.00"),
     }
 
 
@@ -94,10 +99,10 @@ Context window: 1M tokens · Max output: 128K tokens · Input pricing: $3 / MTok
     assert metadata.values["context_length"] == 1_000_000
     assert metadata.values["max_output_tokens"] == 128_000
     pricing = mapping(metadata.values["pricing"])
-    assert pricing["cache_write_per_mtok"] == 3.75
+    assert pricing["cache_write_per_mtok"] == Decimal("3.75")
     tiers = mapping(pricing["tiers"])
     one_hour = mapping(tiers["one_hour_cache_write"])
-    assert one_hour["cache_write_per_mtok"] == 6.0
+    assert one_hour["cache_write_per_mtok"] == Decimal(6)
 
 
 def test_fireworks_pricing_uses_standard_as_default_and_keeps_priority():
@@ -110,11 +115,11 @@ def test_fireworks_pricing_uses_standard_as_default_and_keeps_priority():
     )
 
     pricing = mapping(prices["example-model"].values["pricing"])
-    assert pricing["input_per_mtok"] == 0.22
-    assert pricing["cached_input_per_mtok"] == 0.007
+    assert pricing["input_per_mtok"] == Decimal("0.22")
+    assert pricing["cached_input_per_mtok"] == Decimal("0.007")
     tiers = mapping(pricing["tiers"])
     priority = mapping(tiers["priority"])
-    assert priority["output_per_mtok"] == 0.825
+    assert priority["output_per_mtok"] == Decimal("0.825")
 
 
 def test_fireworks_model_page_records_serverless_source_conflict():
@@ -150,11 +155,11 @@ def test_deepseek_pricing_keeps_peak_and_off_peak_rates():
 
     flash = metadata["deepseek-flash"].values
     pricing = mapping(flash["pricing"])
-    assert pricing["input_per_mtok"] == 0.44
+    assert pricing["input_per_mtok"] == Decimal("0.44")
     tiers = mapping(pricing["tiers"])
     off_peak = mapping(tiers["off_peak"])
-    assert off_peak["input_per_mtok"] == 0.22
-    assert off_peak["output_per_mtok"] == 0.66
+    assert off_peak["input_per_mtok"] == Decimal("0.22")
+    assert off_peak["output_per_mtok"] == Decimal("0.66")
 
 
 def test_mistral_index_and_model_page_map_aliases_to_official_pricing():
@@ -175,7 +180,7 @@ def test_mistral_index_and_model_page_map_aliases_to_official_pricing():
     )
     assert metadata.ids == ("mistral-example-2601", "mistral-example-latest")
     assert metadata.values["context_length"] == 256_000
-    assert metadata.values["pricing"] == {"input_per_mtok": 0.5, "output_per_mtok": 1.5}
+    assert metadata.values["pricing"] == {"input_per_mtok": Decimal("0.5"), "output_per_mtok": Decimal("1.5")}
 
 
 def test_mistral_model_page_reads_serialized_pricing_data():
@@ -192,7 +197,11 @@ def test_mistral_model_page_reads_serialized_pricing_data():
         "https://docs.mistral.ai/models/mistral-example-26-01",
     )
 
-    assert metadata.values["pricing"] == {"input_per_mtok": 0.5, "cached_input_per_mtok": 0.05, "output_per_mtok": 1.5}
+    assert metadata.values["pricing"] == {
+        "input_per_mtok": Decimal("0.5"),
+        "cached_input_per_mtok": Decimal("0.05"),
+        "output_per_mtok": Decimal("1.5"),
+    }
 
 
 def test_official_documentation_applies_through_provider_declared_aliases():
@@ -231,9 +240,9 @@ def test_together_serverless_table_maps_declared_features_and_prices():
     assert documents[0].values["input_modalities"] == ["text"]
     assert documents[0].values["output_modalities"] == ["text"]
     assert documents[0].values["pricing"] == {
-        "input_per_mtok": 1.25,
-        "cached_input_per_mtok": 0.25,
-        "output_per_mtok": 3.75,
+        "input_per_mtok": Decimal("1.25"),
+        "cached_input_per_mtok": Decimal("0.25"),
+        "output_per_mtok": Decimal("3.75"),
     }
 
 

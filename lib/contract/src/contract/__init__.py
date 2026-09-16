@@ -22,6 +22,7 @@ from contract.events import (
 )
 from contract.ids import uuid7
 from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.money import UsdAmount, UsdRate
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
     EnvSecretStore,
@@ -84,6 +85,8 @@ __all__ = [
     "UnsupportedRefSchemeError",
     "UsageEvent",
     "UsageStatus",
+    "UsdAmount",
+    "UsdRate",
     "load_config_section",
     "resolve_ref",
     "token_hash",

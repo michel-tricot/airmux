@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 import yaml
 from fastapi.testclient import TestClient
@@ -7,7 +9,7 @@ from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
 from cli.control_plane import control_plane_app as app
-from contract.taxonomy import TaxonomySpec
+from contract.taxonomy import TaxonomySpec, load_taxonomy
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
 from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
@@ -62,7 +64,7 @@ def test_apply_taxonomy_upserts(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     assert run_in_db(tmp_path, lambda: apply(TAXONOMY)) == (1, 1)
     assert run_in_db(tmp_path, lambda: apply(TAXONOMY.replace("stub.example", "stub2.example"))) == (1, 1)
@@ -76,7 +78,7 @@ def test_apply_taxonomy_carries_the_provider_icon(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_ICON))
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [STUB_ICON]
@@ -93,7 +95,7 @@ def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_PROFILE))
     (provider,) = run_in_db(tmp_path, Provider.find)
@@ -110,9 +112,8 @@ def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
 
 def test_apply_taxonomy_carries_direct_model_prices(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -126,7 +127,6 @@ models:
     cache_read_price_per_mtok: 0.25
     cache_write_price_per_mtok: 2.5
 """
-        )
     )
 
     async def apply():
@@ -140,14 +140,13 @@ models:
         model.output_price_per_mtok,
         model.cache_read_price_per_mtok,
         model.cache_write_price_per_mtok,
-    ) == (2.0, 5.0, 0.25, 2.5)
+    ) == (Decimal("2.0"), Decimal("5.0"), Decimal("0.25"), Decimal("2.5"))
 
 
 def test_apply_taxonomy_carries_model_parameter_support(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -159,7 +158,6 @@ models:
     parameter_support:
       temperature: unsupported
 """
-        )
     )
 
     async def apply():
@@ -173,9 +171,8 @@ models:
 
 def test_apply_taxonomy_carries_model_modalities(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -185,7 +182,6 @@ models:
     input_modalities: [text, image]
     output_modalities: [text]
 """
-        )
     )
 
     async def apply():
@@ -203,7 +199,7 @@ def test_a_provider_declaring_no_icon_has_none(tmp_path):
 
     async def apply():
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(TAXONOMY)))
+        return await apply_taxonomy(load_taxonomy(TAXONOMY))
 
     run_in_db(tmp_path, apply)
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [""]

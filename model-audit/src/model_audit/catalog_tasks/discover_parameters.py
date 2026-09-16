@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from model_audit.catalog_ops import load_provider_entries
@@ -26,7 +27,7 @@ def main(arguments: Sequence[str] = ()) -> int:
         return 2
     catalogued = sorted(selected) if selected else available
     for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
-        catalog = json.loads(path.read_text())
+        catalog = json.loads(path.read_text(), parse_float=Decimal)
         provider = providers[catalog["provider"]]
         models = apply_discovery_evidence(catalog["models"], discovery_evidence(provider, TAXONOMY))
         classified += len(models)

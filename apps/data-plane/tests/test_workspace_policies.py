@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import httpx
@@ -201,7 +202,7 @@ def test_credential_access_denies_when_no_allowed_scope_has_credentials():
 
 
 def test_price_limit_applies_to_fallback_models():
-    backup = MODEL.model_copy(update={"model_id": "backup", "input_price_per_mtok": 5.0})
+    backup = MODEL.model_copy(update={"model_id": "backup", "input_price_per_mtok": Decimal(5)})
     policies = [
         policy({"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}),
         policy({"kind": "price_limit", "max_input_price_per_mtok": "2", "max_output_price_per_mtok": "3"}),

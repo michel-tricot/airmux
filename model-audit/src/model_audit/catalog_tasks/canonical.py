@@ -15,6 +15,7 @@ modified daily, which trains a reviewer to skim past the diffs worth reading.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from .types import object_list, object_or_empty
@@ -54,18 +55,25 @@ def order_keys(record: CatalogObject, leading: tuple[str, ...]) -> CatalogObject
     return {k: record[k] for k in known + rest}
 
 
-def clean_floats(record: CatalogObject) -> CatalogObject:
-    """Round money to the cent-per-million. Vendors return binary float noise like
-    0.030000000000000002, which is meaningless precision and pure diff churn."""
+def _contains_float(value: object) -> bool:
+    if isinstance(value, dict):
+        return any(_contains_float(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_contains_float(item) for item in value)
+    return isinstance(value, float)
+
+
+def validate_prices(record: CatalogObject) -> CatalogObject:
     pricing = record.get("pricing")
-    if isinstance(pricing, dict):
-        record["pricing"] = {k: round(v, 4) if isinstance(v, float) else v for k, v in pricing.items()}
+    if isinstance(pricing, dict) and _contains_float(pricing):
+        message = "catalog pricing must use exact decimals"
+        raise TypeError(message)
     return record
 
 
 def sort_models(models: list[CatalogObject]) -> list[CatalogObject]:
     """Vendors return catalogs in arbitrary and unstable order. Impose one."""
-    return sorted((clean_floats(order_keys(m, MODEL_ORDER)) for m in models), key=lambda m: (str(m.get("id", "")).lower(), str(m.get("id", ""))))
+    return sorted((validate_prices(order_keys(m, MODEL_ORDER)) for m in models), key=lambda m: (str(m.get("id", "")).lower(), str(m.get("id", ""))))
 
 
 def sort_defs(schema: CatalogObject) -> CatalogObject:
@@ -76,8 +84,24 @@ def sort_defs(schema: CatalogObject) -> CatalogObject:
     return schema
 
 
+def _json(value: object, indent: int = 0) -> str:
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        entries = [f"{' ' * (indent + 2)}{json.dumps(str(key), ensure_ascii=False)}: {_json(item, indent + 2)}" for key, item in value.items()]
+        return "{\n" + ",\n".join(entries) + f"\n{' ' * indent}}}"
+    if isinstance(value, list):
+        if not value:
+            return "[]"
+        entries = [f"{' ' * (indent + 2)}{_json(item, indent + 2)}" for item in value]
+        return "[\n" + ",\n".join(entries) + f"\n{' ' * indent}]"
+    return json.dumps(value, ensure_ascii=False)
+
+
 def dumps(value: CatalogValue) -> str:
-    return json.dumps(value, indent=2, ensure_ascii=False) + "\n"
+    return _json(value) + "\n"
 
 
 def write_json(path: Path, value: CatalogValue, *, stamp_field: str | None = None) -> bool:
@@ -89,7 +113,7 @@ def write_json(path: Path, value: CatalogValue, *, stamp_field: str | None = Non
             return False
         if stamp_field and isinstance(value, dict) and stamp_field in value:
             try:
-                old = json.loads(previous)
+                old = json.loads(previous, parse_float=Decimal)
             except json.JSONDecodeError:
                 old = None
             if isinstance(old, dict) and stamp_field in old and dumps({**value, stamp_field: old[stamp_field]}) == previous:

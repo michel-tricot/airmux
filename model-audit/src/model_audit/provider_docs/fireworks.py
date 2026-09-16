@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+from decimal import Decimal
 
 from model_audit.provider_docs.base import ModelDocumentation
 
 PRICE_FIELD_COUNT = 3
 
 
-def _price_triplet(value: str) -> dict[str, float] | None:
-    amounts = [float(amount) for amount in re.findall(r"\\?\$([\d.]+)", value)]
+def _price_triplet(value: str) -> dict[str, Decimal] | None:
+    amounts = [Decimal(amount) for amount in re.findall(r"\\?\$([\d.]+)", value)]
     if len(amounts) != PRICE_FIELD_COUNT:
         return None
     return {"input_per_mtok": amounts[0], "cached_input_per_mtok": amounts[1], "output_per_mtok": amounts[2]}
