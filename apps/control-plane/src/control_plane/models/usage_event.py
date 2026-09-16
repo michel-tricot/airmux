@@ -32,6 +32,7 @@ class UsageEvent(Record, table=True):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    max_output_tokens: int | None = None
     cost_usd: float
     cost_input_usd: float = 0.0
     cost_output_usd: float = 0.0
@@ -108,6 +109,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    max_output_tokens: int | None
     cost_usd: float
     cost_input_usd: float
     cost_output_usd: float

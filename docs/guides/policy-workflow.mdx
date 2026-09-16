@@ -54,8 +54,9 @@ This example limits every request in the active workspace to 1,024 output tokens
   </Step>
 
   <Step title="Verify behavior">
-    After a gateway adopts the new bundle, a request with `max_tokens` greater than `1024` returns `403 policy_denied`.
-    A request that omits `max_tokens` is allowed because airmux does not invent a caller limit.
+    After a gateway adopts the new bundle, a canonical request with `max_output_tokens` greater than `1024` returns
+    `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with
+    `source: policy`. If several matching policies set limits, the tightest ceiling applies.
   </Step>
 </Steps>
 

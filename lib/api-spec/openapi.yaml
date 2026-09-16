@@ -5129,6 +5129,14 @@ components:
           minimum: 0.0
           title: Output Tokens
           description: Total output tokens
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+          description: Effective upstream output-token limit
         cost_usd:
           type: number
           minimum: 0.0
@@ -5197,6 +5205,7 @@ components:
       - bundle_id
       - input_tokens
       - output_tokens
+      - max_output_tokens
       - cost_usd
       - latency_ms
       - stream
@@ -7896,6 +7905,14 @@ components:
           minimum: 0.0
           title: Output Tokens
           description: Total output tokens
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+          description: Effective upstream output-token limit
         cost_usd:
           type: number
           minimum: 0.0
@@ -7975,6 +7992,7 @@ components:
       - bundle_id
       - input_tokens
       - output_tokens
+      - max_output_tokens
       - cost_usd
       - latency_ms
       - status
@@ -8470,6 +8488,11 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        max_output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Output Tokens
         cost_usd:
           type: number
           title: Cost Usd
@@ -8530,6 +8553,7 @@ components:
       - bundle_id
       - input_tokens
       - output_tokens
+      - max_output_tokens
       - cost_usd
       - cost_input_usd
       - cost_output_usd

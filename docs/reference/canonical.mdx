@@ -16,7 +16,7 @@ automatically.
     {"role": "user", "content": "Say hello"}
   ],
   "stream": false,
-  "max_tokens": 128
+  "max_output_tokens": 128
 }
 ```
 
@@ -29,7 +29,7 @@ Message `content` may be a string shorthand for one text part. The stored and em
 | `model` | string | Required |
 | `messages` | array | At least one message |
 | `stream` | boolean | Strict boolean; default `false` |
-| `max_tokens` | integer or null | At least 1 |
+| `max_output_tokens` | integer or null | Maximum total generated tokens, including visible output, reasoning, and tool calls; at least 1 |
 | `temperature` | number or null | At least 0 |
 | `top_p` | number or null | Greater than 0 and at most 1 |
 | `stop` | string array or null | Provider stop sequences |
@@ -41,6 +41,10 @@ Message `content` may be a string shorthand for one text part. The stored and em
 | `parallel_tool_calls` | boolean or null | Strict boolean |
 
 The request top level accepts provider-specific extras. Nested message, content, tool, reasoning, and response-format objects are closed.
+
+The effective upstream limit is the minimum of the caller limit, the tightest matching policy ceiling, and the selected
+model's catalog ceiling. A caller value above policy is denied. A model ceiling clamps a permitted caller value. When
+the caller omits the field, policy and model ceilings supply it; `gateway.adjustments` reports the source.
 
 ## Content parts
 

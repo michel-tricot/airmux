@@ -31,6 +31,7 @@ class EvaluationState:
     candidates: tuple[CredentialEntry, ...]
     denial: str | None = None
     fallback: Fallback | None = None
+    policy_max_output_tokens: int | None = None
 
 
 @singledispatch

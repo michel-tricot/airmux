@@ -1,6 +1,6 @@
 """Acceptance: onboarding a quirky provider is a config change with zero code.
 
-The quirk provider exists only in the taxonomy file: it respells max_tokens as
+The quirk provider exists only in the taxonomy file: it respells max_output_tokens as
 max_completion_tokens, closes its schema, and declares top_k as its one accepted extra. The
 proof reads the wire the stub echoes back: the alias applied, the declared extra forwarded, and the
 undeclared one dropped with its reason on the gateway envelope."""
@@ -29,7 +29,7 @@ def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
         json={
             "model": "quirk",
             "messages": [{"role": "user", "content": "hi"}],
-            "max_tokens": 32,
+            "max_output_tokens": 32,
             "top_k": 5,
             "min_p": 0.1,
         },
@@ -76,5 +76,11 @@ def test_model_parameter_support_changes_the_live_upstream_request(stack: Stack)
             "param": "temperature",
             "action": "dropped",
             "detail": "no-temperature does not support this parameter",
-        }
+        },
+        {
+            "param": "max_output_tokens",
+            "action": "defaulted",
+            "detail": "model caps output at 4096 tokens",
+            "source": "model",
+        },
     ]

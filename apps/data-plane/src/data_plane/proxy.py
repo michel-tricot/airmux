@@ -246,7 +246,12 @@ class RequestExecution:
     async def _attempt(self, decision: Allow, entry: CredentialEntry, credential: Secret) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         routed_request = self.request.model_copy(update={"model": decision.model.model_id})
-        request, reconcile_adjustments = reconcile(routed_request, decision.model, decision.profile)
+        request, reconcile_adjustments = reconcile(
+            routed_request,
+            decision.model,
+            decision.profile,
+            decision.policy_max_output_tokens,
+        )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
         ctx = self._ctx(decision, entry)
