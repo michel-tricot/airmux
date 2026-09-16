@@ -57,8 +57,6 @@ function actionSummary(rule: RuleOut): string {
       return `Credentials: ${action.scopes.join(', ')}`;
     case 'fallback':
       return `Fallback: ${action.models.join(' → ')}`;
-    case 'budget':
-      return `$${action.amount_usd} / ${action.period} · not enforced`;
   }
 }
 

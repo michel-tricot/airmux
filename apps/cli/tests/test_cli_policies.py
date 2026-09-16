@@ -29,7 +29,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
         "id": policy_id,
         "org_id": org_id,
         "workspace_id": str(uuid4()),
-        "name": "Budget",
+        "name": "Production",
         "enabled": True,
         "priority": 100,
         "definition": definition,
@@ -38,7 +38,7 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
         "deleted_at": None,
     }
     path = tmp_path / "policy.json"
-    path.write_text(json.dumps({"name": "Budget", "definition": definition}), encoding="utf-8")
+    path.write_text(json.dumps({"name": "Production", "definition": definition}), encoding="utf-8")
 
     def create(incoming):
         assert json.loads(incoming.content)["definition"] == definition

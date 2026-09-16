@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from contract import uuid7
-from contract.policies import Budget, PolicyDefinition, RequestMatch, RuleDefinition
+from contract.policies import PolicyDefinition, RequestMatch, RuleDefinition
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ def test_request_match_combines_typed_criteria():
         {"kind": "credential_access", "scopes": ["org", "org"]},
         {"kind": "credential_access", "scopes": ["unknown"]},
         {"kind": "fallback", "models": ["backup"], "on": [], "max_attempts": 2, "timeout_ms": 1000},
-        {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared", "enforcement": "placeholder"},
+        {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"},
         {"kind": "execute", "code": "anything"},
     ],
 )
@@ -64,17 +64,6 @@ def test_selected_keys_requires_nonempty_unique_identifiers():
                     "rule_ids": [uuid7()],
                 }
             )
-
-
-def test_budget_has_no_enforcement_mode_until_enforcement_exists():
-    definition = RuleDefinition.model_validate(
-        {
-            "match": {"kind": "all_requests"},
-            "action": {"kind": "budget", "period": "day", "amount_usd": "10", "sharing": "shared"},
-        }
-    )
-
-    assert isinstance(definition.action, Budget)
 
 
 @pytest.mark.parametrize(
