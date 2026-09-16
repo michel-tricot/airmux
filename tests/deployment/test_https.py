@@ -221,7 +221,7 @@ def test_https_inference_and_minted_secrets_remain_private(https_deployment):
     body = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hi"}]}
     headers = {"Authorization": f"Bearer {key['token']}"}
     path = "/inf/v1/chat/completions"
-    eventually(lambda: client.post(path, headers=headers, json=body).status_code == 200)
+    eventually(lambda: all(client.post(path, headers=headers, json=body).status_code == 200 for _ in range(10)))
     for stream in (False, True):
         response = client.post(path, headers=headers, json={**body, "stream": stream})
         assert response.status_code == 200, response.text

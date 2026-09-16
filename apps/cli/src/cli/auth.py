@@ -296,7 +296,6 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
         f"curl {gateway_url.rstrip('/')}/inf/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {token}' \\\n"
         "  -H 'Content-Type: application/json' \\\n"
-        "  -H 'x-airmux-dialect: canonical' \\\n"
         f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": [{{"type": "text", "text": "hi"}}]}}]}}\''
     )
 
