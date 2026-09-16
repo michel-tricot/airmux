@@ -36,7 +36,33 @@ def dropped_parameters(request: CanonicalRequest, model: ModelEntry, profile: Co
     return tuple(sorted(param for param in (*tuning, *request.extra) if _drop_reason(request, model, profile, param) is not None))
 
 
-def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
+def _reconcile_output_limit(
+    request: CanonicalRequest, model: ModelEntry, policy_max_output_tokens: int | None
+) -> tuple[CanonicalRequest, CanonicalAdjustment | None]:
+    caller = request.max_output_tokens
+    ceilings = tuple(limit for limit in (policy_max_output_tokens, model.max_output_tokens) if limit is not None)
+    effective = min((caller, *ceilings)) if caller is not None else min(ceilings, default=None)
+    if effective == caller:
+        return request, None
+    source = (
+        "policy_and_model"
+        if policy_max_output_tokens == model.max_output_tokens == effective
+        else "policy"
+        if policy_max_output_tokens == effective
+        else "model"
+    )
+    action = "defaulted" if caller is None else "clamped"
+    detail = f"{source.replace('_', ' ')} caps output at {effective} tokens"
+    adjustment = CanonicalAdjustment(param="max_output_tokens", action=action, detail=detail, source=source)
+    return request.model_copy(update={"max_output_tokens": effective}), adjustment
+
+
+def reconcile(
+    request: CanonicalRequest,
+    model: ModelEntry,
+    profile: CompiledProfile,
+    policy_max_output_tokens: int | None = None,
+) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
     unsupported = {
         param for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and _value(request, param) is not None
     }
@@ -57,9 +83,9 @@ def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledPro
             forwarded[param] = value
         else:
             adjustments.append(CanonicalAdjustment(param=param, action="dropped", detail=reason))
-    if request.max_tokens and model.max_output_tokens and request.max_tokens > model.max_output_tokens:
-        adjustments.append(CanonicalAdjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
-        request = request.model_copy(update={"max_tokens": model.max_output_tokens})
+    request, limit_adjustment = _reconcile_output_limit(request, model, policy_max_output_tokens)
+    if limit_adjustment is not None:
+        adjustments.append(limit_adjustment)
     if len(forwarded) == len(extra):
         return request, adjustments
     core = {name: getattr(request, name) for name in CanonicalRequest.model_fields}

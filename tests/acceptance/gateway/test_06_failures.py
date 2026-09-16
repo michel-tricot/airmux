@@ -128,6 +128,25 @@ def test_fallback_crosses_provider_families_and_preserves_attempt_accounting(
     assert first.credential_id != second.credential_id
 
 
+def test_each_fallback_attempt_applies_its_models_output_ceiling(gateway: Gateway):
+    provider = gateway.add_provider()
+    backup = gateway.add_provider(name="backup", models=("model-c", "model-d"))
+    gateway.taxonomy["models"][0]["max_output_tokens"] = 100
+    gateway.taxonomy["models"][2]["max_output_tokens"] = 8
+    provider.replies["upstream-model-a"] = Reply(status=503)
+    fallback(gateway)
+    gateway.start()
+
+    response = gateway.request(max_output_tokens=50)
+
+    assert response.status_code == 200, response.text
+    assert provider.requests[0].body["max_tokens"] == 50
+    assert backup.requests[0].body["max_tokens"] == 8
+    assert response.json()["gateway"]["adjustments"][0]["action"] == "clamped"
+    first, second = gateway.events(2)
+    assert (first.max_output_tokens, second.max_output_tokens) == (50, 8)
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("restriction", ["model", "provider", "price"])
 def test_fallback_cannot_bypass_a_restriction_matched_on_the_original_request(gateway: Gateway, dialect: Dialect, restriction: str):

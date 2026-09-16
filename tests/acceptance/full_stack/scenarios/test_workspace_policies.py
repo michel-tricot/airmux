@@ -154,7 +154,7 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
             )
         )
 
-        def completion(token: str | None, max_tokens: int) -> httpx.Response:
+        def completion(token: str | None, max_output_tokens: int) -> httpx.Response:
             authentication = (
                 {"authorization": f"Bearer {token}"}
                 if token is not None
@@ -163,7 +163,12 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
             return httpx.post(
                 f"{stack.dp_url}/inf/v1/chat/completions",
                 headers=authentication,
-                json={"model": MODEL, "messages": [{"role": "user", "content": "Hi"}], "max_tokens": max_tokens, "stream": stream},
+                json={
+                    "model": MODEL,
+                    "messages": [{"role": "user", "content": "Hi"}],
+                    "max_output_tokens": max_output_tokens,
+                    "stream": stream,
+                },
                 timeout=10,
             )
 

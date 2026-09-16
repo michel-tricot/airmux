@@ -46,7 +46,7 @@ CASES: dict[Family, ProviderCase] = {
         "OPENAI_API_KEY",
         "max_completion_tokens",
         (0.4, 1.6, 0.1, 0),
-        {"max_tokens": "max_completion_tokens"},
+        {"max_output_tokens": "max_completion_tokens"},
         1047576,
         ("streaming", "tools", "structured_output"),
     ),
@@ -263,9 +263,9 @@ class LiveGateway:
         }
 
     def request(
-        self, *, stream: bool = False, model: str = "model-a", max_tokens: int = 128, body: dict[str, object] | None = None
+        self, *, stream: bool = False, model: str = "model-a", max_output_tokens: int = 128, body: dict[str, object] | None = None
     ) -> httpx.Response:
-        return self.gateway.request("canonical", stream=stream, model=model, max_tokens=max_tokens, body=body, timeout_s=90)
+        return self.gateway.request("canonical", stream=stream, model=model, max_output_tokens=max_output_tokens, body=body, timeout_s=90)
 
     def assert_metering(self, event: UsageEvent) -> None:
         assert event.status == "ok"
