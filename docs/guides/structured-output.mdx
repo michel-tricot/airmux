@@ -3,14 +3,14 @@ title: "Generate structured output"
 description: "Request a JSON object or strict JSON Schema output and understand capability enforcement."
 ---
 
-Structured output is available when the selected catalog model advertises `structured_output`. TokKeeper rejects an
+Structured output is available when the selected catalog model advertises `structured_output`. airmux rejects an
 unsupported route before contacting the provider.
 
 ## Canonical request
 
 ```bash
 curl http://localhost:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "openai/gpt-4o-mini",

@@ -6,9 +6,39 @@ description: "Understand catalog model IDs, provider profiles, modalities, capab
 The model catalog is the routing contract between management and inference. Query the deployed catalog instead of hard-coding the repository snapshot:
 
 ```bash
-tokkeeper providers list -f json
-tokkeeper models list -f json
+airmux providers list -f json
+airmux models list -f json
 ```
+
+## Inference model discovery
+
+`GET /inf/v1/models` returns `{"object": "list", "data": [...]}`. `GET /inf/v1/models/{model_id}` returns one model object.
+Both endpoints require an active workspace inference key and work with the OpenAI SDK's `models.list()` and
+`models.retrieve()` methods. Model IDs containing slashes are supported.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Gateway model ID to use in inference requests |
+| `object` | Always `model` |
+| `created` | Unix timestamp of the catalog snapshot's publication, not the upstream model's release date |
+| `owned_by` | Configured provider routing name |
+| `gateway.context_window` | Maximum context tokens |
+| `gateway.max_output_tokens` | Output cap, or `null` when unknown |
+| `gateway.input_modalities` | Declared supported input kinds |
+| `gateway.output_modalities` | Declared supported output kinds |
+| `gateway.capabilities` | Declared supported gateway features |
+| `gateway.parameter_support` | Explicit parameter support; absent parameters are unknown |
+
+The list is sorted by model ID and contains models from the caller's organization bundle with a configured credential
+reference in an eligible platform, organization, or workspace scope. Workspace and selected-key policies apply, including
+model/provider allowlists, price ceilings, unconditional denials, model-matched denials, and credential-access rules.
+An unknown or hidden model returns the same `404` response. Missing or invalid inference keys return `401`; discovery
+returns `503` until a bundle is available. Errors use the OpenAI error shape and responses disable caching.
+
+Discovery reads the admitted bundle without database queries, provider calls, or secret resolution. It describes
+configured eligibility, not live credential health. Rules conditioned on streaming or request capabilities, strict
+parameter checks, request limits, and fallback execution apply during inference. Catalog modalities do not add new
+inference endpoints; current content support is described below.
 
 ## Provider entries
 
@@ -46,7 +76,7 @@ xAI provider entries. The deployed catalog is authoritative and may differ after
 Modalities are `text`, `image`, `audio`, `video`, and `pdf`. Current inference content supports text, images, and PDFs;
 catalog entries can still describe the broader vocabulary.
 
-Capabilities are `streaming`, `tools`, `reasoning`, and `structured_output`. TokKeeper derives requirements from the
+Capabilities are `streaming`, `tools`, `reasoning`, and `structured_output`. airmux derives requirements from the
 request and rejects a route with a missing capability.
 
 ## Update the catalog
@@ -54,8 +84,8 @@ request and rejects a route with a missing capability.
 The repository taxonomy is generated from the model-audit evidence. Apply it to an instance with a dry run first:
 
 ```bash
-tokkeeper catalog apply --file taxonomy/taxonomy.yml --dry-run
-tokkeeper catalog apply --file taxonomy/taxonomy.yml
+airmux catalog apply --file taxonomy/taxonomy.yml --dry-run
+airmux catalog apply --file taxonomy/taxonomy.yml
 ```
 
 Catalog changes publish new bundles for affected organizations. They do not mutate requests already executing on an older snapshot.

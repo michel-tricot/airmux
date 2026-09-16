@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
@@ -46,3 +48,10 @@ def test_the_bundle_contract_does_not_close_the_discovered_adapter_namespace():
     provider = ProviderEntry(provider_id="future", kind="future_family", base_url="https://example.com/v1")
 
     assert provider.kind == "future_family"
+
+
+def test_every_discovered_adapter_has_a_black_box_gateway_protocol_fixture():
+    protocols_path = Path(__file__).resolve().parents[3] / "tests/acceptance/gateway/protocols.json"
+    protocols = json.loads(protocols_path.read_text())
+    assert set(protocols["ingress"]) == set(ingress.REGISTRY), "Add the new caller dialect to the standalone gateway scenarios"
+    assert set(protocols["egress"]) == set(egress.REGISTRY), "Add the new provider family to the standalone gateway scenarios"

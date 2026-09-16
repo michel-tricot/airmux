@@ -1,13 +1,13 @@
 services:
-  tokkeeper:
+  airmux:
     ports: !reset []
     environment:
-      TOKKEEPER_CONSOLE_URL: https://${TOKKEEPER_DOMAIN:?Set the public domain}
+      AIRMUX_CONSOLE_URL: https://${AIRMUX_DOMAIN:?Set the public domain}
 
   caddy:
     image: caddy:2
     environment:
-      TOKKEEPER_DOMAIN: ${TOKKEEPER_DOMAIN:?Set the public domain}
+      AIRMUX_DOMAIN: ${AIRMUX_DOMAIN:?Set the public domain}
     ports:
       - "80:80"
       - "443:443"
@@ -17,7 +17,7 @@ services:
       - certificates:/data
       - caddy-config:/config
     depends_on:
-      tokkeeper:
+      airmux:
         condition: service_healthy
     restart: unless-stopped
 

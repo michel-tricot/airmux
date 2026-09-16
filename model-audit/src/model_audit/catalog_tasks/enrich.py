@@ -5,7 +5,7 @@ returns limits and no pricing; OpenAI returns neither. Rather than leave the app
 taxonomy full of zeroes and defaults, gaps are filled from outside sources, in a fixed order
 of trust, and every filled value records where it came from.
 
-    uv run tokkeeper-audit providers sync --only pricing
+    uv run airmux-audit providers sync --only pricing
 
 ## The order of trust
 
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 
     from .types import CatalogObject, CatalogValue
 
-UA = {"User-Agent": "tokkeeper-taxonomy/1.0", "Accept": "application/json"}
+UA = {"User-Agent": "airmux-taxonomy/1.0", "Accept": "application/json"}
 MODELS_DEV = "https://models.dev/api.json"
 OPENROUTER = "https://openrouter.ai/api/v1/models"
 

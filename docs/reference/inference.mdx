@@ -3,12 +3,18 @@ title: "Inference API overview"
 description: "Choose an inference surface, authenticate a request, and understand the shared routing behavior."
 ---
 
-All inference endpoints live under `/inf/v1` and accept a workspace inference key as a bearer token.
+All inference endpoints live under `/inf/v1` and accept a workspace inference key through `Authorization: Bearer` or
+`x-api-key`. Use the same key with the normal API-key argument of the OpenAI or Anthropic SDK.
 
 ```text
 Authorization: Bearer sk-inf-your-key
 Content-Type: application/json
 ```
+
+Credentials are selected in order: a non-empty bearer token, a non-empty `x-api-key`, then the playground cookie.
+Authorization headers using another scheme and empty header values are skipped. The selected key is authenticated once;
+an invalid key returns `401 invalid_token` without trying lower-priority credentials. Cookie authentication requires `X-Requested-With`; when
+`Sec-Fetch-Site` is present, only `same-origin` and `none` are accepted.
 
 ## Surfaces
 
@@ -18,8 +24,14 @@ Content-Type: application/json
 | Responses | `POST /inf/v1/responses` | Responses clients and item-based input/output |
 | Messages | `POST /inf/v1/messages` | Messages clients and named SSE events |
 
+Discover models with `GET /inf/v1/models` and retrieve one with `GET /inf/v1/models/{model_id}` using the same inference key.
+These routes return the OpenAI Models shape. See [model discovery](/docs/reference/models-and-providers#inference-model-discovery) for details.
+
+The generated OpenAPI spec covers the [management API](/docs/reference/management-api). Inference endpoints and their
+shared behavior are described in these reference pages.
+
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
-Chat Completions request can target an Anthropic model. TokKeeper returns the response and errors in the caller's dialect.
+Chat Completions request can target an Anthropic model. airmux returns the response and errors in the caller's dialect.
 
 ## Shared behavior
 
@@ -33,20 +45,47 @@ Every surface uses the same:
 - Parameter reconciliation and visible adjustments
 - Usage and cost accounting
 
+## Response headers
+
+The data plane applies these headers to every HTTP response, including health checks, authentication failures, and
+unexpected server errors. Health and readiness checks remain public.
+
+| Header | Value | Applies to |
+| --- | --- | --- |
+| `Cache-Control` | `no-store` | All responses |
+| `Cache-Control` | `no-store, no-transform` | SSE responses |
+| `X-Request-ID` | Gateway-generated UUIDv7 | All responses |
+| `X-Content-Type-Options` | `nosniff` | All responses |
+| `X-Accel-Buffering` | `no` | SSE responses sent by the data plane |
+| `WWW-Authenticate` | `Bearer realm="airmux"` | `401` responses |
+
+`X-Request-ID` matches the request ID in usage events when an event is recorded. Provider completion IDs in response
+bodies retain their own meaning. Caller-supplied request IDs do not replace the gateway ID. The response renderer owns
+`Content-Type`; middleware forwards streaming bytes without buffering. Existing `Retry-After` headers are preserved.
+
+The `401` challenge advertises bearer authentication. `realm="airmux"` labels the authentication scope and does not
+change key validation.
+
+The packaged Nginx proxy preserves the SSE cache directive and disables inference buffering. Nginx consumes
+`X-Accel-Buffering`, so that header may be absent at the public edge.
+
 ## Model selection
 
-Managed catalog model IDs use `provider/model` form. List the models visible to the active organization:
+Managed catalog model IDs use `provider/model` form. List the models visible to your inference key:
 
 ```bash
-tokkeeper models list -f json
+curl --fail-with-body "$AIRMUX_URL/inf/v1/models" \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY"
 ```
 
 The model must support every required input modality and capability. Streaming, tools, reasoning, and structured output
 are inferred from the request rather than trusted as caller metadata.
 
+The management command `airmux models list -f json` lists the organization catalog with a management key; it does not apply inference-key policies.
+
 ## Base URLs
 
-If the public TokKeeper origin is `https://llm.example.com`:
+If the public airmux origin is `https://llm.example.com`:
 
 | Client | Base URL |
 | --- | --- |

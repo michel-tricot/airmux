@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-description: "Start TokKeeper with Docker, claim the instance, import a provider credential, and make a verified inference request."
+description: "Start airmux with Docker, claim the instance, import a provider credential, and make a verified inference request."
 ---
 
 This path runs the console, control plane, gateway, and Postgres on one machine.
@@ -14,14 +14,14 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 <Steps>
   <Step title="Install the CLI">
     ```bash
-    uv tool install tokkeeper
+    uv tool install airmux
     ```
   </Step>
 
   <Step title="Clone and configure">
     ```bash
-    git clone https://github.com/michel-tricot/tokkeeper.git
-    cd tokkeeper
+    git clone https://github.com/michel-tricot/airmux.git
+    cd airmux
     cp .env.example .env
     ```
 
@@ -38,7 +38,7 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 
   <Step title="Claim and verify the instance">
     ```bash
-    tokkeeper quickstart --url http://localhost:8080
+    airmux quickstart --url http://localhost:8080
     ```
 
     Enter an email and password when prompted. The command creates or resumes an owner account, organization, and
@@ -46,19 +46,19 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
   </Step>
 
   <Step title="Save the inference key">
-    The secret shown as `TOKKEEPER_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
+    The secret shown as `AIRMUX_INFERENCE_KEY` is returned once. Export it in the shell where you will run examples:
 
     ```bash
-    export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
+    export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
     ```
   </Step>
 
   <Step title="Make a request">
-    Use a model served by the provider you configured. `tokkeeper models list` shows the catalog.
+    Use a model served by the provider you configured. `airmux models list` shows the catalog.
 
     ```bash
     curl http://localhost:8080/inf/v1/chat/completions \
-      -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+      -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
       -H 'Content-Type: application/json' \
       -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in five words"}]}'
     ```
@@ -95,9 +95,9 @@ For an inference endpoint managed through local files, without Docker, Postgres,
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper gateway init
-tokkeeper gateway serve
+airmux gateway init
+airmux gateway serve
 ```
 
-The standalone gateway copies the shipped taxonomy into `.tokkeeper` and ignores usage events.
+The standalone gateway copies the shipped taxonomy into `.airmux` and ignores usage events.
 See [Gateway only](/docs/deployment/gateway) for independent installation and standalone configuration.

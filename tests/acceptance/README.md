@@ -1,27 +1,22 @@
 # Acceptance tests
 
-Black-box end-to-end tests. Each one stands up a real control plane, data plane and a stub
-upstream in an isolated tmp dir, then drives them through the shipped console scripts and public
-HTTP surfaces. Nothing here imports `control_plane` or `data_plane`; a test that needs internals
-is a product gap, not a test gap.
+Black-box tests drive real processes through the shipped console scripts and public HTTP surfaces.
+The suites keep separate harnesses and CI jobs:
 
-The shared harness lives in `conftest.py` (the `stack` fixture and the `Stack` class). Both
-categories below use it, so a new test in either place gets the same one-line setup.
+- [Gateway](gateway/README.md): standalone gateway scenarios, protocol variations, policies, metering,
+  and performance comparisons, without a control plane, Postgres, or Docker
+- [Live providers](live_providers/README.md): pinned OpenAI and Anthropic requests, native usage and pricing
+  verification, run nightly, manually, and as a prerequisite for PyPI releases
+- [Full stack](full_stack/README.md): control plane and gateway scenarios, including authentication,
+  bundle publication, organization isolation, event export, and replay, with a throwaway Postgres server
 
-## Categories
+Run either suite from the repository root:
 
-- `scenarios/` - correctness and resilience. Does the system do the right thing under failure:
-  control plane down and event replay. Asserts on behaviour and observable output.
-- `benchmarks/` - performance. Measures a cost and guards it against regression. Reports
-  percentiles and asserts a lenient ceiling, so a gross regression fails but normal runner noise
-  does not.
+```bash
+uv run pytest tests/acceptance/gateway -n auto
+uv run pytest tests/acceptance/full_stack/scenarios
+```
 
-CI runs the two as separate jobs, so a slow benchmark sweep does not delay the correctness
-signal and can be gated independently.
-
-## Adding a benchmark
-
-Measure overhead as a difference, not an absolute: run the same work with and without the thing
-you are measuring against the same stub upstream, and report the delta. See `benchmarks/
-test_overhead.py`. Warm up before sampling, report p50/p90/p99 rather than a mean, and assert a
-loose ceiling rather than an exact number.
+Both correctness suites and the gateway performance comparison run on PR updates and pushes to main.
+Each suite owns its `conftest.py`; gateway tests do not load full-stack setup. Both correctness jobs
+publish assertion failures in their Actions summary and retain JUnit XML as downloadable artifacts.

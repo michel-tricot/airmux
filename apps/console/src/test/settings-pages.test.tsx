@@ -9,7 +9,7 @@ import { ORG, WORKSPACES, server } from './msw';
 const bundle: Api.BundleOut = { id: 'bundle-1', org_id: ORG.id, version: 1, issued_at: '2026-09-11T12:00:00Z' };
 
 function open(path: string) {
-  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
+  window.localStorage.setItem('airmux_org_id', ORG.id);
   window.history.replaceState(null, '', path);
   render(<App />);
 }

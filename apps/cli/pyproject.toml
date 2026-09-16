@@ -1,12 +1,12 @@
 [project]
-name = "tokkeeper"
-version = "0.1.0"
+name = "airmux"
+version = "0.1.1"
 requires-python = ">=3.13"
 dependencies = [
-  "tokkeeper-api-models==0.1.0",
-  "tokkeeper-contract==0.1.0",
-  "tokkeeper-data-plane==0.1.0",
-  "tokkeeper-control-plane==0.1.0",
+  "airmux-api-models==0.1.1",
+  "airmux-contract==0.1.1",
+  "airmux-data-plane==0.1.1",
+  "airmux-control-plane==0.1.1",
   "httpx",
   "typer",
   "python-dotenv",
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tokkeeper = "cli.main:main"
+airmux = "cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

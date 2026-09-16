@@ -94,12 +94,29 @@ def test_new_policy_actions_have_strict_valid_contracts(action):
 
 def test_policy_requires_rules_and_rejects_the_legacy_single_action_shape():
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "all_keys"}, "rule_ids": []})
+        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": []})
     with pytest.raises(ValidationError):
         PolicyDefinition.model_validate(
             {
-                "target": {"kind": "all_keys"},
+                "target": {"kind": "workspace"},
                 "match": {"kind": "all_requests"},
                 "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
             }
         )
+
+
+@pytest.mark.parametrize("user_ids", [[], ["invalid"], [str(uuid7())] * 2, [str(uuid7()) for _ in range(1001)]])
+def test_selected_users_reject_invalid_selections(user_ids):
+    with pytest.raises(ValidationError):
+        PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": user_ids}, "rule_ids": [uuid7()]})
+
+
+def test_workspace_and_selected_user_targets_are_strict():
+    user_id = uuid7()
+    definition = PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": [user_id]}, "rule_ids": [uuid7()]})
+    assert definition.target.kind == "selected_users"
+    assert definition.model_dump(mode="json")["target"] == {"kind": "selected_users", "user_ids": [str(user_id)]}
+    assert PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": [uuid7()]}).target.kind == "workspace"
+    for target in ({"kind": "all_keys"}, {"kind": "workspace", "workspace_id": user_id}):
+        with pytest.raises(ValidationError):
+            PolicyDefinition.model_validate({"target": target, "rule_ids": [uuid7()]})

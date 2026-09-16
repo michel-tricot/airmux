@@ -28,7 +28,8 @@ NOW = datetime.now(tz=UTC)
 
 BUNDLE_YML = """
 keys:
-  - sk-inf-local-dev
+  - token: sk-inf-local-dev
+    user_id: 00000000-0000-0000-0000-000000000001
 taxonomy:
   providers:
     - provider_id: p1

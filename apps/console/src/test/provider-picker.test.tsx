@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 import { taxonomyProvider } from './fixtures';
-beforeEach(() => window.localStorage.setItem('tokkeeper_org_id', ORG.id));
+beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('provider icons', () => {
   it('removes active content from taxonomy SVG markup', async () => {
     server.use(

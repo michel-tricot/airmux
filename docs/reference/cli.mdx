@@ -1,9 +1,9 @@
 ---
 title: 'CLI reference'
-description: 'Reference TokKeeper CLI contexts, environment precedence, output formats, and resource commands.'
+description: 'Reference airmux CLI contexts, environment precedence, output formats, and resource commands.'
 ---
 
-`tokkeeper` is the entry point for remote management, the inference gateway, and the control-plane server.
+`airmux` is the entry point for remote management, the inference gateway, and the control-plane server.
 Local runtime commands do not require a saved login profile. Remote resource commands use the authentication context below.
 
 ## Installation
@@ -11,16 +11,16 @@ Local runtime commands do not require a saved login profile. Remote resource com
 With Python 3.13+ and uv:
 
 ```bash
-uv tool install tokkeeper
+uv tool install airmux
 ```
 
 The installation includes remote management, the gateway, and the control plane. Installing the package starts no services.
 A standalone gateway does not require a running control plane or database.
 
-If `tokkeeper` is not on your PATH, run `uv tool update-shell` and restart your shell.
-`tokkeeper --version` prints the installed CLI version. Use `tokkeeper --help` to see all commands.
+If `airmux` is not on your PATH, run `uv tool update-shell` and restart your shell.
+`airmux --version` prints the installed CLI version. Use `airmux --help` to see all commands.
 
-Install command completion for the current shell with `tokkeeper completion`. Use `--shell` to select
+Install command completion for the current shell with `airmux completion`. Use `--shell` to select
 `bash`, `zsh`, `fish`, `powershell`, or `pwsh` instead of detecting it automatically.
 
 For source checkouts and unreleased builds, see [Development](/docs/development).
@@ -32,10 +32,10 @@ For source checkouts and unreleased builds, see [Development](/docs/development)
 | `gateway`       | `init`, `validate`, `serve`, `schema`                                                                  |
 | `control-plane` | `init`, `validate`, `serve`, `migrate`, `bootstrap-keygen`, `owner`, `taxonomy`, `fixtures`, `openapi` |
 
-Configuration resolution is `--config/-c`, then `TOKKEEPER_CONFIG`, then per-runtime defaults; the
+Configuration resolution is `--config/-c`, then `AIRMUX_CONFIG`, then per-runtime defaults; the
 [configuration reference](/docs/reference/configuration) names them.
 Relative runtime paths and `${file:...}` references resolve against their containing configuration file.
-`gateway init` defaults to `.tokkeeper`; `control-plane init` defaults to the current directory. `--directory/-d` selects another.
+`gateway init` defaults to `.airmux`; `control-plane init` defaults to the current directory. `--directory/-d` selects another.
 Initialization creates private keys, never prints their values, and refuses to overwrite any generated file. `gateway init`
 copies the shipped taxonomy by default; `--taxonomy PATH` references an existing file without copying it. It finishes with
 copyable start, readiness, and inference commands for a real model from the selected taxonomy, preferring one whose provider
@@ -45,15 +45,15 @@ configuration without contacting providers or the database.
 For a standalone gateway, follow [Gateway only](/docs/deployment/gateway). For a connected deployment with existing Postgres:
 
 ```bash
-tokkeeper control-plane init --directory deployment --console-url https://llm.example.com
-export DATABASE_URL='postgresql://user:password@localhost:5432/tokkeeper'
-tokkeeper control-plane validate --config deployment/tokkeeper.yml
-tokkeeper control-plane migrate --config deployment/tokkeeper.yml
-tokkeeper control-plane taxonomy --config deployment/tokkeeper.yml --file /path/to/taxonomy.yml
-tokkeeper control-plane serve --config deployment/tokkeeper.yml
+airmux control-plane init --directory deployment --console-url https://llm.example.com
+export DATABASE_URL='postgresql://user:password@localhost:5432/airmux'
+airmux control-plane validate --config deployment/airmux.yml
+airmux control-plane migrate --config deployment/airmux.yml
+airmux control-plane taxonomy --config deployment/airmux.yml --file /path/to/taxonomy.yml
+airmux control-plane serve --config deployment/airmux.yml
 ```
 
-In another terminal, run `tokkeeper gateway serve --config deployment/tokkeeper.yml`. The generated configuration shares a
+In another terminal, run `airmux gateway serve --config deployment/airmux.yml`. The generated configuration shares a
 private bootstrap key and file secret store between the planes. The same installation can run both services.
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
@@ -72,26 +72,26 @@ inside a running container.
 
 ## Authentication and context
 
-`tokkeeper login` uses a browser device flow and saves a private profile to `~/.tokkeeper/config.toml`. Override the file with `TOKKEEPER_CLI_CONFIG`.
+`airmux login` uses a browser device flow and saves a private profile to `~/.airmux/config.toml`. Override the file with `AIRMUX_CLI_CONFIG`.
 
 ```bash
-tokkeeper login --url https://llm.example.com
-tokkeeper profiles list
-tokkeeper profiles use my-org
-tokkeeper workspaces use production
-tokkeeper status
-tokkeeper doctor
+airmux login --url https://llm.example.com
+airmux profiles list
+airmux profiles use my-org
+airmux workspaces use production
+airmux status
+airmux doctor
 ```
 
 Resolution order is explicit option, `--dev` where supported, environment, active profile, then local default.
 
 | Environment variable          | Purpose                                           |
 | ----------------------------- | ------------------------------------------------- |
-| `TOKKEEPER_CONTROL_PLANE_URL` | Override the management origin                    |
-| `TOKKEEPER_GATEWAY_URL`       | Override the inference origin used by diagnostics |
-| `TOKKEEPER_MANAGEMENT_KEY`    | Override the saved profile token                  |
-| `TOKKEEPER_ORG_ID`            | Override the selected organization                |
-| `TOKKEEPER_CLI_CONFIG`        | Override the profile file path                    |
+| `AIRMUX_CONTROL_PLANE_URL` | Override the management origin                    |
+| `AIRMUX_GATEWAY_URL`       | Override the inference origin used by diagnostics |
+| `AIRMUX_MANAGEMENT_KEY`    | Override the saved profile token                  |
+| `AIRMUX_ORG_ID`            | Override the selected organization                |
+| `AIRMUX_CLI_CONFIG`        | Override the profile file path                    |
 
 ## Output formats
 
@@ -99,12 +99,12 @@ Commands returning resource data accept `-f/--format table|json|text`. Table is 
 intended for automation, and text is tab-separated.
 
 ```bash
-tokkeeper models list -f json
-tokkeeper events list -f text
-tokkeeper commands -f table
+airmux models list -f json
+airmux events list -f text
+airmux commands -f table
 ```
 
-`tokkeeper commands` is the source-backed inventory for the installed CLI version.
+`airmux commands` is the source-backed inventory for the installed CLI version.
 
 Top-level help groups commands by task:
 
@@ -155,17 +155,17 @@ Each command group's help keeps its subcommands in one flat list.
 | `events`               | `list`, `tail`                           |
 | `catalog`              | `apply`                                  |
 
-Run `tokkeeper <group> <command> --help` for the exact options installed on your machine.
+Run `airmux <group> <command> --help` for the exact options installed on your machine.
 
 ## Automation pattern
 
 ```bash
-export TOKKEEPER_CONTROL_PLANE_URL='https://llm.example.com'
-export TOKKEEPER_MANAGEMENT_KEY='sk-cp-your-key'
-export TOKKEEPER_ORG_ID='your-org-id'
+export AIRMUX_CONTROL_PLANE_URL='https://llm.example.com'
+export AIRMUX_MANAGEMENT_KEY='sk-cp-your-key'
+export AIRMUX_ORG_ID='your-org-id'
 
-tokkeeper workspaces list -f json
-tokkeeper inference-keys create deployment --workspace production
+airmux workspaces list -f json
+airmux inference-keys create deployment --workspace production
 ```
 
 Use a service account and a management key limited to the required scope and permissions. One-time secret output should

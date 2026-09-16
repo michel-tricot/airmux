@@ -1,4 +1,4 @@
-jsonpath,supported_by,supported_by_excluding_standins,tokkeeper,anthropic,xai,deepseek
+jsonpath,supported_by,supported_by_excluding_standins,airmux,anthropic,xai,deepseek
 $.max_tokens,4,2,1,1,1,1
 $.messages,4,2,1,1,1,1
 $.messages[*].content,4,2,1,1,1,1

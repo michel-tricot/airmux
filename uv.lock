@@ -10,12 +10,12 @@ resolution-markers = [
 members = [
     "acceptance",
     "model-audit",
-    "tokkeeper",
-    "tokkeeper-api-models",
-    "tokkeeper-contract",
-    "tokkeeper-control-plane",
-    "tokkeeper-data-plane",
-    "tokkeeper-workspace",
+    "airmux",
+    "airmux-api-models",
+    "airmux-contract",
+    "airmux-control-plane",
+    "airmux-data-plane",
+    "airmux-workspace",
 ]
 
 [[package]]
@@ -24,18 +24,18 @@ version = "0.1.0"
 source = { virtual = "tests/acceptance" }
 dependencies = [
     { name = "httpx" },
+    { name = "openai" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rich" },
     { name = "testcontainers" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx" },
+    { name = "openai" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rich" },
     { name = "testcontainers" },
 ]
 
@@ -983,7 +983,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "tokkeeper-contract" },
+    { name = "airmux-contract" },
     { name = "typer" },
 ]
 
@@ -997,7 +997,7 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "tokkeeper-contract", editable = "lib/contract" },
+    { name = "airmux-contract", editable = "lib/contract" },
     { name = "typer" },
 ]
 
@@ -1697,18 +1697,18 @@ wheels = [
 ]
 
 [[package]]
-name = "tokkeeper"
-version = "0.1.0"
+name = "airmux"
+version = "0.1.1"
 source = { editable = "apps/cli" }
 dependencies = [
     { name = "httpx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "tokkeeper-api-models" },
-    { name = "tokkeeper-contract" },
-    { name = "tokkeeper-control-plane" },
-    { name = "tokkeeper-data-plane" },
+    { name = "airmux-api-models" },
+    { name = "airmux-contract" },
+    { name = "airmux-control-plane" },
+    { name = "airmux-data-plane" },
     { name = "tomli-w" },
     { name = "typer" },
 ]
@@ -1719,17 +1719,17 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "tokkeeper-api-models", editable = "lib/api-models" },
-    { name = "tokkeeper-contract", editable = "lib/contract" },
-    { name = "tokkeeper-control-plane", editable = "apps/control-plane" },
-    { name = "tokkeeper-data-plane", editable = "apps/data-plane" },
+    { name = "airmux-api-models", editable = "lib/api-models" },
+    { name = "airmux-contract", editable = "lib/contract" },
+    { name = "airmux-control-plane", editable = "apps/control-plane" },
+    { name = "airmux-data-plane", editable = "apps/data-plane" },
     { name = "tomli-w", specifier = ">=1.2.0" },
     { name = "typer" },
 ]
 
 [[package]]
-name = "tokkeeper-api-models"
-version = "0.1.0"
+name = "airmux-api-models"
+version = "0.1.1"
 source = { editable = "lib/api-models" }
 dependencies = [
     { name = "pydantic" },
@@ -1739,8 +1739,8 @@ dependencies = [
 requires-dist = [{ name = "pydantic", specifier = ">=2" }]
 
 [[package]]
-name = "tokkeeper-contract"
-version = "0.1.0"
+name = "airmux-contract"
+version = "0.1.1"
 source = { editable = "lib/contract" }
 dependencies = [
     { name = "asyncpg" },
@@ -1758,8 +1758,8 @@ requires-dist = [
 ]
 
 [[package]]
-name = "tokkeeper-control-plane"
-version = "0.1.0"
+name = "airmux-control-plane"
+version = "0.1.1"
 source = { editable = "apps/control-plane" }
 dependencies = [
     { name = "alembic" },
@@ -1769,7 +1769,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
-    { name = "tokkeeper-contract" },
+    { name = "airmux-contract" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1782,13 +1782,13 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "sqlmodel" },
-    { name = "tokkeeper-contract", editable = "lib/contract" },
+    { name = "airmux-contract", editable = "lib/contract" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 
 [[package]]
-name = "tokkeeper-data-plane"
-version = "0.1.0"
+name = "airmux-data-plane"
+version = "0.1.1"
 source = { editable = "apps/data-plane" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -1796,7 +1796,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "starlette" },
     { name = "tiktoken" },
-    { name = "tokkeeper-contract" },
+    { name = "airmux-contract" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1807,18 +1807,18 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "starlette" },
     { name = "tiktoken" },
-    { name = "tokkeeper-contract", editable = "lib/contract" },
+    { name = "airmux-contract", editable = "lib/contract" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 
 [[package]]
-name = "tokkeeper-workspace"
+name = "airmux-workspace"
 version = "0.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
 backend = [
-    { name = "tokkeeper" },
+    { name = "airmux" },
 ]
 dev = [
     { name = "anthropic" },
@@ -1840,7 +1840,7 @@ dev = [
 [package.metadata]
 
 [package.metadata.requires-dev]
-backend = [{ name = "tokkeeper", editable = "apps/cli" }]
+backend = [{ name = "airmux", editable = "apps/cli" }]
 dev = [
     { name = "anthropic" },
     { name = "anyio" },

@@ -18,13 +18,13 @@ def https_deployment(tmp_path_factory):
     if "DEPLOYMENT_PROJECT" not in os.environ:
         pytest.skip("set DEPLOYMENT_PROJECT and DEPLOYMENT_FILE to test built deployment images")
     directory = tmp_path_factory.mktemp("https-proxy")
-    project = f"tokkeeper-https-{uuid.uuid4().hex[:10]}"
+    project = f"airmux-https-{uuid.uuid4().hex[:10]}"
     compose_file = os.environ["DEPLOYMENT_FILE"]
     compact = compose_file == "docker-compose.yml"
-    gateway = "tokkeeper" if compact else "console"
-    control_plane = "tokkeeper" if compact else "control-plane"
+    gateway = "airmux" if compact else "console"
+    control_plane = "airmux" if compact else "control-plane"
     compose = ("compose", "-p", project, "-f", compose_file)
-    environment = {**os.environ, "TOKKEEPER_PORT": "127.0.0.1:0", "TOKKEEPER_PUBLIC_URL": "https://localhost"}
+    environment = {**os.environ, "AIRMUX_PORT": "127.0.0.1:0", "AIRMUX_PUBLIC_URL": "https://localhost"}
     certificate = directory / "certificate.pem"
     private_key = directory / "key.pem"
     openssl = shutil.which("openssl")
@@ -136,7 +136,7 @@ def test_https_session_cookie_is_secure_despite_forged_forwarding(https_deployme
     client, signup, _, _, direct = https_deployment
     cookies = SimpleCookie()
     cookies.load(signup.headers["set-cookie"])
-    session = cookies["tokkeeper_session"]
+    session = cookies["airmux_session"]
     assert session["secure"]
     assert session["httponly"]
     assert session["samesite"].lower() == "lax"
@@ -151,7 +151,7 @@ def test_private_api_and_inference_responses_are_not_cacheable(https_deployment)
     client, signup, _, _, _ = https_deployment
     for response in (signup, client.get("/api/v1/auth/me"), client.get("/api/v1/not-a-resource"), client.post("/inf/v1/chat/completions", json={})):
         assert response.headers.get("cache-control") == "no-store", (response.url, response.headers)
-        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers.get_list("x-content-type-options") == ["nosniff"]
         assert response.headers["x-frame-options"] == "DENY"
         assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
@@ -194,7 +194,7 @@ def test_forged_forwarded_host_cannot_change_redirect_origin(https_deployment):
 
 def test_internal_plane_ports_are_not_published(https_deployment):
     _, _, compose, control_plane, _ = https_deployment
-    services = (control_plane,) if control_plane == "tokkeeper" else (control_plane, "data-plane-1", "data-plane-2")
+    services = (control_plane,) if control_plane == "airmux" else (control_plane, "data-plane-1", "data-plane-2")
     for service in services:
         container = docker(*compose, "ps", "-q", service)
         bindings = json.loads(docker("inspect", "--format", "{{json .HostConfig.PortBindings}}", container))
@@ -225,5 +225,7 @@ def test_https_inference_and_minted_secrets_remain_private(https_deployment):
     for stream in (False, True):
         response = client.post(path, headers=headers, json={**body, "stream": stream})
         assert response.status_code == 200, response.text
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get_list("cache-control") == ["no-store, no-transform" if stream else "no-store"]
+        assert response.headers.get_list("x-content-type-options") == ["nosniff"]
+        assert uuid.UUID(response.headers["x-request-id"]).version == 7
         assert "deployment ready" in response.text

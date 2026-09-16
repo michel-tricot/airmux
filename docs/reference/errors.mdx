@@ -3,7 +3,7 @@ title: "Errors"
 description: "Handle stable gateway error codes, provider errors, and failures that arrive after streaming begins."
 ---
 
-TokKeeper keeps the error envelope native to the caller surface.
+airmux keeps the error envelope native to the caller surface.
 
 <CodeGroup>
 
@@ -21,18 +21,24 @@ TokKeeper keeps the error envelope native to the caller surface.
 
 </CodeGroup>
 
+Chat Completions authentication failures, malformed JSON, and invalid dialect overrides use the canonical error shape
+because they occur before dialect resolution. Messages, Responses, and model discovery bind their error format before
+authentication; model discovery uses the OpenAI error shape.
+
 ## Gateway codes
 
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
-| 400 | `invalid_dialect` | Unknown `x-tokkeeper-dialect` value |
+| 400 | `invalid_dialect` | Unknown `x-airmux-dialect` value |
 | 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
 | 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
-| 401 | `missing_bearer_token` | No bearer token and no valid playground cookie |
-| 401 | `invalid_token` | Inference key is unknown, expired, revoked, or not adopted yet |
+| 401 | `missing_bearer_token` | No non-empty bearer token, API-key header, or playground cookie |
+| 401 | `invalid_token` | The selected inference key is unknown, expired, revoked, or not adopted yet |
 | 402 | `credential_unavailable` | Policy and scope selection left no eligible credential |
 | 403 | `policy_denied` | A matching workspace restriction rejected the request |
+| 403 | `missing_requested_with` | Playground-cookie authentication lacks `X-Requested-With` |
+| 403 | `cross_site_request` | Playground-cookie authentication supplied a `Sec-Fetch-Site` value other than `same-origin` or `none` |
 | 404 | `unknown_model` | Catalog model ID does not exist in the active bundle |
 | 502 | `provider_not_configured` | Model references a provider absent from the bundle |
 | 502 | `credential_missing` | Eligible credential references could not resolve a value |
@@ -45,6 +51,11 @@ TokKeeper keeps the error envelope native to the caller surface.
 
 Provider HTTP errors may retain the provider status and normalized provider code. Do not branch only on the human
 message; prefer HTTP status and `code` or `type`.
+
+Every data-plane `401` response includes `WWW-Authenticate: Bearer realm="airmux"`. All data-plane HTTP responses carry the shared
+[response headers](/docs/reference/inference#response-headers), including a gateway request ID.
+
+Unexpected server failures may return a plain-text `500` body; the shared response headers still apply.
 
 ## Streaming errors
 

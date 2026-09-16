@@ -3,22 +3,22 @@ title: 'Configuration reference'
 description: 'Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores.'
 ---
 
-TokKeeper runtime commands read YAML from `--config`, then `TOKKEEPER_CONFIG`. Gateway commands use
-`./.tokkeeper/tokkeeper.yml`, falling back to a shared `./tokkeeper.yml` when the standalone file is absent. Control-plane
-commands use `./tokkeeper.yml`. The all-in-one image uses `deploy/docker/tokkeeper.yml`.
+airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
+`./.airmux/airmux.yml`, falling back to a shared `./airmux.yml` when the standalone file is absent. Control-plane
+commands use `./airmux.yml`. The all-in-one image uses `deploy/docker/airmux.yml`.
 
 ## Docker Compose variables
 
 | Variable                        | Default                         | Purpose                                     |
 | ------------------------------- | ------------------------------- | ------------------------------------------- |
-| `TOKKEEPER_PORT`                | `8080`                          | Published host port                         |
-| `TOKKEEPER_PUBLIC_URL`          | `http://localhost:8080`         | Compose value mapped to the console origin  |
-| `TOKKEEPER_PUBLIC_SIGNUP`       | `false`                         | Allow account creation after instance claim |
-| `POSTGRES_PASSWORD`             | `tokkeeper`                     | Initial local Postgres password             |
-| `TOKKEEPER_IMAGE`               | `tokkeeper:local`               | All-in-one image override                   |
-| `TOKKEEPER_CONTROL_PLANE_IMAGE` | `tokkeeper-control-plane:local` | Split control-plane image override          |
-| `TOKKEEPER_DATA_PLANE_IMAGE`    | `tokkeeper-data-plane:local`    | Split gateway image override                |
-| `TOKKEEPER_CONSOLE_IMAGE`       | `tokkeeper-console:local`       | Split console image override                |
+| `AIRMUX_PORT`                | `8080`                          | Published host port                         |
+| `AIRMUX_PUBLIC_URL`          | `http://localhost:8080`         | Compose value mapped to the console origin  |
+| `AIRMUX_PUBLIC_SIGNUP`       | `false`                         | Allow account creation after instance claim |
+| `POSTGRES_PASSWORD`             | `airmux`                     | Initial local Postgres password             |
+| `AIRMUX_IMAGE`               | `airmux:local`               | All-in-one image override                   |
+| `AIRMUX_CONTROL_PLANE_IMAGE` | `airmux-control-plane:local` | Split control-plane image override          |
+| `AIRMUX_DATA_PLANE_IMAGE`    | `airmux-data-plane:local`    | Split gateway image override                |
+| `AIRMUX_CONSOLE_IMAGE`       | `airmux-console:local`       | Split console image override                |
 
 Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
 migration while the application keeps the pooled URL.
@@ -27,15 +27,15 @@ migration while the application keeps the pooled URL.
 
 ```yaml
 vars:
-  cache_dir: .tokkeeper
+  cache_dir: .airmux
 
 control_plane:
   database:
-    url: ${env:DATABASE_URL:-postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper}
+    url: ${env:DATABASE_URL:-postgresql+asyncpg://airmux:airmux@127.0.0.1:5432/airmux}
   bootstrap:
     token: ${file:${var:cache_dir}/dataplane.key}
-  console_url: ${env:TOKKEEPER_CONSOLE_URL:-http://127.0.0.1:5000}
-  public_signup: ${env:TOKKEEPER_PUBLIC_SIGNUP:-false}
+  console_url: ${env:AIRMUX_CONSOLE_URL:-http://127.0.0.1:5000}
+  public_signup: ${env:AIRMUX_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
     root: ${var:cache_dir}/secrets
@@ -44,7 +44,7 @@ data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane_link
-      url: ${env:TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
@@ -88,9 +88,16 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | Kind      | Use                                                                            |
 | --------- | ------------------------------------------------------------------------------ |
 | `sqlite`  | Durable queued usage export; requires a control-plane link and cache directory |
+| `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
 SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
+
+The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
+files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
+Threads and processes sharing a local file serialize their writes. Restarting appends to the existing file.
+It has no export queue, deduplication, rotation, or `fsync` guarantee; health reports zero pending events.
+Use it on a local POSIX filesystem. File write failures propagate to the request instead of silently discarding usage.
 
 ## Secret stores
 
@@ -101,5 +108,5 @@ SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory 
 | `insecure_database` | Postgres-backed prototype store                                        |
 | `memory`            | Tests and ephemeral development                                        |
 
-The environment store checks `TOKKEEPER_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
+The environment store checks `AIRMUX_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
 are not part of its lookup, so it cannot isolate tenant-specific values.

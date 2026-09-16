@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from contract import EnvStoreConfig
+from contract import EnvStoreConfig, uuid7
 from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
 from contract.taxonomy import TaxonomySpec, parse_taxonomy
 from data_plane.bundle.config import LocalBundleConfig
 from data_plane.bundle.holder import BundleSet
-from data_plane.bundle.local import LocalBundleSpec, compile_local, load_local
+from data_plane.bundle.local import LocalBundleSpec, LocalKey, compile_local, load_local
 from data_plane.config import load_config
 
 if TYPE_CHECKING:
@@ -46,7 +46,8 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
         taxonomy_reference = os.path.relpath(taxonomy_path.resolve(), directory.resolve())
         taxonomy_file = {}
     key = f"sk-inf-{secrets.token_urlsafe(32)}"
-    spec = LocalBundleSpec(keys=[key], taxonomy=taxonomy)
+    user_id = uuid7()
+    spec = LocalBundleSpec(keys=[LocalKey(token=key, user_id=user_id)], taxonomy=taxonomy)
     BundleSet.from_bundles((compile_local(spec, taxonomy, spec.model_dump_json(), datetime.now(tz=UTC)),))
     config = {
         "data_plane": {
@@ -55,14 +56,14 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
             "events": {"kind": "devnull"},
         }
     }
-    bundle = {"keys": ["${file:inference.key}"], "taxonomy": taxonomy_reference}
+    bundle = {"keys": [{"token": "${file:inference.key}", "user_id": str(user_id)}], "taxonomy": taxonomy_reference}
     write_new_configuration(
         directory,
         {
             ".gitignore": GENERATED_STATE_GITIGNORE,
             "inference.key": key + "\n",
             "bundle.yml": yaml.safe_dump(bundle, sort_keys=False),
-            "tokkeeper.yml": yaml.safe_dump(config, sort_keys=False),
+            "airmux.yml": yaml.safe_dump(config, sort_keys=False),
             **taxonomy_file,
         },
     )

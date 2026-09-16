@@ -3,13 +3,13 @@ title: "Authentication and scopes"
 description: "Distinguish browser sessions, management keys, inference keys, principals, roles, and tenancy scopes."
 ---
 
-TokKeeper has separate credentials for management and inference. They are not interchangeable.
+airmux has separate credentials for management and inference. They are not interchangeable.
 
 | Credential | Prefix or transport | Purpose |
 | --- | --- | --- |
 | Browser session | Secure cookie | Console and browser-only management flows |
 | Management key | `sk-cp-` | Permission-limited `/api/v1` automation |
-| Inference key | `sk-inf-` | Model requests for one workspace |
+| Inference key | `sk-inf-` | Model requests and model discovery for one workspace |
 | Provider credential | Provider-specific | Upstream authentication selected by the gateway |
 
 ## Tenancy scopes
@@ -42,7 +42,7 @@ the target scope. A management key cannot delegate authority its caller or key p
 ## Create a management key
 
 ```bash
-tokkeeper management-keys create \
+airmux management-keys create \
   --org "$ORG_ID" \
   --workspace production \
   --label deployment-automation \
@@ -55,11 +55,14 @@ The token is shown once. Revoking a management key also revokes keys delegated f
 ## Inference keys
 
 ```bash
-tokkeeper inference-keys create checkout-service --workspace production
+airmux inference-keys create checkout-service --workspace production
 ```
 
-An inference key authenticates one workspace's requests and is the unit targeted by selected-key policies. Revocation
+An inference key authenticates one workspace's model requests and model discovery and is the unit targeted by selected-key policies. Revocation
 becomes effective after the gateway adopts a bundle that no longer contains its hash.
+
+Send the key through `Authorization: Bearer` or `x-api-key`. See the [inference API overview](/docs/reference/inference)
+for credential precedence and playground-cookie requirements.
 
 See the [management API](/docs/reference/management-api) for bearer authentication and the
 [CLI reference](/docs/reference/cli) for context management.

@@ -5,7 +5,7 @@ from itertools import groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from contract.policies import MAX_WORKSPACE_RULES, Fallback, PolicyEntry, RequestMatch, RuleEntry, SelectedKeys
+from contract.policies import MAX_WORKSPACE_RULES, Fallback, PolicyEntry, RequestMatch, RuleEntry, SelectedKeys, SelectedUsers
 from data_plane.policy_actions import require_evaluator
 from data_plane.requirements import required_capabilities
 
@@ -22,6 +22,7 @@ class CompiledRule:
     policy: PolicyEntry
     rule: RuleEntry
     selected_key_ids: frozenset[str] | None
+    selected_user_ids: frozenset[UUID] | None
     models: frozenset[str]
     capabilities: frozenset[Capability]
 
@@ -65,6 +66,7 @@ def compile_policies(policies: tuple[PolicyEntry, ...], rules: tuple[RuleEntry, 
                     policy=policy,
                     rule=rule,
                     selected_key_ids=(frozenset(policy.definition.target.key_ids) if isinstance(policy.definition.target, SelectedKeys) else None),
+                    selected_user_ids=(frozenset(policy.definition.target.user_ids) if isinstance(policy.definition.target, SelectedUsers) else None),
                     models=frozenset(rule.definition.match.models) if isinstance(rule.definition.match, RequestMatch) else frozenset(),
                     capabilities=frozenset(rule.definition.match.capabilities) if isinstance(rule.definition.match, RequestMatch) else frozenset(),
                 )
@@ -85,12 +87,28 @@ def matching_rules(request: CanonicalRequest, key: KeyEntry, index: PolicyIndex)
     return tuple(entry for entry in candidates if _matches(entry, request, key, capabilities))
 
 
+def matching_model_rules(model_id: str, key: KeyEntry, index: PolicyIndex) -> tuple[CompiledRule, ...]:
+    return tuple(
+        entry
+        for entry in index.get(key.workspace_id, ())
+        if _matches_model(entry, model_id, key)
+        and (not isinstance(match := entry.rule.definition.match, RequestMatch) or (match.stream is None and not entry.capabilities))
+    )
+
+
 def _matches(entry: CompiledRule, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[Capability]) -> bool:
-    if entry.selected_key_ids is not None and key.key_id not in entry.selected_key_ids:
+    if not _matches_model(entry, request.model, key):
         return False
     match = entry.rule.definition.match
     if not isinstance(match, RequestMatch):
         return True
-    model_matches = not entry.models or request.model in entry.models
     stream_matches = match.stream is None or request.stream is match.stream
-    return model_matches and stream_matches and entry.capabilities <= capabilities
+    return stream_matches and entry.capabilities <= capabilities
+
+
+def _matches_model(entry: CompiledRule, model_id: str, key: KeyEntry) -> bool:
+    return (
+        (entry.selected_key_ids is None or key.key_id in entry.selected_key_ids)
+        and (entry.selected_user_ids is None or key.user_id in entry.selected_user_ids)
+        and (not entry.models or model_id in entry.models)
+    )

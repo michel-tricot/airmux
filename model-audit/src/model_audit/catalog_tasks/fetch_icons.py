@@ -11,7 +11,7 @@ variant in the set, icon_color names the monochrome slug, so a consumer can alwa
 either without a null check. Where a vendor has no mark at all, a monogram is generated so
 the same holds; those are the only files here not traceable to lobehub.
 
-    uv run tokkeeper-audit providers sync --only icons
+    uv run airmux-audit providers sync --only icons
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ ROOT = TAXONOMY
 OUT = ROOT / "icons"
 VERSION = "1.94.0"
 BASE = f"https://unpkg.com/@lobehub/icons-static-svg@{VERSION}/icons"
-UA = {"User-Agent": "tokkeeper-taxonomy/1.0"}
+UA = {"User-Agent": "airmux-taxonomy/1.0"}
 
 
 def normalize(svg: str, slug: str) -> str:
@@ -46,7 +46,7 @@ def normalize(svg: str, slug: str) -> str:
     # namespace every locally defined id so marks can share a document
     local_ids = set(re.findall(r'\bid="([^"]+)"', svg))
     for raw in sorted(local_ids, key=len, reverse=True):
-        safe = f"tokkeeper-{slug}-{raw}"
+        safe = f"airmux-{slug}-{raw}"
         svg = svg.replace(f'id="{raw}"', f'id="{safe}"')
         svg = svg.replace(f"url(#{raw})", f"url(#{safe})")
         svg = svg.replace(f'href="#{raw}"', f'href="#{safe}"')

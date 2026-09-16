@@ -12,10 +12,10 @@ import pytest
 
 @pytest.fixture
 def distributions():
-    directory = os.environ.get("TOKKEEPER_DISTRIBUTION_DIR")
+    directory = os.environ.get("AIRMUX_DISTRIBUTION_DIR")
     if directory is None:
-        pytest.skip("set TOKKEEPER_DISTRIBUTION_DIR to test built distributions")
-    return sorted(Path(directory).glob("tokkeeper-*"))
+        pytest.skip("set AIRMUX_DISTRIBUTION_DIR to test built distributions")
+    return sorted(Path(directory).glob("airmux-*"))
 
 
 def distribution_readme(artifact):
@@ -30,9 +30,9 @@ def distribution_readme(artifact):
             assert metadata_file is not None
             metadata = metadata_file.read()
 
-    readme = BytesParser(policy=default).parsebytes(metadata).get_payload()
-    assert isinstance(readme, str)
-    return readme
+    readme = BytesParser(policy=default).parsebytes(metadata).get_payload(decode=True)
+    assert isinstance(readme, bytes)
+    return readme.decode()
 
 
 def test_published_distributions_use_the_repository_readme(distributions):

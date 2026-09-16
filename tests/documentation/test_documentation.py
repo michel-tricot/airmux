@@ -20,13 +20,13 @@ LINK = re.compile(r"(?<!!)\[[^\]]+\]\((/docs(?:/[^)#?]+)?)(?:#[^)]+)?\)")
 LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^)#?]+)(?:#[^)]+)?\)")
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
-PUBLIC_REPOSITORY = "https://github.com/michel-tricot/tokkeeper"
-PUBLISHED_PROJECT = ROOT / "packaging/tokkeeper/pyproject.toml"
+PUBLIC_REPOSITORY = "https://github.com/michel-tricot/airmux"
+PUBLISHED_PROJECT = ROOT / "packaging/airmux/pyproject.toml"
 INTERNAL_DISTRIBUTIONS = {
-    "tokkeeper-api-models",
-    "tokkeeper-contract",
-    "tokkeeper-control-plane",
-    "tokkeeper-data-plane",
+    "airmux-api-models",
+    "airmux-contract",
+    "airmux-control-plane",
+    "airmux-data-plane",
 }
 BUNDLED_PROJECTS = (
     "apps/cli/pyproject.toml",
@@ -122,22 +122,22 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     expected_badges = (
         "actions/workflows/ci.yml/badge.svg",
-        "img.shields.io/pypi/v/tokkeeper",
+        "img.shields.io/pypi/v/airmux",
         "img.shields.io/badge/python-3.13%2B",
         "img.shields.io/badge/license-Elastic--2.0",
     )
     quickstart_commands = (
-        "uv tool install tokkeeper",
-        "tokkeeper gateway init",
-        "tokkeeper gateway serve",
+        "uv tool install airmux",
+        "airmux gateway init",
+        "airmux gateway serve",
         "/inf/v1/chat/completions",
     )
     headings = re.findall(r"^## (.+)$", readme, re.MULTILINE)
 
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
-    assert "Any client that can target one of TokKeeper's exposed HTTP APIs" in readme
-    assert "x-tokkeeper-dialect: openai_native" not in readme.lower()
+    assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
+    assert "x-airmux-dialect: openai_native" not in readme.lower()
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
@@ -149,10 +149,10 @@ def test_public_links_use_the_current_repository() -> None:
     assert occurrences == []
 
 
-def test_tokkeeper_is_the_only_published_python_distribution() -> None:
+def test_airmux_is_the_only_published_python_distribution() -> None:
     project = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]
 
-    assert project["name"] == "tokkeeper"
+    assert project["name"] == "airmux"
     assert project["description"]
     assert project["urls"]["Repository"] == PUBLIC_REPOSITORY
     dependencies = {re.split(r"[\[<>=!~]", dependency, maxsplit=1)[0] for dependency in project["dependencies"]}
@@ -236,7 +236,7 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
 
 def test_public_examples_use_a_neutral_smoke_prompt() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    assert "Reply with exactly: tokkeeper ready" not in documents
+    assert "Reply with exactly: airmux ready" not in documents
     assert "Say hello in one word." in documents
 
 
@@ -248,7 +248,7 @@ def test_documentation_does_not_name_comparison_products() -> None:
 
 def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    commands = re.findall(r"^\s*tokkeeper quickstart --url \S+$", documents, re.MULTILINE)
+    commands = re.findall(r"^\s*airmux quickstart --url \S+$", documents, re.MULTILINE)
 
     assert commands
     assert "docker compose run" not in documents

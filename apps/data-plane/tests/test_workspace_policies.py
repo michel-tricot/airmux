@@ -30,7 +30,7 @@ from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition, Rul
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
-from data_plane.policy import Allow, Deny, evaluate
+from data_plane.policy import Allow, Deny, evaluate, model_allowed
 from data_plane.routing import RoutePlan, plan_routes
 
 
@@ -59,7 +59,7 @@ def policy(action, *, match=None, workspace=WORKSPACE, target=None):
         workspace_id=workspace,
         name="test",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rule_ids": [policy_rule.id]}),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rule_ids": [policy_rule.id]}),
     )
 
 
@@ -70,7 +70,7 @@ def policy_with_rules(rules, *, workspace=WORKSPACE, target=None):
         workspace_id=workspace,
         name="test",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rule_ids": [item.id for item in rule_entries]}),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rule_ids": [item.id for item in rule_entries]}),
     )
 
 
@@ -264,7 +264,7 @@ def test_one_rule_is_shared_by_multiple_policy_targets():
         workspace_id=WORKSPACE,
         name="All traffic",
         priority=10,
-        definition=PolicyDefinition(target={"kind": "all_keys"}, rule_ids=(shared.id,)),
+        definition=PolicyDefinition(target={"kind": "workspace"}, rule_ids=(shared.id,)),
     )
     second = PolicyEntry(
         id=uuid7(),
@@ -350,14 +350,24 @@ def test_invalid_rule_references_are_rejected_before_bundle_admission(invalid):
 
 
 @pytest.mark.parametrize("stream", [False, True])
-@pytest.mark.parametrize("restricted", [False, True])
+@pytest.mark.parametrize(
+    "restriction", [(restricted, target) for restricted in (False, True) for target in ("workspace", "selected_users", "selected_keys")]
+)
 @respx.mock
-def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_path, http_client, stream, restricted):
+def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_path, http_client, stream, restriction):
+    restricted, target_kind = restriction
     api_key, key = make_key()
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     policies = [policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})]
+    target = (
+        {"kind": "workspace"}
+        if target_kind == "workspace"
+        else {"kind": "selected_users", "user_ids": [key.user_id]}
+        if target_kind == "selected_users"
+        else {"kind": "selected_keys", "key_ids": [key.key_id]}
+    )
     if restricted:
-        policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, match={"kind": "request", "models": [MODEL.model_id]}))
+        policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, match={"kind": "request", "models": [MODEL.model_id]}, target=target))
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(
         tmp_path,
@@ -458,3 +468,40 @@ def test_repeated_request_preserves_rate_limited_status_during_credential_cooldo
             response = client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {api_key}"}, json=request().model_dump(mode="json"))
             assert response.status_code == 429
         assert response.json()["error"] == {"code": "429", "message": "rate limited"}
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_user_targets_cover_all_principal_credentials_and_compose_with_workspace_and_key_limits(stream):
+    _, key = make_key()
+    entries = [
+        policy({"kind": "request_limits", "max_output_tokens": 4096}, target={"kind": "workspace"}),
+        policy({"kind": "request_limits", "max_output_tokens": 1024}, target={"kind": "selected_users", "user_ids": [key.user_id]}),
+        policy({"kind": "request_limits", "max_output_tokens": 512}, target={"kind": "selected_keys", "key_ids": [key.key_id]}),
+    ]
+    _, snap = snapshot(entries)
+    incoming = request().model_copy(update={"stream": stream, "max_tokens": 513})
+    assert isinstance(evaluate(incoming, key, snap), Deny)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 512}), key, snap), Allow)
+    for credential_id in ("second-key", "playground-session"):
+        credential = key.model_copy(update={"key_id": credential_id})
+        assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 1025}), credential, snap), Deny)
+        assert isinstance(evaluate(incoming, credential, snap), Allow)
+    other = key.model_copy(update={"key_id": "other", "user_id": uuid7()})
+    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 1025}), other, snap), Allow)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 4097}), other, snap), Deny)
+    sibling = key.model_copy(update={"workspace_id": uuid7()})
+    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 4097}), sibling, snap), Allow)
+
+
+def test_user_targets_share_discovery_and_enforcement_matching():
+    _, key = make_key()
+    entry = policy({"kind": "deny", "message": "Restricted user"}, target={"kind": "selected_users", "user_ids": [key.user_id]})
+    _, snap = snapshot([entry])
+    assert snap.policy_index[WORKSPACE][0].selected_user_ids == frozenset({key.user_id})
+    for credential_id in (key.key_id, "second-key", "playground-session"):
+        credential = key.model_copy(update={"key_id": credential_id})
+        assert not model_allowed(MODEL, credential, snap)
+        assert isinstance(evaluate(request(), credential, snap), Deny)
+    other = key.model_copy(update={"user_id": uuid7()})
+    assert model_allowed(MODEL, other, snap)
+    assert isinstance(evaluate(request(), other, snap), Allow)

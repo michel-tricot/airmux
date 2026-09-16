@@ -11,12 +11,12 @@ You supply the model taxonomy and inference keys through files. Provider credent
 You need Python 3.13+ and uv. Install the CLI with the gateway runtime:
 
 ```bash
-uv tool install tokkeeper
+uv tool install airmux
 ```
 
 The installed gateway runs outside the checkout and includes a starter taxonomy.
 
-If your shell cannot find `tokkeeper`, run `uv tool update-shell` and restart the shell.
+If your shell cannot find `airmux`, run `uv tool update-shell` and restart the shell.
 
 ## Initialize and start
 
@@ -24,13 +24,13 @@ Initialize a directory with the shipped taxonomy:
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-tokkeeper gateway init
-tokkeeper gateway validate
-tokkeeper gateway serve
+airmux gateway init
+airmux gateway validate
+airmux gateway serve
 ```
 
 `init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
-existing files. The default directory is `.tokkeeper`; `--directory` selects another. It copies the shipped taxonomy to
+existing files. The default directory is `.airmux`; `--directory` selects another. It copies the shipped taxonomy to
 `taxonomy.yml` and does not print the key. Pass `--taxonomy PATH` to reference an existing taxonomy without copying it. The
 initializer finishes with copyable commands that select the first model backed by a provider variable already in the
 environment, or the taxonomy's first model when none is set. The commands start the gateway, check readiness, load the
@@ -55,10 +55,10 @@ It does not contact providers or prove that their credentials work. A real infer
 Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
 
 ```bash
-export TOKKEEPER_INFERENCE_KEY="$(cat .tokkeeper/inference.key)"
+export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
 curl --fail http://127.0.0.1:8080/readyz
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
@@ -68,7 +68,7 @@ and canonical callers use the same gateway. See the [inference reference](/docs/
 
 ## Configuration and taxonomy
 
-`.tokkeeper/tokkeeper.yml` selects the local bundle, environment secret store, and usage event sink:
+`.airmux/airmux.yml` selects the local bundle, environment secret store, and usage event sink:
 
 ```yaml
 data_plane:
@@ -82,11 +82,12 @@ data_plane:
     kind: devnull
 ```
 
-The bundle path is relative to this configuration file. `.tokkeeper/bundle.yml` contains the keys, taxonomy reference, and policies:
+The bundle path is relative to this configuration file. `.airmux/bundle.yml` contains the keys, taxonomy reference, and policies:
 
 ```yaml
 keys:
-  - ${file:inference.key}
+  - token: ${file:inference.key}
+    user_id: 00000000-0000-0000-0000-000000000001
 taxonomy: taxonomy.yml
 rules: []
 policies: []
@@ -97,7 +98,7 @@ the same taxonomy schema. The file contains `providers` and `models`; pricing, c
 overrides, and upstream names are used directly from it. Provider icons are accepted as catalog metadata but do not enter
 the inference bundle. Unknown fields and duplicate taxonomy entries are rejected.
 
-With the default setup, edit `.tokkeeper/taxonomy.yml`. When initialized with `--taxonomy PATH`, edit that supplied file instead.
+With the default setup, edit `.airmux/taxonomy.yml`. When initialized with `--taxonomy PATH`, edit that supplied file instead.
 
 For a small custom catalog, `taxonomy` can instead contain those two lists inline. Choose one source: there is no
 implicit merge or precedence between an external file and inline definitions. Every model in the selected taxonomy is
@@ -109,29 +110,49 @@ Requests already in progress finish against the snapshot they started with. Inva
 good snapshot keeps serving. If no valid snapshot has ever loaded, inference and `/readyz` return `503`. Restarting requires
 valid files again; local mode does not persist a separate last-good cache.
 
-You can add plaintext inference tokens to `keys` or use file or environment references. Tokens must start with `sk-inf-`, contain
+Each entry in `keys` requires a `token` and a principal UUID in `user_id`. Use the same UUID for keys belonging to one principal.
+`init` mints the initial principal UUID. Tokens can be plaintext or file or environment references. Tokens must start with `sk-inf-`, contain
 no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
 are fixed for a running process; changing an environment-based key or provider credential requires restarting the service.
 Keep plaintext key files private and out of version control.
 
 ## Run the same configuration in a container
 
-After initialization above, run from the directory containing `.tokkeeper/` and the referenced taxonomy:
+After initialization above, run from the directory containing `.airmux/` and the referenced taxonomy:
 
 ```bash
-docker build --target data-plane -t tokkeeper-gateway:local .
+docker build --target data-plane -t airmux-gateway:local .
 docker run --rm --user "$(id -u):$(id -g)" \
   --mount "type=bind,source=$PWD,target=/config,readonly" \
   -e OPENAI_API_KEY -p 8080:8081 \
-  tokkeeper-gateway:local serve --config /config/.tokkeeper/tokkeeper.yml --host 0.0.0.0 --port 8081
+  airmux-gateway:local serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
 ```
 
-The image entry point is `tokkeeper gateway`, so `validate --config ...` and `serve --help` work as container arguments.
+The image entry point is `airmux gateway`, so `validate --config ...` and `serve --help` work as container arguments.
 Matching the host user allows it to read the private generated key. The read-only mount preserves the relative taxonomy
 reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No control plane or database
 is needed for this configuration.
 
+## Collect usage events locally
+
+Replace the default event sink to collect usage without a control plane:
+
+```yaml
+data_plane:
+  events:
+    kind: file
+    path: usage/events.jsonl
+```
+
+Keep the existing `bundle` and `secrets` sections. The path resolves against the configuration file's directory.
+Every line is a versioned usage event from the shared contract, including routed attempts, policy denials, and
+cancelled streams. Authentication and request parsing failures do not create usage events.
+Events are readable while the gateway runs and append across restarts. Fallback produces one event per attempted
+route, with the same request ID connecting the attempts. See [event outboxes](/docs/reference/configuration#event-outboxes)
+for filesystem and durability semantics.
+
 ## Standalone limits
 
-The default `devnull` event sink discards usage events. Standalone mode has no management API, console, or usage history.
+The default `devnull` event sink discards usage events. The optional file sink provides a local usage log.
+Standalone mode has no management API, console, or managed usage history.
 All keys share one local organization and workspace, with one environment credential per provider.

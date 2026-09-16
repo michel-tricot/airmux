@@ -36,11 +36,28 @@ from data_plane.outbox import SqliteOutbox
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from starlette.applications import Starlette
+    from starlette.testclient import TestClient
+    from starlette.types import ASGIApp
+
+
+class GatewayTransport(httpx.BaseTransport):
+    def __init__(self, client: TestClient) -> None:
+        self.client = client
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        response = self.client.request(
+            request.method,
+            request.url.raw_path.decode(),
+            headers=request.headers,
+            content=request.read(),
+        )
+        return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
 
 NOW = datetime.now(tz=UTC)
 ORG = uuid7()
 WORKSPACE = uuid7()
+USER = uuid7()
 
 CONTROL_PLANE_URL = "http://cp.test"
 
@@ -73,10 +90,10 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
     return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
 
 
-def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE):
+def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE, user: UUID = USER):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, token_hash=token_hash(token))
+    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token))
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -169,7 +186,7 @@ TEXT_NONSTREAM = {
 
 @dataclass(frozen=True)
 class BootedApp:
-    app: Starlette
+    app: ASGIApp
     api_key: str
 
 
@@ -199,7 +216,7 @@ def api_key(booted: BootedApp) -> str:
 
 
 @pytest.fixture
-def dp_app(booted: BootedApp) -> Starlette:
+def dp_app(booted: BootedApp) -> ASGIApp:
     return booted.app
 
 

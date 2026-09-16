@@ -4,7 +4,7 @@ SPECS maps (provider, ingress) to the spec URL and the path within it. Auto-dete
 completion path is unreliable: specs carry several chat-shaped paths, and the right one
 differs per vendor, so it is recorded rather than guessed.
 
-    uv run tokkeeper-audit providers sync --only schemas
+    uv run airmux-audit providers sync --only schemas
 """
 
 from __future__ import annotations

@@ -43,23 +43,41 @@ function fallbackRule(id: string, name: string): RuleOut {
   };
 }
 
-it('selects all keys or individual keys from one Applies to control', async () => {
+it('selects workspace, users including service accounts, and individual keys explicitly', async () => {
   const user = userEvent.setup();
-  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[inferenceKey]} rules={[rule]} />);
-  const appliesTo = screen.getByRole('button', { name: 'Applies to' });
-  expect(appliesTo).toHaveTextContent(/^All keys$/);
+  const principal = { user_id: '01990aa3-4b4c-7000-8000-000000000003', email: 'service@example.com', name: 'CI', service_account: true };
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      users={[principal]}
+      keys={[inferenceKey]}
+      rules={[rule]}
+    />,
+  );
+  const appliesTo = screen.getByRole('combobox', { name: 'Applies to' });
+  expect(appliesTo).toHaveTextContent('Workspace');
   expect(screen.getByText('Includes future inference keys and playground sessions.')).toBeVisible();
-
   await user.click(appliesTo);
-  expect(screen.getByRole('menuitemcheckbox', { name: 'All keys' })).toBeChecked();
+  await user.click(screen.getByRole('option', { name: 'Selected users' }));
+  await user.click(screen.getByRole('button', { name: 'Selected users' }));
+  await user.click(screen.getByRole('menuitemcheckbox', { name: /CI.*service account/ }));
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('button', { name: 'Selected users' })).toHaveTextContent('Selected users (1)');
+  await user.click(appliesTo);
+  await user.click(screen.getByRole('option', { name: 'Selected keys' }));
+  await user.click(screen.getByRole('button', { name: 'Selected keys' }));
   await user.click(screen.getByRole('menuitemcheckbox', { name: 'Production app' }));
-  expect(appliesTo).toHaveTextContent('Selected keys (1)');
-  expect(screen.getByRole('menuitemcheckbox', { name: 'Production app' })).toBeChecked();
+  await user.keyboard('{Escape}');
+  expect(screen.getByRole('button', { name: 'Selected keys' })).toHaveTextContent('Selected keys (1)');
 });
 
 it('attaches and removes reusable rules', async () => {
   const user = userEvent.setup();
-  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule]} />);
+  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} users={[]} keys={[]} rules={[rule]} />);
   await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
   await user.click(screen.getByRole('option', { name: /Safe credentials/ }));
   expect(screen.getByText('Rules')).toBeVisible();
@@ -70,7 +88,7 @@ it('attaches and removes reusable rules', async () => {
 });
 
 it('uses policy reordering as the only priority control', () => {
-  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule]} />);
+  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} users={[]} keys={[]} rules={[rule]} />);
 
   expect(screen.queryByLabelText(/Priority/)).not.toBeInTheDocument();
 });
@@ -86,6 +104,7 @@ it('offers at most one fallback rule per policy', async () => {
       onOpenChange={() => {}}
       onSubmit={async () => {}}
       pending={false}
+      users={[]}
       keys={[]}
       rules={[firstFallback, secondFallback, rule]}
       ruleComposer={{
@@ -114,7 +133,18 @@ it('offers at most one fallback rule per policy', async () => {
 it('searches existing shared rules before attaching one', async () => {
   const user = userEvent.setup();
   const otherRule = { ...rule, id: '01990aa3-4b4c-7000-8000-000000000005', name: 'Other rule' };
-  render(<PolicyEditor policy={null} open onOpenChange={() => {}} onSubmit={async () => {}} pending={false} keys={[]} rules={[rule, otherRule]} />);
+  render(
+    <PolicyEditor
+      policy={null}
+      open
+      onOpenChange={() => {}}
+      onSubmit={async () => {}}
+      pending={false}
+      users={[]}
+      keys={[]}
+      rules={[rule, otherRule]}
+    />,
+  );
 
   await user.click(screen.getByRole('button', { name: 'Add existing rule' }));
   await user.type(screen.getByRole('combobox', { name: 'Search shared rules' }), 'safe');
@@ -142,6 +172,7 @@ it('creates and selects a shared rule without losing the policy draft', async ()
         submittedPolicy = payload;
       }}
       pending={false}
+      users={[]}
       keys={[]}
       rules={[]}
       ruleComposer={{
@@ -193,6 +224,7 @@ it('shows shared rule usage before editing from a policy', async () => {
       onOpenChange={() => {}}
       onSubmit={async () => {}}
       pending={false}
+      users={[]}
       keys={[]}
       rules={[rule]}
       ruleComposer={{
@@ -235,6 +267,7 @@ it('prevents inline creation of a second fallback and allows it after removal', 
       onOpenChange={() => {}}
       onSubmit={async () => {}}
       pending={false}
+      users={[]}
       keys={[]}
       rules={[fallback]}
       ruleComposer={{

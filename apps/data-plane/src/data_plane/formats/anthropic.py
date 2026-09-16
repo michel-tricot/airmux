@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 CACHE_CONTROL = {"type": "ephemeral"}
-REASONING_IDENTITY_PREFIX = "tokkeeper-reasoning-v1:"
+REASONING_IDENTITY_PREFIX = "airmux-reasoning-v1:"
 
 
 def reasoning_signature(reasoning_id: str | None, signature: str | None) -> str:
@@ -339,7 +339,12 @@ def usage_of(reported: UpstreamUsage | None) -> CanonicalUsage:
 
     A usage block with no recognizable counts reads as absent: an unknown reporting shape must
     surface as an estimate, never as a free request."""
-    if reported is None or (reported.input_tokens == 0 and reported.output_tokens == 0):
+    if reported is None or (
+        reported.input_tokens == 0
+        and reported.output_tokens == 0
+        and reported.cache_read_input_tokens == 0
+        and reported.cache_creation_input_tokens == 0
+    ):
         return CanonicalUsage(estimated=True)
     return CanonicalUsage(
         input_tokens=reported.input_tokens + reported.cache_read_input_tokens + reported.cache_creation_input_tokens,

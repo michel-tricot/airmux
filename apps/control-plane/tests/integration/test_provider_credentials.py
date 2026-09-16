@@ -143,7 +143,7 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
 
         async def vault_connections():
             result = await current_session().execute(
-                text("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'tokkeeper-insecure-vault'")
+                text("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'airmux-insecure-vault'")
             )
             return result.scalar_one()
 

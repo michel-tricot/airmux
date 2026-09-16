@@ -21,7 +21,7 @@ def create_rules(client, base, headers):
 
 
 def policy_definition(rules, target=None):
-    return {"target": target or {"kind": "all_keys"}, "rule_ids": [rule["id"] for rule in rules]}
+    return {"target": target or {"kind": "workspace"}, "rule_ids": [rule["id"] for rule in rules]}
 
 
 def test_workspace_policy_crud_validation_and_isolation(tmp_path):
@@ -198,3 +198,81 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         reader = cp.headers(org, permissions=[Permission.policies_read])
         assert client.get(path, headers=reader).status_code == 200
         assert client.post(path, headers=reader, json={"name": "Forbidden", "definition": definition}).status_code == 403
+
+
+def test_selected_users_validate_workspace_eligibility_and_survive_member_removal(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app, base_url="https://testserver") as client:
+        root = cp.headers()
+        org = make_org(client, root, "user-targets")
+        headers = cp.headers(org)
+        workspace = make_workspace(client, headers, "production")
+        sibling = make_workspace(client, headers, "development")
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
+        member = client.post("/api/v1/auth/signup", json={"email": "target@example.com", "name": "Target", "password": "hunter2-hunter2"}).json()[
+            "data"
+        ]
+        user_id = member["user_id"]
+        rules = create_rules(client, base, headers)
+        body = {"name": "User restrictions", "definition": policy_definition(rules, {"kind": "selected_users", "user_ids": [user_id]})}
+        assert client.post(f"{base}/policies", headers=headers, json=body).status_code == 422
+        assert client.put(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers, json={"role": "member"}).status_code == 200
+        assert client.post(f"{base}/policies", headers=headers, json=body).status_code == 422
+        assert client.put(f"{base}/members/{user_id}", headers=headers, json={"role": "member"}).status_code == 200
+        created = client.post(f"{base}/policies", headers=headers, json=body)
+        assert created.status_code == 200, created.text
+        policy_id = created.json()["data"]["id"]
+        candidates = client.get(f"{base}/policy-users", headers=headers).json()["data"]
+        assert user_id in {user["user_id"] for user in candidates}
+        sibling_base = f"/api/v1/organizations/{org}/workspaces/{sibling}"
+        sibling_rules = create_rules(client, sibling_base, headers)
+        assert (
+            client.post(
+                f"{sibling_base}/policies",
+                headers=headers,
+                json={**body, "definition": policy_definition(sibling_rules, body["definition"]["target"])},
+            ).status_code
+            == 422
+        )
+        session_headers = {"X-Requested-With": "fetch"}
+        keys = [client.post(f"{base}/inference-keys", headers=session_headers, json={"label": name}).json()["data"] for name in ("First", "Second")]
+        playground = client.put(f"{base}/playground-session", headers=session_headers).json()["data"]
+        before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
+        credential_ids = {key["id"] for key in keys} | {playground["id"]}
+        assert {key.key_id for key in before.keys} == credential_ids
+        assert {str(key.user_id) for key in before.keys} == {user_id}
+        assert client.delete(f"{base}/members/{user_id}", headers=headers).status_code == 200
+        assert client.put(f"{base}/playground-session", headers=session_headers).status_code == 403
+        assert client.post(f"{base}/inference-keys", headers=session_headers, json={"label": "New"}).status_code == 403
+        assert user_id not in {user["user_id"] for user in client.get(f"{base}/policy-users", headers=headers).json()["data"]}
+        retained = client.get(f"{base}/policies", headers=headers).json()["data"]
+        assert retained[0]["id"] == policy_id
+        assert retained[0]["definition"]["target"] == body["definition"]["target"]
+        after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
+        assert {key.key_id for key in after.keys} == credential_ids
+        assert after.policies == before.policies
+        assert client.delete(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers).status_code == 200
+        removed = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
+        assert removed.keys == after.keys
+        assert removed.policies == after.policies
+
+
+def test_policy_user_picker_includes_service_accounts_and_org_administrators(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        org = make_org(client, root, "policy-users")
+        headers = cp.headers(org)
+        workspace = make_workspace(client, headers)
+        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
+        service = client.post("/api/v1/service-accounts", headers=root, json={"name": "CI"}).json()["data"]
+        assert client.put(f"/api/v1/organizations/{org}/users/{service['id']}", headers=headers, json={"role": "admin"}).status_code == 200
+        candidates = client.get(f"{base}/policy-users", headers=headers).json()["data"]
+        assert any(user["user_id"] == service["id"] and user["service_account"] for user in candidates)
+        rules = create_rules(client, base, headers)
+        response = client.post(
+            f"{base}/policies",
+            headers=headers,
+            json={"name": "CI restrictions", "definition": policy_definition(rules, {"kind": "selected_users", "user_ids": [service["id"]]})},
+        )
+        assert response.status_code == 200, response.text

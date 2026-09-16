@@ -12,12 +12,12 @@ from contract import Modality
 if TYPE_CHECKING:
     from pathlib import Path
 
-PROVIDERS_HEADER = """# Applied provider catalog. Maintain through tokkeeper-audit providers onboard and sync.
-# Agent field guidance: tokkeeper-audit agent guide provider-onboarding
+PROVIDERS_HEADER = """# Applied provider catalog. Maintain through airmux-audit providers onboard and sync.
+# Agent field guidance: airmux-audit agent guide provider-onboarding
 
 """
 CANDIDATES_HEADER = """# Providers tracked for future onboarding. Identity only; no derived catalog data.
-# Promote through a typed provider source and tokkeeper-audit providers onboard.
+# Promote through a typed provider source and airmux-audit providers onboard.
 
 """
 

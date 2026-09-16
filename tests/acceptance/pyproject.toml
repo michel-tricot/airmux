@@ -6,7 +6,7 @@ dependencies = [
   "httpx",
   "pyyaml",
   "python-dotenv",
-  "rich",
+  "openai",
   "testcontainers",
 ]
 

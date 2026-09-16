@@ -3,7 +3,7 @@
 A workspace brings its own provider API keys, plural per provider. The values live in a secret store
 the control plane writes and the data plane reads, named once in config and reached through one
 facade. Plaintext is never persisted anywhere else: not in the bundle, not in `bundle.payload`, not
-in the data plane's disk cache, not in `audit_log`, not in `.env` or `tokkeeper.yml`, not in a log line.
+in the data plane's disk cache, not in `audit_log`, not in `.env` or `airmux.yml`, not in a log line.
 The explicitly named `insecure_database` backend stores plaintext in its dedicated PostgreSQL table;
 database readers, backups, replicas, and transaction logs can expose it.
 
@@ -29,7 +29,7 @@ Credential-access policies may narrow the eligible tiers before the fixed select
   request to a broader tier
 
 The second rule is the one that matters: a broken workspace key must never silently move an org's
-spend onto the platform account. The first keeps platform credentials and `tokkeeper quickstart`
+spend onto the platform account. The first keeps platform credentials and `airmux quickstart`
 working, which deny-on-empty would break.
 
 A policy with `credential_access` scopes `workspace` and `org` requires team-managed credentials;
@@ -118,12 +118,12 @@ The insecure database store takes one PostgreSQL URL, configured identically in 
 control_plane:
   secrets:
     kind: insecure_database
-    url: ${env:TOKKEEPER_INSECURE_VAULT_URL}
+    url: ${env:AIRMUX_INSECURE_VAULT_URL}
 
 data_plane:
   secrets:
     kind: insecure_database
-    url: ${env:TOKKEEPER_INSECURE_VAULT_URL}
+    url: ${env:AIRMUX_INSECURE_VAULT_URL}
 ```
 
 The store maps the full `SecretRef` to an internal address and uses parameterized SQL for every
@@ -365,7 +365,7 @@ account.
 - **Conformance**: one suite parameterized over every writable store, the way adapter tests are
   parameterized over the registry, so the facade is proved once rather than per backend
 - **Dev**: the `file` store under a local root, or `env` for a first run with no setup
-- **`tokkeeper quickstart` needs no infrastructure**: `env` backend, one `scope=platform` credential
+- **`airmux quickstart` needs no infrastructure**: `env` backend, one `scope=platform` credential
   reading the `OPENAI_API_KEY` the operator already has
 
 ## Milestones
@@ -386,7 +386,7 @@ Each lands its failing test in the same commit.
    from event ingestion. Failover and cooldown are deferred, with them the live proof: a real
    request against a running data plane where the first key is revoked mid-test and the request
    still succeeds on the second
-5. Console and CLI: `tokkeeper credentials add/list/rotate/rm --workspace --provider --name` with
+5. Console and CLI: `airmux credentials add/list/rotate/rm --workspace --provider --name` with
    `--from-stdin` so keys never enter shell history, status and fingerprint columns, console panel
    with per-key health
 6. **Done.** The explicitly insecure database store: plaintext PostgreSQL persistence behind the

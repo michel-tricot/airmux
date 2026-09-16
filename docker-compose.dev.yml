@@ -1,19 +1,19 @@
-# Dependencies only, for local development: the planes run from source (uv run tokkeeper control-plane serve,
-# uv run tokkeeper gateway serve) against these. Matches the default database url in tokkeeper.yml.
+# Dependencies only, for local development: the planes run from source (uv run airmux control-plane serve,
+# uv run airmux gateway serve) against these. Matches the default database url in airmux.yml.
 #   docker compose -f docker-compose.dev.yml up -d --wait
 services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: tokkeeper
-      POSTGRES_PASSWORD: tokkeeper
-      POSTGRES_DB: tokkeeper
+      POSTGRES_USER: airmux
+      POSTGRES_PASSWORD: airmux
+      POSTGRES_DB: airmux
     ports:
       - "5432:5432"
     volumes:
       - pgdata-dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tokkeeper"]
+      test: ["CMD-SHELL", "pg_isready -U airmux"]
       interval: 5s
       start_period: 10s
 

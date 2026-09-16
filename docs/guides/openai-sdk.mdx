@@ -1,16 +1,16 @@
 ---
 title: "Use the OpenAI SDK"
-description: "Point Chat Completions and Responses clients at TokKeeper without changing application request shapes."
+description: "Discover models and point Chat Completions and Responses clients at airmux without changing application request shapes."
 ---
 
-TokKeeper exposes both Chat Completions and Responses at the standard SDK paths beneath `/inf/v1`. Your inference key replaces the upstream API key.
+airmux exposes model discovery, Chat Completions, and Responses at the standard SDK paths beneath `/inf/v1`. Your inference key replaces the upstream API key.
 
 ## Configure the client
 
 ```bash
-export TOKKEEPER_URL='http://localhost:8080'
-export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
-export TOKKEEPER_MODEL='openai/gpt-4o-mini'
+export AIRMUX_URL='http://localhost:8080'
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+export AIRMUX_MODEL='openai/gpt-4o-mini'
 ```
 
 <CodeGroup>
@@ -21,12 +21,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
 )
 
 completion = client.chat.completions.create(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
 )
 
@@ -39,12 +39,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
 )
 
 response = client.responses.create(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     input="Explain request routing in one sentence.",
 )
 
@@ -53,26 +53,42 @@ print(response.output_text)
 
 </CodeGroup>
 
+## Discover available models
+
+Use the same client and inference key to list models or retrieve a model by its gateway ID:
+
+```python
+for model in client.models.list():
+    print(model.id, model.owned_by)
+
+model = client.models.retrieve(os.environ["AIRMUX_MODEL"])
+gateway = (model.model_extra or {}).get("gateway", {})
+print(gateway["context_window"], gateway["capabilities"])
+```
+
+Discovery filters the catalog using your key's workspace policies and configured credential scopes. Request-specific
+policies and provider availability are checked during inference. See [model discovery](/docs/reference/models-and-providers#inference-model-discovery) for the response fields and visibility rules.
+
 ## Migrate an existing application
 
 For a client that already constructs the same SDK, only two values change:
 
-| Setting | TokKeeper value |
+| Setting | airmux value |
 | --- | --- |
-| Base URL | `https://your-tokkeeper-domain/inf/v1` |
+| Base URL | `https://your-airmux-domain/inf/v1` |
 | API key | A workspace inference key beginning with `sk-inf-` |
-| Model | A catalog model ID from `tokkeeper models list` |
+| Model | A gateway model ID from `client.models.list()` |
 
 The official SDK identifies its dialect automatically. If you send raw HTTP to `/chat/completions`, set
-`x-tokkeeper-dialect: openai_native` when a text-only request could also be valid canonical JSON.
+`x-airmux-dialect: openai_native` when a text-only request could also be valid canonical JSON.
 
 <Info>
-  Inference keys authorize model requests only. Management keys beginning with `sk-cp-` are rejected by the gateway.
+  Inference keys authorize inference and model discovery. Management keys beginning with `sk-cp-` are rejected by the gateway.
 </Info>
 
 ## Inspect gateway adjustments
 
-TokKeeper reports every parameter it clamps, emulates, or drops in the additive `gateway.adjustments` field. The SDK
+airmux reports every parameter it clamps, emulates, or drops in the additive `gateway.adjustments` field. The SDK
 retains this extension in `model_extra`:
 
 ```python

@@ -21,10 +21,10 @@ task actions, select the matching guide and read its complete text:
 Run:
 
 ```bash
-uv run tokkeeper-audit agent guide <guide> --format text
+uv run airmux-audit agent guide <guide> --format text
 ```
 
-Follow the returned guide as the authority for the workflow. Use the root `tokkeeper-audit`
+Follow the returned guide as the authority for the workflow. Use the root `airmux-audit`
 CLI for every catalog mutation, live experiment, evidence promotion, generation, and
 validation. Do not run the internal task modules under `model-audit/src/model_audit/catalog_tasks/`.
 

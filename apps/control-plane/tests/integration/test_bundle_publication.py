@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
 
 from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
-from control_plane.compiler import publish_pending
+from control_plane.compiler import publish_changes, publish_pending
 from control_plane.db import standalone_transaction
-from control_plane.models import RuntimeConfiguration
+from control_plane.models import InferenceKey, PlaygroundSession, RuntimeConfiguration, User, set_actor
 
 
 def test_full_flow_to_verified_bundle(tmp_path):
@@ -160,3 +161,36 @@ def test_taxonomy_rejects_values_that_cannot_form_a_valid_bundle(tmp_path, path,
         if path.endswith("models"):
             assert c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post(path, json=body, headers=root).status_code == 422
+
+
+@pytest.mark.parametrize("credential_kind", ["inference_key", "playground_session"])
+def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_kind):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, root, "identity-publication")
+        headers = cp.headers(org_id)
+        workspace_id = make_workspace(client, headers)
+        base = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}"
+        if credential_kind == "inference_key":
+            credential_id = client.post(f"{base}/inference-keys", headers=headers, json={"label": "Identity"}).json()["data"]["id"]
+        else:
+            credential_id = client.put(f"{base}/playground-session", headers=headers).json()["data"]["id"]
+        before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])
+
+        async def change_identity():
+            async with standalone_transaction(cp.db_url):
+                await set_actor(before.keys[0].user_id)
+                user = await User.new_service_account("Replacement").save()
+                credential = await (InferenceKey if credential_kind == "inference_key" else PlaygroundSession).find_by_id(UUID(credential_id))
+                assert credential is not None
+                credential.user_id = user.id
+                await credential.save()
+                await publish_changes(datetime.now(tz=UTC))
+                return user.id
+
+        user_id = asyncio.run(change_identity())
+        after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])
+        assert after.bundle_id != before.bundle_id
+        assert after.keys[0].key_id == credential_id
+        assert after.keys[0].user_id == user_id

@@ -9,7 +9,7 @@ bookmarked console URL, a saved login, and a token pasted into a .env survive be
 scratch. Seeding only runs before any human account exists: to start over, drop the database and recreate it.
 
 The tokens here are public knowledge, which is what makes them useful and what makes them
-unacceptable outside development. `tokkeeper control-plane fixtures` refuses any database that already holds
+unacceptable outside development. `airmux control-plane fixtures` refuses any database that already holds
 human accounts.
 
 The file reads in three parts: every constant first, so the credentials and the knobs are in one
@@ -31,7 +31,6 @@ from sqlmodel import col
 
 from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
 from contract.policies import (
-    AllKeys,
     AllowedModels,
     AllowedProviders,
     AllRequests,
@@ -46,7 +45,9 @@ from contract.policies import (
     RequestMatch,
     RuleDefinition,
     SelectedKeys,
+    SelectedUsers,
     StrictParameters,
+    WorkspaceTarget,
 )
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
 from control_plane.keys import MANAGEMENT_KEY_PREFIX, key_prefix
@@ -120,12 +121,12 @@ class MissingProvidersError(ValueError):
     """
 
     def __init__(self, missing: list[str]) -> None:
-        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper control-plane taxonomy --file PATH` to fill it before seeding")
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `airmux control-plane taxonomy --file PATH` to fill it before seeding")
 
 
 class MissingModelsError(ValueError):
     def __init__(self, missing: list[str]) -> None:
-        super().__init__(f"the catalog has no {', '.join(missing)}; run `tokkeeper control-plane taxonomy --file PATH` to fill it before seeding")
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `airmux control-plane taxonomy --file PATH` to fill it before seeding")
 
 
 class ExistingHumanAccountsError(ValueError):
@@ -207,7 +208,7 @@ async def workspace_policy(  # noqa: PLR0913 target and rule references stay exp
     *,
     name: str,
     priority: int,
-    target: AllKeys | SelectedKeys,
+    target: WorkspaceTarget | SelectedUsers | SelectedKeys,
     rules: tuple[Rule, ...],
     enabled: bool = True,
 ) -> Policy:
@@ -384,7 +385,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="Streaming uses team credentials",
         priority=10,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(team_credentials,),
     )
     approved_models = await workspace_rule(
@@ -397,7 +398,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="Approved production models",
         priority=20,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(approved_models,),
     )
     fallback = await workspace_rule(
@@ -416,7 +417,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         production,
         name="GPT-4o fallback",
         priority=30,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(fallback,),
     )
     for priority, (name, action) in enumerate(
@@ -426,7 +427,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
                 "Production model price ceiling",
                 PriceLimit(kind="price_limit", max_input_price_per_mtok=Decimal(100), max_output_price_per_mtok=Decimal(100)),
             ),
-            ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=16384)),
+            ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=4096)),
         ),
         start=31,
     ):
@@ -440,9 +441,23 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
             production,
             name=name,
             priority=priority,
-            target=AllKeys(kind="all_keys"),
+            target=WorkspaceTarget(kind="workspace"),
             rules=(configured_rule,),
         )
+    for priority, (name, target, limit) in enumerate(
+        (
+            ("Michel output token ceiling", SelectedUsers(kind="selected_users", user_ids=(michel.id,)), 1024),
+            ("Checkout output token ceiling", SelectedKeys(kind="selected_keys", key_ids=(str(checkout.id),)), 512),
+        ),
+        start=34,
+    ):
+        configured_rule = await workspace_rule(
+            production,
+            name=name,
+            match=AllRequests(kind="all_requests"),
+            action=RequestLimits(kind="request_limits", max_output_tokens=limit),
+        )
+        await workspace_policy(production, name=name, priority=priority, target=target, rules=(configured_rule,))
     maintenance = await workspace_rule(
         production,
         name="Maintenance denial",
@@ -454,7 +469,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         name="Maintenance window",
         priority=40,
         enabled=False,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(maintenance, team_credentials),
     )
     ci_provider = await workspace_rule(
@@ -480,7 +495,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         default,
         name="Monthly shared budget",
         priority=10,
-        target=AllKeys(kind="all_keys"),
+        target=WorkspaceTarget(kind="workspace"),
         rules=(monthly_budget,),
     )
 
