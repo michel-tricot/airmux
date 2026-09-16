@@ -10,9 +10,13 @@ concurrency:
   group: docker-deployments-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+
 jobs:
   docker-correctness:
     runs-on: ubuntu-latest
+    timeout-minutes: 1
     needs: [deployment]
     if: always()
     steps:
@@ -23,6 +27,7 @@ jobs:
 
   deployment:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -32,10 +37,12 @@ jobs:
       DEPLOYMENT_FILE: ${{ matrix.compose-file }}
       DEPLOYMENT_URL: http://localhost:8080
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Configure deployment diagnostics
         run: echo "AIRMUX_DEPLOYMENT_ARTIFACTS=$RUNNER_TEMP/deployment-artifacts" >> "$GITHUB_ENV"
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           enable-cache: true
           python-version: '3.13'

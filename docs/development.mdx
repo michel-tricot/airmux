@@ -73,6 +73,36 @@ PR CI runs the levels in order against the rebuilt, installed public wheel and u
 configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
 For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/gateway/README.md).
 
+## Workflow checks
+
+PR CI has an independent five-minute workflow check. It runs actionlint 1.7.12 with ShellCheck for embedded shell,
+verifies inputs against each pinned action's upstream metadata, and checks formatting for every workflow. Install
+actionlint and ShellCheck locally, then run:
+
+```bash
+actionlint
+AIRMUX_VALIDATE_ACTION_INPUTS=1 uv run pytest tests/workflows -q
+bunx --no-install prettier --check '.github/workflows/*.{yml,yaml}'
+```
+
+The metadata check reads public upstream files at the exact commit pin because actionlint's built-in action input
+checks do not cover full SHA references. The required correctness gate includes the workflow check, so invalid workflow
+changes cannot pass the merge gate. It also proves that unknown inputs fail; the local diagnostics tests prove
+that invalid expressions, malformed YAML, and shell mistakes fail. Dependabot maintains the action SHA pins weekly.
+
+Every workflow defaults to `contents: read`, checkouts discard Git credentials, and only the publishing job gets
+`id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
+in the release environment, outside PR CI.
+
+Timeouts allow headroom over successful runs 35048133470 and 35047449782: frontend took 2.4–3.5 minutes, backend
+4.7–4.9 minutes, installation under one minute, gateway shards up to 3.5 minutes, aggregation 22 seconds, full-stack
+acceptance up to 4.7 minutes, and performance 3.6 minutes. Docker run 35048133515 took under three minutes per variant.
+The current release build also runs the entire gateway suite sequentially, so it gets 30 minutes; the previous release
+run 34930300106 took 56 seconds to build and 17 seconds to publish before those additional gates. Publishing gets ten
+minutes, PyPI verification retains twenty minutes, release announcement gets five minutes, and live-provider acceptance
+retains its twenty-minute limit. Reusable workflow callers inherit the callee's job timeout because GitHub does not accept `timeout-minutes` on a calling job. The three required status aggregation
+jobs only evaluate dependency results with jq and have one-minute limits.
+
 ## Python checks
 
 ```bash
