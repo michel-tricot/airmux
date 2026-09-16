@@ -52,11 +52,11 @@ def test_required_gate_rejects_empty_results(filename, name, dependencies):
     assert completed.returncode != 0
 
 
-def test_main_requires_current_base_checks_from_github_actions_without_bypasses():
+def test_main_requires_current_base_checks_from_github_actions_with_admin_pull_request_bypass():
     ruleset = json.loads((ROOT / ".github/rulesets/protect-main.json").read_text())
     assert ruleset["enforcement"] == "active"
     assert ruleset["conditions"] == {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}}
-    assert ruleset["bypass_actors"] == []
+    assert ruleset["bypass_actors"] == [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}]
     rules = {rule["type"]: rule.get("parameters", {}) for rule in ruleset["rules"]}
     assert {"deletion", "non_fast_forward", "required_linear_history", "pull_request", "required_status_checks"} == set(rules)
     assert rules["pull_request"]["allowed_merge_methods"] == ["squash"]
