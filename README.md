@@ -24,6 +24,9 @@ Clients can send Chat Completions, Responses, Messages, or canonical requests th
 target the corresponding HTTP API. airmux authenticates the workspace, applies policy, selects a model and scoped
 provider credential, translates the request, and records the result.
 
+> [!NOTE]
+> airmux is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
+
 ## Quickstart
 
 Run a local gateway with no Docker, Postgres, or control plane. You need Python 3.13+, [uv](https://docs.astral.sh/uv/),
@@ -182,20 +185,8 @@ shapes.
 | Add routing and access rules | [Policy workflow](docs/guides/policy-workflow.mdx) |
 | Understand supported inference shapes | [Inference reference](docs/reference/inference.mdx) |
 | Deploy airmux | [Deployment overview](docs/deployment/index.mdx) |
+| Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |
-| Work on the project | [Development guide](docs/development.mdx) |
+| Work on the project | [Contributing](CONTRIBUTING.md) and [Development guide](docs/development.mdx) |
 
 The complete management API is generated from [`lib/api-spec/openapi.yaml`](lib/api-spec/openapi.yaml).
-
-## Contributing and support
-
-Contributions are welcome. Read [Contributing](CONTRIBUTING.md) for the development workflow, architectural boundaries,
-generated contracts, and validation expectations. Significant design changes should update the relevant record in
-[`notes/design`](notes/design/README.md).
-
-Use [GitHub Issues](https://github.com/michel-tricot/airmux/issues) to report a bug or propose a focused feature.
-
-## License and project status
-
-airmux is pre-1.0. APIs, configuration, and migrations may change before the first stable release. The project is
-licensed under the [Elastic License 2.0](LICENSE).

@@ -38,18 +38,10 @@ Restrict backup access because the default file secret store contains plaintext 
 
 ## Updates
 
-Before updating:
-
-1. Read release and migration notes
-2. Back up database and state
-3. Keep the existing public origin and persistent mounts
-4. Update one gateway at a time in a split deployment
-5. Wait for `/readyz` before returning a gateway to service
-6. Send a real buffered and streaming request
-7. Confirm new usage reaches the control plane
-
-The all-in-one image applies database migration and the shipped catalog during startup. It can briefly interrupt
-inference. Split gateways can continue serving cached bundles while the control plane is unavailable.
+The all-in-one image applies database migrations and the shipped catalog before it accepts traffic. A split gateway can
+keep serving an accepted cached bundle while the control plane is unavailable. Because pre-1.0 releases do not promise
+cross-version compatibility between planes, deploy one release across all components. Follow
+[Upgrade and rollback](/docs/deployment/upgrades) to restore the database and state together if verification fails.
 
 ## Common failures
 
