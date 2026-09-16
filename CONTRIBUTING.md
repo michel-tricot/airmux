@@ -123,7 +123,8 @@ Two stable checks are required, each bound to the GitHub Actions App (integratio
 
 These gates run even after an upstream failure. Every pull request runs the complete correctness graph without path
 filters or conditional correctness skips. Failed, cancelled, missing, or unexpectedly skipped dependencies fail the
-gate. Compatibility, performance, provider, soak, and cold-build checks run in `nightly.yml`. See [CI](notes/CI.md).
+gate. Compatibility, performance, provider, soak, and cold-build checks run in `nightly.yml`. See
+[continuous integration design](notes/design/CI.md).
 
 Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
 force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required
