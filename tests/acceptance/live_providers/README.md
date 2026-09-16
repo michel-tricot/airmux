@@ -26,7 +26,7 @@ These bounds limit test traffic; provider budgets on dedicated test keys should 
 
 ## CI and release gate
 
-Configure `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as GitHub environment secrets in `pypi`.
+Configure `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as GitHub environment secrets in `release`.
 The `live-providers` workflow runs nightly on main, on manual dispatch, and as a required job in the
 Python release workflow. It is separate from ordinary PR CI because it uses credentials and incurs
 provider charges. PRs still run the deterministic acceptance suites and the missing-credentials guard.
