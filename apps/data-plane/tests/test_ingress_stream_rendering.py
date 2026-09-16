@@ -19,7 +19,7 @@ from data_plane.canonical import (
 )
 from data_plane.egress.base import CanonicalError
 from data_plane.ingress.anthropic import AnthropicIngress, AnthropicResponseStream
-from data_plane.ingress.openai_native import OpenAIResponseStream
+from data_plane.ingress.openai_chat_completions import OpenAIResponseStream
 from data_plane.ingress.openai_responses import ResponsesStream
 
 

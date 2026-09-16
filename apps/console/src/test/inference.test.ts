@@ -2,9 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { inferenceCompletion } from '@/lib/inference';
 
 const encoder = new TextEncoder();
-const usage = { input_tokens: 7, output_tokens: 3, cache_read_tokens: 2, cache_write_tokens: 0, estimated: false };
+const usage = { prompt_tokens: 7, completion_tokens: 3, total_tokens: 10, prompt_tokens_details: { cached_tokens: 2 } };
 const gateway = { adjustments: [] };
-const completion = { id: 'reply', model: 'model-1', content: [{ type: 'text', text: 'hello' }], usage, gateway };
+const completion = {
+  id: 'reply',
+  object: 'chat.completion',
+  created: 1,
+  model: 'model-1',
+  choices: [{ index: 0, message: { role: 'assistant', content: 'hello' }, finish_reason: 'stop' }],
+  usage,
+  gateway,
+};
 
 function streamResponse(chunks: Uint8Array[]) {
   return new Response(
@@ -24,17 +32,8 @@ afterEach(() => {
 });
 
 describe('inferenceCompletion', () => {
-  it('uses the canonical gateway contract', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({
-        id: 'reply',
-        model: 'model-1',
-        gateway,
-        content: [{ type: 'text', text: 'hello' }],
-        finish_reason: 'stop',
-        usage,
-      }),
-    );
+  it('uses the OpenAI Chat Completions contract', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json(completion));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
@@ -53,21 +52,20 @@ describe('inferenceCompletion', () => {
     expect(Object.fromEntries(new Headers(fetchMock.mock.calls[0]?.[1]?.headers))).toEqual({
       'content-type': 'application/json',
       'x-requested-with': 'fetch',
-      'x-airmux-dialect': 'canonical',
     });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       model: 'model-1',
-      messages: [{ role: 'user', content: [{ type: 'text', text: 'hi' }] }],
+      messages: [{ role: 'user', content: 'hi' }],
       temperature: 0,
       stream: false,
     });
   });
 
-  it('assembles canonical SSE events split across lines, chunks, and UTF-8 code points', async () => {
+  it('assembles OpenAI SSE events split across lines, chunks, and UTF-8 code points', async () => {
     const body = [
-      'data: {"id":"reply","delta":{"type":"text","text":"hé"}}\r\n\r\n',
-      'data: {"id":"reply","delta":{"type":"text","text":"llo 🌍"}}\n\n',
-      'data: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":7,"output_tokens":3,"cache_read_tokens":2,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\n',
+      'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"hé"}}]}\r\n\r\n',
+      'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"llo 🌍"},"finish_reason":"stop"}]}\n\n',
+      'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3,"total_tokens":10,"prompt_tokens_details":{"cached_tokens":2}},"gateway":{"adjustments":[]}}\n\n',
       'data: [DONE]\n\n',
     ].join('');
     const bytes = encoder.encode(body);
@@ -114,20 +112,25 @@ describe('inferenceCompletion', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(Response.json({ error: { code: 'invalid_token' } }, { status: 401 }))
-      .mockResolvedValueOnce(Response.json({ id: 'reply', model: 'model-1', content: [{ type: 'text', text: 'ready' }], usage, gateway }));
+      .mockResolvedValueOnce(
+        Response.json({
+          ...completion,
+          choices: [{ index: 0, message: { role: 'assistant', content: 'ready' }, finish_reason: 'stop' }],
+        }),
+      );
     vi.stubGlobal('fetch', fetchMock);
 
-    const completion = inferenceCompletion({
+    const result = inferenceCompletion({
       model: 'model-1',
       messages: [{ role: 'user', content: 'hi' }],
       stream: false,
     });
     await vi.advanceTimersByTimeAsync(250);
 
-    await expect(completion).resolves.toMatchObject({ content: 'ready' });
+    await expect(result).resolves.toMatchObject({ content: 'ready' });
   });
 
-  it('surfaces a canonical stream error', async () => {
+  it('surfaces an OpenAI stream error', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn<typeof fetch>().mockResolvedValue(streamResponse([encoder.encode('data: {"error":{"message":"provider unavailable"}}\n\n')])),
@@ -143,34 +146,38 @@ it.each([
   null,
   [],
   {},
-  { ...completion, content: 'hello' },
-  { ...completion, content: [{ type: 'text' }] },
-  { ...completion, usage: { ...usage, input_tokens: '7' } },
-])('rejects malformed canonical responses: %j', async (body) => {
+  { ...completion, choices: [] },
+  { ...completion, choices: [{ index: 0, message: { role: 'assistant' }, finish_reason: 'stop' }] },
+  { ...completion, usage: { ...usage, prompt_tokens: '7' } },
+])('rejects malformed OpenAI responses: %j', async (body) => {
   vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(Response.json(body)));
   await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: false })).rejects.toThrow('invalid completion response');
 });
 
-it.each(['{}', '[]', '{"id":"reply","delta":{"type":"text","text":42}}'])('rejects malformed canonical stream events: %s', async (event) => {
-  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(streamResponse([encoder.encode(`data: ${event}\n\ndata: [DONE]\n\n`)])));
-  await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: true })).rejects.toThrow('invalid streaming event');
-});
+it.each(['{}', '[]', '{"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":42}}]}'])(
+  'rejects malformed OpenAI stream events: %s',
+  async (event) => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(streamResponse([encoder.encode(`data: ${event}\n\ndata: [DONE]\n\n`)])));
+    await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: true })).rejects.toThrow('invalid streaming event');
+  },
+);
 
 it.each([
-  'data: {"id":"reply","delta":{"type":"text","text":"partial"}}\n\n',
-  'data: {"id":"reply","delta":{"type":"text","text":"partial"}}\n\ndata: [DONE]\n\n',
-  `data: ${JSON.stringify({ id: 'reply', usage, gateway })}\n\n`,
+  'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"partial"}}]}\n\n',
+  'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"partial"}}]}\n\ndata: [DONE]\n\n',
+  `data: ${JSON.stringify({ id: 'reply', object: 'chat.completion.chunk', created: 1, model: 'model-1', choices: [], usage, gateway })}\n\n`,
 ])('rejects a stream without both its closing event and DONE marker: %s', async (body) => {
   vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(streamResponse([encoder.encode(body)])));
   await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: true })).rejects.toThrow('incomplete stream');
 });
 
-it.each(
-  [[], [{ type: 'reasoning', text: 'thinking' }], [{ type: 'tool_call', id: 'call-1', name: 'lookup', arguments: '{}' }]].map((content) => ({
-    content,
-  })),
-)('accepts valid completions without text: $content', async ({ content }) => {
-  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ...completion, content })));
+it.each([
+  { role: 'assistant', content: null },
+  { role: 'assistant', content: null, reasoning_content: 'thinking' },
+  { role: 'assistant', content: null, tool_calls: [{ id: 'call-1', type: 'function', function: { name: 'lookup', arguments: '{}' } }] },
+])('accepts valid completions without text: $message', async (message) => {
+  const choices = [{ index: 0, message, finish_reason: 'stop' }];
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ...completion, choices })));
   await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: false })).resolves.toMatchObject({
     content: '',
     usage: { inputTokens: 7 },

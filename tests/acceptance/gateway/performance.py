@@ -425,7 +425,7 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 samples, elapsed_s = asyncio.run(
                     measure(
                         url,
-                        gateway.headers("openai_native") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
+                        gateway.headers("openai_chat_completions") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
                         body if proxied else {**body, "model": "upstream-model-a"},
                         concurrency,
                         settings,

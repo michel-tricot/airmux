@@ -11,8 +11,7 @@ if TYPE_CHECKING:
 
 
 INPUT_TOKEN_LIMITS: dict[Dialect, str] = {
-    "canonical": "max_tokens",
-    "openai_native": "max_completion_tokens",
+    "openai_chat_completions": "max_completion_tokens",
     "openai_responses": "max_output_tokens",
     "anthropic": "max_tokens",
 }

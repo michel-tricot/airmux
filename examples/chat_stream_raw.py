@@ -2,8 +2,8 @@
 
     uv run python examples/chat_stream_raw.py
 
-Shows the protocol a client actually consumes: one `data:` event per
-canonical chunk, then a usage event, then the [DONE] sentinel.
+Shows the Chat Completions protocol a client consumes: `data:` events,
+a usage-only chunk, then the [DONE] sentinel.
 """
 
 from __future__ import annotations

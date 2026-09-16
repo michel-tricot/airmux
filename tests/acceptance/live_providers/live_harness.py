@@ -265,7 +265,7 @@ class LiveGateway:
     def request(
         self, *, stream: bool = False, model: str = "model-a", max_tokens: int = 128, body: dict[str, object] | None = None
     ) -> httpx.Response:
-        return self.gateway.request("canonical", stream=stream, model=model, max_tokens=max_tokens, body=body, timeout_s=90)
+        return self.gateway.request("openai_chat_completions", stream=stream, model=model, max_tokens=max_tokens, body=body, timeout_s=90)
 
     def assert_metering(self, event: UsageEvent) -> None:
         assert event.status == "ok"

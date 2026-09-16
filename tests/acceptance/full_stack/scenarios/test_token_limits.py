@@ -36,18 +36,16 @@ def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:
             )
         )
     body = {"model": "quirk", "messages": [{"role": "user", "content": "hi"}]}
-    headers = {"authorization": f"Bearer {stack.caller_api_key}", "x-airmux-dialect": "canonical"}
+    headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     with httpx.Client(base_url=stack.dp_url, headers=headers, timeout=10) as client:
         path = "/inf/v1/chat/completions"
-        assert _poll(lambda: client.post(path, json={**body, "max_tokens": 999}).status_code == 403, 30)
+        assert _poll(lambda: client.post(path, json={**body, "max_completion_tokens": 999}).status_code == 403, 30)
         baseline = stack.upstream_requests
-        response = client.post(path, json={**body, "max_completion_tokens": 999})
-        assert response.status_code == 400, response.text
-        response = client.post(path, headers={"x-airmux-dialect": "openai_native"}, json={**body, "max_completion_tokens": 999})
+        response = client.post(path, json={**body, "max_tokens": 999})
         assert response.status_code == 403, response.text
         assert stack.upstream_requests == baseline
         response = client.post(path, json={**body, "max_tokens": 1})
         assert response.status_code == 200, response.text
-        sent = json.loads(response.json()["content"][0]["text"])
+        sent = json.loads(response.json()["choices"][0]["message"]["content"])
         assert sent["max_completion_tokens"] == 1
         assert "max_tokens" not in sent

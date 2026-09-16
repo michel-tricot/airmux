@@ -20,8 +20,6 @@ from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
 if TYPE_CHECKING:
-    from starlette.datastructures import Headers
-
     from data_plane.canonical import CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
@@ -38,23 +36,6 @@ CONSTANT = frozenset({"stream_options"})
 # the reconcile step reports or forwards it exactly as for a canonical caller. Deriving the core
 # from the definition means a field added to canonical is consumed here without an edit.
 CONSUMED = frozenset(CanonicalRequest.model_fields) | ALIASED | CONSTANT
-
-
-def _openai_shaped(body: dict[str, Any]) -> bool:
-    messages = body.get("messages")
-    for raw in messages if isinstance(messages, list) else []:
-        message = raw if isinstance(raw, dict) else {}
-        if message.get("role") in {"tool", "developer"} or "tool_calls" in message:
-            return True
-        content = message.get("content")
-        if isinstance(content, list) and any(isinstance(block, dict) and block.get("type") == "image_url" for block in content):
-            return True
-    tools = body.get("tools")
-    if isinstance(tools, list) and any(isinstance(tool, dict) and "function" in tool for tool in tools):
-        return True
-    if isinstance(body.get("tool_choice"), dict) and "function" in body["tool_choice"]:
-        return True
-    return "max_completion_tokens" in body
 
 
 def _error_body(status: int, code: str, message: str) -> dict[str, dict[str, str]]:
@@ -112,18 +93,9 @@ def _tool_call_delta(delta: CanonicalToolCallDelta) -> fmt.ToolCallDeltaOut:
     return fmt.ToolCallDeltaOut(index=delta.index, id=delta.id, type="function" if delta.id else None, function=function or None)
 
 
-class OpenAINativeIngress(IngressAdapter):
-    dialect = "openai_native"
-
-    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
-        """The client fingerprint the official SDKs send on every request, or an unambiguous shape.
-
-        A text-only body is shape-identical in both dialects, which is why the fingerprint matters.
-        The User-Agent prefix and not the x-stainless-* family, deliberately: those headers mean
-        "a Stainless-generated SDK", which other vendors' clients also are."""
-        if headers.get("user-agent", "").startswith("OpenAI/"):
-            return True
-        return _openai_shaped(body)
+class OpenAIChatCompletionsIngress(IngressAdapter):
+    dialect = "openai_chat_completions"
+    path = "/inf/v1/chat/completions"
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         """An OpenAI chat request into canonical. Unconsumed fields stay extras; stream_options is

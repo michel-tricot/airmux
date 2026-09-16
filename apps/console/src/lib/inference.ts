@@ -20,7 +20,6 @@ type InferenceCompletionOptions = InferenceRequestOptions & {
 export type PreparedInferenceRequest = {
   path: string;
   body: Record<string, unknown>;
-  dialect: 'canonical';
 };
 
 type ParsedEvent = {
@@ -72,11 +71,10 @@ async function responseError(response: Response): Promise<Error> {
 const finishReasonSchema = z.enum(['stop', 'length', 'tool_calls', 'content_filter']);
 const usageSchema = z
   .object({
-    input_tokens: z.number().int(),
-    output_tokens: z.number().int(),
-    cache_read_tokens: z.number().int(),
-    cache_write_tokens: z.number().int(),
-    estimated: z.boolean(),
+    prompt_tokens: z.number().int(),
+    completion_tokens: z.number().int(),
+    total_tokens: z.number().int(),
+    prompt_tokens_details: z.object({ cached_tokens: z.number().int() }).strict(),
   })
   .strict();
 const gatewaySchema = z
@@ -85,60 +83,83 @@ const gatewaySchema = z
     adjustments: z.array(z.object({ param: z.string(), action: z.enum(['clamped', 'emulated', 'dropped']), detail: z.string() }).strict()),
   })
   .strict();
-const partFields = { cache: z.literal('ephemeral').optional() };
+const toolCallSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal('function'),
+    function: z.object({ name: z.string(), arguments: z.string() }).strict(),
+  })
+  .strict();
 const responseSchema = z
   .object({
     id: z.string(),
+    object: z.literal('chat.completion'),
+    created: z.number().int(),
     model: z.string(),
-    content: z.array(
-      z.discriminatedUnion('type', [
-        z.object({ ...partFields, type: z.literal('text'), text: z.string() }).strict(),
+    choices: z
+      .array(
         z
-          .object({ ...partFields, type: z.literal('reasoning'), id: z.string().optional(), text: z.string(), signature: z.string().optional() })
+          .object({
+            index: z.number().int(),
+            message: z
+              .object({
+                role: z.literal('assistant'),
+                content: z.string().nullable(),
+                reasoning_content: z.string().optional(),
+                tool_calls: z.array(toolCallSchema).optional(),
+              })
+              .strict(),
+            finish_reason: finishReasonSchema.nullable(),
+          })
           .strict(),
-        z.object({ ...partFields, type: z.literal('tool_call'), id: z.string(), name: z.string(), arguments: z.string() }).strict(),
-      ]),
-    ),
-    finish_reason: finishReasonSchema.optional(),
+      )
+      .min(1),
     usage: usageSchema,
     gateway: gatewaySchema,
+  })
+  .strict();
+const toolCallDeltaSchema = z
+  .object({
+    index: z.number().int().nonnegative(),
+    id: z.string().optional(),
+    type: z.literal('function').optional(),
+    function: z.object({ name: z.string().optional(), arguments: z.string().optional() }).strict().optional(),
+  })
+  .strict();
+const deltaSchema = z
+  .object({
+    role: z.literal('assistant').optional(),
+    content: z.string().nullable().optional(),
+    reasoning_content: z.string().optional(),
+    tool_calls: z.array(toolCallDeltaSchema).optional(),
   })
   .strict();
 const chunkSchema = z
   .object({
     id: z.string(),
-    delta: z
-      .discriminatedUnion('type', [
-        z.object({ type: z.literal('text'), text: z.string() }).strict(),
-        z.object({ type: z.literal('reasoning'), id: z.string().optional(), text: z.string(), signature: z.string().optional() }).strict(),
-        z
-          .object({
-            type: z.literal('tool_call'),
-            index: z.number().int().nonnegative(),
-            id: z.string().optional(),
-            name: z.string().optional(),
-            arguments: z.string(),
-          })
-          .strict(),
-      ])
-      .optional(),
-    finish_reason: finishReasonSchema.optional(),
+    object: z.literal('chat.completion.chunk'),
+    created: z.number().int(),
+    model: z.string(),
+    choices: z.array(z.object({ index: z.number().int(), delta: deltaSchema, finish_reason: finishReasonSchema.nullable().optional() }).strict()),
     usage: usageSchema.optional(),
     gateway: gatewaySchema.optional(),
   })
   .strict();
 
-function canonicalUsage(usage: z.infer<typeof usageSchema>): InferenceUsage {
-  return { inputTokens: usage.input_tokens, outputTokens: usage.output_tokens, cacheReadTokens: usage.cache_read_tokens };
+function openAIUsage(usage: z.infer<typeof usageSchema>): InferenceUsage {
+  return {
+    inputTokens: usage.prompt_tokens,
+    outputTokens: usage.completion_tokens,
+    cacheReadTokens: usage.prompt_tokens_details.cached_tokens,
+  };
 }
 
 export function prepareInferenceRequest(options: InferenceRequestOptions): PreparedInferenceRequest {
   return {
     path: '/inf/v1/chat/completions',
-    dialect: 'canonical',
     body: {
       model: options.model,
-      messages: options.messages.map((message) => ({ role: message.role, content: [{ type: 'text', text: message.content }] })),
+      messages: options.messages,
       temperature: options.temperature,
       max_tokens: options.maxTokens,
       stream: options.stream,
@@ -157,11 +178,12 @@ function parseEvent(data: string): ParsedEvent {
   const parsed = chunkSchema.safeParse(body);
   if (!parsed.success) throw new Error('The gateway returned an invalid streaming event');
   const event = parsed.data;
+  const choice = event.choices[0];
   return {
-    closing: event.delta === undefined && event.usage !== undefined && event.gateway !== undefined,
-    delta: event.delta?.type === 'text' ? event.delta.text : undefined,
-    usage: event.usage ? canonicalUsage(event.usage) : undefined,
-    finishReason: event.finish_reason,
+    closing: event.choices.length === 0 && event.usage !== undefined && event.gateway !== undefined,
+    delta: choice?.delta.content ?? undefined,
+    usage: event.usage ? openAIUsage(event.usage) : undefined,
+    finishReason: choice?.finish_reason ?? event.gateway?.finish_reason,
   };
 }
 
@@ -236,13 +258,11 @@ function bufferedResult(body: unknown, durationMs: number): InferenceResult {
   const parsed = responseSchema.safeParse(body);
   if (!parsed.success) throw new Error('The gateway returned an invalid completion response');
   const response = parsed.data;
+  const choice = response.choices[0];
   return {
-    content: response.content
-      .filter((part) => part.type === 'text')
-      .map((part) => part.text)
-      .join(''),
-    usage: canonicalUsage(response.usage),
-    finishReason: response.finish_reason,
+    content: choice.message.content ?? '',
+    usage: openAIUsage(response.usage),
+    finishReason: choice.finish_reason ?? undefined,
     durationMs,
   };
 }
@@ -255,7 +275,6 @@ export async function inferenceCompletion(options: InferenceCompletionOptions): 
     headers: {
       'Content-Type': 'application/json',
       'X-Requested-With': 'fetch',
-      'x-airmux-dialect': prepared.dialect,
     },
     body: JSON.stringify(prepared.body),
     signal: options.signal,

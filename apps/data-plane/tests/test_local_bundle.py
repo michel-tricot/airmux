@@ -129,7 +129,7 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert response.status_code == 200, response.text
-    assert response.json()["content"] == [{"type": "text", "text": "hi"}]
+    assert response.json()["choices"][0]["message"]["content"] == "hi"
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-upstream"
 
 

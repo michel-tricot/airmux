@@ -7,11 +7,7 @@ import httpx
 from model_audit.drivers.base import Connection
 
 OK = 200
-DIALECTS = {
-    "chat/completions": "openai_native",
-    "responses": "openai_responses",
-    "messages": "anthropic",
-}
+ENDPOINTS = frozenset({"chat/completions", "responses", "messages"})
 
 
 @dataclass(frozen=True)
@@ -21,14 +17,14 @@ class Gateway:
     request_timeout_seconds: float = 60
 
     def connection(self, endpoint: str) -> Connection:
-        if endpoint not in DIALECTS:
+        if endpoint not in ENDPOINTS:
             message = f"gateway does not support endpoint {endpoint}"
             raise ValueError(message)
         return Connection(
             base_url=f"{self.base_url.rstrip('/')}/inf/v1",
             api_key=self.api_key,
             auth="bearer",
-            headers={"x-airmux-dialect": DIALECTS[endpoint]},
+            headers={},
             route="gateway",
             timeout_seconds=self.request_timeout_seconds,
         )

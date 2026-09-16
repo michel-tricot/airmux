@@ -6,7 +6,7 @@ description: "Request a JSON object or strict JSON Schema output and understand 
 Structured output is available when the selected catalog model advertises `structured_output`. airmux rejects an
 unsupported route before contacting the provider.
 
-## Canonical request
+## Chat Completions request
 
 ```bash
 curl http://localhost:8080/inf/v1/chat/completions \
@@ -40,7 +40,6 @@ The response content is still text. Parse the returned text as JSON in your appl
 
 | Surface | Field |
 | --- | --- |
-| Canonical | `response_format: {type: "json_schema", json_schema: {...}}` |
 | Chat Completions | `response_format: {type: "json_schema", json_schema: {...}}` |
 | Responses | `text.format: {type: "json_schema", ...}` |
 | Messages | `output_config.format: {type: "json_schema", schema: {...}}` |

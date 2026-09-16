@@ -19,25 +19,25 @@ def test_live_tool_call(live_gateway: LiveGateway, stream: bool) -> None:
     response = live_gateway.request(
         stream=stream,
         body={
-            **request_body("canonical"),
+            **request_body("openai_chat_completions"),
             "max_tokens": 256,
             "stream": stream,
             "messages": [{"role": "user", "content": "Use get_weather to check the weather in Paris."}],
-            "tools": [{"name": "get_weather", "description": "Get weather for a city", "parameters": CITY_SCHEMA}],
-            "tool_choice": {"name": "get_weather"},
+            "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get weather for a city", "parameters": CITY_SCHEMA}}],
+            "tool_choice": {"type": "function", "function": {"name": "get_weather"}},
         },
     )
     assert response.status_code == 200, response.text
     if stream:
-        calls = [event["delta"] for event in stream_payloads(response) if event.get("delta", {}).get("type") == "tool_call"]
+        calls = [call for event in stream_payloads(response) for choice in event.get("choices", []) for call in choice["delta"].get("tool_calls", [])]
         assert calls
-        assert {call["name"] for call in calls if call.get("name")} == {"get_weather"}
-        arguments = json.loads("".join(call.get("arguments", "") for call in calls))
+        assert {call["function"]["name"] for call in calls if call.get("function", {}).get("name")} == {"get_weather"}
+        arguments = json.loads("".join(call.get("function", {}).get("arguments", "") for call in calls))
     else:
-        (call,) = [part for part in response.json()["content"] if part["type"] == "tool_call"]
-        assert call["name"] == "get_weather"
+        (call,) = response.json()["choices"][0]["message"]["tool_calls"]
+        assert call["function"]["name"] == "get_weather"
         assert call["id"]
-        arguments = json.loads(call["arguments"])
+        arguments = json.loads(call["function"]["arguments"])
     assert isinstance(arguments, dict)
     assert set(arguments) == {"city"}
     assert isinstance(arguments["city"], str)
@@ -53,7 +53,7 @@ def test_live_structured_output(live_gateway: LiveGateway, stream: bool) -> None
     response = live_gateway.request(
         stream=stream,
         body={
-            **request_body("canonical"),
+            **request_body("openai_chat_completions"),
             "max_tokens": 256,
             "stream": stream,
             "messages": [{"role": "user", "content": "Return a city name in the requested JSON format."}],
@@ -61,7 +61,7 @@ def test_live_structured_output(live_gateway: LiveGateway, stream: bool) -> None
         },
     )
     assert response.status_code == 200, response.text
-    output = json.loads(streamed_text("canonical", response) if stream else text_of("canonical", response))
+    output = json.loads(streamed_text("openai_chat_completions", response) if stream else text_of("openai_chat_completions", response))
     assert isinstance(output, dict)
     assert set(output) == {"city"}
     assert isinstance(output["city"], str)
@@ -86,9 +86,14 @@ def test_live_supported_reasoning(live_gateway: LiveGateway, stream: bool) -> No
     )
     assert response.status_code == 200, response.text
     if stream:
-        reasoning = [event["delta"]["text"] for event in stream_payloads(response) if event.get("delta", {}).get("type") == "reasoning"]
+        reasoning = [
+            choice["delta"]["reasoning_content"]
+            for event in stream_payloads(response)
+            for choice in event.get("choices", [])
+            if choice["delta"].get("reasoning_content")
+        ]
     else:
-        reasoning = [part["text"] for part in response.json()["content"] if part["type"] == "reasoning"]
+        reasoning = [response.json()["choices"][0]["message"]["reasoning_content"]]
     assert "".join(reasoning).strip()
     (event,) = live_gateway.gateway.events(1)
     live_gateway.assert_metering(event)

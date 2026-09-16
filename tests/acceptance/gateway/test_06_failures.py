@@ -43,8 +43,7 @@ def test_provider_errors_keep_the_caller_shape_and_record_a_valid_event(
     error = {"code": "provider_failure", "message": "provider rejected [REDACTED]"}
     error_kind = {401: "invalid_request_error", 429: "invalid_request_error", 503: "api_error"}[status]
     expected = {
-        "canonical": {"error": error},
-        "openai_native": {"error": {"type": error_kind, **error}},
+        "openai_chat_completions": {"error": {"type": error_kind, **error}},
         "openai_responses": {"error": {"type": error_kind, **error}},
         "anthropic": {"type": "error", "error": {"type": "provider_failure", "message": "provider rejected [REDACTED]"}},
     }
@@ -176,7 +175,7 @@ def test_fallback_deadline_cancels_the_active_attempt_and_gateway_recovers(gatew
     gateway.start()
     response = gateway.request()
     assert response.status_code == 504
-    assert error_of("canonical", response) == "fallback_deadline_exceeded"
+    assert error_of("openai_chat_completions", response) == "fallback_deadline_exceeded"
     assert backup.requests == []
     assert gateway.events(1)[0].status == "cancelled"
     provider.replies["upstream-model-a"] = Reply()

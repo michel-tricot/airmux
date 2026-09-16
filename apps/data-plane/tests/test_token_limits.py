@@ -19,7 +19,7 @@ def test_native_output_token_limits_enter_canonical_before_policy(dialect):
     body = (
         {"model": MODEL.model_id, "input": "hi", "max_output_tokens": 8}
         if dialect == "openai_responses"
-        else {**BODY, "max_completion_tokens" if dialect == "openai_native" else "max_tokens": 8}
+        else {**BODY, "max_completion_tokens" if dialect == "openai_chat_completions" else "max_tokens": 8}
     )
     request, _ = INGRESS[dialect].parse(body)
     assert request.max_tokens == 8

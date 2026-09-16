@@ -83,9 +83,9 @@ def test_error_classification_does_not_depend_on_message_text(error, code, monke
     def reject(body):
         raise error
 
-    monkeypatch.setattr(REGISTRY["canonical"], "parse", reject)
+    monkeypatch.setattr(REGISTRY["openai_chat_completions"], "parse", reject)
     with pytest.raises(RequestRejectedError) as rejection:
-        _parse(request_body("canonical"), REGISTRY["canonical"])
+        _parse(request_body("openai_chat_completions"), REGISTRY["openai_chat_completions"])
     assert rejection.value.code == code
     assert rejection.value.message == str(error)
 
@@ -96,8 +96,8 @@ def test_invalid_stream_mode_returns_a_json_error(dialect, api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
         response = client.post(
-            "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airmux-dialect": dialect},
+            REGISTRY[dialect].path,
+            headers={"Authorization": f"Bearer {api_key}"},
             json={**request_body(dialect), "stream": "false"},
         )
     assert response.status_code == 400

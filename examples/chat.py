@@ -35,11 +35,10 @@ def main() -> int:
         print(f"http {resp.status_code}: {resp.text}")
         return 1
     data = resp.json()
-    for part in data["content"]:
-        if part.get("type") == "text":
-            print(part["text"])
+    choice = data["choices"][0]
+    print(choice["message"]["content"])
     usage = data["usage"]
-    print(f"\n[{data['model']} | {usage['input_tokens']} in / {usage['output_tokens']} out | finish: {data['finish_reason']}]")
+    print(f"\n[{data['model']} | {usage['prompt_tokens']} in / {usage['completion_tokens']} out | finish: {choice['finish_reason']}]")
     return 0
 
 

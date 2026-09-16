@@ -16,7 +16,7 @@ from data_plane.canonical import (
 from data_plane.formats.openai_responses import input_of, messages_of
 from data_plane.ingress import REGISTRY
 from data_plane.ingress.anthropic import AnthropicIngress
-from data_plane.ingress.openai_native import OpenAINativeIngress
+from data_plane.ingress.openai_chat_completions import OpenAIChatCompletionsIngress
 from data_plane.ingress.openai_responses import OpenAIResponsesIngress
 from data_plane.profiles import compile_profile
 from data_plane.reconcile import reconcile
@@ -90,7 +90,7 @@ def test_openai_parse_translates_the_openai_shapes_and_keeps_the_rest():
         "frequency_penalty": 0.5,
         "stream_options": {"include_usage": True},
     }
-    req, _ = OpenAINativeIngress().parse(body)
+    req, _ = OpenAIChatCompletionsIngress().parse(body)
     roles = [(m.role, [p.type for p in m.content]) for m in req.messages]
     assert roles == [("user", ["text"]), ("assistant", ["tool_call"]), ("user", ["tool_result"])]
     assert req.tools is not None
@@ -110,7 +110,7 @@ def test_openai_the_aligned_path_is_a_fixpoint():
         "temperature": 0.7,
         "frequency_penalty": 0.5,
     }
-    ingress = OpenAINativeIngress()
+    ingress = OpenAIChatCompletionsIngress()
     parsed, _ = ingress.parse(body)
     first, _ = reconcile(parsed, MODEL, compile_profile(PROVIDER))
     upstream = make_adapter().transform_request(first, MODEL)
@@ -121,13 +121,13 @@ def test_openai_the_aligned_path_is_a_fixpoint():
 def test_openai_an_unknown_tool_choice_variant_is_never_silently_none():
     """A consumed slot with an unrecognized value is a translation loss the caller hears about:
     the typed tool_choice stays honestly unset and the parse reports the drop."""
-    req, carried = OpenAINativeIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
+    req, carried = OpenAIChatCompletionsIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
     assert req.tool_choice is None
     assert [(a.param, a.action) for a in carried] == [("tool_choice", "dropped")]
 
 
 def test_openai_chat_reasoning_extension_preserves_summary_configuration():
-    request, _ = OpenAINativeIngress().parse(
+    request, _ = OpenAIChatCompletionsIngress().parse(
         {
             **TEXT_BODY,
             "reasoning_effort": "low",

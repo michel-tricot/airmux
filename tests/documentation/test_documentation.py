@@ -150,7 +150,7 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
     assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
-    assert "x-airmux-dialect: openai_native" not in readme.lower()
+    assert "x-airmux-dialect: openai_chat_completions" not in readme.lower()
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
@@ -274,7 +274,7 @@ def test_runnable_examples_use_the_public_inference_prefix() -> None:
     assert "/inf" in sources[ROOT / "examples" / "anthropic_sdk.py"]
 
 
-def test_canonical_examples_do_not_require_a_dialect_override() -> None:
-    paths = [ROOT / "README.md", *documentation_files(), *(ROOT / "notes").rglob("*.md"), *(ROOT / "examples").rglob("*.py")]
-    override = re.compile(r"x-airmux-dialect[\"']?\s*:\s*[\"']?canonical", re.IGNORECASE)
-    assert [str(path.relative_to(ROOT)) for path in paths if override.search(path.read_text(encoding="utf-8"))] == []
+def test_documentation_does_not_describe_dialect_detection() -> None:
+    paths = [ROOT / "AGENTS.md", ROOT / "README.md", *documentation_files(), *(ROOT / "notes").rglob("*.md"), *(ROOT / "examples").rglob("*.py")]
+    detection = re.compile(r"x-airmux-dialect|automatic dialect|dialect detection", re.IGNORECASE)
+    assert [str(path.relative_to(ROOT)) for path in paths if detection.search(path.read_text(encoding="utf-8"))] == []

@@ -1,7 +1,6 @@
 {
   "ingress": {
-    "canonical": "/inf/v1/chat/completions",
-    "openai_native": "/inf/v1/chat/completions",
+    "openai_chat_completions": "/inf/v1/chat/completions",
     "openai_responses": "/inf/v1/responses",
     "anthropic": "/inf/v1/messages"
   },

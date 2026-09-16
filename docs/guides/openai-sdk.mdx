@@ -79,9 +79,8 @@ For a client that already constructs the same SDK, only two values change:
 | API key | A workspace inference key beginning with `sk-inf-` |
 | Model | A gateway model ID from `client.models.list()` |
 
-The official SDK identifies its dialect automatically. Raw requests with unambiguous OpenAI fields such as
-`max_completion_tokens` also need no override. Set `x-airmux-dialect: openai_native` only when a raw request lacks
-either signal and you need a Chat Completions-shaped response rather than the canonical default.
+The SDK method selects the endpoint and protocol. Chat Completions calls use `/chat/completions`; Responses calls use
+`/responses`. Headers and request fields do not change the protocol bound to either path.
 
 <Info>
   Inference keys authorize inference and model discovery. Management keys beginning with `sk-cp-` are rejected by the gateway.

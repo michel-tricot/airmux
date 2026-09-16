@@ -123,7 +123,7 @@ def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(api
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airmux-dialect": "openai_native"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={
                 **TEXT_BODY,
                 "reasoning_effort": "low",
@@ -161,19 +161,27 @@ def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
 
 
 @respx.mock
-def test_openai_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
-    """The mirror invariant from DATAPLANE.md: detection never changes a canonical answer."""
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},
+        {"user-agent": "OpenAI/Python 3.0.0"},
+        {"x-airmux-dialect": "canonical"},
+        {"x-airmux-dialect": "unknown"},
+    ],
+)
+def test_chat_completions_path_always_returns_chat_completions(api_key, dp_app, headers):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": f"Bearer {api_key}", **headers},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     body = r.json()
-    assert "content" in body
-    assert "choices" not in body
+    assert body["choices"][0]["message"]["content"] == "héllo \U0001f30d world"
+    assert "content" not in body
 
 
 @respx.mock

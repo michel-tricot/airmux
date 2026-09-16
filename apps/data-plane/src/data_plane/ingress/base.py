@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from typing import Protocol
 
-    from starlette.datastructures import Headers
     from starlette.responses import Response
 
     from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
@@ -24,7 +23,6 @@ if TYPE_CHECKING:
         def error(self, err: CanonicalError) -> list[bytes]: ...
 
 
-DIALECT_HEADER = "x-airmux-dialect"
 DONE = b"data: [DONE]\n\n"
 
 
@@ -36,10 +34,7 @@ class IngressAdapter(ABC):
     """One caller dialect: how requests in it become canonical, and how canonical answers speak it."""
 
     dialect: ClassVar[str]
-
-    @abstractmethod
-    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
-        """Is this request unmistakably mine? Answer only that; resolve() owns ordering and the default."""
+    path: ClassVar[str]
 
     @abstractmethod
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:

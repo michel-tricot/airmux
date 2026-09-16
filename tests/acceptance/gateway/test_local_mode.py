@@ -21,5 +21,5 @@ def test_embedded_taxonomy_serves_with_a_minimal_environment(gateway: Gateway) -
     eventually(gateway.ready)
     response = gateway.request()
     assert response.status_code == 200, response.text
-    assert response.json()["content"] == [{"type": "text", "text": TEXT}]
+    assert response.json()["choices"][0]["message"]["content"] == TEXT
     assert [request.headers["authorization"] for request in provider.requests] == [f"Bearer {UPSTREAM_KEY}"]

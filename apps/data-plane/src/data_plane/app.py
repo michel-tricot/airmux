@@ -18,10 +18,9 @@ from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
-from data_plane.ingress import CANONICAL
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.outbox import build_outbox
-from data_plane.proxy import complete, messages, responses
+from data_plane.proxy import complete
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
@@ -109,11 +108,9 @@ def create_app(config: Config) -> ASGIApp:
 
     app = Starlette(
         routes=[
-            InferenceRoute("/inf/v1/chat/completions", complete, ingress=INGRESS[CANONICAL], methods=["POST"]),
-            InferenceRoute("/inf/v1/responses", responses, ingress=INGRESS["openai_responses"], methods=["POST"]),
-            InferenceRoute("/inf/v1/messages", messages, ingress=INGRESS["anthropic"], methods=["POST"]),
-            InferenceRoute("/inf/v1/models", models, ingress=INGRESS["openai_native"], methods=["GET"]),
-            InferenceRoute("/inf/v1/models/{model_id:path}", models, ingress=INGRESS["openai_native"], methods=["GET"]),
+            *(InferenceRoute(adapter.path, complete, ingress=adapter, methods=["POST"]) for adapter in INGRESS.values()),
+            InferenceRoute("/inf/v1/models", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
+            InferenceRoute("/inf/v1/models/{model_id:path}", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
         ],
