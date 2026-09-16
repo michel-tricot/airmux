@@ -48,6 +48,7 @@ export const server = setupServer(
       data: [{ user_id: 'user-1', email: 'dev@example.com', name: 'Dev', service_account: false }],
     }),
   ),
+  http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policy-users', () =>
     HttpResponse.json<{ data: Api.WorkspaceMemberCandidateOut[] }>({ data: [] }),
   ),
