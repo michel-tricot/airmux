@@ -178,8 +178,11 @@ The PyPI publication job uses OIDC only and uploads attestations alongside the o
 `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
 Configure the PyPI trusted publisher for `michel-tricot/airmux`, workflow `publish.yml`, and environment
 `release` in the [PyPI project publishing settings](https://pypi.org/manage/project/airmux/settings/publishing/).
-Verify all four fields there before dispatching a candidate; no stored PyPI token is used. A successful first upload
-proves that the renamed workflow can obtain the publishing identity.
+If `airmux` does not exist on PyPI yet, configure a pending publisher with project name `airmux` in your
+[account publishing settings](https://pypi.org/manage/account/publishing/), as described in the
+[PyPI first-upload guide](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
+Verify the project name and all four publisher fields before dispatching a candidate; no stored PyPI token is used.
+A successful first upload proves that the renamed workflow can obtain the publishing identity.
 
 After upload, the workflow downloads both artifacts for the exact version from PyPI, compares the registry digests
 and downloaded bytes against the tested candidate, and installs the downloaded wheel into a fresh tool environment
