@@ -64,14 +64,13 @@ def required_jobs(selection: Selection, scope: Scope) -> dict[str, bool]:
     if scope == "docker":
         return {"deployment": selection.deployment}
     return {
-        "checks": True,
+        "workflows": True,
         "frontend": selection.frontend,
         "backend": selection.backend,
         "python-distributions": selection.backend,
         "installation-smoke": selection.backend,
         **gateway,
         "gateway-results": selection.backend,
-        "gateway-performance": True,
         "acceptance": selection.backend,
         "browser-acceptance": selection.frontend,
     }

@@ -122,10 +122,12 @@ Three stable checks are required, each bound to the GitHub Actions App (integrat
 | `docker-correctness` | Both compact and split Docker deployments |
 | `dependency-security` | Python and JavaScript dependency audits |
 
-These gates run even after an upstream failure and succeed only when every dependency succeeds. Failed, cancelled,
-skipped, or missing dependencies fail the gate. Pending or missing required checks block merging, and updating a
-branch after `main` advances requires checks against the new base. `gateway-results` publishes diagnostics and is
-not a required correctness check. Gateway performance and live-provider runs are separate from correctness gates.
+These gates run even after an upstream failure. CI and Docker gates require successful change classification and
+every necessary dependency to succeed; skips pass only when the change policy permits them. Dependency audits always
+run. Failed, cancelled, missing, or unexpectedly skipped dependencies fail their gate. Pending or missing required
+checks block merging, and updating a branch after `main` advances requires checks against the new base.
+`gateway-results` publishes diagnostics and rejects unsuccessful gateway jobs. Gateway performance and live-provider
+runs are separate from correctness gates. See [the CI change policy](notes/CI.md) for selection and timing evidence.
 
 Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
 force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required

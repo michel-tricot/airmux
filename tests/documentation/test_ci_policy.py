@@ -142,7 +142,7 @@ def test_policy_cli_emits_outputs_and_returns_failure_for_invalid_dependencies(t
     assert "| frontend | True |" in summary.read_text()
     results = job_results(Selection(False, False, False))
     assert runner.invoke(app, ["gate", "ci"], env={"NEEDS": json.dumps(results)}).exit_code == 0
-    results["gateway-performance"]["result"] = "cancelled"
+    results["workflows"]["result"] = "cancelled"
     assert runner.invoke(app, ["gate", "ci"], env={"NEEDS": json.dumps(results)}).exit_code != 0
 
 
@@ -156,12 +156,15 @@ def test_every_workflow_is_parsable_and_filters_jobs_instead_of_triggers():
 
 
 def test_workflow_aggregates_cover_all_validation_jobs():
-    workflows: list[tuple[str, Scope, str]] = [("ci.yml", "ci", "ci"), ("docker-deployments.yml", "docker", "deployment-results")]
+    workflows: list[tuple[str, Scope, str]] = [("ci.yml", "ci", "ci-correctness"), ("docker-deployments.yml", "docker", "docker-correctness")]
     for filename, scope, aggregate in workflows:
         jobs = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())["jobs"]
         expected = {"changes", *required_jobs(Selection(), scope)}
         assert set(jobs[aggregate]["needs"]) == expected
-        assert set(jobs) == expected | {aggregate}
+        independent = {"gateway-performance"} if scope == "ci" else set()
+        assert set(jobs) == expected | {aggregate} | independent
+        for name in independent:
+            assert "if" not in jobs[name]
         assert jobs[aggregate]["if"] == "always()"
         for name, required in required_jobs(Selection(False, False, False), scope).items():
             if not required:
