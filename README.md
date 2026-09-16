@@ -53,7 +53,7 @@ export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Reply with exactly: airmux ready"}],"max_completion_tokens":16}'
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in one word."}],"max_completion_tokens":16}'
 ```
 
 The same gateway accepts streaming requests, tool calls, structured output, reasoning, images, and PDF inputs when the
@@ -72,7 +72,7 @@ agent frameworks, CLIs, services, and raw HTTP integrations.
 | Responses | `POST /inf/v1/responses` |
 | Messages | `POST /inf/v1/messages` |
 | Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
-| Canonical | `POST /inf/v1/chat/completions` with `x-airmux-dialect: canonical` |
+| Canonical | `POST /inf/v1/chat/completions` |
 
 The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with an airmux inference key:
 
