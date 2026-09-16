@@ -1,0 +1,59 @@
+name: prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Public version increment
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-branch:
+    if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - name: Prepare the public version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          uv version --project packaging/airmux --bump "$BUMP" --frozen
+          test "$(git diff --name-only)" = "packaging/airmux/pyproject.toml"
+          test -z "$(git ls-files --others --exclude-standard)"
+          version="$(python -c 'import tomllib; print(tomllib.load(open("packaging/airmux/pyproject.toml", "rb"))["project"]["version"])')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=release/v$version" >> "$GITHUB_OUTPUT"
+      - name: Create the release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ steps.version.outputs.branch }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          project="packaging/airmux/pyproject.toml"
+          project_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$project?ref=$GITHUB_SHA" --jq .sha)"
+          content="$(base64 -w 0 "$project")"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/$RELEASE_BRANCH" -f sha="$GITHUB_SHA"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$project" -f message="Prepare airmux $RELEASE_VERSION" -f content="$content" -f branch="$RELEASE_BRANCH" -f sha="$project_sha"
+          compare_url="https://github.com/$GITHUB_REPOSITORY/compare/main...$RELEASE_BRANCH?expand=1"
+          {
+            echo "Release branch \`$RELEASE_BRANCH\` is ready."
+            echo "Open the prefilled pull request: $compare_url"
+          } >> "$GITHUB_STEP_SUMMARY"

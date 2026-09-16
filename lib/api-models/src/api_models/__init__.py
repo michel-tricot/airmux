@@ -57,50 +57,6 @@ class AllowedProviders(BaseModel):
     names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
 
 
-class AmountUsd(RootModel[float]):
-    root: Annotated[float, Field(gt=0.0, title="Amount Usd")]
-
-
-class AmountUsd1(RootModel[str]):
-    model_config = ConfigDict(
-        regex_engine="python-re",
-    )
-    root: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Amount Usd",
-        ),
-    ]
-
-
-class BudgetInput(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Annotated[Literal["budget"], Field(title="Kind")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    amount_usd: Annotated[AmountUsd | AmountUsd1, Field(title="Amount Usd")]
-    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
-
-
-class BudgetOutput(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        regex_engine="python-re",
-    )
-    kind: Annotated[Literal["budget"], Field(title="Kind")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    amount_usd: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Amount Usd",
-        ),
-    ]
-    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
-
-
 class BundleManifestEntry(BaseModel):
     """
     The immutable identity of one organization bundle available to a data plane.
@@ -2201,15 +2157,7 @@ class RuleDefinitionInput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchInput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels
-        | AllowedProviders
-        | DenyRequest
-        | StrictParameters
-        | PriceLimitInput
-        | RequestLimits
-        | CredentialAccess
-        | Fallback
-        | BudgetInput,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2220,15 +2168,7 @@ class RuleDefinitionOutput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels
-        | AllowedProviders
-        | DenyRequest
-        | StrictParameters
-        | PriceLimitOutput
-        | RequestLimits
-        | CredentialAccess
-        | Fallback
-        | BudgetOutput,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2430,7 +2370,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinition,
-        Field(description="Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced"),
+        Field(description="Workspace, user, or inference key target and reusable rules"),
     ]
 
 

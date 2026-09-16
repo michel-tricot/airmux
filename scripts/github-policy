@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --locked --package airmux python
 from __future__ import annotations
 
 import difflib
@@ -17,7 +17,7 @@ policy = root / ".github/policy"
 
 def gh(repo: str, method: str, endpoint: str, body: object | None = None) -> object:
     url = f"repos/{repo}" + (f"/{endpoint}" if endpoint else "")
-    command = ["gh", "api", "--method", method, url]
+    command = ["gh", "api", "--method", method, url, *(("--input", "-") if body is not None else ())]
     result = subprocess.run(
         command,
         input=None if body is None else json.dumps(body),

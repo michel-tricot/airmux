@@ -49,53 +49,6 @@ export interface AllowedProviders {
   names: string[];
 }
 
-export type BudgetInputPeriod = typeof BudgetInputPeriod[keyof typeof BudgetInputPeriod];
-
-
-export const BudgetInputPeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export type BudgetInputSharing = typeof BudgetInputSharing[keyof typeof BudgetInputSharing];
-
-
-export const BudgetInputSharing = {
-  shared: 'shared',
-  per_key: 'per_key',
-} as const;
-
-export interface BudgetInput {
-  kind: 'budget';
-  period: BudgetInputPeriod;
-  amount_usd: number | string;
-  sharing: BudgetInputSharing;
-}
-
-export type BudgetOutputPeriod = typeof BudgetOutputPeriod[keyof typeof BudgetOutputPeriod];
-
-
-export const BudgetOutputPeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export type BudgetOutputSharing = typeof BudgetOutputSharing[keyof typeof BudgetOutputSharing];
-
-
-export const BudgetOutputSharing = {
-  shared: 'shared',
-  per_key: 'per_key',
-} as const;
-
-export interface BudgetOutput {
-  kind: 'budget';
-  period: BudgetOutputPeriod;
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
-  amount_usd: string;
-  sharing: BudgetOutputSharing;
-}
-
 /**
  * The immutable identity of one organization bundle available to a data plane.
  */
@@ -365,7 +318,7 @@ export interface Fallback {
 
 export interface RuleDefinitionOutput {
   match: AllRequests | RequestMatchOutput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback | BudgetOutput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback;
 }
 
 export interface RuleEntry {
@@ -1300,7 +1253,7 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced */
+  /** Workspace, user, or inference key target and reusable rules */
   definition: PolicyDefinition;
 }
 
@@ -1627,7 +1580,7 @@ export interface RoutedUsageEventV1 {
 
 export interface RuleDefinitionInput {
   match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback | BudgetInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback;
 }
 
 export interface RuleCreate {

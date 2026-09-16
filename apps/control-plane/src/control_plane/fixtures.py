@@ -34,7 +34,6 @@ from contract.policies import (
     AllowedModels,
     AllowedProviders,
     AllRequests,
-    Budget,
     CredentialAccess,
     DenyRequest,
     Fallback,
@@ -485,18 +484,18 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
         rules=(ci_provider,),
     )
-    monthly_budget = await workspace_rule(
+    default_output_limit = await workspace_rule(
         default,
-        name="Monthly shared budget",
+        name="Default output token ceiling",
         match=AllRequests(kind="all_requests"),
-        action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
+        action=RequestLimits(kind="request_limits", max_output_tokens=4096),
     )
     await workspace_policy(
         default,
-        name="Monthly shared budget",
+        name="Default output token ceiling",
         priority=10,
         target=WorkspaceTarget(kind="workspace"),
-        rules=(monthly_budget,),
+        rules=(default_output_limit,),
     )
 
     await ManagementKey(

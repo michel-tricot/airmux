@@ -134,11 +134,6 @@ def test_policy_index_preserves_workspace_evaluation_order():
     assert tuple(compiled.policy.id for compiled in snap.policy_index[other_workspace]) == (other.id,)
 
 
-def test_budget_does_not_enforce_yet():
-    key, snap = snapshot([policy({"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "shared"})])
-    assert isinstance(evaluate(request(), key, snap), Allow)
-
-
 def test_strict_parameters_rejects_a_parameter_the_model_would_drop():
     model = MODEL.model_copy(update={"parameter_support": {"temperature": "unsupported"}})
     key, snap = snapshot([policy({"kind": "strict_parameters"})], models=[model])

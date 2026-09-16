@@ -1,6 +1,6 @@
 [project]
 name = "airmux"
-version = "0.1.1"
+version = "0.1.2"
 description = "Self-hosted LLM gateway and management CLI"
 readme = "README.md"
 license = "Elastic-2.0"

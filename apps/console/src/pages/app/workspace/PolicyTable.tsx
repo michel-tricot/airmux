@@ -222,20 +222,7 @@ export function PolicyTable({
                 {
                   key: 'status',
                   header: 'Status',
-                  cell: (policy) => {
-                    const attachedRules = policy.definition.rule_ids
-                      .map((id) => ruleById.get(id))
-                      .filter((rule): rule is RuleOut => rule !== undefined);
-                    return (
-                      <Badge variant={policy.enabled ? 'success' : 'secondary'}>
-                        {!policy.enabled
-                          ? 'Disabled'
-                          : attachedRules.length > 0 && attachedRules.every((rule) => rule.definition.action.kind === 'budget')
-                            ? 'Not enforced'
-                            : 'Enabled'}
-                      </Badge>
-                    );
-                  },
+                  cell: (policy) => <Badge variant={policy.enabled ? 'success' : 'secondary'}>{policy.enabled ? 'Enabled' : 'Disabled'}</Badge>,
                 },
                 ...(canManage
                   ? [
