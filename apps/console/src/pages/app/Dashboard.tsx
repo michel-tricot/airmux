@@ -10,6 +10,7 @@ import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-s
 import { useAuthorization } from '@/features/permissions/hooks';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
+import { formatUsd, parseUsdAmount } from '@/lib/money';
 
 export default function AppDashboard() {
   const orgId = useRequiredOrgId();
@@ -109,7 +110,7 @@ export default function AppDashboard() {
                 header: 'Cost',
                 headClassName: 'text-right',
                 cellClassName: 'text-right font-mono text-sm',
-                cell: (event) => `$${event.cost_usd.toFixed(4)}`,
+                cell: (event) => formatUsd(parseUsdAmount(event.cost_usd)),
               },
               {
                 key: 'when',

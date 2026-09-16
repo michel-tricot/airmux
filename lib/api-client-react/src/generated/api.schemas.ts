@@ -149,10 +149,14 @@ export interface ModelEntry {
   model_id: string;
   provider_id: string;
   upstream_model: string;
-  input_price_per_mtok: number;
-  output_price_per_mtok: number;
-  cache_read_price_per_mtok: number;
-  cache_write_price_per_mtok: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  input_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  output_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_read_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_write_price_per_mtok: string;
   context_window: number;
   max_output_tokens?: number | null;
   /**
@@ -274,11 +278,11 @@ export const StrictParametersValue = {
 } as const;
 export type StrictParameters = typeof StrictParametersValue;
 
-export interface PriceLimitOutput {
+export interface PriceLimit {
   kind: 'price_limit';
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  /** @pattern ^\d+(?:\.\d+)?$ */
   max_input_price_per_mtok: string;
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$) */
+  /** @pattern ^\d+(?:\.\d+)?$ */
   max_output_price_per_mtok: string;
 }
 
@@ -343,7 +347,7 @@ export interface Fallback {
 
 export interface RuleDefinitionOutput {
   match: AllRequests | RequestMatchOutput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
 }
 
 export interface PolicyDefinitionOutput {
@@ -547,23 +551,23 @@ export interface DeniedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_usd: number;
+  cost_usd: string;
   /**
      * Estimated input cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_input_usd?: number;
+  cost_input_usd?: string;
   /**
      * Estimated output cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_output_usd?: number;
+  cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Input tokens read from a provider cache
      * @minimum 0
@@ -972,24 +976,24 @@ export interface ModelIn {
   egress_kind?: string | null;
   /**
      * USD per million input tokens
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  input_price_per_mtok?: number;
+  input_price_per_mtok?: string;
   /**
      * USD per million output tokens
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  output_price_per_mtok?: number;
+  output_price_per_mtok?: string;
   /**
      * USD per million cache-read input tokens
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cache_read_price_per_mtok?: number;
+  cache_read_price_per_mtok?: string;
   /**
      * USD per million cache-write input tokens
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cache_write_price_per_mtok?: number;
+  cache_write_price_per_mtok?: string;
   /**
      * Context window in tokens
      * @minimum 1
@@ -1059,10 +1063,14 @@ export interface ModelOut {
   provider_id: string;
   upstream_model: string;
   egress_kind: string | null;
-  input_price_per_mtok: number;
-  output_price_per_mtok: number;
-  cache_read_price_per_mtok: number;
-  cache_write_price_per_mtok: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  input_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  output_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_read_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_write_price_per_mtok: string;
   context_window: number;
   max_output_tokens: number | null;
   input_modalities: ModelOutInputModalitiesItem[];
@@ -1257,15 +1265,9 @@ export interface RequestMatchInput {
   capabilities?: RequestMatchInputCapabilitiesItem[];
 }
 
-export interface PriceLimitInput {
-  kind: 'price_limit';
-  max_input_price_per_mtok: number | string;
-  max_output_price_per_mtok: number | string;
-}
-
 export interface RuleDefinitionInput {
   match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
 }
 
 export interface PolicyDefinitionInput {
@@ -1545,23 +1547,23 @@ export interface RoutedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_usd: number;
+  cost_usd: string;
   /**
      * Estimated input cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_input_usd?: number;
+  cost_input_usd?: string;
   /**
      * Estimated output cost in USD
-     * @minimum 0
+     * @pattern ^\d+(?:\.\d+)?$
      */
-  cost_output_usd?: number;
+  cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Input tokens read from a provider cache
      * @minimum 0
@@ -1694,9 +1696,12 @@ export interface UsageEventOut {
   input_tokens: number;
   output_tokens: number;
   max_output_tokens: number | null;
-  cost_usd: number;
-  cost_input_usd: number;
-  cost_output_usd: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_input_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_output_usd: string;
   cache_read_tokens: number;
   cache_write_tokens: number;
   latency_ms: number;

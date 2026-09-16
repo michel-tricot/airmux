@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING, cast
 
 import yaml
@@ -48,7 +49,7 @@ def _models(taxonomy: Path, provider_id: str) -> tuple[Mapping[str, object], ...
     path = taxonomy / "models" / f"{provider_id}.json"
     if not path.exists():
         return ()
-    document = _mapping(json.loads(path.read_text(encoding="utf-8")))
+    document = _mapping(json.loads(path.read_text(encoding="utf-8"), parse_float=Decimal))
     return tuple(_mapping(item) for item in _sequence(document.get("models")))
 
 

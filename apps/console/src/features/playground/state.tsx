@@ -15,7 +15,8 @@ export type PlaygroundInteraction = {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
-  estimatedCostUsd: number;
+  cacheWriteTokens: number;
+  estimatedCostPicoUsd: bigint;
   durationMs: number;
   firstTokenMs: number | undefined;
 };

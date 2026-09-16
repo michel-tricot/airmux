@@ -11,9 +11,8 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from airmux_runtime.config import load_yaml
 from airmux_runtime.files import GENERATED_STATE_GITIGNORE, write_new_configuration
-from contract.taxonomy import TaxonomySpec
+from airmux_runtime.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.bootstrap import bootstrap_data_plane
@@ -172,7 +171,7 @@ async def seed_fixtures(config: Path) -> FixtureResult:
 
 
 async def apply_catalog(config: Path, path: Path) -> TaxonomyResult:
-    taxonomy = TaxonomySpec.model_validate(load_yaml(path))
+    taxonomy = parse_taxonomy(path)
     with database_errors():
         async with standalone_transaction(load_settings(config).database.url):
             await set_actor("root")

@@ -74,7 +74,7 @@ def _usage_event(metered, status, occurred_at):
         "input_tokens": 1,
         "output_tokens": 1,
         "max_output_tokens": 128,
-        "cost_usd": 0.0,
+        "cost_usd": "0.0",
         "latency_ms": 1,
         "status": status,
         "stream": False,

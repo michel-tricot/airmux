@@ -1165,6 +1165,7 @@ version = "0.1.0"
 source = { editable = "model-audit" }
 dependencies = [
     { name = "airmux-contract" },
+    { name = "airmux-runtime" },
     { name = "anthropic" },
     { name = "httpx" },
     { name = "jsonschema" },
@@ -1179,6 +1180,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "airmux-contract", editable = "lib/contract" },
+    { name = "airmux-runtime", editable = "lib/runtime" },
     { name = "anthropic" },
     { name = "httpx" },
     { name = "jsonschema" },

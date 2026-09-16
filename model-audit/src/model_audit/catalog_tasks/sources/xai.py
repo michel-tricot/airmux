@@ -33,6 +33,7 @@ serves /v1/responses too and the catalog does not claim it.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
@@ -79,8 +80,8 @@ class XAI(ModelSource):
         return payload
 
     def normalize(self, item: CatalogObject) -> CatalogObject:
-        def scale(value: CatalogValue) -> float | None:
-            return round(value / CENTS_PER_HUNDRED_MILLION, 4) if isinstance(value, (int, float)) else None
+        def scale(value: CatalogValue) -> Decimal | None:
+            return value / Decimal(CENTS_PER_HUNDRED_MILLION) if isinstance(value, (int, Decimal)) and not isinstance(value, bool) else None
 
         prompt = scale(item.get("prompt_text_token_price"))
         cached = scale(item.get("cached_prompt_text_token_price"))

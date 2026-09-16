@@ -6,13 +6,15 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import httpx
 import tiktoken
 from pydantic import BaseModel
 
-from contract import DeniedUsageEventV1, RoutedUsageEventV1, uuid7
+from contract import DeniedUsageEventV1, RoutedUsageEventV1, UsdAmount, uuid7
+from contract.money import USD_AMOUNT_QUANTUM, ZERO_USD
 from data_plane.canonical import CanonicalTextPart, CanonicalUsage
 
 if TYPE_CHECKING:
@@ -36,14 +38,15 @@ class RequestStart:
     started_at: float
 
 
-def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[float, float]:
+def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[UsdAmount, UsdAmount]:
     fresh_input_tokens = max(0, usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
     input_cost = (
         fresh_input_tokens * model.input_price_per_mtok
         + usage.cache_read_tokens * model.cache_read_price_per_mtok
         + usage.cache_write_tokens * model.cache_write_price_per_mtok
-    ) / 1_000_000
-    return input_cost, usage.output_tokens * model.output_price_per_mtok / 1_000_000
+    ) / Decimal(1_000_000)
+    output_cost = usage.output_tokens * model.output_price_per_mtok / Decimal(1_000_000)
+    return input_cost.quantize(USD_AMOUNT_QUANTUM), output_cost.quantize(USD_AMOUNT_QUANTUM)
 
 
 @functools.lru_cache(maxsize=64)
@@ -110,8 +113,8 @@ def record_denied(
             bundle_id=bundle_id,
             input_tokens=0,
             output_tokens=0,
+            cost_usd=ZERO_USD,
             max_output_tokens=None,
-            cost_usd=0.0,
             latency_ms=int((time.monotonic() - start.started_at) * 1000),
             status="denied",
             stream=request.stream,
@@ -165,7 +168,7 @@ def record_usage(
     )
     logger.info(
         "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d max_output_tokens=%s "
-        "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",
+        "cache_read=%d cache_write=%d estimated=%s cost_usd=%s latency_ms=%d",
         ctx.request_id,
         ctx.model.model_id,
         ctx.provider.provider_id,

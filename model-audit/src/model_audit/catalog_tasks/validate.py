@@ -12,6 +12,7 @@ rule, so the fix is obvious without reading this file.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -195,7 +196,7 @@ def check_schemas(all_entries: list[dict]) -> None:  # noqa: PLR0912 schema vali
 def check_models(all_entries: list[dict]) -> None:  # noqa: PLR0912,PLR0915 model validation enumerates independent contract rules
     known = {entry["id"]: entry for entry in all_entries}
     for f in sorted((ROOT / "models").glob("*.json")):
-        doc = json.loads(f.read_text())
+        doc = json.loads(f.read_text(), parse_float=Decimal)
         provider = doc.get("provider")
         if provider not in known:
             fail("models", f"{f.name} is for {provider}, which is in neither catalog")
@@ -326,7 +327,7 @@ def main(_arguments: Sequence[str] = ()) -> int:
             emit(f"  {line}")
         return 1
 
-    models = [m for f in (ROOT / "models").glob("*.json") for m in json.loads(f.read_text())["models"]]
+    models = [m for f in (ROOT / "models").glob("*.json") for m in json.loads(f.read_text(), parse_float=Decimal)["models"]]
     complete = sum(1 for m in models if m.get("context_length") and m.get("max_output_tokens"))
     emit(
         f"ok: {len(all_entries)} entries, "

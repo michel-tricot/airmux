@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -59,10 +60,10 @@ def seed_catalog(tmp_path, *, include_models=True):
                     name=name,
                     provider_id=providers[provider_name].id,
                     upstream_model=name,
-                    input_price_per_mtok=1,
-                    output_price_per_mtok=2,
-                    cache_read_price_per_mtok=0,
-                    cache_write_price_per_mtok=0,
+                    input_price_per_mtok=Decimal(1),
+                    output_price_per_mtok=Decimal(2),
+                    cache_read_price_per_mtok=Decimal(0),
+                    cache_write_price_per_mtok=Decimal(0),
                     context_window=128000,
                     input_modalities=["text"],
                     output_modalities=["text"],

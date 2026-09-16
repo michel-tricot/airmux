@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from contract.money import ZERO_USD, UsdAmount
 
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 RoutedUsageStatus = Literal["ok", "upstream_error", "timeout", "cancelled", "credential_rejected", "rate_limited"]
@@ -38,10 +40,10 @@ class _UsageEventV1(BaseModel):
     bundle_id: UUID = Field(description="Policy bundle used for the request")
     input_tokens: int = Field(description="Total input tokens", ge=0, le=MAX_EVENT_INTEGER)
     output_tokens: int = Field(description="Total output tokens", ge=0, le=MAX_EVENT_INTEGER)
+    cost_usd: UsdAmount = Field(description="Total estimated cost in USD")
+    cost_input_usd: UsdAmount = Field(default=ZERO_USD, description="Estimated input cost in USD")
+    cost_output_usd: UsdAmount = Field(default=ZERO_USD, description="Estimated output cost in USD")
     max_output_tokens: int | None = Field(description="Effective upstream output-token limit", ge=1, le=MAX_EVENT_INTEGER)
-    cost_usd: float = Field(description="Total estimated cost in USD", ge=0)
-    cost_input_usd: float = Field(default=0.0, description="Estimated input cost in USD", ge=0)
-    cost_output_usd: float = Field(default=0.0, description="Estimated output cost in USD", ge=0)
     cache_read_tokens: int = Field(default=0, description="Input tokens read from a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     cache_write_tokens: int = Field(default=0, description="Input tokens written to a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     latency_ms: int = Field(description="End-to-end request latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)
@@ -60,6 +62,16 @@ class _UsageEventV1(BaseModel):
             msg = "occurred_at must include a timezone"
             raise ValueError(msg)
         return occurred_at
+
+    @model_validator(mode="after")
+    def exact_total(self) -> Self:
+        if self.cost_usd != self.cost_input_usd + self.cost_output_usd:
+            msg = "cost_usd must equal cost_input_usd plus cost_output_usd"
+            raise ValueError(msg)
+        if self.status == "denied" and self.cost_usd != ZERO_USD:
+            msg = "denied events must have zero cost"
+            raise ValueError(msg)
+        return self
 
 
 class DeniedUsageEventV1(_UsageEventV1):

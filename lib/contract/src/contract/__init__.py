@@ -22,6 +22,7 @@ from contract.events import (
 )
 from contract.ids import uuid7
 from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.money import UsdAmount, UsdRate
 from contract.secrets import SecretPurpose, SecretRef
 
 __all__ = [
@@ -48,6 +49,8 @@ __all__ = [
     "SecretRef",
     "UsageEvent",
     "UsageStatus",
+    "UsdAmount",
+    "UsdRate",
     "token_hash",
     "uuid7",
 ]

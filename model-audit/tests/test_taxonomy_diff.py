@@ -28,6 +28,6 @@ def test_taxonomy_diff_reports_exact_model_fields_and_summary(tmp_path: Path):
 
     assert {(row["field"], row["before"], str(row["after"])) for row in rows} == {
         ("context_length", 10, "20"),
-        ("pricing", None, "{'input_per_mtok': 1.0}"),
+        ("pricing", None, "{'input_per_mtok': '1.0'}"),
     }
     assert summarize_taxonomy_diff(rows) == [{"scope": "catalog-model", "change": "changed", "count": 2}]

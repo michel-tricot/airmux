@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,13 +17,13 @@ if TYPE_CHECKING:
 class ProviderExpectation:
     headers: dict[str, str]
     tokens: tuple[int, int, int, int]
-    costs: tuple[float, float]
+    costs: tuple[str, str]
 
 
 PROVIDER_EXPECTATIONS: dict[Family, ProviderExpectation] = {
-    "openai_compatible": ProviderExpectation({"authorization": f"Bearer {UPSTREAM_KEY}"}, (11, 3, 4, 0), (0.000015, 0.000015)),
-    "openai_responses": ProviderExpectation({"authorization": f"Bearer {UPSTREAM_KEY}"}, (11, 3, 4, 0), (0.000015, 0.000015)),
-    "anthropic": ProviderExpectation({"x-api-key": UPSTREAM_KEY}, (11, 3, 4, 2), (0.000016, 0.000015)),
+    "openai_compatible": ProviderExpectation({"authorization": f"Bearer {UPSTREAM_KEY}"}, (11, 3, 4, 0), ("0.000015", "0.000015")),
+    "openai_responses": ProviderExpectation({"authorization": f"Bearer {UPSTREAM_KEY}"}, (11, 3, 4, 0), ("0.000015", "0.000015")),
+    "anthropic": ProviderExpectation({"x-api-key": UPSTREAM_KEY}, (11, 3, 4, 2), ("0.000016", "0.000015")),
 }
 STREAM_TERMINALS: dict[Dialect, tuple[str, dict[str, int]]] = {
     "openai_chat_completions": ("data: [DONE]", {}),
@@ -49,7 +50,7 @@ def test_every_protocol_pair_preserves_content_and_usage(gateway: Gateway, diale
         assert received.headers[header] == value
     (event,) = gateway.events(1)
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == expected.tokens
-    assert (event.cost_input_usd, event.cost_output_usd) == pytest.approx(expected.costs, rel=1e-12, abs=1e-15)
+    assert (event.cost_input_usd, event.cost_output_usd) == tuple(Decimal(cost) for cost in expected.costs)
     assert event.credential_id is not None
     assert event.credential_scope == "platform"
     assert event.stream == stream

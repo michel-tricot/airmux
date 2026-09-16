@@ -24,7 +24,8 @@ def _event(org: UUID) -> dict:
         "input_tokens": 10,
         "output_tokens": 5,
         "max_output_tokens": 128,
-        "cost_usd": 0.000004,
+        "cost_usd": "0.000004",
+        "cost_input_usd": "0.000004",
         "latency_ms": 120,
         "status": "ok",
         "stream": False,
@@ -118,7 +119,17 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
 
         denied = c.post(
             "/api/v1/events",
-            json=[{**event, "provider_id": "", "status": "denied", "credential_id": None, "credential_scope": None}],
+            json=[
+                {
+                    **event,
+                    "provider_id": "",
+                    "status": "denied",
+                    "credential_id": None,
+                    "credential_scope": None,
+                    "cost_usd": "0",
+                    "cost_input_usd": "0",
+                }
+            ],
             headers=root,
         )
         assert denied.status_code == 200, denied.text

@@ -16,7 +16,8 @@ from uuid import UUID, uuid5
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from airmux_runtime.config import load_yaml, resolve_refs
+from airmux_runtime.config import resolve_refs
+from airmux_runtime.taxonomy import load_taxonomy_document, parse_taxonomy
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
 from contract.policies import PolicyEntry
 from contract.taxonomy import TaxonomySpec
@@ -130,8 +131,9 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
 
 def load_local(path: Path, now: datetime) -> BundleV1:
     raw = path.read_text(encoding="utf-8")
-    spec = LocalBundleSpec.model_validate(resolve_refs(yaml.safe_load(raw) or {}, base_dir=path.parent))
-    taxonomy = TaxonomySpec.model_validate(load_yaml(path.parent / spec.taxonomy)) if isinstance(spec.taxonomy, Path) else spec.taxonomy
+    document = load_taxonomy_document(raw)
+    spec = LocalBundleSpec.model_validate(resolve_refs(document, base_dir=path.parent))
+    taxonomy = parse_taxonomy(path.parent / spec.taxonomy) if isinstance(spec.taxonomy, Path) else spec.taxonomy
     identity = spec.model_dump_json() + "\n" + taxonomy.model_dump_json()
     return compile_local(spec, taxonomy, identity, now)
 
