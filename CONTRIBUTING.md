@@ -127,10 +127,13 @@ skipped, or missing dependencies fail the gate. Pending or missing required chec
 branch after `main` advances requires checks against the new base. `gateway-results` publishes diagnostics and is
 not a required correctness check. Gateway performance and live-provider runs are separate from correctness gates.
 
-There are no administrator, automation, or deploy-key bypasses. The owner follows the same pull request and CI rules.
-The owner is currently the only collaborator, so approvals are not required. When an independent collaborator with
-review permissions is added, set `required_approving_review_count` to `1` and `require_last_push_approval` to `true`
-in the ruleset payload and apply it. Keep stale-review dismissal enabled. Do not add a bypass to avoid failing CI.
+Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
+force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required
+checks are unavailable or strict current-base checks cannot settle during concurrent merges. Automation and deploy
+keys have no bypass. Record why an administrator bypass was used in the pull request. The owner is currently the only
+collaborator, so approvals are not required. When an independent collaborator with review permissions is added, set
+`required_approving_review_count` to `1` and `require_last_push_approval` to `true` in the ruleset payload and apply it.
+Keep stale-review dismissal enabled.
 
 The versioned configuration is [.github/rulesets/protect-main.json](.github/rulesets/protect-main.json). Workflow
 check names and this payload must change together. An administrator can apply the payload to the existing ruleset:
