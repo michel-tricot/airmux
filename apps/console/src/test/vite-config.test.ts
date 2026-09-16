@@ -16,6 +16,15 @@ function configuredAllowedHosts({ allowedHosts, replId }: { allowedHosts?: strin
   return JSON.parse(output) as { server: string[] | true; preview: string[] | true };
 }
 
+function configuredMaxWorkers() {
+  const configUrl = pathToFileURL(path.resolve(import.meta.dirname, '../../vitest.config.ts')).href;
+  const source = `
+    const { default: config } = await import(${JSON.stringify(configUrl)});
+    process.stdout.write(JSON.stringify(config.test?.maxWorkers ?? null));
+  `;
+  return JSON.parse(execFileSync('bun', ['-e', source], { encoding: 'utf8' })) as number | string | null;
+}
+
 describe('Vite host allowlist', () => {
   it('uses Vite host validation defaults outside Replit', () => {
     expect(configuredAllowedHosts()).toEqual({
@@ -34,4 +43,8 @@ describe('Vite host allowlist', () => {
       preview: ['console.example.com', 'api.example.com'],
     });
   });
+});
+
+it('scales test workers to the host', () => {
+  expect(configuredMaxWorkers()).toBeNull();
 });

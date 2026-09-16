@@ -127,8 +127,7 @@ jobs:
       - run: mkdir -p frontend-results
       - run: bun run --filter '@workspace/gateway-console' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/console.xml
       - run: bun run --filter '@workspace/api-client-react' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/client.xml
-      - if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-        run: bun run --filter '@workspace/gateway-console' build
+      - run: bun run --filter '@workspace/gateway-console' build
       - name: Summarize frontend results
         if: always()
         continue-on-error: true
@@ -151,7 +150,6 @@ jobs:
           retention-days: 7
 
   package:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -187,6 +185,7 @@ jobs:
           retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
 
   gateway:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -226,6 +225,7 @@ jobs:
           retention-days: 7
 
   full-stack:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -256,6 +256,7 @@ jobs:
           retention-days: 7
 
   browser:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -291,6 +292,7 @@ jobs:
           retention-days: 7
 
   docker:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15

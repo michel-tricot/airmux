@@ -12,16 +12,18 @@ ROOT = Path(__file__).parents[2]
 CI_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package", "gateway", "full-stack", "browser", "docker"}
 GATES = (("ci.yml", "required", CI_JOBS), ("security.yml", "dependency-security", {"pip-audit", "bun-audit", "dependency-review"}))
 FULL_RUN = "github.event_name != 'pull_request' || github.event.pull_request.draft == false"
-PULL_REQUEST_FULL_RUN = "github.event_name == 'pull_request' && github.event.pull_request.draft == false"
+PULL_REQUEST_RUN = "github.event_name == 'pull_request'"
 GATED_FULL_RUN = f"always() && ({FULL_RUN})"
+ALWAYS = "always()"
 
 
 def selected_jobs(workflow, event_name, draft):
     conditions = {
         None: True,
         FULL_RUN: event_name != "pull_request" or draft is False,
-        PULL_REQUEST_FULL_RUN: event_name == "pull_request" and draft is False,
+        PULL_REQUEST_RUN: event_name == "pull_request",
         GATED_FULL_RUN: event_name != "pull_request" or draft is False,
+        ALWAYS: True,
     }
     selected = set()
     pending = dict(workflow["jobs"])
@@ -33,7 +35,7 @@ def selected_jobs(workflow, event_name, draft):
                 continue
             condition = job.get("if")
             assert condition in conditions, condition
-            if conditions[condition] and (condition == GATED_FULL_RUN or dependencies <= selected):
+            if conditions[condition] and (condition in {GATED_FULL_RUN, ALWAYS} or dependencies <= selected):
                 selected.add(name)
             del pending[name]
             break
@@ -50,7 +52,7 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
     gate = workflow["jobs"][name]
     assert set(gate["needs"]) == dependencies
     assert gate.get("name", name) == name
-    assert gate["if"] == GATED_FULL_RUN
+    assert gate["if"] == (GATED_FULL_RUN if filename == "ci.yml" else ALWAYS)
     step = gate["steps"][-1]
     assert step["env"]["NEEDS"] == "${{ toJSON(needs) }}"
     needs = {dependency: {"result": result} for dependency in dependencies}
@@ -93,12 +95,10 @@ def test_dependency_review_uses_the_documented_free_tier_fallback_when_unavailab
 def test_ci_runs_every_correctness_job_when_full_checks_are_required_and_discovers_suites():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     assert set(workflow["jobs"]) == CI_JOBS | {"required"}
-    for name in ("quality", "python-unit", "frontend"):
+    for name in ("quality", "python-unit", "frontend", "package"):
         assert "if" not in workflow["jobs"][name]
-    for name in ("python-integration", "package"):
+    for name in ("python-integration", "gateway", "full-stack", "browser", "docker"):
         assert workflow["jobs"][name]["if"] == FULL_RUN
-    for name in ("gateway", "full-stack", "browser", "docker"):
-        assert "if" not in workflow["jobs"][name]
     for name in CI_JOBS:
         job = workflow["jobs"][name]
         assert job.get("continue-on-error", False) is False
@@ -114,14 +114,26 @@ def test_ci_runs_every_correctness_job_when_full_checks_are_required_and_discove
     assert "paths:" not in (ROOT / ".github/workflows/ci.yml").read_text()
     assert "paths-ignore:" not in (ROOT / ".github/workflows/ci.yml").read_text()
     frontend_build = next(step for step in workflow["jobs"]["frontend"]["steps"] if step.get("run", "").endswith(" build"))
-    assert frontend_build["if"] == FULL_RUN
+    assert "if" not in frontend_build
 
 
 @pytest.mark.parametrize(
     ("event_name", "activity", "draft", "expected_ci", "expected_security"),
     [
-        ("pull_request", "opened", True, {"quality", "python-unit", "frontend"}, set()),
-        ("pull_request", "synchronize", True, {"quality", "python-unit", "frontend"}, set()),
+        (
+            "pull_request",
+            "opened",
+            True,
+            {"quality", "python-unit", "frontend", "package"},
+            {"pip-audit", "bun-audit", "dependency-review", "dependency-security"},
+        ),
+        (
+            "pull_request",
+            "synchronize",
+            True,
+            {"quality", "python-unit", "frontend", "package"},
+            {"pip-audit", "bun-audit", "dependency-review", "dependency-security"},
+        ),
         ("pull_request", "ready_for_review", False, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-review", "dependency-security"}),
         ("pull_request", "synchronize", False, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-review", "dependency-security"}),
         ("push", None, None, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-security"}),
@@ -140,12 +152,12 @@ def test_pull_request_state_selects_the_expected_workflow_jobs(event_name, activ
     assert selected_jobs(security, event_name, draft) == expected_security
 
 
-def test_security_full_jobs_and_gate_skip_draft_pull_requests():
+def test_fast_security_jobs_run_on_draft_pull_requests():
     jobs = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text())["jobs"]
-    assert jobs["pip-audit"]["if"] == FULL_RUN
-    assert jobs["bun-audit"]["if"] == FULL_RUN
-    assert jobs["dependency-review"]["if"] == PULL_REQUEST_FULL_RUN
-    assert jobs["dependency-security"]["if"] == GATED_FULL_RUN
+    assert "if" not in jobs["pip-audit"]
+    assert "if" not in jobs["bun-audit"]
+    assert jobs["dependency-review"]["if"] == PULL_REQUEST_RUN
+    assert jobs["dependency-security"]["if"] == ALWAYS
 
 
 def test_workflows_separate_pr_nightly_and_release_work():

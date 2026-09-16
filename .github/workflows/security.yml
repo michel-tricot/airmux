@@ -18,7 +18,6 @@ permissions:
 
 jobs:
   pip-audit:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,7 +32,6 @@ jobs:
       - run: uvx pip-audit==2.10.0 --strict --disable-pip --no-deps --requirement requirements-audit.txt
 
   bun-audit:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -46,7 +44,7 @@ jobs:
       - run: bun audit
 
   dependency-review:
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -72,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     needs: [pip-audit, bun-audit, dependency-review]
-    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: always()
     steps:
       - name: Require audits and the available pull-request review
         env:
