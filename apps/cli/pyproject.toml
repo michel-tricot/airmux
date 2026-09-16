@@ -1,12 +1,12 @@
 [project]
 name = "airmux"
-version = "0.1.1"
+version = "0.0.0"
 requires-python = ">=3.13"
 dependencies = [
-  "airmux-api-models==0.1.1",
-  "airmux-contract==0.1.1",
-  "airmux-data-plane==0.1.1",
-  "airmux-control-plane==0.1.1",
+  "airmux-api-models",
+  "airmux-contract",
+  "airmux-data-plane",
+  "airmux-control-plane",
   "httpx",
   "typer",
   "python-dotenv",
