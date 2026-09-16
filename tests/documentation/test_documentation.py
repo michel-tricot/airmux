@@ -118,6 +118,19 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
     assert "notes/design/README.md" in contributing
 
 
+def test_documentation_tracks_current_ci_entry_points() -> None:
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+
+    assert "tests/ci/test_merge_policy.py" in contributing
+    assert "tests/documentation/test_merge_policy.py" not in contributing
+    assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
+
+
+def test_documentation_covers_safe_upgrades() -> None:
+    assert (DOCS / "deployment" / "upgrades.mdx").exists()
+
+
 def test_readme_is_a_complete_oss_entry_point() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     expected_badges = (

@@ -144,4 +144,4 @@ scripts/github-policy apply
 
 Use current-base status checks for this personally owned private repository. A merge queue is unavailable here.
 When a required workflow is broken, repair it through a pull request; protection intentionally keeps `main` blocked
-until the required checks pass. Test the gates locally with `uv run pytest tests/ci`.
+until the required checks pass. Test the gates locally with `uv run pytest tests/ci/test_merge_policy.py`.

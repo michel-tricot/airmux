@@ -58,6 +58,7 @@
               "docs/deployment/fly",
               "docs/deployment/render",
               "docs/deployment/digitalocean",
+              "docs/deployment/upgrades",
               "docs/deployment/scaling",
               "docs/deployment/operations",
               "docs/deployment/security"
