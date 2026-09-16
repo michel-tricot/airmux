@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '23 7 * * *'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA to build and validate as an installed distribution
+        type: string
+        required: true
   workflow_call:
     inputs:
       ref:
