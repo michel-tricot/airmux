@@ -16,5 +16,5 @@ uv run pytest tests/acceptance/full_stack/scenarios
 ```
 
 Both correctness suites and the gateway performance comparison run on PR updates and pushes to main.
-Full-stack benchmarks remain manual. Each suite owns its `conftest.py`; gateway tests do not load
-full-stack setup.
+Each suite owns its `conftest.py`; gateway tests do not load full-stack setup. Both correctness jobs
+publish assertion failures in their Actions summary and retain JUnit XML as downloadable artifacts.

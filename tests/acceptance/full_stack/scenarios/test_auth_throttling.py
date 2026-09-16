@@ -31,15 +31,19 @@ def test_authentication_throttles_without_starving_health_or_inference(stack: St
             return await asyncio.gather(
                 *(client.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong-password"}) for _ in range(16)),
                 client.get("/healthz"),
+                client.post(
+                    stack.dp_url + "/inf/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {stack.caller_api_key}"},
+                    json={"model": "echo", "messages": [{"role": "user", "content": "during authentication burst"}]},
+                ),
             )
 
     responses = asyncio.run(burst())
-    assert responses[-1].status_code == 200
-    assert {response.status_code for response in responses[:-1]} <= {401, 429}
-    limited = [response for response in responses[:-1] if response.status_code == 429]
+    assert [response.status_code for response in responses[-2:]] == [200, 200]
+    assert {response.status_code for response in responses[:-2]} <= {401, 429}
+    limited = [response for response in responses[:-2] if response.status_code == 429]
     assert limited
     assert all(int(response.headers["Retry-After"]) > 0 for response in limited)
-    assert stack.request().status_code == 200
 
     async def start_burst() -> list[httpx.Response]:
         async with httpx.AsyncClient(base_url=stack.cp_url, timeout=10) as client:

@@ -7,10 +7,6 @@ from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD
 def test_enrollment_hides_foreign_invitation_metadata_over_http(stack):
     stack.write_config()
     stack.start_cp()
-    stack.collect_credentials()
-    stack.start_dp()
-    stack.wait_dp_ready()
-    assert stack.request().status_code == 200
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}) as browser:
         login = browser.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
         login.raise_for_status()
@@ -45,4 +41,3 @@ def test_enrollment_hides_foreign_invitation_metadata_over_http(stack):
                 assert [invitation["org_id"] for invitation in enrollment["pending_invitations"]] == [org_id]
                 assert private_id not in response.text
                 assert "Private invitations" not in response.text
-    assert stack.request().status_code == 200

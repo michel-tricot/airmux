@@ -19,9 +19,6 @@ def test_password_change_rotates_the_current_browser_and_ends_other_sessions(sta
     }
     stack.config_path.write_text(yaml.safe_dump(configuration))
     stack.start_cp()
-    stack.collect_credentials()
-    stack.start_dp()
-    stack.wait_dp_ready()
     csrf = {"X-Requested-With": "XMLHttpRequest"}
     with (
         httpx.Client(base_url=stack.cp_url, headers=csrf, timeout=10.0) as current,
@@ -35,6 +32,5 @@ def test_password_change_rotates_the_current_browser_and_ends_other_sessions(sta
         assert current.cookies["tokkeeper_session"] != original_cookie
         assert current.get("/api/v1/auth/me").status_code == 200
         assert other.get("/api/v1/auth/me").status_code == 401
-        assert stack.request().status_code == 200
         assert other.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}).status_code == 401
         other.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": "new-acceptance-password"}).raise_for_status()

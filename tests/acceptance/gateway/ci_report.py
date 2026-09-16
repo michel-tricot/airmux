@@ -19,7 +19,7 @@ def annotation(message: str) -> str:
 @app.command()
 def report(directory: Path, summary: Annotated[Path, typer.Option()]) -> None:
     reports = sorted(directory.glob("*.xml"))
-    sections = ["## Gateway integration tests", "", "| Level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
+    sections = ["## Acceptance test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
     failures: list[tuple[str, str, str]] = []
     for path in reports:
         root = ET.parse(path).getroot()  # noqa: S314 reports are generated locally by pytest
@@ -49,7 +49,7 @@ def report(directory: Path, summary: Annotated[Path, typer.Option()]) -> None:
     sections.extend(
         [
             "",
-            "Full tracebacks are in the test step logs and the gateway-integration artifact, alongside sanitized gateway and upstream diagnostics.",
+            "Full tracebacks are in the test step logs. Download the job's test-results artifact for the JUnit reports.",
             "",
         ]
     )

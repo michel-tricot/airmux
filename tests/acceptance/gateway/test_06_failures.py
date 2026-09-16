@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from gateway_harness import DIALECTS, ERROR_FIELDS, FAMILIES, error_of, stream_payloads, streamed_text, text_of
-from upstream import TEXT, UPSTREAM_KEY, Reply
+from upstream import TEXT, UPSTREAM_KEY, Malformation, Reply
 
 if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
@@ -40,7 +40,15 @@ def test_provider_errors_keep_the_caller_shape_and_record_a_valid_event(
     gateway.start()
     response = gateway.request(dialect, stream=stream)
     assert response.status_code == status, response.text
-    assert error_of(dialect, response) == "provider_failure"
+    error = {"code": "provider_failure", "message": "provider rejected [REDACTED]"}
+    error_kind = {401: "invalid_request_error", 429: "invalid_request_error", 503: "api_error"}[status]
+    expected = {
+        "canonical": {"error": error},
+        "openai_native": {"error": {"type": error_kind, **error}},
+        "openai_responses": {"error": {"type": error_kind, **error}},
+        "anthropic": {"type": "error", "error": {"type": "provider_failure", "message": "provider rejected [REDACTED]"}},
+    }
+    assert response.json() == expected[dialect]
     assert UPSTREAM_KEY not in response.text
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.stream) == (event_status, "model-a", "stub", stream)
@@ -50,10 +58,12 @@ def test_provider_errors_keep_the_caller_shape_and_record_a_valid_event(
 
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("family", FAMILIES)
-@pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
-def test_malformed_provider_success_is_an_error_and_service_recovers(gateway: Gateway, dialect: Dialect, family: Family, stream: bool):
+@pytest.mark.parametrize(("stream", "malformation"), [(False, "json"), (True, "event"), (True, "event_name")])
+def test_malformed_provider_success_is_an_error_and_service_recovers(
+    gateway: Gateway, dialect: Dialect, family: Family, stream: bool, malformation: Malformation
+):
     provider = gateway.add_provider(family)
-    provider.replies["upstream-model-a"] = Reply(malformed="event" if stream else "json")
+    provider.replies["upstream-model-a"] = Reply(malformed=malformation)
     gateway.start()
     response = gateway.request(dialect, stream=stream)
     if stream:

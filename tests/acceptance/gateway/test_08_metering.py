@@ -60,10 +60,6 @@ TOKEN_CASES: dict[Family, dict[str, TokenCase]] = {
             {"prompt_tokens": 1000, "completion_tokens": 40, "prompt_tokens_details": {"cached_tokens": 300}},
             MeteringExpectation((1000, 40, 300, 0), 0.001475, 0.0002),
         ),
-        "cache_writes_when_reported": TokenCase(
-            {"prompt_tokens": 1000, "completion_tokens": 40, "prompt_tokens_details": {"cached_tokens": 0}},
-            MeteringExpectation((1000, 40, 0, 0), 0.002, 0.0002),
-        ),
         "zero_output": TokenCase(
             {"prompt_tokens": 1000, "completion_tokens": 0, "prompt_tokens_details": {"cached_tokens": 0}},
             MeteringExpectation((1000, 0, 0, 0), 0.002, 0),
@@ -71,10 +67,6 @@ TOKEN_CASES: dict[Family, dict[str, TokenCase]] = {
         "cache_reads_zero_output": TokenCase(
             {"prompt_tokens": 1000, "completion_tokens": 0, "prompt_tokens_details": {"cached_tokens": 1000}},
             MeteringExpectation((1000, 0, 1000, 0), 0.00025, 0),
-        ),
-        "cache_writes_zero_output": TokenCase(
-            {"prompt_tokens": 1000, "completion_tokens": 0, "prompt_tokens_details": {"cached_tokens": 0}},
-            MeteringExpectation((1000, 0, 0, 0), 0.002, 0),
         ),
         "zero_input": TokenCase(
             {"prompt_tokens": 0, "completion_tokens": 40, "prompt_tokens_details": {"cached_tokens": 0}},
@@ -98,10 +90,6 @@ TOKEN_CASES: dict[Family, dict[str, TokenCase]] = {
             {"input_tokens": 1000, "output_tokens": 40, "input_tokens_details": {"cached_tokens": 300}},
             MeteringExpectation((1000, 40, 300, 0), 0.001475, 0.0002),
         ),
-        "cache_writes_when_reported": TokenCase(
-            {"input_tokens": 1000, "output_tokens": 40, "input_tokens_details": {"cached_tokens": 0}},
-            MeteringExpectation((1000, 40, 0, 0), 0.002, 0.0002),
-        ),
         "zero_output": TokenCase(
             {"input_tokens": 1000, "output_tokens": 0, "input_tokens_details": {"cached_tokens": 0}},
             MeteringExpectation((1000, 0, 0, 0), 0.002, 0),
@@ -109,10 +97,6 @@ TOKEN_CASES: dict[Family, dict[str, TokenCase]] = {
         "cache_reads_zero_output": TokenCase(
             {"input_tokens": 1000, "output_tokens": 0, "input_tokens_details": {"cached_tokens": 1000}},
             MeteringExpectation((1000, 0, 1000, 0), 0.00025, 0),
-        ),
-        "cache_writes_zero_output": TokenCase(
-            {"input_tokens": 1000, "output_tokens": 0, "input_tokens_details": {"cached_tokens": 0}},
-            MeteringExpectation((1000, 0, 0, 0), 0.002, 0),
         ),
         "zero_input": TokenCase(
             {"input_tokens": 0, "output_tokens": 40, "input_tokens_details": {"cached_tokens": 0}},
@@ -165,21 +149,9 @@ TOKEN_CASES: dict[Family, dict[str, TokenCase]] = {
 DISCONNECT_CASES: dict[Family, dict[str, TokenCase]] = {
     "openai_compatible": {
         "mixed_usage": TokenCase(DEFAULT_USAGE["openai_compatible"], MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)),
-        "only_cache_reads": TokenCase(
-            TOKEN_CASES["openai_compatible"]["cache_reads"].reported_usage, MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)
-        ),
-        "only_cache_writes": TokenCase(
-            TOKEN_CASES["openai_compatible"]["cache_writes_when_reported"].reported_usage, MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)
-        ),
     },
     "openai_responses": {
         "mixed_usage": TokenCase(DEFAULT_USAGE["openai_responses"], MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)),
-        "only_cache_reads": TokenCase(
-            TOKEN_CASES["openai_responses"]["cache_reads"].reported_usage, MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)
-        ),
-        "only_cache_writes": TokenCase(
-            TOKEN_CASES["openai_responses"]["cache_writes_when_reported"].reported_usage, MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)
-        ),
     },
     "anthropic": {
         "mixed_usage": TokenCase(DEFAULT_USAGE["anthropic"], MeteringExpectation((11, 2, 4, 2), 0.000016, 0.00001)),
@@ -274,22 +246,8 @@ def test_catalog_prices_determine_each_event_cost(gateway: Gateway, dialect: Dia
     assert_metering(event, case.expected[family])
 
 
-@pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.parametrize(("family", "case_id"), [(family, case_id) for family in FAMILIES for case_id in TOKEN_CASES[family]])
 @pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
-@pytest.mark.parametrize(
-    "case_id",
-    [
-        "ordinary",
-        "cache_reads",
-        "mixed_cache",
-        "cache_writes_when_reported",
-        "zero_output",
-        "cache_reads_zero_output",
-        "cache_writes_zero_output",
-        "zero_input",
-        "million_token_units",
-    ],
-)
 def test_reported_tokens_determine_the_event_cost(gateway: Gateway, family: Family, stream: bool, case_id: str):
     case = TOKEN_CASES[family][case_id]
     provider = gateway.add_provider(family)
@@ -367,8 +325,7 @@ def test_fallback_prices_each_attempt_using_its_own_model(gateway: Gateway, dial
     assert first.cost_usd + second.cost_usd == pytest.approx(total_cost, rel=1e-12, abs=1e-15)
 
 
-@pytest.mark.parametrize("family", FAMILIES)
-@pytest.mark.parametrize("case_id", ["mixed_usage", "only_cache_reads", "only_cache_writes"])
+@pytest.mark.parametrize(("family", "case_id"), [(family, case_id) for family in FAMILIES for case_id in DISCONNECT_CASES[family]])
 def test_disconnect_prices_only_observed_or_estimated_usage(gateway: Gateway, family: Family, case_id: str):
     case = DISCONNECT_CASES[family][case_id]
     provider = gateway.add_provider(family)
@@ -440,3 +397,32 @@ def test_active_stream_keeps_original_prices_after_catalog_reload(gateway: Gatew
             assert_metering(event, DEFAULT_EXPECTATIONS[family])
         else:
             assert_metering(event, RELOADED_EXPECTATIONS[family])
+
+
+ZERO_USAGE_CASES: dict[Family, tuple[TokenCase, bool]] = {
+    "openai_compatible": (TokenCase({"prompt_tokens": 0, "completion_tokens": 0}, MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001)), True),
+    "anthropic": (
+        TokenCase(
+            {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
+            MeteringExpectation((3, 2, 0, 0), 0.000006, 0.00001),
+        ),
+        True,
+    ),
+    "openai_responses": (TokenCase({"input_tokens": 0, "output_tokens": 0}, MeteringExpectation((0, 0, 0, 0), 0, 0)), False),
+}
+
+
+@pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
+def test_all_zero_usage_distinguishes_authoritative_counts_from_estimates(gateway: Gateway, family: Family, stream: bool) -> None:
+    case, estimated = ZERO_USAGE_CASES[family]
+    provider = gateway.add_provider(family)
+    provider.replies["upstream-model-a"] = Reply(text="one two", usage=case.reported_usage)
+    gateway.start()
+    response = gateway.request(stream=stream)
+    assert response.status_code == 200, response.text
+    usage = next(payload["usage"] for payload in stream_payloads(response) if "usage" in payload) if stream else response.json()["usage"]
+    assert usage == {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": estimated}
+    (event,) = gateway.events(1)
+    assert event.status == "ok"
+    assert_metering(event, case.expected)

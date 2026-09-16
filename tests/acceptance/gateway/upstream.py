@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 Family = Literal["openai_compatible", "openai_responses", "anthropic"]
+Malformation = Literal["none", "json", "event", "event_name"]
 ReportedUsage = dict[str, object] | Literal["default"] | None
 UPSTREAM_KEY = "upstream-integration-secret"
 TEXT = "hello 🌍"
@@ -30,7 +31,7 @@ class Reply:
     content: Literal["text", "tool", "reasoning"] = "text"
     usage: ReportedUsage = "default"
     terminal: bool = True
-    malformed: Literal["none", "json", "event"] = "none"
+    malformed: Malformation = "none"
     delay_s: float = 0
     split_bytes: bool = False
     hold: threading.Event | None = None
@@ -198,6 +199,8 @@ class ProviderHandler(BaseHTTPRequestHandler):
         events = stream_events(provider.family, reply)
         if reply.malformed == "event":
             events = [*events[:1], b"data: {invalid\n\n"]
+        if reply.malformed == "event_name":
+            events = [b"event: \xff\ndata: {}\n\n"]
         with contextlib.suppress(BrokenPipeError, ConnectionResetError):
             for event in events:
                 fragments = [event[index : index + 1] for index in range(len(event))] if reply.split_bytes else [event]

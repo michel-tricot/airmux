@@ -82,7 +82,7 @@ jobs:
       - name: Gateway level 1 - basics
         run: uv run pytest tests/acceptance/gateway/test_01_basic.py -n auto --junitxml=gateway-results/01-basic.xml
       - name: Gateway level 2 - protocols
-        run: uv run pytest tests/acceptance/gateway/test_02_protocols.py -n auto --junitxml=gateway-results/02-protocols.xml
+        run: uv run pytest tests/acceptance/gateway/test_02_protocols.py tests/acceptance/gateway/test_openai_sdk.py -n auto --junitxml=gateway-results/02-protocols.xml
       - name: Gateway level 3 - features
         run: uv run pytest tests/acceptance/gateway/test_03_features.py -n auto --junitxml=gateway-results/03-features.xml
       - name: Gateway level 4 - policies
@@ -92,7 +92,7 @@ jobs:
       - name: Gateway level 6 - failures and fallback
         run: uv run pytest tests/acceptance/gateway/test_06_failures.py -n auto --junitxml=gateway-results/06-failures.xml
       - name: Gateway level 7 - runtime and CLI lifecycle
-        run: uv run pytest tests/acceptance/gateway/test_07_runtime.py tests/acceptance/gateway/test_gateway.py -n auto --junitxml=gateway-results/07-runtime.xml
+        run: uv run pytest tests/acceptance/gateway/test_07_runtime.py tests/acceptance/gateway/test_gateway.py tests/acceptance/gateway/test_local_mode.py -n auto --junitxml=gateway-results/07-runtime.xml
       - name: Gateway level 8 - metering and pricing
         run: uv run pytest tests/acceptance/gateway/test_08_metering.py -n auto --junitxml=gateway-results/08-metering.xml
       - name: Summarize gateway test results
@@ -173,18 +173,14 @@ jobs:
           enable-cache: true
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
-      - run: uv run pytest tests/acceptance/full_stack/scenarios
-
-  # Off by default: the numbers are host bound, and a shared runner loses requests under the
-  # higher concurrency levels, so this has never passed here. Run it from the Actions tab, or
-  # locally with uv run pytest tests/acceptance/full_stack/benchmarks, where the table is the point.
-  benchmarks:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
+      - run: uv run pytest tests/acceptance/full_stack/scenarios --junitxml=acceptance-results/full-stack.xml
+      - name: Summarize full-stack acceptance results
+        if: always()
+        run: uv run python tests/acceptance/gateway/ci_report.py acceptance-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload full-stack acceptance results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          enable-cache: true
-      - run: uv sync --all-packages --frozen
-      - run: uv run pytest tests/acceptance/full_stack/benchmarks
+          name: full-stack-acceptance
+          path: acceptance-results
+          retention-days: 7

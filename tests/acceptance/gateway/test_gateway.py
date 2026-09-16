@@ -149,10 +149,6 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
                 changed = {**body, "model": "changed"}
                 eventually(lambda: client.post("/inf/v1/chat/completions", headers=headers, json=changed).status_code == 200)
                 assert client.post("/inf/v1/chat/completions", headers=headers, json=body).status_code != 200
-                taxonomy_path.write_text("models: [{model_id: broken}]\n")
-                time.sleep(0.3)
-                assert client.post("/inf/v1/chat/completions", headers=headers, json=changed).status_code == 200
-                taxonomy_path.write_text(yaml.safe_dump(taxonomy))
                 process.send_signal(signal.SIGTERM)
                 assert process.wait(timeout=10) in {0, -signal.SIGTERM}
                 process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway

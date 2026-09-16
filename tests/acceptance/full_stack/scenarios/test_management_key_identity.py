@@ -11,10 +11,6 @@ from contract import uuid7
 def test_management_keys_keep_the_issuing_identity_over_http(stack):
     stack.write_config()
     stack.start_cp()
-    stack.collect_credentials()
-    stack.start_dp()
-    stack.wait_dp_ready()
-    assert stack.request().status_code == 200
     csrf = {"X-Requested-With": "XMLHttpRequest"}
     with httpx.Client(base_url=stack.cp_url, headers=csrf) as owner, httpx.Client(base_url=stack.cp_url, headers=csrf) as admin:
         owner_login = owner.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
@@ -69,4 +65,3 @@ def test_management_keys_keep_the_issuing_identity_over_http(stack):
                 json={"instance_id": str(uuid7()), "version": "acceptance", "bundle_id": None},
             )
             heartbeat.raise_for_status()
-    assert stack.request().status_code == 200

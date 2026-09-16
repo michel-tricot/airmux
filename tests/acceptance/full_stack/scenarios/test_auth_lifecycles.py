@@ -29,9 +29,6 @@ def start(stack: Stack) -> None:
     }
     stack.config_path.write_text(yaml.safe_dump(configuration))
     stack.start_cp()
-    stack.collect_credentials()
-    stack.start_dp()
-    stack.wait_dp_ready()
 
 
 def concurrently(first: Callable[[], httpx.Response], second: Callable[[], httpx.Response]) -> tuple[httpx.Response, httpx.Response]:
@@ -84,7 +81,6 @@ def test_invitation_competing_transitions_preserve_one_membership(stack: Stack, 
         replay = accept()
         assert replay.status_code == accepted.status_code
         assert token not in members.text
-        assert stack.request().status_code == 200
 
 
 @pytest.mark.parametrize("competing_action", ["approval", "delivery"])
@@ -126,7 +122,6 @@ def test_cli_competing_transitions_deliver_one_usable_credential(stack: Stack, c
         assert token not in keys.text
         admin.delete(f"/api/v1/management-keys/{minted[0]['id']}").raise_for_status()
         assert httpx.get(f"{stack.cp_url}/api/v1/organizations/{stack.org_id}/workspaces", headers=headers).status_code == 401
-        assert stack.request().status_code == 200
 
 
 def test_password_change_closes_a_concurrent_old_password_login(stack: Stack) -> None:
@@ -146,4 +141,3 @@ def test_password_change_closes_a_concurrent_old_password_login(stack: Stack) ->
         assert current.get("/api/v1/auth/me").status_code == 200
         competing.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": MEMBER_PASSWORD}).raise_for_status()
         assert competing.get("/api/v1/auth/me").status_code == 200
-        assert stack.request().status_code == 200

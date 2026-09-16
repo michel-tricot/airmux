@@ -14,7 +14,6 @@ import secrets
 import shutil
 import signal
 import socket
-import statistics
 import subprocess
 import threading
 import time
@@ -26,9 +25,6 @@ import httpx
 import pytest
 import yaml
 from dotenv import dotenv_values
-from rich import box
-from rich.console import Console
-from rich.table import Table
 from testcontainers.core.container import DockerContainer
 
 if TYPE_CHECKING:
@@ -129,17 +125,18 @@ class _StubHandler(BaseHTTPRequestHandler):
         server = self.server
         assert isinstance(server, _StubServer)
         server.record_request()
+        if self.headers.get("authorization") != f"Bearer {STUB_API_KEY}":
+            body = json.dumps({"error": {"code": "invalid_api_key", "message": "invalid provider credential"}}).encode()
+            self.send_response(401)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         request = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
         messages = request.get("messages")
         message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
         prompt = message.get("content")
-        if prompt == "malformed-sse-name":
-            self.send_response(200)
-            self.send_header("content-type", "text/event-stream")
-            self.end_headers()
-            self.wfile.write(b"event: \xff\ndata: {}\n\n")
-            self.wfile.flush()
-            return
         if prompt == "fallback-primary-unavailable" and request.get("model") == MODEL:
             body = json.dumps({"error": {"message": "primary unavailable"}}).encode("utf-8")
             self.send_response(503)
@@ -157,7 +154,7 @@ class _StubHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
         if request.get("stream"):
-            self._stream_response(terminal=prompt != "truncated-stream")
+            self._stream_response()
             return
         if prompt == "malformed-buffered":
             body = b"{}"
@@ -186,7 +183,7 @@ class _StubHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _stream_response(self, terminal: bool = True) -> None:
+    def _stream_response(self) -> None:
         self.send_response(200)
         self.send_header("content-type", "text/event-stream")
         self.end_headers()
@@ -200,8 +197,7 @@ class _StubHandler(BaseHTTPRequestHandler):
             usage = {"id": "cmpl-stub", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 60, "total_tokens": 71}}
             for event in (finish, usage):
                 self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
-            if terminal:
-                self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent
@@ -507,81 +503,3 @@ def stack(tmp_path: Path) -> Iterator[Stack]:
         yield s
     finally:
         s.teardown()
-
-
-# benchmark reporting ------------------------------------------------------
-
-PERCENTILES = (50, 90, 99)
-
-
-def _pct(xs: list[float], q: float) -> float:
-    ordered = sorted(xs)
-    rank = max(0, min(len(ordered) - 1, round(q / 100 * len(ordered)) - 1))
-    return ordered[rank]
-
-
-class Bench:
-    """Collects named timing series (milliseconds) and prints them as one rich table.
-
-    Every benchmark uses the `bench` fixture so they all warm up, sample and report the same
-    way. Measure a cost as a difference against a baseline (see benchmarks/test_overhead.py);
-    the table shows each series and, when a baseline and treatment are named, the
-    per-percentile overhead row.
-    """
-
-    def __init__(self, capsys: pytest.CaptureFixture[str]) -> None:
-        self._capsys = capsys
-        self._series: dict[str, list[float]] = {}
-
-    def measure(self, name: str, call: Callable[[], object], *, warmup: int = 20, samples: int = 200) -> None:
-        times: list[float] = []
-        for i in range(warmup + samples):
-            start = time.perf_counter()
-            resp = call()
-            elapsed = (time.perf_counter() - start) * 1000
-            assert getattr(resp, "status_code", 200) == 200
-            if i >= warmup:
-                times.append(elapsed)
-        self._series[name] = times
-
-    @staticmethod
-    def percentile(xs: list[float], q: float) -> float:
-        return _pct(xs, q)
-
-    def overhead(self, treatment: str, baseline: str, q: float = 50) -> float:
-        return _pct(self._series[treatment], q) - _pct(self._series[baseline], q)
-
-    def report(self, *, title: str, baseline: str | None = None, treatment: str | None = None) -> None:
-        table = Table(title=title, box=box.ROUNDED, header_style="bold", title_style="bold", caption="latency in milliseconds")
-        table.add_column("series", style="cyan", no_wrap=True)
-        table.add_column("n", justify="right")
-        for q in PERCENTILES:
-            table.add_column(f"p{q}", justify="right")
-        table.add_column("max", justify="right")
-        table.add_column("mean", justify="right")
-        for name, xs in self._series.items():
-            cells = [f"{_pct(xs, q):.2f}" for q in PERCENTILES] + [f"{max(xs):.2f}", f"{statistics.fmean(xs):.2f}"]
-            table.add_row(name, str(len(xs)), *cells)
-        if baseline and treatment:
-            base, treat = self._series[baseline], self._series[treatment]
-            deltas = [f"{_pct(treat, q) - _pct(base, q):.2f}" for q in PERCENTILES] + ["", f"{statistics.fmean(treat) - statistics.fmean(base):.2f}"]
-            table.add_section()
-            table.add_row("overhead", "", *deltas, style="bold magenta")
-        with self._capsys.disabled():
-            Console().print(table)
-
-    def table(self, *, title: str, columns: list[str], rows: list[tuple[object, ...]], caption: str = "") -> None:
-        """Render arbitrary tabular results (e.g. a throughput sweep) with the same styling."""
-        out = Table(title=title, box=box.ROUNDED, header_style="bold", title_style="bold", caption=caption)
-        out.add_column(columns[0], style="cyan", no_wrap=True)
-        for name in columns[1:]:
-            out.add_column(name, justify="right")
-        for row in rows:
-            out.add_row(*(str(cell) for cell in row))
-        with self._capsys.disabled():
-            Console().print(out)
-
-
-@pytest.fixture
-def bench(capsys: pytest.CaptureFixture[str]) -> Bench:
-    return Bench(capsys)

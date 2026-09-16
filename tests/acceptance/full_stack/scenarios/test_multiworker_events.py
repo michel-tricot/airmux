@@ -1,48 +1,17 @@
-"""Acceptance: many uvicorn workers share one cache dir without losing or duplicating events.
-
-Every request received by the upstream must land exactly once in the control plane. The upstream
-count remains observable when the gateway served a request but its response was lost in transit.
-"""
-
 from __future__ import annotations
 
-import contextlib
-import threading
-import time
-from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import httpx
+from stack_harness import _poll
 
 if TYPE_CHECKING:
     from stack_harness import Stack
 
 WORKERS = 4
 CONCURRENCY = 16
-PER_CLIENT = 30
-
-
-def _load(url: str, headers: dict[str, str], body: dict, clients: int, per_client: int) -> int:
-    successes: list[int] = []
-    lock = threading.Lock()
-
-    def worker() -> None:
-        served = 0
-        with httpx.Client(timeout=30.0) as client:
-            for _ in range(per_client):
-                with contextlib.suppress(httpx.HTTPError):
-                    response = client.post(url, headers=headers, json=body)
-                    if response.status_code == 200:
-                        served += 1
-        with lock:
-            successes.append(served)
-
-    threads = [threading.Thread(target=worker) for _ in range(clients)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
-    return sum(successes)
+PER_CLIENT = 8
 
 
 def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
@@ -51,26 +20,23 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     stack.collect_credentials()
     stack.start_dp(workers=WORKERS)
     stack.wait_dp_ready()
-    time.sleep(3)  # wait_dp_ready only proves one worker answered; let the rest boot and poll a bundle
 
-    url = f"{stack.dp_url}/inf/v1/chat/completions"
-    headers = {"authorization": f"Bearer {stack.caller_api_key}"}
-    body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
+    def requests(client_id: int) -> None:
+        with httpx.Client(base_url=stack.dp_url, headers={"Authorization": f"Bearer {stack.caller_api_key}"}, timeout=30) as client:
+            for request_id in range(PER_CLIENT):
+                response = client.post(
+                    "/inf/v1/chat/completions",
+                    json={"model": "echo", "messages": [{"role": "user", "content": f"client {client_id} request {request_id}"}]},
+                )
+                assert response.status_code == 200, response.text
 
-    successful = _load(url, headers, body, clients=WORKERS, per_client=5)
-    successful += _load(url, headers, body, clients=CONCURRENCY, per_client=PER_CLIENT)
-    assert successful > 400
-
-    served = stack.upstream_requests
-    assert served >= successful
-
-    deadline = time.monotonic() + 30
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as clients:
+        tuple(clients.map(requests, range(CONCURRENCY)))
+    expected = CONCURRENCY * PER_CLIENT
+    assert stack.upstream_requests == expected
+    assert _poll(lambda: httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == 0, 30)
     events = stack.events()
-    while time.monotonic() < deadline and sum(event["status"] == "ok" for event in events) < served:
-        time.sleep(0.5)
-        events = stack.events()
-
-    event_request_ids = [event["request_id"] for event in events]
-    statuses = Counter(str(event["status"]) for event in events)
-    assert len(set(event_request_ids)) == len(event_request_ids), f"duplicate request ids: {statuses}"
-    assert statuses["ok"] == served, f"upstream requests: {served}; usage events: {statuses}"
+    assert len(events) == expected
+    assert {event["status"] for event in events} == {"ok"}
+    assert len({event["event_id"] for event in events}) == expected
+    assert len({event["request_id"] for event in events}) == expected

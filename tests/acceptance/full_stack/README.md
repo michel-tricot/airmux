@@ -1,28 +1,36 @@
 # Full-stack acceptance tests
 
-Black-box end-to-end tests. Each one stands up a real control plane, data plane and a stub
-upstream in an isolated tmp dir, then drives them through the shipped console scripts and public
-HTTP surfaces. Nothing here imports `control_plane` or `data_plane`; a test that needs internals
-is a product gap, not a test gap.
+Black-box tests start real control-plane and gateway processes and drive the shipped console scripts and public HTTP
+surfaces. Each scenario gets an isolated directory and Postgres database. Security scenarios that exercise only
+management APIs start only the control plane. Nothing imports `control_plane` or `data_plane`.
 
-The shared harness lives in `stack_harness.py`; `conftest.py` exposes its fixtures and Postgres setup hooks. Both
-categories below use it, so a new test in either place gets the same one-line setup.
+`stack_harness.py` owns deployment setup and an authenticated HTTP provider; `conftest.py` exposes its fixture and
+Postgres lifecycle hooks. Tests live in `scenarios/` and run on every PR update and push to main:
 
-## Categories
+```bash
+uv run pytest tests/acceptance/full_stack/scenarios
+```
 
-- `scenarios/` - correctness and resilience. Does the system do the right thing under failure:
-  control plane down and event replay. Asserts on behaviour and observable output.
-- `benchmarks/` - manual full-stack performance sweeps. Reports percentiles and asserts lenient
-  absolute limits; shared runners have made these unreliable as automatic PR checks
+Keep scenarios here when they prove a boundary that standalone gateway tests cannot: remote bundle publication,
+organization/workspace isolation, credential resolution, transactional security races, outage operation and durable
+export into the control plane. Protocol details, SDK decoding and local bundle setup belong in the
+[standalone suite](../gateway/README.md).
 
-CI runs scenarios automatically and full-stack benchmarks only on manual dispatch. The standalone
-[gateway performance job](../gateway/README.md#performance-and-regression-tracking) compares base and
-candidate wheels on the same runner for every PR and main-branch push, publishes a comparison summary
-and retains raw measurements for regression investigation.
+Event replay uses real inference events. A forwarding HTTP proxy commits the first batch into the control plane, then
+returns an unavailable response instead of its acknowledgement. The test observes identical event IDs delivered again,
+exactly one stored event per ID and an empty public pending queue. It never inserts synthetic events into SQLite.
+Concurrent export requires all 128 requests to succeed across four configured gateway workers and all events to arrive
+with unique event and request IDs. This is a correctness scenario, not a throughput benchmark. Workers share one
+heartbeat identity, so the instance roster does not reveal individual worker readiness.
 
-## Adding a benchmark
+Authentication resilience checks malformed input and saturates a real password worker with a bounded queue. Health
+and inference requests run concurrently with authentication bursts; a valid login must work again afterwards.
 
-Measure overhead as a difference, not an absolute: run the same work with and without the thing
-you are measuring against the same stub upstream, and report the delta. See `benchmarks/
-test_overhead.py`. Warm up before sampling, report p50/p90/p99 rather than a mean, and assert a
-loose ceiling rather than an exact number.
+The Actions summary displays counts and expandable assertion/setup failures even when pytest fails. The
+`full-stack-acceptance` artifact retains JUnit XML for seven days.
+
+The previous absolute-threshold overhead and throughput sweeps have been retired. The retained
+[gateway performance job](../gateway/README.md#performance-and-regression-tracking) compares base and candidate wheels
+on the same runner for every PR and main push. Its event writes are included, but control-plane polling and export
+traffic are not measured. Full-stack scenarios protect remote operation and export correctness; add a separate
+performance workload before making claims about remote/export latency or worker scaling.

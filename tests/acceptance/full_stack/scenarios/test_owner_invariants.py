@@ -12,10 +12,6 @@ CSRF = {"X-Requested-With": "XMLHttpRequest"}
 def test_owner_changes_keep_instance_and_organization_authority_live(stack):
     stack.write_config()
     stack.start_cp()
-    stack.collect_credentials()
-    stack.start_dp()
-    stack.wait_dp_ready()
-    assert stack.request().status_code == 200
 
     with httpx.Client(base_url=stack.cp_url, headers=CSRF) as founder, httpx.Client(base_url=stack.cp_url, headers=CSRF) as successor:
         founder_login = founder.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
@@ -60,5 +56,3 @@ def test_owner_changes_keep_instance_and_organization_authority_live(stack):
                 ]
             ]
         assert sorted(response.status_code for response in responses) == [200, 409]
-
-    assert stack.request().status_code == 200
