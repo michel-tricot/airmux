@@ -246,7 +246,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
         "fallback",
         "budget",
     }
-    assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_keys"}
+    assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_users", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
     streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match
@@ -256,6 +256,28 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     ci_policy = next(policy for policy in policies if policy.name == "CI provider allowlist")
     assert ci_policy.definition.target.kind == "selected_keys"
     assert ci_policy.definition.target.key_ids == (str(ci_key.id),)
+    checkout_key = next(key for key in inference_keys if key.label == "checkout-service")
+    production_limits = {
+        policy.definition.target.kind: (
+            policy,
+            next(rule for rule in rules if rule.id == policy.definition.rule_ids[0]).definition.action,
+        )
+        for policy in policies
+        if policy.name in {"Output token ceiling", "Michel output token ceiling", "Checkout output token ceiling"}
+    }
+    assert set(production_limits) == {"workspace", "selected_users", "selected_keys"}
+    for kind, limit in (("workspace", 4096), ("selected_users", 1024), ("selected_keys", 512)):
+        policy, action = production_limits[kind]
+        assert policy.enabled
+        assert policy.workspace_id == checkout_key.workspace_id
+        assert action.kind == "request_limits"
+        assert action.max_output_tokens == limit
+    user_target = production_limits["selected_users"][0].definition.target
+    assert user_target.kind == "selected_users"
+    assert user_target.user_ids == (checkout_key.user_id,)
+    key_target = production_limits["selected_keys"][0].definition.target
+    assert key_target.kind == "selected_keys"
+    assert key_target.key_ids == (str(checkout_key.id),)
     team_credentials = next(rule for rule in rules if rule.name == "Streaming team credentials")
     assert sum(team_credentials.id in policy.definition.rule_ids for policy in policies) == 2
 
