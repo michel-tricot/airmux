@@ -76,7 +76,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
     if user is not None and user.managing_org_id == org_id:
         raise HTTPException(status_code=409, detail="Delete an organization-managed service account instead of removing its membership")
     await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
-    await membership.remove()
+    await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
 
@@ -137,7 +137,7 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
     if membership is not None:
         await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
     if membership is not None:
-        await membership.remove()
+        await membership.delete()
     await service_account.delete_with_contents()
     return Envelope(data=DeletedOut.of(user_id))
 

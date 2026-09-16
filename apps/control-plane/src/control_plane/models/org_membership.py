@@ -54,14 +54,14 @@ class OrgMembership(Record, Tombstonable, table=True):
         self.role = role
         return await self.save()
 
-    async def remove(self) -> None:
+    async def delete(self) -> None:
         from control_plane.models.inference_key import InferenceKey  # noqa: PLC0415 membership and credential models meet at the operation
         from control_plane.models.playground_session import PlaygroundSession  # noqa: PLC0415 membership and credential models meet at the operation
 
         await self._refuse_last_owner_removal()
         await InferenceKey.revoke_owned_in_org(self.user_id, self.org_id)
         await PlaygroundSession.revoke_owned_in_org(self.user_id, self.org_id)
-        await self.delete()
+        await super().delete()
 
 
 class OrgMembershipIn(RequestModel):

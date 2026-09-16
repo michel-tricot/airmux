@@ -165,7 +165,7 @@ async def remove_member(user_id: UUID, workspace: WorkspaceDep) -> Envelope[Dele
     membership = await WorkspaceMembership.get((user_id, workspace.id))
     if membership is None:
         raise HTTPException(status_code=404, detail="User is not a member of this workspace")
-    await membership.remove()
+    await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{workspace.id}"))
 
 
