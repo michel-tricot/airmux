@@ -30,13 +30,6 @@ class ActivityOut(BaseModel):
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
 
 
-class AllKeys(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Annotated[Literal["all_keys"], Field(title="Kind")]
-
-
 class AllRequests(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -566,6 +559,7 @@ class KeyEntry(BaseModel):
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
     token_hash: Annotated[str, Field(title="Token Hash")]
     expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")] = None
 
@@ -1586,6 +1580,14 @@ class SelectedKeys(BaseModel):
     key_ids: Annotated[list[KeyId], Field(max_length=1000, min_length=1, title="Key Ids")]
 
 
+class SelectedUsers(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["selected_users"], Field(title="Kind")]
+    user_ids: Annotated[list[UUID], Field(max_length=1000, min_length=1, title="User Ids")]
+
+
 class ServiceAccountIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1800,6 +1802,13 @@ class WorkspaceOut(BaseModel):
 
 class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
     root: Annotated[Literal["admin", "member", "viewer"], Field(title="WorkspaceRole")]
+
+
+class WorkspaceTarget(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["workspace"], Field(title="Kind")]
 
 
 class Name5(RootModel[str]):
@@ -2077,7 +2086,10 @@ class PolicyDefinition(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    target: Annotated[AllKeys | SelectedKeys, Field(discriminator="kind", title="Target")]
+    target: Annotated[
+        WorkspaceTarget | SelectedUsers | SelectedKeys,
+        Field(discriminator="kind", title="Target"),
+    ]
     rule_ids: Annotated[
         list[UUID],
         Field(
@@ -2379,7 +2391,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinition,
-        Field(description="Inference key target and reusable rules. Budgets are not yet enforced"),
+        Field(description="Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced"),
     ]
 
 

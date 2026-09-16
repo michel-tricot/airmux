@@ -5,11 +5,11 @@ from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
-from sqlalchemy import CheckConstraint, Column, ForeignKey, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, or_, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.authz import InstanceRole
+from control_plane.authz import InstanceRole, OrgRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
@@ -97,6 +97,27 @@ class User(Record, Identified, Tombstonable, table=True):
             .order_by(col(cls.email))
         )
         return [(membership, user) for membership, user in (await current_session().execute(query)).all()]
+
+    @classmethod
+    async def policy_candidates(cls, org_id: UUID, workspace_id: UUID) -> list[Self]:
+        return await cls.find(
+            col(cls.id).in_(
+                select(OrgMembership.user_id).where(
+                    OrgMembership.org_id == org_id,
+                    or_(
+                        col(OrgMembership.role).in_((OrgRole.owner, OrgRole.admin)),
+                        select(WorkspaceMembership.user_id)
+                        .where(
+                            WorkspaceMembership.user_id == OrgMembership.user_id,
+                            WorkspaceMembership.org_id == org_id,
+                            WorkspaceMembership.workspace_id == workspace_id,
+                        )
+                        .exists(),
+                    ),
+                )
+            ),
+            order_by=col(cls.email),
+        )
 
     @classmethod
     async def candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID) -> list[Self]:

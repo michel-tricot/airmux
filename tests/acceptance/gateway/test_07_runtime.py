@@ -73,7 +73,7 @@ def test_concurrent_requests_keep_keys_content_and_events_separate(gateway: Gate
 
     def complete(index: int):
         model = "model-a" if index % 2 == 0 else "model-b"
-        key = SECOND_KEY if index % 2 else gateway.bundle["keys"][0]
+        key = SECOND_KEY if index % 2 else gateway.bundle["keys"][0]["token"]
         response = gateway.request(dialect, model=model, key=key)
         assert response.status_code == 200
         assert text_of(dialect, response) == ("answer A" if index % 2 == 0 else "answer B")
@@ -106,7 +106,7 @@ def test_active_stream_keeps_its_snapshot_while_new_requests_use_rotated_keys_an
                 break
         else:
             pytest.fail("stream ended before delivering content")
-        gateway.bundle["keys"] = [rotated_key]
+        gateway.bundle["keys"] = [{"token": rotated_key, "user_id": gateway.bundle["keys"][0]["user_id"]}]
         gateway.add_policy([{"kind": "models", "names": ["model-b"]}])
         gateway.write_files()
         observed = []

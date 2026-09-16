@@ -30,7 +30,7 @@ def write_taxonomy(tmp_path):
 def test_external_taxonomy_reloads_and_keeps_last_good_snapshot(tmp_path, monkeypatch):
     taxonomy = write_taxonomy(tmp_path)
     bundle = tmp_path / "bundle.yml"
-    bundle.write_text("keys: ['${env:AIRMUX_INFERENCE_KEY}']\ntaxonomy: taxonomy.yml\n")
+    bundle.write_text("keys: [{token: '${env:AIRMUX_INFERENCE_KEY}', user_id: 00000000-0000-0000-0000-000000000001}]\ntaxonomy: taxonomy.yml\n")
     monkeypatch.setenv("AIRMUX_INFERENCE_KEY", "sk-inf-private")
     monkeypatch.chdir(tmp_path.parent)
     holder = BundleHolder()
@@ -65,7 +65,9 @@ def test_external_taxonomy_reloads_and_keeps_last_good_snapshot(tmp_path, monkey
 def test_local_keys_reject_unusable_or_duplicate_tokens(tmp_path, monkeypatch, keys):
     monkeypatch.delenv("MISSING_GATEWAY_KEY", raising=False)
     bundle = tmp_path / "bundle.yml"
-    bundle.write_text(yaml.safe_dump({"keys": keys, "taxonomy": TAXONOMY}))
+    bundle.write_text(
+        yaml.safe_dump({"keys": [{"token": key, "user_id": "00000000-0000-0000-0000-000000000001"} for key in keys], "taxonomy": TAXONOMY})
+    )
     with pytest.raises(ValidationError):
         load_local(bundle, datetime.now(tz=UTC))
 
@@ -174,7 +176,17 @@ def test_validation_does_not_disclose_an_invalid_inference_key(tmp_path):
     runner = CliRunner()
     assert runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)]).exit_code == 0
     key = "private-but-invalid-token"
-    (directory / "bundle.yml").write_text(yaml.safe_dump({"keys": [key], "taxonomy": str(taxonomy)}))
+    (directory / "bundle.yml").write_text(
+        yaml.safe_dump({"keys": [{"token": key, "user_id": "00000000-0000-0000-0000-000000000001"}], "taxonomy": str(taxonomy)})
+    )
     result = runner.invoke(app, ["validate", "--config", str(directory / "airmux.yml")])
     assert result.exit_code != 0
     assert key not in result.output
+
+
+@pytest.mark.parametrize("identity", [{}, {"user_id": None}, {"user_id": "invalid"}])
+def test_local_keys_require_uuid_principals(tmp_path, identity):
+    bundle = tmp_path / "bundle.yml"
+    bundle.write_text(yaml.safe_dump({"keys": [{"token": "sk-inf-local", **identity}], "taxonomy": TAXONOMY}))
+    with pytest.raises(ValidationError):
+        load_local(bundle, datetime.now(tz=UTC))

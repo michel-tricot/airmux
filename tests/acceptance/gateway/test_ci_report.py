@@ -56,3 +56,15 @@ def test_ci_summary_explains_missing_reports(tmp_path: Path):
     result = CliRunner().invoke(app, [str(tmp_path / "missing"), "--summary", str(summary)])
     assert result.exit_code == 0, result.output
     assert "No test reports were produced" in summary.read_text()
+
+
+def test_ci_summary_combines_reports_downloaded_from_parallel_jobs(tmp_path: Path):
+    for level in ("01-basic", "02-protocols"):
+        reports = tmp_path / f"gateway-integration-{level}" / "gateway-results"
+        reports.mkdir(parents=True)
+        (reports / f"{level}.xml").write_text('<testsuite tests="2" failures="0" errors="0" skipped="0" />')
+    summary = tmp_path / "summary.md"
+    result = CliRunner().invoke(app, [str(tmp_path), "--summary", str(summary)])
+    assert result.exit_code == 0, result.output
+    assert "| 01-basic | 2 | 0 | 0 | 0 |" in summary.read_text()
+    assert "| 02-protocols | 2 | 0 | 0 | 0 |" in summary.read_text()

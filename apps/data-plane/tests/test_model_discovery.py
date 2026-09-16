@@ -136,14 +136,14 @@ def discovery_bundle(action, *, match=None, target=None, workspace=WORKSPACE, cr
         workspace_id=workspace,
         name="discovery",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "all_keys"}, "rule_ids": [rule.id]}),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rule_ids": [rule.id]}),
     )
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)))
     return token, bundle.model_copy(update={"rules": (rule,), "policies": (policy,)})
 
 
 @respx.mock
-@pytest.mark.parametrize("target", [{"kind": "all_keys"}, {"kind": "selected_keys", "key_ids": ["k-dev"]}])
+@pytest.mark.parametrize("target", [{"kind": "workspace"}, {"kind": "selected_keys", "key_ids": ["k-dev"]}])
 @pytest.mark.parametrize(
     "action",
     [

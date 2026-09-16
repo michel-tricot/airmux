@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING
 import httpx
 import performance
 import pytest
-from performance import Measurement, Revision, Settings, comparisons, request, run_revision
+import yaml
+from performance import Measurement, Revision, Settings, comparisons, request, run_revision, run_round
 from pydantic import ValidationError
 
 if TYPE_CHECKING:
@@ -117,3 +118,20 @@ def test_performance_load_preserves_usage_with_integration_artifacts_enabled(gat
         usage = json.loads(events.execute("SELECT body FROM outbox LIMIT 1").fetchone()[0])
     assert (usage["input_tokens"], usage["output_tokens"], usage["cache_read_tokens"]) == (11, 3, 4)
     assert usage["status"] == "ok"
+
+
+def test_performance_round_uses_the_supplied_revision_harness(gateway: Gateway, tmp_path: Path):
+    harness_directory = tmp_path / "revision-harness"
+    harness_directory.mkdir()
+    harness = Path(__file__).with_name("gateway_harness.py").read_text()
+    harness = harness.replace('"token": INFERENCE_KEY', '"token": "sk-inf-revision-harness"')
+    harness = harness.replace("key: str = INFERENCE_KEY", 'key: str = "sk-inf-revision-harness"')
+    (harness_directory / "gateway_harness.py").write_text(harness)
+    for name in ("upstream.py", "protocols.json"):
+        (harness_directory / name).write_bytes(Path(__file__).with_name(name).read_bytes())
+    directory = tmp_path / "revision-performance"
+    measurements = run_round(directory, Path(gateway.executable), "base", 1, Settings(0.1, 1), harness_directory=harness_directory)
+    assert {(measurement.scenario, measurement.concurrency) for measurement in measurements} == set(performance.WORKLOADS)
+    assert all(measurement.revision == "base" and measurement.round == 1 for measurement in measurements)
+    bundle = yaml.safe_load((directory / "bundle.yml").read_text())
+    assert bundle["keys"][0]["token"] == "sk-inf-revision-harness"

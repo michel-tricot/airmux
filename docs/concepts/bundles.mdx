@@ -9,7 +9,7 @@ A bundle is a complete, versioned configuration snapshot for one organization. I
 
 Each bundle includes:
 
-- Active inference-key hashes and workspace identities
+- Active inference-key and playground-session hashes, workspace identities, and required principal user IDs
 - Provider endpoints and adapter kinds
 - Model routes, prices, limits, modalities, capabilities, and parameter support
 - Enabled provider-credential references, priorities, and versions
@@ -31,7 +31,7 @@ The default source configuration polls every five seconds. The general remote-bu
 ## Consistency behavior
 
 Management writes are immediately visible through the control plane but become effective for inference only after bundle
-adoption. This applies to new or revoked inference keys, provider credentials, catalog changes, and policies.
+adoption. This applies to new or revoked inference keys, credential principal changes, provider credentials, catalog changes, and policies.
 
 A request uses one immutable snapshot from authentication through routing, so it cannot observe half of a configuration change.
 

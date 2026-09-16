@@ -7,7 +7,7 @@ Workspace policies control which inference requests airmux accepts, which routes
 
 ## Policy model
 
-A **rule** owns one request match and one action. A **policy** targets all inference keys or a selected set of keys and
+A **rule** owns one request match and one action. A **policy** applies to its workspace, selected users, or selected inference keys and
 references one or more reusable rules.
 
 - Every matching restriction must pass
@@ -26,8 +26,31 @@ every gateway are not one synchronous operation.
 Apply a policy to every current and future inference key, including playground sessions:
 
 ```json
-{"kind": "all_keys"}
+{"kind": "workspace"}
 ```
+
+Select principals whose inference keys and playground sessions should be restricted in this workspace:
+
+```json
+{
+  "kind": "selected_users",
+  "user_ids": ["01990aa3-4b4c-7000-8000-000000000001"]
+}
+```
+
+Selected users must be organization members with workspace membership or an organization owner/admin role. Service accounts
+are included. Selections require 1 to 1,000 unique UUIDs. A key identifies its creating principal; a shared application key
+identifies its owner or service account, not the application's end user. The same user's policy in Production has no effect
+in Development.
+
+Workspace, user, and key restrictions all apply together. With output limits of 4,096, 1,024, and 512 respectively, a request
+above 512 tokens is denied regardless of priority. Priority still determines the first matching fallback configuration.
+
+Removing workspace or organization membership preserves existing inference keys, unexpired playground sessions, and policy
+references. Their user restrictions continue to apply until credentials are explicitly revoked or sessions expire. Removal
+prevents creating new credentials through the removed membership; organization owners/admins retain their inherited workspace
+authority. Removed users disappear from the picker, and cannot be newly selected. To edit a policy containing an ineligible
+user, select eligible users or change the target explicitly. Removing the final user never turns the target into a workspace policy.
 
 Or select specific key IDs:
 
@@ -223,7 +246,7 @@ Then attach the returned rule ID at `/api/v1/organizations/{org_id}/workspaces/{
   "enabled": true,
   "priority": 20,
   "definition": {
-    "target": {"kind": "all_keys"},
+    "target": {"kind": "workspace"},
     "rule_ids": ["00000000-0000-0000-0000-000000000001"]
   }
 }
