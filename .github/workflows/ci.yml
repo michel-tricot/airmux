@@ -11,6 +11,16 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  ci-correctness:
+    runs-on: ubuntu-latest
+    needs: [frontend, ci, installation, gateway-acceptance, acceptance]
+    if: always()
+    steps:
+      - name: Require every correctness job to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'length > 0 and all(.[]; .result == "success")' <<< "$NEEDS"
+
   frontend:
     runs-on: ubuntu-latest
     steps:

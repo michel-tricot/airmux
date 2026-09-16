@@ -12,6 +12,16 @@ permissions:
   contents: read
 
 jobs:
+  dependency-security:
+    runs-on: ubuntu-latest
+    needs: [python, javascript]
+    if: always()
+    steps:
+      - name: Require both dependency audits to succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: jq -e 'length > 0 and all(.[]; .result == "success")' <<< "$NEEDS"
+
   python:
     runs-on: ubuntu-latest
     timeout-minutes: 10
