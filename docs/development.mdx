@@ -204,6 +204,13 @@ The installation includes both runtimes. Invoke `airmux` directly from any direc
 
 The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
+They remain at version `0.0.0` and use unversioned workspace dependencies. Do not update them for a release. Prepare the
+next public patch version in a normal pull request with:
+
+```bash
+uv version --project packaging/airmux --bump patch
+```
+
 Dispatch `release.yml` from `main` with an existing protected candidate tag:
 
 ```bash
