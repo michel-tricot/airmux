@@ -33,6 +33,8 @@ jobs:
       DEPLOYMENT_URL: http://localhost:8080
     steps:
       - uses: actions/checkout@v7
+      - name: Configure deployment diagnostics
+        run: echo "AIRMUX_DEPLOYMENT_ARTIFACTS=$RUNNER_TEMP/deployment-artifacts" >> "$GITHUB_ENV"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -43,9 +45,29 @@ jobs:
         run: echo 'DEPLOYMENT_COMPACT_IMAGE=airmux:local' >> "$GITHUB_ENV"
       - if: matrix.compose-file == 'docker-compose.split.yml'
         run: echo 'DEPLOYMENT_GATEWAY_IMAGE=airmux-data-plane:local' >> "$GITHUB_ENV"
-      - run: uv run --no-sync pytest tests/deployment
-      - if: failure()
-        run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color
+      - run: uv run --no-sync pytest tests/deployment --junitxml=deployment-results/docker.xml
+      - name: Preserve Docker failure logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          mkdir -p "$AIRMUX_DEPLOYMENT_ARTIFACTS"
+          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color 2>&1 \
+            | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' \
+            | tee "$AIRMUX_DEPLOYMENT_ARTIFACTS/compose.log"
+      - name: Summarize Docker deployment results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py deployment-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload Docker deployment results and diagnostics
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: docker-deployment-${{ matrix.compose-file }}
+          path: |
+            deployment-results/*.xml
+            ${{ runner.temp }}/deployment-artifacts/*.log
+          retention-days: 7
       - if: always()
         run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" down -v
       - name: Verify workspace lockfile is unchanged
