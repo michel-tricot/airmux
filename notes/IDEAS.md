@@ -17,14 +17,6 @@ Add `POST /inf/v1/messages/count_tokens` to the Anthropic ingress so Claude Code
 context meter without calling a provider. The data plane already estimates tokens for metering,
 but this endpoint needs a caller-facing accuracy contract and adapter-wide tests.
 
-## Move SQLite outbox writes off the event loop
-
-`SqliteOutbox.record` commits synchronously on the request path. At moderate load this is cheap,
-but concurrent workers serialize on SQLite's write lock and can block the event loop. A dedicated
-writer thread with an acknowledged queue would retain durability while isolating that blocking
-work. Build it only if committed concurrency benchmarks show that single-host scale-out is not
-enough.
-
 ## Observe unauthenticated gateway traffic
 
 Usage events can attribute an authorization denial to a valid inference key. Invalid or missing

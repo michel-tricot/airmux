@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -43,33 +44,44 @@ def event_of(index: int) -> RoutedUsageEventV1:
 
 def write_events(path: Path, start: int, count: int) -> None:
     outbox = FileOutbox(FileOutboxConfig(path=path))
+    reservation = outbox.try_reserve(count)
+    assert reservation is not None
     try:
         for index in range(start, start + count):
-            outbox.record(event_of(index))
+            reservation.record(event_of(index))
     finally:
-        outbox.close()
+        reservation.release_unused()
+        asyncio.run(outbox.close())
 
 
 def read_events(path: Path) -> list[UsageEvent]:
     return TypeAdapter(list[UsageEvent]).validate_json("[" + ",".join(path.read_text().splitlines()) + "]", strict=True)
 
 
-def test_file_events_are_visible_before_close_and_append_after_reopening(tmp_path, http_client):
+async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_path, http_client):
     path = tmp_path / "nested/events.jsonl"
     events = [event_of(0), event_of(1)]
     outbox = build_outbox(FileOutboxConfig(path=path), http_client)
     try:
-        outbox.record(events[0])
+        reservation = outbox.try_reserve(1)
+        assert reservation is not None
+        reservation.record(events[0])
+        reservation.release_unused()
+        stats = await outbox.stats()
         assert read_events(path) == events[:1]
-        assert outbox.stats().pending == 0
+        assert stats.durable == 0
     finally:
-        outbox.close()
+        await outbox.close()
     reopened = FileOutbox(FileOutboxConfig(path=path))
     try:
-        reopened.record(events[1])
+        reservation = reopened.try_reserve(1)
+        assert reservation is not None
+        reservation.record(events[1])
+        reservation.release_unused()
+        await reopened.stats()
         assert read_events(path) == events
     finally:
-        reopened.close()
+        await reopened.close()
     assert path.stat().st_mode & 0o777 == 0o600
 
 
@@ -77,13 +89,16 @@ def test_file_events_from_concurrent_threads_remain_complete(tmp_path):
     path = tmp_path / "events.jsonl"
     outbox = FileOutbox(FileOutboxConfig(path=path))
     events = [event_of(index) for index in range(100)]
+    reservation = outbox.try_reserve(len(events))
+    assert reservation is not None
     try:
         with ThreadPoolExecutor(max_workers=8) as executor:
-            list(executor.map(outbox.record, events))
-        assert {event.event_id for event in read_events(path)} == {event.event_id for event in events}
-        assert len(read_events(path)) == len(events)
+            list(executor.map(reservation.record, events))
     finally:
-        outbox.close()
+        reservation.release_unused()
+        asyncio.run(outbox.close())
+    assert {event.event_id for event in read_events(path)} == {event.event_id for event in events}
+    assert len(read_events(path)) == len(events)
 
 
 def test_file_events_from_concurrent_processes_remain_complete(tmp_path):

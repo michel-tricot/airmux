@@ -2,34 +2,36 @@ from __future__ import annotations
 
 import fcntl
 import os
-import threading
 from typing import TYPE_CHECKING
 
-from data_plane.outbox.base import EventOutbox
+from data_plane.outbox.base import DurableStats, QueuedOutbox
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from contract import UsageEvent
     from data_plane.config import FileOutboxConfig
 
 
-class FileOutbox(EventOutbox):
-    """Append metered events as immediately readable JSON Lines on a local filesystem."""
-
+class FileOutbox(QueuedOutbox):
     def __init__(self, config: FileOutboxConfig) -> None:
-        config.path.parent.mkdir(parents=True, exist_ok=True)
-        self._event_file = os.fdopen(os.open(config.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a", encoding="utf-8")
-        self._lock = threading.Lock()
+        self._config = config
+        super().__init__("airmux-file-outbox")
 
-    def record(self, event: UsageEvent, /) -> None:
-        content = event.model_dump_json() + "\n"
-        with self._lock:
-            fcntl.flock(self._event_file.fileno(), fcntl.LOCK_EX)
-            try:
-                self._event_file.write(content)
-                self._event_file.flush()
-            finally:
-                fcntl.flock(self._event_file.fileno(), fcntl.LOCK_UN)
+    def _open_storage(self) -> None:
+        self._config.path.parent.mkdir(parents=True, exist_ok=True)
+        self._event_file = os.fdopen(os.open(self._config.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a", encoding="utf-8")
 
-    def close(self) -> None:
-        with self._lock:
-            self._event_file.close()
+    def _persist(self, events: Sequence[UsageEvent], /) -> None:
+        fcntl.flock(self._event_file.fileno(), fcntl.LOCK_EX)
+        try:
+            self._event_file.writelines(event.model_dump_json() + "\n" for event in events)
+            self._event_file.flush()
+        finally:
+            fcntl.flock(self._event_file.fileno(), fcntl.LOCK_UN)
+
+    def _durable_stats(self) -> DurableStats:
+        return DurableStats()
+
+    def _close_storage(self) -> None:
+        self._event_file.close()

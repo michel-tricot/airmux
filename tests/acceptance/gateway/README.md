@@ -92,8 +92,9 @@ For a PR, the base is its target commit and the candidate is the merge commit te
 with the preceding commit; a manual run compares with `main`. Both gateways run the candidate checkout's benchmark,
 so changes to the workload apply equally to both versions.
 
-`performance.py` measures buffered latency, streaming time to the first non-empty text delta, throughput at concurrency
-1, 8 and 32, and latency with 100 applicable policies. Direct upstream calls at concurrency 1 and 32 reveal changes in
+`performance.py` measures buffered latency and throughput with SQLite and dev-null event collection at concurrency
+1, 8 and 32, streaming time to the first non-empty text delta, and latency with 100 applicable policies.
+Direct upstream calls at concurrency 1 and 32 reveal changes in
 the load generator or stub. These are representative OpenAI Chat Completions workloads; the correctness suite covers
 the full protocol matrix. Longer prompts, sustained token streams, worker scaling and real providers need separate
 workloads before drawing conclusions about those paths.
@@ -101,8 +102,9 @@ workloads before drawing conclusions about those paths.
 Each workload warms persistent connections before a two-second closed-loop load window. Five rounds alternate
 base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first
 content latency and completed requests per second. Request failures, incorrect text, incomplete streams and lost usage
-events fail the job. Both versions use one gateway worker and the existing durable SQLite event queue; event writes
-are included, periodic export is excluded, and periodic bundle polling is excluded with a one-hour interval. The lightweight provider runs
+events fail the job. Both versions use one gateway worker. SQLite request-path reservation and enqueueing are included,
+while its storage thread drains concurrently; paired dev-null workloads isolate that metering persistence cost. Periodic
+export and bundle polling are excluded with one-hour intervals. The lightweight provider runs
 in its own async process, reuses the handwritten native response fixtures, supports persistent connections and captures
 no request history during load.
 
@@ -127,7 +129,7 @@ overhead. Direct and proxied windows have different request counts under closed-
 receive equal weight. No p95/p99 values are subtracted. Total proxied latency is still reported separately.
 
 This measures the incremental cost of the extra local HTTP hop, authentication, translation, applicable policy
-evaluation, metering, durable SQLite event collection, client parsing, scheduling and connection-pool/queueing effects.
+evaluation, metering, the selected SQLite or dev-null event sink, client parsing, scheduling and connection-pool/queueing effects.
 It does not isolate time executing gateway code. Model inference, external providers/network variability,
 control-plane traffic, periodic event export and bundle polling, startup and warmup are excluded. Provider waits occur
 in both paths. Windows run sequentially, so controls do not compete with proxy traffic; time-varying runner load can

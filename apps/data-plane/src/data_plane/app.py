@@ -33,9 +33,24 @@ logger = logging.getLogger("data_plane")
 
 
 async def healthz(request: Request) -> JSONResponse:
-    stats = runtime_of(request).outbox.stats()
+    stats = await runtime_of(request).outbox.stats()
     oldest_age_s = max(0.0, (datetime.now(tz=UTC) - stats.oldest_event_at).total_seconds()) if stats.oldest_event_at is not None else None
-    return JSONResponse({"status": "ok", "events": {"pending": stats.pending, "oldest_age_s": oldest_age_s}})
+    return JSONResponse(
+        {
+            "status": "ok",
+            "events": {
+                "reserved": stats.reserved,
+                "filled": stats.filled,
+                "durable": stats.durable,
+                "capacity": stats.capacity,
+                "oldest_age_s": oldest_age_s,
+                "reservation_rejections": stats.reservation_rejections,
+                "persisted": stats.persisted_events,
+                "gracefully_drained": stats.gracefully_drained_events,
+                "storage_worker_failures": stats.storage_worker_failures,
+            },
+        }
+    )
 
 
 async def readyz(request: Request) -> JSONResponse:
@@ -104,7 +119,7 @@ def create_app(config: Config) -> ASGIApp:
                         for task in tasks:
                             task.cancel()
             finally:
-                outbox.close()
+                await outbox.close()
 
     app = Starlette(
         routes=[

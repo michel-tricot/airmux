@@ -41,7 +41,7 @@ def test_smallest_rate_one_token_cost_is_exact():
     assert cost_breakdown(CanonicalUsage(input_tokens=1), model) == (Decimal("0.000000000001"), Decimal(0))
 
 
-def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):
+async def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     bundle_id = uuid7()
     credential_id = uuid7()
@@ -71,9 +71,12 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
         usage=CanonicalUsage(estimated=True),
     )
 
-    record_usage(outbox, ctx, response, "cancelled", request)
-    (event,) = outbox.next_batch(10)
-    outbox.close()
+    reservation = outbox.try_reserve(1)
+    assert reservation is not None
+    record_usage(reservation, ctx, response, "cancelled", request)
+    reservation.release_unused()
+    (event,) = await outbox.next_batch(10)
+    await outbox.close()
 
     assert event.request_id == ctx.request_id
     assert event.bundle_id == bundle_id
@@ -86,7 +89,7 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
     assert event.cost_usd == event.cost_input_usd + event.cost_output_usd
 
 
-def test_estimation_preserves_reported_input_and_counts_non_text_content(tmp_path, http_client):
+async def test_estimation_preserves_reported_input_and_counts_non_text_content(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     ctx = Ctx(
         request_id=uuid7(),
@@ -114,22 +117,30 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content(tmp_pat
         usage=CanonicalUsage(input_tokens=37, estimated=True),
     )
 
-    record_usage(outbox, ctx, response, "cancelled", request)
-    (event,) = outbox.next_batch(10)
+    reservation = outbox.try_reserve(1)
+    assert reservation is not None
+    record_usage(reservation, ctx, response, "cancelled", request)
+    reservation.release_unused()
+    (event,) = await outbox.next_batch(10)
+    await outbox.close()
 
     assert event.input_tokens == 37
     assert event.output_tokens > 0
 
 
-def test_denial_uses_the_request_identity_and_elapsed_latency(tmp_path, http_client):
+async def test_denial_uses_the_request_identity_and_elapsed_latency(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     request_id = uuid7()
     key = make_key("denied")[1]
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
     start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1)
-    record_denied(outbox, key, uuid7(), request, start)
-    (event,) = outbox.next_batch(10)
+    reservation = outbox.try_reserve(1)
+    assert reservation is not None
+    record_denied(reservation, key, uuid7(), request, start)
+    reservation.release_unused()
+    (event,) = await outbox.next_batch(10)
+    await outbox.close()
 
     assert event.request_id == request_id
     assert event.latency_ms >= 1000

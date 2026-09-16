@@ -7,7 +7,7 @@ import httpx
 import pytest
 import respx
 from anthropic import Anthropic
-from conftest import TEXT_LOG, TEXT_NONSTREAM, GatewayTransport, make_outbox, mock_control_plane
+from conftest import TEXT_LOG, TEXT_NONSTREAM, GatewayTransport, make_outbox, mock_control_plane, read_and_close_outbox
 from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route
@@ -137,9 +137,7 @@ def test_request_id_matches_response_and_usage_accounting(dp_app, api_key, tmp_p
         assert_private_headers(response)
         assert response.json()["id"] == "chatcmpl-9"
         assert "x-accel-buffering" not in response.headers
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
+    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
     assert len(events) == 1
     assert events[0].request_id == request_id
 
@@ -155,9 +153,7 @@ def test_policy_denials_have_the_same_request_id_as_the_usage_event(dp_app, api_
         )
     assert response.status_code == 404
     assert_private_headers(response)
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
+    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
     assert events[0].request_id == UUID(response.headers["x-request-id"])
 
 

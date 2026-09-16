@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import pytest
 import respx
-from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane, read_and_close_outbox
 from starlette.testclient import TestClient
 
 from airmux_runtime.secrets import (
@@ -29,10 +29,7 @@ OTHER_WORKSPACE = uuid7()
 
 def _recorded(tmp_path, http_client):
     """The events the data plane buffered, read straight from its outbox."""
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
-    return events
+    return read_and_close_outbox(make_outbox(tmp_path, http_client))
 
 
 async def value_of(resolver, entry) -> str:

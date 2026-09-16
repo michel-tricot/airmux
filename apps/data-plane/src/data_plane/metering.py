@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from contract import KeyEntry, ModelEntry, RoutedUsageStatus
     from data_plane.canonical import CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import Ctx
-    from data_plane.outbox import EventOutbox
+    from data_plane.outbox import OutboxReservation
 
 
 logger = logging.getLogger("data_plane")
@@ -94,13 +94,13 @@ def _prompt_text(request: CanonicalRequest) -> str:
 
 
 def record_denied(
-    outbox: EventOutbox,
+    reservation: OutboxReservation,
     key: KeyEntry,
     bundle_id: UUID,
     request: CanonicalRequest,
     start: RequestStart,
 ) -> None:
-    outbox.record(
+    reservation.record(
         DeniedUsageEventV1(
             event_id=uuid7(),
             request_id=start.request_id,
@@ -123,7 +123,7 @@ def record_denied(
 
 
 def record_usage(
-    outbox: EventOutbox,
+    reservation: OutboxReservation,
     ctx: Ctx,
     response: CanonicalResponse,
     status: RoutedUsageStatus,
@@ -140,7 +140,7 @@ def record_usage(
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    outbox.record(
+    reservation.record(
         RoutedUsageEventV1(
             event_id=uuid7(),
             request_id=ctx.request_id,

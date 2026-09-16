@@ -84,14 +84,19 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite flush defaults to 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file, and the
-outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through the same outbox.
+SQLite export defaults to every 5 seconds. Each worker reserves request capacity in a fixed 1,024-event memory queue,
+persists queued events on one dedicated storage thread, and coordinates export through the shared SQLite outbox. Its
+cache directory defaults to `.airmux` beside the configuration file, and the outbox writes `events.db` there.
 
 The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
-files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
-Threads and processes sharing a local file serialize their writes. Restarting appends to the existing file.
-It has no export queue, deduplication, rotation, or `fsync` guarantee; health reports zero pending events.
-Use it on a local POSIX filesystem. File write failures propagate to the request instead of silently discarding usage.
+files with mode `0600`. Its storage thread appends complete usage events in batches and flushes before releasing their
+queue capacity. Processes sharing a local file serialize their writes. Restarting appends to the existing file.
+It has no export queue, deduplication, rotation, or `fsync` guarantee; health reports zero durable events awaiting export.
+Use it on a local POSIX filesystem. A file write failure terminates the worker instead of silently discarding usage.
+
+SQLite and file requests return after the in-memory handoff, without waiting for local persistence. Graceful shutdown
+drains filled events into local storage. `SIGKILL`, machine failure, power loss, or storage failure can lose events that
+were accepted into memory but had not been persisted.
 
 ## Secret stores
 
