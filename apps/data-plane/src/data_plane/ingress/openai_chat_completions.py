@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 # This dialect's alternate spellings of canonical fields: parse folds each into its canonical
 # name, and the egress side re-spells the canonical value however the provider wants it.
-ALIASED = frozenset({"max_completion_tokens", "reasoning_effort"})
+ALIASED = frozenset({"max_tokens", "max_completion_tokens", "reasoning_effort"})
 
 # Protocol plumbing with no canonical carrier because its meaning is constant under our
 # contract: the stream always reports usage, and body_of re-emits its own stream_options on
@@ -35,7 +35,7 @@ CONSTANT = frozenset({"stream_options"})
 # Everything consumed here is spoken for; everything else rides through as canonical extras, so
 # the reconcile step reports or forwards it exactly as for a canonical caller. Deriving the core
 # from the definition means a field added to canonical is consumed here without an edit.
-CONSUMED = frozenset(CanonicalRequest.model_fields) | ALIASED | CONSTANT
+CONSUMED = (frozenset(CanonicalRequest.model_fields) - {"max_output_tokens"}) | ALIASED | CONSTANT
 
 
 def _error_body(status: int, code: str, message: str) -> dict[str, dict[str, str]]:
@@ -103,6 +103,12 @@ class OpenAIChatCompletionsIngress(IngressAdapter):
 
         An unrecognized value in a consumed slot (a tool_choice variant this parse does not
         know) is a translation loss: reported as an adjustment, never a silent None."""
+        if "max_output_tokens" in body:
+            message = "Chat Completions requests use max_tokens or max_completion_tokens, not max_output_tokens"
+            raise ValueError(message)
+        if "max_tokens" in body and "max_completion_tokens" in body:
+            message = "supply max_tokens or max_completion_tokens, not both"
+            raise ValueError(message)
         stop = body.get("stop")
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
         adjustments = []
@@ -131,7 +137,7 @@ class OpenAIChatCompletionsIngress(IngressAdapter):
                 "model": body.get("model"),
                 "messages": fmt.from_messages(body.get("messages")),
                 "stream": body.get("stream", False),
-                "max_tokens": body.get("max_tokens") or body.get("max_completion_tokens"),
+                "max_output_tokens": body.get("max_completion_tokens", body.get("max_tokens")),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
                 "stop": [stop] if isinstance(stop, str) else stop,

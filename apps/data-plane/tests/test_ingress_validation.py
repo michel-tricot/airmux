@@ -13,7 +13,8 @@ from data_plane.proxy import RequestRejectedError, _parse
 def request_body(dialect):
     if dialect == "openai_responses":
         return {"model": "gpt-test", "input": [{"role": "user", "content": "hello"}]}
-    return {"model": "gpt-test", "messages": [{"role": "user", "content": "hello"}]}
+    limit = {"max_tokens": 8} if dialect == "anthropic" else {}
+    return {"model": "gpt-test", "messages": [{"role": "user", "content": "hello"}], **limit}
 
 
 @pytest.mark.parametrize("dialect", REGISTRY)

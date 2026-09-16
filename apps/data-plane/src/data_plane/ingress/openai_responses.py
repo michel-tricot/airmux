@@ -271,7 +271,7 @@ class OpenAIResponsesIngress(IngressAdapter):
                 "model": body.get("model"),
                 "messages": messages,
                 "stream": body.get("stream", False),
-                "max_tokens": body.get("max_output_tokens"),
+                "max_output_tokens": body.get("max_output_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
                 "tools": _tools(body.get("tools")),

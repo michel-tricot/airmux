@@ -80,14 +80,17 @@ def test_ci_runs_every_correctness_job_unconditionally_and_discovers_suites():
     assert "paths-ignore:" not in (ROOT / ".github/workflows/ci.yml").read_text()
 
 
-def test_exactly_four_workflows_separate_pr_nightly_and_release_work():
+def test_workflows_separate_pr_nightly_and_release_work():
     workflows = {path.name for path in (ROOT / ".github/workflows").glob("*.yml")}
-    assert workflows == {"ci.yml", "security.yml", "nightly.yml", "release.yml"}
+    assert workflows == {"ci.yml", "security.yml", "nightly.yml", "prepare-release.yml", "release.yml"}
     nightly = yaml.safe_load((ROOT / ".github/workflows/nightly.yml").read_text())
+    prepare_release = yaml.safe_load((ROOT / ".github/workflows/prepare-release.yml").read_text())
     release = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     assert "pull_request" not in nightly[True]
+    assert "pull_request" not in prepare_release[True]
     assert "pull_request" not in release[True]
-    assert set(release[True]["workflow_dispatch"]["inputs"]) == {"tag"}
+    assert set(prepare_release[True]["workflow_dispatch"]["inputs"]) == {"bump"}
+    assert release[True]["workflow_dispatch"] == {}
     nightly_commands = "\n".join(step.get("run", "") for job in nightly["jobs"].values() for step in job.get("steps", []))
     assert "pytest -m performance tests/acceptance/gateway" in nightly_commands
 

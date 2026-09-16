@@ -83,13 +83,13 @@ def test_composite_primary_keys_join_in_record_id(tmp_path):
 
     user_id, org_id = run_in_db(tmp_path, build)
 
-    async def remove():
+    async def delete_membership():
         await set_actor(ACTOR)
         membership = await OrgMembership.get((user_id, org_id))
         assert membership is not None
         await membership.delete()
 
-    run_in_db(tmp_path, remove)
+    run_in_db(tmp_path, delete_membership)
 
     deletion = next(r for r in _audit_rows(tmp_path) if (r.table_name, r.action) == ("org_membership", "delete"))
     assert deletion.record_id == f"{user_id}/{org_id}"

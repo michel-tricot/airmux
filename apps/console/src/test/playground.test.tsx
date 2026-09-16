@@ -26,6 +26,7 @@ describe('playground', () => {
               bundle_id: '01941f29-7c00-7000-8000-000000000004',
               input_tokens: 12,
               output_tokens: 4,
+              max_output_tokens: 128,
               cost_usd: 0.001,
               cost_input_usd: 0.0005,
               cost_output_usd: 0.0005,

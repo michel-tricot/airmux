@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, inference_key_body, make_org, make_workspace, run_in_db, setup_control_plane
 from sqlmodel import col
 
 from contract import BundleV1, uuid7
@@ -181,7 +181,9 @@ def test_workspace_routes_resolve_by_slug(tmp_path):
 
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/staging", headers=org).json()["data"]["id"] == str(ws)
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/staging/members", headers=org).status_code == 200
-        key = c.post(f"/api/v1/organizations/{o1}/workspaces/staging/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{o1}/workspaces/staging/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         assert [k["id"] for k in c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=org).json()["data"]] == [key["id"]]
 
         assert c.get(f"/api/v1/organizations/{o2}/workspaces/staging", headers=cp.headers(o2)).status_code == 404
@@ -245,10 +247,24 @@ def test_key_operations_require_workspace_membership(tmp_path):
         _, outsider = _member(c, cp, o1, "orgmate@example.com")
         ws = make_workspace(c, creator)
 
-        assert c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=creator).status_code == 200
+        assert (
+            c.post(
+                f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys",
+                json=inference_key_body(c, creator, "k"),
+                headers=creator,
+            ).status_code
+            == 200
+        )
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=creator).status_code == 200
 
-        assert c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=outsider).status_code == 403
+        assert (
+            c.post(
+                f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys",
+                json=inference_key_body(c, outsider, "k"),
+                headers=outsider,
+            ).status_code
+            == 403
+        )
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=outsider).status_code == 403
 
         admin = cp.headers(o1)
@@ -304,8 +320,8 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
         org = cp.headers(o1)
         ws1 = make_workspace(c, org, "one")
         ws2 = make_workspace(c, org, "two")
-        k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json={"label": "k1"}, headers=org).json()["data"]
-        k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json={"label": "k2"}, headers=org).json()["data"]
+        k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json=inference_key_body(c, org, "k1"), headers=org).json()["data"]
+        k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json=inference_key_body(c, org, "k2"), headers=org).json()["data"]
 
         c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])

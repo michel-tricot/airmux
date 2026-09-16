@@ -50,7 +50,7 @@ class ChatBody(BaseModel):
 
     model: str
     messages: list[dict[str, Any]]
-    max_tokens: int | None = None
+    max_output_tokens: int | None = None
     temperature: float | None = None
     top_p: float | None = None
     stop: list[str] | None = None
@@ -171,7 +171,7 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
     return ChatBody(
         model=upstream_model,
         messages=to_messages(req.messages),
-        max_tokens=req.max_tokens,
+        max_output_tokens=req.max_output_tokens,
         temperature=req.temperature,
         top_p=req.top_p,
         stop=req.stop,

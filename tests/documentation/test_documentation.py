@@ -125,6 +125,9 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "tests/ci/test_merge_policy.py" in contributing
     assert "tests/documentation/test_merge_policy.py" not in contributing
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
+    assert "Prepare release" in development
+    assert "Publish release" in development
+    assert "prefilled pull request link" in development
 
 
 def test_documentation_covers_safe_upgrades() -> None:
@@ -207,18 +210,18 @@ def test_published_dependencies_match_the_bundled_projects() -> None:
     assert merged_requirements(published) == merged_requirements(bundled)
 
 
-def test_published_version_matches_every_bundled_project() -> None:
-    version = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]["version"]
-
+def test_bundled_projects_are_release_independent() -> None:
+    sources = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["uv"]["sources"]
     for path, project in bundled_projects().items():
-        assert project["version"] == version, path
-        internal_pins = [
+        assert project["version"] == "0.0.0", path
+        internal_requirements = [
             Requirement(dependency)
             for dependency in project_dependencies(project)
             if canonicalize_name(Requirement(dependency).name) in INTERNAL_DISTRIBUTIONS
         ]
-        for pin in internal_pins:
-            assert str(pin.specifier) == f"=={version}", (path, pin.name)
+        for requirement in internal_requirements:
+            assert not requirement.specifier, (path, requirement.name)
+            assert sources[requirement.name] == {"workspace": True}, (path, requirement.name)
 
 
 @pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])

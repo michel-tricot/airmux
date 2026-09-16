@@ -23,20 +23,20 @@ def test_rule_create_preserves_typed_configuration(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
     definition = {
         "match": {"kind": "all_requests"},
-        "action": {"kind": "budget", "period": "month", "amount_usd": "10.25", "sharing": "shared"},
+        "action": {"kind": "request_limits", "max_output_tokens": 2048},
     }
     rule = {
         "id": rule_id,
         "org_id": org_id,
         "workspace_id": workspace_id,
-        "name": "Budget",
+        "name": "Output limit",
         "definition": definition,
         "created_at": "2026-09-08T00:00:00Z",
         "updated_at": "2026-09-08T00:00:00Z",
         "deleted_at": None,
     }
     path = tmp_path / "rule.json"
-    path.write_text(json.dumps({"name": "Budget", "definition": definition}), encoding="utf-8")
+    path.write_text(json.dumps({"name": "Output limit", "definition": definition}), encoding="utf-8")
 
     def create(incoming):
         assert json.loads(incoming.content)["definition"] == definition

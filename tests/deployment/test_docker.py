@@ -169,7 +169,12 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     org = payload(client.post("/api/v1/enroll/org", json={"name": "Deployment"}))
     base = f"/api/v1/organizations/{org['id']}"
     workspace = payload(client.post(f"{base}/workspaces", json={"name": "default"}))
-    key = payload(client.post(f"{base}/workspaces/{workspace['id']}/inference-keys", json={"label": "deployment"}))
+    key = payload(
+        client.post(
+            f"{base}/workspaces/{workspace['id']}/inference-keys",
+            json={"label": "deployment", "user_id": owner["user_id"]},
+        )
+    )
     payload(client.post("/api/v1/instance/taxonomy/providers", json={"provider_id": provider, "base_url": "http://deployment-upstream:9000"}))
     payload(
         client.post(

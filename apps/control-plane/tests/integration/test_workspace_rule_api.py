@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_workspace, setup_control_plane
 
 from contract import BundleV1
 
@@ -12,6 +12,27 @@ RULE = {
         "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
     },
 }
+
+BUDGET_RULE = {
+    "name": "Budget",
+    "definition": {
+        "match": {"kind": "all_requests"},
+        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "sharing": "shared"},
+    },
+}
+
+
+def test_budget_rules_are_rejected_on_create_and_update(tmp_path):
+    control_plane = setup_control_plane(tmp_path)
+    with TestClient(control_plane.app) as client:
+        org_id = make_org(client, control_plane.headers(), "no-budget-rules")
+        headers = control_plane.headers(org_id)
+        workspace_id = make_workspace(client, headers, "production")
+        base = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/rules"
+        rule = client.post(base, headers=headers, json=RULE).json()["data"]
+
+        assert client.post(base, headers=headers, json=BUDGET_RULE).status_code == 422
+        assert client.patch(f"{base}/{rule['id']}", headers=headers, json={"definition": BUDGET_RULE["definition"]}).status_code == 422
 
 
 def test_rule_is_shared_live_across_policies_and_cannot_be_deleted_while_referenced(tmp_path):
@@ -29,7 +50,7 @@ def test_rule_is_shared_live_across_policies_and_cannot_be_deleted_while_referen
         for name, selected in (("All traffic", False), ("Customer traffic", True)):
             target: dict[str, object] = {"kind": "workspace"}
             if selected:
-                key = client.post(f"{base}/inference-keys", headers=headers, json={"label": "customer"}).json()["data"]
+                key = client.post(f"{base}/inference-keys", headers=headers, json=inference_key_body(client, headers, "customer")).json()["data"]
                 target = {"kind": "selected_keys", "key_ids": [key["id"]]}
             body = {"name": name, "definition": {"target": target, "rule_ids": [rule["id"]]}}
             response = client.post(f"{base}/policies", headers=headers, json=body)

@@ -9,13 +9,13 @@ resolution-markers = [
 [manifest]
 members = [
     "acceptance",
-    "model-audit",
     "airmux",
     "airmux-api-models",
     "airmux-contract",
     "airmux-control-plane",
     "airmux-data-plane",
     "airmux-workspace",
+    "model-audit",
 ]
 
 [[package]]
@@ -39,6 +39,168 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "testcontainers" },
+]
+
+[[package]]
+name = "airmux"
+version = "0.0.0"
+source = { editable = "apps/cli" }
+dependencies = [
+    { name = "airmux-api-models" },
+    { name = "airmux-contract" },
+    { name = "airmux-control-plane" },
+    { name = "airmux-data-plane" },
+    { name = "httpx" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "tomli-w" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "airmux-api-models", editable = "lib/api-models" },
+    { name = "airmux-contract", editable = "lib/contract" },
+    { name = "airmux-control-plane", editable = "apps/control-plane" },
+    { name = "airmux-data-plane", editable = "apps/data-plane" },
+    { name = "httpx" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "tomli-w", specifier = ">=1.2.0" },
+    { name = "typer" },
+]
+
+[[package]]
+name = "airmux-api-models"
+version = "0.0.0"
+source = { editable = "lib/api-models" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2" }]
+
+[[package]]
+name = "airmux-contract"
+version = "0.0.0"
+source = { editable = "lib/contract" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[[package]]
+name = "airmux-control-plane"
+version = "0.0.0"
+source = { editable = "apps/control-plane" }
+dependencies = [
+    { name = "airmux-contract" },
+    { name = "alembic" },
+    { name = "argon2-cffi" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "pyyaml" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "sqlmodel" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "airmux-contract", editable = "lib/contract" },
+    { name = "alembic" },
+    { name = "argon2-cffi", specifier = ">=23.1" },
+    { name = "asyncpg" },
+    { name = "fastapi" },
+    { name = "pyyaml" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
+    { name = "sqlmodel" },
+    { name = "uvicorn", extras = ["standard"] },
+]
+
+[[package]]
+name = "airmux-data-plane"
+version = "0.0.0"
+source = { editable = "apps/data-plane" }
+dependencies = [
+    { name = "airmux-contract" },
+    { name = "httpx", extra = ["http2"] },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "tiktoken" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "airmux-contract", editable = "lib/contract" },
+    { name = "httpx", extras = ["http2"] },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "pyyaml" },
+    { name = "starlette" },
+    { name = "tiktoken" },
+    { name = "uvicorn", extras = ["standard"] },
+]
+
+[[package]]
+name = "airmux-workspace"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+backend = [
+    { name = "airmux" },
+]
+dev = [
+    { name = "anthropic" },
+    { name = "anyio" },
+    { name = "datamodel-code-generator" },
+    { name = "import-linter" },
+    { name = "jsonschema" },
+    { name = "openai" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-xdist" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "testcontainers" },
+    { name = "ty" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+backend = [{ name = "airmux", editable = "apps/cli" }]
+dev = [
+    { name = "anthropic" },
+    { name = "anyio" },
+    { name = "datamodel-code-generator" },
+    { name = "import-linter" },
+    { name = "jsonschema" },
+    { name = "openai" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-xdist" },
+    { name = "respx" },
+    { name = "ruff", specifier = ">=0.14" },
+    { name = "testcontainers" },
+    { name = "ty", specifier = ">=0.0.50" },
 ]
 
 [[package]]
@@ -977,6 +1139,7 @@ name = "model-audit"
 version = "0.1.0"
 source = { editable = "model-audit" }
 dependencies = [
+    { name = "airmux-contract" },
     { name = "anthropic" },
     { name = "httpx" },
     { name = "jsonschema" },
@@ -985,12 +1148,12 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "airmux-contract" },
     { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "airmux-contract", editable = "lib/contract" },
     { name = "anthropic" },
     { name = "httpx" },
     { name = "jsonschema" },
@@ -999,7 +1162,6 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "rich" },
-    { name = "airmux-contract", editable = "lib/contract" },
     { name = "typer" },
 ]
 
@@ -1727,168 +1889,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/d9/dfd086aa2d918c563a140720e0ce296cada1634efd2783d5cf51e05f984e/tiktoken-0.13.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:6644c9c2b5cf3916f5a3641d7d12fdb3f006a7b3d9ff6acdaec44e29ab1ff91e", size = 1181863, upload-time = "2026-05-15T04:51:15.025Z" },
     { url = "https://files.pythonhosted.org/packages/2f/68/a18b4f307086954fdae32714cb4f85562e34f9d34ab206e61f1816aa6018/tiktoken-0.13.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:5cb65b60b9408563676d874a3a4ee573370066f0dc4e29d84e82e989c6517424", size = 1239218, upload-time = "2026-05-15T04:51:16.103Z" },
     { url = "https://files.pythonhosted.org/packages/16/5b/f2aa703a4fc5d2dff73460a7d46cc2f3f44aa0f3dd8eeb20d2a0ecf68862/tiktoken-0.13.0-cp314-cp314t-win_amd64.whl", hash = "sha256:85b78cc3a2c3d48723ca751fa981f1fedccd54194ca0471b957364353a898b07", size = 918110, upload-time = "2026-05-15T04:51:17.237Z" },
-]
-
-[[package]]
-name = "airmux"
-version = "0.1.1"
-source = { editable = "apps/cli" }
-dependencies = [
-    { name = "httpx" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "airmux-api-models" },
-    { name = "airmux-contract" },
-    { name = "airmux-control-plane" },
-    { name = "airmux-data-plane" },
-    { name = "tomli-w" },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "airmux-api-models", editable = "lib/api-models" },
-    { name = "airmux-contract", editable = "lib/contract" },
-    { name = "airmux-control-plane", editable = "apps/control-plane" },
-    { name = "airmux-data-plane", editable = "apps/data-plane" },
-    { name = "tomli-w", specifier = ">=1.2.0" },
-    { name = "typer" },
-]
-
-[[package]]
-name = "airmux-api-models"
-version = "0.1.1"
-source = { editable = "lib/api-models" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2" }]
-
-[[package]]
-name = "airmux-contract"
-version = "0.1.1"
-source = { editable = "lib/contract" }
-dependencies = [
-    { name = "asyncpg" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncpg" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-]
-
-[[package]]
-name = "airmux-control-plane"
-version = "0.1.1"
-source = { editable = "apps/control-plane" }
-dependencies = [
-    { name = "alembic" },
-    { name = "argon2-cffi" },
-    { name = "asyncpg" },
-    { name = "fastapi" },
-    { name = "pyyaml" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "sqlmodel" },
-    { name = "airmux-contract" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic" },
-    { name = "argon2-cffi", specifier = ">=23.1" },
-    { name = "asyncpg" },
-    { name = "fastapi" },
-    { name = "pyyaml" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
-    { name = "sqlmodel" },
-    { name = "airmux-contract", editable = "lib/contract" },
-    { name = "uvicorn", extras = ["standard"] },
-]
-
-[[package]]
-name = "airmux-data-plane"
-version = "0.1.1"
-source = { editable = "apps/data-plane" }
-dependencies = [
-    { name = "httpx", extra = ["http2"] },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "starlette" },
-    { name = "tiktoken" },
-    { name = "airmux-contract" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", extras = ["http2"] },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "pyyaml" },
-    { name = "starlette" },
-    { name = "tiktoken" },
-    { name = "airmux-contract", editable = "lib/contract" },
-    { name = "uvicorn", extras = ["standard"] },
-]
-
-[[package]]
-name = "airmux-workspace"
-version = "0.1.0"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-backend = [
-    { name = "airmux" },
-]
-dev = [
-    { name = "anthropic" },
-    { name = "anyio" },
-    { name = "datamodel-code-generator" },
-    { name = "import-linter" },
-    { name = "jsonschema" },
-    { name = "openai" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-xdist" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "testcontainers" },
-    { name = "ty" },
-]
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-backend = [{ name = "airmux", editable = "apps/cli" }]
-dev = [
-    { name = "anthropic" },
-    { name = "anyio" },
-    { name = "datamodel-code-generator" },
-    { name = "import-linter" },
-    { name = "jsonschema" },
-    { name = "openai" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-xdist" },
-    { name = "respx" },
-    { name = "ruff", specifier = ">=0.14" },
-    { name = "testcontainers" },
-    { name = "ty", specifier = ">=0.0.50" },
 ]
 
 [[package]]

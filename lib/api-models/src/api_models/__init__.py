@@ -57,50 +57,6 @@ class AllowedProviders(BaseModel):
     names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
 
 
-class AmountUsd(RootModel[float]):
-    root: Annotated[float, Field(gt=0.0, title="Amount Usd")]
-
-
-class AmountUsd1(RootModel[str]):
-    model_config = ConfigDict(
-        regex_engine="python-re",
-    )
-    root: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Amount Usd",
-        ),
-    ]
-
-
-class BudgetInput(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Annotated[Literal["budget"], Field(title="Kind")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    amount_usd: Annotated[AmountUsd | AmountUsd1, Field(title="Amount Usd")]
-    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
-
-
-class BudgetOutput(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        regex_engine="python-re",
-    )
-    kind: Annotated[Literal["budget"], Field(title="Kind")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    amount_usd: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Amount Usd",
-        ),
-    ]
-    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
-
-
 class BundleManifestEntry(BaseModel):
     """
     The immutable identity of one organization bundle available to a data plane.
@@ -239,6 +195,18 @@ class DeletedOutStr(BaseModel):
     deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
 
 
+class MaxOutputTokens(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Effective upstream output-token limit",
+            ge=1,
+            le=2147483647,
+            title="Max Output Tokens",
+        ),
+    ]
+
+
 class DeniedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -289,6 +257,13 @@ class DeniedUsageEventV1(BaseModel):
             ge=0,
             le=2147483647,
             title="Output Tokens",
+        ),
+    ]
+    max_output_tokens: Annotated[
+        MaxOutputTokens | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
         ),
     ]
     cost_usd: Annotated[
@@ -481,6 +456,13 @@ class InferenceKeyIn(BaseModel):
             title="Label",
         ),
     ]
+    user_id: Annotated[
+        UUID,
+        Field(
+            description="Principal whose identity this key carries into policy evaluation",
+            title="User Id",
+        ),
+    ]
 
 
 class InferenceKeyOut(BaseModel):
@@ -494,6 +476,13 @@ class InferenceKeyOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class InferenceKeyOwnerOut(BaseModel):
+    user_id: Annotated[UUID, Field(title="User Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    service_account: Annotated[bool, Field(title="Service Account")]
 
 
 class InferenceKeyRevokedOut(BaseModel):
@@ -648,7 +637,7 @@ class EgressKind(RootModel[str]):
     ]
 
 
-class MaxOutputTokens(RootModel[int]):
+class MaxOutputTokens1(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -737,7 +726,7 @@ class ModelIn(BaseModel):
         ),
     ] = 128000
     max_output_tokens: Annotated[
-        MaxOutputTokens | None,
+        MaxOutputTokens1 | None,
         Field(
             description="Max completion tokens; requests are clamped to it",
             title="Max Output Tokens",
@@ -1417,6 +1406,18 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
+class MaxOutputTokens2(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Effective upstream output-token limit",
+            ge=1,
+            le=2147483647,
+            title="Max Output Tokens",
+        ),
+    ]
+
+
 class RoutedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1472,6 +1473,13 @@ class RoutedUsageEventV1(BaseModel):
             ge=0,
             le=2147483647,
             title="Output Tokens",
+        ),
+    ]
+    max_output_tokens: Annotated[
+        MaxOutputTokens2 | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
         ),
     ]
     cost_usd: Annotated[
@@ -1715,6 +1723,7 @@ class UsageEventOut(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     cost_usd: Annotated[float, Field(title="Cost Usd")]
     cost_input_usd: Annotated[float, Field(title="Cost Input Usd")]
     cost_output_usd: Annotated[float, Field(title="Cost Output Usd")]
@@ -1944,6 +1953,10 @@ class EnvelopeListInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(title="Data")]
 
 
+class EnvelopeListInferenceKeyOwnerOut(BaseModel):
+    data: Annotated[list[InferenceKeyOwnerOut], Field(title="Data")]
+
+
 class EnvelopeListOrgInvitationOut(BaseModel):
     data: Annotated[list[OrgInvitationOut], Field(title="Data")]
 
@@ -2162,15 +2175,7 @@ class RuleDefinitionInput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchInput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels
-        | AllowedProviders
-        | DenyRequest
-        | StrictParameters
-        | PriceLimitInput
-        | RequestLimits
-        | CredentialAccess
-        | Fallback
-        | BudgetInput,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2181,15 +2186,7 @@ class RuleDefinitionOutput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels
-        | AllowedProviders
-        | DenyRequest
-        | StrictParameters
-        | PriceLimitOutput
-        | RequestLimits
-        | CredentialAccess
-        | Fallback
-        | BudgetOutput,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2391,7 +2388,7 @@ class PolicyCreate(BaseModel):
     ] = 100
     definition: Annotated[
         PolicyDefinition,
-        Field(description="Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced"),
+        Field(description="Workspace, user, or inference key target and reusable rules"),
     ]
 
 

@@ -27,7 +27,7 @@ def list_policies(workspace: WorkspaceOption = "", control_plane_url: str = "", 
 def create_policy(
     configuration: PolicyFile, workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
 ) -> None:
-    """Create a policy from JSON; budgets are recorded but not yet enforced."""
+    """Create a policy from JSON."""
     body = _configuration(configuration, PolicyCreate)
     with access_client(control_plane_url) as client:
         response = ensure_ok(

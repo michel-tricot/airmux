@@ -25,7 +25,8 @@ from data_plane.reconcile import reconcile
 @pytest.mark.parametrize("dialect", REGISTRY)
 def test_document_content_survives_ingress(dialect):
     field = "input" if dialect == "openai_responses" else "messages"
-    request, adjustments = REGISTRY[dialect].parse({"model": "gpt-test", field: [{"role": "user", "content": [DOCUMENT_PARTS[dialect]]}]})
+    limit = {"max_tokens": 8} if dialect == "anthropic" else {}
+    request, adjustments = REGISTRY[dialect].parse({"model": "gpt-test", field: [{"role": "user", "content": [DOCUMENT_PARTS[dialect]]}], **limit})
     assert request.messages[0].content == [CanonicalDocumentPart(media_type="application/pdf", data="JVBERi0=")]
     assert adjustments == []
 
@@ -96,7 +97,7 @@ def test_openai_parse_translates_the_openai_shapes_and_keeps_the_rest():
     assert req.tools is not None
     assert (req.tools[0].name, req.tools[0].description) == ("w", "weather")
     assert getattr(req.tool_choice, "name", None) == "w"
-    assert req.max_tokens == 64
+    assert req.max_output_tokens == 64
     assert req.extra == {"frequency_penalty": 0.5}  # stream_options consumed silently, the rest kept for the reconcile step
 
 
@@ -152,7 +153,7 @@ def test_anthropic_parse_hoists_system_and_keeps_the_rest_as_extras():
     }
     req, adjustments = AnthropicIngress().parse(body)
     assert [m.role for m in req.messages] == ["system", "user"]
-    assert req.max_tokens == 64
+    assert req.max_output_tokens == 64
     assert req.stop == ["END"]
     assert req.reasoning is not None
     assert req.reasoning.type == "enabled"

@@ -61,6 +61,18 @@ describe('inferenceCompletion', () => {
     });
   });
 
+  it('accepts output-limit adjustments from the gateway', async () => {
+    const adjusted = {
+      ...completion,
+      gateway: {
+        adjustments: [{ param: 'max_output_tokens', action: 'defaulted', detail: 'model caps output at 4096 tokens', source: 'model' }],
+      },
+    };
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(Response.json(adjusted)));
+
+    await expect(inferenceCompletion({ model: 'model-1', messages: [], stream: false })).resolves.toMatchObject({ content: 'hello' });
+  });
+
   it('assembles OpenAI SSE events split across lines, chunks, and UTF-8 code points', async () => {
     const body = [
       'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"hé"}}]}\r\n\r\n',

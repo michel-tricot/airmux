@@ -134,15 +134,8 @@ class Fallback(_PolicyModel):
         return self
 
 
-class Budget(_PolicyModel):
-    kind: Literal["budget"]
-    period: Literal["day", "month"]
-    amount_usd: Decimal = Field(gt=0, max_digits=16, decimal_places=6)
-    sharing: Literal["shared", "per_key"]
-
-
 PolicyAction = Annotated[
-    AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
+    AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
     Field(discriminator="kind"),
 ]
 

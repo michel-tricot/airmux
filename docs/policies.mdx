@@ -39,18 +39,20 @@ Select principals whose inference keys and playground sessions should be restric
 ```
 
 Selected users must be organization members with workspace membership or an organization owner/admin role. Service accounts
-are included. Selections require 1 to 1,000 unique UUIDs. A key identifies its creating principal; a shared application key
-identifies its owner or service account, not the application's end user. The same user's policy in Production has no effect
-in Development.
+are included. Selections require 1 to 1,000 unique UUIDs. Every inference key identifies its explicit owner, independently of
+the human or service account that created it. A shared application key identifies its service-account owner, not the
+application's end user. The same user's policy in Production has no effect in Development.
 
 Workspace, user, and key restrictions all apply together. With output limits of 4,096, 1,024, and 512 respectively, a request
 above 512 tokens is denied regardless of priority. Priority still determines the first matching fallback configuration.
 
-Removing workspace or organization membership preserves existing inference keys, unexpired playground sessions, and policy
-references. Their user restrictions continue to apply until credentials are explicitly revoked or sessions expire. Removal
-prevents creating new credentials through the removed membership; organization owners/admins retain their inherited workspace
-authority. Removed users disappear from the picker, and cannot be newly selected. To edit a policy containing an ineligible
-user, select eligible users or change the target explicitly. Removing the final user never turns the target into a workspace policy.
+Removing workspace membership revokes that owner's inference keys and playground sessions in the workspace. Removing
+organization membership revokes them across the organization. Re-adding membership does not reactivate those credentials,
+even when an organization role continues to grant control-plane authority for the workspace.
+
+User-targeted policy references remain unchanged because a policy does not grant access. Removed users disappear from the
+picker and cannot be newly selected. To edit a policy containing an ineligible user, select eligible users or change the
+target explicitly. Removing the final user never turns the target into a workspace policy.
 
 Or select specific key IDs:
 
@@ -202,23 +204,6 @@ authentication failure may try another credential in the same selected scope.
   A provider may continue generation after a timeout. airmux records every attempted route separately, so fallback does
   not provide exactly-once generation.
 </Info>
-
-### Budget
-
-```json
-{
-  "kind": "budget",
-  "period": "month",
-  "amount_usd": "250.00",
-  "sharing": "shared"
-}
-```
-
-`period` is `day` or `month`; `sharing` is `shared` or `per_key`.
-
-<Warning>
-  Budget enforcement is not implemented. Saving or enabling a budget rule does not limit spending.
-</Warning>
 
 ## Complete API shapes
 

@@ -80,7 +80,16 @@ const usageSchema = z
 const gatewaySchema = z
   .object({
     finish_reason: finishReasonSchema.optional(),
-    adjustments: z.array(z.object({ param: z.string(), action: z.enum(['clamped', 'emulated', 'dropped']), detail: z.string() }).strict()),
+    adjustments: z.array(
+      z
+        .object({
+          param: z.string(),
+          action: z.enum(['clamped', 'defaulted', 'emulated', 'dropped']),
+          detail: z.string(),
+          source: z.enum(['policy', 'model', 'policy_and_model']).nullable().optional(),
+        })
+        .strict(),
+    ),
   })
   .strict();
 const toolCallSchema = z

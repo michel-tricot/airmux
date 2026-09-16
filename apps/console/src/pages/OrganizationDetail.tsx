@@ -258,7 +258,8 @@ export default function OrganizationDetail() {
                 canRemoveMembers
                   ? {
                       title: (member) => `Remove ${member.name} from the organization?`,
-                      description: 'They lose access to this organization and all of its workspaces.',
+                      description:
+                        'They lose access to this organization, and their inference keys and playground sessions across it stop working immediately.',
                       onRemove: (member) => removeMember.mutateAsync({ userId: member.user_id, orgId: org.id }),
                       pending: removeMember.isPending,
                     }

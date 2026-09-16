@@ -1,6 +1,6 @@
 [project]
 name = "airmux-api-models"
-version = "0.1.1"
+version = "0.0.0"
 requires-python = ">=3.13"
 dependencies = [
   "pydantic>=2",

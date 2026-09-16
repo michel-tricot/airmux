@@ -34,7 +34,7 @@ LOCAL_WORKSPACE = str(UUID(int=0))
 REQUEST_INPUTS: dict[Dialect, dict[str, object]] = {
     "openai_chat_completions": {"messages": [{"role": "user", "content": "hi"}]},
     "openai_responses": {"input": "hi"},
-    "anthropic": {"messages": [{"role": "user", "content": "hi"}]},
+    "anthropic": {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 128},
 }
 ERROR_FIELDS: dict[Dialect, str] = {
     "openai_chat_completions": "code",

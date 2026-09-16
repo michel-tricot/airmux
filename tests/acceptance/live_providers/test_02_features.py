@@ -20,7 +20,7 @@ def test_live_tool_call(live_gateway: LiveGateway, stream: bool) -> None:
         stream=stream,
         body={
             **request_body("openai_chat_completions"),
-            "max_tokens": 256,
+            "max_completion_tokens": 256,
             "stream": stream,
             "messages": [{"role": "user", "content": "Use get_weather to check the weather in Paris."}],
             "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get weather for a city", "parameters": CITY_SCHEMA}}],
@@ -54,7 +54,7 @@ def test_live_structured_output(live_gateway: LiveGateway, stream: bool) -> None
         stream=stream,
         body={
             **request_body("openai_chat_completions"),
-            "max_tokens": 256,
+            "max_completion_tokens": 256,
             "stream": stream,
             "messages": [{"role": "user", "content": "Return a city name in the requested JSON format."}],
             "response_format": {"type": "json_schema", "json_schema": {"name": "city", "strict": True, "schema": CITY_SCHEMA}},
@@ -78,7 +78,7 @@ def test_live_supported_reasoning(live_gateway: LiveGateway, stream: bool) -> No
         stream=stream,
         body={
             "model": "model-a",
-            "max_tokens": 1280,
+            "max_completion_tokens": 1280,
             "stream": stream,
             "messages": [{"role": "user", "content": "Work out how many apples remain when 17 apples are divided into 4 equal groups."}],
             "reasoning": {"type": "enabled", "budget_tokens": 1024},

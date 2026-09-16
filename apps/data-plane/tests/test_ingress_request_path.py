@@ -113,7 +113,10 @@ def test_openai_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, d
         )
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway is not None
-    assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [("n", "dropped")]
+    assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [
+        ("n", "dropped"),
+        ("max_output_tokens", "defaulted"),
+    ]
 
 
 @respx.mock
@@ -149,7 +152,17 @@ def test_openai_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_
         )
     assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
     gateway = (completion.model_extra or {}).get("gateway")
-    assert gateway == {"finish_reason": "stop", "adjustments": []}
+    assert gateway == {
+        "finish_reason": "stop",
+        "adjustments": [
+            {
+                "param": "max_output_tokens",
+                "action": "defaulted",
+                "detail": "model caps output at 4096 tokens",
+                "source": "model",
+            }
+        ],
+    }
 
 
 def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
