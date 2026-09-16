@@ -1,12 +1,28 @@
 name: publish
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing candidate tag, such as v0.1.1
+        type: string
+        required: true
+      sha:
+        description: Full immutable commit SHA referenced by the tag
+        type: string
+        required: true
+
+concurrency:
+  group: publish-${{ inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
   build:
+    if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.candidate.outputs.sha }}
+      version: ${{ steps.candidate.outputs.version }}
     permissions:
       contents: read
     steps:
@@ -14,19 +30,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ inputs.sha }}
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           enable-cache: false
           python-version: '3.13'
       - name: Verify release source and version
+        id: candidate
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_SHA: ${{ inputs.sha }}
         run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([a-z0-9.]+)?$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           git merge-base --is-ancestor HEAD origin/main
           version="${RELEASE_TAG#v}"
-          test "$RELEASE_TAG" = "v$version"
           test "$(uv version --short --project packaging/airmux --no-config)" = "$version"
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - run: uv sync --all-packages --frozen
       - name: Build release distributions
         run: ./scripts/build-python-distribution.sh
@@ -54,12 +77,13 @@ jobs:
           name: python-distributions
           path: dist/airmux*
           if-no-files-found: error
+          retention-days: 30
 
   live-providers:
     needs: build
     uses: ./.github/workflows/live-providers.yml
     with:
-      ref: ${{ github.event.release.tag_name }}
+      ref: ${{ needs.build.outputs.sha }}
       distribution-artifact: python-distributions
     permissions:
       contents: read
@@ -80,4 +104,86 @@ jobs:
           name: python-distributions
           path: dist
       - uses: astral-sh/attest-action@f589a42a7efb6fe400b4f400de60b4bc90390027
-      - run: uv publish --trusted-publishing always dist/*
+      - name: Upload candidate or verify identical existing files on rerun
+        run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/ dist/*.whl dist/*.tar.gz
+
+  verify-pypi:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.build.outputs.sha }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          enable-cache: false
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: python-distributions
+          path: dist
+      - name: Download exact PyPI version and compare candidate hashes
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: uv run python tests/installation/pypi_artifacts.py "$VERSION" dist "$RUNNER_TEMP/pypi-dist"
+      - name: Install verified PyPI wheel into a fresh isolated environment
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/pypi-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/pypi-bin
+        run: uv tool install --no-cache "$RUNNER_TEMP"/pypi-dist/airmux-*.whl
+      - name: Verify installed CLI version and help outside the checkout
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          test "$("$RUNNER_TEMP/pypi-bin/airmux" --version)" = "airmux $VERSION"
+          "$RUNNER_TEMP/pypi-bin/airmux" --help
+      - name: Verify a real request through the installed gateway with a stub upstream
+        env:
+          AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/pypi-bin/airmux
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+          DOCKER_HOST: unix:///no-docker.sock
+        run: uv run pytest tests/acceptance/gateway/test_01_basic.py::test_ready_gateway_completes_and_records_usage
+      - name: Retain PyPI smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pypi-smoke-diagnostics
+          path: ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7
+
+  announce:
+    needs: [build, verify-pypi]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.build.outputs.sha }}
+      - name: Announce the verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_SHA: ${{ needs.build.outputs.sha }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          notes="Version: $VERSION
+          Source commit: $RELEASE_SHA"
+          if gh release view "$RELEASE_TAG" --json body --jq .body > "$RUNNER_TEMP/release-body"; then
+            grep -Fx "Version: $VERSION" "$RUNNER_TEMP/release-body"
+            grep -Fx "Source commit: $RELEASE_SHA" "$RUNNER_TEMP/release-body"
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --target "$RELEASE_SHA" \
+              --title "airmux $VERSION" --generate-notes --notes "$notes" --draft
+          fi
+          gh release edit "$RELEASE_TAG" --draft=false

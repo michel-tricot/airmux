@@ -162,19 +162,53 @@ The installation includes both runtimes. Invoke `airmux` directly from any direc
 
 The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
-Publishing a GitHub release with a tag such as `v0.1.0` runs `publish.yml`. The workflow rejects a tag that differs
-from the public distribution version, builds one wheel and source distribution, rebuilds the wheel from its source
-distribution, and runs the installed behavior suite. A required live-provider job then installs the actual release
-wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies, fallback, and metering.
-The separate PyPI publication job requires both the build and live-provider jobs to succeed. Configure
+Dispatch `publish.yml` from `main` with an existing candidate tag and its full 40-character commit SHA:
+
+```bash
+gh workflow run publish.yml --ref main -f tag=v0.1.1 -f sha="$(git rev-parse 'v0.1.1^{commit}')"
+```
+
+The tag must resolve to that exact SHA, the commit must belong to `main`, and the tag version must match the public
+distribution version. The workflow builds one candidate wheel and source distribution, rebuilds the wheel from
+the source distribution, and verifies the rebuilt installation and gateway. A required live-provider job installs
+the original candidate wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies,
+fallback, and metering. Both gates must pass before any upload or GitHub release announcement.
+
+The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
 `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
 Configure the PyPI trusted publisher for `michel-tricot/airmux`, workflow `publish.yml`, and environment
-`release`. Its environment must match the publication job.
+`release` in the [PyPI project publishing settings](https://pypi.org/manage/project/airmux/settings/publishing/).
+If `airmux` does not exist on PyPI yet, configure a pending publisher with project name `airmux` in your
+[account publishing settings](https://pypi.org/manage/account/publishing/), as described in the
+[PyPI first-upload guide](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
+Verify the project name and all four publisher fields before dispatching a candidate; no stored PyPI token is used.
+A successful first upload proves that the renamed workflow can obtain the publishing identity.
 
-The same live suite runs nightly on main and can be dispatched manually. It does not run on ordinary PRs.
+After upload, the workflow downloads both artifacts for the exact version from PyPI, compares the registry digests
+and downloaded bytes against the tested candidate, and installs the downloaded wheel into a fresh tool environment
+without a cache. It checks CLI help and the exact version outside the checkout, then sends a real request through
+the installed local gateway to a stub upstream and verifies usage accounting. Only after this succeeds does it
+create and publish GitHub release notes identifying the version and source commit. This workflow does not deploy
+to production.
+
+If upload succeeds but PyPI verification fails, the package is already public on PyPI, but the GitHub announcement
+remains unpublished. Use **Re-run failed jobs** on the original Actions run within the 30-day candidate artifact
+retention period. This preserves the exact tested bytes and skips the successful build and live-provider gates.
+If the upload job itself failed partway through, its hash-aware `uv publish --check-url` skips identical existing
+files and uploads the remaining files; different hashes fail. If announcement fails after draft creation, rerunning
+checks its version and source commit before publishing that draft. Do not rebuild and overwrite an uploaded version.
+For a defective package or expired candidate artifacts, fix the source and choose a new version and tag.
+
+The same live suite runs nightly on main and can be dispatched manually against an immutable source SHA:
+
+```bash
+gh workflow run live-providers.yml --ref main -f ref="$(git rev-parse HEAD)"
+```
+
+Manual and scheduled checks build and install a distribution rather than serving the workspace sources.
+The live suite does not run on ordinary PRs.
 See the [live-provider suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/live_providers/README.md)
-for local execution, request bounds, and model maintenance. The existing trigger starts after GitHub release
-metadata is published; these checks gate the package publication to PyPI.
+for local execution, request bounds, and model maintenance.
 
 ## Run deployment tests
 
