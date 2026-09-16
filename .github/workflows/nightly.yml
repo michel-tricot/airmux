@@ -1,0 +1,277 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full main commit SHA, defaults to the selected main revision
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ inputs.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: source
+        env:
+          CANDIDATE_SHA: ${{ inputs.sha || github.sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$CANDIDATE_SHA" origin/main
+          echo "sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - run: |
+          ./scripts/build-python-distribution.sh
+          mkdir candidate
+          cp dist/airmux-*.tar.gz candidate/
+          uv build --wheel --out-dir candidate dist/airmux-*.tar.gz
+          cd candidate
+          sha256sum airmux-* > SHA256SUMS
+      - id: candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: nightly-candidate-${{ needs.resolve.outputs.sha }}
+          path: candidate
+          if-no-files-found: error
+          retention-days: 7
+
+  compatibility:
+    needs: [resolve, package]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.13', '3.14']
+    env:
+      DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - name: Install candidate and portable runner
+        run: |
+          uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file "$RUNNER_TEMP/constraints.txt"
+          cd candidate
+          sha256sum --check SHA256SUMS
+          uv tool install --python "${{ matrix.python }}" --constraints "$RUNNER_TEMP/constraints.txt" airmux-*.whl
+          uv venv --python "${{ matrix.python }}" "$RUNNER_TEMP/portable"
+          uv pip install --python "$RUNNER_TEMP/portable/bin/python" pytest httpx pyyaml
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+      - run: |
+          "$RUNNER_TEMP/portable/bin/python" -I -m pytest tests/installation/portable --junitxml=compatibility-results/portable.xml
+        env:
+          AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
+      - name: Summarize compatibility results
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "Commit: ${{ needs.resolve.outputs.sha }}"
+            echo "Python: $("$RUNNER_TEMP/portable/bin/python" --version)"
+            echo "Candidate SHA-256:"
+            cat candidate/SHA256SUMS
+            echo "JUnit cases: $(grep -o '<testcase' compatibility-results/portable.xml 2>/dev/null | wc -l)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload compatibility results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: compatibility-${{ matrix.os }}-${{ matrix.python }}-${{ needs.resolve.outputs.sha }}
+          path: compatibility-results
+          retention-days: 7
+
+  performance:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - name: Build the preceding main revision
+        run: |
+          git worktree add "$RUNNER_TEMP/base" HEAD^
+          "$RUNNER_TEMP/base/scripts/build-python-distribution.sh" "$RUNNER_TEMP/base-dist"
+          uv export --project "$RUNNER_TEMP/base" --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file "$RUNNER_TEMP/base-constraints.txt"
+          uv tool install --python 3.13 --constraints "$RUNNER_TEMP/base-constraints.txt" "$RUNNER_TEMP"/base-dist/airmux-*.whl
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/base-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/base-bin
+      - uses: ./.github/actions/install-candidate
+        with:
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
+      - name: Validate performance harness coverage
+        run: uv run --no-sync pytest -m performance tests/acceptance/gateway --junitxml=performance-results/tests.xml
+      - name: Compare repeated performance samples
+        run: |
+          uv run --no-sync python tests/acceptance/gateway/performance.py --rounds 5 \
+            --base-bin "$RUNNER_TEMP/base-bin/airmux" --base-harness "$RUNNER_TEMP/base/tests/acceptance/gateway" \
+            --candidate-bin "$AIRMUX_GATEWAY_BIN" --base-revision "$(git rev-parse HEAD^)" \
+            --candidate-revision "${{ needs.resolve.outputs.sha }}" --output performance-results
+          cat performance-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload benchmark evidence
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: performance-${{ needs.resolve.outputs.sha }}
+          path: performance-results
+          retention-days: 90
+
+  live-providers:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/install-candidate
+        with:
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
+      - run: uv run --no-sync pytest tests/acceptance/live_providers --junitxml=provider-results/providers.xml
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/provider-artifacts
+          DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+      - name: Summarize provider results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py provider-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload provider results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: providers-${{ needs.resolve.outputs.sha }}
+          path: |
+            provider-results
+            ${{ runner.temp }}/provider-artifacts
+          retention-days: 7
+
+  soak:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/install-candidate
+        with:
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
+      - name: Repeat discovered concurrency scenarios
+        run: |
+          for round in 1 2 3; do
+            uv run --no-sync pytest tests/acceptance/gateway -n 4 -k 'concurrent or disconnect or reload' --junitxml="soak-results/round-$round.xml"
+          done
+        env:
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/soak-artifacts
+          DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+      - name: Summarize soak results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py soak-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload soak results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: soak-${{ needs.resolve.outputs.sha }}
+          path: |
+            soak-results
+            ${{ runner.temp }}/soak-artifacts
+          retention-days: 7
+
+  cold-docker:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIRMUX_PYTHON_BUILD: python-candidate
+      DEPLOYMENT_PROJECT: airmux-nightly
+      DEPLOYMENT_FILE: docker-compose.yml
+      DEPLOYMENT_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          path: candidate
+      - run: cd candidate && sha256sum --check SHA256SUMS
+      - run: docker compose -p "$DEPLOYMENT_PROJECT" build --no-cache
+      - run: docker compose -p "$DEPLOYMENT_PROJECT" up -d --wait --wait-timeout 180
+      - run: uv run --no-sync pytest tests/deployment --junitxml=cold-docker-results/docker.xml
+        env:
+          DEPLOYMENT_COMPACT_IMAGE: airmux:local
+      - name: Summarize cold-build results
+        if: always()
+        continue-on-error: true
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py cold-docker-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload cold-build results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: cold-docker-${{ needs.resolve.outputs.sha }}
+          path: cold-docker-results
+          retention-days: 7
+      - if: always()
+        run: docker compose -p "$DEPLOYMENT_PROJECT" down -v

@@ -1,3 +1,5 @@
+ARG AIRMUX_PYTHON_BUILD=python-build
+
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS python-build
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -15,6 +17,21 @@ COPY apps/data-plane/src apps/data-plane/src
 COPY apps/cli/src apps/cli/src
 RUN uv sync --only-group backend --frozen
 
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS python-candidate
+WORKDIR /app
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+COPY pyproject.toml uv.lock ./
+COPY lib/api-models/pyproject.toml lib/api-models/
+COPY lib/contract/pyproject.toml lib/contract/
+COPY apps/control-plane/pyproject.toml apps/control-plane/
+COPY apps/cli/pyproject.toml apps/cli/
+COPY apps/data-plane/pyproject.toml apps/data-plane/README.md apps/data-plane/
+RUN uv sync --only-group backend --frozen --no-install-workspace
+COPY candidate/airmux-*.whl /tmp/candidate/
+RUN uv pip install --python .venv/bin/python --no-deps /tmp/candidate/airmux-*.whl
+
+FROM ${AIRMUX_PYTHON_BUILD} AS selected-python-build
+
 FROM oven/bun:1 AS console-build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.json tsconfig.base.json ./
@@ -28,7 +45,7 @@ FROM python:3.13-slim-bookworm AS runtime
 RUN groupadd --system --gid 10001 airmux && useradd --system --uid 10001 --gid airmux --home-dir /state --shell /usr/sbin/nologin airmux \
     && mkdir -p /state/runtime /state/secrets /state/data-plane \
     && chown -R airmux:airmux /state
-COPY --from=python-build /app /app
+COPY --from=selected-python-build /app /app
 COPY deploy/docker /app/deploy/docker
 COPY taxonomy/taxonomy.yml /app/taxonomy/taxonomy.yml
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/docker/airmux.yml

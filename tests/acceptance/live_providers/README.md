@@ -27,19 +27,18 @@ These bounds limit test traffic; provider budgets on dedicated test keys should 
 ## CI and release gate
 
 Configure `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as GitHub environment secrets in `release`.
-The `live-providers` workflow runs nightly on main, on manual dispatch, and as a required job in the
-Python release workflow. It is separate from ordinary PR CI because it uses credentials and incurs
+The `nightly` workflow runs this suite on main and manual dispatch, and `release` runs it before
+publication. It is separate from ordinary PR CI because it uses credentials and incurs
 provider charges. PRs still run the deterministic acceptance suites and the missing-credentials guard.
 The environment permits the `main` branch and protected `v*` release tags only, with administrator bypass disabled.
 Nightly and manual main runs need no approval; dispatches from arbitrary branches cannot access credentials.
 
 For releases, the live job downloads and installs the exact wheel that the subsequent PyPI job publishes.
 The test checkout uses the release's validated commit SHA. Both jobs download the build's immutable artifact ID.
-Publication requires successful trusted main-push CI, Docker, and dependency-security runs for that exact SHA,
-plus the build checks and all live-provider checks in that same release workflow run.
+Publication requires successful trusted `required` and `dependency-security` jobs for that exact SHA, plus
+installation and all live-provider checks in the release workflow run.
 There are no skips for credentials, provider outages, or unsupported responses. A provider outage blocks
-publication; rerun the failed job once it recovers. GitHub release metadata is already public when the
-existing `release: published` trigger starts; the gate controls PyPI publication.
+publication; rerun the failed job once it recovers. GitHub release metadata is published only after PyPI verification.
 
 Failures appear in the Actions summary and test logs. Each run retains JUnit reports and sanitized gateway
 logs, configuration, and usage events in `live-provider-test-results` for seven days. Real native response

@@ -6,10 +6,11 @@ management APIs start only the control plane. Nothing imports `control_plane` or
 
 `stack_harness.py` owns deployment setup and an authenticated HTTP provider; `conftest.py` exposes its fixture and
 Postgres lifecycle hooks. API scenarios live in `scenarios/`, while `browser/` drives the console through Chromium.
-Both run on every PR update and push to main:
+Both run on every PR update and push to main. The scenario controller starts one Postgres server and xdist workers
+create isolated databases and state directories inside it:
 
 ```bash
-uv run pytest tests/acceptance/full_stack/scenarios
+uv run pytest -n 2 tests/acceptance/full_stack/scenarios
 uv run playwright install chromium
 uv run pytest tests/acceptance/full_stack/browser
 ```
@@ -38,8 +39,8 @@ logs for seven days. Set `AIRMUX_STACK_ARTIFACTS` to a directory to retain these
 named logs after stopping services and redacts known test credentials. Configuration, cookies, private keys and secret-store
 files are excluded. Stub logs contain request counts, timestamps and HTTP statuses without headers or bodies.
 
-The previous absolute-threshold overhead and throughput sweeps have been retired. The retained
+The previous absolute-threshold overhead and throughput sweeps have been retired. The nightly
 [gateway performance job](../gateway/README.md#performance-and-regression-tracking) compares base and candidate wheels
-on the same runner for every PR and main push. Its event writes are included, but control-plane polling and export
+on the same runner. Its event writes are included, but control-plane polling and export
 traffic are not measured. Full-stack scenarios protect remote operation and export correctness; add a separate
 performance workload before making claims about remote/export latency or worker scaling.

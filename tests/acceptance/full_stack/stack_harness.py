@@ -7,6 +7,7 @@ only be written by reaching into internals, that is a gap in the product, not th
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
@@ -22,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TextIO
 from uuid import uuid4
 
+import asyncpg
 import httpx
 import pytest
 import yaml
@@ -44,6 +46,7 @@ PG_IMAGE = "postgres:16"
 PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
 
 _pg: dict[str, DockerContainer | str] = {}
+PG_ADMIN_ENV = "AIRMUX_TEST_PG_URL"
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -53,6 +56,8 @@ def pytest_configure(config: pytest.Config) -> None:
     database driver or control_plane import. The TCP probe matters: initdb runs a throwaway
     socket-only server that would answer pg_isready.
     """
+    if hasattr(config, "workerinput") or PG_ADMIN_ENV in os.environ:
+        return
     container = (
         DockerContainer(PG_IMAGE)
         .with_env("POSTGRES_USER", "test")
@@ -66,8 +71,9 @@ def pytest_configure(config: pytest.Config) -> None:
     ready = lambda: container.exec(["psql", "-h", "127.0.0.1", "-U", "test", "-d", "postgres", "-c", "SELECT 1"]).exit_code == 0  # noqa: E731
     assert _poll(ready, READY_TIMEOUT), "test postgres did not come up"
     _pg["container"] = container
-    _pg["host"] = container.get_container_host_ip()
-    _pg["port"] = str(container.get_exposed_port(5432))
+    host = container.get_container_host_ip()
+    port = str(container.get_exposed_port(5432))
+    os.environ[PG_ADMIN_ENV] = f"postgresql://test:test@{host}:{port}/postgres"
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:
@@ -77,14 +83,22 @@ def pytest_unconfigure(config: pytest.Config) -> None:
 
 
 def _create_database(name: str) -> str:
-    container = _pg["container"]
-    assert isinstance(container, DockerContainer)
-    result = container.exec(["psql", "-h", "127.0.0.1", "-U", "test", "-d", "postgres", "-c", f'CREATE DATABASE "{name}"'])
-    assert result.exit_code == 0, result.output
-    return f"postgresql+asyncpg://test:test@{_pg['host']}:{_pg['port']}/{name}"
+    admin_url = os.environ[PG_ADMIN_ENV].replace("postgresql+asyncpg://", "postgresql://")
+
+    async def create() -> None:
+        connection = await asyncpg.connect(admin_url)
+        try:
+            await connection.execute(f'CREATE DATABASE "{name}"')
+        finally:
+            await connection.close()
+
+    asyncio.run(create())
+    return admin_url.replace("postgresql://", "postgresql+asyncpg://").rsplit("/", 1)[0] + f"/{name}"
 
 
 def _bin(name: str) -> str:
+    if name == "airmux" and (candidate := os.environ.get("AIRMUX_INSTALL_BIN")):
+        return candidate
     path = shutil.which(name)
     if path is None:
         pytest.skip(f"{name} console script not on PATH; run `uv sync --all-packages` first")

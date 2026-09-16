@@ -204,24 +204,20 @@ The installation includes both runtimes. Invoke `airmux` directly from any direc
 
 The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
-Dispatch `publish.yml` from `main` with an existing candidate tag and its full 40-character commit SHA:
+Dispatch `release.yml` from `main` with an existing protected candidate tag:
 
 ```bash
-gh workflow run publish.yml --ref main -f tag=v0.1.1 -f sha="$(git rev-parse 'v0.1.1^{commit}')"
+gh workflow run release.yml --ref main -f tag=v0.1.1
 ```
 
 The tag must resolve to that exact SHA, the commit must belong to `main`, and the tag version must match the public
-distribution version. The workflow also requires the latest successful main-push runs of `ci.yml`,
-`docker-deployments.yml`, and `dependency-security.yml` for exactly that commit. Missing, pending, failed, cancelled,
-or untrusted runs block publication. The workflow builds one candidate wheel and source distribution, rebuilds the wheel from
-the source distribution, and verifies the rebuilt installation and gateway. A required live-provider job installs
-the original candidate wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies,
-fallback, and metering. Both gates must pass before any upload or GitHub release announcement.
-The build, provider tests, publication, and PyPI verification share the validated SHA and immutable artifact ID.
+distribution version. The workflow requires successful `required` and `dependency-security` jobs for that exact main
+commit, then downloads the SHA-named candidate produced by `ci.yml`. It never rebuilds release files. Installation,
+live-provider checks, publication, PyPI verification, and the final gateway request share that validated artifact.
 
 The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
 `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
-Configure the PyPI trusted publisher for `michel-tricot/airmux`, workflow `publish.yml`, and environment
+Configure the PyPI trusted publisher for `michel-tricot/airmux`, workflow `release.yml`, and environment
 `release` in the [PyPI project publishing settings](https://pypi.org/manage/project/airmux/settings/publishing/).
 If `airmux` does not exist on PyPI yet, configure a pending publisher with project name `airmux` in your
 [account publishing settings](https://pypi.org/manage/account/publishing/), as described in the
@@ -229,7 +225,7 @@ If `airmux` does not exist on PyPI yet, configure a pending publisher with proje
 Verify the project name and all four publisher fields before dispatching a candidate; no stored PyPI token is used.
 A successful first upload proves that the renamed workflow can obtain the publishing identity.
 
-The [release-policy payloads](https://github.com/michel-tricot/airmux/tree/main/.github/release-policy) record the
+The [repository policy payloads](https://github.com/michel-tricot/airmux/tree/main/.github/policy) record the
 GitHub settings. `Release Tag Creation` restricts `v*` tag creation to repository administrators; the sole administrator
 and intended release actor is `michel-tricot`. `Immutable Release Tags` prohibits updates and deletion without any
 bypass, including for the release actor. These are separate rulesets so creation permission cannot permit replacement.
@@ -249,15 +245,13 @@ to production.
 If upload succeeds but PyPI verification fails, the package is already public on PyPI, but the GitHub announcement
 remains unpublished. Use **Re-run failed jobs** on the original Actions run within the 30-day candidate artifact
 retention period. This preserves the exact tested bytes and skips the successful build and live-provider gates.
-If the upload job itself failed partway through, its hash-aware `uv publish --check-url` skips identical existing
-files and uploads the remaining files; different hashes fail. If announcement fails after draft creation, rerunning
-checks its version and source commit before publishing that draft. Do not rebuild and overwrite an uploaded version.
-For a defective package or expired candidate artifacts, fix the source and choose a new version and tag.
+Do not rebuild and overwrite an uploaded version. For a defective package or expired candidate artifact, fix the
+source and choose a new version and tag.
 
 The same live suite runs nightly on main and can be dispatched manually against an immutable source SHA:
 
 ```bash
-gh workflow run live-providers.yml --ref main -f ref="$(git rev-parse HEAD)"
+gh workflow run nightly.yml --ref main -f sha="$(git rev-parse HEAD)"
 ```
 
 Manual and scheduled checks build and install a distribution rather than serving the workspace sources.

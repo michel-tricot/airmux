@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "allowed_actions": "selected",
+  "sha_pinning_required": true,
+  "selected_actions_url": {
+    "github_owned_allowed": true,
+    "verified_allowed": false,
+    "patterns_allowed": [
+      "astral-sh/setup-uv@*",
+      "oven-sh/setup-bun@*",
+      "pypa/gh-action-pypi-publish@*"
+    ]
+  }
+}

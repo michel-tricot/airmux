@@ -10,8 +10,8 @@ import asyncpg
 import httpx
 import pytest
 import yaml
-from conftest import run_cli
 from testcontainers.core.container import DockerContainer
+from tests.installation.installation_support import run_cli
 
 
 def wait_ready(client, process):

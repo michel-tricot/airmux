@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import yaml
-from conftest import run_cli
+from tests.installation.installation_support import run_cli
 
 
 def test_help_inventory_and_version_work_in_every_installation(installation, tmp_path):

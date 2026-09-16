@@ -13,6 +13,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 WORKFLOWS = sorted((ROOT / ".github/workflows").glob("*.y*ml"))
+ACTIONS = sorted((ROOT / ".github/actions").glob("*/action.y*ml"))
 
 
 @cache
@@ -53,6 +54,25 @@ def test_pinned_action_metadata_rejects_unknown_input(tmp_path):
         test_action_inputs_match_pinned_metadata(workflow)
 
 
+@pytest.mark.skipif(os.environ.get("AIRMUX_VALIDATE_ACTION_INPUTS") != "1", reason="Enable upstream action metadata checks explicitly")
+@pytest.mark.parametrize("path", ACTIONS, ids=lambda path: str(path.parent.relative_to(ROOT)))
+def test_composite_action_inputs_match_pinned_metadata(path):
+    action = yaml.safe_load(path.read_text())
+    for step in action["runs"]["steps"]:
+        if "uses" in step and not step["uses"].startswith("./"):
+            unknown = frozenset(name.lower() for name in step.get("with", {})) - action_inputs(step["uses"])
+            assert not unknown, f"{path}: {step['uses']}: unknown inputs {sorted(unknown)}"
+
+
+@pytest.mark.parametrize("path", ACTIONS, ids=lambda path: str(path.parent.relative_to(ROOT)))
+def test_composite_actions_pin_external_dependencies(path):
+    action = yaml.safe_load(path.read_text())
+    for step in action["runs"]["steps"]:
+        if "uses" in step and not step["uses"].startswith("./"):
+            _, revision = step["uses"].split("@")
+            assert re.fullmatch(r"[0-9a-f]{40}", revision), step["uses"]
+
+
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda path: path.name)
 def test_workflow_security_boundaries(path):
     workflow = yaml.safe_load(path.read_text())
@@ -60,17 +80,18 @@ def test_workflow_security_boundaries(path):
     for name, job in workflow["jobs"].items():
         permissions = job.get("permissions", workflow["permissions"])
         expected_permissions = {
-            "build": {"contents": "read", "actions": "read"},
+            "prepare": {"contents": "read", "actions": "read"},
             "publish": {"contents": "read", "id-token": "write"},
             "announce": {"contents": "write"},
         }.get(name, {"contents": "read"})
         assert permissions == expected_permissions
-        if "uses" in job:
-            assert job["uses"] in {"./.github/workflows/change-policy.yml", "./.github/workflows/live-providers.yml"}
-            continue
+        assert "uses" not in job
         assert 0 < job["timeout-minutes"] <= 30
         for step in job["steps"]:
             if "uses" not in step:
+                continue
+            if step["uses"].startswith("./"):
+                assert (ROOT / step["uses"] / "action.yml").is_file()
                 continue
             action, revision = step["uses"].split("@")
             assert re.fullmatch(r"[0-9a-f]{40}", revision), step["uses"]

@@ -18,6 +18,6 @@ uv run pytest tests/acceptance/full_stack/scenarios
 uv run pytest tests/acceptance/full_stack/browser
 ```
 
-The correctness suites and the gateway performance comparison run on PR updates and pushes to main.
+The correctness suites run on PR updates and pushes to main. Performance, compatibility, provider, and soak checks run nightly.
 Each suite owns its `conftest.py`; gateway tests do not load full-stack setup. The correctness jobs
 publish assertion failures in their Actions summary and retain JUnit XML as downloadable artifacts.

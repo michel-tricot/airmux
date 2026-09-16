@@ -10,6 +10,9 @@
 !tsconfig.json
 !tsconfig.base.json
 !taxonomy
+!candidate
+candidate/*
+!candidate/airmux-*.whl
 **/__pycache__
 **/*.pyc
 **/node_modules

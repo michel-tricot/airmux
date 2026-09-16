@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import html
+import os
+import platform
 import xml.etree.ElementTree as ET
-from pathlib import Path  # noqa: TC003 Typer resolves command annotations at runtime
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -19,7 +21,11 @@ def annotation(message: str) -> str:
 @app.command()
 def report(directory: Path, summary: Annotated[Path, typer.Option()]) -> None:
     reports = sorted(directory.rglob("*.xml"))
-    sections = ["## Test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
+    sections = ["## Evidence", "", f"Commit: `{os.environ.get('GITHUB_SHA', 'local')}`", f"Python: `{platform.python_version()}`"]
+    digests = Path("candidate/SHA256SUMS")
+    if digests.is_file():
+        sections.extend(["", "Candidate SHA-256:", "", "```text", digests.read_text().strip(), "```"])
+    sections.extend(["", "## Test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"])
     failures: list[tuple[str, str, str]] = []
     for path in reports:
         root = ET.parse(path).getroot()  # noqa: S314 reports are generated locally by pytest

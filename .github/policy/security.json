@@ -1,0 +1,12 @@
+{
+  "security_and_analysis": {
+    "advanced_security": { "status": "enabled" },
+    "secret_scanning": { "status": "enabled" },
+    "secret_scanning_push_protection": { "status": "enabled" }
+  },
+  "codeql_default_setup": {
+    "state": "configured",
+    "query_suite": "default",
+    "languages": ["javascript-typescript", "python"]
+  }
+}

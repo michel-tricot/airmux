@@ -114,20 +114,17 @@ The active [Protect Main ruleset](https://github.com/michel-tricot/airmux/rules/
 allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches must be
 up to date with `main` before merging, and review conversations must be resolved.
 
-Three stable checks are required, each bound to the GitHub Actions App (integration ID `15368`):
+Two stable checks are required, each bound to the GitHub Actions App (integration ID `15368`):
 
 | Required check | Coverage |
 | --- | --- |
-| `ci-correctness` | Frontend, backend, installation, every gateway acceptance shard, and full-stack acceptance |
-| `docker-correctness` | Both compact and split Docker deployments |
-| `dependency-security` | Python and JavaScript dependency audits |
+| `required` | Quality, Python, frontend, packaged gateway, full-stack, browser, and Docker correctness |
+| `dependency-security` | Python and JavaScript audits plus pull-request dependency review |
 
-These gates run even after an upstream failure. CI and Docker gates require successful change classification and
-every necessary dependency to succeed; skips pass only when the change policy permits them. Dependency audits always
-run. Failed, cancelled, missing, or unexpectedly skipped dependencies fail their gate. Pending or missing required
-checks block merging, and updating a branch after `main` advances requires checks against the new base.
-`gateway-results` publishes diagnostics and rejects unsuccessful gateway jobs. Gateway performance and live-provider
-runs are separate from correctness gates. See [the CI change policy](notes/CI.md) for selection and timing evidence.
+These gates run even after an upstream failure. Every pull request runs the complete correctness graph without path
+filters or conditional correctness skips. Failed, cancelled, missing, or unexpectedly skipped dependencies fail the
+gate. Compatibility, performance, provider, soak, and cold-build checks run in `nightly.yml`. See
+[continuous integration design](notes/design/CI.md).
 
 Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
 force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required
@@ -137,13 +134,12 @@ collaborator, so approvals are not required. When an independent collaborator wi
 `required_approving_review_count` to `1` and `require_last_push_approval` to `true` in the ruleset payload and apply it.
 Keep stale-review dismissal enabled.
 
-The versioned configuration is [.github/rulesets/protect-main.json](.github/rulesets/protect-main.json). Workflow
-check names and this payload must change together. An administrator can apply the payload to the existing ruleset:
+The versioned configuration is in [.github/policy](.github/policy). Workflow check names and the policy must change
+together. Inspect live drift before explicitly applying it:
 
 ```bash
-gh api --method PUT repos/michel-tricot/airmux/rulesets/20767120 \
-  --input .github/rulesets/protect-main.json
-gh api repos/michel-tricot/airmux/rules/branches/main
+scripts/github-policy diff
+scripts/github-policy apply
 ```
 
 Use current-base status checks for this personally owned private repository. A merge queue is unavailable here.
