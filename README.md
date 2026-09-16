@@ -20,7 +20,7 @@
 </div>
 
 airmux gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
-Clients can send Chat Completions, Responses, Messages, or canonical requests through any SDK or integration that can
+Clients can send Chat Completions, Responses, or Messages requests through any SDK or integration that can
 target the corresponding HTTP API. airmux authenticates the workspace, applies policy, selects a model and scoped
 provider credential, translates the request, and records the result.
 
@@ -75,7 +75,6 @@ agent frameworks, CLIs, services, and raw HTTP integrations.
 | Responses | `POST /inf/v1/responses` |
 | Messages | `POST /inf/v1/messages` |
 | Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
-| Canonical | `POST /inf/v1/chat/completions` |
 
 The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with an airmux inference key:
 

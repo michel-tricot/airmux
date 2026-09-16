@@ -30,7 +30,10 @@ def test_success_disconnect_and_provider_failures_reach_the_control_plane(stack:
             assert response.status_code == 200
             request_ids.append(response.headers["x-request-id"])
             for line in response.iter_lines():
-                if line.startswith("data: ") and json.loads(line[6:]).get("delta", {}).get("type") == "text":
+                if line == "data: [DONE]" or not line.startswith("data: "):
+                    continue
+                event = json.loads(line[6:])
+                if any(choice.get("delta", {}).get("content") for choice in event.get("choices", [])):
                     break
             else:
                 pytest.fail("stream ended before delivering content")

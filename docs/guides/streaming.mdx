@@ -29,7 +29,7 @@ for chunk in stream:
         print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
-## Raw canonical stream
+## Raw Chat Completions stream
 
 ```bash
 curl --no-buffer http://localhost:8080/inf/v1/chat/completions \
@@ -38,27 +38,22 @@ curl --no-buffer http://localhost:8080/inf/v1/chat/completions \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Count from one to five"}],"stream":true}'
 ```
 
-Canonical streaming emits:
+Chat Completions streaming emits:
 
-1. Zero or more `data:` events with a text, reasoning, or tool-call `delta`
-2. One closing event with `finish_reason`, `usage`, and `gateway`, but no `delta`
+1. One or more `chat.completion.chunk` events with `choices[].delta`
+2. A terminal choice with `finish_reason` and a usage-only chunk with `gateway`
 3. `data: [DONE]`
 
 ```json
-{"id":"019...","delta":{"type":"text","text":"One"}}
+{"id":"019...","object":"chat.completion.chunk","choices":[{"delta":{"content":"One"},"finish_reason":null}]}
 ```
 
 ```json
 {
   "id": "019...",
-  "finish_reason": "stop",
-  "usage": {
-    "input_tokens": 12,
-    "output_tokens": 8,
-    "cache_read_tokens": 0,
-    "cache_write_tokens": 0,
-    "estimated": false
-  },
+  "object": "chat.completion.chunk",
+  "choices": [],
+  "usage": {"prompt_tokens": 12, "completion_tokens": 8, "total_tokens": 20},
   "gateway": {"finish_reason": "stop", "adjustments": []}
 }
 ```

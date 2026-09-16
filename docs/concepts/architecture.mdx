@@ -36,7 +36,6 @@ database-capable exception, and resolved values remain outside the bundle.
 flowchart LR
   O[OpenAI callers] --> I[Ingress adapters]
   A[Anthropic callers] --> I
-  C[Canonical callers] --> I
   I --> W[Canonical request and response]
   W --> P[Policy, routing, and metering]
   P --> E[Egress adapters]
@@ -49,10 +48,10 @@ With `N` caller dialects and `M` provider families, the canonical waist needs `N
 translator for every caller-provider pair. Request reconciliation, policy, routing, adjustments, usage, and cancellation
 accounting are implemented once against canonical types.
 
-Ingress adapters decide whether a request belongs to their dialect, parse it into canonical, and render canonical output
-for the caller. Egress adapters translate canonical requests to a provider family and fold buffered or streaming output
-back into canonical. Adapter modules are discovered automatically, so adding a dialect or provider family does not
-require editing a central registry.
+Each ingress adapter owns one public path, parses that protocol into canonical, and renders canonical output for the
+caller. Egress adapters translate canonical requests to a provider family and fold buffered or streaming output back
+into canonical. Adapter modules are discovered automatically, so adding a dialect or provider family does not require
+editing a central registry or application route list.
 
 ## Control plane
 
@@ -73,7 +72,7 @@ database. The sole cold-path exception is resolving the selected provider secret
 ## Configuration bundles
 
 The control plane compiles one complete bundle per organization. A bundle contains active inference-key hashes,
-providers, models, provider-credential references, enabled policies, and referenced rules. It never contains inference
+providers, models, provider-credential references, and enabled policies with inline rule definitions. It never contains inference
 tokens or provider secret values.
 
 Remote gateways poll a manifest, validate new bundles, build lookup indexes, swap them atomically, and cache the

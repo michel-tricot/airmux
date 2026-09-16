@@ -123,7 +123,7 @@ describe('key cache invalidation across pages', () => {
     expect(list.result.current.data).toHaveLength(1);
 
     const create = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await create.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
+    await create.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app', user_id: 'user-1' } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
   });

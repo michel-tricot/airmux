@@ -61,8 +61,13 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
         )
     assert r.status_code == 200
     body = r.json()
-    assert body["content"] == [{"type": "text", "text": "hello there"}]
-    assert body["usage"] == {"input_tokens": 5, "output_tokens": 2, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": False}
+    assert body["choices"][0]["message"]["content"] == "hello there"
+    assert body["usage"] == {
+        "prompt_tokens": 5,
+        "completion_tokens": 2,
+        "total_tokens": 7,
+        "prompt_tokens_details": {"cached_tokens": 0},
+    }
     events = _recorded(tmp_path, http_client)
     assert [(e.status, e.org_id, e.workspace_id) for e in events] == [("ok", ORG, WORKSPACE)]
     sent = json.loads(route.calls.last.request.content)
@@ -125,7 +130,8 @@ def test_bearer_authentication_scheme_is_case_insensitive(api_key, dp_app):
 
 
 @respx.mock
-def test_unknown_explicit_dialect_is_rejected_instead_of_falling_back(api_key, dp_app):
+def test_dialect_header_has_no_special_behavior(api_key, dp_app):
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()
     with TestClient(dp_app) as client:
         response = client.post(
@@ -133,8 +139,22 @@ def test_unknown_explicit_dialect_is_rejected_instead_of_falling_back(api_key, d
             headers={"Authorization": f"Bearer {api_key}", "X-airmux-Dialect": "unknown"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
+    assert response.status_code == 200
+    assert response.json()["object"] == "chat.completion"
+
+
+@respx.mock
+def test_chat_completion_path_does_not_route_by_request_shape(api_key, dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "input": "hi"},
+        )
     assert response.status_code == 400
-    assert response.json()["error"]["code"] == "invalid_dialect"
+    assert response.json()["error"]["type"] == "invalid_request_error"
+    assert response.json()["error"]["code"] == "invalid_request"
 
 
 @respx.mock

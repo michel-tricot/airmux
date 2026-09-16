@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
 from contract.money import UsdRate
-from contract.policies import PolicyEntry, RuleEntry
+from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
 
 
@@ -98,7 +98,6 @@ class BundleV1(BaseModel):
     issued_at: datetime
     keys: list[KeyEntry]
     catalog: Catalog
-    rules: tuple[RuleEntry, ...]
     policies: tuple[PolicyEntry, ...]
 
 

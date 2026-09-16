@@ -219,7 +219,7 @@ export default function AppOrgSettings() {
                                 {canDeleteServiceAccount && (
                                   <ConfirmButton
                                     title={`Delete ${member.name}?`}
-                                    description="The service account and all of its control-plane management keys will stop working immediately."
+                                    description="The service account and all of its management keys, inference keys, and playground sessions stop working immediately."
                                     confirmLabel="Delete service account"
                                     pending={deleteServiceAccount.isPending}
                                     aria-label={`Delete service account ${member.name}`}

@@ -12,7 +12,7 @@ from data_plane.canonical import (
 )
 from data_plane.formats.openai_responses import ResponseMetadata, json_response
 from data_plane.ingress.anthropic import AnthropicIngress
-from data_plane.ingress.openai_native import OpenAINativeIngress
+from data_plane.ingress.openai_chat_completions import OpenAIChatCompletionsIngress
 
 
 def test_openai_buffered_chat_preserves_an_empty_reasoning_part():
@@ -24,7 +24,7 @@ def test_openai_buffered_chat_preserves_an_empty_reasoning_part():
         usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
 
-    payload = json.loads(bytes(OpenAINativeIngress().render_response(final).body))
+    payload = json.loads(bytes(OpenAIChatCompletionsIngress().render_response(final).body))
 
     assert payload["choices"][0]["message"]["reasoning_content"] == ""
 

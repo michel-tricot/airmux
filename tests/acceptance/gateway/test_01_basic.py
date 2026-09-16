@@ -17,7 +17,7 @@ def test_ready_gateway_completes_and_records_usage(gateway: Gateway):
     assert httpx.get(f"{gateway.url}/healthz").json() == {"status": "ok", "events": {"pending": 0, "oldest_age_s": None}}
     response = gateway.request()
     assert response.status_code == 200, response.text
-    assert text_of("canonical", response) == TEXT
+    assert text_of("openai_chat_completions", response) == TEXT
     assert provider.requests[0].body["model"] == "upstream-model-a"
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.key_id, event.stream) == ("ok", "model-a", "stub", "local-0", False)
@@ -35,7 +35,7 @@ def test_authentication_rejects_requests_before_spending_provider_credentials(ga
     )
     assert response.status_code == 401
     expected = "missing_bearer_token" if key is None else "invalid_token"
-    assert error_of("canonical" if dialect == "openai_native" else dialect, response) == expected
+    assert error_of("openai_chat_completions" if dialect == "openai_chat_completions" else dialect, response) == expected
     assert provider.requests == []
     assert gateway.events(0) == []
 
@@ -45,7 +45,7 @@ def test_unknown_model_is_denied_and_metered_without_an_upstream_request(gateway
     gateway.start()
     response = gateway.request(model="unknown")
     assert response.status_code == 404
-    assert error_of("canonical", response) == "unknown_model"
+    assert error_of("openai_chat_completions", response) == "unknown_model"
     assert provider.requests == []
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.credential_id) == ("denied", "unknown", "", None)

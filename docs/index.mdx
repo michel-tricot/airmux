@@ -3,8 +3,8 @@ title: "airmux"
 description: "Run one self-hosted endpoint for LLM applications across providers, with routing, access controls, and usage accounting built in."
 ---
 
-airmux is a self-hosted LLM gateway. Applications send requests to one endpoint using a supported SDK or the native
-canonical API. airmux authenticates the workspace, applies policy, selects a model and provider credential, translates
+airmux is a self-hosted LLM gateway. Applications send requests using the Chat Completions, Responses, or Messages API.
+airmux authenticates the workspace, applies policy, selects a model and provider credential, translates
 the request, and records usage.
 
 <Columns cols={2}>
@@ -18,7 +18,7 @@ the request, and records usage.
     Run the all-in-one image or separate the console, control plane, and gateways.
   </Card>
   <Card title="Inference reference" icon="braces" href="/docs/reference/inference">
-    Compare the Chat Completions, Responses, Messages, and canonical surfaces.
+    Compare the Chat Completions, Responses, and Messages surfaces.
   </Card>
 </Columns>
 
@@ -26,7 +26,7 @@ the request, and records usage.
 
 - One inference origin for multiple upstream provider families
 - Compatible Chat Completions, Responses, and Messages surfaces
-- A canonical request and response format for provider-neutral applications
+- A provider-neutral canonical model inside the gateway
 - Workspace-scoped inference keys and permission-limited management keys
 - Platform, organization, and workspace provider credentials
 - Model, provider, price, parameter, request, denial, and fallback policies

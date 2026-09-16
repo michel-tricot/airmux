@@ -33,6 +33,7 @@ class UsageEvent(Record, table=True):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    max_output_tokens: int | None = None
     cost_usd: UsdAmount = Field(sa_column=Column(Numeric(28, 12), nullable=False))
     cost_input_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
     cost_output_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
@@ -109,6 +110,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    max_output_tokens: int | None
     cost_usd: UsdAmount
     cost_input_usd: UsdAmount
     cost_output_usd: UsdAmount

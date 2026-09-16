@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import threading
 from dataclasses import dataclass
 from decimal import Decimal
@@ -195,6 +194,16 @@ def assert_metering(event: UsageEvent, expected: MeteringExpectation) -> None:
     assert_cost(event, expected.input_cost, expected.output_cost)
 
 
+def assert_caller_usage(usage: dict[str, object], tokens: tuple[int, int, int, int]) -> None:
+    input_tokens, output_tokens, cache_read_tokens, _cache_write_tokens = tokens
+    assert usage == {
+        "prompt_tokens": input_tokens,
+        "completion_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+        "prompt_tokens_details": {"cached_tokens": cache_read_tokens},
+    }
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("family", FAMILIES)
 @pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
@@ -257,13 +266,7 @@ def test_reported_tokens_determine_the_event_cost(gateway: Gateway, family: Fami
     response = gateway.request(stream=stream)
     assert response.status_code == 200, response.text
     usage = next(payload["usage"] for payload in stream_payloads(response) if "usage" in payload) if stream else response.json()["usage"]
-    assert usage == {
-        "input_tokens": case.expected.tokens[0],
-        "output_tokens": case.expected.tokens[1],
-        "cache_read_tokens": case.expected.tokens[2],
-        "cache_write_tokens": case.expected.tokens[3],
-        "estimated": False,
-    }
+    assert_caller_usage(usage, case.expected.tokens)
     (event,) = gateway.events(1)
     assert event.status == "ok"
     assert_metering(event, case.expected)
@@ -278,7 +281,7 @@ def test_missing_usage_is_priced_from_estimated_tokens(gateway: Gateway, family:
     response = gateway.request(stream=stream)
     assert response.status_code == 200, response.text
     usage = next(payload["usage"] for payload in stream_payloads(response) if "usage" in payload) if stream else response.json()["usage"]
-    assert usage["estimated"] is True
+    assert_caller_usage(usage, (0, 0, 0, 0))
     (event,) = gateway.events(1)
     assert event.status == "ok"
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == (3, 2, 0, 0)
@@ -334,11 +337,14 @@ def test_disconnect_prices_only_observed_or_estimated_usage(gateway: Gateway, fa
     provider.replies["upstream-model-a"] = Reply(text="one two", usage=case.reported_usage, hold=release)
     gateway.start()
     with httpx.stream(
-        "POST", gateway.url + PROTOCOLS["ingress"]["canonical"], headers=gateway.headers(), json=request_body("canonical", stream=True)
+        "POST",
+        gateway.url + PROTOCOLS["ingress"]["openai_chat_completions"],
+        headers=gateway.headers(),
+        json=request_body("openai_chat_completions", stream=True),
     ) as response:
         assert response.status_code == 200
         for line in response.iter_lines():
-            if line.startswith("data: ") and json.loads(line[6:]).get("delta", {}).get("text") == "one two":
+            if line.startswith("data: ") and "one two" in line:
                 break
         else:
             pytest.fail("stream ended before delivering content")
@@ -362,14 +368,17 @@ def test_active_stream_keeps_original_prices_after_catalog_reload(gateway: Gatew
     assert gateway.request(model="model-b").status_code == 200
     (baseline,) = gateway.events(1)
     with httpx.stream(
-        "POST", gateway.url + PROTOCOLS["ingress"]["canonical"], headers=gateway.headers(), json=request_body("canonical", stream=True)
+        "POST",
+        gateway.url + PROTOCOLS["ingress"]["openai_chat_completions"],
+        headers=gateway.headers(),
+        json=request_body("openai_chat_completions", stream=True),
     ) as response:
         assert response.status_code == 200
         received = []
         lines = response.iter_lines()
         for line in lines:
             received.append(line)
-            if line.startswith("data: ") and json.loads(line[6:]).get("delta", {}).get("text") == TEXT:
+            if line.startswith("data: ") and TEXT in line:
                 break
         else:
             pytest.fail("stream ended before delivering content")
@@ -385,7 +394,7 @@ def test_active_stream_keeps_original_prices_after_catalog_reload(gateway: Gatew
         eventually(reloaded)
         release.set()
         complete = httpx.Response(200, text="\n".join([*received, *lines]))
-        assert streamed_text("canonical", complete) == TEXT
+        assert streamed_text("openai_chat_completions", complete) == TEXT
         assert complete.text.splitlines().count("data: [DONE]") == 1
     events = gateway.events(2 + len(observed))
     assert events[-1].model_id == "model-a"
@@ -400,30 +409,27 @@ def test_active_stream_keeps_original_prices_after_catalog_reload(gateway: Gatew
             assert_metering(event, RELOADED_EXPECTATIONS[family])
 
 
-ZERO_USAGE_CASES: dict[Family, tuple[TokenCase, bool]] = {
-    "openai_compatible": (TokenCase({"prompt_tokens": 0, "completion_tokens": 0}, MeteringExpectation((3, 2, 0, 0), "0.000006", "0.00001")), True),
-    "anthropic": (
-        TokenCase(
-            {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
-            MeteringExpectation((3, 2, 0, 0), "0.000006", "0.00001"),
-        ),
-        True,
+ZERO_USAGE_CASES: dict[Family, TokenCase] = {
+    "openai_compatible": TokenCase({"prompt_tokens": 0, "completion_tokens": 0}, MeteringExpectation((3, 2, 0, 0), "0.000006", "0.00001")),
+    "anthropic": TokenCase(
+        {"input_tokens": 0, "output_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
+        MeteringExpectation((3, 2, 0, 0), "0.000006", "0.00001"),
     ),
-    "openai_responses": (TokenCase({"input_tokens": 0, "output_tokens": 0}, MeteringExpectation((0, 0, 0, 0), "0", "0")), False),
+    "openai_responses": TokenCase({"input_tokens": 0, "output_tokens": 0}, MeteringExpectation((0, 0, 0, 0), "0", "0")),
 }
 
 
 @pytest.mark.parametrize("family", FAMILIES)
 @pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
 def test_all_zero_usage_distinguishes_authoritative_counts_from_estimates(gateway: Gateway, family: Family, stream: bool) -> None:
-    case, estimated = ZERO_USAGE_CASES[family]
+    case = ZERO_USAGE_CASES[family]
     provider = gateway.add_provider(family)
     provider.replies["upstream-model-a"] = Reply(text="one two", usage=case.reported_usage)
     gateway.start()
     response = gateway.request(stream=stream)
     assert response.status_code == 200, response.text
     usage = next(payload["usage"] for payload in stream_payloads(response) if "usage" in payload) if stream else response.json()["usage"]
-    assert usage == {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": estimated}
+    assert_caller_usage(usage, (0, 0, 0, 0))
     (event,) = gateway.events(1)
     assert event.status == "ok"
     assert_metering(event, case.expected)

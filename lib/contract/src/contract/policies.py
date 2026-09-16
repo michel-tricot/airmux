@@ -145,28 +145,24 @@ class RuleDefinition(_PolicyModel):
     action: PolicyAction
 
 
-class RuleEntry(_PolicyModel):
-    id: UUID
-    workspace_id: UUID
-    name: PolicyName
-    definition: RuleDefinition
-
-
 class PolicyDefinition(_PolicyModel):
     target: PolicyTarget
-    rule_ids: tuple[UUID, ...] = Field(
+    rules: tuple[RuleDefinition, ...] = Field(
         min_length=1,
         max_length=MAX_WORKSPACE_RULES,
-        description="Unordered reusable rule references; a policy may contain at most one fallback rule",
+        description="Unordered inline rule definitions; a policy may contain at most one fallback rule",
     )
 
-    @field_validator("rule_ids")
+    @field_validator("rules")
     @classmethod
-    def unique_rule_ids(cls, rule_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
-        if len(set(rule_ids)) != len(rule_ids):
-            msg = "Policy rule references must be unique"
+    def valid_rules(cls, rules: tuple[RuleDefinition, ...]) -> tuple[RuleDefinition, ...]:
+        if len(set(rules)) != len(rules):
+            msg = "Policy rules must be unique"
             raise ValueError(msg)
-        return tuple(sorted(rule_ids))
+        if sum(isinstance(rule.action, Fallback) for rule in rules) > 1:
+            msg = "A policy may contain at most one fallback rule"
+            raise ValueError(msg)
+        return tuple(sorted(rules, key=lambda rule: rule.model_dump_json()))
 
 
 class PolicyEntry(_PolicyModel):

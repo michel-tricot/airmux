@@ -44,7 +44,7 @@ providers:
   - provider_id: stub
     base_url: https://stub.example/v1
     param_aliases:
-      max_tokens: max_completion_tokens
+      max_output_tokens: max_completion_tokens
     accepted_params: [top_k]
     params_closed: true
 """
@@ -99,7 +99,7 @@ def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
 
     run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_PROFILE))
     (provider,) = run_in_db(tmp_path, Provider.find)
-    assert provider.param_aliases == {"max_tokens": "max_completion_tokens"}
+    assert provider.param_aliases == {"max_output_tokens": "max_completion_tokens"}
     assert provider.accepted_params == ["top_k"]
     assert provider.params_closed is True
 

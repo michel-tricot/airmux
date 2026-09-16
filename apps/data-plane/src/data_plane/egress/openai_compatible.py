@@ -121,7 +121,8 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             "content-type": "application/json",
         }
         url = str(self.provider.base_url).rstrip("/") + "/chat/completions"
-        body = encode(body_of(req, m.upstream_model), aliases=self.provider.param_aliases, extras=req.extra)
+        aliases = {"max_output_tokens": "max_tokens", **self.provider.param_aliases}
+        body = encode(body_of(req, m.upstream_model), aliases=aliases, extras=req.extra)
         return UpstreamRequest(method="POST", url=url, headers=headers, body=body)
 
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse:

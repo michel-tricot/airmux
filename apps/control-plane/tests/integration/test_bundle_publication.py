@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
 
 from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
 from control_plane.compiler import publish_changes, publish_pending
@@ -22,7 +22,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         o1 = make_org(c, root, "o1")
         org = cp.headers(o1)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()["data"]
         assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
@@ -51,7 +51,9 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         org_id = make_org(c, root, "o1")
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert bundle.keys == []
@@ -69,7 +71,7 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
 
         key = c.post(
             f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
-            json={"label": "automatic"},
+            json=inference_key_body(c, org, "automatic"),
             headers=org,
         ).json()["data"]
         created = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
@@ -174,7 +176,9 @@ def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_
         workspace_id = make_workspace(client, headers)
         base = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}"
         if credential_kind == "inference_key":
-            credential_id = client.post(f"{base}/inference-keys", headers=headers, json={"label": "Identity"}).json()["data"]["id"]
+            credential_id = client.post(f"{base}/inference-keys", headers=headers, json=inference_key_body(client, headers, "Identity")).json()[
+                "data"
+            ]["id"]
         else:
             credential_id = client.put(f"{base}/playground-session", headers=headers).json()["data"]["id"]
         before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])

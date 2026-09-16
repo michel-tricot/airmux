@@ -63,8 +63,8 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, Anthropic Messages,
-and canonical callers use the same gateway. See the [inference reference](/docs/reference/inference).
+Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages
+callers use the same gateway. See the [inference reference](/docs/reference/inference).
 
 ## Configuration and taxonomy
 
@@ -89,7 +89,6 @@ keys:
   - token: ${file:inference.key}
     user_id: 00000000-0000-0000-0000-000000000001
 taxonomy: taxonomy.yml
-rules: []
 policies: []
 ```
 

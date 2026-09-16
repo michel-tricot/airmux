@@ -58,6 +58,7 @@ def test_all_inference_authentication_errors_have_common_headers(dp_app, method,
         assert response.json()["type"] == "error"
         assert response.json()["error"]["type"] == "missing_bearer_token"
     else:
+        assert response.json()["error"]["type"] == "invalid_request_error"
         assert response.json()["error"]["code"] == "missing_bearer_token"
 
 
@@ -131,7 +132,7 @@ def test_request_id_matches_response_and_usage_accounting(dp_app, api_key, tmp_p
         assert response.headers["x-accel-buffering"] == "no"
         assert response.headers["content-type"].startswith("text/event-stream")
         chunks = [json.loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: ") and line != "data: [DONE]"]
-        assert {chunk["id"] for chunk in chunks} == {"chatcmpl-9"}
+        assert {chunk["id"] for chunk in chunks} == {str(request_id)}
     else:
         assert_private_headers(response)
         assert response.json()["id"] == "chatcmpl-9"

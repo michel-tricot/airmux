@@ -29,8 +29,6 @@ from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
 
 if TYPE_CHECKING:
-    from starlette.datastructures import Headers
-
     from data_plane.canonical import CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
@@ -240,9 +238,7 @@ class ResponsesStream:
 
 class OpenAIResponsesIngress(IngressAdapter):
     dialect = "openai_responses"
-
-    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
-        return headers.get("user-agent", "").startswith("OpenAI/") and "input" in body
+    path = "/inf/v1/responses"
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         unsupported = sorted(set(body) - SUPPORTED)
@@ -275,7 +271,7 @@ class OpenAIResponsesIngress(IngressAdapter):
                 "model": body.get("model"),
                 "messages": messages,
                 "stream": body.get("stream", False),
-                "max_tokens": body.get("max_output_tokens"),
+                "max_output_tokens": body.get("max_output_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
                 "tools": _tools(body.get("tools")),

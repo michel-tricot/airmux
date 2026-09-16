@@ -43,6 +43,7 @@ class _UsageEventV1(BaseModel):
     cost_usd: UsdAmount = Field(description="Total estimated cost in USD")
     cost_input_usd: UsdAmount = Field(default=ZERO_USD, description="Estimated input cost in USD")
     cost_output_usd: UsdAmount = Field(default=ZERO_USD, description="Estimated output cost in USD")
+    max_output_tokens: int | None = Field(description="Effective upstream output-token limit", ge=1, le=MAX_EVENT_INTEGER)
     cache_read_tokens: int = Field(default=0, description="Input tokens read from a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     cache_write_tokens: int = Field(default=0, description="Input tokens written to a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     latency_ms: int = Field(description="End-to-end request latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)

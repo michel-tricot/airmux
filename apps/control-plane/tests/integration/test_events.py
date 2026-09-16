@@ -23,6 +23,7 @@ def _event(org: UUID) -> dict:
         "bundle_id": str(uuid4()),
         "input_tokens": 10,
         "output_tokens": 5,
+        "max_output_tokens": 128,
         "cost_usd": "0.000004",
         "cost_input_usd": "0.000004",
         "latency_ms": 120,

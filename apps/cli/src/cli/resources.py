@@ -18,6 +18,7 @@ from api_models import (
     InferenceKeyOut,
     ManagementKeyCreatedOut,
     ManagementKeyOut,
+    MeOut,
     OrgMemberOut,
     OrgOut,
     ProviderCredentialOut,
@@ -562,14 +563,24 @@ def orgs_create(
 @inference_keys_app.command("create")
 def inference_keys_create(
     label: str = typer.Argument(..., help="What this key is for, e.g. staging"),
+    owner: str = typer.Option("", "--owner", help="Principal that this key represents; defaults to the current principal"),
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
 ) -> None:
     """Create an inference key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
+        owner_id = owner or str(payload(ensure_ok(c.get("/api/v1/auth/me")), MeOut).user_id)
         _key_created(
-            payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,)), InferenceKeyCreatedOut)
+            payload(
+                post_expecting(
+                    c,
+                    org_path(f"/workspaces/{workspace_ref}/inference-keys"),
+                    {"label": label, "user_id": owner_id},
+                    ok=(200,),
+                ),
+                InferenceKeyCreatedOut,
+            )
         )
 
 

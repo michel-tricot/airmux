@@ -16,7 +16,7 @@ No control plane, Postgres, Docker, external provider API, or gateway implementa
 | 7 | `test_07_runtime.py` | Client disconnects, estimated usage, restart persistence, concurrent workers, key/policy reloads, invalid files and recovery |
 | 8 | `test_08_metering.py` | Input/output and cache prices, free models/caches, fractional and tiny costs, token counts, fallback costs, partial usage, pricing reloads |
 
-Level 2 also runs `test_openai_sdk.py` with the unmodified SDK and automatic dialect detection.
+Level 2 also runs `test_openai_sdk.py` with the unmodified SDK against its path-bound protocol.
 Level 7 includes `test_gateway.py` for installed CLI setup, validation, taxonomy reload and restart, plus
 `test_local_mode.py` for embedded taxonomy with a minimal environment and no control plane.
 Levels describe increasing complexity, not dependencies. Every test owns its deployment and can run alone.
@@ -75,9 +75,9 @@ fixture accepts native usage JSON in `Reply(usage=...)`; omit the argument for i
 absent usage. Cache-write counts are exercised where the provider protocol reports them. Fixed estimation fixtures use
 the unknown upstream model's `o200k_base` encoding: `user: hi` is three tokens and `one two` is two.
 Partial usage retains reported cache-only prompts on disconnect; it estimates only counts the provider has not supplied.
-Explicit all-zero OpenAI Chat Completions and Anthropic usage currently renders zero counts marked as estimated;
-the event meter fills those counts from the request/response text. OpenAI Responses treats an explicit zero usage
-object as authoritative, so its zero counts remain free. The all-zero cases document both caller usage and event cost.
+Explicit all-zero OpenAI Chat Completions and Anthropic usage renders zero caller counts; the event meter estimates
+those counts from the request and response text. OpenAI Responses treats an explicit zero usage object as authoritative,
+so its zero counts remain free. The all-zero cases document both caller usage and event cost.
 OpenAI disconnect tables retain one case because usage arrives after the held content frame; Anthropic retains three
 because its initial frame reports input and cache counts before cancellation.
 Metering case tables pair handwritten native usage JSON with independently written token counts and dollar amounts.

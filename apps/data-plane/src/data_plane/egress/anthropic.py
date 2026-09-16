@@ -153,14 +153,13 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         """Transport assembly only; every field mapping lives in formats.anthropic."""
         system, messages = to_request(req.messages)
-        max_tokens = req.max_tokens or m.max_output_tokens
-        if max_tokens is None:
-            message = f"anthropic model {m.model_id} requires max_output_tokens in the bundle"
+        if req.max_output_tokens is None:
+            message = "anthropic egress requires a resolved max_output_tokens"
             raise ValueError(message)
         body = MessagesBody(
             model=m.upstream_model,
             messages=messages,
-            max_tokens=max_tokens,
+            max_tokens=req.max_output_tokens,
             system=system,
             temperature=req.temperature,
             top_p=req.top_p,

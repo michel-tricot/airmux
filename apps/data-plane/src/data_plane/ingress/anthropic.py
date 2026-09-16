@@ -12,14 +12,14 @@ from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
 if TYPE_CHECKING:
-    from starlette.datastructures import Headers
-
     from data_plane.canonical import CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
 # so top_k and metadata reach providers whose profile accepts them.
-CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences", "thinking", "output_config"})
+CONSUMED = (frozenset(CanonicalRequest.model_fields) - {"max_output_tokens"}) | frozenset(
+    {"max_tokens", "system", "stop_sequences", "thinking", "output_config"}
+)
 
 
 def _mapping(value: object) -> dict[str, Any]:
@@ -114,12 +114,15 @@ class AnthropicResponseStream:
 
 class AnthropicIngress(IngressAdapter):
     dialect = "anthropic"
-
-    def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
-        """Never claims on the chat route: /inf/v1/messages binds this dialect directly."""
-        return False
+    path = "/inf/v1/messages"
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
+        if "max_output_tokens" in body:
+            message = "Anthropic Messages requests use max_tokens, not max_output_tokens"
+            raise ValueError(message)
+        if body.get("max_tokens") is None:
+            message = "max_tokens is required and must be an integer"
+            raise ValueError(message)
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
         adjustments = []
         raw_tool_choice = body.get("tool_choice")
@@ -145,7 +148,7 @@ class AnthropicIngress(IngressAdapter):
                 "model": body.get("model"),
                 "messages": fmt.from_request(body),
                 "stream": body.get("stream", False),
-                "max_tokens": body.get("max_tokens"),
+                "max_output_tokens": body.get("max_tokens"),
                 "temperature": body.get("temperature"),
                 "top_p": body.get("top_p"),
                 "stop": body.get("stop_sequences"),

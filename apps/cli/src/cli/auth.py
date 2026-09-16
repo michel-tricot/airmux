@@ -243,7 +243,12 @@ def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]
 
 def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyCreatedOut:
     path = f"/api/v1/organizations/{org_id}/workspaces/{workspace.id}/inference-keys"
-    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key creation", InferenceKeyCreatedOut)
+    owner = _payload_or_die(client.get("/api/v1/auth/me", headers=bearer), "current principal", MeOut)
+    return _payload_or_die(
+        client.post(path, json={"label": "quickstart", "user_id": str(owner.user_id)}, headers=bearer),
+        "key creation",
+        InferenceKeyCreatedOut,
+    )
 
 
 def _gateway_error(response: httpx.Response) -> str:
@@ -273,10 +278,10 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
             try:
                 response = gateway.post(
                     "/inf/v1/chat/completions",
-                    headers={"authorization": f"Bearer {token}", "x-airmux-dialect": "canonical"},
+                    headers={"authorization": f"Bearer {token}"},
                     json={
                         "model": model,
-                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hello in one word."}]}],
+                        "messages": [{"role": "user", "content": "Say hello in one word."}],
                         "stream": False,
                     },
                 )
@@ -296,7 +301,7 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
         f"curl {gateway_url.rstrip('/')}/inf/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {token}' \\\n"
         "  -H 'Content-Type: application/json' \\\n"
-        f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": [{{"type": "text", "text": "hi"}}]}}]}}\''
+        f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
 
 

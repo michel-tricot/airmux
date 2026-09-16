@@ -57,7 +57,12 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
         credential_scope="workspace",
         bundle_id=bundle_id,
     )
-    request = CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "count to three"}], stream=True)
+    request = CanonicalRequest(
+        model=MODEL.model_id,
+        messages=[{"role": "user", "content": "count to three"}],
+        stream=True,
+        max_output_tokens=37,
+    )
     response = CanonicalResponse(
         id=str(ctx.request_id),
         model=MODEL.model_id,
@@ -77,6 +82,7 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
     assert event.status == "cancelled"
     assert event.input_tokens > 0
     assert event.output_tokens > 0
+    assert event.max_output_tokens == 37
     assert event.cost_usd == event.cost_input_usd + event.cost_output_usd
 
 

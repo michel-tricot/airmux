@@ -26,8 +26,7 @@ PROVIDER_EXPECTATIONS: dict[Family, ProviderExpectation] = {
     "anthropic": ProviderExpectation({"x-api-key": UPSTREAM_KEY}, (11, 3, 4, 2), ("0.000016", "0.000015")),
 }
 STREAM_TERMINALS: dict[Dialect, tuple[str, dict[str, int]]] = {
-    "canonical": ("data: [DONE]", {}),
-    "openai_native": ("data: [DONE]", {}),
+    "openai_chat_completions": ("data: [DONE]", {}),
     "openai_responses": ("event: response.completed", {"response.completed": 1}),
     "anthropic": ("event: message_stop", {"message_stop": 1}),
 }

@@ -81,7 +81,6 @@
               "docs/reference/chat-completions",
               "docs/reference/responses",
               "docs/reference/messages",
-              "docs/reference/canonical",
               "docs/reference/errors"
             ]
           },
@@ -271,15 +270,6 @@
                     ]
                   },
                   {
-                    "group": "Rules",
-                    "pages": [
-                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
-                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
-                      "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}",
-                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}"
-                    ]
-                  },
-                  {
                     "group": "Policies",
                     "pages": [
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policy-users",
@@ -318,6 +308,7 @@
                   {
                     "group": "Inference Keys",
                     "pages": [
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-key-owners",
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
                       "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
                       "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}"

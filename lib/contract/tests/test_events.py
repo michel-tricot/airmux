@@ -24,6 +24,7 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "bundle_id": uuid7(),
         "input_tokens": 1,
         "output_tokens": 1,
+        "max_output_tokens": 128,
         "cost_usd": "0",
         "latency_ms": 1,
         "status": "ok",

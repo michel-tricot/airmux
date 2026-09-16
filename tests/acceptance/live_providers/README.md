@@ -2,7 +2,7 @@
 
 Real HTTPS requests go through an installed standalone gateway to pinned OpenAI and Anthropic models.
 The three egress families are OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages.
-All requests use canonical ingress; the Docker-free gateway suite covers the ingress dialect matrix.
+All requests use Chat Completions ingress; the Docker-free gateway suite covers the full ingress protocol matrix.
 
 The 35 scenarios progress through buffered and streaming completions, tool calls, strict JSON output,
 supported Anthropic reasoning, policy denial, output limits, and cross-family fallback. A local forwarding

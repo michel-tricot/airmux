@@ -114,6 +114,7 @@ def record_denied(
             input_tokens=0,
             output_tokens=0,
             cost_usd=ZERO_USD,
+            max_output_tokens=None,
             latency_ms=int((time.monotonic() - start.started_at) * 1000),
             status="denied",
             stream=request.stream,
@@ -152,6 +153,7 @@ def record_usage(
             bundle_id=ctx.bundle_id,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
+            max_output_tokens=request.max_output_tokens,
             cache_read_tokens=usage.cache_read_tokens,
             cache_write_tokens=usage.cache_write_tokens,
             cost_usd=cost_in + cost_out,
@@ -165,7 +167,7 @@ def record_usage(
         ),
     )
     logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
+        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d max_output_tokens=%s "
         "cache_read=%d cache_write=%d estimated=%s cost_usd=%s latency_ms=%d",
         ctx.request_id,
         ctx.model.model_id,
@@ -174,6 +176,7 @@ def record_usage(
         ctx.stream,
         usage.input_tokens,
         usage.output_tokens,
+        request.max_output_tokens,
         usage.cache_read_tokens,
         usage.cache_write_tokens,
         usage.estimated,

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
+from helpers import inference_key_body, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
 from control_plane.authz import Permission
@@ -43,7 +43,11 @@ def test_deleting_a_workspace_takes_its_keys_and_members(tmp_path):
         org = make_org(c, root, "o1")
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
-        key = c.post(f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers).json()["data"]
+        key = c.post(
+            f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys",
+            json=inference_key_body(c, headers, "k"),
+            headers=headers,
+        ).json()["data"]
 
         deleted = c.delete(f"/api/v1/organizations/{org}/workspaces/{workspace}", headers=headers)
         assert deleted.status_code == 200, deleted.text
@@ -79,7 +83,11 @@ def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
         org = make_org(c, root, "o1")
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
-        c.post(f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
+        c.post(
+            f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys",
+            json=inference_key_body(c, headers, "k"),
+            headers=headers,
+        )
         c.post(
             f"/api/v1/organizations/{org}/management-keys",
             json={"label": "k", "permissions": [Permission.workspaces_read]},

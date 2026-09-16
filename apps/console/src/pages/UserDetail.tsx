@@ -167,7 +167,7 @@ export default function UserDetail() {
                       cell: (org: OrgOut) => (
                         <ConfirmButton
                           title={`Remove ${user.name} from ${org.name}?`}
-                          description="They lose access to this organization and all of its workspaces."
+                          description="They lose access to this organization, and their inference keys and playground sessions across it stop working immediately."
                           confirmLabel="Remove membership"
                           pending={removeMember.isPending}
                           aria-label="Remove membership"

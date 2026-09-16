@@ -169,7 +169,12 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     org = payload(client.post("/api/v1/enroll/org", json={"name": "Deployment"}))
     base = f"/api/v1/organizations/{org['id']}"
     workspace = payload(client.post(f"{base}/workspaces", json={"name": "default"}))
-    key = payload(client.post(f"{base}/workspaces/{workspace['id']}/inference-keys", json={"label": "deployment"}))
+    key = payload(
+        client.post(
+            f"{base}/workspaces/{workspace['id']}/inference-keys",
+            json={"label": "deployment", "user_id": owner["user_id"]},
+        )
+    )
     payload(client.post("/api/v1/instance/taxonomy/providers", json={"provider_id": provider, "base_url": "http://deployment-upstream:9000"}))
     payload(
         client.post(
@@ -178,7 +183,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         )
     )
     payload(client.post(f"{base}/provider-credentials", json={"provider": provider, "value": "deployment-test-key"}))
-    headers = {"Authorization": f"Bearer {key['token']}", "x-airmux-dialect": "openai_native"}
+    headers = {"Authorization": f"Bearer {key['token']}"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
     eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))
