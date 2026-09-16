@@ -72,15 +72,7 @@ export function createQueryClient(): QueryClient {
 
 function AppSection() {
   const { orgId, setOrgId } = useSession();
-  const enrollment = useEnrollment({
-    query: {
-      queryKey: getEnrollmentQueryKey(),
-      retry: false,
-      refetchInterval: 10000,
-      refetchIntervalInBackground: true,
-      refetchOnWindowFocus: 'always',
-    },
-  });
+  const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), retry: false } });
 
   useEffect(() => {
     if (orgId && enrollment.data && !enrollment.data.orgs.some((org) => org.id === orgId)) setOrgId(null);

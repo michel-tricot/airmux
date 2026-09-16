@@ -20,7 +20,7 @@ export into the control plane. Protocol details, SDK decoding and local bundle s
 [standalone suite](../gateway/README.md).
 
 Browser scenarios cover boundaries that component tests cannot prove: one-time credential handling, navigation and
-authorization against real services, inference recovery, and clearing organization-scoped state after membership loss.
+authorization against real services, inference recovery, and server-side membership revocation with reload recovery.
 
 Event replay uses real inference events. A forwarding HTTP proxy commits the first batch into the control plane, then
 returns an unavailable response instead of its acknowledgement. The test observes identical event IDs delivered again,
