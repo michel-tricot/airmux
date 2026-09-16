@@ -10,6 +10,7 @@ import httpx
 import pytest
 import respx
 
+from airmux_runtime.secrets import Secret
 from contract import (
     INFERENCE_TOKEN_PREFIX,
     BundleV1,
@@ -18,7 +19,6 @@ from contract import (
     KeyEntry,
     ModelEntry,
     ProviderEntry,
-    Secret,
     SecretPurpose,
     SecretRef,
     token_hash,
@@ -113,7 +113,7 @@ def make_remote_bundle(key_ids=("k1",), org=ORG):
 
 
 def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
-    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token")
     outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path)
     return Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
@@ -124,7 +124,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
 def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         SqliteOutboxConfig(
-            control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
+            control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token"),
             cache_dir=tmp_path,
             flush_interval_s=flush_interval_s,
         ),
@@ -200,7 +200,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
-    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token")
     config = Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),

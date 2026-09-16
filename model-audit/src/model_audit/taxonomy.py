@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, cast
 
 import yaml
 
+from airmux_runtime.taxonomy import dump_taxonomy
 from contract import MODALITIES, Modality
 from contract.money import parse_fixed_point
-from contract.taxonomy import dump_taxonomy
 from model_audit.cases import load_cases, load_features
 from model_audit.evidence import write_behavior
 from model_audit.surfaces import discover

@@ -6,7 +6,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from contract.taxonomy import dump_taxonomy, load_taxonomy
+from airmux_runtime.taxonomy import dump_taxonomy, load_taxonomy
 
 MODEL = """
 models:

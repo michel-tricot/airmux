@@ -1,0 +1,20 @@
+[project]
+name = "airmux-runtime"
+version = "0.0.0"
+requires-python = ">=3.13"
+dependencies = [
+  "airmux-contract",
+  "anyio",
+  "pydantic>=2",
+  "pyyaml",
+]
+
+[project.optional-dependencies]
+insecure-database = ["asyncpg"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/airmux_runtime"]

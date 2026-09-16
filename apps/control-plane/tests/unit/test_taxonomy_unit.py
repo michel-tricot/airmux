@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 import control_plane
-from contract.taxonomy import parse_taxonomy
+from airmux_runtime.taxonomy import parse_taxonomy
 from control_plane.fixtures import ROUTED_MODELS
 from control_plane.models.common.wire import RequestModel
 from control_plane.routes import taxonomy as taxonomy_routes

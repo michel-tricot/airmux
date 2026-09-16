@@ -9,7 +9,7 @@ from conftest import CTX, MODEL, PROVIDER
 from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.canonical import (
     CanonicalDocumentPart,
     CanonicalJsonSchemaResponseFormat,

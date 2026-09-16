@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
   "airmux-api-models",
   "airmux-contract",
+  "airmux-runtime",
   "airmux-data-plane",
   "airmux-control-plane",
   "httpx",

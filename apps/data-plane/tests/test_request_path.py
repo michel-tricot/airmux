@@ -8,7 +8,7 @@ import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane
 from starlette.testclient import TestClient
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
 from data_plane.proxy import RequestRejectedError, _transform

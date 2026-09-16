@@ -8,8 +8,9 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
+from airmux_runtime.taxonomy import load_taxonomy
 from cli.control_plane import control_plane_app as app
-from contract.taxonomy import TaxonomySpec, load_taxonomy
+from contract.taxonomy import TaxonomySpec
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
 from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 

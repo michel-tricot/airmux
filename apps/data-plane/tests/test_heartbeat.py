@@ -21,7 +21,7 @@ async def test_heartbeat_reports_a_bundle_only_when_the_manifest_contains_one(ht
     instance_id = uuid7()
     route = respx.post("http://cp.test/api/v1/heartbeat").mock(return_value=httpx.Response(200))
     heartbeat = Heartbeat(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+        control_plane=ControlPlaneLink(url="http://cp.test", management_key="dp-token"),
         interval_s=30,
         holder=holder,
         instance_id=instance_id,

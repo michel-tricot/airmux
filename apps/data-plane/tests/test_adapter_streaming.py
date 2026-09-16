@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalReasoningPart, CanonicalTextPart, CanonicalToolCallPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamProtocolError, UpstreamStreamError
