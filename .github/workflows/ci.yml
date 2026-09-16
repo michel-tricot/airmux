@@ -2,6 +2,7 @@ name: ci
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -14,7 +15,20 @@ permissions:
   contents: read
 
 jobs:
+  draft-smoke:
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+      - run: uvx --from ruff==0.16.1 ruff format --check .
+      - run: uvx --from ruff==0.16.1 ruff check .
+
   quality:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -64,6 +78,7 @@ jobs:
           retention-days: 7
 
   python-unit:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -88,6 +103,7 @@ jobs:
           retention-days: 7
 
   python-integration:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -110,6 +126,7 @@ jobs:
           retention-days: 7
 
   frontend:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -148,6 +165,7 @@ jobs:
           retention-days: 7
 
   package:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -344,7 +362,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     needs: [quality, python-unit, python-integration, frontend, package, gateway, full-stack, browser, docker]
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     steps:
       - name: Require every correctness job to succeed
         env:
