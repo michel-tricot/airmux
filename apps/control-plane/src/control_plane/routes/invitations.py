@@ -5,13 +5,13 @@ from urllib.parse import quote
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
-from sqlmodel import col
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission
 from control_plane.deps import ActorDep, OrgDep, org_scope, require
 from control_plane.models import OrgInvitation, User, Workspace
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import Envelope, PageEnvelope
 from control_plane.models.org_invitation import (
     InvitationUnavailableError,
     OrgInvitationCreate,
@@ -58,16 +58,11 @@ async def create_invitation(
 
 
 @router.get("", tags=["Organization Invitations"], dependencies=[require("api", org_scope, Permission.members_read)])
-async def list_invitations(org_id: OrgDep) -> Envelope[list[OrgInvitationOut]]:
+async def list_invitations(org_id: OrgDep, page: PageDep) -> PageEnvelope[OrgInvitationOut]:
     """List pending and expired invitations without returning their secret URLs."""
-    invitations = await OrgInvitation.find(
-        OrgInvitation.org_id == org_id,
-        col(OrgInvitation.accepted_at).is_(None),
-        col(OrgInvitation.revoked_at).is_(None),
-        order_by=col(OrgInvitation.email),
-    )
     now = datetime.now(tz=UTC)
-    return Envelope(data=[_out(invitation, now) for invitation in invitations])
+    invitations = await OrgInvitation.page_for_org(org_id, page)
+    return PageEnvelope.from_slice(invitations.map(lambda invitation: _out(invitation, now)))
 
 
 @router.post(

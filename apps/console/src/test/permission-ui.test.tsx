@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, paged, server } from './msw';
 
 const ORG_MEMBER_PERMISSIONS: Api.Permission[] = ['organizations.read', 'workspaces.create', 'catalog.read'];
 const WORKSPACE_MEMBER_PERMISSIONS: Api.Permission[] = [
@@ -57,19 +57,17 @@ describe('permission-aware organization console', () => {
     server.use(
       http.get('/api/v1/organizations/:orgId/users', orgMembers),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-        HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({
-          data: [
-            {
-              user_id: 'user-1',
-              workspace_id: WORKSPACES[0].id,
-              email: 'dev@example.com',
-              name: 'Dev',
-              service_account: false,
-              role: 'member',
-              status: 'member',
-            },
-          ],
-        }),
+        paged<Api.WorkspaceMembershipOut>([
+          {
+            user_id: 'user-1',
+            workspace_id: WORKSPACES[0].id,
+            email: 'dev@example.com',
+            name: 'Dev',
+            service_account: false,
+            role: 'member',
+            status: 'member',
+          },
+        ]),
       ),
     );
 
@@ -108,28 +106,26 @@ describe('permission-aware organization console', () => {
         }),
       ),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
-        HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
-          data: [
-            {
-              id: 'credential-1',
-              provider_id: 'provider-1',
-              version: 1,
-              status_at: null,
-              scope: 'workspace',
-              created_at: '2026-01-01T00:00:00Z',
-              updated_at: '2026-01-01T00:00:00Z',
-              deleted_at: null,
-              org_id: ORG.id,
-              workspace_id: WORKSPACES[0].id,
-              provider_name: 'openai',
-              name: 'default',
-              fingerprint: 'abcd',
-              priority: 100,
-              enabled: true,
-              status: 'unknown',
-            },
-          ],
-        }),
+        paged<Api.ProviderCredentialOut>([
+          {
+            id: 'credential-1',
+            provider_id: 'provider-1',
+            version: 1,
+            status_at: null,
+            scope: 'workspace',
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+            deleted_at: null,
+            org_id: ORG.id,
+            workspace_id: WORKSPACES[0].id,
+            provider_name: 'openai',
+            name: 'default',
+            fingerprint: 'abcd',
+            priority: 100,
+            enabled: true,
+            status: 'unknown',
+          },
+        ]),
       ),
     );
 
@@ -156,22 +152,20 @@ describe('permission-aware organization console', () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () =>
-        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({
-          data: [
-            {
-              id: 'key-1',
-              org_id: ORG.id,
-              updated_at: '2026-01-01T00:00:00Z',
-              deleted_at: null,
-              workspace_id: WORKSPACES[0].id,
-              user_id: 'user-1',
-              label: 'viewer-key',
-              prefix: 'sk-inf-test',
-              revoked: false,
-              created_at: '2026-01-01T00:00:00Z',
-            },
-          ],
-        }),
+        paged<Api.InferenceKeyOut>([
+          {
+            id: 'key-1',
+            org_id: ORG.id,
+            updated_at: '2026-01-01T00:00:00Z',
+            deleted_at: null,
+            workspace_id: WORKSPACES[0].id,
+            user_id: 'user-1',
+            label: 'viewer-key',
+            prefix: 'sk-inf-test',
+            revoked: false,
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ]),
       ),
     );
 

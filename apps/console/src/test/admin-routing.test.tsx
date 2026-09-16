@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, paged, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 const USER: Api.UserOut = {
@@ -17,7 +17,7 @@ const USER: Api.UserOut = {
   created_at: now,
   updated_at: now,
   deleted_at: null,
-  orgs: [ORG.id],
+  org_count: 1,
 };
 const MANAGEMENT_KEY: Api.ManagementKeyOut = {
   id: 'management-key-1',
@@ -72,45 +72,38 @@ function installAdminHandlers() {
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json<{ data: Api.MeOut }>({
-        data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs },
+        data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', org_count: USER.org_count },
       }),
     ),
-    http.get('/api/v1/organizations', () => HttpResponse.json<{ data: Api.OrgOut[] }>({ data: [ORG] })),
+    http.get('/api/v1/organizations', () => paged([ORG])),
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
-    http.get('/api/v1/users', () => HttpResponse.json<{ data: Api.UserOut[] }>({ data: [USER] })),
+    http.get('/api/v1/users', () => paged([USER])),
     http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
-    http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [MANAGEMENT_KEY] })),
+    http.get('/api/v1/users/:userId/organizations', () => paged([{ user_id: USER.id, org_id: ORG.id, role: 'owner', status: 'member' }])),
+    http.get('/api/v1/instance/management-keys', () => paged([MANAGEMENT_KEY])),
     http.get('/api/v1/instance/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [PROVIDER], models: [] } })),
-    http.get('/api/v1/instance/provider-credentials', () =>
-      HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({ data: [PROVIDER_CREDENTIAL] }),
-    ),
+    http.get('/api/v1/instance/provider-credentials', () => paged([PROVIDER_CREDENTIAL])),
     http.get('/api/v1/instance/data-planes', () =>
-      HttpResponse.json<{ data: Api.DataPlaneInstanceOut[] }>({
-        data: [
-          {
-            instance_id: 'data-plane-1',
-            org_id: null,
-            version: '0.1.0',
-            bundle_id: null,
-            address: '127.0.0.1',
-            status: 'online',
-            first_seen: now,
-            last_seen: now,
-          },
-        ],
-      }),
+      paged<Api.DataPlaneInstanceOut>([
+        {
+          instance_id: 'data-plane-1',
+          org_id: null,
+          version: '0.1.0',
+          bundle_id: null,
+          address: '127.0.0.1',
+          status: 'online',
+          first_seen: now,
+          last_seen: now,
+        },
+      ]),
     ),
     http.get('/api/v1/instance/activity', () =>
-      HttpResponse.json<{ data: Api.ActivityOut[] }>({
-        data: [{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }],
-      }),
+      paged<Api.ActivityOut>([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
     ),
     http.get('/api/v1/organizations/:orgId/users', () =>
-      HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
-        data: [{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }],
-      }),
+      paged<Api.OrgMemberOut>([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }]),
     ),
-    http.get('/api/v1/organizations/:orgId/workspaces', () => HttpResponse.json<{ data: Api.WorkspaceOut[] }>({ data: WORKSPACES })),
+    http.get('/api/v1/organizations/:orgId/workspaces', () => paged(WORKSPACES)),
   );
 }
 
@@ -149,10 +142,8 @@ describe('instance administration routes', () => {
       status: 'member',
     });
     server.use(
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-        HttpResponse.json<{ data: Api.WorkspaceMembershipOut[] }>({ data: [member()] }),
-      ),
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () => paged([member()])),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => paged([])),
       http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members/:userId', async ({ params, request }) => {
         expect(params.userId).toBe('user-2');
         role = ((await request.json()) as Api.WorkspaceMembershipIn).role;
@@ -175,18 +166,16 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })),
       http.get('/api/v1/organizations/:orgId/users', () =>
-        HttpResponse.json<{ data: Api.OrgMemberOut[] }>({
-          data: [
-            {
-              user_id: 'user-2',
-              email: 'member@example.com',
-              name: 'Organization Member',
-              service_account: false,
-              role: 'member',
-              status: 'member',
-            },
-          ],
-        }),
+        paged<Api.OrgMemberOut>([
+          {
+            user_id: 'user-2',
+            email: 'member@example.com',
+            name: 'Organization Member',
+            service_account: false,
+            role: 'member',
+            status: 'member',
+          },
+        ]),
       ),
     );
     const user = userEvent.setup();
@@ -206,11 +195,11 @@ describe('instance administration routes', () => {
         return HttpResponse.json<{ data: Api.ProviderCredentialOut }>({ data: { ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 } });
       }),
       http.get('/api/v1/instance/provider-credentials', () =>
-        HttpResponse.json<{ data: Api.ProviderCredentialOut[] }>({
-          data: submitted
+        paged<Api.ProviderCredentialOut>(
+          submitted
             ? [PROVIDER_CREDENTIAL, { ...PROVIDER_CREDENTIAL, id: 'provider-credential-2', name: 'backup', priority: 200 }]
             : [PROVIDER_CREDENTIAL],
-        }),
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -244,13 +233,11 @@ describe('instance administration routes', () => {
   it('counts only active management keys on the dashboard', async () => {
     server.use(
       http.get('/api/v1/instance/management-keys', () =>
-        HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({
-          data: [
-            MANAGEMENT_KEY,
-            { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
-            { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },
-          ],
-        }),
+        paged<Api.ManagementKeyOut>([
+          MANAGEMENT_KEY,
+          { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
+          { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },
+        ]),
       ),
     );
     renderAt('/instance');
@@ -307,7 +294,7 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs },
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', org_count: USER.org_count },
         }),
       ),
       http.get('/api/v1/auth/permissions', () =>
@@ -341,7 +328,7 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs },
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', org_count: USER.org_count },
         }),
       ),
       http.get('/api/v1/auth/permissions', () =>
@@ -363,7 +350,7 @@ describe('instance administration routes', () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'data_plane', orgs: USER.orgs },
+          data: { user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'data_plane', org_count: USER.org_count },
         }),
       ),
       http.get('/api/v1/auth/permissions', () =>

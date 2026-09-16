@@ -5,13 +5,14 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.bundle import Bundle
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, KeyColumn, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
@@ -38,8 +39,8 @@ def _as_uuid(value: str) -> UUID | None:
 
 
 @audited
-class Org(Record, Identified, Tombstonable, table=True):
-    __table_args__: ClassVar = (UniqueConstraint("slug", name="org_slug_key"),)
+class Org(Record, Identified, Tombstonable, UUID7Pageable, table=True):
+    __table_args__: ClassVar = (UniqueConstraint("slug", name="org_slug_key"), Index("org_name_id_idx", "name", "id"))
 
     name: str
     slug: str = Field(sa_type=CITEXT)
@@ -91,6 +92,33 @@ class Org(Record, Identified, Tombstonable, table=True):
             col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)),
             order_by=col(cls.name),
         )
+
+    @classmethod
+    async def page_all(cls, request: PageQuery) -> PageSlice[Self]:
+        return await cls._page(
+            select(cls),
+            request,
+            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
+
+    @classmethod
+    async def page_joined_by(cls, user_id: UUID, visible_org_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)))
+        if visible_org_id is not None:
+            statement = statement.where(cls.id == visible_org_id)
+        return await cls._page(
+            statement,
+            request,
+            cursor_context={"user_id": user_id, "visible_org_id": visible_org_id},
+            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
+
+    @classmethod
+    async def count_joined_by(cls, user_id: UUID, visible_org_id: UUID | None) -> int:
+        statement = select(func.count()).select_from(cls).where(col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)))
+        if visible_org_id is not None:
+            statement = statement.where(cls.id == visible_org_id)
+        return (await current_session().execute(statement)).scalar_one()
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the org and everything scoped to it: workspaces with their keys, members and

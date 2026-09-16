@@ -1,21 +1,24 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListOrgEvents,
-  useListWorkspaceEvents,
-  useListActivity,
-  useListBundles,
+  useListOrgEventsInfinite,
+  useListWorkspaceEventsInfinite,
+  useListActivityInfinite,
+  useListBundlesInfinite,
   useRepublishBundle,
-  useListDataPlanes,
-  useListInstanceActivity,
-  getListBundlesQueryKey,
+  useListDataPlanesInfinite,
+  useListInstanceActivityInfinite,
+  getListBundlesInfiniteQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useOrgEvents(orgId: string, params: ListOrgEventsParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgEvents(orgId, params, { query: { enabled, refetchInterval: 3_000 } });
+  return useListOrgEventsInfinite(orgId, params, {
+    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
+  });
 }
 
 export function useWorkspaceEvents(
@@ -24,33 +27,35 @@ export function useWorkspaceEvents(
   params: ListWorkspaceEventsParams,
   { enabled = true }: EnabledQueryOptions = {},
 ) {
-  return useListWorkspaceEvents(orgId, workspaceRef, params, {
-    query: { enabled, refetchInterval: 3_000 },
+  return useListWorkspaceEventsInfinite(orgId, workspaceRef, params, {
+    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
   });
 }
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListActivity(orgId, params, { query: { enabled } });
+  return useListActivityInfinite(orgId, params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useBundles(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListBundles(orgId, { query: { enabled } });
+  return useListBundlesInfinite(orgId, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useRepublishBundleMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useRepublishBundle({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t republish the configuration. Please try again.' },
     },
   });
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListDataPlanes(undefined, { query: { enabled, refetchInterval: 10_000 } });
+  return useListDataPlanesInfinite(undefined, {
+    query: { enabled, refetchInterval: 10_000, ...paginatedQueryOptions, select: flattenPages },
+  });
 }
 
 export function useInstanceActivity(params: { limit?: number }, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceActivity(params, { query: { enabled } });
+  return useListInstanceActivityInfinite(params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }

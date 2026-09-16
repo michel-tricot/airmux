@@ -98,9 +98,13 @@ Resolution order is explicit option, `--dev` where supported, environment, activ
 Commands returning resource data accept `-f/--format table|json|text`. Table is the interactive default, JSON is
 intended for automation, and text is tab-separated.
 
+List commands request 50 results by default. Use `--limit 1..200` to choose the page size and `--all` to follow cursors
+until every page has been fetched. Without `--all`, output contains only the first page. `events tail` continuously polls
+the newest event page and de-duplicates events seen during the current process; it does not promise replay across restarts.
+
 ```bash
-airmux models list -f json
-airmux events list -f text
+airmux workspaces list --limit 25 -f json
+airmux events list --all -f text
 airmux commands -f table
 ```
 

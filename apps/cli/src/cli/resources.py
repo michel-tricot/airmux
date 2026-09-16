@@ -31,12 +31,14 @@ from api_models import (
     WorkspaceOut,
 )
 from cli.client import (
+    AllPagesOption,
+    LimitOption,
     access_client,
     access_get,
     ensure_ok,
     org_path,
     payload,
-    payload_rows,
+    payload_page,
     post_expecting,
     resolve_org_id,
     resolve_workspace,
@@ -151,18 +153,24 @@ BUNDLE_COLS = [
 
 
 @orgs_app.command("list")
-def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def orgs_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List every organization on this instance."""
-    print_rows("orgs", access_get("/api/v1/organizations", control_plane_url, OrgOut), ORG_COLS, fmt)
+    print_rows("orgs", access_get("/api/v1/organizations", control_plane_url, OrgOut, limit=limit, all_pages=all_pages), ORG_COLS, fmt)
 
 
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
 
 
 @workspaces_app.command("list")
-def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def workspaces_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List your workspaces."""
-    print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut), WORKSPACE_COLS, fmt)
+    print_rows(
+        "workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut, limit=limit, all_pages=all_pages), WORKSPACE_COLS, fmt
+    )
 
 
 @workspaces_app.command("use")
@@ -185,10 +193,17 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
 
 
 @workspace_members_app.command("list")
-def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def workspace_members_list(
+    workspace: WorkspaceOption = "",
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("members", access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut), MEMBER_COLS, fmt)
+    rows = access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut, limit=limit, all_pages=all_pages)
+    print_rows("members", rows, MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
@@ -217,11 +232,20 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 
 
 @inference_keys_app.command("list")
-def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def inference_keys_list(
+    workspace: WorkspaceOption = "",
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
     """List this workspace's inference keys."""
     workspace_ref = resolve_workspace(workspace)
     print_rows(
-        "inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut), KEY_COLS, fmt
+        "inference keys",
+        access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut, limit=limit, all_pages=all_pages),
+        KEY_COLS,
+        fmt,
     )
 
 
@@ -257,7 +281,7 @@ USER_COLS = [
     Col("email", "Email"),
     Col("name", "Name", max_width=30),
     Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
-    Col("orgs", "Orgs", style="cyan", max_width=40),
+    Col("org_count", "Orgs", style="cyan"),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
 
@@ -286,22 +310,28 @@ def service_accounts_create(
 
 
 @service_accounts_app.command("list")
-def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def service_accounts_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List machine accounts."""
-    rows = access_get("/api/v1/users", control_plane_url, UserOut, {"service_account": True})
+    rows = access_get("/api/v1/users", control_plane_url, UserOut, {"service_account": True}, limit=limit, all_pages=all_pages)
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
-def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def users_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List every account and the organizations it belongs to."""
-    print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut), USER_COLS, fmt)
+    print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut, limit=limit, all_pages=all_pages), USER_COLS, fmt)
 
 
 @org_members_app.command("list")
-def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def org_members_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List the active org's members."""
-    print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut, limit=limit, all_pages=all_pages), ORG_MEMBER_COLS, fmt)
 
 
 @org_members_app.command("add")
@@ -332,6 +362,8 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
     workspace_id: str = typer.Option("", "--workspace", help="Workspace target within the selected organization"),
     instance: bool = typer.Option(False, "--instance", help="List keys at instance scope"),
     user_id: str = typer.Option("", "--user", help="Only keys for this principal"),
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
@@ -348,7 +380,17 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
         else f"/api/v1/organizations/{selected_org}/management-keys"
     )
     print_rows(
-        "management keys", access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None), MANAGEMENT_KEY_COLS, fmt
+        "management keys",
+        access_get(
+            path,
+            control_plane_url,
+            ManagementKeyOut,
+            {"user_id": user_id} if user_id else None,
+            limit=limit,
+            all_pages=all_pages,
+        ),
+        MANAGEMENT_KEY_COLS,
+        fmt,
     )
 
 
@@ -449,9 +491,11 @@ def catalog_apply(
 
 
 @bundles_app.command("list")
-def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def bundles_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List published configuration versions."""
-    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url, BundleOut), BUNDLE_COLS, fmt)
+    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url, BundleOut, limit=limit, all_pages=all_pages), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("republish")
@@ -474,22 +518,32 @@ INSTANCE_COLS = [
 
 @gateways_app.command("list")
 def gateways_list(
-    all_: bool = typer.Option(False, "--all", help="Include gateways that are offline"),
+    include_offline: bool = typer.Option(False, "--include-offline", help="Include gateways that are offline"),
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """List connected gateways."""
     load_dotenv(find_dotenv(usecwd=True))
     with access_client(control_plane_url) as c:
-        resp = c.get("/api/v1/instance/data-planes", params={"include_offline": all_})
-        ensure_ok(resp)
-        print_rows("gateways", payload_rows(resp, DataPlaneInstanceOut), INSTANCE_COLS, fmt)
+        query: dict[str, str | int | bool] = {"include_offline": include_offline, "limit": limit}
+        rows: list[DataPlaneInstanceOut] = []
+        while True:
+            page = payload_page(ensure_ok(c.get("/api/v1/instance/data-planes", params=query)), DataPlaneInstanceOut)
+            rows.extend(page.items)
+            if not all_pages or page.next_cursor is None:
+                break
+            query["cursor"] = page.next_cursor
+        print_rows("gateways", rows, INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
-def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def events_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List recent requests, newest first."""
-    print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut), EVENT_COLS, fmt)
+    print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut, limit=limit, all_pages=all_pages), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
@@ -512,31 +566,27 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
     with access_client(control_plane_url) as c:
         resp = c.get(path, params={"limit": keep})
         ensure_ok(resp)
-        rows.extend(reversed(payload_rows(resp, UsageEventOut)))
-        cursor = (
-            (rows[-1].occurred_at.isoformat(), str(rows[-1].event_id))
-            if rows
-            else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
-        )
+        rows.extend(reversed(payload_page(resp, UsageEventOut).items))
+        seen = deque((str(event.event_id) for event in rows), maxlen=max(keep, 400))
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
-                    ensure_ok(resp)
-                    for event in payload_rows(resp, UsageEventOut):
+                    page = payload_page(ensure_ok(c.get(path, params={"limit": 200})), UsageEventOut)
+                    for event in reversed(page.items):
+                        if str(event.event_id) in seen:
+                            continue
                         emit(event)
-                        cursor = (event.occurred_at.isoformat(), str(event.event_id))
+                        seen.append(str(event.event_id))
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
-                    ensure_ok(resp)
-                    batch = payload_rows(resp, UsageEventOut)
+                    page = payload_page(ensure_ok(c.get(path, params={"limit": 200})), UsageEventOut)
+                    batch = [event for event in reversed(page.items) if str(event.event_id) not in seen]
                     fresh_ids = {str(event.event_id) for event in batch}
                     if batch:
                         rows.extend(batch)
-                        cursor = (batch[-1].occurred_at.isoformat(), str(batch[-1].event_id))
+                        seen.extend(fresh_ids)
                     live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")
@@ -646,18 +696,17 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
 
 
 @provider_credentials_app.command("list")
-def provider_credentials_list(
+def provider_credentials_list(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     workspace: WorkspaceOption = "",
     org_wide: bool = typer.Option(False, "--org", help="List every credential in the org rather than one workspace's"),
+    limit: LimitOption = 50,
+    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """List provider keys, in the order they are tried."""
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
-    with access_client(control_plane_url) as c:
-        resp = c.get(path)
-        ensure_ok(resp)
-        rows = payload_rows(resp, ProviderCredentialOut)
+    rows = access_get(path, control_plane_url, ProviderCredentialOut, limit=limit, all_pages=all_pages)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
 
 

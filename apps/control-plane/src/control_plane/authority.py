@@ -21,6 +21,7 @@ from control_plane.authz import (
     decide,
 )
 from control_plane.models import ManagementKey, OrgMembership, User, Workspace, WorkspaceMembership
+from control_plane.models.common import PageQuery, PageSlice
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -80,15 +81,18 @@ async def decisions(actor: Actor, permission: Permission, targets: Iterable[Scop
     return {scope: decide(actor, grants, AccessRequest(permission=permission, target=scope)) for scope in scopes}
 
 
-async def readable_workspaces(actor: Actor, org_id: UUID) -> list[Workspace]:
+async def readable_workspaces(actor: Actor, org_id: UUID, page: PageQuery) -> PageSlice[Workspace]:
     if Permission.workspaces_read not in actor.grant.permissions or not actor.grant.scope.covers(Scope.org(org_id)):
-        return []
-    return await Workspace.readable_by(
+        return PageSlice(items=(), next_cursor=None)
+    return await Workspace.page_readable_by(
         actor.principal_id,
         org_id,
-        instance_roles=tuple(role.value for role, permissions in INSTANCE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
-        org_roles=tuple(role.value for role, permissions in ORG_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
-        workspace_roles=tuple(role.value for role, permissions in WORKSPACE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+        page,
+        roles=(
+            tuple(role.value for role, permissions in INSTANCE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+            tuple(role.value for role, permissions in ORG_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+            tuple(role.value for role, permissions in WORKSPACE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+        ),
     )
 
 

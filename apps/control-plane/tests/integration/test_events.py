@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
 
@@ -133,17 +132,18 @@ def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
-        first = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
+        first = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()
         second = c.get(
             f"/api/v1/organizations/{org_id}/events",
-            params={"limit": 2, "before": first[-1]["occurred_at"], "before_event_id": first[-1]["event_id"]},
+            params={"limit": 2, "cursor": first["page"]["next_cursor"]},
             headers=headers,
-        ).json()["data"]
+        ).json()
 
-        assert [event["event_id"] for event in [*first, *second]] == [str(UUID(int=index)) for index in (3, 2, 1)]
+        assert [event["event_id"] for event in [*first["data"], *second["data"]]] == [str(UUID(int=index)) for index in (3, 2, 1)]
+        assert second["page"]["next_cursor"] is None
 
 
-def test_event_cursors_are_stable_when_timestamps_match_and_support_tailing(tmp_path):
+def test_event_cursors_are_stable_when_timestamps_match(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         root = cp.headers()
@@ -153,40 +153,12 @@ def test_event_cursors_are_stable_when_timestamps_match_and_support_tailing(tmp_
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
-        newest = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()["data"]
+        newest = c.get(f"/api/v1/organizations/{org_id}/events", params={"limit": 2}, headers=headers).json()
         older = c.get(
             f"/api/v1/organizations/{org_id}/events",
-            params={"before": newest[-1]["occurred_at"], "before_event_id": newest[-1]["event_id"]},
-            headers=headers,
-        ).json()["data"]
-        newer = c.get(
-            f"/api/v1/organizations/{org_id}/events",
-            params={"after": older[-1]["occurred_at"], "after_event_id": older[-1]["event_id"]},
+            params={"cursor": newest["page"]["next_cursor"]},
             headers=headers,
         ).json()["data"]
 
-        assert [event["event_id"] for event in newest] == [str(UUID(int=3)), str(UUID(int=2))]
+        assert [event["event_id"] for event in newest["data"]] == [str(UUID(int=3)), str(UUID(int=2))]
         assert [event["event_id"] for event in older] == [str(UUID(int=1))]
-        assert [event["event_id"] for event in newer] == [str(UUID(int=2)), str(UUID(int=3))]
-
-
-@pytest.mark.parametrize(
-    "params",
-    [
-        {"before": "2026-08-15T12:00:00+00:00"},
-        {"before_event_id": str(UUID(int=1))},
-        {"after": "2026-08-15T12:00:00+00:00"},
-        {"after_event_id": str(UUID(int=1))},
-        {
-            "before": "2026-08-15T12:00:00+00:00",
-            "before_event_id": str(UUID(int=1)),
-            "after": "2026-08-15T12:00:00+00:00",
-            "after_event_id": str(UUID(int=1)),
-        },
-    ],
-)
-def test_event_cursor_parameters_must_form_one_complete_pair(tmp_path, params):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        org_id = make_org(c, cp.headers(), "o1")
-        assert c.get(f"/api/v1/organizations/{org_id}/events", params=params, headers=cp.headers(org_id)).status_code == 422

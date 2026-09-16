@@ -40,7 +40,17 @@ Every successful management response wraps its result once:
 }
 ```
 
-Lists use `{"data": [...]}`. Errors retain FastAPI's `{"detail": ...}` shape and are not enveloped.
+Growing collections add page metadata:
+
+```json
+{
+  "data": [{ "id": "019...", "name": "Production" }],
+  "page": { "next_cursor": "eyJrIjpbIi4uLiJdLCJ2IjoxfQ" }
+}
+```
+
+Bounded collections, such as a workspace's policies and rules, remain `{"data": [...]}`. Errors retain FastAPI's
+`{"detail": ...}` shape and are not enveloped.
 
 ## Example
 
@@ -76,7 +86,22 @@ a one-time secret. Store the returned value immediately; later list and get oper
 
 ## Pagination
 
-Usage endpoints accept `limit` from 1 to 200 plus either a complete `before` and `before_event_id` pair or an `after`
-and `after_event_id` pair. Timestamps must include a timezone. Do not mix before and after cursors.
+Growing collection endpoints use cursor pagination:
+
+- `limit` is the maximum number of results per page, defaults to 50, and accepts 1 through 200
+- `cursor` is the opaque `page.next_cursor` returned by the preceding request
+- `page.next_cursor` is `null` when no later page exists
+
+Do not decode, edit, or reuse a cursor with another endpoint, tenant, scope, or filter. Invalid, oversized, stale-version,
+and mismatched cursors return `422` with `{"detail":"invalid cursor"}`. Cursors identify a position, not a database row,
+so traversal can continue if the item at the previous page boundary is deleted.
+
+```bash
+curl 'https://llm.example.com/api/v1/organizations/$ORG_ID/workspaces?limit=50' \
+  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
+
+curl 'https://llm.example.com/api/v1/organizations/$ORG_ID/workspaces?limit=50&cursor=$NEXT_CURSOR' \
+  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
+```
 
 Use the endpoint pages that follow this overview for request bodies, response schemas, required permissions, and interactive examples.

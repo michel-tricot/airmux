@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from sqlmodel import col
 
 from contract import PLAYGROUND_COOKIE, token_hash
 from control_plane.authority import ensure_inference_key_owner, is_allowed, readable_workspaces
@@ -12,7 +11,8 @@ from control_plane.authz import Permission, Scope, WorkspaceRole
 from control_plane.deps import ActorDep, OrgDep, PlaygroundCookie, WorkspaceDep, org_scope, require, workspace_scope
 from control_plane.keys import PLAYGROUND_SESSION_TTL, create_inference_key_for_workspace, rotate_playground_session
 from control_plane.models import InferenceKey, Org, OrgMembership, PlaygroundSession, User, Workspace, WorkspaceMembership
-from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
 from control_plane.models.inference_key import InferenceKeyCreatedOut, InferenceKeyIn, InferenceKeyOut, InferenceKeyOwnerOut, InferenceKeyRevokedOut
 from control_plane.models.playground_session import PlaygroundSessionEndedOut, PlaygroundSessionReadyOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
@@ -56,10 +56,9 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
     tags=["Organization Workspaces"],
     dependencies=[require("api", org_scope, Permission.workspaces_read, Permission.organizations_read)],
 )
-async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
+async def list_workspaces(org_id: OrgDep, actor: ActorDep, page: PageDep) -> PageEnvelope[WorkspaceOut]:
     """List workspaces the caller can read in an organization."""
-    visible = await readable_workspaces(actor, org_id)
-    return Envelope(data=[WorkspaceOut.model_validate(workspace) for workspace in visible])
+    return PageEnvelope.from_slice(await readable_workspaces(actor, org_id, page), WorkspaceOut)
 
 
 @router.get("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require("api", workspace_scope, Permission.workspaces_read)])
@@ -85,30 +84,30 @@ async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> En
 
 
 @router.get("/{workspace_ref}/policy-users", tags=["Workspace Policies"], dependencies=[require("api", workspace_scope, Permission.policies_read)])
-async def list_policy_users(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
-    users = await User.policy_candidates(workspace.org_id, workspace.id)
-    return Envelope(
-        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
+async def list_policy_users(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMemberCandidateOut]:
+    users = await User.page_policy_candidates(workspace.org_id, workspace.id, page)
+    return PageEnvelope.from_slice(
+        users.map(lambda user: WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account))
     )
 
 
 @router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_read)])
-async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
+async def list_members(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMembershipOut]:
     """List the members of a workspace and their workspace roles."""
-    memberships = await User.workspace_members(workspace.id)
-    return Envelope(
-        data=[
-            WorkspaceMembershipOut(
+    users = await User.page_workspace_members(workspace.id, page)
+    roles = await WorkspaceMembership.roles_for_workspace_users(workspace.id, tuple(user.id for user in users.items))
+    return PageEnvelope.from_slice(
+        users.map(
+            lambda user: WorkspaceMembershipOut(
                 user_id=user.id,
                 workspace_id=workspace.id,
                 email=user.email,
                 name=user.name,
                 service_account=user.service_account,
-                role=membership.role,
+                role=roles[user.id],
                 status="member",
             )
-            for membership, user in memberships
-        ]
+        )
     )
 
 
@@ -117,14 +116,11 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
     tags=["Workspace Members"],
     dependencies=[require("api", workspace_scope, Permission.members_manage)],
 )
-async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
+async def list_member_candidates(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMemberCandidateOut]:
     """List organization members who can be added to a workspace."""
-    candidates = await User.candidates_for_workspace(workspace.org_id, workspace.id)
-    return Envelope(
-        data=[
-            WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account)
-            for user in candidates
-        ]
+    users = await User.page_candidates_for_workspace(workspace.org_id, workspace.id, page)
+    return PageEnvelope.from_slice(
+        users.map(lambda user: WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account))
     )
 
 
@@ -237,15 +233,12 @@ async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, ac
     tags=["Workspace Inference Keys"],
     dependencies=[require("api", workspace_scope, Permission.inference_keys_manage)],
 )
-async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) -> Envelope[list[InferenceKeyOwnerOut]]:
+async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep, page: PageDep) -> PageEnvelope[InferenceKeyOwnerOut]:
     """List principals the caller may select as an inference-key owner."""
-    current = await User.find_by_id(actor.principal_id)
-    owners = [current] if current is not None else []
-    if await is_allowed(actor, Permission.members_manage, Scope.workspace(workspace.org_id, workspace.id)):
-        managed = await User.find(User.managing_org_id == workspace.org_id, col(User.service_account).is_(True), order_by=col(User.name))
-        owners = [*owners, *(owner for owner in managed if owner.id != actor.principal_id)]
-    return Envelope(
-        data=[InferenceKeyOwnerOut(user_id=owner.id, email=owner.email, name=owner.name, service_account=owner.service_account) for owner in owners]
+    include_managed = await is_allowed(actor, Permission.members_manage, Scope.workspace(workspace.org_id, workspace.id))
+    owners = await User.page_inference_key_owners(actor.principal_id, workspace.org_id, include_managed, page)
+    return PageEnvelope.from_slice(
+        owners.map(lambda owner: InferenceKeyOwnerOut(user_id=owner.id, email=owner.email, name=owner.name, service_account=owner.service_account))
     )
 
 
@@ -254,10 +247,9 @@ async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) ->
     tags=["Workspace Inference Keys"],
     dependencies=[require("api", workspace_scope, Permission.inference_keys_read)],
 )
-async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[InferenceKeyOut]]:
+async def list_inference_keys(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[InferenceKeyOut]:
     """List inference-key metadata for a workspace without returning secret tokens."""
-    keys = await InferenceKey.find(InferenceKey.workspace_id == workspace.id, order_by=col(InferenceKey.id))
-    return Envelope(data=[InferenceKeyOut.model_validate(k) for k in keys])
+    return PageEnvelope.from_slice(await InferenceKey.page_for_workspace(workspace.id, page), InferenceKeyOut)
 
 
 @router.delete(

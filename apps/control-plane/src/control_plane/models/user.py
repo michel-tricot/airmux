@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
-from sqlalchemy import CheckConstraint, Column, ForeignKey, or_, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, func, or_, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.authz import InstanceRole, OrgRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
+from control_plane.models.common import Identified, KeyColumn, NotOwnedError, PageQuery, PageSlice, Tombstonable, UUID7Pageable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn
@@ -23,6 +23,9 @@ SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airmux.invalid"
 EMAIL_MAX_LENGTH = 320
 
 _INSTANCE_OWNER_LOCK = 0x41524C4C
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql import Select
 
 
 class LastInstanceOwnerError(ValueError):
@@ -36,7 +39,7 @@ class ManagedServiceAccountInstanceRoleError(ValueError):
 
 
 @audited
-class User(Record, Identified, Tombstonable, table=True):
+class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
         CheckConstraint(
@@ -128,6 +131,87 @@ class User(Record, Identified, Tombstonable, table=True):
             .exists(),
             order_by=col(cls.email),
         )
+
+    @classmethod
+    async def _page_by_email(
+        cls, statement: Select[tuple[Self]], request: PageQuery, *, cursor_context: dict[str, bool | UUID | None] | None = None
+    ) -> PageSlice[Self]:
+        return await cls._page(
+            statement,
+            request,
+            cursor_context=cursor_context,
+            columns=(KeyColumn(col(cls.email), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
+
+    @classmethod
+    async def page_for_instance(cls, request: PageQuery, service_account: bool | None) -> PageSlice[Self]:
+        statement = select(cls)
+        if service_account is not None:
+            statement = statement.where(cls.service_account == service_account)
+        return await cls._page_by_email(statement, request, cursor_context={"service_account": service_account})
+
+    @classmethod
+    async def page_members_of(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)))
+        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id})
+
+    @classmethod
+    async def page_workspace_members(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(
+            select(WorkspaceMembership.user_id)
+            .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
+            .exists()
+        )
+        return await cls._page_by_email(statement, request, cursor_context={"workspace_id": workspace_id})
+
+    @classmethod
+    async def page_policy_candidates(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(
+            col(cls.id).in_(
+                select(OrgMembership.user_id).where(
+                    OrgMembership.org_id == org_id,
+                    or_(
+                        col(OrgMembership.role).in_((OrgRole.owner, OrgRole.admin)),
+                        select(WorkspaceMembership.user_id)
+                        .where(
+                            WorkspaceMembership.user_id == OrgMembership.user_id,
+                            WorkspaceMembership.org_id == org_id,
+                            WorkspaceMembership.workspace_id == workspace_id,
+                        )
+                        .exists(),
+                    ),
+                )
+            )
+        )
+        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id, "workspace_id": workspace_id})
+
+    @classmethod
+    async def page_candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(
+            col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
+            ~select(WorkspaceMembership.user_id)
+            .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
+            .exists(),
+        )
+        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id, "workspace_id": workspace_id})
+
+    @classmethod
+    async def page_inference_key_owners(cls, principal_id: UUID, org_id: UUID, include_managed: bool, request: PageQuery) -> PageSlice[Self]:
+        condition = col(cls.id) == principal_id
+        if include_managed:
+            condition = or_(condition, (col(cls.managing_org_id) == org_id) & col(cls.service_account).is_(True))
+        return await cls._page_by_email(
+            select(cls).where(condition),
+            request,
+            cursor_context={"principal_id": principal_id, "org_id": org_id, "include_managed": include_managed},
+        )
+
+    @classmethod
+    async def membership_counts(cls, user_ids: tuple[UUID, ...]) -> dict[UUID, int]:
+        if not user_ids:
+            return {}
+        query = select(OrgMembership.user_id, func.count()).where(col(OrgMembership.user_id).in_(user_ids)).group_by(col(OrgMembership.user_id))
+        return {result[0]: int(result[1]) for result in (await current_session().execute(query)).all()}
 
     @classmethod
     async def owned_by(cls, org_id: UUID, user_id: UUID) -> Self:
@@ -244,9 +328,9 @@ class UserOut(RecordOut[User]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    orgs: list[UUID]
+    org_count: int
 
-    api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})
+    api_extra: ClassVar[frozenset[str]] = frozenset({"org_count"})
 
 
 class OrgServiceAccountCreatedOut(BaseModel):

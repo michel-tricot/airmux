@@ -29,7 +29,9 @@ def test_get_user_by_id_carries_their_memberships(tmp_path):
 
         fetched = c.get(f"/api/v1/users/{user.id}", headers=root)
         assert fetched.status_code == 200, fetched.text
-        assert fetched.json()["data"]["orgs"] == [str(org)]
+        assert fetched.json()["data"]["org_count"] == 1
+        memberships = c.get(f"/api/v1/users/{user.id}/organizations", headers=root).json()["data"]
+        assert [membership["org_id"] for membership in memberships] == [str(org)]
         assert c.get(f"/api/v1/users/{uuid7()}", headers=root).status_code == 404
 
 

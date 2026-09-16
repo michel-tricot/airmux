@@ -132,6 +132,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("personal_for", name="org_personal_for_key"),
         sa.UniqueConstraint("slug", name="org_slug_key"),
     )
+    op.create_index("org_name_id_idx", "org", ["name", "id"], unique=False)
     op.create_index("ix_user_managing_org_id", "user", ["managing_org_id"], unique=False)
     op.create_foreign_key("user_managing_org_id_fkey", "user", "org", ["managing_org_id"], ["id"])
     op.create_table(
@@ -146,6 +147,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("instance_id"),
     )
+    op.create_index("data_plane_instance_seen_id_idx", "data_plane_instance", ["last_seen", "instance_id"], unique=False)
     op.create_table(
         "provider",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -189,6 +191,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("event_id"),
     )
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
+    op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
+    op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -243,6 +247,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index("bundle_org_version_key", "bundle", ["org_id", "version"], unique=True)
     op.create_table(
         "model",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -334,6 +339,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
         sa.UniqueConstraint("org_id", "slug", name="workspace_org_id_slug_key"),
     )
+    op.create_index("workspace_org_name_id_idx", "workspace", ["org_id", "name", "id"], unique=False)
     op.create_table(
         "workspace_membership",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -380,6 +386,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
+    op.create_index("management_key_org_id_idx", "management_key", ["org_id", "id"], unique=False)
+    op.create_index("management_key_workspace_id_idx", "management_key", ["org_id", "workspace_id", "id"], unique=False)
     op.create_table(
         "inference_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -408,6 +416,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
+    op.create_index("inference_key_workspace_id_idx", "inference_key", ["workspace_id", "id"], unique=False)
     op.create_table(
         "provider_credential",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -447,6 +456,13 @@ def upgrade() -> None:
             name="provider_credential_scope_name_key",
             postgresql_nulls_not_distinct=True,
         ),
+    )
+    op.create_index("provider_credential_org_order_idx", "provider_credential", ["org_id", "priority", "name", "id"], unique=False)
+    op.create_index(
+        "provider_credential_workspace_order_idx",
+        "provider_credential",
+        ["org_id", "workspace_id", "priority", "name", "id"],
+        unique=False,
     )
     op.create_table(
         "org_invitation",
@@ -586,25 +602,36 @@ def downgrade() -> None:
     op.drop_table("runtime_configuration")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
     op.drop_table("org_invitation")
+    op.drop_index("provider_credential_workspace_order_idx", table_name="provider_credential")
+    op.drop_index("provider_credential_org_order_idx", table_name="provider_credential")
     op.drop_table("provider_credential")
+    op.drop_index("inference_key_workspace_id_idx", table_name="inference_key")
     op.drop_table("inference_key")
     op.drop_index("ix_workspace_membership_workspace_id", table_name="workspace_membership")
     op.drop_table("workspace_membership")
+    op.drop_index("management_key_workspace_id_idx", table_name="management_key")
+    op.drop_index("management_key_org_id_idx", table_name="management_key")
     op.drop_table("management_key")
+    op.drop_index("workspace_org_name_id_idx", table_name="workspace")
     op.drop_table("workspace")
     op.drop_table("cli_auth_request")
     op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")
     op.drop_table("org_membership")
     op.drop_table("model")
+    op.drop_index("bundle_org_version_key", table_name="bundle")
     op.drop_table("bundle")
     op.drop_table("auth_session")
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")
     op.drop_table("provider")
+    op.drop_index("data_plane_instance_seen_id_idx", table_name="data_plane_instance")
     op.drop_table("data_plane_instance")
     op.drop_constraint("user_managing_org_id_fkey", "user", type_="foreignkey")
+    op.drop_index("org_name_id_idx", table_name="org")
     op.drop_table("org")
     op.drop_table("user")
     op.drop_table("audit_log")

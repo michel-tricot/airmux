@@ -5,9 +5,10 @@ from typing import Any, ClassVar, Self
 from uuid import UUID  # noqa: TC003 pydantic resolves the model annotations at runtime
 
 from sqlalchemy import JSON, Table, inspect, text
-from sqlmodel import Field, col, or_
+from sqlmodel import Field, col, or_, select
 
 from control_plane.db import current_session
+from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
@@ -46,26 +47,34 @@ class AuditLog(Record, table=True):
     api_readonly: ClassVar[frozenset[str]] = frozenset({"id", "table_name", "record_id", "action", "user_id", "occurred_at"})
 
     @classmethod
-    async def recent(cls, limit: int) -> list[Self]:
+    async def recent(cls, request: PageQuery) -> PageSlice[Self]:
         """The instance-wide trail, newest first. The integer sequence is the only total order the
         rows have: uuid7 cannot separate two writes inside one millisecond."""
-        return await cls.find(order_by=col(cls.id).desc(), limit=limit)
+        return await keyset_page(
+            select(cls),
+            request,
+            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+        )
 
     @classmethod
-    async def for_org(cls, org_id: UUID, limit: int) -> list[Self]:
+    async def for_org(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
         """The trail of one org: rows that carry its org_id in either snapshot, plus the org row itself.
 
         The snapshots stay in the database as a json filter rather than being read back and sifted
         in Python, which is what would leak them into the process at all.
         """
-        return await cls.find(
+        statement = select(cls).where(
             or_(
                 col(cls.before)["org_id"].as_string() == str(org_id),
                 col(cls.after)["org_id"].as_string() == str(org_id),
                 (col(cls.table_name) == "org") & (col(cls.record_id) == str(org_id)),
             ),
-            order_by=col(cls.id).desc(),
-            limit=limit,
+        )
+        return await keyset_page(
+            statement,
+            request,
+            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+            cursor_context={"org_id": org_id},
         )
 
 

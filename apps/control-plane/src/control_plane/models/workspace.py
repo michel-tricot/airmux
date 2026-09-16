@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint, or_
+from sqlalchemy import Index, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, OrgOwned, Tombstonable
+from control_plane.models.common import Identified, KeyColumn, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from contract import SecretStore
 
 DERIVED_SLUG_FALLBACK = "workspace"
+type ReadableRoles = tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]
 
 
 def _as_uuid(value: str) -> UUID | None:
@@ -38,7 +39,7 @@ def _as_uuid(value: str) -> UUID | None:
 
 
 @audited
-class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
+class Workspace(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
     """The scope inference keys live in; membership is drawn from the owning org.
 
     The (id, org_id) unique constraint exists only as the composite foreign key target that
@@ -49,6 +50,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
         UniqueConstraint("org_id", "slug", name="workspace_org_id_slug_key"),
+        Index("workspace_org_name_id_idx", "org_id", "name", "id"),
     )
 
     org_id: UUID = Field(foreign_key="org.id")
@@ -124,6 +126,42 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
             .exists()
         )
         return await cls.find(cls.org_id == org_id, or_(instance_access, org_access, workspace_access), order_by=col(cls.name))
+
+    @classmethod
+    async def page_readable_by(
+        cls,
+        principal_id: UUID,
+        org_id: UUID,
+        request: PageQuery,
+        *,
+        roles: ReadableRoles,
+    ) -> PageSlice[Self]:
+        instance_roles, org_roles, workspace_roles = roles
+        instance_access = select(User.id).where(col(User.id) == principal_id, col(User.instance_role).in_(instance_roles)).exists()
+        org_access = (
+            select(OrgMembership.user_id)
+            .where(
+                col(OrgMembership.user_id) == principal_id,
+                col(OrgMembership.org_id) == org_id,
+                col(OrgMembership.role).in_(org_roles),
+            )
+            .exists()
+        )
+        workspace_access = (
+            select(WorkspaceMembership.user_id)
+            .where(
+                col(WorkspaceMembership.user_id) == principal_id,
+                col(WorkspaceMembership.workspace_id) == col(cls.id),
+                col(WorkspaceMembership.role).in_(workspace_roles),
+            )
+            .exists()
+        )
+        return await cls._page(
+            select(cls).where(cls.org_id == org_id, or_(instance_access, org_access, workspace_access)),
+            request,
+            cursor_context={"org_id": org_id},
+            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the workspace with the rows scoped to it: its inference keys, its members, and the

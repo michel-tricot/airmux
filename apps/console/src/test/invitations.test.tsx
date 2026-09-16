@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import type { OrgInvitationOut } from '@workspace/api-client-react';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, paged, server } from './msw';
 
 const now = '2026-08-17T12:00:00Z';
 
@@ -40,21 +40,28 @@ describe('organization invitations', () => {
       http.get('/api/v1/enroll', () =>
         HttpResponse.json<{ data: Api.EnrollOut }>({
           data: {
-            orgs: [],
             personal_org_id: null,
-            pending_invitations: [
-              {
-                email: 'dev@example.com',
-                org_id: ORG.id,
-                org_name: ORG.name,
-                org_role: 'member',
-                workspace_id: WORKSPACES[0].id,
-                workspace_name: WORKSPACES[0].name,
-                workspace_role: 'viewer',
-                expires_at: '2026-08-24T12:00:00Z',
-              },
-            ],
+            org_count: 0,
+            pending_invitation_count: 1,
           },
+        }),
+      ),
+      http.get('/api/v1/enroll/organizations', () => paged([])),
+      http.get('/api/v1/enroll/invitations', () =>
+        HttpResponse.json({
+          data: [
+            {
+              email: 'dev@example.com',
+              org_id: ORG.id,
+              org_name: ORG.name,
+              org_role: 'member',
+              workspace_id: WORKSPACES[0].id,
+              workspace_name: WORKSPACES[0].name,
+              workspace_role: 'viewer',
+              expires_at: '2026-08-24T12:00:00Z',
+            },
+          ],
+          page: { next_cursor: null },
         }),
       ),
     );
@@ -73,7 +80,7 @@ describe('organization invitations', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['members.manage', 'members.read'] } }),
       ),
-      http.get('/api/v1/organizations/:orgId/invitations', () => HttpResponse.json<{ data: Api.OrgInvitationOut[] }>({ data: invitations })),
+      http.get('/api/v1/organizations/:orgId/invitations', () => paged(invitations)),
       http.post('/api/v1/organizations/:orgId/invitations', async ({ request }) => {
         const body = (await request.json()) as { email: string; org_role: string };
         invitations = [{ ...invitation(), email: body.email, org_role: body.org_role }];
@@ -218,7 +225,7 @@ describe('organization invitations', () => {
       http.post('/api/v1/auth/signup', async ({ request }) => {
         signupBody = (await request.json()) as Api.SignupIn;
         return HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] },
+          data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, org_count: 0 },
         });
       }),
     );

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  useListUsers,
+  useListUsersInfinite,
   useGetUser,
   useCreateServiceAccount,
   useDeleteUser,
@@ -8,19 +8,20 @@ import {
   getMyPermissionsQueryKey,
   addOrgUser,
   removeOrgUser,
-  getListUsersQueryKey,
+  getListUsersInfiniteQueryKey,
   getGetUserQueryKey,
-  getListOrgUsersQueryKey,
+  getListOrgUsersInfiniteQueryKey,
   getEnrollmentQueryKey,
   getMeQueryKey,
   type OrgRole,
-  getListBundlesQueryKey,
-  getListActivityQueryKey,
+  getListBundlesInfiniteQueryKey,
+  getListActivityInfiniteQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useUsers({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListUsers(undefined, { query: { enabled } });
+  return useListUsersInfinite(undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useUser(userId: string) {
@@ -31,7 +32,7 @@ export function useCreateServiceAccountMutation() {
   const queryClient = useQueryClient();
   return useCreateServiceAccount({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() }),
       meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
   });
@@ -41,7 +42,7 @@ export function useDeleteUserMutation() {
   const queryClient = useQueryClient();
   return useDeleteUser({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() }),
       meta: { errorMessage: 'We couldn’t delete this user. Please try again.' },
     },
   });
@@ -60,14 +61,14 @@ function useMembershipInvalidation() {
   const queryClient = useQueryClient();
   return (target: OrgMembershipTarget) =>
     Promise.all([
-      queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
-      queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(target.orgId) }),
+      queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(target.orgId) }),
       queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
-      queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(target.orgId) }),
-      queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(target.orgId) }),
+      queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(target.orgId) }),
+      queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(target.orgId) }),
     ]);
 }
 
@@ -95,7 +96,7 @@ export function useChangeInstanceRoleMutation() {
     mutation: {
       onSuccess: (_user, { userId }) =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getListUsersInfiniteQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId) }),
           queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),

@@ -63,7 +63,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
         assert "SameSite=lax" in set_cookie
         assert "Secure" in set_cookie
         assert resp.json()["data"]["user_id"] == user["id"]
-        assert resp.json()["data"]["orgs"] == [str(org_id)]
+        assert resp.json()["data"]["org_count"] == 1
 
         keys = c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=CSRF)
         assert keys.status_code == 200
@@ -253,7 +253,7 @@ def test_signup_creates_user_identity_and_session(tmp_path):
         me = resp.json()["data"]
         assert me["email"] == "new@example.com"
         assert me["instance_role"] is None
-        assert me["orgs"] == []
+        assert me["org_count"] == 0
         assert c.get("/api/v1/auth/me", headers=CSRF).json()["data"]["user_id"] == me["user_id"]
         assert c.get("/api/v1/organizations", headers=CSRF).status_code == 403
         c.cookies.clear()

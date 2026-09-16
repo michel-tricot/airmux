@@ -8,6 +8,15 @@ export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
 export type DefaultHeadersGetter = () => Record<string, string | null>;
 
+export interface Page<T> {
+  items: T[];
+  page: { next_cursor: string | null };
+}
+
+export function getNextPageParam(page: Page<unknown>): string | undefined {
+  return page.page.next_cursor ?? undefined;
+}
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = 'application/json, application/problem+json';
 
@@ -241,10 +250,19 @@ async function parseErrorBody(response: Response, method: string): Promise<unkno
 }
 
 function unwrapEnvelope(body: unknown): unknown {
-  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !('data' in body)) {
-    throw new TypeError('Expected a response envelope containing only data');
+  if (!body || typeof body !== 'object' || Array.isArray(body) || !('data' in body)) {
+    throw new TypeError('Expected a response envelope containing data');
   }
-  return body.data;
+  const keys = Object.keys(body);
+  if (keys.length === 1) return body.data;
+  if (keys.length !== 2 || !('page' in body) || !body.page || typeof body.page !== 'object' || Array.isArray(body.page)) {
+    throw new TypeError('Expected a response envelope containing data and optional page metadata');
+  }
+  const page = body.page as Record<string, unknown>;
+  if (Object.keys(page).length !== 1 || !('next_cursor' in page) || (page.next_cursor !== null && typeof page.next_cursor !== 'string')) {
+    throw new TypeError('Expected page metadata containing next_cursor');
+  }
+  return { items: body.data, page };
 }
 
 async function parseSuccessBody(response: Response, requestInfo: { method: string; url: string }): Promise<unknown> {

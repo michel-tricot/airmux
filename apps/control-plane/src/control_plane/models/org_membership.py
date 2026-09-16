@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import CheckConstraint, delete
+from sqlalchemy import CheckConstraint, delete, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Field, col, select
 
 from control_plane.authz import OrgRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Tombstonable
+from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, Tombstonable, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RequestModel
 
@@ -40,6 +40,29 @@ class OrgMembership(Record, Tombstonable, table=True):
     @classmethod
     async def delete_with_org(cls, org_id: UUID) -> None:
         await current_session().execute(delete(cls).where(col(cls.org_id) == org_id))
+
+    @classmethod
+    async def page_for_user(cls, user_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        return await keyset_page(
+            select(cls).where(cls.user_id == user_id),
+            request,
+            Keyset(model=cls, columns=(KeyColumn(col(cls.org_id), "asc", "uuid"),)),
+            cursor_context={"user_id": user_id},
+        )
+
+    @classmethod
+    async def roles_for_org_users(cls, org_id: UUID, user_ids: tuple[UUID, ...]) -> dict[UUID, OrgRole]:
+        if not user_ids:
+            return {}
+        memberships = await cls.find(cls.org_id == org_id, col(cls.user_id).in_(user_ids))
+        return {membership.user_id: OrgRole(membership.role) for membership in memberships}
+
+    @classmethod
+    async def count_for_user(cls, user_id: UUID, visible_org_id: UUID | None = None) -> int:
+        statement = select(func.count()).select_from(cls).where(cls.user_id == user_id)
+        if visible_org_id is not None:
+            statement = statement.where(cls.org_id == visible_org_id)
+        return (await current_session().execute(statement)).scalar_one()
 
     async def _lock_org(self) -> None:
         from control_plane.models.org import Org  # noqa: PLC0415 org imports membership, so the two only meet at call time

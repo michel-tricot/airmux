@@ -1,23 +1,24 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListOrgUsers,
-  useListMembers,
-  useListMemberCandidates,
+  useListOrgUsersInfinite,
+  useListMembersInfinite,
+  useListMemberCandidatesInfinite,
   useAddMember,
   useRemoveMember,
   useCreateOrgServiceAccount,
   useDeleteOrgServiceAccount,
   useCreateOrgServiceAccountManagementKey,
-  getListOrgUsersQueryKey,
-  getListOrgManagementKeysQueryKey,
-  getListMembersQueryKey,
+  getListOrgUsersInfiniteQueryKey,
+  getListOrgManagementKeysInfiniteQueryKey,
+  getListMembersInfiniteQueryKey,
   getMyPermissionsQueryKey,
-  getListInferenceKeysQueryKey,
-  getListBundlesQueryKey,
-  getListActivityQueryKey,
+  getListInferenceKeysInfiniteQueryKey,
+  getListBundlesInfiniteQueryKey,
+  getListActivityInfiniteQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }> = [
   { value: 'admin', label: 'Admin' },
@@ -26,7 +27,7 @@ export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }
 ];
 
 export function useOrgMembers(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgUsers(orgId, { query: { enabled } });
+  return useListOrgUsersInfinite(orgId, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useCreateOrgServiceAccountMutation(orgId: string) {
@@ -34,8 +35,8 @@ export function useCreateOrgServiceAccountMutation(orgId: string) {
   return useCreateOrgServiceAccount({
     mutation: {
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
@@ -47,10 +48,10 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
   return useDeleteOrgServiceAccount({
     mutation: {
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
     },
@@ -61,25 +62,27 @@ export function useCreateOrgServiceAccountManagementKeyMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useCreateOrgServiceAccountManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t generate the service account key. Please try again.' },
     },
   });
 }
 
 export function useWorkspaceMembers(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListMembers(orgId, workspaceRef, { query: { enabled } });
+  return useListMembersInfinite(orgId, workspaceRef, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useWorkspaceMemberCandidates(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListMemberCandidates(orgId, workspaceRef, { query: { enabled } });
+  return useListMemberCandidatesInfinite(orgId, workspaceRef, undefined, {
+    query: { enabled, ...paginatedQueryOptions, select: flattenPages },
+  });
 }
 
 export function useAddWorkspaceMemberMutation(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   return useAddMember({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersInfiniteQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t add the member. Please try again.' },
     },
   });
@@ -91,10 +94,10 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
     mutation: {
       onSuccess: () =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
-          queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
-          queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-          queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListMembersInfiniteQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListInferenceKeysInfiniteQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
       meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },
     },
@@ -107,7 +110,7 @@ export function useChangeWorkspaceRoleMutation(orgId: string, workspaceRef: stri
     mutation: {
       onSuccess: () =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListMembersInfiniteQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
         ]),
       meta: { errorMessage: 'We couldn’t change the workspace role. Please try again.' },

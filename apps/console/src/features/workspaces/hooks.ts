@@ -1,17 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListWorkspaces,
+  useListWorkspacesInfinite,
   useGetWorkspace,
   useCreateWorkspace,
   useUpdateWorkspace,
   useDeleteWorkspace,
-  getListWorkspacesQueryKey,
+  getListWorkspacesInfiniteQueryKey,
   getGetWorkspaceQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useWorkspaces(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListWorkspaces(orgId, { query: { enabled } });
+  return useListWorkspacesInfinite(orgId, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useWorkspace(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
@@ -22,7 +23,7 @@ export function useCreateWorkspaceMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useCreateWorkspace({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesInfiniteQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t create the workspace. Please try again.' },
     },
   });
@@ -34,7 +35,7 @@ export function useRenameWorkspaceMutation(orgId: string, workspaceRef: string) 
     mutation: {
       onSuccess: () =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListWorkspacesInfiniteQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef) }),
         ]),
       meta: { errorMessage: 'We couldn’t rename the workspace. Please try again.' },
@@ -46,7 +47,7 @@ export function useDeleteWorkspaceMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useDeleteWorkspace({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesInfiniteQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t delete this workspace. Please try again.' },
     },
   });

@@ -29,19 +29,23 @@ def test_enrollment_limits_invitation_metadata_to_credential_scope(tmp_path, inv
         assert local.status_code == 200, local.text
         assert client.post(f"/api/v1/organizations/{second}/invitations", headers=root, json=body).status_code == 200
         assert client.put(f"/api/v1/organizations/{first}/users/{user_id}", headers=root, json={"role": "admin"}).status_code == 200
-        browser = client.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert {invitation["org_id"] for invitation in browser["pending_invitations"]} == {str(first), str(second)}
+        browser = client.get("/api/v1/enroll/invitations", headers=CSRF).json()["data"]
+        assert {invitation["org_id"] for invitation in browser} == {str(first), str(second)}
         org_bearer = cp.headers_for(first, user_id)
         org_view = client.get("/api/v1/enroll", headers=org_bearer)
         assert org_view.status_code == 200, org_view.text
-        assert [org["id"] for org in org_view.json()["data"]["orgs"]] == [str(first)]
-        assert [invitation["org_id"] for invitation in org_view.json()["data"]["pending_invitations"]] == [str(first)]
-        assert "private-org" not in org_view.text
+        orgs = client.get("/api/v1/enroll/organizations", headers=org_bearer)
+        invitations = client.get("/api/v1/enroll/invitations", headers=org_bearer)
+        assert [org["id"] for org in orgs.json()["data"]] == [str(first)]
+        assert [invitation["org_id"] for invitation in invitations.json()["data"]] == [str(first)]
+        assert "private-org" not in orgs.text
+        assert "private-org" not in invitations.text
         workspace_bearer = cp.headers_for(first, user_id, selected)
         workspace_view = client.get("/api/v1/enroll", headers=workspace_bearer)
         assert workspace_view.status_code == 200, workspace_view.text
-        invitations = workspace_view.json()["data"]["pending_invitations"]
+        invitations_response = client.get("/api/v1/enroll/invitations", headers=workspace_bearer)
+        invitations = invitations_response.json()["data"]
         assert [invitation["workspace_id"] for invitation in invitations] == ([str(selected)] if invited_workspace == "selected" else [])
-        assert "private-org" not in workspace_view.text
-        assert "private-workspace" not in workspace_view.text
-        assert "token_hash" not in workspace_view.text
+        assert "private-org" not in invitations_response.text
+        assert "private-workspace" not in invitations_response.text
+        assert "token_hash" not in invitations_response.text

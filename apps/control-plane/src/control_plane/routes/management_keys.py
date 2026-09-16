@@ -5,14 +5,14 @@ from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col
 
 from control_plane.authority import ensure_management_key_permissions, management_key_parent
-from control_plane.authz import Actor, Permission, Scope, ScopeLevel
+from control_plane.authz import Actor, Permission, Scope
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.keys import ManagementKeyGrant, create_management_key
 from control_plane.models import ManagementKey
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common import PageDep, PageQuery  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import Envelope, PageEnvelope
 from control_plane.models.management_key import (
     ManagementKeyCreatedOut,
     ManagementKeyIn,
@@ -42,17 +42,10 @@ def _out(key: ManagementKey, now: datetime) -> ManagementKeyOut:
     return ManagementKeyOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now)})
 
 
-async def _list_management_keys(scope: Scope, user_id: UUID | None) -> Envelope[list[ManagementKeyOut]]:
-    conditions = []
-    if scope.level is ScopeLevel.org:
-        conditions.append(ManagementKey.org_id == scope.org_id)
-    elif scope.level is ScopeLevel.workspace:
-        conditions.extend((ManagementKey.org_id == scope.org_id, ManagementKey.workspace_id == scope.workspace_id))
-    if user_id is not None:
-        conditions.append(ManagementKey.user_id == user_id)
-    keys = await ManagementKey.find(*conditions, order_by=col(ManagementKey.id))
+async def _list_management_keys(scope: Scope, user_id: UUID | None, page: PageQuery) -> PageEnvelope[ManagementKeyOut]:
+    keys = await ManagementKey.page_for_scope(scope, user_id, page)
     now = datetime.now(tz=UTC)
-    return Envelope(data=[_out(key, now) for key in keys])
+    return PageEnvelope.from_slice(keys.map(lambda key: _out(key, now)))
 
 
 async def issue_management_key(body: ManagementKeyIn, actor: Actor, scope: Scope, *, principal_id: UUID) -> ManagementKeyCreatedOut:
@@ -84,9 +77,9 @@ async def _create_management_key(body: ManagementKeyIn, actor: Actor, scope: Sco
 @router.get(
     "/instance/management-keys", tags=["Instance Management Keys"], dependencies=[require("api", instance_scope, Permission.management_keys_read)]
 )
-async def list_instance_management_keys(user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
+async def list_instance_management_keys(page: PageDep, user_id: UUID | None = None) -> PageEnvelope[ManagementKeyOut]:
     """List management keys across all scopes, optionally filtered by principal."""
-    return await _list_management_keys(Scope.instance(), user_id)
+    return await _list_management_keys(Scope.instance(), user_id, page)
 
 
 @router.post(
@@ -102,9 +95,9 @@ async def create_instance_management_key(body: ManagementKeyIn, actor: ActorDep)
     tags=["Organization Management Keys"],
     dependencies=[require("api", org_scope, Permission.management_keys_read)],
 )
-async def list_org_management_keys(org_id: OrgDep, user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
+async def list_org_management_keys(org_id: OrgDep, page: PageDep, user_id: UUID | None = None) -> PageEnvelope[ManagementKeyOut]:
     """List organization- and workspace-scoped management keys within an organization."""
-    return await _list_management_keys(Scope.org(org_id), user_id)
+    return await _list_management_keys(Scope.org(org_id), user_id, page)
 
 
 @router.post(
@@ -122,9 +115,9 @@ async def create_org_management_key(body: ManagementKeyIn, org_id: OrgDep, actor
     tags=["Workspace Management Keys"],
     dependencies=[require("api", workspace_scope, Permission.management_keys_read)],
 )
-async def list_workspace_management_keys(workspace: WorkspaceDep, user_id: UUID | None = None) -> Envelope[list[ManagementKeyOut]]:
+async def list_workspace_management_keys(workspace: WorkspaceDep, page: PageDep, user_id: UUID | None = None) -> PageEnvelope[ManagementKeyOut]:
     """List management keys scoped to one workspace."""
-    return await _list_management_keys(Scope.workspace(workspace.org_id, workspace.id), user_id)
+    return await _list_management_keys(Scope.workspace(workspace.org_id, workspace.id), user_id, page)
 
 
 @router.post(

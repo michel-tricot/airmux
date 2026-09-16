@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import col
+from fastapi import APIRouter, HTTPException
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
@@ -14,10 +12,11 @@ from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, requir
 from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
-from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
-from control_plane.models.usage_event import UsageEventOut, UsageEventPage
+from control_plane.models.usage_event import UsageEventOut
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
@@ -25,23 +24,22 @@ router = APIRouter(prefix="/organizations/{org_id}")
 
 
 @router.get("/users", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_read)])
-async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
+async def list_org_users(org_id: OrgDep, page: PageDep) -> PageEnvelope[OrgMemberOut]:
     """List the human users and service accounts that belong to an organization."""
-    members = await User.members_of(org_id)
-    memberships = {membership.user_id: membership for membership in await OrgMembership.find(OrgMembership.org_id == org_id)}
-    return Envelope(
-        data=[
-            OrgMemberOut(
+    members = await User.page_members_of(org_id, page)
+    roles = await OrgMembership.roles_for_org_users(org_id, tuple(user.id for user in members.items))
+    return PageEnvelope.from_slice(
+        members.map(
+            lambda user: OrgMemberOut(
                 user_id=user.id,
                 email=user.email,
                 name=user.name,
                 service_account=user.service_account,
-                role=memberships[user.id].role,
+                role=roles[user.id],
                 status="member",
                 managed=user.managing_org_id == org_id,
             )
-            for user in members
-        ]
+        )
     )
 
 
@@ -102,7 +100,7 @@ async def create_org_service_account(
     )
     return Envelope(
         data=OrgServiceAccountCreatedOut(
-            service_account=UserOut.model_validate({**service_account.model_dump(), "orgs": [org_id]}),
+            service_account=UserOut.model_validate({**service_account.model_dump(), "org_count": 1}),
             membership=MembershipOut(user_id=service_account.id, org_id=org_id, role=OrgRole(membership.role), status="member"),
             management_key=management_key,
         )
@@ -153,29 +151,26 @@ async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
 
 
 @router.get("/bundles", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])
-async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
+async def list_bundles(org_id: OrgDep, page: PageDep) -> PageEnvelope[BundleOut]:
     """List policy bundle metadata for an organization."""
-    bundles = await Bundle.find(Bundle.org_id == org_id, order_by=col(Bundle.version))
-    return Envelope(data=[BundleOut.model_validate(bundle) for bundle in bundles])
+    return PageEnvelope.from_slice(await Bundle.page_for_org(org_id, page), BundleOut)
 
 
 @router.get("/events", tags=["Organization Usage Events"], dependencies=[require("api", org_scope, Permission.usage_read)])
-async def list_org_events(org_id: OrgDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+async def list_org_events(org_id: OrgDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events across an organization with cursor pagination."""
-    events = await UsageEvent.for_scope(org_id, None, page)
-    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(org_id, None, page), UsageEventOut)
 
 
 @router.get(
     "/workspaces/{workspace_ref}/events", tags=["Workspace Usage Events"], dependencies=[require("api", workspace_scope, Permission.usage_read)]
 )
-async def list_workspace_events(workspace: WorkspaceDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+async def list_workspace_events(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events for one workspace with cursor pagination."""
-    events = await UsageEvent.for_scope(workspace.org_id, workspace.id, page)
-    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(workspace.org_id, workspace.id, page), UsageEventOut)
 
 
 @router.get("/activity", tags=["Organization Activity"], dependencies=[require("api", org_scope, Permission.audit_read)])
-async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
+async def list_activity(org_id: OrgDep, page: PageDep) -> PageEnvelope[ActivityOut]:
     """List the most recent audited changes in an organization."""
-    return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])
+    return PageEnvelope.from_slice(await AuditLog.for_org(org_id, page), ActivityOut)

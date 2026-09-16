@@ -122,6 +122,14 @@ export const operationAuthority = {
       },
     ],
   },
+  listUserOrganizations: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["principals.read"],
+      },
+    ],
+  },
   listUsers: {
     checks: [
       {
@@ -138,19 +146,19 @@ export const operationAuthority = {
       },
     ],
   },
-  listOrgs: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["organizations.read"],
-      },
-    ],
-  },
   createOrg: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["organizations.create"],
+      },
+    ],
+  },
+  listOrgs: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
       },
     ],
   },
@@ -378,19 +386,19 @@ export const operationAuthority = {
       },
     ],
   },
-  listInstanceProviderCredentials: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["provider-credentials.read"],
-      },
-    ],
-  },
   createInstanceProviderCredential: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["provider-credentials.manage"],
+      },
+    ],
+  },
+  listInstanceProviderCredentials: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["provider-credentials.read"],
       },
     ],
   },

@@ -124,7 +124,7 @@ def test_valid_invitation_allows_signup_when_public_signup_is_closed(tmp_path):
 
         assert signup.status_code == 200, signup.text
         assert signup.json()["data"]["email"] == "invitee@example.com"
-        assert signup.json()["data"]["orgs"] == []
+        assert signup.json()["data"]["org_count"] == 0
         assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
 
 
@@ -191,9 +191,9 @@ def test_new_account_sees_its_pending_invitations_in_enrollment(tmp_path):
         )
         assert signup.status_code == 200, signup.text
 
-        enrollment = client.get("/api/v1/enroll", headers=CSRF)
+        enrollment = client.get("/api/v1/enroll/invitations", headers=CSRF)
         assert enrollment.status_code == 200, enrollment.text
-        assert enrollment.json()["data"]["pending_invitations"] == [
+        assert enrollment.json()["data"] == [
             {
                 "email": "invitee@example.com",
                 "org_id": str(org_id),
@@ -207,7 +207,7 @@ def test_new_account_sees_its_pending_invitations_in_enrollment(tmp_path):
         ]
 
         assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
-        assert client.get("/api/v1/enroll", headers=CSRF).json()["data"]["pending_invitations"] == []
+        assert client.get("/api/v1/enroll/invitations", headers=CSRF).json()["data"] == []
 
 
 def test_wrong_account_cannot_accept_and_does_not_consume_the_invitation(tmp_path):

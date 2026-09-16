@@ -6,13 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index
 from sqlalchemy.types import TypeDecorator
-from sqlmodel import Field, col
+from sqlmodel import Field, col, select
 
-from control_plane.authz import Permission, Scope
+from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut, RequestModel
@@ -36,10 +36,12 @@ class PermissionList(TypeDecorator[list[Permission]]):
 
 
 @audited
-class ManagementKey(Record, Identified, Tombstonable, table=True):
+class ManagementKey(Record, Identified, Tombstonable, UUID7Pageable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="management_key_workspace_needs_org"),
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
+        Index("management_key_org_id_idx", "org_id", "id"),
+        Index("management_key_workspace_id_idx", "org_id", "workspace_id", "id"),
     )
 
     user_id: UUID = Field(foreign_key="user.id")
@@ -110,6 +112,21 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
         for key in keys:
             if key.parent_id not in key_ids:
                 await key.delete_with_descendants()
+
+    @classmethod
+    async def page_for_scope(cls, scope: Scope, user_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls)
+        if scope.level is ScopeLevel.org:
+            statement = statement.where(cls.org_id == scope.org_id)
+        elif scope.level is ScopeLevel.workspace:
+            statement = statement.where(cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
+        if user_id is not None:
+            statement = statement.where(cls.user_id == user_id)
+        return await cls._page(
+            statement,
+            request,
+            cursor_context={"scope": scope.level.value, "org_id": scope.org_id, "workspace_id": scope.workspace_id, "user_id": user_id},
+        )
 
 
 class ManagementKeyOut(RecordOut[ManagementKey]):

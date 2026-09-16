@@ -119,6 +119,8 @@
                     "group": "Enrollment",
                     "pages": [
                       "GET /api/v1/enroll",
+                      "GET /api/v1/enroll/organizations",
+                      "GET /api/v1/enroll/invitations",
                       "POST /api/v1/enroll/org",
                       "POST /api/v1/enroll/invitations/preview",
                       "POST /api/v1/enroll/invitations/accept"
@@ -139,6 +141,7 @@
                       "POST /api/v1/service-accounts",
                       "POST /api/v1/service-accounts/{user_id}/management-keys",
                       "GET /api/v1/users/{user_id}",
+                      "GET /api/v1/users/{user_id}/organizations",
                       "DELETE /api/v1/users/{user_id}",
                       "GET /api/v1/users",
                       "PUT /api/v1/users/{user_id}/instance-role"

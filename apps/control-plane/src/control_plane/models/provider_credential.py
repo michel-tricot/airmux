@@ -7,14 +7,14 @@ from uuid import UUID
 
 from pydantic import Field as PydanticField
 from pydantic import SecretStr, field_validator
-from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, String, UniqueConstraint, or_
+from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, Index, String, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
-from sqlmodel import Field, col
+from sqlmodel import Field, col, select
 
 from contract import CredentialScope, SecretNotFoundError, SecretPurpose, SecretRef, SecretRejectedError, SecretStore
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, KeyColumn, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
@@ -30,7 +30,7 @@ ProviderCredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
     scope="nullable_org",
     columns=("org_id", "workspace_id", "provider_name", "name", "priority", "enabled", "version"),
 )
-class ProviderCredential(Record, Identified, Tombstonable, table=True):
+class ProviderCredential(Record, Identified, Tombstonable, UUID7Pageable, table=True):
     """One provider API key the platform holds on someone's behalf. The value is not here.
 
     Deliberately not OrgOwned: a platform credential belongs to the instance rather than to a
@@ -66,6 +66,8 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
             postgresql_nulls_not_distinct=True,
         ),
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
+        Index("provider_credential_org_order_idx", "org_id", "priority", "name", "id"),
+        Index("provider_credential_workspace_order_idx", "org_id", "workspace_id", "priority", "name", "id"),
     )
 
     org_id: UUID | None = Field(default=None, foreign_key="org.id")
@@ -124,6 +126,26 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     async def for_instance(cls) -> list[Self]:
         """Instance credentials in the order the data plane tries them."""
         return await cls.find(col(cls.org_id).is_(None), order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
+
+    @classmethod
+    async def page_for_scope(cls, org_id: UUID | None, workspace_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls)
+        if org_id is None:
+            statement = statement.where(col(cls.org_id).is_(None))
+        else:
+            statement = statement.where(cls.org_id == org_id)
+            if workspace_id is not None:
+                statement = statement.where(cls.workspace_id == workspace_id)
+        return await cls._page(
+            statement,
+            request,
+            cursor_context={"org_id": org_id, "workspace_id": workspace_id},
+            columns=(
+                KeyColumn(col(cls.priority), "asc", "int"),
+                KeyColumn(col(cls.name), "asc", "str"),
+                KeyColumn(col(cls.id), "asc", "uuid"),
+            ),
+        )
 
     async def delete_with_value(self, store: SecretStore) -> None:
         """Delete the credential and the value behind it.

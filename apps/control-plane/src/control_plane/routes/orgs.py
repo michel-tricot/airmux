@@ -3,12 +3,12 @@ from __future__ import annotations
 from uuid import UUID  # noqa: TC003 fastapi resolves return annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
-from sqlmodel import col
 
 from control_plane.authz import Permission
 from control_plane.deps import OrgDep, instance_scope, org_scope, require
 from control_plane.models import Org
-from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
 from control_plane.models.org import OrgCreate, OrgOut, OrgUpdate
 from control_plane.routes.provider_credentials import secret_store
 
@@ -32,9 +32,9 @@ async def update_org(org_id: OrgDep, body: OrgUpdate) -> Envelope[OrgOut]:
 
 
 @router.get("", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_read)])
-async def list_orgs() -> Envelope[list[OrgOut]]:
+async def list_orgs(page: PageDep) -> PageEnvelope[OrgOut]:
     """List every organization on the instance."""
-    return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.name))])
+    return PageEnvelope.from_slice(await Org.page_all(page), OrgOut)
 
 
 @router.get("/{org_id}", tags=["Organization Settings"], dependencies=[require("api", org_scope, Permission.organizations_read)])

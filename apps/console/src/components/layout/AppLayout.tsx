@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
   const workspaces = workspacesQuery.data;
   const enrollment = useEnrollment();
-  const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
+  const canSwitchOrg = (enrollment.data?.org_count ?? 0) > 1;
   const [location, setLocation] = useLocation();
   const [createOpen, setCreateOpen] = useState(false);
 

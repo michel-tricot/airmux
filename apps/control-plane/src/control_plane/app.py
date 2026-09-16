@@ -18,6 +18,7 @@ from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.models.auth_identity import IdentityConflictError
+from control_plane.models.common import InvalidCursorError
 from control_plane.models.org import OrgSlugTakenError
 from control_plane.models.org_membership import LastOrgOwnerError
 from control_plane.models.policy import InvalidPolicyError
@@ -94,6 +95,8 @@ async def validation_handler(_request: Request, exc: Exception) -> JSONResponse:
     Dropping `input` and `ctx` leaves the caller everything they need to fix the request, and
     makes the guarantee hold for every body rather than for the ones we remembered to redact."""
     errors = getattr(exc, "errors", list)()
+    if any(error.get("loc") == ("query", "cursor") for error in errors):
+        return JSONResponse(status_code=422, content={"detail": "invalid cursor"})
     detail = [{key: value for key, value in error.items() if key not in {"input", "ctx"}} for error in errors]
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(detail)})
 
@@ -161,6 +164,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.state.password_workers = PasswordWorkers(workers=throttling.password_workers, queue=throttling.password_queue)
     app.add_exception_handler(ThrottledError, throttled_handler)
     app.add_exception_handler(NotOwnedError, not_owned_handler)
+    app.add_exception_handler(InvalidCursorError, domain_validation_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(IntegrityError, integrity_handler)
     app.add_exception_handler(AuthorizationError, authorization_handler)

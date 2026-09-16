@@ -5,11 +5,11 @@ from typing import ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKeyConstraint
-from sqlmodel import Field, col
+from sqlalchemy import ForeignKeyConstraint, Index
+from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
+from control_plane.models.common import Identified, NotOwnedError, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.runtime_configuration import bundle_input
@@ -17,11 +17,14 @@ from control_plane.models.runtime_configuration import bundle_input
 
 @audited
 @bundle_input(scope="org", columns=("org_id", "workspace_id", "user_id", "token_hash", "revoked"))
-class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
+class InferenceKey(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
     """org_id stays denormalized beside workspace_id so the compiler collects an org's keys in one
     query and owned_by keeps working; the composite foreign key keeps the pair from disagreeing."""
 
-    __table_args__: ClassVar = (ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),)
+    __table_args__: ClassVar = (
+        ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
+        Index("inference_key_workspace_id_idx", "workspace_id", "id"),
+    )
 
     org_id: UUID = Field(foreign_key="org.id")
     workspace_id: UUID
@@ -57,6 +60,10 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     async def delete_owned_by(cls, user_id: UUID) -> None:
         for key in await cls.find(cls.user_id == user_id):
             await key.delete()
+
+    @classmethod
+    async def page_for_workspace(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        return await cls._page(select(cls).where(cls.workspace_id == workspace_id), request, cursor_context={"workspace_id": workspace_id})
 
 
 class InferenceKeyIn(RequestModel):

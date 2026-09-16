@@ -477,6 +477,13 @@ export interface CliAuthStartOut {
   expires_in_seconds: number;
 }
 
+/**
+ * @minLength 1
+ * @maxLength 512
+ * @pattern ^[A-Za-z0-9_-]+$
+ */
+export type CursorToken = string;
+
 export type DataPlaneInstanceOutStatus = typeof DataPlaneInstanceOutStatus[keyof typeof DataPlaneInstanceOutStatus];
 
 
@@ -598,31 +605,10 @@ export interface DeniedUsageEventV1 {
   credential_scope?: null;
 }
 
-export interface OrgOut {
-  id: string;
-  name: string;
-  slug: string;
-  personal_for: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface InvitationPreviewOut {
-  email: string;
-  org_id: string;
-  org_name: string;
-  org_role: string;
-  workspace_id: string | null;
-  workspace_name: string | null;
-  workspace_role: string | null;
-  expires_at: string;
-}
-
 export interface EnrollOut {
-  orgs: OrgOut[];
   personal_org_id: string | null;
-  pending_invitations: InvitationPreviewOut[];
+  org_count: number;
+  pending_invitation_count: number;
 }
 
 export interface EventsIngestedOut {
@@ -724,6 +710,17 @@ export interface InvitationAcceptedOut {
   org_id: string;
   workspace_id: string | null;
   status: 'accepted';
+}
+
+export interface InvitationPreviewOut {
+  email: string;
+  org_id: string;
+  org_name: string;
+  org_role: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  workspace_role: string | null;
+  expires_at: string;
 }
 
 export interface InvitationTokenIn {
@@ -892,7 +889,7 @@ export interface MeOut {
   email: string;
   name: string;
   instance_role: InstanceRole | null;
-  orgs: string[];
+  org_count: number;
 }
 
 export type OrgRole = typeof OrgRole[keyof typeof OrgRole];
@@ -1169,6 +1166,16 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
+export interface OrgOut {
+  id: string;
+  name: string;
+  slug: string;
+  personal_for: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 export interface UserOut {
   id: string;
   email: string;
@@ -1179,7 +1186,7 @@ export interface UserOut {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  orgs: string[];
+  org_count: number;
 }
 
 export interface OrgServiceAccountCreatedOut {
@@ -1202,6 +1209,10 @@ export interface OrgServiceAccountIn {
 export interface OrgUpdate {
   /** Replacement organization name */
   name?: string | null;
+}
+
+export interface PageInfo {
+  next_cursor: string | null;
 }
 
 export interface PasswordChangeIn {
@@ -1234,6 +1245,24 @@ export interface PlaygroundSessionReadyOut {
   expires_at: string;
   status: 'ready';
 }
+
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+/**
+ * @maxItems 100
+ */
+export type PolicyCollection = PolicyOut[];
 
 export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
 
@@ -1300,19 +1329,6 @@ export interface PolicyCreate {
 export interface PolicyOrder {
   /** Every workspace policy ID, from first to last evaluation priority */
   policy_ids: string[];
-}
-
-export interface PolicyOut {
-  id: string;
-  org_id: string;
-  workspace_id: string;
-  name: string;
-  enabled: boolean;
-  priority: number;
-  definition: PolicyDefinitionOutput;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface PolicyUpdate {
@@ -1767,11 +1783,123 @@ export interface WorkspaceUpdate {
   name?: string | null;
 }
 
+export interface PageManagementKeyOut {
+  /** @maxItems 200 */
+  items: ManagementKeyOut[];
+  page: PageInfo;
+}
+
+export interface PageOrgOut {
+  /** @maxItems 200 */
+  items: OrgOut[];
+  page: PageInfo;
+}
+
+export interface PageInvitationPreviewOut {
+  /** @maxItems 200 */
+  items: InvitationPreviewOut[];
+  page: PageInfo;
+}
+
+export interface PageDataPlaneInstanceOut {
+  /** @maxItems 200 */
+  items: DataPlaneInstanceOut[];
+  page: PageInfo;
+}
+
+export interface PageActivityOut {
+  /** @maxItems 200 */
+  items: ActivityOut[];
+  page: PageInfo;
+}
+
+export interface PageMembershipOut {
+  /** @maxItems 200 */
+  items: MembershipOut[];
+  page: PageInfo;
+}
+
+export interface PageUserOut {
+  /** @maxItems 200 */
+  items: UserOut[];
+  page: PageInfo;
+}
+
+export interface PageOrgInvitationOut {
+  /** @maxItems 200 */
+  items: OrgInvitationOut[];
+  page: PageInfo;
+}
+
+export interface PageWorkspaceOut {
+  /** @maxItems 200 */
+  items: WorkspaceOut[];
+  page: PageInfo;
+}
+
+export interface PageWorkspaceMemberCandidateOut {
+  /** @maxItems 200 */
+  items: WorkspaceMemberCandidateOut[];
+  page: PageInfo;
+}
+
+export interface PageWorkspaceMembershipOut {
+  /** @maxItems 200 */
+  items: WorkspaceMembershipOut[];
+  page: PageInfo;
+}
+
+export interface PageInferenceKeyOut {
+  /** @maxItems 200 */
+  items: InferenceKeyOut[];
+  page: PageInfo;
+}
+
+export interface PageInferenceKeyOwnerOut {
+  /** @maxItems 200 */
+  items: InferenceKeyOwnerOut[];
+  page: PageInfo;
+}
+
+export interface PageProviderCredentialOut {
+  /** @maxItems 200 */
+  items: ProviderCredentialOut[];
+  page: PageInfo;
+}
+
+export interface PageOrgMemberOut {
+  /** @maxItems 200 */
+  items: OrgMemberOut[];
+  page: PageInfo;
+}
+
+export interface PageBundleOut {
+  /** @maxItems 200 */
+  items: BundleOut[];
+  page: PageInfo;
+}
+
+export interface PageUsageEventOut {
+  /** @maxItems 200 */
+  items: UsageEventOut[];
+  page: PageInfo;
+}
+
 export type ListInstanceManagementKeysParams = {
 /**
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 export type ListOrgManagementKeysParams = {
@@ -1779,6 +1907,16 @@ export type ListOrgManagementKeysParams = {
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 export type ListWorkspaceManagementKeysParams = {
@@ -1786,6 +1924,16 @@ export type ListWorkspaceManagementKeysParams = {
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 export type MyPermissionsParams = {
@@ -1806,14 +1954,67 @@ export type CliAuthRequestDetailsParams = {
 code: string;
 };
 
+export type ListEnrollmentOrgsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListEnrollmentInvitationsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
 export type ListDataPlanesParams = {
 /**
  * Include data planes whose most recent heartbeat is outside the online window
  */
 include_offline?: boolean;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 export type ListInstanceActivityParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListUserOrganizationsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1
@@ -1827,25 +2028,192 @@ export type ListUsersParams = {
  * Filter by principal type: true for service accounts and false for human users
  */
 service_account?: boolean | null;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListOrgsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListInvitationsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListWorkspacesParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListPolicyUsersParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListMembersParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListMemberCandidatesParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListInferenceKeysParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListInferenceKeyOwnersParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListInstanceProviderCredentialsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListOrgProviderCredentialsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListWorkspaceProviderCredentialsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListOrgUsersParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListBundlesParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
 };
 
 export type ListOrgEventsParams = {
 /**
- * Return events before this timestamp; use with before_event_id
+ * Opaque continuation token from the previous page
  */
-before?: string | null;
-/**
- * Event ID that disambiguates the before timestamp
- */
-before_event_id?: string | null;
-/**
- * Return events after this timestamp; use with after_event_id
- */
-after?: string | null;
-/**
- * Event ID that disambiguates the after timestamp
- */
-after_event_id?: string | null;
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1
@@ -1856,21 +2224,9 @@ limit?: number;
 
 export type ListWorkspaceEventsParams = {
 /**
- * Return events before this timestamp; use with before_event_id
+ * Opaque continuation token from the previous page
  */
-before?: string | null;
-/**
- * Event ID that disambiguates the before timestamp
- */
-before_event_id?: string | null;
-/**
- * Return events after this timestamp; use with after_event_id
- */
-after?: string | null;
-/**
- * Event ID that disambiguates the after timestamp
- */
-after_event_id?: string | null;
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1
@@ -1880,6 +2236,10 @@ limit?: number;
 };
 
 export type ListActivityParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1

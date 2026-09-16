@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, text
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
@@ -15,7 +15,7 @@ from contract import token_hash
 from control_plane.authz import Scope, ScopeLevel
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, OrgOwned, Tombstonable
+from control_plane.models.common import Identified, KeyColumn, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordCreate, RecordOut, RequestModel
@@ -43,7 +43,7 @@ def _new_token() -> str:
 
 
 @audited
-class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
+class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("org_role IN ('admin', 'member')", name="org_invitation_org_role_valid"),
         CheckConstraint(
@@ -120,6 +120,20 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
+    async def page_for_org(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(
+            cls.org_id == org_id,
+            col(cls.accepted_at).is_(None),
+            col(cls.revoked_at).is_(None),
+        )
+        return await cls._page(
+            statement,
+            request,
+            cursor_context={"org_id": org_id},
+            columns=(KeyColumn(col(cls.email), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
+
+    @classmethod
     async def pending_for_email(cls, email: str, now: datetime, scope: Scope) -> list[tuple[Self, str, str | None]]:
         query = (
             select(cls, Org.name, Workspace.name)
@@ -138,6 +152,60 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         if scope.level is ScopeLevel.workspace:
             query = query.where(cls.workspace_id == scope.workspace_id)
         return [(result[0], result[1], result[2]) for result in (await current_session().execute(query)).all()]
+
+    @classmethod
+    async def page_pending_for_email(cls, email: str, now: datetime, scope: Scope, request: PageQuery) -> PageSlice[Self]:
+        statement = select(cls).where(
+            cls.email == User.normalize_email(email),
+            col(cls.accepted_at).is_(None),
+            col(cls.revoked_at).is_(None),
+            col(cls.expires_at) > now,
+        )
+        if scope.level is not ScopeLevel.instance:
+            statement = statement.where(cls.org_id == scope.org_id)
+        if scope.level is ScopeLevel.workspace:
+            statement = statement.where(cls.workspace_id == scope.workspace_id)
+        return await cls._page(
+            statement,
+            request,
+            cursor_context={
+                "email": User.normalize_email(email),
+                "scope": scope.level.value,
+                "org_id": scope.org_id,
+                "workspace_id": scope.workspace_id,
+            },
+            columns=(KeyColumn(col(cls.created_at), "asc", "datetime"), KeyColumn(col(cls.id), "asc", "uuid")),
+        )
+
+    @classmethod
+    async def count_pending_for_email(cls, email: str, now: datetime, scope: Scope) -> int:
+        statement = (
+            select(func.count())
+            .select_from(cls)
+            .where(
+                cls.email == User.normalize_email(email),
+                col(cls.accepted_at).is_(None),
+                col(cls.revoked_at).is_(None),
+                col(cls.expires_at) > now,
+            )
+        )
+        if scope.level is not ScopeLevel.instance:
+            statement = statement.where(cls.org_id == scope.org_id)
+        if scope.level is ScopeLevel.workspace:
+            statement = statement.where(cls.workspace_id == scope.workspace_id)
+        return (await current_session().execute(statement)).scalar_one()
+
+    @classmethod
+    async def preview_names(cls, invitation_ids: tuple[UUID, ...]) -> dict[UUID, tuple[str, str | None]]:
+        if not invitation_ids:
+            return {}
+        query = (
+            select(cls.id, Org.name, Workspace.name)
+            .join(Org, col(Org.id) == col(cls.org_id))
+            .outerjoin(Workspace, col(Workspace.id) == col(cls.workspace_id))
+            .where(col(cls.id).in_(invitation_ids))
+        )
+        return {result[0]: (result[1], result[2]) for result in (await current_session().execute(query)).all()}
 
     @classmethod
     async def for_token(cls, token: str, *, lock: bool = False) -> Self | None:

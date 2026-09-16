@@ -19,11 +19,19 @@ def _signup(c, email="m@example.com"):
     return resp.json()["data"]
 
 
+def _orgs(c, headers):
+    return c.get("/api/v1/enroll/organizations", headers=headers).json()["data"]
+
+
 def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
         me = _signup(c)
-        assert c.get("/api/v1/enroll", headers=CSRF).json()["data"] == {"orgs": [], "personal_org_id": None, "pending_invitations": []}
+        assert c.get("/api/v1/enroll", headers=CSRF).json()["data"] == {
+            "personal_org_id": None,
+            "org_count": 0,
+            "pending_invitation_count": 0,
+        }
 
         created = c.post("/api/v1/enroll/org", json={"name": "michels"}, headers=CSRF)
         assert created.status_code == 200, created.text
@@ -31,9 +39,10 @@ def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
         assert org["personal_for"] == me["user_id"]
 
         standing = c.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert [o["id"] for o in standing["orgs"]] == [org["id"]]
+        assert [organization["id"] for organization in _orgs(c, CSRF)] == [org["id"]]
         assert standing["personal_org_id"] == org["id"]
-        assert c.get("/api/v1/auth/me", headers=CSRF).json()["data"]["orgs"] == [org["id"]]
+        assert standing["org_count"] == 1
+        assert c.get("/api/v1/auth/me", headers=CSRF).json()["data"]["org_count"] == 1
         assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers=CSRF).status_code == 200
 
 
@@ -44,7 +53,7 @@ def test_personal_org_is_capped_at_one_per_user(tmp_path):
         assert c.post("/api/v1/enroll/org", json={"name": "first"}, headers=CSRF).status_code == 200
         again = c.post("/api/v1/enroll/org", json={"name": "second"}, headers=CSRF)
         assert again.status_code == 409
-        assert len(c.get("/api/v1/enroll", headers=CSRF).json()["data"]["orgs"]) == 1
+        assert c.get("/api/v1/enroll", headers=CSRF).json()["data"]["org_count"] == 1
 
 
 def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path):
@@ -59,7 +68,8 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
         personal = c.post("/api/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
 
         standing = c.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert {o["id"] for o in standing["orgs"]} == {str(granted), personal["id"]}
+        assert {organization["id"] for organization in _orgs(c, CSRF)} == {str(granted), personal["id"]}
+        assert standing["org_count"] == 2
         assert standing["personal_org_id"] == personal["id"]
 
 
@@ -69,7 +79,7 @@ def test_bearer_can_read_enrollment_but_cannot_found_a_personal_org(tmp_path):
     with _client(cp) as c:
         assert c.post("/api/v1/enroll/org", json={"name": "admins-own"}, headers=root).status_code == 401
         standing = c.get("/api/v1/enroll", headers=root).json()["data"]
-        assert standing == {"orgs": [], "personal_org_id": None, "pending_invitations": []}
+        assert standing == {"personal_org_id": None, "org_count": 0, "pending_invitation_count": 0}
 
 
 def test_org_bound_bearer_does_not_disclose_other_memberships(tmp_path):
@@ -84,9 +94,10 @@ def test_org_bound_bearer_does_not_disclose_other_memberships(tmp_path):
 
         bearer = cp.headers_for(first, user.id)
         standing = c.get("/api/v1/enroll", headers=bearer).json()["data"]
-        assert [org["id"] for org in standing["orgs"]] == [str(first)]
+        assert [org["id"] for org in _orgs(c, bearer)] == [str(first)]
+        assert standing["org_count"] == 1
         assert standing["personal_org_id"] is None
-        assert c.get("/api/v1/auth/me", headers=bearer).json()["data"]["orgs"] == [str(first)]
+        assert c.get("/api/v1/auth/me", headers=bearer).json()["data"]["org_count"] == 1
 
 
 def test_admin_provisioned_orgs_are_not_personal(tmp_path):
@@ -109,6 +120,7 @@ def test_personal_slot_survives_membership_removal(tmp_path):
         assert c.delete(f"/api/v1/organizations/{org['id']}/users/{me['user_id']}", headers=org_headers).status_code == 200
 
         standing = c.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert standing["orgs"] == []
+        assert standing["org_count"] == 0
+        assert _orgs(c, CSRF) == []
         assert standing["personal_org_id"] == org["id"]
         assert c.post("/api/v1/enroll/org", json={"name": "second"}, headers=CSRF).status_code == 409

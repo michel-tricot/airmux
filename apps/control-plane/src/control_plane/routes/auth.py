@@ -9,8 +9,8 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contract import PLAYGROUND_COOKIE
-from control_plane.authority import effective_permissions, principal_can_issue_instance_management_key, principal_can_select_org, visible_org_ids
-from control_plane.authz import Actor, InstanceRole, Permission, Scope
+from control_plane.authority import effective_permissions, principal_can_issue_instance_management_key, principal_can_select_org
+from control_plane.authz import Actor, InstanceRole, Permission, Scope, ScopeLevel
 from control_plane.deps import (
     ActingUserDep,
     ActorDep,
@@ -76,7 +76,7 @@ class MeOut(BaseModel):
     email: str
     name: str
     instance_role: InstanceRole | None
-    orgs: list[UUID]
+    org_count: int
 
 
 class MyPermissionsOut(BaseModel):
@@ -108,11 +108,16 @@ def _set_session_cookie(response: Response, token: str, request: Request) -> Non
 
 
 async def _me_out(user: User, actor: Actor | None = None) -> MeOut:
-    memberships = await OrgMembership.find(OrgMembership.user_id == user.id)
-    orgs = sorted(membership.org_id for membership in memberships)
-    if actor is not None:
-        orgs = visible_org_ids(actor, orgs)
-    return MeOut(user_id=user.id, email=user.email, name=user.name, instance_role=user.instance_role, orgs=orgs)
+    visible_org_id = None
+    if actor is not None and actor.grant.scope.level in {ScopeLevel.org, ScopeLevel.workspace}:
+        visible_org_id = actor.grant.scope.org_id
+    return MeOut(
+        user_id=user.id,
+        email=user.email,
+        name=user.name,
+        instance_role=user.instance_role,
+        org_count=await OrgMembership.count_for_user(user.id, visible_org_id),
+    )
 
 
 async def _login_user(email: str, password: str, workers: PasswordWorkers) -> User:
