@@ -1,0 +1,34 @@
+name: Install candidate
+description: Download, verify, and install the sdist-derived candidate with locked dependencies
+inputs:
+  artifact-id:
+    description: Candidate artifact ID
+    required: true
+  python-version:
+    description: Python version
+    default: '3.13'
+  no-cache:
+    description: Disable the uv cache
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      with:
+        artifact-ids: ${{ inputs.artifact-id }}
+        path: candidate
+    - run: |
+        uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file "$RUNNER_TEMP/constraints.txt"
+        cd candidate
+        sha256sum --check SHA256SUMS
+        options=()
+        if [[ "${{ inputs.no-cache }}" == "true" ]]; then options+=(--no-cache); fi
+        uv tool install "${options[@]}" --python "${{ inputs.python-version }}" --constraints "$RUNNER_TEMP/constraints.txt" airmux-*.whl
+        {
+          echo "AIRMUX_INSTALL_BIN=$RUNNER_TEMP/airmux-bin/airmux"
+          echo "AIRMUX_GATEWAY_BIN=$RUNNER_TEMP/airmux-bin/airmux"
+        } >> "$GITHUB_ENV"
+      shell: bash
+      env:
+        UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+        UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin

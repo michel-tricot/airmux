@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import difflib
+import json
+import os
+import subprocess
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+app = typer.Typer()
+root = Path(__file__).resolve().parents[1]
+policy = root / ".github/policy"
+
+
+def gh(repo: str, method: str, endpoint: str, body: object | None = None) -> object:
+    url = f"repos/{repo}" + (f"/{endpoint}" if endpoint else "")
+    command = ["gh", "api", "--method", method, url]
+    result = subprocess.run(
+        command,
+        input=None if body is None else json.dumps(body),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip())
+    return json.loads(result.stdout) if result.stdout else None
+
+
+def gh_optional(repo: str, endpoint: str) -> object | None:
+    try:
+        return gh(repo, "GET", endpoint)
+    except RuntimeError:
+        return None
+
+
+def load(name: str) -> object:
+    return json.loads((policy / name).read_text())
+
+
+def project(actual: object, desired: object) -> object:
+    if isinstance(desired, dict) and isinstance(actual, dict):
+        return {key: project(actual.get(key), value) for key, value in desired.items()}
+    if isinstance(desired, list) and isinstance(actual, list):
+        return [project(value, desired[index]) if index < len(desired) else value for index, value in enumerate(actual)]
+    return actual
+
+
+def rulesets(repo: str) -> dict[str, object]:
+    summaries = gh(repo, "GET", "rulesets")
+    assert isinstance(summaries, list)
+    return {summary["name"]: gh(repo, "GET", f"rulesets/{summary['id']}") for summary in summaries}
+
+
+def current(repo: str) -> dict[str, object]:
+    available = rulesets(repo)
+    environment = gh(repo, "GET", "environments/release")
+    sources = gh(repo, "GET", "environments/release/deployment-branch-policies")
+    actions = gh(repo, "GET", "actions/permissions")
+    assert isinstance(actions, dict)
+    selected = gh(repo, "GET", "actions/permissions/selected-actions") if actions.get("allowed_actions") == "selected" else {}
+    repository = gh(repo, "GET", "")
+    codeql = gh_optional(repo, "code-scanning/default-setup")
+    assert isinstance(environment, dict) and isinstance(sources, dict) and isinstance(actions, dict) and isinstance(selected, dict)
+    assert isinstance(repository, dict)
+    actions["selected_actions_url"] = selected
+    return {
+        "protect-main.json": available.get("Protect Main"),
+        "release-tag-creation.json": available.get("Release Tag Creation"),
+        "release-tag-immutability.json": available.get("Immutable Release Tags"),
+        "release-environment.json": environment,
+        "release-sources.json": sources["branch_policies"],
+        "actions.json": actions,
+        "security.json": {"security_and_analysis": repository.get("security_and_analysis"), "codeql_default_setup": codeql},
+    }
+
+
+def desired() -> dict[str, object]:
+    return {path.name: json.loads(path.read_text()) for path in sorted(policy.glob("*.json"))}
+
+
+@app.command("diff")
+def diff_policy(repo: Annotated[str, typer.Option()] = os.environ.get("GITHUB_REPOSITORY", "michel-tricot/airmux")) -> None:
+    expected = desired()
+    observed = current(repo)
+    changed = False
+    for name, value in expected.items():
+        before = json.dumps(project(observed.get(name), value), indent=2, sort_keys=True).splitlines()
+        after = json.dumps(value, indent=2, sort_keys=True).splitlines()
+        difference = list(difflib.unified_diff(before, after, fromfile=f"live/{name}", tofile=f"desired/{name}", lineterm=""))
+        if difference:
+            changed = True
+            typer.echo("\n".join(difference))
+    if changed:
+        raise typer.Exit(1)
+
+
+def apply_ruleset(repo: str, payload: object, available: dict[str, object]) -> None:
+    assert isinstance(payload, dict)
+    existing = available.get(payload["name"])
+    if isinstance(existing, dict):
+        gh(repo, "PUT", f"rulesets/{existing['id']}", payload)
+    else:
+        gh(repo, "POST", "rulesets", payload)
+
+
+@app.command()
+def apply(repo: Annotated[str, typer.Option()] = os.environ.get("GITHUB_REPOSITORY", "michel-tricot/airmux")) -> None:
+    expected = desired()
+    available = rulesets(repo)
+    for name in ("protect-main.json", "release-tag-creation.json", "release-tag-immutability.json"):
+        apply_ruleset(repo, expected[name], available)
+    gh(repo, "PUT", "environments/release", expected["release-environment.json"])
+    live_sources = gh(repo, "GET", "environments/release/deployment-branch-policies")
+    assert isinstance(live_sources, dict)
+    desired_sources = expected["release-sources.json"]
+    assert isinstance(desired_sources, list)
+    wanted = {(source["name"], source["type"]) for source in desired_sources}
+    for source in live_sources["branch_policies"]:
+        if (source["name"], source["type"]) not in wanted:
+            gh(repo, "DELETE", f"environments/release/deployment-branch-policies/{source['id']}")
+    present = {(source["name"], source["type"]) for source in live_sources["branch_policies"]}
+    for source in desired_sources:
+        if (source["name"], source["type"]) not in present:
+            gh(repo, "POST", "environments/release/deployment-branch-policies", source)
+    actions = expected["actions.json"]
+    assert isinstance(actions, dict)
+    gh(repo, "PUT", "actions/permissions", {key: value for key, value in actions.items() if key != "selected_actions_url"})
+    gh(repo, "PUT", "actions/permissions/selected-actions", actions["selected_actions_url"])
+    security = expected["security.json"]
+    assert isinstance(security, dict)
+    gh(repo, "PATCH", "", {"security_and_analysis": security["security_and_analysis"]})
+    gh(repo, "PATCH", "code-scanning/default-setup", security["codeql_default_setup"])
+    diff_policy(repo)
+
+
+if __name__ == "__main__":
+    app()

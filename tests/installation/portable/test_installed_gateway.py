@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 import yaml
-from conftest import run_cli
+from tests.installation.installation_support import run_cli
 
 
 class Upstream(BaseHTTPRequestHandler):

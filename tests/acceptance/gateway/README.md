@@ -180,15 +180,13 @@ correctness; remote polling/export performance and worker scaling need separate 
 
 ## CI failure display
 
-The eight gateway acceptance levels run in parallel CI jobs with fail-fast disabled. Each job installs
-the release rebuilt from its source distribution and retains its own reports and diagnostics. The
-gateway-results job combines those artifacts and the installation reports into one summary and the
-gateway-integration artifact, including when a level fails.
+The gateway CI job installs the wheel rebuilt from the source distribution and runs this entire directory with xdist.
+Adding or moving a test in the directory changes no workflow YAML. The job retains its report and diagnostics even
+when a test fails.
 
-The installation job's Actions summary shows installation checks, reporting checks, counts by level and expandable assertion/setup-error tracebacks
-with the complete parameterized test name. Its `always()` reporting step runs after a failing test level; later levels
-remain stopped. Up to ten failures also produce error annotations. Full pytest tracebacks stay in the original step
-logs, and the `gateway-integration` artifact retains XML plus sanitized caller, gateway and upstream diagnostics.
+The Actions summary shows counts and expandable assertion/setup-error tracebacks with the complete parameterized test
+name. Its `always()` reporting step runs after a failure. Full pytest tracebacks stay in the original step logs, and
+the gateway artifact retains XML plus sanitized caller, gateway and upstream diagnostics.
 Summary details are bounded to the first 50 failures and 10,000 escaped characters per failure.
 
 `ci_report.py` reads pytest's JUnit output without changing pytest's exit status or test behavior. To preview it locally:

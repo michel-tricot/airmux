@@ -32,8 +32,7 @@
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "ci-correctness", "integration_id": 15368 },
-          { "context": "docker-correctness", "integration_id": 15368 },
+          { "context": "required", "integration_id": 15368 },
           { "context": "dependency-security", "integration_id": 15368 }
         ]
       }

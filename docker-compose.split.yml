@@ -28,6 +28,8 @@ services:
     build:
       context: .
       target: control-plane
+      args:
+        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
@@ -52,6 +54,8 @@ services:
     build:
       context: .
       target: data-plane
+      args:
+        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
     volumes:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro

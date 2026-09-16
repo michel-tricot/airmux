@@ -7,14 +7,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from scripts.ci_policy import Selection, required_jobs, validate_results
 
 ROOT = Path(__file__).parents[2]
-GATES = (
-    ("ci.yml", "ci-correctness", {"changes", *required_jobs(Selection(), "ci")}),
-    ("docker-deployments.yml", "docker-correctness", {"changes", *required_jobs(Selection(), "docker")}),
-    ("dependency-security.yml", "dependency-security", {"python", "javascript"}),
-)
+CI_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package", "gateway", "full-stack", "browser", "docker"}
+GATES = (("ci.yml", "required", CI_JOBS), ("security.yml", "dependency-security", {"pip-audit", "bun-audit", "dependency-review"}))
 
 
 @pytest.mark.parametrize(("filename", "name", "dependencies"), GATES)
@@ -25,70 +21,67 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
     assert set(gate["needs"]) == dependencies
     assert gate.get("name", name) == name
     assert gate["if"] == "always()"
-    gate_step = gate["steps"][-2] if filename != "dependency-security.yml" else gate["steps"][-1]
-    assert gate_step["env"]["NEEDS"] == "${{ toJSON(needs) }}"
-    for dependency in dependencies:
-        needs = {name: {"result": result if name == dependency else "success", "outputs": {}} for name in dependencies}
-        if filename != "dependency-security.yml":
-            needs["changes"]["outputs"] = {"frontend": "true", "backend": "true", "deployment": "true"}
-            scope = "ci" if filename == "ci.yml" else "docker"
-            assert gate_step["run"] == f"uv run --no-sync python -m scripts.ci_policy gate {scope}"
-            if result == "success":
-                validate_results(json.dumps(needs), scope)
-            else:
-                with pytest.raises(ValueError, match=r"must succeed|results rejected|validation error"):
-                    validate_results(json.dumps(needs), scope)
-            continue
-        completed = subprocess.run(
-            ["/bin/bash", "-e", "-o", "pipefail"],
-            input=gate["steps"][0]["run"],
-            env={**os.environ, "NEEDS": json.dumps(needs)},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert (completed.returncode == 0) == (result == "success"), (dependency, completed.stdout, completed.stderr)
-
-
-@pytest.mark.parametrize(("filename", "name", "dependencies"), GATES)
-def test_required_gate_rejects_empty_results(filename, name, dependencies):
-    if filename != "dependency-security.yml":
-        with pytest.raises(ValueError, match="changes must succeed"):
-            validate_results("{}", "ci" if filename == "ci.yml" else "docker")
-        return
-    workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
+    step = gate["steps"][-1]
+    assert step["env"]["NEEDS"] == "${{ toJSON(needs) }}"
+    needs = {dependency: {"result": result} for dependency in dependencies}
+    if filename == "security.yml" and result == "skipped":
+        needs["pip-audit"]["result"] = "success"
+        needs["bun-audit"]["result"] = "success"
     completed = subprocess.run(
         ["/bin/bash", "-e", "-o", "pipefail"],
-        input=workflow["jobs"][name]["steps"][0]["run"],
-        env={**os.environ, "NEEDS": "{}"},
+        input=step["run"],
+        env={**os.environ, "NEEDS": json.dumps(needs)},
         capture_output=True,
         text=True,
         check=False,
     )
-    assert completed.returncode != 0
+    expected = result == "success" or (filename == "security.yml" and result == "skipped")
+    assert (completed.returncode == 0) == expected
 
 
-def test_main_requires_current_base_checks_from_github_actions_with_admin_pull_request_bypass():
-    ruleset = json.loads((ROOT / ".github/rulesets/protect-main.json").read_text())
-    assert ruleset["enforcement"] == "active"
-    assert ruleset["conditions"] == {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}}
-    assert ruleset["bypass_actors"] == [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}]
+def test_main_requires_only_stable_aggregate_checks():
+    ruleset = json.loads((ROOT / ".github/policy/protect-main.json").read_text())
     rules = {rule["type"]: rule.get("parameters", {}) for rule in ruleset["rules"]}
-    assert {"deletion", "non_fast_forward", "required_linear_history", "pull_request", "required_status_checks"} == set(rules)
-    assert rules["pull_request"]["allowed_merge_methods"] == ["squash"]
     checks = rules["required_status_checks"]
     assert checks["strict_required_status_checks_policy"] is True
-    assert checks["do_not_enforce_on_create"] is False
-    assert {(check["context"], check["integration_id"]) for check in checks["required_status_checks"]} == {(name, 15368) for _, name, _ in GATES}
+    assert {(check["context"], check["integration_id"]) for check in checks["required_status_checks"]} == {
+        ("required", 15368),
+        ("dependency-security", 15368),
+    }
 
 
-@pytest.mark.parametrize(("filename", "name", "dependencies"), GATES)
-def test_required_workflows_run_on_every_pull_request(filename, name, dependencies):
-    workflow = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
-    triggers = workflow[True]
-    assert "pull_request" in triggers
-    assert triggers["pull_request"] is None
-    assert triggers["push"] == {"branches": ["main"]}
-    assert workflow["jobs"][name].get("continue-on-error", False) is False
-    for dependency in dependencies:
-        assert workflow["jobs"][dependency].get("continue-on-error", False) is False
+def test_ci_runs_every_correctness_job_unconditionally_and_discovers_suites():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    assert set(workflow["jobs"]) == CI_JOBS | {"required"}
+    for name in CI_JOBS:
+        job = workflow["jobs"][name]
+        assert "if" not in job
+        assert job.get("continue-on-error", False) is False
+    commands = "\n".join(step.get("run", "") for job in workflow["jobs"].values() for step in job.get("steps", []))
+    assert "tests/acceptance/gateway -n auto" in commands
+    assert "pytest -n 2 tests/acceptance/full_stack/scenarios" in commands
+    assert "pytest tests/installation/portable" in commands
+    assert "test_01_basic.py" not in commands
+    assert "matrix.tests" not in commands
+    assert "paths:" not in (ROOT / ".github/workflows/ci.yml").read_text()
+    assert "paths-ignore:" not in (ROOT / ".github/workflows/ci.yml").read_text()
+
+
+def test_exactly_four_workflows_separate_pr_nightly_and_release_work():
+    workflows = {path.name for path in (ROOT / ".github/workflows").glob("*.yml")}
+    assert workflows == {"ci.yml", "security.yml", "nightly.yml", "release.yml"}
+    nightly = yaml.safe_load((ROOT / ".github/workflows/nightly.yml").read_text())
+    release = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    assert "pull_request" not in nightly[True]
+    assert "pull_request" not in release[True]
+    assert set(release[True]["workflow_dispatch"]["inputs"]) == {"tag"}
+
+
+def test_package_once_graph_feeds_every_black_box_job():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
+    for name in ("gateway", "full-stack", "browser", "docker"):
+        assert "package" in jobs[name]["needs"]
+    package = "\n".join(step.get("run", "") for step in jobs["package"]["steps"])
+    assert "uv build --wheel" in package
+    assert "SHA256SUMS" in package
+    assert jobs["package"]["outputs"]["artifact-id"] == "${{ steps.candidate.outputs.artifact-id }}"

@@ -58,6 +58,21 @@ def test_ci_summary_explains_missing_reports(tmp_path: Path):
     assert "No test reports were produced" in summary.read_text()
 
 
+def test_ci_summary_records_commit_runtime_and_candidate_digests(tmp_path: Path, monkeypatch):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    (candidate / "SHA256SUMS").write_text("abc  airmux.whl\n")
+    summary = tmp_path / "summary.md"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "deadbeef")
+    result = CliRunner().invoke(app, [str(tmp_path / "results"), "--summary", str(summary)])
+    assert result.exit_code == 0, result.output
+    contents = summary.read_text()
+    assert "Commit: `deadbeef`" in contents
+    assert "Python: `" in contents
+    assert "abc  airmux.whl" in contents
+
+
 def test_ci_summary_combines_reports_downloaded_from_parallel_jobs(tmp_path: Path):
     for level in ("01-basic", "02-protocols"):
         reports = tmp_path / f"gateway-integration-{level}" / "gateway-results"
