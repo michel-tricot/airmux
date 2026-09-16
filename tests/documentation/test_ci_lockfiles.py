@@ -47,10 +47,12 @@ def test_workspace_preparation_preserves_lock_and_rejects_stale_manifest(name, c
 def test_prepared_workspace_commands_cannot_relock():
     for workflow in WORKFLOWS.values():
         for job in workflow["jobs"].values():
-            for step in job.get("steps", []):
+            steps = job.get("steps", [])
+            expected = "--no-sync" if any(step.get("run", "").startswith("uv sync ") for step in steps) else "--locked"
+            for step in steps:
                 for line in step.get("run", "").splitlines():
                     if line.strip().startswith("uv run "):
-                        assert "--no-sync" in shlex.split(line.rstrip("\\"))
+                        assert expected in shlex.split(line.rstrip("\\"))
     job = WORKFLOWS["ci.yml"]["jobs"]["ci"]
     assert job["env"]["UV_NO_SYNC"] == "true"
     for script in ("export-openapi.sh", "generate-api-models.sh", "export-completion-schemas.sh"):
