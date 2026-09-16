@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import TYPE_CHECKING, Annotated
 
@@ -21,6 +22,16 @@ app = typer.Typer()
 async def complete(request: Request) -> Response:
     body = json.loads(await request.body())
     stream = bool(body.get("stream"))
+    expected = {
+        "model": "upstream-model-a",
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": 50,
+        **({"stream": True, "stream_options": {"include_usage": True}} if stream else {}),
+    }
+    if body != expected:
+        return Response("Unmatched benchmark payload", status_code=400)
+    if request.app.state.delay_ms:
+        await asyncio.sleep(request.app.state.delay_ms / 1000)
     return Response(STREAM_BODY if stream else BODY, media_type="text/event-stream" if stream else "application/json")
 
 
@@ -29,9 +40,10 @@ async def ready(request: Request) -> Response:
 
 
 @app.command()
-def serve(port: Annotated[int, typer.Option(min=1, max=65535)]) -> None:
+def serve(port: Annotated[int, typer.Option(min=1, max=65535)], delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0) -> None:
     upstream = Starlette(routes=[Route("/chat/completions", complete, methods=["POST"]), Route("/readyz", ready)])
-    uvicorn.run(upstream, host="127.0.0.1", port=port, log_level="warning", access_log=False)
+    upstream.state.delay_ms = delay_ms
+    uvicorn.run(upstream, host="127.0.0.1", port=port, log_level="warning", access_log=False, timeout_keep_alive=3600)
 
 
 if __name__ == "__main__":

@@ -211,6 +211,8 @@ class _StubHandler(BaseHTTPRequestHandler):
 
 
 class _StubServer(ThreadingHTTPServer):
+    request_queue_size = 128
+
     def __init__(self, address: tuple[str, int], log_path: Path) -> None:
         self.log = log_path.open("a", encoding="utf-8")
         super().__init__(address, _StubHandler)

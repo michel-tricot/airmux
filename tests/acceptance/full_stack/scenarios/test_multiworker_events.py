@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
+import socket
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
+from http.client import HTTPResponse
 from typing import TYPE_CHECKING
 
 import httpx
-from stack_harness import _poll
+from stack_harness import STUB_API_KEY, _poll, _StubServer
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from stack_harness import Stack
 
 WORKERS = 4
@@ -41,3 +47,24 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     assert {event["status"] for event in events} == {"ok"}
     assert len({event["event_id"] for event in events}) == expected
     assert len({event["request_id"] for event in events}) == expected
+
+
+def test_upstream_accepts_a_full_concurrent_connection_burst(tmp_path: Path) -> None:
+    body = json.dumps({"model": "echo", "messages": [{"role": "user", "content": "hi"}]}).encode()
+    request = (
+        f"POST /chat/completions HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {STUB_API_KEY}\r\n"
+        f"Content-Length: {len(body)}\r\nContent-Type: application/json\r\n\r\n"
+    ).encode() + body
+    with _StubServer(("127.0.0.1", 0), tmp_path / "upstream.log") as upstream, ExitStack() as connections:
+        clients = [connections.enter_context(socket.create_connection(("127.0.0.1", upstream.server_port), timeout=1)) for _ in range(CONCURRENCY)]
+        upstream.start()
+        try:
+            for client in clients:
+                client.sendall(request)
+                with HTTPResponse(client) as response:
+                    response.begin()
+                    assert response.status == 200
+                    assert json.loads(response.read())["choices"][0]["message"]["content"] == "ok"
+            assert upstream.request_count == CONCURRENCY
+        finally:
+            upstream.shutdown()
