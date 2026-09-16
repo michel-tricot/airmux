@@ -45,7 +45,7 @@ jobs:
         with:
           enable-cache: false
           python-version: '3.13'
-      - run: uv sync --all-packages --frozen
+      - run: uv sync --all-packages --locked
       - name: Download release distributions
         if: inputs.distribution-artifact-id != ''
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -68,10 +68,10 @@ jobs:
           AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
           AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
           DOCKER_HOST: unix:///no-docker.sock
-        run: uv run pytest tests/acceptance/live_providers --junitxml=live-provider-results/live-providers.xml
+        run: uv run --no-sync pytest tests/acceptance/live_providers --junitxml=live-provider-results/live-providers.xml
       - name: Summarize live-provider results
         if: always()
-        run: uv run python tests/acceptance/gateway/ci_report.py live-provider-results --summary "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-sync python tests/acceptance/gateway/ci_report.py live-provider-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload live-provider results and diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -81,3 +81,6 @@ jobs:
             live-provider-results
             ${{ runner.temp }}/gateway-artifacts
           retention-days: 7
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock

@@ -33,8 +33,11 @@ jobs:
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
         with:
           python-version: '3.13'
-      - run: uv export --frozen --all-packages --all-groups --no-emit-workspace --no-hashes --output-file requirements-audit.txt
+      - run: uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file requirements-audit.txt
       - run: uvx pip-audit==2.10.0 --strict --disable-pip --no-deps --requirement requirements-audit.txt
+      - name: Verify workspace lockfile is unchanged
+        if: always()
+        run: git diff --exit-code -- uv.lock
 
   javascript:
     runs-on: ubuntu-latest
