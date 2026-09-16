@@ -73,7 +73,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-python
-      - run: uv run --no-sync pytest lib/contract/tests apps/control-plane/tests/unit apps/data-plane/tests apps/cli/tests model-audit/tests -n auto --junitxml=unit-results/unit.xml
+      - run: uv run --no-sync pytest lib/contract/tests lib/runtime/tests apps/control-plane/tests/unit apps/data-plane/tests apps/cli/tests model-audit/tests -n auto --junitxml=unit-results/unit.xml
       - name: Summarize unit results
         if: always()
         continue-on-error: true

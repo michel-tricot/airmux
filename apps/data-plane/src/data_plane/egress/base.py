@@ -13,7 +13,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from uuid import UUID
 
-    from contract import CredentialScope, ModelEntry, ProviderEntry, Secret
+    from airmux_runtime.secrets import Secret
+    from contract import CredentialScope, ModelEntry, ProviderEntry
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
 

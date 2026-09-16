@@ -8,15 +8,13 @@ import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane
 from starlette.testclient import TestClient
 
-from contract import (
-    Catalog,
+from airmux_runtime.secrets import (
     FileStoreConfig,
     MemoryStoreConfig,
     Secret,
-    SecretStore,
     SecretStoreUnavailableError,
-    uuid7,
 )
+from contract import Catalog, uuid7
 from data_plane.app import create_app
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
 from data_plane.cache import CachedBundles, write_cached_bundles
@@ -143,7 +141,7 @@ async def test_an_unavailable_store_raises_and_is_not_cached():
     """Infrastructure being down must not be remembered as a missing key, or a store that recovers
     stays invisible for the length of the negative TTL."""
 
-    class Broken(SecretStore):
+    class Broken:
         kind = "broken"
 
         def __init__(self):
@@ -192,8 +190,8 @@ def _byok_app(tmp_path, credentials):
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
-    store_config = FileStoreConfig(root=tmp_path / "secrets")
-    control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
+    store_config = FileStoreConfig(path=tmp_path / "secrets")
+    control_plane = ControlPlaneLink(url="http://cp.test", management_key="dp-token")
     config = Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,
@@ -229,9 +227,9 @@ def test_one_data_plane_serves_two_org_bundles(tmp_path):
             ],
         ),
     )
-    store_config = FileStoreConfig(root=tmp_path / "secrets")
+    store_config = FileStoreConfig(path=tmp_path / "secrets")
     asyncio.run(store_config.build().put(platform.ref, Secret("sk-platform")))
-    control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
+    control_plane = ControlPlaneLink(url="http://cp.test", management_key="dp-token")
     config = Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         secrets=store_config,

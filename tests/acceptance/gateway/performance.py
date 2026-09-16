@@ -58,7 +58,7 @@ class PerformanceGateway(Gateway):
             "kind": "sqlite",
             "cache_dir": "usage",
             "flush_interval_s": 3600,
-            "control_plane": {"url": "http://127.0.0.1:1", "token": "benchmark-export-token"},
+            "control_plane": {"url": "http://127.0.0.1:1", "management_key": "benchmark-export-token"},
         }
         self.config_path.write_text(yaml.safe_dump(configuration), encoding="utf-8")
 

@@ -12,7 +12,8 @@ from pg import db_url_for
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from contract import BundleV1, EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
+from airmux_runtime.secrets import EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError
+from contract import BundleV1, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.db import current_session
 from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor

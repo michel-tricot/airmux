@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast
 
 from pydantic import SecretStr  # noqa: TC002 pydantic resolves the config field type at runtime
 
-from contract.secrets.base import (
+from airmux_runtime.secrets.base import (
     Secret,
     SecretNotFoundError,
     SecretRef,
-    SecretStore,
     SecretStoreConfig,
     SecretStoreUnavailableError,
+    _SecretAdapter,
     path_segments,
 )
 
@@ -35,21 +35,26 @@ class _DatabaseUnavailableError(RuntimeError):
     pass
 
 
+def _require_driver() -> None:
+    try:
+        import asyncpg  # noqa: F401, PLC0415 optional driver loads only when this backend is selected
+    except ModuleNotFoundError as error:
+        if error.name != "asyncpg":
+            raise
+        message = "the insecure_database secret backend requires the 'airmux-runtime[insecure-database]' extra"
+        raise RuntimeError(message) from None
+
+
 class InsecureDatabaseStoreConfig(SecretStoreConfig):
     kind: Literal["insecure_database"] = "insecure_database"
     url: SecretStr
 
     def build(self) -> InsecureDatabaseSecretStore:
+        _require_driver()
         return InsecureDatabaseSecretStore(url=self.url.get_secret_value())
 
 
-class InsecureDatabaseSecretStore(SecretStore):
-    """A PostgreSQL store that persists secret values as plaintext.
-
-    This backend is intentionally named insecure because database readers, backups, replicas, and
-    transaction logs can all expose its values. Use it only where that tradeoff is understood.
-    """
-
+class InsecureDatabaseSecretStore(_SecretAdapter):
     kind: ClassVar[str] = "insecure_database"
 
     def __init__(self, url: str) -> None:
@@ -68,13 +73,12 @@ class InsecureDatabaseSecretStore(SecretStore):
             raise SecretNotFoundError(ref)
         return Secret(value)
 
-    async def put(self, ref: SecretRef, secret: Secret) -> Secret:
+    async def put(self, ref: SecretRef, secret: Secret) -> None:
         try:
             async with self._connection() as connection:
                 await connection.execute(UPSERT_VALUE, self.address_of(ref), secret.reveal())
         except _DatabaseUnavailableError as error:
             raise SecretStoreUnavailableError(ref, "database operation failed") from error
-        return secret
 
     async def delete(self, ref: SecretRef) -> None:
         try:
@@ -104,7 +108,8 @@ class InsecureDatabaseSecretStore(SecretStore):
 
     @asynccontextmanager
     async def _connection(self) -> AsyncIterator[asyncpg.Connection]:
-        import asyncpg  # noqa: PLC0415 driver loads only when this backend performs an operation
+        _require_driver()
+        import asyncpg  # noqa: PLC0415 optional driver loads only when this backend performs an operation
 
         try:
             pool = await self._pool_or_create()
@@ -114,7 +119,8 @@ class InsecureDatabaseSecretStore(SecretStore):
             raise _DatabaseUnavailableError from error
 
     async def _pool_or_create(self) -> asyncpg.Pool:
-        import asyncpg  # noqa: PLC0415 driver loads only when this backend performs an operation
+        _require_driver()
+        import asyncpg  # noqa: PLC0415 optional driver loads only when this backend performs an operation
 
         pool = self._pool
         if pool is not None:

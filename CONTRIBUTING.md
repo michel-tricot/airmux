@@ -46,7 +46,8 @@ Continue with the [development guide](docs/development.mdx) to initialize the da
 5. Run focused checks while iterating, then the relevant full suites before opening a pull request
 
 Do not add compatibility behavior for a contract that has not been deployed. Keep the control plane and data plane
-independent, with `contract` as their only shared import.
+independent. Shared imports are limited to pure interchange values in `contract` and process infrastructure in
+`airmux_runtime`.
 
 ## Generated contracts
 

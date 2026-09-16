@@ -8,8 +8,9 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
+from airmux_runtime.secrets import EnvStoreConfig, MemoryStoreConfig
 from cli.control_plane import control_plane_app as cli_app
-from contract import EnvStoreConfig, MemoryStoreConfig, token_hash
+from contract import token_hash
 from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
     ACME_MEMBER_INVITE_TOKEN,

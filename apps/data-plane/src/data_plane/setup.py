@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from contract import EnvStoreConfig, uuid7
-from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
-from contract.taxonomy import TaxonomySpec, parse_taxonomy
+from airmux_runtime.config import load_yaml
+from airmux_runtime.files import GENERATED_STATE_GITIGNORE, write_new_configuration
+from airmux_runtime.secrets import EnvStoreConfig
+from contract import uuid7
+from contract.taxonomy import TaxonomySpec
 from data_plane.bundle.config import LocalBundleConfig
 from data_plane.bundle.holder import BundleSet
 from data_plane.bundle.local import LocalBundleSpec, LocalKey, compile_local, load_local
@@ -42,7 +44,7 @@ def initialize(directory: Path, taxonomy_path: Path | None = None) -> None:
         taxonomy_reference = "taxonomy.yml"
         taxonomy_file = {taxonomy_reference: taxonomy_text}
     else:
-        taxonomy = parse_taxonomy(taxonomy_path)
+        taxonomy = TaxonomySpec.model_validate(load_yaml(taxonomy_path))
         taxonomy_reference = os.path.relpath(taxonomy_path.resolve(), directory.resolve())
         taxonomy_file = {}
     key = f"sk-inf-{secrets.token_urlsafe(32)}"

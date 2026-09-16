@@ -5,10 +5,56 @@ root_packages =
     control_plane
     data_plane
     model_audit
+    airmux_runtime
 include_external_packages = True
 
+[importlinter:contract:contract-is-pure]
+name = contract imports no runtime infrastructure or planes
+type = forbidden
+source_modules =
+    contract
+forbidden_modules =
+    airmux_runtime
+    control_plane
+    data_plane
+    asyncpg
+    sqlalchemy
+    sqlmodel
+    psycopg
+    alembic
+    fastapi
+    dotenv
+    yaml
+    anyio
+    pathlib
+    httpx
+    requests
+
+[importlinter:contract:runtime-database-isolation]
+name = shared runtime exposes only the insecure database adapter to database machinery
+type = forbidden
+source_modules =
+    airmux_runtime
+forbidden_modules =
+    asyncpg
+    sqlalchemy
+    sqlmodel
+    psycopg
+    alembic
+ignore_imports =
+    airmux_runtime.secrets.insecure_database -> asyncpg
+
+[importlinter:contract:runtime-is-shared-infrastructure]
+name = shared runtime imports neither plane
+type = forbidden
+source_modules =
+    airmux_runtime
+forbidden_modules =
+    control_plane
+    data_plane
+
 [importlinter:contract:data-plane-isolation]
-name = data plane imports no control plane or database machinery except the insecure vault
+name = data plane imports no control plane or database machinery except the optional runtime adapter
 type = forbidden
 source_modules =
     data_plane
@@ -21,7 +67,7 @@ forbidden_modules =
     alembic
     fastapi
 ignore_imports =
-    contract.secrets.insecure_database -> asyncpg
+    airmux_runtime.secrets.insecure_database -> asyncpg
 
 [importlinter:contract:model-audit-is-black-box]
 name = model audit reaches the gateway through public HTTP only
@@ -36,6 +82,7 @@ forbidden_modules =
 name = runtimes and contract do not import the command interface
 type = forbidden
 source_modules =
+    airmux_runtime
     contract
     control_plane
     data_plane

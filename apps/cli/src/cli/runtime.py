@@ -9,8 +9,6 @@ import typer
 import yaml
 from pydantic import ValidationError
 
-from contract import UnknownVarError
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -35,7 +33,7 @@ def runtime_command[**P](command: Callable[P, None]) -> Callable[P, None]:
             detail = f" at line {location.line + 1}" if location else ""
             typer.echo(f"Error: Invalid YAML{detail}; check the configuration file", err=True)
             raise typer.Exit(1) from None
-        except (OSError, TypeError, ValueError, UnknownVarError) as error:
+        except (OSError, TypeError, ValueError) as error:
             typer.echo(f"Error: {error}", err=True)
             raise typer.Exit(1) from None
 

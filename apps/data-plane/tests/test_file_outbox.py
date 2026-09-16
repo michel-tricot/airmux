@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from airmux_runtime.config import ConfigContext
 from contract import RoutedUsageEventV1, UsageEvent, uuid7
-from contract.config import ConfigContext
 from data_plane.config import Config, FileOutboxConfig
 from data_plane.outbox import FileOutbox, build_outbox
 

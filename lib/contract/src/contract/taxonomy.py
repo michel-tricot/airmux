@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from contract.model_types import Capability, Modality, ParameterSupport
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
     from typing import Self
 
 
@@ -99,7 +97,3 @@ def _duplicates(values: Iterable[str]) -> list[str]:
             duplicates.add(value)
         seen.add(value)
     return sorted(duplicates)
-
-
-def parse_taxonomy(path: Path) -> TaxonomySpec:
-    return TaxonomySpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
