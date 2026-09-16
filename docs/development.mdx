@@ -73,10 +73,10 @@ PR CI runs the levels in order against the rebuilt, installed public wheel and u
 configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
 For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/gateway/README.md).
 
-CI builds the candidate distributions once on Linux, validates their metadata, rebuilds the wheel from the source
-distribution, and reuses that candidate across installation and gateway checks. Portable smoke jobs install it on
-Python 3.13 and 3.14 on Linux and macOS outside the source checkout. Postgres, Docker, full-stack, and gateway
-acceptance checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/CI.md)
+CI builds the candidate distributions once on Linux and validates their metadata. It rebuilds the wheel from the source
+distribution, then reuses that candidate for installation and gateway checks. Portable smoke jobs install it outside
+the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack, and gateway acceptance
+checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/CI.md)
 for current job selection, cancellation behavior, and measured timings.
 
 To run the portable checks locally without installing the workspace:
@@ -111,9 +111,9 @@ that invalid expressions, malformed YAML, and shell mistakes fail. Dependabot ma
 
 Every workflow defaults to `contents: read`, checkouts discard Git credentials, and only the publishing job gets
 `id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
-in the release environment, outside PR CI. The CI and Docker correctness gates validate the change-policy decision and
-the expected job results before they report success; dependency security requires both audits. Timing evidence belongs
-in `notes/CI.md`, not this setup guide.
+in the release environment, outside PR CI. The CI and Docker correctness gates check the change-policy decision and
+expected job results before reporting success. Dependency security passes only when both audits pass. Timing evidence
+belongs in `notes/CI.md`, not this setup guide.
 
 ## Python checks
 
