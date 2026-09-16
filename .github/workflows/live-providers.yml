@@ -14,7 +14,7 @@ on:
       ref:
         type: string
         required: true
-      distribution-artifact:
+      distribution-artifact-id:
         type: string
         required: true
 
@@ -47,13 +47,14 @@ jobs:
           python-version: '3.13'
       - run: uv sync --all-packages --locked
       - name: Download release distributions
-        if: inputs.distribution-artifact != ''
+        if: inputs.distribution-artifact-id != ''
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: ${{ inputs.distribution-artifact }}
+          artifact-ids: ${{ inputs.distribution-artifact-id }}
+          merge-multiple: true
           path: dist
       - name: Build distributions for scheduled or manual checks
-        if: inputs.distribution-artifact == ''
+        if: inputs.distribution-artifact-id == ''
         run: ./scripts/build-python-distribution.sh
       - name: Install candidate wheel
         env:
