@@ -152,6 +152,12 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
     return UUID(response.json()["data"]["id"])
 
 
+def inference_key_body(client, headers: dict[str, str], label: str) -> dict[str, str]:
+    response = client.get("/api/v1/auth/me", headers=headers)
+    assert response.status_code == 200, response.text
+    return {"label": label, "user_id": response.json()["data"]["user_id"]}
+
+
 def run_in_db(tmp_path, action):
     """Run one fat-model call against the test database: tests are non-request code, so they open their own transaction."""
 

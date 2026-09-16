@@ -16,7 +16,7 @@ from data_plane.canonical import (
 from data_plane.formats.openai_responses import input_of, messages_of
 from data_plane.ingress import REGISTRY
 from data_plane.ingress.anthropic import AnthropicIngress
-from data_plane.ingress.openai_native import OpenAINativeIngress
+from data_plane.ingress.openai_chat_completions import OpenAIChatCompletionsIngress
 from data_plane.ingress.openai_responses import OpenAIResponsesIngress
 from data_plane.profiles import compile_profile
 from data_plane.reconcile import reconcile
@@ -25,7 +25,8 @@ from data_plane.reconcile import reconcile
 @pytest.mark.parametrize("dialect", REGISTRY)
 def test_document_content_survives_ingress(dialect):
     field = "input" if dialect == "openai_responses" else "messages"
-    request, adjustments = REGISTRY[dialect].parse({"model": "gpt-test", field: [{"role": "user", "content": [DOCUMENT_PARTS[dialect]]}]})
+    limit = {"max_tokens": 8} if dialect == "anthropic" else {}
+    request, adjustments = REGISTRY[dialect].parse({"model": "gpt-test", field: [{"role": "user", "content": [DOCUMENT_PARTS[dialect]]}], **limit})
     assert request.messages[0].content == [CanonicalDocumentPart(media_type="application/pdf", data="JVBERi0=")]
     assert adjustments == []
 
@@ -90,13 +91,13 @@ def test_openai_parse_translates_the_openai_shapes_and_keeps_the_rest():
         "frequency_penalty": 0.5,
         "stream_options": {"include_usage": True},
     }
-    req, _ = OpenAINativeIngress().parse(body)
+    req, _ = OpenAIChatCompletionsIngress().parse(body)
     roles = [(m.role, [p.type for p in m.content]) for m in req.messages]
     assert roles == [("user", ["text"]), ("assistant", ["tool_call"]), ("user", ["tool_result"])]
     assert req.tools is not None
     assert (req.tools[0].name, req.tools[0].description) == ("w", "weather")
     assert getattr(req.tool_choice, "name", None) == "w"
-    assert req.max_tokens == 64
+    assert req.max_output_tokens == 64
     assert req.extra == {"frequency_penalty": 0.5}  # stream_options consumed silently, the rest kept for the reconcile step
 
 
@@ -110,7 +111,7 @@ def test_openai_the_aligned_path_is_a_fixpoint():
         "temperature": 0.7,
         "frequency_penalty": 0.5,
     }
-    ingress = OpenAINativeIngress()
+    ingress = OpenAIChatCompletionsIngress()
     parsed, _ = ingress.parse(body)
     first, _ = reconcile(parsed, MODEL, compile_profile(PROVIDER))
     upstream = make_adapter().transform_request(first, MODEL)
@@ -121,13 +122,13 @@ def test_openai_the_aligned_path_is_a_fixpoint():
 def test_openai_an_unknown_tool_choice_variant_is_never_silently_none():
     """A consumed slot with an unrecognized value is a translation loss the caller hears about:
     the typed tool_choice stays honestly unset and the parse reports the drop."""
-    req, carried = OpenAINativeIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
+    req, carried = OpenAIChatCompletionsIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
     assert req.tool_choice is None
     assert [(a.param, a.action) for a in carried] == [("tool_choice", "dropped")]
 
 
 def test_openai_chat_reasoning_extension_preserves_summary_configuration():
-    request, _ = OpenAINativeIngress().parse(
+    request, _ = OpenAIChatCompletionsIngress().parse(
         {
             **TEXT_BODY,
             "reasoning_effort": "low",
@@ -152,7 +153,7 @@ def test_anthropic_parse_hoists_system_and_keeps_the_rest_as_extras():
     }
     req, adjustments = AnthropicIngress().parse(body)
     assert [m.role for m in req.messages] == ["system", "user"]
-    assert req.max_tokens == 64
+    assert req.max_output_tokens == 64
     assert req.stop == ["END"]
     assert req.reasoning is not None
     assert req.reasoning.type == "enabled"

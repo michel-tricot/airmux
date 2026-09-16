@@ -34,7 +34,7 @@ class InferenceContext:
     start: RequestStart
 
 
-type InferenceEndpoint = Callable[[Request, InferenceContext], Awaitable[Response]]
+type InferenceEndpoint = Callable[[Request, InferenceContext, IngressAdapter], Awaitable[Response]]
 
 
 def render_rejection(ingress: IngressAdapter, error: RequestRejectedError) -> Response:
@@ -47,7 +47,7 @@ class InferenceRoute(Route):
             try:
                 key, snapshot = authenticate_request(request, runtime_of(request).holder)
                 context = InferenceContext(key=key, snapshot=snapshot, start=cast("RequestStart", request.state.request_start))
-                return await endpoint(request, context)
+                return await endpoint(request, context, ingress)
             except RequestRejectedError as error:
                 return render_rejection(ingress, error)
 

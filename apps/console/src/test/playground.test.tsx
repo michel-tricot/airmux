@@ -26,6 +26,7 @@ describe('playground', () => {
               bundle_id: '01941f29-7c00-7000-8000-000000000004',
               input_tokens: 12,
               output_tokens: 4,
+              max_output_tokens: 128,
               cost_usd: 0.001,
               cost_input_usd: 0.0005,
               cost_output_usd: 0.0005,
@@ -92,9 +93,11 @@ describe('playground', () => {
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
           [
-            'data: {"id":"reply","delta":{"type":"text","text":"hello from the gateway"}}',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"hello from the gateway"}}]}',
             '',
-            'data: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":12,"output_tokens":4,"cache_read_tokens":2,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+            '',
+            'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":12,"completion_tokens":4,"total_tokens":16,"prompt_tokens_details":{"cached_tokens":2}},"gateway":{"adjustments":[]}}',
             '',
             'data: [DONE]',
             '',
@@ -138,7 +141,7 @@ describe('playground', () => {
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRMUX_INFERENCE_KEY');
     expect(curlDialog).not.toHaveTextContent('x-airmux-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
-    expect(curlDialog).toHaveTextContent('"text": "hello"');
+    expect(curlDialog).toHaveTextContent('"content": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
     expect(curlDialog).toHaveTextContent('"stream": true');
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
@@ -149,9 +152,9 @@ describe('playground', () => {
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
-    expect(dialect).toBe('canonical');
+    expect(dialect).toBe('');
     expect(requestedWith).toBe('fetch');
-    expect(requestBody.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'hello' }] }]);
+    expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
 
     const workspaceNavigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
     const workspaceOverview = within(workspaceNavigation)
@@ -198,7 +201,7 @@ describe('playground', () => {
       ),
       http.post('/inf/v1/chat/completions', () =>
         HttpResponse.text(
-          'data: {"id":"reply","finish_reason":"content_filter","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{},"finish_reason":"content_filter"}]}\n\ndata: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"prompt_tokens_details":{"cached_tokens":0}},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
           {
             headers: { 'content-type': 'text/event-stream' },
           },
@@ -316,7 +319,7 @@ describe('playground', () => {
       http.post('/inf/v1/chat/completions', async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
-          'data: {"id":"reply","delta":{"type":"text","text":"ok"}}\n\ndata: {"id":"reply","finish_reason":"stop","usage":{"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_write_tokens":0,"estimated":false},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
+          'data: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: {"id":"reply","object":"chat.completion.chunk","created":1,"model":"model-1","choices":[],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0,"prompt_tokens_details":{"cached_tokens":0}},"gateway":{"adjustments":[]}}\n\ndata: [DONE]\n\n',
           {
             headers: { 'content-type': 'text/event-stream' },
           },

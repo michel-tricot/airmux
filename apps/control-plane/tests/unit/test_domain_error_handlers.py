@@ -8,15 +8,12 @@ from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.org import OrgSlugTakenError
 from control_plane.models.org_membership import LastOrgOwnerError
 from control_plane.models.policy import InvalidPolicyError
-from control_plane.models.rule import InvalidRuleError, RuleInUseError
 from control_plane.models.user import LastInstanceOwnerError, ManagedServiceAccountInstanceRoleError
 
 
 async def test_stable_domain_errors_have_central_http_mappings():
     cases = (
         ("invalid-policy", InvalidPolicyError("Invalid policy"), 422, "Invalid policy"),
-        ("invalid-rule", InvalidRuleError("Invalid rule"), 422, "Invalid rule"),
-        ("rule-in-use", RuleInUseError("Rule is in use"), 409, "Rule is in use"),
         ("org-slug-taken", OrgSlugTakenError(), 409, "slug is already taken"),
         ("last-org-owner", LastOrgOwnerError(), 409, "An organization must keep at least one owner"),
         ("last-instance-owner", LastInstanceOwnerError(), 409, "An instance must keep at least one owner"),

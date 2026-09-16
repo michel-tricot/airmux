@@ -23,7 +23,7 @@ from pydantic import ValidationError
 from starlette.testclient import TestClient
 
 from contract import Catalog, uuid7
-from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition, RuleEntry
+from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
 from data_plane.app import create_app
 from data_plane.bundle.holder import BundleSet
 from data_plane.cache import CachedBundles, write_cached_bundles
@@ -125,21 +125,16 @@ def test_gateway_model_ids_can_contain_slashes_and_do_not_expose_upstream_detail
 
 def discovery_bundle(action, *, match=None, target=None, workspace=WORKSPACE, credentials=(PLATFORM_CREDENTIAL,)):
     token, key = make_key()
-    rule = RuleEntry(
-        id=uuid7(),
-        workspace_id=workspace,
-        name="discovery",
-        definition=RuleDefinition.model_validate({"match": match or {"kind": "all_requests"}, "action": action}),
-    )
+    rule = RuleDefinition.model_validate({"match": match or {"kind": "all_requests"}, "action": action})
     policy = PolicyEntry(
         id=uuid7(),
         workspace_id=workspace,
         name="discovery",
         priority=100,
-        definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rule_ids": [rule.id]}),
+        definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rules": [rule]}),
     )
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)))
-    return token, bundle.model_copy(update={"rules": (rule,), "policies": (policy,)})
+    return token, bundle.model_copy(update={"policies": (policy,)})
 
 
 @respx.mock

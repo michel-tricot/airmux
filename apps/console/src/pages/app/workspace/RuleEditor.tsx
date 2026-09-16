@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react';
 import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
+import type { RuleDefinitionInput, RuleDefinitionOutput, TaxonomyOut } from '@workspace/api-client-react';
 import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
-import { FormDialog } from '@/components/shared/form-dialog';
 import { SearchPicker } from '@/components/shared/search-picker';
 import { Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
 import { ModelBadges } from '@/features/rules/presentation';
-import { ruleType, type RuleKind } from '@/features/rules/types';
+import type { RuleKind } from '@/features/rules/types';
 const failureOptions = [
   { value: 'rate_limited', label: 'Rate limited (429)' },
   { value: 'upstream_unavailable', label: 'Upstream unavailable (5xx or connection failure)' },
@@ -26,7 +25,7 @@ const credentialScopeOptions = [
   { value: 'platform', label: 'Platform credentials' },
 ];
 
-type TextFieldName = 'name' | 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
+type TextFieldName = 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
 
 function TextField({
   form,
@@ -85,7 +84,6 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
   }));
   return (
     <>
-      <TextField form={form} name="name" label="Rule name" />
       <FormField
         control={form.control}
         name="match"
@@ -308,12 +306,12 @@ export function RuleFormContent({
   onBack,
   intro,
 }: {
-  rule: RuleOut | null;
+  rule: RuleDefinitionInput | RuleDefinitionOutput | null;
   kind: RuleKind;
   catalog: TaxonomyOut;
   pending: boolean;
   submitLabel: string;
-  onSubmit: (payload: RuleCreate) => Promise<unknown>;
+  onSubmit: (payload: RuleDefinitionInput) => Promise<unknown>;
   onBack: () => void;
   intro?: ReactNode;
 }) {
@@ -344,40 +342,5 @@ export function RuleFormContent({
         </div>
       </form>
     </Form>
-  );
-}
-
-export function RuleEditor({
-  rule,
-  kind,
-  open,
-  onOpenChange,
-  onSubmit,
-  pending,
-  catalog,
-}: {
-  rule: RuleOut | null;
-  kind: RuleKind;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: RuleCreate) => Promise<unknown>;
-  pending: boolean;
-  catalog: TaxonomyOut;
-}) {
-  const type = ruleType(kind);
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={`${rule ? 'Edit' : 'Create'} ${type.formName}`}
-      description={`${type.description} Rules are reusable across policies.`}
-      schema={ruleFormSchema}
-      defaultValues={rule ? ruleForm(rule) : { ...ruleDefaults, kind }}
-      onSubmit={(values) => onSubmit(rulePayload(values))}
-      submitLabel="Save rule"
-      pending={pending}
-    >
-      {(form) => <RuleFields form={form} catalog={catalog} kind={kind} />}
-    </FormDialog>
   );
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PolicyCreate, PolicyOut } from '@workspace/api-client-react';
+import type { PolicyCreate, PolicyOut, RuleDefinitionInput } from '@workspace/api-client-react';
 
 export const policyFormSchema = z
   .object({
@@ -8,12 +8,16 @@ export const policyFormSchema = z
     targetKind: z.enum(['workspace', 'selected_users', 'selected_keys']),
     userIds: z.array(z.string().uuid()).max(1000),
     keyIds: z.array(z.string().min(1).max(255)).max(1000),
-    ruleIds: z.array(z.string().uuid()).min(1).max(100),
+    rules: z.array(z.custom<RuleDefinitionInput>()).min(1).max(100),
   })
   .superRefine((values, context) => {
-    for (const field of ['ruleIds', 'userIds', 'keyIds'] as const)
+    for (const field of ['userIds', 'keyIds'] as const)
       if (new Set(values[field]).size !== values[field].length)
         context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message: 'Each selection can appear only once' });
+    if (new Set(values.rules.map((rule) => JSON.stringify(rule))).size !== values.rules.length)
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['rules'], message: 'Each rule can appear only once' });
+    if (values.rules.filter((rule) => rule.action.kind === 'fallback').length > 1)
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['rules'], message: 'A policy can contain at most one fallback rule' });
     if (values.targetKind === 'selected_users' && values.userIds.length === 0)
       context.addIssue({ code: z.ZodIssueCode.custom, path: ['userIds'], message: 'Select at least one user' });
     if (values.targetKind === 'selected_keys' && values.keyIds.length === 0)
@@ -22,7 +26,7 @@ export const policyFormSchema = z
 
 export type PolicyForm = z.infer<typeof policyFormSchema>;
 
-export const policyDefaults: PolicyForm = { name: '', enabled: true, targetKind: 'workspace', userIds: [], keyIds: [], ruleIds: [] };
+export const policyDefaults: PolicyForm = { name: '', enabled: true, targetKind: 'workspace', userIds: [], keyIds: [], rules: [] };
 
 export function policyPayload(values: PolicyForm): PolicyCreate {
   return {
@@ -35,13 +39,13 @@ export function policyPayload(values: PolicyForm): PolicyCreate {
           : values.targetKind === 'selected_users'
             ? { kind: 'selected_users', user_ids: values.userIds }
             : { kind: 'selected_keys', key_ids: values.keyIds },
-      rule_ids: values.ruleIds,
+      rules: values.rules,
     },
   };
 }
 
 export function policyForm(policy: PolicyOut): PolicyForm {
-  const { target, rule_ids: ruleIds } = policy.definition;
+  const { target, rules } = policy.definition;
   return {
     ...policyDefaults,
     name: policy.name,
@@ -49,6 +53,6 @@ export function policyForm(policy: PolicyOut): PolicyForm {
     targetKind: target.kind,
     userIds: target.kind === 'selected_users' ? target.user_ids : [],
     keyIds: target.kind === 'selected_keys' ? target.key_ids : [],
-    ruleIds,
+    rules,
   };
 }

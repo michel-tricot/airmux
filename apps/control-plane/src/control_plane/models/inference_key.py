@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint
-from sqlmodel import Field
+from sqlmodel import Field, col
 
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
@@ -41,9 +41,34 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
             raise NotOwnedError
         return key
 
+    @classmethod
+    async def revoke_owned_in_workspace(cls, user_id: UUID, workspace_id: UUID) -> None:
+        for key in await cls.find(cls.user_id == user_id, cls.workspace_id == workspace_id, col(cls.revoked).is_(False)):
+            key.revoked = True
+            await key.save()
+
+    @classmethod
+    async def revoke_owned_in_org(cls, user_id: UUID, org_id: UUID) -> None:
+        for key in await cls.find(cls.user_id == user_id, cls.org_id == org_id, col(cls.revoked).is_(False)):
+            key.revoked = True
+            await key.save()
+
+    @classmethod
+    async def delete_owned_by(cls, user_id: UUID) -> None:
+        for key in await cls.find(cls.user_id == user_id):
+            await key.delete()
+
 
 class InferenceKeyIn(RequestModel):
     label: str = Field(description="What this key is for, e.g. staging or the calling app; shown in listings", min_length=1, max_length=80)
+    user_id: UUID = Field(description="Principal whose identity this key carries into policy evaluation")
+
+
+class InferenceKeyOwnerOut(BaseModel):
+    user_id: UUID
+    email: str
+    name: str
+    service_account: bool
 
 
 class InferenceKeyOut(RecordOut[InferenceKey]):

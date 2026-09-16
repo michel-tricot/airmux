@@ -18,6 +18,7 @@ import { useScopedAuthorization } from '@/features/permissions/hooks';
 import { inferenceKeyAccess, managementKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
+import { useSession } from '@/lib/session';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -30,6 +31,7 @@ interface WorkspacePanelProps {
 
 export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: WorkspacePanelProps) {
   const [, setLocation] = useLocation();
+  const { user } = useSession();
 
   const authorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef });
   const canReadWorkspace = authorization.can(workspaceAccess.read);
@@ -169,8 +171,15 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         )}
       </Tabs>
 
-      {canCreateKeys && (
-        <InferenceKeyDialog orgId={orgId} workspaceRef={workspaceRef} open={keyOpen} onOpenChange={setKeyOpen} onCreated={setToken} />
+      {canCreateKeys && user && (
+        <InferenceKeyDialog
+          orgId={orgId}
+          workspaceRef={workspaceRef}
+          open={keyOpen}
+          onOpenChange={setKeyOpen}
+          onCreated={setToken}
+          currentUser={user}
+        />
       )}
 
       {canUpdate && (

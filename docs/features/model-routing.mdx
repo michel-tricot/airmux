@@ -46,11 +46,12 @@ enters a short cooldown so concurrent requests do not immediately reuse it.
 Provider profiles define aliases, accepted extra fields, and model-specific parameter support. Before the upstream call, airmux may:
 
 - Re-spell a parameter for the provider
-- Clamp `max_tokens` to the model's catalog maximum
+- Default an omitted `max_output_tokens` from policy or model metadata
+- Clamp an explicit `max_output_tokens` to the model's catalog maximum
 - Drop an unsupported optional parameter
 - Forward a documented top-level extra field
 
-Every clamp, emulation, or drop appears in `gateway.adjustments`. Use `strict_parameters` policy to reject a route that
+Every default, clamp, emulation, or drop appears in `gateway.adjustments`. Use `strict_parameters` policy to reject a route that
 would drop a supplied parameter.
 
 ## Fallback plans
@@ -68,7 +69,8 @@ The configured `max_attempts` counts the primary call, credential retries, and b
 established stream.
 
 Every backup route is evaluated against the same workspace restrictions. A fallback cannot escape an allowlist, price
-ceiling, credential rule, capability check, or parameter policy.
+ceiling, credential rule, capability check, or parameter policy. Its effective output limit is recalculated from that
+backup model's catalog ceiling.
 
 <Info>
   Fallback is not exactly-once generation. A timed-out provider may continue work after airmux starts another attempt,

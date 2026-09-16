@@ -24,6 +24,7 @@ class Allow:
     provider: ProviderEntry
     candidates: tuple[CredentialEntry, ...]
     profile: CompiledProfile
+    policy_max_output_tokens: int | None
 
 
 @dataclass(frozen=True)
@@ -58,12 +59,11 @@ def model_allowed(model: ModelEntry, key: KeyEntry, snap: BundleSnapshot) -> boo
     provider = snap.provider_index[model.provider_id]
     state = EvaluationState(candidates=policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id))
     for compiled in matching_model_rules(model.model_id, key, snap.policy_index):
-        action = compiled.rule.definition.action
+        action = compiled.definition.action
         if not isinstance(action, (AllowedModels, AllowedProviders, CredentialAccess, DenyRequest, PriceLimit)):
             continue
         context = ModelActionContext(
             policy=compiled.policy,
-            rule=compiled.rule,
             key=key,
             model=model,
             provider=provider,
@@ -85,20 +85,23 @@ def evaluate_policies(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot
     for compiled in rules:
         context = ActionContext(
             policy=compiled.policy,
-            rule=compiled.rule,
             request=req,
             key=key,
             model=route.model,
             provider=route.provider,
             profile=route.profile,
         )
-        state = evaluate_action(compiled.rule.definition.action, context, state)
+        state = evaluate_action(compiled.definition.action, context, state)
         if state.denial is not None:
             return PolicyEvaluation(Deny(code="policy_denied", status=403, message=state.denial), state.fallback, rules)
     candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)
     if not candidates:
         return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, rules)
-    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, rules)
+    return PolicyEvaluation(
+        replace(route, candidates=candidates, policy_max_output_tokens=state.policy_max_output_tokens),
+        state.fallback,
+        rules,
+    )
 
 
 def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
@@ -115,4 +118,10 @@ def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decisi
     if provider is None:
         return Deny(code="provider_not_configured", status=502)
     candidates = policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
-    return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])
+    return Allow(
+        model=model,
+        provider=provider,
+        candidates=candidates,
+        profile=snap.profile_index[provider.provider_id],
+        policy_max_output_tokens=None,
+    )

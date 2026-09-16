@@ -90,7 +90,7 @@ def initialize(directory: Path, console_url: str) -> None:
     token, _ = new_management_key()
     bootstrap = "${file:.airmux/dataplane.key}"
     secrets = {"kind": "file"}
-    link = {"url": "http://127.0.0.1:8000", "token": bootstrap}
+    link = {"url": "http://127.0.0.1:8000", "management_key": bootstrap}
     config = {
         "control_plane": {
             "database": {"url": "${env:DATABASE_URL}"},

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_workspace, setup_control_plane
 
 
 def test_org_activity_reports_the_writes_in_that_org(tmp_path):
@@ -31,7 +31,11 @@ def test_activity_never_serves_the_row_snapshots(tmp_path):
         org = make_org(c, root, "o1")
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
-        c.post(f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
+        c.post(
+            f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys",
+            json=inference_key_body(c, headers, "k"),
+            headers=headers,
+        )
 
         for entry in c.get(f"/api/v1/organizations/{org}/activity", headers=headers).json()["data"]:
             assert "before" not in entry

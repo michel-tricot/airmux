@@ -102,6 +102,7 @@ def test_control_plane_init_prepares_connected_configuration_without_a_database(
     assert result.exit_code == 0, result.output
     config = yaml.safe_load((tmp_path / "airmux.yml").read_text())
     assert config["data_plane"]["bundle"]["kind"] == "remote"
+    assert config["data_plane"]["bundle"]["control_plane"]["management_key"] == "${file:.airmux/dataplane.key}"
     assert config["control_plane"]["database"]["url"] == "${env:DATABASE_URL}"
     key = (tmp_path / ".airmux/dataplane.key").read_text().strip()
     status = git_status(tmp_path)

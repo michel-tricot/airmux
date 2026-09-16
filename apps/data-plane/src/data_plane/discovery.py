@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from contract import KeyEntry, ModelEntry
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.http import InferenceContext
+    from data_plane.ingress import IngressAdapter
 
 
 class ModelInfoOut(BaseModel):
@@ -68,7 +69,7 @@ def _retrieve_model(model_id: str, key: KeyEntry, snapshot: BundleSnapshot) -> M
     return _model_out(model, snapshot)
 
 
-async def models(request: Request, context: InferenceContext) -> Response:
+async def models(request: Request, context: InferenceContext, _ingress: IngressAdapter) -> Response:
     if "model_id" in request.path_params:
         result = _retrieve_model(str(request.path_params["model_id"]), context.key, context.snapshot)
     else:

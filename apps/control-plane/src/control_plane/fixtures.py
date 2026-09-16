@@ -63,7 +63,6 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
-    Rule,
     UsageEvent,
     User,
     Workspace,
@@ -205,34 +204,26 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     return await credential.save()
 
 
-async def workspace_policy(  # noqa: PLR0913 target and rule references stay explicit in fixture call sites
+async def workspace_policy(
     workspace: Workspace,
     *,
     name: str,
     priority: int,
     target: WorkspaceTarget | SelectedUsers | SelectedKeys,
-    rules: tuple[Rule, ...],
-    enabled: bool = True,
+    rules: tuple[RuleDefinition, ...],
 ) -> Policy:
     return await Policy(
         id=fixture_id(f"policy:{workspace.name}:{name}"),
         org_id=workspace.org_id,
         workspace_id=workspace.id,
         name=name,
-        enabled=enabled,
         priority=priority,
-        definition=PolicyDefinition(target=target, rule_ids=tuple(rule.id for rule in rules)),
+        definition=PolicyDefinition(target=target, rules=rules),
     ).save()
 
 
-async def workspace_rule(workspace: Workspace, *, name: str, match: AllRequests | RequestMatch, action: PolicyAction) -> Rule:
-    return await Rule(
-        id=fixture_id(f"rule:{workspace.name}:{name}"),
-        org_id=workspace.org_id,
-        workspace_id=workspace.id,
-        name=name,
-        definition=RuleDefinition.model_validate({"match": match, "action": action}),
-    ).save()
+def policy_rule(*, match: AllRequests | RequestMatch, action: PolicyAction) -> RuleDefinition:
+    return RuleDefinition.model_validate({"match": match, "action": action})
 
 
 async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
@@ -377,9 +368,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
     await inference_key(ACME_RETIRED_TOKEN, production, dana, label="batch-jobs", revoked=True).save()
 
-    team_credentials = await workspace_rule(
-        production,
-        name="Streaming team credentials",
+    team_credentials = policy_rule(
         match=RequestMatch(kind="request", stream=True),
         action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
     )
@@ -390,9 +379,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=WorkspaceTarget(kind="workspace"),
         rules=(team_credentials,),
     )
-    approved_models = await workspace_rule(
-        production,
-        name="Approved production models",
+    approved_models = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
     )
@@ -403,9 +390,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=WorkspaceTarget(kind="workspace"),
         rules=(approved_models,),
     )
-    fallback = await workspace_rule(
-        production,
-        name="GPT-4o fallback",
+    fallback = policy_rule(
         match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
         action=Fallback(
             kind="fallback",
@@ -433,9 +418,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         ),
         start=31,
     ):
-        configured_rule = await workspace_rule(
-            production,
-            name=name,
+        configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
             action=action,
         )
@@ -453,30 +436,25 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         ),
         start=34,
     ):
-        configured_rule = await workspace_rule(
-            production,
-            name=name,
+        configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
             action=RequestLimits(kind="request_limits", max_output_tokens=limit),
         )
         await workspace_policy(production, name=name, priority=priority, target=target, rules=(configured_rule,))
-    maintenance = await workspace_rule(
-        production,
-        name="Maintenance denial",
+    maintenance = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
     )
-    await workspace_policy(
+    maintenance_policy = await workspace_policy(
         production,
         name="Maintenance window",
         priority=40,
-        enabled=False,
         target=WorkspaceTarget(kind="workspace"),
         rules=(maintenance, team_credentials),
     )
-    ci_provider = await workspace_rule(
-        staging,
-        name="OpenAI provider only",
+    maintenance_policy.enabled = False
+    await maintenance_policy.save()
+    ci_provider = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=AllowedProviders(kind="providers", names=("openai",)),
     )
@@ -487,9 +465,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
         rules=(ci_provider,),
     )
-    default_output_limit = await workspace_rule(
-        default,
-        name="Default output token ceiling",
+    default_output_limit = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=RequestLimits(kind="request_limits", max_output_tokens=4096),
     )

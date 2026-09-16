@@ -2,9 +2,9 @@
 
     uv run python examples/anthropic_chat.py [prompt ...]
 
-Same canonical gateway request as examples/chat.py, just a Claude model id. The
+Same Chat Completions request as examples/chat.py, just a Claude model id. The
 gateway translates the request into Anthropic's Messages
-API and maps the reply back to canonical shape. Needs ANTHROPIC_API_KEY
+API and maps the reply back to Chat Completions. Needs ANTHROPIC_API_KEY
 in .env and a compiled bundle whose anthropic provider uses the native
 adapter (kind: anthropic).
 """
@@ -38,11 +38,10 @@ def main() -> int:
         print(f"http {resp.status_code}: {resp.text}")
         return 1
     data = resp.json()
-    for part in data["content"]:
-        if part.get("type") == "text":
-            print(part["text"])
+    choice = data["choices"][0]
+    print(choice["message"]["content"])
     usage = data["usage"]
-    print(f"\n[{data['model']} | {usage['input_tokens']} in / {usage['output_tokens']} out | finish: {data['finish_reason']}]")
+    print(f"\n[{data['model']} | {usage['prompt_tokens']} in / {usage['completion_tokens']} out | finish: {choice['finish_reason']}]")
     return 0
 
 

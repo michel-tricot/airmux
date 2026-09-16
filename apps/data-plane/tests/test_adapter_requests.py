@@ -245,7 +245,7 @@ def test_surviving_extras_merge_after_the_typed_body(kind):
 def test_responses_applies_provider_aliases_after_the_explicit_field_mapping():
     provider = PROVIDER.model_copy(update={"kind": "openai_responses", "param_aliases": {"max_output_tokens": "max_tokens"}})
     adapter = REGISTRY["openai_responses"](provider, Secret("sk-test"))
-    request = request_of(CORPUS[0], max_tokens=64)
+    request = request_of(CORPUS[0], max_output_tokens=64)
 
     sent = json.loads(adapter.transform_request(request, MODEL).body)
 
@@ -255,10 +255,10 @@ def test_responses_applies_provider_aliases_after_the_explicit_field_mapping():
 
 def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
     adapter, model = _adapter("openai_compatible")
-    provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "max_completion_tokens"}})
+    provider = PROVIDER.model_copy(update={"param_aliases": {"max_output_tokens": "max_completion_tokens"}})
     adapter.provider = provider
     body = json.loads(request_of(CORPUS[0]).model_dump_json())
-    request = CanonicalRequest.model_validate({**body, "max_tokens": 64, "max_completion_tokens": 999})
+    request = CanonicalRequest.model_validate({**body, "max_output_tokens": 64, "max_completion_tokens": 999})
     sent = json.loads(adapter.transform_request(request, model).body)
     assert sent["max_completion_tokens"] == 64  # the canonical value, in the provider's spelling
     assert "max_tokens" not in sent

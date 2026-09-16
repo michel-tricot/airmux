@@ -107,7 +107,7 @@ def test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down
                     time.sleep(0.1)
                 else:
                     pytest.fail(f"installed gateway did not become ready:\n{log_path.read_text()}")
-                headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
+                headers = {"Authorization": f"Bearer {key}"}
                 request = {"model": "echo", "messages": [{"role": "user", "content": "hello"}]}
                 response = client.post("/inf/v1/chat/completions", headers=headers, json=request)
                 assert response.status_code == 200, response.text

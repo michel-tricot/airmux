@@ -13,7 +13,7 @@ One inference request follows the same stages regardless of caller dialect or pr
   </Step>
 
   <Step title="Parse">
-    The route or dialect resolver chooses an ingress adapter. The adapter validates the caller's wire shape and produces
+    The request path selects its bound ingress adapter. The adapter validates the caller's wire shape and produces
     a canonical request plus any translation adjustments.
   </Step>
 

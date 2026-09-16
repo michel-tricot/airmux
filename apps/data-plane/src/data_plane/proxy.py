@@ -20,8 +20,6 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.http import render_rejection
-from data_plane.ingress import REGISTRY as INGRESS
-from data_plane.ingress import UnknownDialectError, resolve
 from data_plane.metering import RequestStart, record_denied, record_usage, status_for_error, status_for_upstream
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
@@ -48,24 +46,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-async def complete(request: Request, context: InferenceContext) -> Response:
-    """Use canonical errors until the caller's dialect is known."""
-    body = await _body(request)
-    try:
-        ingress = resolve(request.headers, body)
-    except UnknownDialectError as error:
-        raise RequestRejectedError(400, "invalid_dialect", str(error)) from error
-    return await _run(IncomingRequest(body=body, context=context, ingress=ingress), runtime_of(request))
-
-
-async def messages(request: Request, context: InferenceContext) -> Response:
-    """The Anthropic-shaped route: the dialect is the route, so every answer speaks it."""
-    return await _run(IncomingRequest(body=await _body(request), context=context, ingress=INGRESS["anthropic"]), runtime_of(request))
-
-
-async def responses(request: Request, context: InferenceContext) -> Response:
-    """The Responses route is bound to its dialect so all failures retain its error shape."""
-    return await _run(IncomingRequest(body=await _body(request), context=context, ingress=INGRESS["openai_responses"]), runtime_of(request))
+async def complete(request: Request, context: InferenceContext, ingress: IngressAdapter) -> Response:
+    return await _run(IncomingRequest(body=await _body(request), context=context, ingress=ingress), runtime_of(request))
 
 
 async def _body(request: Request) -> dict[str, Any]:
@@ -247,7 +229,12 @@ class RequestExecution:
     async def _attempt(self, decision: Allow, entry: CredentialEntry, credential: Secret) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         routed_request = self.request.model_copy(update={"model": decision.model.model_id})
-        request, reconcile_adjustments = reconcile(routed_request, decision.model, decision.profile)
+        request, reconcile_adjustments = reconcile(
+            routed_request,
+            decision.model,
+            decision.profile,
+            decision.policy_max_output_tokens,
+        )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
         ctx = self._ctx(decision, entry)

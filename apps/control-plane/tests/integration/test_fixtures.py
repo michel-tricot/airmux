@@ -32,7 +32,6 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
-    Rule,
     User,
     set_actor,
 )
@@ -233,10 +232,10 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
 
     run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
     policies = run_in_db(tmp_path, Policy.find)
-    rules = run_in_db(tmp_path, Rule.find)
     inference_keys = run_in_db(tmp_path, InferenceKey.find)
+    rules = [rule for policy in policies for rule in policy.definition.rules]
 
-    assert {rule.definition.action.kind for rule in rules} == {
+    assert {rule.action.kind for rule in rules} == {
         "models",
         "providers",
         "deny",
@@ -249,7 +248,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_users", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
-    streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match
+    streaming_match = streaming_policy.definition.rules[0].match
     assert streaming_match.kind == "request"
     assert streaming_match.stream is True
     ci_key = next(key for key in inference_keys if key.label == "ci")
@@ -260,7 +259,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     production_limits = {
         policy.definition.target.kind: (
             policy,
-            next(rule for rule in rules if rule.id == policy.definition.rule_ids[0]).definition.action,
+            policy.definition.rules[0].action,
         )
         for policy in policies
         if policy.name in {"Output token ceiling", "Michel output token ceiling", "Checkout output token ceiling"}
@@ -278,8 +277,8 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     key_target = production_limits["selected_keys"][0].definition.target
     assert key_target.kind == "selected_keys"
     assert key_target.key_ids == (str(checkout_key.id),)
-    team_credentials = next(rule for rule in rules if rule.name == "Streaming team credentials")
-    assert sum(team_credentials.id in policy.definition.rule_ids for policy in policies) == 2
+    team_credentials = streaming_policy.definition.rules[0]
+    assert sum(team_credentials in policy.definition.rules for policy in policies) == 2
 
 
 def test_data_plane_fixtures_cover_global_and_dedicated_lifecycle_states(tmp_path):

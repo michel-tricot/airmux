@@ -113,7 +113,10 @@ def test_openai_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, d
         )
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway is not None
-    assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [("n", "dropped")]
+    assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [
+        ("n", "dropped"),
+        ("max_output_tokens", "defaulted"),
+    ]
 
 
 @respx.mock
@@ -123,7 +126,7 @@ def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(api
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "x-airmux-dialect": "openai_native"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={
                 **TEXT_BODY,
                 "reasoning_effort": "low",
@@ -149,7 +152,17 @@ def test_openai_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_
         )
     assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
     gateway = (completion.model_extra or {}).get("gateway")
-    assert gateway == {"finish_reason": "stop", "adjustments": []}
+    assert gateway == {
+        "finish_reason": "stop",
+        "adjustments": [
+            {
+                "param": "max_output_tokens",
+                "action": "defaulted",
+                "detail": "model caps output at 4096 tokens",
+                "source": "model",
+            }
+        ],
+    }
 
 
 def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
@@ -161,19 +174,27 @@ def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
 
 
 @respx.mock
-def test_openai_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
-    """The mirror invariant from DATAPLANE.md: detection never changes a canonical answer."""
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},
+        {"user-agent": "OpenAI/Python 3.0.0"},
+        {"x-airmux-dialect": "canonical"},
+        {"x-airmux-dialect": "unknown"},
+    ],
+)
+def test_chat_completions_path_always_returns_chat_completions(api_key, dp_app, headers):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
+            headers={"Authorization": f"Bearer {api_key}", **headers},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     body = r.json()
-    assert "content" in body
-    assert "choices" not in body
+    assert body["choices"][0]["message"]["content"] == "héllo \U0001f30d world"
+    assert "content" not in body
 
 
 @respx.mock

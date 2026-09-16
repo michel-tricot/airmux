@@ -322,7 +322,7 @@ export const operationAuthority = {
       },
     ],
   },
-  revokeInferenceKey: {
+  listInferenceKeyOwners: {
     checks: [
       {
         scope: "workspace_scope",
@@ -330,35 +330,11 @@ export const operationAuthority = {
       },
     ],
   },
-  listRules: {
+  revokeInferenceKey: {
     checks: [
       {
         scope: "workspace_scope",
-        anyOf: ["policies.read"],
-      },
-    ],
-  },
-  createRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  updateRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  deleteRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
+        anyOf: ["inference-keys.manage"],
       },
     ],
   },

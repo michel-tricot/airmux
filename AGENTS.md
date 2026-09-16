@@ -18,8 +18,8 @@ Canonical is the waist: N ingress dialects and M egress families all cross throu
 N+M translators, never N times M, and policy, metering and adjustments are written once against it.
 Adding an egress adapter (provider family) is one new module under egress/: subclass EgressAdapter,
 set `kind`, implement the methods. Adding an ingress adapter (caller dialect) is one new module under
-ingress/: subclass IngressAdapter, set `dialect`, implement claims, parse, render_response,
-render_error and new_stream. Either way, edit no existing file. If you think you need to edit a
+ingress/: subclass IngressAdapter, set `dialect` and `path`, implement parse, render_response,
+render_error and new_stream. Discovery adds its route. Either way, edit no existing file. If you think you need to edit a
 registry, the registry is wrong; fix the registry.
 
 - A family's JSON spelling shared by both sides of the gateway lives in formats/<family>.py, pure
@@ -27,8 +27,8 @@ registry, the registry is wrong; fix the registry.
   each other. Canonical to provider body is one body_of per family, every field mapped by hand. Never
   map fields reflectively; a name shared by two schemas is coincidence, not a rule. A spelling with a
   single consumer may stay inline in its adapter until a second consumer exists.
-- resolve() owns dialect discrimination end to end: override header, then claims() in registry order,
-  then canonical as the unclaimed default. An ingress adapter answers only "is this mine".
+- Each public inference path binds exactly one discovered ingress adapter. Headers and request-body shape never select
+  the caller protocol. Canonical models are the internal waist and are not a public HTTP dialect.
 - The transport never parses SSE. Framing lives once in egress/base.frame_sse, the single source
   of truth for the SSE machine; an adapter's frame() adds only its dialect, like OpenAI's [DONE].
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.

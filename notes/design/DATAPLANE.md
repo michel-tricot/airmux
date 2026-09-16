@@ -62,7 +62,7 @@ Both cross the same canonical middle.
 
 | Route | Behavior |
 |---|---|
-| `POST /inf/v1/chat/completions` | Canonical completion surface with OpenAI-compatible ingress detection |
+| `POST /inf/v1/chat/completions` | OpenAI Chat Completions surface |
 | `POST /inf/v1/responses` | OpenAI Responses surface |
 | `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
@@ -96,27 +96,18 @@ consumes the stream. Metering uses that same request ID; provider completion IDs
 The bundle contains only token hashes. Revocation is absence from a later bundle, so a request made
 after the new bundle is admitted fails without a database or cache invalidation call.
 
-On `/inf/v1/chat/completions`, authentication and JSON decoding happen before dialect resolution. An
-error at either stage therefore uses the canonical error envelope. `/inf/v1/messages` binds the
-Anthropic ingress before those checks, so every error on that route is Anthropic-shaped.
+Each `InferenceRoute` owns its ingress adapter before authentication or body parsing. Authentication,
+parsing, policy, provider, and response failures therefore use the protocol bound to the request path.
 
-### Canonical request
+### Internal canonical request
 
-The canonical request is `CanonicalRequest` and is published as `airmux.request.yaml`. Its modeled
+The canonical request is `CanonicalRequest`. It is the internal target of every ingress adapter, not a
+public HTTP protocol. Its modeled
 fields are:
 
 - `model`, `messages`, and `stream`
 - `max_tokens`, `temperature`, `top_p`, `stop`, and `seed`
 - `tools`, `tool_choice`, and `response_format`
-
-A minimal canonical call is:
-
-```bash
-curl http://127.0.0.1:8080/inf/v1/chat/completions \
-  -H 'Authorization: Bearer sk-inf-...' \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
-```
 
 Messages contain typed parts rather than provider-specific blocks:
 
@@ -134,9 +125,10 @@ The request top level is open. Unknown top-level fields become canonical extras 
 provider-specific parameters through the gateway. Nested shapes are closed because an unknown field
 inside a message, part, or tool has no faithful generic translation.
 
-### Canonical response
+### Internal canonical response
 
-The canonical response is `CanonicalResponse` and is published as `airmux.response.yaml`. It carries:
+The canonical response is `CanonicalResponse`. Every ingress adapter renders it in the bound caller
+protocol. It carries:
 
 - `id` and the caller-facing `model`
 - Typed assistant `content`
@@ -151,52 +143,30 @@ and whether the counts were estimated. Cache traffic is included in total input 
 entry identifies the parameter, an action of `clamped`, `emulated`, or `dropped`, and a human-readable
 reason. The rest of the response remains completion data and does not expose provider-specific state.
 
-Canonical buffered responses and chunks omit null-valued fields. Compatibility renderers follow
-their dialect's native wire shape.
+Ingress renderers follow their protocol's native wire shape.
 
-### Canonical streaming
+### Internal canonical streaming
 
-A canonical request with `stream: true` receives `text/event-stream`. Each data frame contains one
-`CanonicalChunk` from `airmux.stream.yaml`:
+Provider streams fold into `CanonicalChunk` values before the bound ingress renderer produces SSE:
 
 - Ordinary chunks carry one typed `text`, `reasoning`, or `tool_call` delta
 - Tool-call fragments use an index; the opening fragment carries the id and name, and argument text accumulates across fragments
-- The closing chunk has no delta and carries finish reason, usage, and gateway adjustments
-- The stream terminates with `data: [DONE]`
+- Finalization supplies finish reason, usage, and gateway adjustments to the renderer
+- Each public protocol owns its terminal behavior
 
 If an error occurs after the HTTP stream has opened, the status is already committed. The error is
-rendered as an SSE event in the caller's dialect. Canonical and OpenAI streams then emit `[DONE]`;
-Anthropic streams emit an Anthropic error event.
+rendered as an SSE event in the caller's dialect. Chat Completions emits `[DONE]`; Responses and
+Messages use their native terminal events.
 
 ### OpenAI compatibility on `/inf/v1/chat/completions`
 
-The chat route supports both the canonical shape and unmodified OpenAI SDKs. `resolve()` selects the
-ingress adapter in this order:
-
-1. A recognized `x-airmux-dialect` override
-2. Each non-canonical adapter's `claims()` result in registry-name order
-3. Canonical as the unclaimed default
-
-The recognized override values are `canonical`, `openai_native`, and `anthropic`. Anthropic clients
-normally use `/inf/v1/messages`, which binds that ingress directly. An unrecognized override is ignored,
-after which claims and canonical fallback proceed normally.
-
-The OpenAI ingress claims a request when either condition is true:
-
-- `User-Agent` begins with `OpenAI/`, as the official SDK sends
-- The body has an unambiguous OpenAI marker: a `tool` or `developer` role, `tool_calls`, an
-  `image_url` block, a nested `function` wrapper, or `max_completion_tokens`
-
-The `x-stainless-*` headers are not used for detection because other vendors also ship
-Stainless-generated clients. A text-only request without a fingerprint or override is shape-identical
-to canonical and therefore receives the canonical response.
-
-An OpenAI request is parsed into canonical and rendered back as OpenAI:
+The chat route binds `OpenAIChatCompletionsIngress`. Headers and body fields cannot change its request,
+response, error, or streaming protocol. A Chat Completions request is parsed into canonical and rendered back as OpenAI:
 
 - Buffered responses use `chat.completion` and the `choices` axis
 - Streamed responses use `chat.completion.chunk`, finish with a usage-only chunk, and then `[DONE]`
 - `gateway` is an extra field that official SDK models retain or ignore safely
-- OpenAI-shaped errors are returned after the dialect has been resolved
+- OpenAI-shaped errors are returned for every failure on the route
 
 Pointing the official client at the gateway changes only its base URL and key:
 
@@ -238,8 +208,8 @@ become canonical extras. Provider profiles decide whether those extras are forwa
 
 ### Errors
 
-Before streaming begins, request and transport errors use an HTTP status plus the resolved caller
-dialect's error body. The canonical body is `{"error": {"code": "...", "message": "..."}}`.
+Before streaming begins, request and transport errors use an HTTP status plus the route-bound caller
+protocol's error body.
 
 | Status | Gateway code | Meaning |
 |---|---|---|
@@ -259,15 +229,14 @@ Provider HTTP statuses are preserved. When an adapter recognizes the provider's 
 and message are also preserved and then rendered in the caller's dialect. Error codes are additive;
 clients should branch on status class first and code second.
 
-### Compatibility policy
+### Internal interface policy
 
-The canonical schemas and their surrounding behavior are the gateway's stable consumer contract:
+The canonical models are an internal interface shared by ingress, policy, routing, egress, and metering:
 
 - Existing fields keep their type and meaning; new fields may appear anywhere
 - New content parts, deltas, finish reasons, adjustment actions, gateway members, and error codes may appear
-- Callers must treat unknown fields and enum members as unknown rather than failing
-- Plain-string message content and the open request top level remain supported
-- A canonical response stays provider-neutral; provider identity does not change its top-level shape
+- Public protocol adapters decide which caller fields and variants are accepted
+- The canonical response stays provider-neutral; provider identity does not change its internal shape
 - Canonical schema changes land as committed diffs under `taxonomy/schemas/completion/`
 
 ## Package structure
@@ -278,7 +247,7 @@ The canonical schemas and their surrounding behavior are the gateway's stable co
 | `app.py`, `runtime.py`, `config.py` | Process composition, lifespan, routes, and immutable runtime dependencies |
 | `bundle/`, `cache.py`, `heartbeat.py` | Bundle acquisition, verification, admission, durable cache, and instance heartbeat |
 | `canonical/` | Provider-neutral request, response, content, usage, and stream types |
-| `ingress/` | Caller-dialect detection, parsing, response rendering, and error rendering |
+| `ingress/` | Public path ownership, parsing, response rendering, and error rendering |
 | `formats/` | Pure JSON spelling shared by ingress and egress for one protocol family |
 | `egress/` | Provider-family transport, response parsing, stream folding, and upstream error mapping |
 | `auth.py`, `policy.py` | Hash authentication and pure bundle evaluation |
@@ -503,13 +472,13 @@ metering, and request orchestration operate once on canonical types.
 
 An ingress adapter owns one caller dialect and implements:
 
-- `claims()` for chat-route discrimination
+- A unique `dialect` and public `path`
 - `parse()` into canonical plus parse-time adjustments
 - `render_response()` and `render_error()`
 - `new_stream()` for rendering canonical chunks in the caller's stream protocol
 
-Concrete classes are discovered by scanning modules under `ingress/`. Duplicate dialect names fail
-startup. Canonical never claims a request; it is the explicit fallback owned by `resolve()`.
+Concrete classes are discovered by scanning modules under `ingress/`. Duplicate dialect names or paths fail
+startup. Discovery also creates each adapter's completion route.
 
 ### Egress adapters
 
@@ -543,7 +512,7 @@ meaning.
 The HTTP boundary and orchestration in `proxy.py` serve every caller/provider combination:
 
 1. Mint the request ID and start time, capture the current bundle snapshot, and authenticate the caller
-2. Read a JSON object and resolve or bind the ingress dialect
+2. Use the route-bound ingress adapter and read a JSON object
 3. Parse the caller body into `CanonicalRequest` and collect translation adjustments
 4. Call pure `evaluate()` with the request, authenticated key, and captured snapshot
 5. Select the first credential candidate from the most specific populated scope
@@ -702,14 +671,12 @@ contract constraint and is the reason a genuinely new family still needs a share
 ### Add an ingress dialect
 
 1. Add one module under `ingress/`
-2. Subclass `IngressAdapter` and set a unique `dialect`
-3. Make `claims()` answer only whether the request is unmistakably that dialect
-4. Parse into canonical and report translation loss as adjustments
-5. Render buffered responses, errors, and streams from canonical
-6. Reuse a format module when the same protocol is already an egress family
+2. Subclass `IngressAdapter` and set a unique `dialect` and `path`
+3. Parse into canonical and report translation loss as adjustments
+4. Render buffered responses, errors, and streams from canonical
+5. Reuse a format module when the same protocol is already an egress family
 
-Do not edit a registry. `resolve()` owns override handling, claims ordering, and canonical fallback.
-A dedicated route requires an explicit route binding in `app.py`; a chat-route dialect does not.
+Do not edit a registry or `app.py`. Discovery creates the route and rejects discriminator collisions.
 
 ### Change the canonical definition
 

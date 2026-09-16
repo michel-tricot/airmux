@@ -1,15 +1,14 @@
 ---
 title: "Chat Completions"
-description: "Reference the Chat Completions-compatible request, response, streaming, and dialect-selection behavior."
+description: "Reference the Chat Completions-compatible request, response, streaming, and error behavior."
 ---
 
 ```text
 POST /inf/v1/chat/completions
 ```
 
-This route accepts Chat Completions or canonical JSON. Official SDK user-agents and unambiguous OpenAI fields such as
-`max_completion_tokens` select Chat Completions automatically. Set `x-airmux-dialect: openai_native` only for raw
-requests with neither signal when you need a Chat Completions-shaped response.
+This route always accepts and returns OpenAI Chat Completions. Headers and request-body fields cannot select another
+caller protocol.
 
 ## Request
 
@@ -31,8 +30,8 @@ curl https://llm.example.com/inf/v1/chat/completions \
 | `model` | string | Required catalog model ID |
 | `messages` | array | System, developer, user, assistant, and tool messages |
 | `stream` | boolean | Defaults to `false` |
-| `max_tokens` | integer | Canonical name; minimum 1 |
-| `max_completion_tokens` | integer | Chat Completions alias for `max_tokens` |
+| `max_tokens` | integer | Legacy Chat Completions spelling; minimum 1 |
+| `max_completion_tokens` | integer | Current Chat Completions spelling; minimum 1 |
 | `temperature` | number | Minimum 0 |
 | `top_p` | number | Greater than 0 and at most 1 |
 | `stop` | string or array | Normalized to an array |
@@ -45,6 +44,7 @@ curl https://llm.example.com/inf/v1/chat/completions \
 | `reasoning` | object | Extended reasoning configuration |
 
 Other top-level fields are treated as provider extras. A provider profile either forwards them or reports them as dropped in `gateway.adjustments`.
+Supplying both output-limit fields is invalid. Either field maps to canonical `max_output_tokens`.
 
 ## Response
 

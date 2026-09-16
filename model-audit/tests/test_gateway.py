@@ -8,18 +8,11 @@ from model_audit.drivers.base import access_error, status_outcome
 from model_audit.gateway import Gateway
 
 
-@pytest.mark.parametrize(
-    ("endpoint", "dialect"),
-    [
-        ("chat/completions", "openai_native"),
-        ("responses", "openai_responses"),
-        ("messages", "anthropic"),
-    ],
-)
-def test_raw_gateway_connections_select_the_requested_dialect(endpoint, dialect):
+@pytest.mark.parametrize("endpoint", ["chat/completions", "responses", "messages"])
+def test_raw_gateway_connections_use_path_bound_protocols(endpoint):
     connection = Gateway(base_url="http://gateway", api_key="key").connection(endpoint)
 
-    assert connection.headers == {"x-airmux-dialect": dialect}
+    assert connection.headers == {}
 
 
 def test_provider_forbidden_response_does_not_invalidate_gateway_authentication():

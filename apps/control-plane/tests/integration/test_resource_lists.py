@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -13,7 +13,9 @@ def test_list_endpoints_read_back(tmp_path):
         org_id = make_org(c, root, "o1")
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
         c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root)
 

@@ -27,6 +27,7 @@ def make_event(request_id) -> RoutedUsageEventV1:
         bundle_id=uuid4(),
         input_tokens=10,
         output_tokens=5,
+        max_output_tokens=128,
         cost_usd=0.000004,
         latency_ms=100,
         status="ok",

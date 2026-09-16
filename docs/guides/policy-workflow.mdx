@@ -1,37 +1,13 @@
 ---
 title: "Create a workspace policy"
-description: "Build a reusable rule, attach it to a policy, and verify the policy from the CLI."
+description: "Create a self-contained policy and verify it from the CLI."
 ---
 
-Rules hold request matching and one action. Policies target inference keys and attach one or more reusable rules.
-
-This example limits every request in the active workspace to 1,024 output tokens.
+A policy contains its target and every rule it enforces. This example limits every request in the active workspace to 1,024 output tokens.
 
 <Steps>
-  <Step title="Create the rule configuration">
-    Save this as `output-limit-rule.json`:
-
-    ```json
-    {
-      "name": "Limit output to 1024 tokens",
-      "definition": {
-        "match": {"kind": "all_requests"},
-        "action": {"kind": "request_limits", "max_output_tokens": 1024}
-      }
-    }
-    ```
-  </Step>
-
-  <Step title="Create the reusable rule">
-    ```bash
-    airmux rules create output-limit-rule.json -f json
-    ```
-
-    Copy the returned rule `id`.
-  </Step>
-
   <Step title="Create the policy configuration">
-    Save this as `output-limit-policy.json`, replacing `RULE_ID`:
+    Save this as `output-limit-policy.json`:
 
     ```json
     {
@@ -40,7 +16,12 @@ This example limits every request in the active workspace to 1,024 output tokens
       "priority": 10,
       "definition": {
         "target": {"kind": "workspace"},
-        "rule_ids": ["00000000-0000-0000-0000-000000000001"]
+        "rules": [
+          {
+            "match": {"kind": "all_requests"},
+            "action": {"kind": "request_limits", "max_output_tokens": 1024}
+          }
+        ]
       }
     }
     ```
@@ -54,18 +35,18 @@ This example limits every request in the active workspace to 1,024 output tokens
   </Step>
 
   <Step title="Verify behavior">
-    After a gateway adopts the new bundle, a request with `max_tokens` greater than `1024` returns `403 policy_denied`.
-    A request that omits `max_tokens` is allowed because airmux does not invent a caller limit.
+    After a gateway adopts the new bundle, a Chat Completions request with `max_completion_tokens` greater than `1024` returns
+    `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with
+    `source: policy`. If several matching policies set limits, the tightest ceiling applies.
   </Step>
 </Steps>
 
-Policy updates publish a new configuration bundle asynchronously. Check
+Policy updates replace `definition` atomically and publish a new configuration bundle asynchronously. Check
 [bundles and consistency](/docs/concepts/bundles) if a newly saved policy is not visible at a gateway yet.
-
-See [workspace policies](/docs/policies) for every match and action type.
-
 
 Use `{"kind": "workspace"}` for every current and future credential, including playground sessions. To restrict a principal
 across their credentials in this workspace, replace the target with `{"kind": "selected_users", "user_ids": ["USER_UUID"]}`.
 Use `{"kind": "selected_keys", "key_ids": ["KEY_ID"]}` for specific credentials. The console's **Applies to** selector
 exposes the same three targets, including service accounts in the user picker. Key inspection lists all applicable policies.
+
+See [workspace policies](/docs/policies) for every match and action type.

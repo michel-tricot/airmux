@@ -5,11 +5,14 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
+import respx
+from conftest import make_config, mock_control_plane
+from starlette.testclient import TestClient
 
 from contract import ProviderEntry
-from data_plane import egress, ingress
+from data_plane import app, egress, ingress
 from data_plane.egress.openai_compatible import OpenAICompatibleAdapter
-from data_plane.ingress.canonical import CanonicalIngress
+from data_plane.ingress.openai_chat_completions import OpenAIChatCompletionsIngress
 
 
 def adapter_module(module_name: str, base: type, discriminator: str, value: str) -> ModuleType:
@@ -36,12 +39,38 @@ def test_duplicate_egress_kind_fails_discovery(monkeypatch):
 
 
 def test_duplicate_ingress_dialect_fails_discovery(monkeypatch):
-    modules = duplicate_modules(ingress.__name__, CanonicalIngress, "dialect")
+    modules = duplicate_modules(ingress.__name__, OpenAIChatCompletionsIngress, "dialect")
     monkeypatch.setattr(ingress.pkgutil, "iter_modules", lambda _path: [SimpleNamespace(name="first"), SimpleNamespace(name="second")])
     monkeypatch.setattr(ingress.importlib, "import_module", modules.__getitem__)
 
     with pytest.raises(RuntimeError, match="duplicate ingress dialect 'duplicate'"):
         ingress._discover()
+
+
+def test_duplicate_ingress_path_fails_discovery(monkeypatch):
+    modules = duplicate_modules(ingress.__name__, OpenAIChatCompletionsIngress, "path")
+    modules[f"{ingress.__name__}.first"].Adapter.dialect = "first"
+    modules[f"{ingress.__name__}.second"].Adapter.dialect = "second"
+    monkeypatch.setattr(ingress.pkgutil, "iter_modules", lambda _path: [SimpleNamespace(name="first"), SimpleNamespace(name="second")])
+    monkeypatch.setattr(ingress.importlib, "import_module", modules.__getitem__)
+
+    with pytest.raises(RuntimeError, match="duplicate ingress path 'duplicate'"):
+        ingress._discover()
+
+
+@respx.mock
+def test_discovered_ingress_adds_its_route_without_an_application_registry(monkeypatch, tmp_path):
+    class FutureIngress(OpenAIChatCompletionsIngress):
+        dialect = "future"
+        path = "/inf/v1/future"
+
+    monkeypatch.setattr(app, "INGRESS", {**ingress.REGISTRY, FutureIngress.dialect: FutureIngress()})
+    mock_control_plane()
+
+    gateway = app.create_app(make_config(tmp_path))
+
+    with TestClient(gateway) as client:
+        assert client.post(FutureIngress.path).status_code == 503
 
 
 def test_the_bundle_contract_does_not_close_the_discovered_adapter_namespace():
