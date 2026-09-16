@@ -14,16 +14,28 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    uses: ./.github/workflows/change-policy.yml
+
   ci-correctness:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
-    needs: [workflows, frontend, ci, installation, gateway-acceptance, acceptance, browser-acceptance]
+    timeout-minutes: 5
+    needs:
+      [changes, workflows, frontend, backend, python-distributions, installation-smoke, installation, gateway-acceptance, gateway-results, acceptance, browser-acceptance]
     if: always()
     steps:
-      - name: Require every correctness job to succeed
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --locked
+      - name: Validate required check results
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: jq -e 'length > 0 and all(.[]; .result == "success")' <<< "$NEEDS"
+        run: uv run --locked python -m scripts.ci_policy gate ci
 
   workflows:
     runs-on: ubuntu-latest
@@ -47,7 +59,7 @@ jobs:
       - name: Check pinned action inputs and security boundaries
         env:
           AIRMUX_VALIDATE_ACTION_INPUTS: '1'
-        run: uv run --locked pytest tests/workflows -q
+        run: uv run --locked pytest tests/workflows tests/documentation -q
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version: 1.3.14
@@ -55,6 +67,8 @@ jobs:
       - run: bunx --no-install prettier --check '.github/workflows/*.{yml,yaml}'
 
   frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -72,7 +86,9 @@ jobs:
       - run: bun run coverage
       - run: bun run --filter '@workspace/gateway-console' build
 
-  ci:
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
       UV_NO_SYNC: 'true'
@@ -116,6 +132,8 @@ jobs:
         run: git diff --exit-code -- uv.lock
 
   python-distributions:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -151,7 +169,8 @@ jobs:
           retention-days: 7
 
   installation-smoke:
-    needs: python-distributions
+    needs: [changes, python-distributions]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -206,7 +225,8 @@ jobs:
           retention-days: 7
 
   installation:
-    needs: python-distributions
+    needs: [changes, python-distributions]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -254,7 +274,8 @@ jobs:
         run: git diff --exit-code -- uv.lock
 
   gateway-acceptance:
-    needs: python-distributions
+    needs: [changes, python-distributions]
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -321,8 +342,8 @@ jobs:
   gateway-results:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [installation-smoke, installation, gateway-acceptance]
-    if: always()
+    needs: [changes, installation-smoke, installation, gateway-acceptance]
+    if: always() && needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -332,6 +353,10 @@ jobs:
           enable-cache: true
           python-version: '3.13'
       - run: uv sync --all-packages --locked
+      - name: Reject failed or cancelled gateway jobs
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: uv run --locked python -m scripts.ci_policy gate gateway
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: gateway-integration-*
@@ -413,6 +438,8 @@ jobs:
         working-directory: performance-candidate
 
   acceptance:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -446,6 +473,8 @@ jobs:
         run: git diff --exit-code -- uv.lock
 
   browser-acceptance:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

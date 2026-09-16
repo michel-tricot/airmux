@@ -1,0 +1,39 @@
+name: change policy
+
+on:
+  workflow_call:
+    outputs:
+      frontend:
+        value: ${{ jobs.changes.outputs.frontend }}
+      backend:
+        value: ${{ jobs.changes.outputs.backend }}
+      deployment:
+        value: ${{ jobs.changes.outputs.deployment }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.policy.outputs.frontend }}
+      backend: ${{ steps.policy.outputs.backend }}
+      deployment: ${{ steps.policy.outputs.deployment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --locked
+      - id: policy
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: uv run --locked python -m scripts.ci_policy classify "$EVENT" --base "$BASE" --head "$HEAD"

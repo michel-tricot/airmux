@@ -14,18 +14,31 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    uses: ./.github/workflows/change-policy.yml
+
   docker-correctness:
     runs-on: ubuntu-latest
-    timeout-minutes: 1
-    needs: [deployment]
+    timeout-minutes: 5
+    needs: [changes, deployment]
     if: always()
     steps:
-      - name: Require both Docker deployments to succeed
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --locked
+      - name: Validate required deployment results
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: jq -e 'length > 0 and all(.[]; .result == "success")' <<< "$NEEDS"
+        run: uv run --locked python -m scripts.ci_policy gate docker
 
   deployment:
+    needs: changes
+    if: needs.changes.outputs.deployment == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
