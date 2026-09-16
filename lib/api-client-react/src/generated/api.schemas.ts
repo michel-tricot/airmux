@@ -551,8 +551,6 @@ export interface DeniedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @pattern ^\d+(?:\.\d+)?$
@@ -568,6 +566,8 @@ export interface DeniedUsageEventV1 {
      * @pattern ^\d+(?:\.\d+)?$
      */
   cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Input tokens read from a provider cache
      * @minimum 0
@@ -1547,8 +1547,6 @@ export interface RoutedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @pattern ^\d+(?:\.\d+)?$
@@ -1564,6 +1562,8 @@ export interface RoutedUsageEventV1 {
      * @pattern ^\d+(?:\.\d+)?$
      */
   cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Input tokens read from a provider cache
      * @minimum 0

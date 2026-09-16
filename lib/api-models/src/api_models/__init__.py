@@ -259,13 +259,6 @@ class DeniedUsageEventV1(BaseModel):
             title="Output Tokens",
         ),
     ]
-    max_output_tokens: Annotated[
-        MaxOutputTokens | None,
-        Field(
-            description="Effective upstream output-token limit",
-            title="Max Output Tokens",
-        ),
-    ]
     cost_usd: Annotated[
         str,
         Field(
@@ -290,6 +283,13 @@ class DeniedUsageEventV1(BaseModel):
             title="Cost Output Usd",
         ),
     ] = "0"
+    max_output_tokens: Annotated[
+        MaxOutputTokens | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
+        ),
+    ]
     cache_read_tokens: Annotated[
         int | None,
         Field(
@@ -1425,13 +1425,6 @@ class RoutedUsageEventV1(BaseModel):
             title="Output Tokens",
         ),
     ]
-    max_output_tokens: Annotated[
-        MaxOutputTokens2 | None,
-        Field(
-            description="Effective upstream output-token limit",
-            title="Max Output Tokens",
-        ),
-    ]
     cost_usd: Annotated[
         str,
         Field(
@@ -1456,6 +1449,13 @@ class RoutedUsageEventV1(BaseModel):
             title="Cost Output Usd",
         ),
     ] = "0"
+    max_output_tokens: Annotated[
+        MaxOutputTokens2 | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
+        ),
+    ]
     cache_read_tokens: Annotated[
         int | None,
         Field(
