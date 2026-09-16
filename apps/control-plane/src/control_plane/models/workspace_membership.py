@@ -46,6 +46,14 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
         )
         await current_session().execute(statement)
 
+    async def remove(self) -> None:
+        from control_plane.models.inference_key import InferenceKey  # noqa: PLC0415 membership and credential models meet at the operation
+        from control_plane.models.playground_session import PlaygroundSession  # noqa: PLC0415 membership and credential models meet at the operation
+
+        await InferenceKey.revoke_owned_in_workspace(self.user_id, self.workspace_id)
+        await PlaygroundSession.revoke_owned_in_workspace(self.user_id, self.workspace_id)
+        await self.delete()
+
 
 class WorkspaceMembershipIn(RequestModel):
     role: WorkspaceRole = Field(description="Workspace role to grant")

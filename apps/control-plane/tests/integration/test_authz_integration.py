@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_user, make_workspace, setup_control_plane
 
 from contract import uuid7
 from control_plane.authz import Permission
@@ -29,7 +29,9 @@ def test_permission_ceiling_restricts_actions_within_a_scope(tmp_path):
         assert client.get(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", headers=reader).status_code == 200
         assert (
             client.post(
-                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", json={"label": "blocked"}, headers=reader
+                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+                json=inference_key_body(client, reader, "blocked"),
+                headers=reader,
             ).status_code
             == 403
         )

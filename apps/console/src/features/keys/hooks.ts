@@ -18,6 +18,9 @@ import {
   getListInferenceKeysQueryKey,
   type ListInstanceManagementKeysParams,
   type ListOrgManagementKeysParams,
+  useListInferenceKeyOwners,
+  getListBundlesQueryKey,
+  getListActivityQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
 
@@ -73,11 +76,20 @@ export function useInferenceKeys(orgId: string, workspaceRef: string, { enabled 
   return useListInferenceKeys(orgId, workspaceRef, { query: { enabled } });
 }
 
+export function useInferenceKeyOwners(orgId: string, workspaceRef: string) {
+  return useListInferenceKeyOwners(orgId, workspaceRef);
+}
+
 export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   return useCreateInferenceKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
+        ]),
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
   });
@@ -87,7 +99,12 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
   const queryClient = useQueryClient();
   return useRevokeInferenceKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
+        ]),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },
   });

@@ -26,8 +26,9 @@ credential claims, or tenant identifiers. Each route declares one permission and
 and API hygiene tests reject unclassified routes or permission checks without a scope.
 
 Standing grants are evaluated on every request. Removing a membership or changing a role takes
-effect without rewriting keys. Restoring the role can make an otherwise live key usable again,
-because a key records a ceiling rather than a copy of its principal's roles.
+effect without rewriting management keys or browser sessions. Restoring the role can make an
+otherwise live management key usable again because it records a ceiling rather than a copy of its
+principal's roles. Inference credentials follow the separate offboarding rules below.
 
 ## Scope hierarchy
 
@@ -99,6 +100,28 @@ can create a workspace without joining it because instance authority already cov
 
 Human and service-account principals use the same role system. A service account may hold any role;
 authorization depends on its resulting standing grants, not its principal kind or a special role name.
+
+## Inference credential ownership and offboarding
+
+An inference key stores one immutable owner principal. That principal's identity enters the bundle
+and policy evaluation. The creator is a separate identity recorded by the audited insert rather than
+a duplicate table column.
+
+A caller may create a self-owned inference key when it has `inference-keys.manage` for the workspace.
+Selecting a different owner additionally requires `members.manage`, and that owner must be an
+organization-managed service account belonging to the workspace's organization. No caller can mint
+an inference key owned by another human. Production applications should use service-account owners so
+their credentials do not depend on a human membership.
+
+Workspace membership removal revokes the owner's active inference keys and playground sessions in that
+workspace before deleting the membership. Organization membership removal does the same across the
+organization before its workspace memberships cascade. These writes share the membership transaction,
+so a rejected last-owner removal changes no credential. Re-adding a membership does not reactivate a
+revoked credential. User and service-account deletion removes every inference credential they own.
+
+Management keys and browser sessions are not revoked during membership removal because standing
+authority is re-evaluated on every control-plane request. User-targeted policy references remain because
+policies restrict credentials but never grant access.
 
 ## Management keys
 

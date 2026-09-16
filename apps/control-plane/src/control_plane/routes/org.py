@@ -11,7 +11,7 @@ from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
 from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
-from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, RuntimeConfiguration, UsageEvent, User
+from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
@@ -136,10 +136,8 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
     membership = await OrgMembership.get((user_id, org_id))
     if membership is not None:
         await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
-    if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
-        raise HTTPException(status_code=409, detail="service account created inference keys that outlive it; delete those workspaces first")
     if membership is not None:
-        await membership.delete()
+        await membership.remove()
     await service_account.delete_with_contents()
     return Envelope(data=DeletedOut.of(user_id))
 
