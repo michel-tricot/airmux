@@ -73,7 +73,16 @@ def deployment():
         with httpx.Client(base_url=url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as client:
             yield client, compose, gateways, compact
     finally:
-        docker("rm", "-f", upstream)
+        try:
+            artifacts = os.environ.get("AIRMUX_DEPLOYMENT_ARTIFACTS")
+            if artifacts:
+                destination = Path(artifacts)
+                destination.mkdir(parents=True, exist_ok=True)
+                output = subprocess.run(["docker", "logs", upstream], cwd=ROOT, capture_output=True, text=True, check=True)  # noqa: S603,S607 controlled Docker test command
+                contents = (output.stdout + output.stderr).replace("deployment-test-key", "[REDACTED]").replace("deployment-password", "[REDACTED]")
+                (destination / "upstream.log").write_text(contents, encoding="utf-8")
+        finally:
+            docker("rm", "-f", upstream)
 
 
 def service_action(compose, action, service):
