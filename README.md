@@ -53,7 +53,7 @@ export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
 curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Reply with exactly: airmux ready"}],"max_completion_tokens":16}'
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in one word."}],"max_completion_tokens":16}'
 ```
 
 The same gateway accepts streaming requests, tool calls, structured output, reasoning, images, and PDF inputs when the
