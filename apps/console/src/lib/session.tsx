@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useMe, useLogout, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
+import { useQueryClient, type Query } from '@tanstack/react-query';
+import { useMe, useLogout, getMeQueryKey, getGetOrgQueryKey, getMyPermissionsQueryKey, type MeOut } from '@workspace/api-client-react';
 
 const ORG_STORAGE_KEY = 'airmux_org_id';
 
@@ -22,11 +22,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const session = useMe({ query: { queryKey: getMeQueryKey(), retry: false } });
   const [orgId, setOrgIdState] = useState<string | null>(() => window.localStorage.getItem(ORG_STORAGE_KEY));
 
-  const setOrgId = useCallback((id: string | null) => {
-    setOrgIdState(id);
-    if (id) window.localStorage.setItem(ORG_STORAGE_KEY, id);
-    else window.localStorage.removeItem(ORG_STORAGE_KEY);
-  }, []);
+  const setOrgId = useCallback(
+    (id: string | null) => {
+      if (orgId && orgId !== id) {
+        const orgPath = getGetOrgQueryKey(orgId)[0];
+        const permissionPath = getMyPermissionsQueryKey()[0];
+        const departedOrg = ({ queryKey }: Query) => {
+          const [path, params] = queryKey;
+          return (
+            (typeof path === 'string' && (path === orgPath || path.startsWith(`${orgPath}/`))) ||
+            (path === permissionPath && typeof params === 'object' && params !== null && 'org_id' in params && params.org_id === orgId)
+          );
+        };
+        void queryClient.cancelQueries({ predicate: departedOrg });
+        queryClient.removeQueries({ predicate: departedOrg });
+      }
+      setOrgIdState(id);
+      if (id) window.localStorage.setItem(ORG_STORAGE_KEY, id);
+      else window.localStorage.removeItem(ORG_STORAGE_KEY);
+    },
+    [orgId, queryClient],
+  );
 
   const logoutMutation = useLogout();
   const logout = useCallback(() => {
