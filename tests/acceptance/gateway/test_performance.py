@@ -109,7 +109,17 @@ async def test_stream_timing_measures_text_after_metadata_and_rejects_missing_te
             await request(client, "http://upstream/incomplete", {}, {"stream": True})
 
 
-def test_performance_load_preserves_usage_with_integration_artifacts_enabled(gateway: Gateway, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.parametrize("override", [True, False], ids=["dialect_override", "sdk_fingerprint"])
+def test_performance_load_preserves_usage_with_integration_artifacts_enabled(
+    gateway: Gateway, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, override: bool
+):
+    if not override:
+        headers = performance.PerformanceGateway.headers
+        monkeypatch.setattr(
+            performance.PerformanceGateway,
+            "headers",
+            lambda gateway, dialect: {name: value for name, value in headers(gateway, dialect).items() if name == "Authorization"},
+        )
     monkeypatch.setenv("AIRMUX_GATEWAY_ARTIFACTS", str(tmp_path / "artifacts"))
     directory = tmp_path / "performance"
     run_revision(directory, Path(gateway.executable), "candidate", 1, Settings(0.1, 1))

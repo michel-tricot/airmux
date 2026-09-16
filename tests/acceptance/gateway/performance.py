@@ -288,7 +288,11 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 "stream": scenario == "stream",
                 "max_tokens": 50,
             }
-            samples, elapsed_s = asyncio.run(measure(url, {} if direct else gateway.headers("openai_native"), body, concurrency, settings))
+            samples, elapsed_s = asyncio.run(
+                measure(
+                    url, {} if direct else {**gateway.headers("openai_native"), "User-Agent": "OpenAI/Python benchmark"}, body, concurrency, settings
+                )
+            )
             if not direct:
                 event_count += settings.warmup * concurrency + len(samples)
             measurements.append(
