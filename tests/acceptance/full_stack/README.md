@@ -27,7 +27,10 @@ Authentication resilience checks malformed input and saturates a real password w
 and inference requests run concurrently with authentication bursts; a valid login must work again afterwards.
 
 The Actions summary displays counts and expandable assertion/setup failures even when pytest fails. The
-`full-stack-acceptance` artifact retains JUnit XML for seven days.
+`full-stack-acceptance` artifact retains JUnit XML and per-scenario control-plane, gateway, CLI setup and stub-upstream
+logs for seven days. Set `AIRMUX_STACK_ARTIFACTS` to a directory to retain these logs locally. Teardown copies only the
+named logs after stopping services and redacts known test credentials. Configuration, cookies, private keys and secret-store
+files are excluded. Stub logs contain request counts, timestamps and HTTP statuses without headers or bodies.
 
 The previous absolute-threshold overhead and throughput sweeps have been retired. The retained
 [gateway performance job](../gateway/README.md#performance-and-regression-tracking) compares base and candidate wheels

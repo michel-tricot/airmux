@@ -19,7 +19,7 @@ def annotation(message: str) -> str:
 @app.command()
 def report(directory: Path, summary: Annotated[Path, typer.Option()]) -> None:
     reports = sorted(directory.rglob("*.xml"))
-    sections = ["## Acceptance test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
+    sections = ["## Test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
     failures: list[tuple[str, str, str]] = []
     for path in reports:
         root = ET.parse(path).getroot()  # noqa: S314 reports are generated locally by pytest
