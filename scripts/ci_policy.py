@@ -23,6 +23,11 @@ class Selection:
     backend: bool = True
     deployment: bool = True
 
+    def __post_init__(self) -> None:
+        if (self.frontend, self.backend, self.deployment) not in {(False, False, False), (True, False, True), (True, True, True)}:
+            message = "Change policy must select documentation, frontend with Docker, or full validation"
+            raise ValueError(message)
+
 
 def classify(paths: tuple[str, ...], event: str) -> Selection:
     if event != "pull_request" or not paths:

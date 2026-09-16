@@ -45,6 +45,14 @@ def test_non_pr_events_always_select_full_validation(event):
     assert classify(("docs/development.mdx",), event) == Selection()
 
 
+@pytest.mark.parametrize("flags", [(False, True, True), (True, True, False), (True, False, False)])
+def test_aggregate_rejects_inconsistent_classifier_outputs(flags):
+    results = job_results(Selection())
+    results["changes"]["outputs"] = {name: str(value).lower() for name, value in zip(("frontend", "backend", "deployment"), flags, strict=True)}
+    with pytest.raises(ValueError, match="Change policy must select"):
+        validate_results(json.dumps(results), "ci")
+
+
 def job_results(selection, scope="ci"):
     return {
         "changes": {"result": "success", "outputs": {name: str(value).lower() for name, value in vars(selection).items()}},
