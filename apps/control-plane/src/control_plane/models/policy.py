@@ -159,7 +159,7 @@ class PolicyCreate(RecordCreate[Policy]):
     name: str = Field(min_length=1, max_length=200, description="Display name for the workspace policy")
     enabled: bool = Field(default=True, description="Whether gateways apply this policy after receiving the updated configuration")
     priority: int = Field(default=100, ge=0, le=10000, description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply")
-    definition: PolicyDefinition = Field(description="Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced")
+    definition: PolicyDefinition = Field(description="Workspace, user, or inference key target and reusable rules")
 
 
 class PolicyUpdate(RecordUpdate[Policy]):

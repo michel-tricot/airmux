@@ -224,7 +224,6 @@ def test_discovery_includes_models_with_credentials_allowed_by_policy(tmp_path, 
     [
         {"kind": "strict_parameters"},
         {"kind": "request_limits", "max_output_tokens": 1},
-        {"kind": "budget", "period": "day", "amount_usd": "1", "sharing": "per_key"},
         {"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 100},
     ],
 )

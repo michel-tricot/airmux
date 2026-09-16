@@ -5,7 +5,7 @@ import type { RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-rea
 import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { SearchPicker } from '@/components/shared/search-picker';
-import { Alert, AlertDescription, Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
+import { Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
 import { ModelBadges } from '@/features/rules/presentation';
@@ -26,7 +26,7 @@ const credentialScopeOptions = [
   { value: 'platform', label: 'Platform credentials' },
 ];
 
-type TextFieldName = 'name' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
+type TextFieldName = 'name' | 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
 
 function TextField({
   form,
@@ -292,54 +292,6 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
             <TextField form={form} name="timeoutMs" label="Time limit (milliseconds)" numeric min={100} max={120000} />
           </div>
           <p className="text-sm text-muted-foreground">Includes the primary call and credential retries. Every backup must pass all restrictions.</p>
-        </>
-      )}
-      {kind === 'budget' && (
-        <>
-          <Alert>
-            <AlertDescription>Budget enforcement is not available yet. This rule does not track spending or block requests.</AlertDescription>
-          </Alert>
-          <TextField form={form} name="amount" label="Estimated spend limit (USD)" />
-          <FormField
-            control={form.control}
-            name="period"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Period</FormLabel>
-                <FormControl>
-                  <Dropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={[
-                      { value: 'day', label: 'Calendar day (UTC)' },
-                      { value: 'month', label: 'Calendar month (UTC)' },
-                    ]}
-                    aria-label="Budget period"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="sharing"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Allowance sharing</FormLabel>
-                <FormControl>
-                  <Dropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={[
-                      { value: 'shared', label: 'Shared across matching keys' },
-                      { value: 'per_key', label: 'Separate allowance per key' },
-                    ]}
-                    aria-label="Allowance sharing"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
         </>
       )}
     </>

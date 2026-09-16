@@ -20,7 +20,7 @@ async def list_policies(workspace: WorkspaceDep) -> Envelope[list[PolicyOut]]:
 
 @router.post("", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope[PolicyOut]:
-    """Create a workspace inference policy; budgets are recorded but not yet enforced."""
+    """Create a workspace inference policy."""
     policy = Policy(
         org_id=workspace.org_id, workspace_id=workspace.id, name=body.name, enabled=body.enabled, priority=body.priority, definition=body.definition
     )
