@@ -204,23 +204,16 @@ The installation includes both runtimes. Invoke `airmux` directly from any direc
 
 The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
-They remain at version `0.0.0` and use unversioned workspace dependencies. Do not update them for a release. Prepare the
-next public patch version in a normal pull request with:
+They remain at version `0.0.0` and use unversioned workspace dependencies. Do not update them for a release.
 
-```bash
-uv version --project packaging/airmux --bump patch
-```
+Run **Prepare release** from the Actions page on `main` and choose a patch, minor, or major increment. The workflow updates
+only the public distribution version, opens a release pull request, and dispatches the required CI and security checks.
+Review and merge that pull request normally.
 
-Dispatch `release.yml` from `main` with an existing protected candidate tag:
-
-```bash
-gh workflow run release.yml --ref main -f tag=v0.1.1
-```
-
-The tag must resolve to that exact SHA, the commit must belong to `main`, and the tag version must match the public
-distribution version. The workflow requires successful `required` and `dependency-security` jobs for that exact main
-commit, then downloads the SHA-named candidate produced by `ci.yml`. It never rebuilds release files. Installation,
-live-provider checks, publication, PyPI verification, and the final gateway request share that validated artifact.
+After the merged commit passes the `required` and `dependency-security` jobs on `main`, run **Publish release** from the
+Actions page on `main`. It requires no inputs. The workflow reads the public version, downloads the SHA-named candidate
+produced by `ci.yml`, verifies it, and creates the protected tag after installation and live-provider checks pass. It
+never rebuilds release files. Publication, PyPI verification, and the final gateway request share that validated artifact.
 
 The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
 `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
@@ -233,10 +226,10 @@ Verify the project name and all four publisher fields before dispatching a candi
 A successful first upload proves that the renamed workflow can obtain the publishing identity.
 
 The [repository policy payloads](https://github.com/michel-tricot/airmux/tree/main/.github/policy) record the
-GitHub settings. `Release Tag Creation` restricts `v*` tag creation to repository administrators; the sole administrator
-and intended release actor is `michel-tricot`. `Immutable Release Tags` prohibits updates and deletion without any
-bypass, including for the release actor. These are separate rulesets so creation permission cannot permit replacement.
-Adding an administrator grants release-tag creation permission and requires an explicit policy review.
+GitHub settings. `Release Tag Creation` restricts `v*` tag creation to repository administrators and the GitHub Actions
+integration used by **Publish release**. `Immutable Release Tags` prohibits updates and deletion without any bypass,
+including for release actors. These are separate rulesets so creation permission cannot permit replacement. Adding an
+administrator grants release-tag creation permission and requires an explicit policy review.
 The `release` environment allows only `v*` tags and `main`, with administrator bypass disabled. Main remains an
 approved source for scheduled and manually dispatched provider checks, which have read-only repository permissions.
 There are no required reviewers while the owner is the only administrator, so scheduled checks need no approval.

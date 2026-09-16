@@ -1,0 +1,60 @@
+name: prepare release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Public version increment
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-pr:
+    if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-python
+      - name: Prepare the public version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          uv version --project packaging/airmux --bump "$BUMP" --frozen
+          test "$(git diff --name-only)" = "packaging/airmux/pyproject.toml"
+          test -z "$(git ls-files --others --exclude-standard)"
+          version="$(python -c 'import tomllib; print(tomllib.load(open("packaging/airmux/pyproject.toml", "rb"))["project"]["version"])')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=release/v$version" >> "$GITHUB_OUTPUT"
+      - name: Open the release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ steps.version.outputs.branch }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          project="packaging/airmux/pyproject.toml"
+          project_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$project?ref=$GITHUB_SHA" --jq .sha)"
+          content="$(base64 -w 0 "$project")"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/$RELEASE_BRANCH" -f sha="$GITHUB_SHA"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$project" -f message="Prepare airmux $RELEASE_VERSION" -f content="$content" -f branch="$RELEASE_BRANCH" -f sha="$project_sha"
+          pr_url="$(gh pr create --base main --head "$RELEASE_BRANCH" --title "Prepare airmux $RELEASE_VERSION" --body "Bumps the public airmux distribution to $RELEASE_VERSION. Internal workspace versions remain unchanged.")"
+          echo "$pr_url" >> "$GITHUB_STEP_SUMMARY"
+          gh workflow run ci.yml --ref "$RELEASE_BRANCH"
+          gh workflow run security.yml --ref "$RELEASE_BRANCH"

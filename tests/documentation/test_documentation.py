@@ -125,7 +125,8 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "tests/ci/test_merge_policy.py" in contributing
     assert "tests/documentation/test_merge_policy.py" not in contributing
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
-    assert "uv version --project packaging/airmux --bump patch" in development
+    assert "Prepare release" in development
+    assert "Publish release" in development
 
 
 def test_documentation_covers_safe_upgrades() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import runpy
 import shutil
@@ -42,3 +43,20 @@ def test_github_api_receives_json_body(tmp_path, monkeypatch):
     gh = cast("Callable[[str, str, str, object | None], object | None]", module["gh"])
 
     assert gh("michel-tricot/airmux", "PUT", "actions/permissions", {"enabled": True}) == {"enabled": True}
+
+
+def test_release_tag_creation_allows_only_administrators_and_github_actions():
+    ruleset = json.loads((ROOT / ".github/policy/release-tag-creation.json").read_text())
+    immutability = json.loads((ROOT / ".github/policy/release-tag-immutability.json").read_text())
+
+    assert ruleset["bypass_actors"] == [
+        {"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"},
+        {"actor_id": 15368, "actor_type": "Integration", "bypass_mode": "always"},
+    ]
+    assert immutability["bypass_actors"] == []
+
+
+def test_actions_may_create_release_pull_requests_with_read_only_defaults():
+    permissions = json.loads((ROOT / ".github/policy/workflow-permissions.json").read_text())
+
+    assert permissions == {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": True}
