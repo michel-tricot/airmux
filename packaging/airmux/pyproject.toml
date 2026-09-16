@@ -1,5 +1,5 @@
 [project]
-name = "tokkeeper"
+name = "airmux"
 version = "0.1.1"
 description = "Self-hosted LLM gateway and management CLI"
 readme = "README.md"
@@ -25,12 +25,12 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/michel-tricot/tokkeeper/tree/main/docs"
-Repository = "https://github.com/michel-tricot/tokkeeper"
-Issues = "https://github.com/michel-tricot/tokkeeper/issues"
+Documentation = "https://github.com/michel-tricot/airmux/tree/main/docs"
+Repository = "https://github.com/michel-tricot/airmux"
+Issues = "https://github.com/michel-tricot/airmux/issues"
 
 [project.scripts]
-tokkeeper = "cli.main:main"
+airmux = "cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

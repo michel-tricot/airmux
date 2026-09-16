@@ -1,6 +1,6 @@
 # Command line
 
-TokKeeper has one public executable, `tokkeeper`. It manages remote installations and starts local runtimes through
+airmux has one public executable, `airmux`. It manages remote installations and starts local runtimes through
 `gateway` and `control-plane` command groups. The CLI owns Typer, help, output, and actionable command errors. Each runtime
 owns typed operations and its application factory. Neither runtime imports the CLI, and the planes still share only `contract`.
 
@@ -11,13 +11,13 @@ request and response boundaries.
 
 ## Installation boundary
 
-The `tokkeeper` distribution installs the CLI and both runtimes. One installation supports remote management,
+The `airmux` distribution installs the CLI and both runtimes. One installation supports remote management,
 standalone gateways, and control planes without choosing extras. Installation starts no services and does not require
 a database. Its wheel contains the `cli`, `api_models`, `contract`, `control_plane`, and `data_plane` import packages.
 The corresponding workspace projects remain local development units so their dependencies and boundaries stay explicit.
-They are not published or resolved when installing TokKeeper.
+They are not published or resolved when installing airmux.
 
-The distribution name `tokkeeper` resolves to two different projects: the CLI workspace project in a development checkout
+The distribution name `airmux` resolves to two different projects: the CLI workspace project in a development checkout
 and the published distribution in an installation. Runtime version reporting reads that name, so both must carry the same
 version, and the published dependency list must equal the union of the bundled projects' external dependencies. Repository
 tests in `tests/documentation` enforce both invariants.
@@ -37,9 +37,9 @@ distribution version, and the installed behavior suite exercises the same artifa
 
 ## Local configuration
 
-Runtime commands resolve `--config`, then `TOKKEEPER_CONFIG`. Gateway commands use `./.tokkeeper/tokkeeper.yml`, falling back to
-a shared `./tokkeeper.yml` when the standalone file is absent; control-plane commands use `./tokkeeper.yml`. Gateway
-initialization writes into `.tokkeeper` by default; control-plane initialization writes into the current directory. Both accept
+Runtime commands resolve `--config`, then `AIRMUX_CONFIG`. Gateway commands use `./.airmux/airmux.yml`, falling back to
+a shared `./airmux.yml` when the standalone file is absent; control-plane commands use `./airmux.yml`. Gateway
+initialization writes into `.airmux` by default; control-plane initialization writes into the current directory. Both accept
 an explicit directory and refuse to overwrite existing files.
 Generated configuration and keys are private. Standalone inference keys and the connected bootstrap key use file references,
 avoiding an additional environment export before startup. Standalone initialization copies the shipped taxonomy unless the

@@ -22,7 +22,7 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
     body = json.dumps(
         {
             "model": model_id,
-            "messages": [{"role": "user", "content": "Reply with exactly: tokkeeper ready"}],
+            "messages": [{"role": "user", "content": "Reply with exactly: airmux ready"}],
             "max_completion_tokens": 16,
         },
         separators=(",", ":"),
@@ -36,12 +36,12 @@ def next_steps(guide: GatewayGuide, config: Path, inference_key: Path) -> tuple[
         "Next:",
         *provider_step,
         "  2. Start the gateway:",
-        f"     tokkeeper gateway serve --config {shell_quote(str(config))}",
+        f"     airmux gateway serve --config {shell_quote(str(config))}",
         "  3. In another terminal, verify inference:",
-        f'     export TOKKEEPER_INFERENCE_KEY="$(cat {shell_quote(str(inference_key))})"',
+        f'     export AIRMUX_INFERENCE_KEY="$(cat {shell_quote(str(inference_key))})"',
         "     curl --fail http://127.0.0.1:8080/readyz",
         "     curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \\",
-        '       -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\',
+        '       -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \\',
         "       -H 'Content-Type: application/json' \\",
         f"       -d {shell_quote(body)}",
     )
@@ -54,13 +54,13 @@ def init(
         Path | None,
         typer.Option("--taxonomy", exists=True, dir_okay=False, readable=True, help="Existing taxonomy YAML; defaults to the shipped taxonomy"),
     ] = None,
-    directory: DirectoryOption = Path(".tokkeeper"),
+    directory: DirectoryOption = Path(".airmux"),
 ) -> None:
     """Create standalone configuration and a private inference key."""
     from data_plane.setup import describe_configuration, initialize  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     initialize(directory, taxonomy)
-    config = directory / "tokkeeper.yml"
+    config = directory / "airmux.yml"
     inference_key = directory / "inference.key"
     guide = describe_configuration(config)
     if taxonomy is None:

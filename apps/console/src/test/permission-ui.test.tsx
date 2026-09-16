@@ -33,7 +33,7 @@ function installPermissionHandler(workspacePermissions: Api.Permission[]) {
   );
 }
 
-beforeEach(() => window.localStorage.setItem('tokkeeper_org_id', ORG.id));
+beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 
 describe('permission-aware organization console', () => {
   it('blocks direct model-catalog navigation before requesting the catalog', async () => {

@@ -79,7 +79,7 @@ const models = [
 ];
 
 beforeEach(() => {
-  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
+  window.localStorage.setItem('airmux_org_id', ORG.id);
   server.use(
     http.get(`/api/v1/organizations/${ORG.id}/taxonomy`, () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers, models } })),
   );

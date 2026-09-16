@@ -1,16 +1,16 @@
 ---
 title: "Use the OpenAI SDK"
-description: "Discover models and point Chat Completions and Responses clients at TokKeeper without changing application request shapes."
+description: "Discover models and point Chat Completions and Responses clients at airmux without changing application request shapes."
 ---
 
-TokKeeper exposes model discovery, Chat Completions, and Responses at the standard SDK paths beneath `/inf/v1`. Your inference key replaces the upstream API key.
+airmux exposes model discovery, Chat Completions, and Responses at the standard SDK paths beneath `/inf/v1`. Your inference key replaces the upstream API key.
 
 ## Configure the client
 
 ```bash
-export TOKKEEPER_URL='http://localhost:8080'
-export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
-export TOKKEEPER_MODEL='openai/gpt-4o-mini'
+export AIRMUX_URL='http://localhost:8080'
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+export AIRMUX_MODEL='openai/gpt-4o-mini'
 ```
 
 <CodeGroup>
@@ -21,12 +21,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
 )
 
 completion = client.chat.completions.create(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
 )
 
@@ -39,12 +39,12 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf/v1",
-    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
 )
 
 response = client.responses.create(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     input="Explain request routing in one sentence.",
 )
 
@@ -61,7 +61,7 @@ Use the same client and inference key to list models or retrieve a model by its 
 for model in client.models.list():
     print(model.id, model.owned_by)
 
-model = client.models.retrieve(os.environ["TOKKEEPER_MODEL"])
+model = client.models.retrieve(os.environ["AIRMUX_MODEL"])
 gateway = (model.model_extra or {}).get("gateway", {})
 print(gateway["context_window"], gateway["capabilities"])
 ```
@@ -73,14 +73,14 @@ policies and provider availability are checked during inference. See [model disc
 
 For a client that already constructs the same SDK, only two values change:
 
-| Setting | TokKeeper value |
+| Setting | airmux value |
 | --- | --- |
-| Base URL | `https://your-tokkeeper-domain/inf/v1` |
+| Base URL | `https://your-airmux-domain/inf/v1` |
 | API key | A workspace inference key beginning with `sk-inf-` |
 | Model | A gateway model ID from `client.models.list()` |
 
 The official SDK identifies its dialect automatically. If you send raw HTTP to `/chat/completions`, set
-`x-tokkeeper-dialect: openai_native` when a text-only request could also be valid canonical JSON.
+`x-airmux-dialect: openai_native` when a text-only request could also be valid canonical JSON.
 
 <Info>
   Inference keys authorize inference and model discovery. Management keys beginning with `sk-cp-` are rejected by the gateway.
@@ -88,7 +88,7 @@ The official SDK identifies its dialect automatically. If you send raw HTTP to `
 
 ## Inspect gateway adjustments
 
-TokKeeper reports every parameter it clamps, emulates, or drops in the additive `gateway.adjustments` field. The SDK
+airmux reports every parameter it clamps, emulates, or drops in the additive `gateway.adjustments` field. The SDK
 retains this extension in `model_extra`:
 
 ```python

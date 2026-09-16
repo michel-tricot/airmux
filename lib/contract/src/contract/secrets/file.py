@@ -25,14 +25,14 @@ from contract.secrets.base import SecretRef
 
 DIRECTORY_MODE = 0o700
 FILE_MODE = 0o600
-DEFAULT_ROOT = Path(".tokkeeper/secrets")
+DEFAULT_ROOT = Path(".airmux/secrets")
 
 
 def write_private_text(path: Path, value: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=DIRECTORY_MODE)
     temporary: Path | None = None
     try:
-        descriptor, temporary_name = tempfile.mkstemp(prefix=".tokkeeper-", dir=path.parent)
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".airmux-", dir=path.parent)
         temporary = Path(temporary_name)
         os.fchmod(descriptor, FILE_MODE)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:

@@ -10,11 +10,11 @@ from contract.config import ConfigContext
 from control_plane.keys import validate_management_key_token
 from control_plane.throttling import ThrottleConfig
 
-DEFAULT_DATABASE_URL = "postgresql+asyncpg://tokkeeper:tokkeeper@127.0.0.1:5432/tokkeeper"
+DEFAULT_DATABASE_URL = "postgresql+asyncpg://airmux:airmux@127.0.0.1:5432/airmux"
 """The local database, for a checkout where the host sets no DATABASE_URL."""
 
 DEFAULT_CONSOLE_URL = "http://127.0.0.1:5000"
-"""Where the console is served in a checkout; compose sets TOKKEEPER_CONSOLE_URL to the port nginx publishes."""
+"""Where the console is served in a checkout; compose sets AIRMUX_CONSOLE_URL to the port nginx publishes."""
 
 
 class DatabaseConfig(BaseModel):
@@ -73,7 +73,7 @@ def database_url() -> str:
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
-    """Load settings from an explicit config path, falling back to TOKKEEPER_CONFIG for the serve/migrate contexts that pass it via env."""
-    path = Path(config_path or os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml")).resolve()
+    """Load settings from an explicit config path, falling back to AIRMUX_CONFIG for the serve/migrate contexts that pass it via env."""
+    path = Path(config_path or os.environ.get("AIRMUX_CONFIG", "airmux.yml")).resolve()
     section = load_config_section("control_plane", path)
     return Settings.model_validate(section, context=ConfigContext(base_dir=path.parent))

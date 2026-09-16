@@ -32,12 +32,12 @@ uv run pytest tests/acceptance/gateway/test_08_metering.py -n auto
 uv run pytest tests/acceptance/gateway -k 'fallback and stream' -n auto
 ```
 
-By default, the harness uses the `tokkeeper` beside the test Python interpreter.
-Set `TOKKEEPER_GATEWAY_BIN` to test an independently installed wheel.
-Set `TOKKEEPER_GATEWAY_ARTIFACTS` to collect sanitized diagnostics in a directory outside the checkout:
+By default, the harness uses the `airmux` beside the test Python interpreter.
+Set `AIRMUX_GATEWAY_BIN` to test an independently installed wheel.
+Set `AIRMUX_GATEWAY_ARTIFACTS` to collect sanitized diagnostics in a directory outside the checkout:
 
 ```bash
-TOKKEEPER_GATEWAY_ARTIFACTS=/tmp/gateway-artifacts \
+AIRMUX_GATEWAY_ARTIFACTS=/tmp/gateway-artifacts \
   uv run pytest tests/acceptance/gateway -n auto --junitxml=/tmp/gateway-results.xml
 ```
 
@@ -120,8 +120,8 @@ To compare any two installed gateways locally, choose a fresh output directory:
 
 ```bash
 uv run python tests/acceptance/gateway/performance.py \
-  --base-bin /path/to/base/bin/tokkeeper \
-  --candidate-bin /path/to/candidate/bin/tokkeeper \
+  --base-bin /path/to/base/bin/airmux \
+  --candidate-bin /path/to/candidate/bin/airmux \
   --base-revision BASE_SHA --candidate-revision CANDIDATE_SHA \
   --output "$(mktemp -d)"
 ```

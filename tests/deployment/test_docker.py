@@ -47,7 +47,7 @@ def deployment():
     url = os.environ["DEPLOYMENT_URL"]
     compose = ("compose", "-p", project, "-f", compose_file)
     compact = compose_file == "docker-compose.yml"
-    gateways = ("tokkeeper",) if compact else ("data-plane-1", "data-plane-2")
+    gateways = ("airmux",) if compact else ("data-plane-1", "data-plane-2")
     gateway = gateways[0]
     container = docker(*compose, "ps", "-q", gateway)
     image = docker("inspect", "--format", "{{.Config.Image}}", container)
@@ -87,22 +87,21 @@ def assert_unprivileged(compose, service, expected):
     servers = [
         process
         for process in processes.splitlines()[1:]
-        if not process.split()[2].endswith("/docker-init")
-        and any(name in process for name in ("tokkeeper control-plane", "tokkeeper gateway", "nginx:"))
+        if not process.split()[2].endswith("/docker-init") and any(name in process for name in ("airmux control-plane", "airmux gateway", "nginx:"))
     ]
     assert servers
-    assert all(server.split()[1] in {"tokkeeper", "10001"} for server in servers), processes
+    assert all(server.split()[1] in {"airmux", "10001"} for server in servers), processes
     assert all(sum(command in server for server in servers) == 1 for command in expected), processes
 
 
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
     if compact:
-        assert_unprivileged(compose, gateways[0], ("tokkeeper control-plane serve", "tokkeeper gateway serve", "nginx: master"))
+        assert_unprivileged(compose, gateways[0], ("airmux control-plane serve", "airmux gateway serve", "nginx: master"))
         return
-    assert_unprivileged(compose, "control-plane", ("tokkeeper control-plane serve",))
+    assert_unprivileged(compose, "control-plane", ("airmux control-plane serve",))
     for gateway in gateways:
-        assert_unprivileged(compose, gateway, ("tokkeeper gateway serve",))
+        assert_unprivileged(compose, gateway, ("airmux gateway serve",))
     assert_unprivileged(compose, "console", ("nginx: master",))
 
 
@@ -114,10 +113,10 @@ def assert_quickstart(public_url, config_path):
             uv,
             "run",
             "--package",
-            "tokkeeper",
+            "airmux",
             "--no-dev",
             "--frozen",
-            "tokkeeper",
+            "airmux",
             "quickstart",
             "--url",
             public_url,
@@ -127,7 +126,7 @@ def assert_quickstart(public_url, config_path):
             "deployment-password",
         ],
         cwd=ROOT,
-        env={**os.environ, "TOKKEEPER_CLI_CONFIG": str(config_path), "DEPLOYMENT_API_KEY": "deployment-test-key"},
+        env={**os.environ, "AIRMUX_CLI_CONFIG": str(config_path), "DEPLOYMENT_API_KEY": "deployment-test-key"},
         capture_output=True,
         text=True,
         check=True,
@@ -139,9 +138,9 @@ def assert_quickstart(public_url, config_path):
 
 def assert_installed_packages(compose, gateway):
     container = docker(*compose, "ps", "-q", gateway)
-    assert docker("exec", container, "tokkeeper", "--version").startswith("tokkeeper ")
-    assert "--config" in docker("exec", container, "tokkeeper", "gateway", "serve", "--help")
-    assert "--config" in docker("exec", container, "tokkeeper", "control-plane", "serve", "--help")
+    assert docker("exec", container, "airmux", "--version").startswith("airmux ")
+    assert "--config" in docker("exec", container, "airmux", "gateway", "serve", "--help")
+    assert "--config" in docker("exec", container, "airmux", "control-plane", "serve", "--help")
 
 
 def assert_control_plane_outage(client, compose, path, headers, request):
@@ -170,7 +169,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         )
     )
     payload(client.post(f"{base}/provider-credentials", json={"provider": provider, "value": "deployment-test-key"}))
-    headers = {"Authorization": f"Bearer {key['token']}", "x-tokkeeper-dialect": "openai_native"}
+    headers = {"Authorization": f"Bearer {key['token']}", "x-airmux-dialect": "openai_native"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
     eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))

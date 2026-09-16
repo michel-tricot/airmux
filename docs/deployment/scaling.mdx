@@ -6,13 +6,13 @@ description: "Run the console, control plane, and multiple data planes independe
 The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, and two gateways on one Docker host.
 
 ```bash
-docker compose -p tokkeeper-split -f docker-compose.split.yml up -d --build --wait
-tokkeeper quickstart --url http://localhost:8080
+docker compose -p airmux-split -f docker-compose.split.yml up -d --build --wait
+airmux quickstart --url http://localhost:8080
 ```
 
 The console proxy distributes `/inf/` requests between both gateways.
 
-Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
 ## Volume ownership
 
@@ -35,7 +35,7 @@ The checked-in split file demonstrates service boundaries, not a multi-host prod
 - One persistent cache and outbox directory per gateway
 - A streaming-capable load balancer with response buffering disabled
 
-Set `TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address. Protect this path and its data-plane management key.
+Set `AIRMUX_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address. Protect this path and its data-plane management key.
 
 Keep one control-plane replica with the checked-in startup process. Multiple control-plane replicas require coordinated
 migration and catalog initialization plus shared credential storage.

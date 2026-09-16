@@ -170,12 +170,12 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
     config = load_config()
     profile = active_profile(config)
     if profile is None or config.active is None:
-        console.print("[red]Not signed in. Run [bold]tokkeeper login[/bold].[/red]")
+        console.print("[red]Not signed in. Run [bold]airmux login[/bold].[/red]")
         raise typer.Exit(1)
     with access_client(control_plane_url) as c:
         resp = c.get(org_path(f"/workspaces/{workspace}"))
     if not resp.is_success:
-        console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]tokkeeper workspaces list[/bold].[/red]")
+        console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airmux workspaces list[/bold].[/red]")
         raise typer.Exit(1)
     chosen = payload(resp, WorkspaceOut)
     updated_profile = profile.model_copy(update={"workspace": chosen.slug, "workspace_name": chosen.name})
@@ -281,7 +281,7 @@ def service_accounts_create(
     with access_client(control_plane_url) as c:
         account = payload(post_expecting(c, "/api/v1/service-accounts", {"name": name}, ok=(200,)), UserOut)
     console.print(f"Created service account [bold]{account.email}[/bold]")
-    console.print(f"[dim]Add it to your organization: tokkeeper orgs members add {account.id}[/dim]")
+    console.print(f"[dim]Add it to your organization: airmux orgs members add {account.id}[/dim]")
 
 
 @service_accounts_app.command("list")
@@ -556,7 +556,7 @@ def orgs_create(
     body = {"name": name, "slug": slug}
     with access_client(control_plane_url) as client:
         organization = payload(post_expecting(client, "/api/v1/organizations", body, ok=(200,)), OrgOut)
-    console.print(f"Created [bold]{organization.name}[/bold]. Add people with tokkeeper orgs members add <user>.")
+    console.print(f"Created [bold]{organization.name}[/bold]. Add people with airmux orgs members add <user>.")
 
 
 @inference_keys_app.command("create")
@@ -583,7 +583,7 @@ def workspaces_create(
     with access_client(control_plane_url) as c:
         body = {"name": name, "slug": slug} if slug else {"name": name}
         created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)), WorkspaceOut)
-    console.print(f"Created [bold]{created.slug}[/bold]. Select it with tokkeeper workspaces use {created.slug}.")
+    console.print(f"Created [bold]{created.slug}[/bold]. Select it with airmux workspaces use {created.slug}.")
 
 
 PROVIDER_CREDENTIAL_COLS = [
@@ -602,7 +602,7 @@ def _read_secret(prompt: str) -> str:
 
     There is deliberately no --value flag: a key passed as an argument lands in the shell history
     and in the process list of every other user on the machine for as long as the command runs.
-    Piping is the automated path, `echo $KEY | tokkeeper provider-credentials add openai`.
+    Piping is the automated path, `echo $KEY | airmux provider-credentials add openai`.
     """
     if sys.stdin.isatty():
         return typer.prompt(prompt, hide_input=True)
@@ -652,7 +652,7 @@ def provider_credentials_list(
 
 @provider_credentials_app.command("rotate")
 def provider_credentials_rotate(
-    credential_id: str = typer.Argument(..., help="Credential id from `tokkeeper provider-credentials list`"),
+    credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
 ) -> None:
     """Replace a provider key, keeping its name and position."""
@@ -666,7 +666,7 @@ def provider_credentials_rotate(
 
 @provider_credentials_app.command("rm")
 def provider_credentials_rm(
-    credential_id: str = typer.Argument(..., help="Credential id from `tokkeeper provider-credentials list`"),
+    credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     control_plane_url: str = "",
 ) -> None:
     """Delete a provider key."""
@@ -678,7 +678,7 @@ def provider_credentials_rm(
 
 @provider_credentials_app.command("disable")
 def provider_credentials_disable(
-    credential_id: str = typer.Argument(..., help="Credential id from `tokkeeper provider-credentials list`"),
+    credential_id: str = typer.Argument(..., help="Credential id from `airmux provider-credentials list`"),
     enable: bool = typer.Option(False, "--enable", help="Put it back in the pool instead"),
     control_plane_url: str = "",
 ) -> None:

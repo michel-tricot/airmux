@@ -63,7 +63,7 @@ async def _require_migrated_schema(engine: AsyncEngine) -> None:
     head = head_revision()
     if current != head:
         state = f"at revision {current}" if current else "empty"
-        msg = f"database schema is {state} but the code expects {head}: run `tokkeeper control-plane migrate` (serve --dev migrates automatically)"
+        msg = f"database schema is {state} but the code expects {head}: run `airmux control-plane migrate` (serve --dev migrates automatically)"
         raise RuntimeError(msg)
 
 
@@ -150,7 +150,7 @@ async def throttled_handler(_request: Request, exc: Exception) -> JSONResponse:
 
 def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBackend | None = None) -> FastAPI:
     app = ControlPlaneApp(
-        title="TokKeeper Control Plane API",
+        title="airmux Control Plane API",
         description=API_DESCRIPTION,
         version="0.1.0",
         lifespan=lifespan,

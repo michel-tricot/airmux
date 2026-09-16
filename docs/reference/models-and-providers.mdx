@@ -6,8 +6,8 @@ description: "Understand catalog model IDs, provider profiles, modalities, capab
 The model catalog is the routing contract between management and inference. Query the deployed catalog instead of hard-coding the repository snapshot:
 
 ```bash
-tokkeeper providers list -f json
-tokkeeper models list -f json
+airmux providers list -f json
+airmux models list -f json
 ```
 
 ## Inference model discovery
@@ -76,7 +76,7 @@ xAI provider entries. The deployed catalog is authoritative and may differ after
 Modalities are `text`, `image`, `audio`, `video`, and `pdf`. Current inference content supports text, images, and PDFs;
 catalog entries can still describe the broader vocabulary.
 
-Capabilities are `streaming`, `tools`, `reasoning`, and `structured_output`. TokKeeper derives requirements from the
+Capabilities are `streaming`, `tools`, `reasoning`, and `structured_output`. airmux derives requirements from the
 request and rejects a route with a missing capability.
 
 ## Update the catalog
@@ -84,8 +84,8 @@ request and rejects a route with a missing capability.
 The repository taxonomy is generated from the model-audit evidence. Apply it to an instance with a dry run first:
 
 ```bash
-tokkeeper catalog apply --file taxonomy/taxonomy.yml --dry-run
-tokkeeper catalog apply --file taxonomy/taxonomy.yml
+airmux catalog apply --file taxonomy/taxonomy.yml --dry-run
+airmux catalog apply --file taxonomy/taxonomy.yml
 ```
 
 Catalog changes publish new bundles for affected organizations. They do not mutate requests already executing on an older snapshot.

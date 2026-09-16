@@ -1,9 +1,9 @@
-"""Build a field support matrix across TokKeeper and every provider request schema.
+"""Build a field support matrix across airmux and every provider request schema.
 
 Flattens each provider's request schema into JSONPaths and reports, per path, which
 providers accept it. Emits a CSV for spreadsheet use and a JSON blob for the HTML report.
 
-    Generated as part of `uv run tokkeeper-audit taxonomy rebuild`.
+    Generated as part of `uv run airmux-audit taxonomy rebuild`.
 
 Paths come from the schema the provider actually publishes, so a provider that borrows the
 canonical OpenAI schema reports OpenAI's fields verbatim. Those are flagged rather than
@@ -123,9 +123,9 @@ def main(arguments: Sequence[str] = ()) -> int:
     max_depth = int(arguments[1]) if len(arguments) > 1 else DEFAULT_MAX_DEPTH
     providers = yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]
 
-    tokkeeper_paths = paths_for("schemas/completion/tokkeeper.request.yaml", max_depth)
-    columns = [{"id": "tokkeeper", "name": "TokKeeper", "kind": "gateway", "standin": False, "count": len(tokkeeper_paths)}]
-    support = {"tokkeeper": tokkeeper_paths}
+    airmux_paths = paths_for("schemas/completion/airmux.request.yaml", max_depth)
+    columns = [{"id": "airmux", "name": "airmux", "kind": "gateway", "standin": False, "count": len(airmux_paths)}]
+    support = {"airmux": airmux_paths}
     for entry in providers:
         parts = (entry["schema"] or {}).get("completion", {}).get(ingress)
         if not parts:

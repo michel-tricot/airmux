@@ -45,7 +45,7 @@ declared by its provider. Its source list points to those exact schema files. A 
 in a schema is supported; an absent field remains unknown because permissive and
 documentation-derived schemas cannot prove rejection.
 
-`tokkeeper-audit providers sync` adds discovery evidence after acquiring models and schemas.
+`airmux-audit providers sync` adds discovery evidence after acquiring models and schemas.
 Catalog validation independently regenerates the schema-derived evidence and rejects missing
 or stale model records. Live behavioral support belongs in accepted audit evidence, never in
 the model catalog. There is no maintained list of model ids or parameter claims in the skill.

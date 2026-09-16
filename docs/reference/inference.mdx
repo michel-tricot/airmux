@@ -31,7 +31,7 @@ The generated OpenAPI spec covers the [management API](/docs/reference/managemen
 shared behavior are described in these reference pages.
 
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
-Chat Completions request can target an Anthropic model. TokKeeper returns the response and errors in the caller's dialect.
+Chat Completions request can target an Anthropic model. airmux returns the response and errors in the caller's dialect.
 
 ## Shared behavior
 
@@ -57,13 +57,13 @@ unexpected server errors. Health and readiness checks remain public.
 | `X-Request-ID` | Gateway-generated UUIDv7 | All responses |
 | `X-Content-Type-Options` | `nosniff` | All responses |
 | `X-Accel-Buffering` | `no` | SSE responses sent by the data plane |
-| `WWW-Authenticate` | `Bearer realm="tokkeeper"` | `401` responses |
+| `WWW-Authenticate` | `Bearer realm="airmux"` | `401` responses |
 
 `X-Request-ID` matches the request ID in usage events when an event is recorded. Provider completion IDs in response
 bodies retain their own meaning. Caller-supplied request IDs do not replace the gateway ID. The response renderer owns
 `Content-Type`; middleware forwards streaming bytes without buffering. Existing `Retry-After` headers are preserved.
 
-The `401` challenge advertises bearer authentication. `realm="tokkeeper"` labels the authentication scope and does not
+The `401` challenge advertises bearer authentication. `realm="airmux"` labels the authentication scope and does not
 change key validation.
 
 The packaged Nginx proxy preserves the SSE cache directive and disables inference buffering. Nginx consumes
@@ -74,18 +74,18 @@ The packaged Nginx proxy preserves the SSE cache directive and disables inferenc
 Managed catalog model IDs use `provider/model` form. List the models visible to your inference key:
 
 ```bash
-curl --fail-with-body "$TOKKEEPER_URL/inf/v1/models" \
-  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY"
+curl --fail-with-body "$AIRMUX_URL/inf/v1/models" \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY"
 ```
 
 The model must support every required input modality and capability. Streaming, tools, reasoning, and structured output
 are inferred from the request rather than trusted as caller metadata.
 
-The management command `tokkeeper models list -f json` lists the organization catalog with a management key; it does not apply inference-key policies.
+The management command `airmux models list -f json` lists the organization catalog with a management key; it does not apply inference-key policies.
 
 ## Base URLs
 
-If the public TokKeeper origin is `https://llm.example.com`:
+If the public airmux origin is `https://llm.example.com`:
 
 | Client | Base URL |
 | --- | --- |

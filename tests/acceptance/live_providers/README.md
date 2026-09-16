@@ -19,7 +19,7 @@ Configure `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`, then run:
 uv run --env-file .env pytest tests/acceptance/live_providers
 ```
 
-Set `TOKKEEPER_GATEWAY_BIN` to an installed wheel's executable to test that build. Missing or empty keys
+Set `AIRMUX_GATEWAY_BIN` to an installed wheel's executable to test that build. Missing or empty keys
 fail collection. Run without `-n`; one session allows at most 30 real requests, each with an output limit
 of at most 1,280 tokens and an 8 KiB request body. The normal complete run makes 29 real requests.
 These bounds limit test traffic; provider budgets on dedicated test keys should also be configured.

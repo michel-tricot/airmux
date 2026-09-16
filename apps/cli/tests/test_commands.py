@@ -25,49 +25,49 @@ def test_every_command_is_listed_once():
 
     assert len(paths) == len(set(paths))
     for path in (
-        "tokkeeper quickstart",
-        "tokkeeper status",
-        "tokkeeper doctor",
-        "tokkeeper profiles list",
-        "tokkeeper profiles use",
-        "tokkeeper orgs mine",
-        "tokkeeper provider-credentials add",
-        "tokkeeper management-keys create",
-        "tokkeeper catalog apply",
-        "tokkeeper gateways list",
+        "airmux quickstart",
+        "airmux status",
+        "airmux doctor",
+        "airmux profiles list",
+        "airmux profiles use",
+        "airmux orgs mine",
+        "airmux provider-credentials add",
+        "airmux management-keys create",
+        "airmux catalog apply",
+        "airmux gateways list",
     ):
         assert path in paths
 
-    assert "tokkeeper taxonomy apply" not in paths
-    assert "tokkeeper data-planes list" not in paths
-    assert "tokkeeper bundles republish" in paths
-    assert "tokkeeper bundles compile" not in paths
-    assert "tokkeeper test verify" not in paths
-    assert "tokkeeper test loadgen" not in paths
+    assert "airmux taxonomy apply" not in paths
+    assert "airmux data-planes list" not in paths
+    assert "airmux bundles republish" in paths
+    assert "airmux bundles compile" not in paths
+    assert "airmux test verify" not in paths
+    assert "airmux test loadgen" not in paths
 
 
 def test_the_listing_does_not_list_itself():
-    assert "tokkeeper commands" not in [row["command"] for row in listed()]
+    assert "airmux commands" not in [row["command"] for row in listed()]
 
 
 def test_a_command_takes_its_category_from_its_group():
     """Most commands never name a category; the group they sit in is the answer."""
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["tokkeeper orgs mine"] == RESOURCES
-    assert rows["tokkeeper workspaces create"] == RESOURCES
-    assert rows["tokkeeper users list"] == RESOURCES
+    assert rows["airmux orgs mine"] == RESOURCES
+    assert rows["airmux workspaces create"] == RESOURCES
+    assert rows["airmux users list"] == RESOURCES
 
 
 def test_all_resource_commands_share_one_category():
     rows = {row["command"]: row["category"] for row in listed()}
 
-    assert rows["tokkeeper orgs list"] == RESOURCES
-    assert rows["tokkeeper orgs create"] == RESOURCES
-    assert rows["tokkeeper providers list"] == RESOURCES
-    assert rows["tokkeeper models list"] == RESOURCES
-    assert "tokkeeper providers create" not in rows
-    assert "tokkeeper models create" not in rows
+    assert rows["airmux orgs list"] == RESOURCES
+    assert rows["airmux orgs create"] == RESOURCES
+    assert rows["airmux providers list"] == RESOURCES
+    assert rows["airmux models list"] == RESOURCES
+    assert "airmux providers create" not in rows
+    assert "airmux models create" not in rows
 
 
 def test_every_command_says_what_it_does():
@@ -85,14 +85,14 @@ def test_the_table_groups_by_category():
 def test_categories_follow_the_user_task():
     categories = {command["command"]: command["category"] for command in listed()}
 
-    assert categories["tokkeeper quickstart"] == "Getting started"
+    assert categories["airmux quickstart"] == "Getting started"
     for command in ("login", "profiles list", "status", "doctor"):
-        assert categories[f"tokkeeper {command}"] == "Connection"
+        assert categories[f"airmux {command}"] == "Connection"
     for command in ("gateway init", "gateway serve", "control-plane init", "control-plane serve"):
-        assert categories[f"tokkeeper {command}"] == "Services"
+        assert categories[f"airmux {command}"] == "Services"
     for command in ("catalog apply", "gateways list", "orgs list"):
-        assert categories[f"tokkeeper {command}"] == "Manage resources"
-    assert categories["tokkeeper completion"] == GOODIES
+        assert categories[f"airmux {command}"] == "Manage resources"
+    assert categories["airmux completion"] == GOODIES
 
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -107,7 +107,7 @@ def test_completion_installs_for_the_selected_shell(tmp_path, monkeypatch):
     result = runner.invoke(app, ["completion", "--shell", "fish"])
 
     assert result.exit_code == 0, result.output
-    completion = tmp_path / ".config/fish/completions/tokkeeper.fish"
+    completion = tmp_path / ".config/fish/completions/airmux.fish"
     assert completion.is_file()
-    assert "tokkeeper" in completion.read_text()
+    assert "airmux" in completion.read_text()
     assert f"Installed fish completion at {completion}" in result.output

@@ -219,7 +219,7 @@ def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True, t
 def write_config(tmp_path, _cp: ControlPlane) -> str:
     """The minimal config file pointing CLI commands at a setup_control_plane database."""
     doc = {"control_plane": {"database": {"url": db_url_for(tmp_path)}}}
-    cfg = tmp_path / "tokkeeper.yml"
+    cfg = tmp_path / "airmux.yml"
     cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
     return str(cfg)
 

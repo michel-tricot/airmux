@@ -76,7 +76,7 @@ def initialize_gateway(executable, taxonomy_path, directory, tmp_path, environme
     )
     key = (directory / "inference.key").read_text().strip()
     assert key not in initialized.stdout
-    config_path = directory / "tokkeeper.yml"
+    config_path = directory / "airmux.yml"
     config = yaml.safe_load(config_path.read_text())
     config["data_plane"]["bundle"]["reload_interval_s"] = 0.1
     config_path.write_text(yaml.safe_dump(config))
@@ -102,7 +102,7 @@ def verify_gateway_requests(client, headers, body, key):
     unauthorized = client.post("/inf/v1/chat/completions", json=body)
     assert unauthorized.status_code == 401
     assert unauthorized.headers["cache-control"] == "no-store"
-    assert unauthorized.headers["www-authenticate"] == 'Bearer realm="tokkeeper"'
+    assert unauthorized.headers["www-authenticate"] == 'Bearer realm="airmux"'
     assert client.get("/inf/v1/models", headers={"x-api-key": key}).status_code == 200
     response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
     assert response.status_code == 200, response.text
@@ -114,7 +114,7 @@ def verify_gateway_requests(client, headers, body, key):
 
 
 def test_installed_gateway_with_external_taxonomy(tmp_path):
-    executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper"))
+    executable = os.environ.get("AIRMUX_GATEWAY_BIN", str(Path(sys.executable).parent / "airmux"))
     provider = ThreadingHTTPServer(("127.0.0.1", 0), ProviderHandler)
     thread = threading.Thread(target=provider.serve_forever, daemon=True)
     thread.start()
@@ -141,7 +141,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
             process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
                 eventually(lambda: client.get("/readyz").status_code == 200)
-                headers = {"Authorization": f"Bearer {key}", "X-Tokkeeper-Dialect": "openai_native"}
+                headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
                 body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
                 verify_gateway_requests(client, headers, body, key)
                 taxonomy["models"][0]["model_id"] = "changed"

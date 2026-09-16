@@ -41,15 +41,15 @@ jobs:
         run: ./scripts/build-python-distribution.sh
       - name: Install candidate wheel
         env:
-          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
-          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: uv tool install dist/tokkeeper-*.whl
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+        run: uv tool install dist/airmux-*.whl
       - name: Verify real providers and metering
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
-          TOKKEEPER_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+          AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
           DOCKER_HOST: unix:///no-docker.sock
         run: uv run pytest tests/acceptance/live_providers --junitxml=live-provider-results/live-providers.xml
       - name: Summarize live-provider results

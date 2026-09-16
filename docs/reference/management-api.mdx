@@ -13,7 +13,7 @@ Automation sends a management key:
 Authorization: Bearer sk-cp-your-key
 ```
 
-Browser sessions use the `tokkeeper_session` cookie and must also send `X-Requested-With`. Inference keys are not accepted by management endpoints.
+Browser sessions use the `airmux_session` cookie and must also send `X-Requested-With`. Inference keys are not accepted by management endpoints.
 
 ## Scope in URLs
 
@@ -46,7 +46,7 @@ Lists use `{"data": [...]}`. Errors retain FastAPI's `{"detail": ...}` shape and
 
 ```bash
 curl https://llm.example.com/api/v1/organizations/$ORG_ID/workspaces \
-  -H "Authorization: Bearer $TOKKEEPER_MANAGEMENT_KEY" \
+  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY" \
   -H 'Accept: application/json'
 ```
 

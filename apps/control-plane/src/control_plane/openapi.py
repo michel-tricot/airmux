@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
     from control_plane.deps import PermissionCheck
 
-API_DESCRIPTION = """Manage TokKeeper organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
+API_DESCRIPTION = """Manage airmux organizations, workspaces, management keys, provider credentials, and data-plane synchronization.
 
 Organization and workspace targets are part of each URL. Successful responses wrap their result in
 `{"data": ...}`. Authenticate with a control-plane management key or a browser session as documented by
@@ -29,7 +29,7 @@ API_TAGS = [
     {
         "name": "Instance Organizations",
         "x-displayName": "Organizations",
-        "description": "List and create organizations on this TokKeeper instance",
+        "description": "List and create organizations on this airmux instance",
     },
     {"name": "Instance Users", "x-displayName": "Users", "description": "Manage human users and service accounts across the instance"},
     {
@@ -40,16 +40,16 @@ API_TAGS = [
     {
         "name": "Instance Model Catalog",
         "x-displayName": "Model Catalog",
-        "description": "Manage the providers and models available through this TokKeeper instance",
+        "description": "Manage the providers and models available through this airmux instance",
     },
     {
         "name": "Instance Provider Credentials",
         "x-displayName": "Provider Credentials",
-        "description": "Manage provider API keys available across the TokKeeper instance",
+        "description": "Manage provider API keys available across the airmux instance",
     },
     {"name": "Data Plane Instances", "x-displayName": "Data Planes", "description": "Inspect connected data-plane instances"},
     {"name": "Instance Activity", "x-displayName": "Activity", "description": "Inspect recent audited changes across the instance"},
-    {"name": "OSS", "x-displayName": "Self-hosting", "description": "Bootstrap a new self-hosted TokKeeper deployment"},
+    {"name": "OSS", "x-displayName": "Self-hosting", "description": "Bootstrap a new self-hosted airmux deployment"},
     {"name": "Organization Settings", "x-displayName": "Settings", "description": "View, update, and delete one organization"},
     {
         "name": "Organization Members",
@@ -300,7 +300,7 @@ class ControlPlaneApp(FastAPI):
                 operation = schema["paths"][path][method.lower()]
                 operation["summary"] = OPERATION_SUMMARIES.get(route.name, operation["summary"])
                 if permission_checks:
-                    operation["x-tokkeeper-authority"] = [
+                    operation["x-airmux-authority"] = [
                         {"scope": check.required_scope, "anyOf": [permission.value for permission in rule]}
                         for check in permission_checks
                         for rule in check.required_permission_rules
