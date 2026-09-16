@@ -7,14 +7,14 @@ control_plane:
   public_signup: ${env:AIRMUX_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
-    root: /state/secrets
+    path: /state/secrets
 
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://control-plane:8000}
-      token: ${file:/state/runtime/dataplane.key}
+      management_key: ${file:/state/runtime/dataplane.key}
     cache_dir: /state/data-plane
     poll_interval_s: 5
     heartbeat_interval_s: 30
@@ -25,4 +25,4 @@ data_plane:
     flush_interval_s: 5
   secrets:
     kind: file
-    root: /state/secrets
+    path: /state/secrets

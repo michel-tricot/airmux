@@ -1,48 +1,29 @@
 from __future__ import annotations
 
-from typing import Annotated
+from dataclasses import dataclass
+from enum import StrEnum
+from uuid import UUID  # noqa: TC003 SecretRef crosses the wire inside the bundle, so pydantic resolves this at runtime
 
-from pydantic import Field
 
-from contract.secrets.base import (
-    Secret,
-    SecretNotFoundError,
-    SecretPurpose,
-    SecretRef,
-    SecretRejectedError,
-    SecretStore,
-    SecretStoreConfig,
-    SecretStoreUnavailableError,
-)
-from contract.secrets.env import EnvSecretStore, EnvStoreConfig
-from contract.secrets.file import FileSecretStore, FileStoreConfig
-from contract.secrets.insecure_database import InsecureDatabaseSecretStore, InsecureDatabaseStoreConfig
-from contract.secrets.memory import MemorySecretStore, MemoryStoreConfig
+class SecretPurpose(StrEnum):
+    """The kind of credential addressed by a secret reference."""
 
-SecretsConfig = Annotated[MemoryStoreConfig | FileStoreConfig | EnvStoreConfig | InsecureDatabaseStoreConfig, Field(discriminator="kind")]
-"""Which store this process talks to, tagged by kind so each backend parses only its own settings.
+    provider = "provider"
 
-Both planes read their own copy of this section and must name the same store, because one writes
-what the other reads. `config.build()` is how either plane gets its store; there is no factory to
-edit when a backend is added.
-"""
+
+@dataclass(frozen=True)
+class SecretRef:
+    """A stable reference to a secret value and the scope that owns it."""
+
+    purpose: SecretPurpose
+    service: str
+    name: str
+    secret_id: UUID
+    org_id: UUID | None = None
+    workspace_id: UUID | None = None
+
 
 __all__ = [
-    "EnvSecretStore",
-    "EnvStoreConfig",
-    "FileSecretStore",
-    "FileStoreConfig",
-    "InsecureDatabaseSecretStore",
-    "InsecureDatabaseStoreConfig",
-    "MemorySecretStore",
-    "MemoryStoreConfig",
-    "Secret",
-    "SecretNotFoundError",
     "SecretPurpose",
     "SecretRef",
-    "SecretRejectedError",
-    "SecretStore",
-    "SecretStoreConfig",
-    "SecretStoreUnavailableError",
-    "SecretsConfig",
 ]

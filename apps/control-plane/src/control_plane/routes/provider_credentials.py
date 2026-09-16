@@ -5,7 +5,7 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from contract import Secret, SecretRejectedError, SecretStore
+from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
 from control_plane.authz import Permission, Scope
 from control_plane.deps import OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Provider, ProviderCredential, Workspace
@@ -76,10 +76,10 @@ async def _create_provider_credential(
 
 async def _hold(store: SecretStore, credential: ProviderCredential, secret: Secret) -> str:
     try:
-        held = await store.put(credential.secret_ref(), secret)
+        await store.put(credential.secret_ref(), secret)
     except SecretRejectedError as e:
         raise HTTPException(status_code=501, detail=str(e)) from e
-    return held.fingerprint
+    return secret.fingerprint
 
 
 @instance_router.post(

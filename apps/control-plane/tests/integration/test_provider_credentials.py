@@ -12,7 +12,8 @@ from pg import db_url_for
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from contract import BundleV1, EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
+from airmux_runtime.secrets import EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError
+from contract import BundleV1, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.db import current_session
 from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
@@ -73,7 +74,7 @@ def _usage_event(metered, status, occurred_at):
         "input_tokens": 1,
         "output_tokens": 1,
         "max_output_tokens": 128,
-        "cost_usd": 0.0,
+        "cost_usd": "0.0",
         "latency_ms": 1,
         "status": status,
         "stream": False,

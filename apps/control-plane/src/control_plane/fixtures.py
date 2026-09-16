@@ -29,7 +29,8 @@ from uuid import UUID, uuid5
 
 from sqlmodel import col
 
-from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
+from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
+from contract import INFERENCE_TOKEN_PREFIX, UsageStatus, token_hash
 from contract.policies import (
     AllowedModels,
     AllowedProviders,
@@ -197,7 +198,9 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
         status=status,
     ).save()
     with contextlib.suppress(SecretRejectedError):
-        credential.fingerprint = (await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))).fingerprint
+        secret = Secret(FIXTURE_PROVIDER_KEY)
+        await store.put(credential.secret_ref(), secret)
+        credential.fingerprint = secret.fingerprint
     return await credential.save()
 
 
@@ -232,6 +235,8 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
     rng = Random(f"usage:{workspace.id}")  # noqa: S311 fixture traffic, not cryptography
     for index in range(count):
         model_id, provider_id = rng.choice(MODELS)
+        cost_input_usd = Decimal(rng.randint(1000, 200000)) / 1_000_000
+        cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
         await UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
             request_id=fixture_id(f"request:{workspace.id}:{index}"),
@@ -244,9 +249,9 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
             input_tokens=rng.randint(300, 6000),
             output_tokens=rng.randint(80, 1500),
-            cost_usd=rng.uniform(0.001, 0.5),
-            cost_input_usd=rng.uniform(0.001, 0.2),
-            cost_output_usd=rng.uniform(0.001, 0.3),
+            cost_usd=cost_input_usd + cost_output_usd,
+            cost_input_usd=cost_input_usd,
+            cost_output_usd=cost_output_usd,
             cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
             cache_write_tokens=0,
             latency_ms=rng.randint(180, 4000),

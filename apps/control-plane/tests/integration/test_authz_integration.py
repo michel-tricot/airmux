@@ -92,7 +92,7 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
                 "input_tokens": 1,
                 "output_tokens": 1,
                 "max_output_tokens": 128,
-                "cost_usd": 0,
+                "cost_usd": "0",
                 "latency_ms": 1,
                 "status": "ok",
                 "stream": False,

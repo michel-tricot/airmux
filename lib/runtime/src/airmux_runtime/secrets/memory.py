@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import ClassVar, Literal
 
-from contract.secrets.base import Secret, SecretNotFoundError, SecretRef, SecretStore, SecretStoreConfig, path_segments
+from airmux_runtime.secrets.base import Secret, SecretNotFoundError, SecretRef, SecretStoreConfig, _SecretAdapter, path_segments
 
 
 class MemoryStoreConfig(SecretStoreConfig):
@@ -12,14 +12,7 @@ class MemoryStoreConfig(SecretStoreConfig):
         return MemorySecretStore()
 
 
-class MemorySecretStore(SecretStore):
-    """An in-process store for tests and single-process development.
-
-    Both planes sharing one instance is what makes the whole write-then-read path testable without
-    infrastructure. It is not a deployment option: nothing survives a restart or reaches a second
-    process.
-    """
-
+class MemorySecretStore(_SecretAdapter):
     kind: ClassVar[str] = "memory"
 
     def __init__(self) -> None:
@@ -31,9 +24,8 @@ class MemorySecretStore(SecretStore):
             raise SecretNotFoundError(ref)
         return Secret(value)
 
-    async def put(self, ref: SecretRef, secret: Secret) -> Secret:
+    async def put(self, ref: SecretRef, secret: Secret) -> None:
         self._values[path_segments(ref)] = secret.reveal()
-        return secret
 
     async def delete(self, ref: SecretRef) -> None:
         self._values.pop(path_segments(ref), None)

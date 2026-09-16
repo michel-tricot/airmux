@@ -25,7 +25,7 @@ from control_plane.models.user import User
 from control_plane.models.workspace_membership import WorkspaceMembership
 
 if TYPE_CHECKING:
-    from contract import SecretStore
+    from airmux_runtime.secrets import SecretStore
 
 DERIVED_SLUG_FALLBACK = "workspace"
 type ReadableRoles = tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]

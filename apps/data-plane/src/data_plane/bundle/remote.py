@@ -40,7 +40,7 @@ class RemoteBundleSource(BundleSource):
         try:
             response = await self._http_client.get(
                 f"{self._config.control_plane.url}/api/v1/bundles/manifest",
-                headers={"authorization": f"Bearer {self._config.control_plane.token}"},
+                headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
             )
             response.raise_for_status()
             manifest = BundleManifest.model_validate(response.json()["data"])
@@ -112,7 +112,7 @@ class RemoteBundleSource(BundleSource):
             return existing
         response = await self._http_client.get(
             f"{self._config.control_plane.url}/api/v1/bundles/{entry.bundle_id}",
-            headers={"authorization": f"Bearer {self._config.control_plane.token}"},
+            headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
         )
         response.raise_for_status()
         return BundleV1.model_validate(response.json()["data"])

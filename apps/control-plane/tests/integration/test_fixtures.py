@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
+from airmux_runtime.secrets import EnvStoreConfig, MemoryStoreConfig
 from cli.control_plane import control_plane_app as cli_app
-from contract import EnvStoreConfig, MemoryStoreConfig, token_hash
+from contract import token_hash
 from control_plane.authz import InstanceRole
 from control_plane.fixtures import (
     ACME_MEMBER_INVITE_TOKEN,
@@ -58,10 +60,10 @@ def seed_catalog(tmp_path, *, include_models=True):
                     name=name,
                     provider_id=providers[provider_name].id,
                     upstream_model=name,
-                    input_price_per_mtok=1,
-                    output_price_per_mtok=2,
-                    cache_read_price_per_mtok=0,
-                    cache_write_price_per_mtok=0,
+                    input_price_per_mtok=Decimal(1),
+                    output_price_per_mtok=Decimal(2),
+                    cache_read_price_per_mtok=Decimal(0),
+                    cache_write_price_per_mtok=Decimal(0),
                     context_window=128000,
                     input_modalities=["text"],
                     output_modalities=["text"],

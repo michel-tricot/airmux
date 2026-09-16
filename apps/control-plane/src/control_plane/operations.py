@@ -11,8 +11,8 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
-from contract.taxonomy import parse_taxonomy
+from airmux_runtime.files import GENERATED_STATE_GITIGNORE, write_new_configuration
+from airmux_runtime.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.bootstrap import bootstrap_data_plane
@@ -88,8 +88,8 @@ def initialize(directory: Path, console_url: str) -> None:
     console_url = Settings(console_url=console_url).console_url
     token, _ = new_management_key()
     bootstrap = "${file:.airmux/dataplane.key}"
-    secrets = {"kind": "file", "root": ".airmux/secrets"}
-    link = {"url": "http://127.0.0.1:8000", "token": bootstrap}
+    secrets = {"kind": "file"}
+    link = {"url": "http://127.0.0.1:8000", "management_key": bootstrap}
     config = {
         "control_plane": {
             "database": {"url": "${env:DATABASE_URL}"},

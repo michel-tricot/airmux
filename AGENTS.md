@@ -2,10 +2,12 @@
 
 ## Boundary rules, non-negotiable
 - data_plane may never import sqlalchemy, sqlmodel, asyncpg, alembic, fastapi, or control_plane.
-  The only exception is `contract/secrets/insecure_database.py`, which may use asyncpg so the
+  The only exception is `airmux_runtime/secrets/insecure_database.py`, which may use asyncpg so the
   `insecure_database` secret store can resolve a cold credential behind the data plane's
-  version-keyed, single-flight TTL cache. No other contract module may import a database driver.
-- The only shared import between planes is contract.
+  version-keyed, single-flight TTL cache. No other runtime module may import a database driver.
+- The only shared imports between planes are contract and airmux_runtime. contract contains pure
+  interchange values and schemas. airmux_runtime contains only reusable process infrastructure and
+  may not import either plane.
 - If a feature seems to need a DB read on the request path, add a field to the bundle instead. Say so before doing it.
   Cold secret resolution through `SecretStore.get(ref)` is the sole exception; secret values and
   store-specific representations never enter the bundle contract.
@@ -37,7 +39,7 @@ registry, the registry is wrong; fix the registry.
 
 ## Control plane data access
 - All DB access goes through the fat-model API on control_plane.models: Record.get/find/first/save/delete, OrgOwned.owned_by, Identified.find_by_id.
-  The shared `InsecureDatabaseSecretStore` is the sole exception: both planes use its three fixed,
+  The `airmux_runtime` `InsecureDatabaseSecretStore` is the sole exception: both planes use its three fixed,
   parameterized asyncpg statements against `insecure_vault_secret`, outside the ambient management
   transaction. No other control-plane path may use it for database access.
 - The session is ambient (ContextVar in control_plane.db). One transaction per request, committed at request end; save() flushes, never commits.

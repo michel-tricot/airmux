@@ -5,10 +5,11 @@ from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Index, String
+from sqlalchemy import Column, Index, Numeric, String
 from sqlmodel import Field, col, select
 
-from contract import CredentialScope, UsageStatus
+from contract import CredentialScope, UsageStatus, UsdAmount
+from contract.money import ZERO_USD
 from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
@@ -35,9 +36,9 @@ class UsageEvent(Record, table=True):
     input_tokens: int
     output_tokens: int
     max_output_tokens: int | None = None
-    cost_usd: float
-    cost_input_usd: float = 0.0
-    cost_output_usd: float = 0.0
+    cost_usd: UsdAmount = Field(sa_column=Column(Numeric(28, 12), nullable=False))
+    cost_input_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
+    cost_output_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
     latency_ms: int
@@ -77,9 +78,9 @@ class UsageEventOut(RecordOut[UsageEvent]):
     input_tokens: int
     output_tokens: int
     max_output_tokens: int | None
-    cost_usd: float
-    cost_input_usd: float
-    cost_output_usd: float
+    cost_usd: UsdAmount
+    cost_input_usd: UsdAmount
+    cost_output_usd: UsdAmount
     cache_read_tokens: int
     cache_write_tokens: int
     latency_ms: int

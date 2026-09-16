@@ -44,7 +44,7 @@ class Heartbeat:
         )
         response = await self._http_client.post(
             f"{self._control_plane.url}/api/v1/heartbeat",
-            headers={"authorization": f"Bearer {self._control_plane.token}"},
+            headers={"authorization": f"Bearer {self._control_plane.management_key}"},
             json=body.model_dump(mode="json"),
         )
         response.raise_for_status()

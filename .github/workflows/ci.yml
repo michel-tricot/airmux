@@ -2,6 +2,7 @@ name: ci
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -73,7 +74,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-python
-      - run: uv run --no-sync pytest lib/contract/tests apps/control-plane/tests/unit apps/data-plane/tests apps/cli/tests model-audit/tests -n auto --junitxml=unit-results/unit.xml
+      - run: uv run --no-sync pytest lib/contract/tests lib/runtime/tests apps/control-plane/tests/unit apps/data-plane/tests apps/cli/tests model-audit/tests -n auto --junitxml=unit-results/unit.xml
       - name: Summarize unit results
         if: always()
         continue-on-error: true
@@ -88,6 +89,7 @@ jobs:
           retention-days: 7
 
   python-integration:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -183,6 +185,7 @@ jobs:
           retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
 
   gateway:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -222,6 +225,7 @@ jobs:
           retention-days: 7
 
   full-stack:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -252,6 +256,7 @@ jobs:
           retention-days: 7
 
   browser:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -287,6 +292,7 @@ jobs:
           retention-days: 7
 
   docker:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -344,7 +350,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     needs: [quality, python-unit, python-integration, frontend, package, gateway, full-stack, browser, docker]
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     steps:
       - name: Require every correctness job to succeed
         env:

@@ -41,6 +41,7 @@ A borrowed price is a good default and a bad guarantee. Do not bill from one.
 from __future__ import annotations
 
 import json
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 from .canonical import write_catalog
@@ -70,7 +71,7 @@ MODELS_DEV_ID = {
 
 
 def get(url: str) -> CatalogValue:
-    return json.loads(fetch_bytes(url, UA, timeout=120))
+    return json.loads(fetch_bytes(url, UA, timeout=120), parse_float=Decimal)
 
 
 def norm(model_id: str) -> str:
@@ -80,12 +81,12 @@ def norm(model_id: str) -> str:
     return s.rsplit("/", 1)[-1]
 
 
-def per_mtok(value: CatalogValue) -> float | None:
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+def per_mtok(value: CatalogValue) -> Decimal | None:
+    if isinstance(value, bool) or not isinstance(value, (str, int, Decimal)):
         return None
     try:
-        return round(float(value) * 1_000_000, 4)
-    except (TypeError, ValueError):
+        return Decimal(value) * 1_000_000
+    except InvalidOperation:
         return None
 
 
@@ -214,7 +215,7 @@ def main(arguments: Sequence[str] = ()) -> int:
     gaps: list[dict[str, object]] = []
 
     for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
-        doc = json.loads(path.read_text())
+        doc = json.loads(path.read_text(), parse_float=Decimal)
         provider = doc["provider"]
         doc["models"] = text_only(doc["models"])
         for model in doc["models"]:

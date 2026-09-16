@@ -22,7 +22,7 @@ from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.workspace import Workspace
 
 if TYPE_CHECKING:
-    from contract import SecretStore
+    from airmux_runtime.secrets import SecretStore
 
 DERIVED_SLUG_FALLBACK = "organization"
 

@@ -18,13 +18,10 @@ import { usePlaygroundState, type PlaygroundMessage, type PlaygroundRequest } fr
 import { SearchPicker } from '@/components/shared/search-picker';
 import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
 import { CopyButton, CopyFeedback } from '@/components/shared/copy-control';
+import { estimateUsd, formatUsd } from '@/lib/money';
 
 function formatDuration(durationMs: number) {
   return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
-}
-
-function formatCost(costUsd: number) {
-  return `$${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)}`;
 }
 
 function curlFor(request: PlaygroundRequest) {
@@ -113,7 +110,7 @@ function MessageBubble({ message }: { message: PlaygroundMessage }) {
                 <>
                   <span>{message.interaction.model}</span>
                   <span>{message.interaction.inputTokens + message.interaction.outputTokens} total</span>
-                  <span>Est. {formatCost(message.interaction.estimatedCostUsd)}</span>
+                  <span>Est. {formatUsd(message.interaction.estimatedCostPicoUsd)}</span>
                   <span>{formatDuration(message.interaction.durationMs)}</span>
                   <Button
                     variant="ghost"
@@ -259,13 +256,15 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
       });
       if (abortRef.current !== controller) return;
       const usage = result.usage;
-      const freshInputTokens = Math.max(0, (usage?.inputTokens ?? 0) - (usage?.cacheReadTokens ?? 0));
-      const estimatedCostUsd = activeModelDetails
-        ? (freshInputTokens * activeModelDetails.input_price_per_mtok +
-            (usage?.cacheReadTokens ?? 0) * activeModelDetails.cache_read_price_per_mtok +
-            (usage?.outputTokens ?? 0) * activeModelDetails.output_price_per_mtok) /
-          1_000_000
-        : 0;
+      const freshInputTokens = Math.max(0, (usage?.inputTokens ?? 0) - (usage?.cacheReadTokens ?? 0) - (usage?.cacheWriteTokens ?? 0));
+      const estimatedCostPicoUsd = activeModelDetails
+        ? estimateUsd([
+            { tokens: freshInputTokens, rate: activeModelDetails.input_price_per_mtok },
+            { tokens: usage?.cacheReadTokens ?? 0, rate: activeModelDetails.cache_read_price_per_mtok },
+            { tokens: usage?.cacheWriteTokens ?? 0, rate: activeModelDetails.cache_write_price_per_mtok },
+            { tokens: usage?.outputTokens ?? 0, rate: activeModelDetails.output_price_per_mtok },
+          ])
+        : 0n;
       setPlayground((current) => ({
         ...current,
         messages: [
@@ -282,7 +281,8 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                   inputTokens: usage.inputTokens,
                   outputTokens: usage.outputTokens,
                   cacheReadTokens: usage.cacheReadTokens,
-                  estimatedCostUsd,
+                  cacheWriteTokens: usage.cacheWriteTokens,
+                  estimatedCostPicoUsd,
                   durationMs: result.durationMs,
                   firstTokenMs: result.firstTokenMs,
                 }

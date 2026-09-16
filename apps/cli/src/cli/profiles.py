@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 import tomli_w
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
-from contract.secrets.file import write_private_text
+from airmux_runtime.files import write_private_text
 
 
 class Profile(BaseModel):

@@ -263,6 +263,30 @@ class DeniedUsageEventV1(BaseModel):
             title="Output Tokens",
         ),
     ]
+    cost_usd: Annotated[
+        str,
+        Field(
+            description="Total estimated cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Usd",
+        ),
+    ]
+    cost_input_usd: Annotated[
+        str | None,
+        Field(
+            description="Estimated input cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Input Usd",
+        ),
+    ] = "0"
+    cost_output_usd: Annotated[
+        str | None,
+        Field(
+            description="Estimated output cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Output Usd",
+        ),
+    ] = "0"
     max_output_tokens: Annotated[
         MaxOutputTokens | None,
         Field(
@@ -270,18 +294,6 @@ class DeniedUsageEventV1(BaseModel):
             title="Max Output Tokens",
         ),
     ]
-    cost_usd: Annotated[
-        float,
-        Field(description="Total estimated cost in USD", ge=0.0, title="Cost Usd"),
-    ]
-    cost_input_usd: Annotated[
-        float | None,
-        Field(description="Estimated input cost in USD", ge=0.0, title="Cost Input Usd"),
-    ] = 0.0
-    cost_output_usd: Annotated[
-        float | None,
-        Field(description="Estimated output cost in USD", ge=0.0, title="Cost Output Usd"),
-    ] = 0.0
     cache_read_tokens: Annotated[
         int | None,
         Field(
@@ -601,10 +613,10 @@ class ModelEntry(BaseModel):
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
     upstream_model: Annotated[str, Field(title="Upstream Model")]
-    input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
-    output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
-    cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
-    cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
+    input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
     input_modalities: Annotated[
@@ -687,37 +699,37 @@ class ModelIn(BaseModel):
         Field(description="Per-model egress adapter override", title="Egress Kind"),
     ] = None
     input_price_per_mtok: Annotated[
-        float | None,
+        str | None,
         Field(
             description="USD per million input tokens",
-            ge=0.0,
+            pattern="^\\d+(?:\\.\\d+)?$",
             title="Input Price Per Mtok",
         ),
-    ] = 0.0
+    ] = "0"
     output_price_per_mtok: Annotated[
-        float | None,
+        str | None,
         Field(
             description="USD per million output tokens",
-            ge=0.0,
+            pattern="^\\d+(?:\\.\\d+)?$",
             title="Output Price Per Mtok",
         ),
-    ] = 0.0
+    ] = "0"
     cache_read_price_per_mtok: Annotated[
-        float | None,
+        str | None,
         Field(
             description="USD per million cache-read input tokens",
-            ge=0.0,
+            pattern="^\\d+(?:\\.\\d+)?$",
             title="Cache Read Price Per Mtok",
         ),
-    ] = 0.0
+    ] = "0"
     cache_write_price_per_mtok: Annotated[
-        float | None,
+        str | None,
         Field(
             description="USD per million cache-write input tokens",
-            ge=0.0,
+            pattern="^\\d+(?:\\.\\d+)?$",
             title="Cache Write Price Per Mtok",
         ),
-    ] = 0.0
+    ] = "0"
     context_window: Annotated[
         int | None,
         Field(
@@ -776,10 +788,10 @@ class ModelOut(BaseModel):
     provider_id: Annotated[UUID, Field(title="Provider Id")]
     upstream_model: Annotated[str, Field(title="Upstream Model")]
     egress_kind: Annotated[str | None, Field(title="Egress Kind")]
-    input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
-    output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
-    cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
-    cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
+    input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     input_modalities: Annotated[
@@ -1081,75 +1093,13 @@ class Priority(RootModel[int]):
     ]
 
 
-class MaxInputPricePerMtok(RootModel[float]):
-    root: Annotated[float, Field(ge=0.0, title="Max Input Price Per Mtok")]
-
-
-class MaxInputPricePerMtok1(RootModel[str]):
-    model_config = ConfigDict(
-        regex_engine="python-re",
-    )
-    root: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Max Input Price Per Mtok",
-        ),
-    ]
-
-
-class MaxOutputPricePerMtok(RootModel[float]):
-    root: Annotated[float, Field(ge=0.0, title="Max Output Price Per Mtok")]
-
-
-class MaxOutputPricePerMtok1(RootModel[str]):
-    model_config = ConfigDict(
-        regex_engine="python-re",
-    )
-    root: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Max Output Price Per Mtok",
-        ),
-    ]
-
-
-class PriceLimitInput(BaseModel):
+class PriceLimit(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     kind: Annotated[Literal["price_limit"], Field(title="Kind")]
-    max_input_price_per_mtok: Annotated[
-        MaxInputPricePerMtok | MaxInputPricePerMtok1,
-        Field(title="Max Input Price Per Mtok"),
-    ]
-    max_output_price_per_mtok: Annotated[
-        MaxOutputPricePerMtok | MaxOutputPricePerMtok1,
-        Field(title="Max Output Price Per Mtok"),
-    ]
-
-
-class PriceLimitOutput(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        regex_engine="python-re",
-    )
-    kind: Annotated[Literal["price_limit"], Field(title="Kind")]
-    max_input_price_per_mtok: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Max Input Price Per Mtok",
-        ),
-    ]
-    max_output_price_per_mtok: Annotated[
-        str,
-        Field(
-            pattern="^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,17}0*$)\\d{0,10}\\.\\d{0,6}0*$)",
-            title="Max Output Price Per Mtok",
-        ),
-    ]
+    max_input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Max Input Price Per Mtok")]
+    max_output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Max Output Price Per Mtok")]
 
 
 class ProviderCredentialIn(BaseModel):
@@ -1481,6 +1431,30 @@ class RoutedUsageEventV1(BaseModel):
             title="Output Tokens",
         ),
     ]
+    cost_usd: Annotated[
+        str,
+        Field(
+            description="Total estimated cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Usd",
+        ),
+    ]
+    cost_input_usd: Annotated[
+        str | None,
+        Field(
+            description="Estimated input cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Input Usd",
+        ),
+    ] = "0"
+    cost_output_usd: Annotated[
+        str | None,
+        Field(
+            description="Estimated output cost in USD",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cost Output Usd",
+        ),
+    ] = "0"
     max_output_tokens: Annotated[
         MaxOutputTokens2 | None,
         Field(
@@ -1488,18 +1462,6 @@ class RoutedUsageEventV1(BaseModel):
             title="Max Output Tokens",
         ),
     ]
-    cost_usd: Annotated[
-        float,
-        Field(description="Total estimated cost in USD", ge=0.0, title="Cost Usd"),
-    ]
-    cost_input_usd: Annotated[
-        float | None,
-        Field(description="Estimated input cost in USD", ge=0.0, title="Cost Input Usd"),
-    ] = 0.0
-    cost_output_usd: Annotated[
-        float | None,
-        Field(description="Estimated output cost in USD", ge=0.0, title="Cost Output Usd"),
-    ] = 0.0
     cache_read_tokens: Annotated[
         int | None,
         Field(
@@ -1730,9 +1692,9 @@ class UsageEventOut(BaseModel):
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
-    cost_usd: Annotated[float, Field(title="Cost Usd")]
-    cost_input_usd: Annotated[float, Field(title="Cost Input Usd")]
-    cost_output_usd: Annotated[float, Field(title="Cost Output Usd")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
+    cost_output_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Output Usd")]
     cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
     cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     latency_ms: Annotated[int, Field(title="Latency Ms")]
@@ -2136,7 +2098,7 @@ class RuleDefinitionInput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchInput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2147,7 +2109,7 @@ class RuleDefinitionOutput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
 

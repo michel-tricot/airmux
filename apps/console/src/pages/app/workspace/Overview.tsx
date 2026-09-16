@@ -17,6 +17,7 @@ import { providerCredentialAccess } from '@/features/credentials/policy';
 import { inferenceKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
+import { formatUsd, sumUsdAmounts } from '@/lib/money';
 
 const EVENTS_WINDOW = 200;
 
@@ -72,7 +73,7 @@ export default function WorkspaceOverview() {
   const requests = events?.length;
   const inputTokens = events?.reduce((sum, event) => sum + event.input_tokens, 0);
   const outputTokens = events?.reduce((sum, event) => sum + event.output_tokens, 0);
-  const costUsd = events?.reduce((sum, event) => sum + event.cost_usd, 0);
+  const costUsd = events ? sumUsdAmounts(events.map((event) => event.cost_usd)) : undefined;
   const recent = events?.slice(0, 8);
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeKey = (keyId: string) => keyLabels.get(keyId) ?? (canReadKeys && keysQuery.isSuccess ? 'Playground' : null);
@@ -85,7 +86,7 @@ export default function WorkspaceOverview() {
             model,
             requests: modelEvents.length,
             tokens: modelEvents.reduce((sum, event) => sum + event.input_tokens + event.output_tokens, 0),
-            cost: modelEvents.reduce((sum, event) => sum + event.cost_usd, 0),
+            cost: sumUsdAmounts(modelEvents.map((event) => event.cost_usd)),
           };
         })
         .sort((a, b) => b.requests - a.requests)
@@ -144,12 +145,7 @@ export default function WorkspaceOverview() {
             value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
             hint={`latest ${EVENTS_WINDOW} requests`}
           />
-          <MetricCard
-            icon={Coins}
-            label="Spend"
-            value={costUsd === undefined ? '-' : `$${costUsd.toFixed(costUsd >= 1 ? 2 : 4)}`}
-            hint={`latest ${EVENTS_WINDOW} requests`}
-          />
+          <MetricCard icon={Coins} label="Spend" value={costUsd === undefined ? '-' : formatUsd(costUsd)} hint={`latest ${EVENTS_WINDOW} requests`} />
         </div>
       )}
 
@@ -196,7 +192,7 @@ export default function WorkspaceOverview() {
                     header: 'Cost',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
-                    cell: (row) => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}`,
+                    cell: (row) => formatUsd(row.cost),
                   },
                 ]}
               />

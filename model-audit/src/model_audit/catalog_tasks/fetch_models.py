@@ -19,6 +19,7 @@ import os
 import urllib.error
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
 import yaml
@@ -97,7 +98,7 @@ def acquire(  # noqa: PLR0911 acquisition guard clauses return one explicit prov
         return FetchResult(provider, "fail", f"models without required modalities: {', '.join(incomplete)}")
 
     target = OUT / f"{provider}.json"
-    previous_models = object_list(object_or_empty(json.loads(target.read_text())).get("models")) if target.exists() else []
+    previous_models = object_list(object_or_empty(json.loads(target.read_text(), parse_float=Decimal)).get("models")) if target.exists() else []
     previous_ids = {model["id"] for model in previous_models}
     models = apply_discovery_evidence(models, discovery_evidence(configuration, ROOT))
     models = retain_documented_models(models, previous_models)

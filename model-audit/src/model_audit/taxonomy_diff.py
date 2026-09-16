@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import yaml
@@ -13,12 +14,22 @@ if TYPE_CHECKING:
 def _indexed(path: Path, key: str, identity: str) -> dict[str, dict[str, object]]:
     if not path.exists():
         return {}
-    document = yaml.safe_load(path.read_text(encoding="utf-8")) if path.suffix in {".yml", ".yaml"} else json.loads(path.read_text(encoding="utf-8"))
+    document = (
+        yaml.safe_load(path.read_text(encoding="utf-8"))
+        if path.suffix in {".yml", ".yaml"}
+        else json.loads(path.read_text(encoding="utf-8"), parse_float=Decimal)
+    )
     return {str(item[identity]): item for item in document.get(key, [])}
 
 
 def _value(value: object) -> object:
-    return value if value is not None else None
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    if isinstance(value, dict):
+        return {key: _value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_value(item) for item in value]
+    return value
 
 
 def _records(scope: str, provider: str, before: dict[str, object] | None, after: dict[str, object] | None) -> list[dict[str, object]]:
@@ -30,8 +41,8 @@ def _records(scope: str, provider: str, before: dict[str, object] | None, after:
                 "model": "",
                 "field": "$record",
                 "change": "added" if before is None else "removed",
-                "before": before,
-                "after": after,
+                "before": _value(before),
+                "after": _value(after),
             }
         ]
     return [
@@ -62,8 +73,8 @@ def _model_records(scope: str, provider: str, before: dict[str, dict[str, object
                     "model": model_id,
                     "field": "$record",
                     "change": "added" if old is None else "removed",
-                    "before": old,
-                    "after": new,
+                    "before": _value(old),
+                    "after": _value(new),
                 }
             )
             continue

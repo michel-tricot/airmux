@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON
+from sqlalchemy import JSON, Column, Numeric
 from sqlmodel import Field
 
-from contract import Capability, Modality, ParameterSupport
+from contract import Capability, Modality, ParameterSupport, UsdRate
 from contract.taxonomy import ModelSpec
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
@@ -40,10 +40,10 @@ class Model(Record, Identified, Tombstonable, table=True):
     provider_id: UUID = Field(foreign_key="provider.id")
     upstream_model: str
     egress_kind: str | None = None
-    input_price_per_mtok: float
-    output_price_per_mtok: float
-    cache_read_price_per_mtok: float
-    cache_write_price_per_mtok: float
+    input_price_per_mtok: UsdRate = Field(sa_column=Column(Numeric(16, 6), nullable=False))
+    output_price_per_mtok: UsdRate = Field(sa_column=Column(Numeric(16, 6), nullable=False))
+    cache_read_price_per_mtok: UsdRate = Field(sa_column=Column(Numeric(16, 6), nullable=False))
+    cache_write_price_per_mtok: UsdRate = Field(sa_column=Column(Numeric(16, 6), nullable=False))
     context_window: int
     max_output_tokens: int | None = None
     input_modalities: list[Modality] = Field(sa_type=JSON, min_length=1, nullable=False)
@@ -58,10 +58,10 @@ class ModelOut(RecordOut[Model]):
     provider_id: UUID
     upstream_model: str
     egress_kind: str | None
-    input_price_per_mtok: float
-    output_price_per_mtok: float
-    cache_read_price_per_mtok: float
-    cache_write_price_per_mtok: float
+    input_price_per_mtok: UsdRate
+    output_price_per_mtok: UsdRate
+    cache_read_price_per_mtok: UsdRate
+    cache_write_price_per_mtok: UsdRate
     context_window: int
     max_output_tokens: int | None
     input_modalities: list[Modality]

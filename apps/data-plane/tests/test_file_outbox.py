@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from airmux_runtime.config import ConfigContext
 from contract import RoutedUsageEventV1, UsageEvent, uuid7
-from contract.config import ConfigContext
 from data_plane.config import Config, FileOutboxConfig
 from data_plane.outbox import FileOutbox, build_outbox
 
@@ -31,7 +31,8 @@ def event_of(index: int) -> RoutedUsageEventV1:
         input_tokens=11,
         output_tokens=3,
         max_output_tokens=128,
-        cost_usd=0.000037,
+        cost_usd="0.000037",
+        cost_input_usd="0.000037",
         latency_ms=1,
         status="ok",
         stream=False,

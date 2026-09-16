@@ -5,11 +5,11 @@ import json
 import os
 import threading
 from dataclasses import dataclass
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING
 
 import httpx
-import pytest
 from pydantic import TypeAdapter
 from tests.acceptance.gateway.gateway_harness import Gateway
 
@@ -31,7 +31,7 @@ class ProviderCase:
     base_url: str
     credential: str
     output_limit: str
-    prices: tuple[float, float, float, float]
+    prices: tuple[str, str, str, str]
     aliases: dict[str, str]
     context_window: int
     capabilities: tuple[Capability, ...]
@@ -45,7 +45,7 @@ CASES: dict[Family, ProviderCase] = {
         "https://api.openai.com/v1",
         "OPENAI_API_KEY",
         "max_completion_tokens",
-        (0.4, 1.6, 0.1, 0),
+        ("0.4", "1.6", "0.1", "0"),
         {"max_output_tokens": "max_completion_tokens"},
         1047576,
         ("streaming", "tools", "structured_output"),
@@ -57,7 +57,7 @@ CASES: dict[Family, ProviderCase] = {
         "https://api.openai.com/v1",
         "OPENAI_API_KEY",
         "max_output_tokens",
-        (0.4, 1.6, 0.1, 0),
+        ("0.4", "1.6", "0.1", "0"),
         {},
         1047576,
         ("streaming", "tools", "structured_output"),
@@ -69,7 +69,7 @@ CASES: dict[Family, ProviderCase] = {
         "https://api.anthropic.com/v1",
         "ANTHROPIC_API_KEY",
         "max_tokens",
-        (1, 5, 0.1, 1.25),
+        ("1", "5", "0.1", "1.25"),
         {},
         200000,
         ("streaming", "tools", "structured_output", "reasoning"),
@@ -281,12 +281,10 @@ class LiveGateway:
         assert tokens[0] > 0
         assert tokens[1] > 0
         total, output, reads, writes = tokens
-        input_price, output_price, read_price, write_price = self.case.prices
-        input_cost = ((total - reads - writes) * input_price + reads * read_price + writes * write_price) / 1000000
-        output_cost = output * output_price / 1000000
-        assert (event.cost_input_usd, event.cost_output_usd, event.cost_usd) == pytest.approx(
-            (input_cost, output_cost, input_cost + output_cost), rel=1e-12, abs=1e-15
-        )
+        input_price, output_price, read_price, write_price = (Decimal(price) for price in self.case.prices)
+        input_cost = ((total - reads - writes) * input_price + reads * read_price + writes * write_price) / Decimal(1000000)
+        output_cost = output * output_price / Decimal(1000000)
+        assert (event.cost_input_usd, event.cost_output_usd, event.cost_usd) == (input_cost, output_cost, input_cost + output_cost)
 
     def close(self) -> None:
         self.gateway.sensitive_values = (os.environ[self.case.credential],)

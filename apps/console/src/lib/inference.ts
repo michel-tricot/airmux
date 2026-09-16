@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export type InferenceMessage = { role: 'system' | 'user' | 'assistant'; content: string };
-export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
 export type InferenceResult = { content: string; usage?: InferenceUsage; finishReason?: string; firstTokenMs?: number; durationMs: number };
 
 export type InferenceRequestOptions = {
@@ -160,6 +160,7 @@ function openAIUsage(usage: z.infer<typeof usageSchema>): InferenceUsage {
     inputTokens: usage.prompt_tokens,
     outputTokens: usage.completion_tokens,
     cacheReadTokens: usage.prompt_tokens_details.cached_tokens,
+    cacheWriteTokens: 0,
   };
 }
 

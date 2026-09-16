@@ -126,7 +126,7 @@ def _credential_rows(credentials: list[ProviderCredentialOut]) -> list[dict[str,
 
 
 def _money(value: object) -> str:
-    return f"{value:.6f}" if isinstance(value, int | float) else str(value or "")
+    return "" if value is None else str(value)
 
 
 EVENT_COLS = [

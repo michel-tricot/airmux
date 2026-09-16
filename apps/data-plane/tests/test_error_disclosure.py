@@ -8,7 +8,7 @@ import respx
 from conftest import PROVIDER, mock_control_plane
 from starlette.testclient import TestClient
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import ProviderDiagnostic, UpstreamResponseError, UpstreamStreamError
 from data_plane.egress.openai_compatible import OpenAICompatibleAdapter

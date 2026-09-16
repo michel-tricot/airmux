@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 from contract.model_types import Capability, Modality, ParameterSupport
+from contract.money import ZERO_USD, UsdRate
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
     from typing import Self
 
 
@@ -52,10 +51,10 @@ class ModelSpec(_TaxonomyInput):
     egress_kind: str | None = Field(
         None, description="Per-model egress adapter override", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$"
     )
-    input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
-    output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
-    cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")
-    cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
+    input_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million input tokens")
+    output_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million output tokens")
+    cache_read_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million cache-read input tokens")
+    cache_write_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million cache-write input tokens")
     context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
     max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
     input_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Accepted input modalities")
@@ -99,7 +98,3 @@ def _duplicates(values: Iterable[str]) -> list[str]:
             duplicates.add(value)
         seen.add(value)
     return sorted(duplicates)
-
-
-def parse_taxonomy(path: Path) -> TaxonomySpec:
-    return TaxonomySpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})

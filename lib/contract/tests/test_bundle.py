@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
@@ -11,10 +13,10 @@ def model_entry(**overrides: object) -> dict[str, object]:
         "model_id": "model",
         "provider_id": "provider",
         "upstream_model": "upstream",
-        "input_price_per_mtok": 1,
-        "output_price_per_mtok": 2,
-        "cache_read_price_per_mtok": 0,
-        "cache_write_price_per_mtok": 0,
+        "input_price_per_mtok": "1",
+        "output_price_per_mtok": "2",
+        "cache_read_price_per_mtok": "0",
+        "cache_write_price_per_mtok": "0",
         "context_window": 128000,
         "input_modalities": ["text"],
         "output_modalities": ["text"],
@@ -28,6 +30,13 @@ def test_model_modalities_are_required_bundle_data():
         ModelEntry.model_validate(model_entry(input_modalities=None))
     with pytest.raises(ValidationError):
         ModelEntry.model_validate(model_entry(output_modalities=[]))
+
+
+def test_model_prices_are_exact_and_serialize_as_strings():
+    model = ModelEntry.model_validate(model_entry())
+
+    assert model.input_price_per_mtok == Decimal(1)
+    assert model.model_dump(mode="json")["input_price_per_mtok"] == "1"
 
 
 def test_model_capabilities_use_the_policy_vocabulary():
