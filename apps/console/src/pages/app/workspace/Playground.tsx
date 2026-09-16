@@ -34,7 +34,6 @@ function curlFor(request: PlaygroundRequest) {
     "curl '" + window.location.origin + prepared.path + "' \\",
     '  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \\',
     "  -H 'Content-Type: application/json' \\",
-    "  -H 'x-airmux-dialect: " + prepared.dialect + "' \\",
     "  --data-raw '" + body + "'",
   ].join('\n');
 }

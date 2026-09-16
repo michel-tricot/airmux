@@ -405,7 +405,7 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout
     assert "Verified anthropic/claude-test" in result.stdout
-    assert "x-airmux-dialect: canonical" in result.stdout
+    assert "x-airmux-dialect" not in result.stdout
     assert "openai/gpt-5-nano" not in result.stdout
 
 
