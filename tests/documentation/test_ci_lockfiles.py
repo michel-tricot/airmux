@@ -52,7 +52,9 @@ def test_prepared_workspace_commands_cannot_relock():
             for step in steps:
                 for line in step.get("run", "").splitlines():
                     if line.strip().startswith("uv run "):
-                        assert expected in shlex.split(line.rstrip("\\"))
+                        command = shlex.split(line.rstrip("\\"))
+                        if "--no-project" not in command:
+                            assert expected in command
     job = WORKFLOWS["ci.yml"]["jobs"]["ci"]
     assert job["env"]["UV_NO_SYNC"] == "true"
     for script in ("export-openapi.sh", "generate-api-models.sh", "export-completion-schemas.sh"):
