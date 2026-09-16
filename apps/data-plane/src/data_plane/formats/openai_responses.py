@@ -211,8 +211,8 @@ def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
     }
     if request.stream:
         body["stream"] = True
-    if request.max_tokens is not None:
-        body["max_output_tokens"] = request.max_tokens
+    if request.max_output_tokens is not None:
+        body["max_output_tokens"] = request.max_output_tokens
     if request.temperature is not None:
         body["temperature"] = request.temperature
     if request.top_p is not None:

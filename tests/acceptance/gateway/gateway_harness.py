@@ -35,7 +35,7 @@ REQUEST_INPUTS: dict[Dialect, dict[str, object]] = {
     "canonical": {"messages": [{"role": "user", "content": "hi"}]},
     "openai_native": {"messages": [{"role": "user", "content": "hi"}]},
     "openai_responses": {"input": "hi"},
-    "anthropic": {"messages": [{"role": "user", "content": "hi"}]},
+    "anthropic": {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 128},
 }
 ERROR_FIELDS: dict[Dialect, str] = {
     "canonical": "code",

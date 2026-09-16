@@ -338,7 +338,7 @@ class Stack:
 
     def _write_taxonomy(self) -> None:
         """The stub provider, plus a quirky one that exists to prove onboarding is config: it
-        respells max_tokens, closes its schema, and declares the one extra param it accepts."""
+        respells max_output_tokens, closes its schema, and declares the one extra param it accepts."""
         spec = {
             "providers": [
                 {
@@ -350,7 +350,7 @@ class Stack:
                     "provider_id": "quirk",
                     "kind": "openai_compatible",
                     "base_url": f"http://127.0.0.1:{self.stub_port}",
-                    "param_aliases": {"max_tokens": "max_completion_tokens"},
+                    "param_aliases": {"max_output_tokens": "max_completion_tokens"},
                     "accepted_params": ["top_k"],
                     "params_closed": True,
                 },

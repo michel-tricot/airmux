@@ -559,6 +559,8 @@ export interface DeniedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @minimum 0
@@ -1540,6 +1542,8 @@ export interface RoutedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @minimum 0
@@ -1720,6 +1724,7 @@ export interface UsageEventOut {
   bundle_id: string;
   input_tokens: number;
   output_tokens: number;
+  max_output_tokens: number | null;
   cost_usd: number;
   cost_input_usd: number;
   cost_output_usd: number;

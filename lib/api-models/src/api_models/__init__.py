@@ -195,6 +195,18 @@ class DeletedOutStr(BaseModel):
     deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
 
 
+class MaxOutputTokens(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Effective upstream output-token limit",
+            ge=1,
+            le=2147483647,
+            title="Max Output Tokens",
+        ),
+    ]
+
+
 class DeniedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -245,6 +257,13 @@ class DeniedUsageEventV1(BaseModel):
             ge=0,
             le=2147483647,
             title="Output Tokens",
+        ),
+    ]
+    max_output_tokens: Annotated[
+        MaxOutputTokens | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
         ),
     ]
     cost_usd: Annotated[
@@ -618,7 +637,7 @@ class EgressKind(RootModel[str]):
     ]
 
 
-class MaxOutputTokens(RootModel[int]):
+class MaxOutputTokens1(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -707,7 +726,7 @@ class ModelIn(BaseModel):
         ),
     ] = 128000
     max_output_tokens: Annotated[
-        MaxOutputTokens | None,
+        MaxOutputTokens1 | None,
         Field(
             description="Max completion tokens; requests are clamped to it",
             title="Max Output Tokens",
@@ -1387,6 +1406,18 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
+class MaxOutputTokens2(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Effective upstream output-token limit",
+            ge=1,
+            le=2147483647,
+            title="Max Output Tokens",
+        ),
+    ]
+
+
 class RoutedUsageEventV1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1442,6 +1473,13 @@ class RoutedUsageEventV1(BaseModel):
             ge=0,
             le=2147483647,
             title="Output Tokens",
+        ),
+    ]
+    max_output_tokens: Annotated[
+        MaxOutputTokens2 | None,
+        Field(
+            description="Effective upstream output-token limit",
+            title="Max Output Tokens",
         ),
     ]
     cost_usd: Annotated[
@@ -1685,6 +1723,7 @@ class UsageEventOut(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     cost_usd: Annotated[float, Field(title="Cost Usd")]
     cost_input_usd: Annotated[float, Field(title="Cost Input Usd")]
     cost_output_usd: Annotated[float, Field(title="Cost Output Usd")]

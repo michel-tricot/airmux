@@ -10,6 +10,7 @@ $defs:
       action:
         enum:
         - clamped
+        - defaulted
         - emulated
         - dropped
         title: Action
@@ -17,6 +18,16 @@ $defs:
       detail:
         title: Detail
         type: string
+      source:
+        anyOf:
+        - enum:
+          - policy
+          - model
+          - policy_and_model
+          type: string
+        - type: 'null'
+        default: null
+        title: Source
     required:
     - param
     - action

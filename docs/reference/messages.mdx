@@ -30,7 +30,7 @@ curl https://llm.example.com/inf/v1/messages \
 | `model` | Required catalog model ID |
 | `messages` | User and assistant Messages content |
 | `system` | String or supported text-block array |
-| `max_tokens` | Minimum 1 when supplied |
+| `max_tokens` | Required; minimum 1; maps to canonical `max_output_tokens` |
 | `stream` | Boolean |
 | `temperature`, `top_p` | Sampling fields |
 | `stop_sequences` | Canonical stop-sequence alias |
