@@ -131,7 +131,26 @@ Matching the host user allows it to read the private generated key. The read-onl
 reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No control plane or database
 is needed for this configuration.
 
+## Collect usage events locally
+
+Replace the default event sink to collect usage without a control plane:
+
+```yaml
+data_plane:
+  events:
+    kind: file
+    path: usage/events.jsonl
+```
+
+Keep the existing `bundle` and `secrets` sections. The path resolves against the configuration file's directory.
+Every line is a versioned usage event from the shared contract, including routed attempts, policy denials, and
+cancelled streams. Authentication and request parsing failures do not create usage events.
+Events are readable while the gateway runs and append across restarts. Fallback produces one event per attempted
+route, with the same request ID connecting the attempts. See [event outboxes](/docs/reference/configuration#event-outboxes)
+for filesystem and durability semantics.
+
 ## Standalone limits
 
-The default `devnull` event sink discards usage events. Standalone mode has no management API, console, or usage history.
+The default `devnull` event sink discards usage events. The optional file sink provides a local usage log.
+Standalone mode has no management API, console, or managed usage history.
 All keys share one local organization and workspace, with one environment credential per provider.

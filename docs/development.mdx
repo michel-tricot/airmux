@@ -61,11 +61,17 @@ The generated bundle references the existing taxonomy file. Both reload after ed
 keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
 for installation without a source checkout at runtime.
 
-The Docker-free subprocess suite verifies setup, authentication, buffered and streaming requests, taxonomy reloads, and restarts:
+The Docker-free subprocess suite progresses through basics, protocol pairs, features, simple policies, advanced policy
+composition, failures and fallback, runtime changes, and metering prices and costs. It starts real gateways and scripted
+upstream HTTP servers, then validates their JSON Lines usage events against the shared contract:
 
 ```bash
-uv run pytest tests/gateway
+uv run pytest tests/acceptance/gateway -n auto
 ```
+
+PR CI runs the levels in order against the rebuilt, installed public wheel and uploads JUnit results, sanitized
+configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
+For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/acceptance/gateway/README.md).
 
 ## Python checks
 
@@ -89,7 +95,7 @@ running. `TOKKEEPER_TEST_PG_URL` can point to a disposable long-lived Postgres s
 Request-path changes also require black-box scenarios and a real request against a running data plane:
 
 ```bash
-uv run pytest tests/acceptance/scenarios
+uv run pytest tests/acceptance/full_stack/scenarios
 ```
 
 ## Console checks
@@ -127,7 +133,7 @@ Commit generated files with their source. Do not edit generated API models, clie
 | `lib/api-models` | Generated Python management API models |
 | `lib/api-client-react` | Generated console client |
 | `taxonomy`, `model-audit` | Provider catalog and direct API evidence |
-| `tests/acceptance` | Running-gateway behavior |
+| `tests/acceptance` | Standalone gateway and full-stack behavior |
 | `tests/deployment` | Fresh Docker deployment verification |
 
 ## Reset development state
@@ -156,9 +162,19 @@ The installation includes both runtimes. Invoke `tokkeeper` directly from any di
 
 The repository publishes one `tokkeeper` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
-Publishing a GitHub release with a tag such as `v0.1.0` runs `publish-python.yml`. The workflow rejects a tag that differs
+Publishing a GitHub release with a tag such as `v0.1.0` runs `publish.yml`. The workflow rejects a tag that differs
 from the public distribution version, builds one wheel and source distribution, rebuilds the wheel from its source
-distribution, and runs the installed behavior suite before publishing from a separate job.
+distribution, and runs the installed behavior suite. A required live-provider job then installs the actual release
+wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies, fallback, and metering.
+The separate PyPI publication job requires both the build and live-provider jobs to succeed. Configure
+`OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
+Configure the PyPI trusted publisher for `michel-tricot/tokkeeper`, workflow `publish.yml`, and environment
+`release`. Its environment must match the publication job.
+
+The same live suite runs nightly on main and can be dispatched manually. It does not run on ordinary PRs.
+See the [live-provider suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/acceptance/live_providers/README.md)
+for local execution, request bounds, and model maintenance. The existing trigger starts after GitHub release
+metadata is published; these checks gate the package publication to PyPI.
 
 ## Run deployment tests
 

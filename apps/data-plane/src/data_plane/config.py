@@ -27,7 +27,14 @@ class DevNullOutboxConfig(BaseModel):
     kind: Literal["devnull"] = "devnull"
 
 
-OutboxConfig = Annotated[SqliteOutboxConfig | DevNullOutboxConfig, Field(discriminator="kind")]
+class FileOutboxConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["file"] = "file"
+    path: ConfigPath
+
+
+OutboxConfig = Annotated[SqliteOutboxConfig | DevNullOutboxConfig | FileOutboxConfig, Field(discriminator="kind")]
 
 
 class Config(BaseModel):

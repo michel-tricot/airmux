@@ -5,7 +5,7 @@ requires-python = ">=3.13"
 
 [tool.uv.workspace]
 members = ["lib/api-models", "lib/contract", "apps/*", "model-audit", "tests/*"]
-exclude = ["apps/console", "tests/deployment", "tests/documentation", "tests/gateway", "tests/installation"]
+exclude = ["apps/console", "tests/deployment", "tests/documentation", "tests/installation"]
 
 [tool.uv.sources]
 tokkeeper-api-models = { workspace = true }
@@ -32,6 +32,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/documentation"]
 asyncio_mode = "auto"
+pythonpath = [".", "tests/acceptance/gateway"]
 
 [tool.ruff]
 line-length = 150

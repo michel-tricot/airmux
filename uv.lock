@@ -24,18 +24,18 @@ version = "0.1.0"
 source = { virtual = "tests/acceptance" }
 dependencies = [
     { name = "httpx" },
+    { name = "openai" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rich" },
     { name = "testcontainers" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx" },
+    { name = "openai" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "rich" },
     { name = "testcontainers" },
 ]
 

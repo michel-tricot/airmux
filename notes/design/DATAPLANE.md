@@ -476,7 +476,7 @@ The independently installable data-plane wheel and matching contract wheel requi
 packages. `tokkeeper gateway init` admits the chosen taxonomy before creating a private directory, generates a random
 inference key, and writes a bundle referring to the taxonomy. `validate` performs local admission without network access.
 These commands and the file source are supported deployment interfaces, documented in `docs/deployment/gateway.mdx`.
-The `tests/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
+The `tests/acceptance/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
 
 With the environment secret store, a synthesized provider ref resolves through the conventional
 `{PROVIDER_ID}_API_KEY` environment variable.
@@ -769,7 +769,7 @@ Run the relevant checks from the repository root:
 
 ```bash
 uv run pytest apps/data-plane/tests
-uv run pytest tests/acceptance
+uv run pytest tests/acceptance/full_stack/scenarios
 uv run ruff format --check .
 uv run ruff check .
 uv run ty check
