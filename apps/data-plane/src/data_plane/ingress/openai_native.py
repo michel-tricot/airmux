@@ -54,7 +54,7 @@ def _openai_shaped(body: dict[str, Any]) -> bool:
         return True
     if isinstance(body.get("tool_choice"), dict) and "function" in body["tool_choice"]:
         return True
-    return "max_completion_tokens" in body
+    return "max_tokens" in body or "max_completion_tokens" in body
 
 
 def _error_body(status: int, code: str, message: str) -> dict[str, dict[str, str]]:
