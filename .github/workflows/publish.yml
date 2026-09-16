@@ -26,33 +26,33 @@ jobs:
           git merge-base --is-ancestor HEAD origin/main
           version="${RELEASE_TAG#v}"
           test "$RELEASE_TAG" = "v$version"
-          test "$(uv version --short --project packaging/tokkeeper --no-config)" = "$version"
+          test "$(uv version --short --project packaging/airmux --no-config)" = "$version"
       - run: uv sync --all-packages --frozen
       - name: Build release distributions
         run: ./scripts/build-python-distribution.sh
       - name: Rebuild wheels from source distributions
         run: |
           mkdir dist-from-sdist
-          uv build --wheel --out-dir dist-from-sdist dist/tokkeeper-*.tar.gz
+          uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
       - name: Install rebuilt release
         env:
-          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
-          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
-        run: uv tool install dist-from-sdist/tokkeeper-*.whl
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+        run: uv tool install dist-from-sdist/airmux-*.whl
       - name: Verify installed release
         env:
-          TOKKEEPER_DISTRIBUTION_DIR: dist
-          TOKKEEPER_INSTALL_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          AIRMUX_DISTRIBUTION_DIR: dist
+          AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
         run: uv run pytest tests/installation
       - name: Verify installed gateway
         env:
-          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
           DOCKER_HOST: unix:///no-docker.sock
         run: uv run pytest tests/acceptance/gateway
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: python-distributions
-          path: dist/tokkeeper*
+          path: dist/airmux*
           if-no-files-found: error
 
   live-providers:

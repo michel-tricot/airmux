@@ -1,6 +1,6 @@
 ---
 title: "Deployment overview"
-description: "Choose an all-in-one or split TokKeeper deployment and identify the required database, state, network, and public URL."
+description: "Choose an all-in-one or split airmux deployment and identify the required database, state, network, and public URL."
 ---
 
 Choose [gateway only](/docs/deployment/gateway) for a Python inference service managed through local files, with no Docker,
@@ -10,7 +10,7 @@ For the full platform, start with the all-in-one image unless you need to size o
 
 <Columns cols={2}>
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
-    Run TokKeeper and Postgres on one host.
+    Run airmux and Postgres on one host.
   </Card>
   <Card title="Fly.io" icon="plane" href="/docs/deployment/fly">
     Deploy one Machine, a persistent volume, and Managed Postgres.
@@ -23,7 +23,7 @@ For the full platform, start with the all-in-one image unless you need to size o
   </Card>
 </Columns>
 
-Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
 ## Full-platform production requirements
 
@@ -32,7 +32,7 @@ Install the [TokKeeper CLI](/docs/reference/cli#installation) on the machine you
 | Postgres 16 | Control-plane state, bundles, usage, and audit activity |
 | Persistent `/state` | Gateway identity, bundle cache, provider-secret files, and pending usage |
 | `DATABASE_URL` | Async Postgres connection; plain `postgresql://` URLs are normalized for `asyncpg` |
-| `TOKKEEPER_CONSOLE_URL` | Exact public origin used by browser and CLI flows |
+| `AIRMUX_CONSOLE_URL` | Exact public origin used by browser and CLI flows |
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
 
@@ -43,11 +43,11 @@ The all-in-one container listens on port `8080` and serves the console, `/api/v1
 The first human account becomes the instance owner. Claim a new public instance immediately after it becomes reachable:
 
 ```bash
-tokkeeper quickstart --url https://llm.example.com
+airmux quickstart --url https://llm.example.com
 ```
 
 Until the first account is created, anyone who can reach the sign-up page can claim ownership. Public sign-up is
-disabled after claim unless `TOKKEEPER_PUBLIC_SIGNUP=true`; invitation links still work for their invited email.
+disabled after claim unless `AIRMUX_PUBLIC_SIGNUP=true`; invitation links still work for their invited email.
 
 ## Persist and back up
 
@@ -62,7 +62,7 @@ Never clone a live gateway identity or share its SQLite outbox between replicas.
 ```bash
 curl --fail https://llm.example.com/healthz
 curl --fail https://llm.example.com/readyz
-tokkeeper doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
+airmux doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
 ```
 
 `quickstart` is the final proof because it performs a real inference request through the public route.

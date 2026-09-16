@@ -46,7 +46,7 @@ NOW = datetime(2026, 8, 9, tzinfo=UTC)
 
 
 def seed_catalog(tmp_path, *, include_models=True):
-    """The providers the fixtures route traffic to, as `tokkeeper control-plane taxonomy` would leave them."""
+    """The providers the fixtures route traffic to, as `airmux control-plane taxonomy` would leave them."""
 
     async def apply():
         await set_actor("root")
@@ -115,7 +115,7 @@ def test_cli_bootstraps_the_configured_data_plane_before_human_fixtures(tmp_path
     cp = setup_control_plane(tmp_path)
     seed_catalog(tmp_path)
     token = "sk-cp-fixture-bootstrap-secret-that-is-long-enough"
-    config = tmp_path / "tokkeeper.yml"
+    config = tmp_path / "airmux.yml"
     config.write_text(
         f"control_plane:\n  database:\n    url: {cp.db_url}\n  bootstrap:\n    token: {token}\n",
         encoding="utf-8",
@@ -156,7 +156,7 @@ def test_the_cli_names_the_command_that_fills_the_catalog(tmp_path):
     refused = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 
     assert refused.exit_code == 1
-    assert "tokkeeper control-plane taxonomy" in refused.output
+    assert "airmux control-plane taxonomy" in refused.output
 
 
 def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path):
@@ -170,7 +170,7 @@ def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path)
 
 
 def test_the_keys_are_seeded_whatever_the_store_can_hold(tmp_path, monkeypatch):
-    """The env store is the default, so `tokkeeper control-plane fixtures` on an unconfigured instance hits it.
+    """The env store is the default, so `airmux control-plane fixtures` on an unconfigured instance hits it.
 
     The rows are the fixture; the value beside them is the store's business. On the env store there
     is nothing to write because the ref already resolves to a variable the operator owns, so a

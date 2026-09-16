@@ -36,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
   const routedWorkspaceRef = match?.[1] ?? '';
   const activeSuffix = match?.[2] ?? '';
-  const lastWorkspaceKey = `tokkeeper_last_ws_${orgId}`;
+  const lastWorkspaceKey = `airmux_last_ws_${orgId}`;
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
   const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;

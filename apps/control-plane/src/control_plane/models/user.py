@@ -19,7 +19,7 @@ from control_plane.models.management_key import ManagementKeyCreatedOut, Managem
 from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
-SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.tokkeeper.invalid"
+SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airmux.invalid"
 EMAIL_MAX_LENGTH = 320
 
 _INSTANCE_OWNER_LOCK = 0x41524C4C

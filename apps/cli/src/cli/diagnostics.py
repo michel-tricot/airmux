@@ -59,7 +59,7 @@ def _profile_rows() -> list[dict[str, object]]:
 
 def resolve_gateway_url(override: str = "") -> str:
     profile = load_active_profile()
-    return override or os.environ.get("TOKKEEPER_GATEWAY_URL") or (profile.gateway_url if profile is not None else None) or "http://localhost:8080"
+    return override or os.environ.get("AIRMUX_GATEWAY_URL") or (profile.gateway_url if profile is not None else None) or "http://localhost:8080"
 
 
 @profiles_app.command("list")
@@ -74,7 +74,7 @@ def profiles_use(name: str) -> None:
     try:
         set_active(name)
     except KeyError:
-        console.print(f"[red]No profile [bold]{name}[/bold]. See [bold]tokkeeper profiles list[/bold].[/red]")
+        console.print(f"[red]No profile [bold]{name}[/bold]. See [bold]airmux profiles list[/bold].[/red]")
         raise typer.Exit(1) from None
     console.print(f"Using profile [bold]{name}[/bold]")
 
@@ -85,7 +85,7 @@ def profiles_remove(name: str) -> None:
     try:
         remove_profile(name)
     except KeyError:
-        console.print(f"[red]No profile [bold]{name}[/bold]. See [bold]tokkeeper profiles list[/bold].[/red]")
+        console.print(f"[red]No profile [bold]{name}[/bold]. See [bold]airmux profiles list[/bold].[/red]")
         raise typer.Exit(1) from None
     console.print(f"Removed profile [bold]{name}[/bold]")
 
@@ -95,8 +95,8 @@ def status(fmt: FormatOption = OutputFormat.table) -> None:
     """Show the context and endpoints the next command will use."""
     config = load_config()
     profile = active_profile(config)
-    organization = os.environ.get("TOKKEEPER_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else "")
-    authentication = "environment" if os.environ.get("TOKKEEPER_MANAGEMENT_KEY") else "profile" if profile is not None and profile.token else "none"
+    organization = os.environ.get("AIRMUX_ORG_ID") or (profile.org_name if profile is not None and profile.scope == "org" else "")
+    authentication = "environment" if os.environ.get("AIRMUX_MANAGEMENT_KEY") else "profile" if profile is not None and profile.token else "none"
     rows = [
         {
             "profile": config.active or "none",
@@ -127,7 +127,7 @@ def _request_check(name: str, request: Callable[[], httpx.Response]) -> dict[str
 
 def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, str]]:
     profile = load_active_profile()
-    token = os.environ.get("TOKKEEPER_MANAGEMENT_KEY") or (profile.token if profile is not None else None)
+    token = os.environ.get("AIRMUX_MANAGEMENT_KEY") or (profile.token if profile is not None else None)
     path = config_path()
     if path.exists():
         private = stat.S_IMODE(path.stat().st_mode) == PRIVATE_FILE_MODE
@@ -149,7 +149,7 @@ def diagnostic_rows(control_plane_url: str, gateway_url: str) -> list[dict[str, 
 @app.command(rich_help_panel=CONNECTION)
 def doctor(
     control_plane_url: str = typer.Option("", help="Control plane URL; defaults to the active context"),
-    gateway_url: str = typer.Option("", help="Gateway URL; defaults to TOKKEEPER_GATEWAY_URL or the active context"),
+    gateway_url: str = typer.Option("", help="Gateway URL; defaults to AIRMUX_GATEWAY_URL or the active context"),
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """Check local credentials, control-plane access, and gateway readiness."""

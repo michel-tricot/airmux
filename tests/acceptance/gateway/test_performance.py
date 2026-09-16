@@ -110,7 +110,7 @@ async def test_stream_timing_measures_text_after_metadata_and_rejects_missing_te
 
 
 def test_performance_load_preserves_usage_with_integration_artifacts_enabled(gateway: Gateway, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("TOKKEEPER_GATEWAY_ARTIFACTS", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("AIRMUX_GATEWAY_ARTIFACTS", str(tmp_path / "artifacts"))
     directory = tmp_path / "performance"
     run_revision(directory, Path(gateway.executable), "candidate", 1, Settings(0.1, 1))
     with sqlite3.connect(directory / "usage/events.db") as events:

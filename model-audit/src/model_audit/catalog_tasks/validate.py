@@ -3,7 +3,7 @@
 Everything here was a check run by hand while the catalog was built. Collected into one
 place so drift fails loudly instead of being noticed by whoever reads the file next.
 
-    uv run tokkeeper-audit taxonomy validate
+    uv run airmux-audit taxonomy validate
 
 Exits non-zero on the first category with failures. Each failure names the entry and the
 rule, so the fix is obvious without reading this file.
@@ -286,7 +286,7 @@ def check_applied() -> None:
     """taxonomy.yml is generated. If it has drifted, the database gets stale routing."""
     _, _, changed = write_taxonomy(ROOT.parent, check=True)
     if changed:
-        fail("applied", "taxonomy.yml is out of date; run tokkeeper-audit taxonomy build")
+        fail("applied", "taxonomy.yml is out of date; run airmux-audit taxonomy build")
 
 
 def check_seed(all_entries: list[dict]) -> None:

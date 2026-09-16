@@ -4,7 +4,7 @@ Reads providers.yml, calls every provider's model listing endpoint with whatever
 credential is in the environment, and writes one file per provider. Providers whose key
 is absent are skipped and reported, so a partial run is legible rather than silently thin.
 
-    uv run tokkeeper-audit providers sync [provider_id] --only models
+    uv run airmux-audit providers sync [provider_id] --only models
 
 Capability fields are populated only where the provider itself declares them. A null means
 the provider does not say, never that the capability is absent: most catalogs return bare

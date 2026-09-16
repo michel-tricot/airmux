@@ -101,9 +101,9 @@ def resolve_refs(node: object, variables: dict[str, str] | None = None, *, base_
 
 
 def load_config_section(name: str, config_path: str | Path | None = None) -> dict[str, Any]:
-    """One plane's section of the shared config file, refs resolved; the path falls back to TOKKEEPER_CONFIG."""
+    """One plane's section of the shared config file, refs resolved; the path falls back to AIRMUX_CONFIG."""
     load_dotenv(find_dotenv(usecwd=True))
-    path = Path(config_path) if config_path else Path(os.environ.get("TOKKEEPER_CONFIG", "tokkeeper.yml"))
+    path = Path(config_path) if config_path else Path(os.environ.get("AIRMUX_CONFIG", "airmux.yml"))
     if not path.exists():
         return {}
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}

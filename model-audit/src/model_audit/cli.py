@@ -54,7 +54,7 @@ GatewaySurfaceOption = Annotated[
 ]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
 ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1, max=100, help="Maximum experiments to run concurrently")]
-GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running TokKeeper data plane")]
+GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running airmux data plane")]
 GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
 SyncComponent = Literal["models", "pricing", "schemas", "parameters", "icons"]
 SyncOption = Annotated[
@@ -63,7 +63,7 @@ SyncOption = Annotated[
 ]
 
 
-app = typer.Typer(name="tokkeeper-audit", no_args_is_help=True, help="Discover model behavior, compile taxonomy, and find gateway gaps")
+app = typer.Typer(name="airmux-audit", no_args_is_help=True, help="Discover model behavior, compile taxonomy, and find gateway gaps")
 agent_app = typer.Typer(name="agent", no_args_is_help=True, help="Versioned operating guides for agents")
 cases_app = typer.Typer(name="cases", no_args_is_help=True)
 providers_app = typer.Typer(name="providers", no_args_is_help=True)
@@ -327,11 +327,11 @@ def providers_onboard(
     load_dotenv(ROOT / ".env")
     source = provider_sources().get(provider_id)
     if source is None:
-        message = f"provider source {provider_id} does not exist; run 'tokkeeper-audit agent guide provider-onboarding'"
+        message = f"provider source {provider_id} does not exist; run 'airmux-audit agent guide provider-onboarding'"
         raise typer.BadParameter(message)
     definition = source.definition
     if definition is None:
-        message = f"provider source {provider_id} has no ProviderDefinition; run 'tokkeeper-audit agent guide provider-onboarding'"
+        message = f"provider source {provider_id} has no ProviderDefinition; run 'airmux-audit agent guide provider-onboarding'"
         raise typer.BadParameter(message)
     key = os.environ.get(definition.env_var)
     if not source.open_access and key is None:
@@ -575,10 +575,10 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
     load_dotenv(ROOT / ".env")
-    gateway_url = gateway_url or os.environ.get("TOKKEEPER_GATEWAY_URL")
-    gateway_api_key = gateway_api_key or os.environ.get("TOKKEEPER_INFERENCE_KEY")
+    gateway_url = gateway_url or os.environ.get("AIRMUX_GATEWAY_URL")
+    gateway_api_key = gateway_api_key or os.environ.get("AIRMUX_INFERENCE_KEY")
     if gateway_url is None or gateway_api_key is None:
-        message = "set TOKKEEPER_GATEWAY_URL and TOKKEEPER_INFERENCE_KEY, or pass both gateway options"
+        message = "set AIRMUX_GATEWAY_URL and AIRMUX_INFERENCE_KEY, or pass both gateway options"
         raise typer.BadParameter(message)
     plan = _plan(
         Filters(
@@ -657,9 +657,9 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if current_harness != document.run.harness_fingerprint:
         message = f"audit harness changed since the run started: expected {document.run.harness_fingerprint}, found {current_harness}"
         raise typer.BadParameter(message)
-    gateway_api_key = gateway_api_key or os.environ.get("TOKKEEPER_INFERENCE_KEY")
+    gateway_api_key = gateway_api_key or os.environ.get("AIRMUX_INFERENCE_KEY")
     if gateway_api_key is None:
-        message = "set TOKKEEPER_INFERENCE_KEY or pass --gateway-api-key"
+        message = "set AIRMUX_INFERENCE_KEY or pass --gateway-api-key"
         raise typer.BadParameter(message)
     pending = remaining_plan(document)
     if not pending.experiments:

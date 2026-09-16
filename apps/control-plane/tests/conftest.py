@@ -4,7 +4,7 @@ pytest_configure runs in the xdist controller before workers spawn, so the conta
 exactly once and its admin URL reaches the workers through the environment. The template
 database is built by the alembic chain, so every test runs against exactly the schema a
 deployment has; test_schema owns proving that create_all and the models agree with it. Tests
-clone the template per tmp_path through pg.py. Set TOKKEEPER_TEST_PG_URL to reuse a long-lived
+clone the template per tmp_path through pg.py. Set AIRMUX_TEST_PG_URL to reuse a long-lived
 local server and skip the container start.
 """
 

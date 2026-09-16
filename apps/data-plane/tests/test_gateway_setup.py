@@ -30,8 +30,8 @@ def write_taxonomy(tmp_path):
 def test_external_taxonomy_reloads_and_keeps_last_good_snapshot(tmp_path, monkeypatch):
     taxonomy = write_taxonomy(tmp_path)
     bundle = tmp_path / "bundle.yml"
-    bundle.write_text("keys: ['${env:TOKKEEPER_INFERENCE_KEY}']\ntaxonomy: taxonomy.yml\n")
-    monkeypatch.setenv("TOKKEEPER_INFERENCE_KEY", "sk-inf-private")
+    bundle.write_text("keys: ['${env:AIRMUX_INFERENCE_KEY}']\ntaxonomy: taxonomy.yml\n")
+    monkeypatch.setenv("AIRMUX_INFERENCE_KEY", "sk-inf-private")
     monkeypatch.chdir(tmp_path.parent)
     holder = BundleHolder()
     source = LocalBundleSource(LocalBundleConfig(kind="local", path=bundle), holder)
@@ -84,12 +84,12 @@ def test_init_creates_private_files_and_validate_works_outside_the_directory(tmp
     assert directory.stat().st_mode & 0o777 == 0o700
     assert "providers:" not in (directory / "bundle.yml").read_text()
     assert not (directory / "taxonomy.yml").exists()
-    monkeypatch.setenv("TOKKEEPER_CONFIG", str(directory / "tokkeeper.yml"))
+    monkeypatch.setenv("AIRMUX_CONFIG", str(directory / "airmux.yml"))
     monkeypatch.chdir(tmp_path.parent)
     config = load_config()
     assert isinstance(config.bundle, LocalBundleConfig)
     assert config.bundle.path == directory / "bundle.yml"
-    result = runner.invoke(app, ["validate", "--config", str(directory / "tokkeeper.yml")])
+    result = runner.invoke(app, ["validate", "--config", str(directory / "airmux.yml")])
     assert result.exit_code == 0, result.output
     assert key not in result.output
     result = runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)])
@@ -114,7 +114,7 @@ def test_describe_configuration_includes_every_provider_and_model(tmp_path, monk
     directory = tmp_path / "gateway"
     assert initialize(directory, taxonomy_path) is None
     monkeypatch.setenv("SECOND_API_KEY", "private-provider-key")
-    guide = describe_configuration(directory / "tokkeeper.yml")
+    guide = describe_configuration(directory / "airmux.yml")
     assert [(provider.provider_id, provider.models) for provider in guide.providers] == [
         ("first", ("first-a", "first-b")),
         ("second", ("second-a",)),
@@ -175,6 +175,6 @@ def test_validation_does_not_disclose_an_invalid_inference_key(tmp_path):
     assert runner.invoke(app, ["init", "--directory", str(directory), "--taxonomy", str(taxonomy)]).exit_code == 0
     key = "private-but-invalid-token"
     (directory / "bundle.yml").write_text(yaml.safe_dump({"keys": [key], "taxonomy": str(taxonomy)}))
-    result = runner.invoke(app, ["validate", "--config", str(directory / "tokkeeper.yml")])
+    result = runner.invoke(app, ["validate", "--config", str(directory / "airmux.yml")])
     assert result.exit_code != 0
     assert key not in result.output

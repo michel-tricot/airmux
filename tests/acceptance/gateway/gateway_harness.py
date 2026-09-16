@@ -102,12 +102,12 @@ class Gateway:
         self.directory = directory
         self.scenario = scenario
         self.directory.mkdir()
-        self.config_path = directory / "tokkeeper.yml"
+        self.config_path = directory / "airmux.yml"
         self.taxonomy_path = directory / "taxonomy.yml"
         self.bundle_path = directory / "bundle.yml"
         self.events_path = directory / "usage/events.jsonl"
         self.reload_interval_s = 0.05
-        self.executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper"))
+        self.executable = os.environ.get("AIRMUX_GATEWAY_BIN", str(Path(sys.executable).parent / "airmux"))
         self.environment = {**os.environ, "STUB_API_KEY": UPSTREAM_KEY, "BACKUP_API_KEY": UPSTREAM_KEY, "DOCKER_HOST": "unix:///no-docker.sock"}
         self.providers: list[Upstream] = []
         self.sensitive_values: tuple[str, ...] = ()
@@ -221,7 +221,7 @@ class Gateway:
                 self.process.wait(timeout=5)
 
     def headers(self, dialect: Dialect = "canonical", key: str = INFERENCE_KEY) -> dict[str, str]:
-        return {"Authorization": f"Bearer {key}", "X-Tokkeeper-Dialect": dialect}
+        return {"Authorization": f"Bearer {key}", "X-airmux-Dialect": dialect}
 
     def request(
         self,
@@ -265,7 +265,7 @@ class Gateway:
         for provider in self.providers:
             provider.close()
         self.log.close()
-        artifacts = os.environ.get("TOKKEEPER_GATEWAY_ARTIFACTS")
+        artifacts = os.environ.get("AIRMUX_GATEWAY_ARTIFACTS")
         if artifacts:
             destination = Path(artifacts) / self.scenario
             destination.mkdir(parents=True, exist_ok=True)

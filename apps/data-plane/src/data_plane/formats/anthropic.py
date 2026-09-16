@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 CACHE_CONTROL = {"type": "ephemeral"}
-REASONING_IDENTITY_PREFIX = "tokkeeper-reasoning-v1:"
+REASONING_IDENTITY_PREFIX = "airmux-reasoning-v1:"
 
 
 def reasoning_signature(reasoning_id: str | None, signature: str | None) -> str:

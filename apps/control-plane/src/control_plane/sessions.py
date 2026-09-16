@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
 SESSION_TOKEN_PREFIX = "sk-sess-"  # noqa: S105 token prefix, not a secret
-SESSION_COOKIE = "tokkeeper_session"
+SESSION_COOKIE = "airmux_session"
 SESSION_IDLE_TTL = timedelta(hours=12)
 SESSION_ABSOLUTE_TTL = timedelta(days=14)
 

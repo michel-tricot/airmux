@@ -1,10 +1,10 @@
 ---
-title: "TokKeeper"
+title: "airmux"
 description: "Run one self-hosted endpoint for LLM applications across providers, with routing, access controls, and usage accounting built in."
 ---
 
-TokKeeper is a self-hosted LLM gateway. Applications send requests to one endpoint using a supported SDK or the native
-canonical API. TokKeeper authenticates the workspace, applies policy, selects a model and provider credential, translates
+airmux is a self-hosted LLM gateway. Applications send requests to one endpoint using a supported SDK or the native
+canonical API. airmux authenticates the workspace, applies policy, selects a model and provider credential, translates
 the request, and records usage.
 
 <Columns cols={2}>
@@ -12,7 +12,7 @@ the request, and records usage.
     Start the complete stack, add a provider credential, and make a verified request.
   </Card>
   <Card title="Connect an SDK" icon="code" href="/docs/guides/openai-sdk">
-    Point an existing SDK at TokKeeper by changing its base URL and API key.
+    Point an existing SDK at airmux by changing its base URL and API key.
   </Card>
   <Card title="Deploy" icon="server" href="/docs/deployment">
     Run the all-in-one image or separate the console, control plane, and gateways.
@@ -22,7 +22,7 @@ the request, and records usage.
   </Card>
 </Columns>
 
-## What TokKeeper provides
+## What airmux provides
 
 - One inference origin for multiple upstream provider families
 - Compatible Chat Completions, Responses, and Messages surfaces
@@ -38,7 +38,7 @@ the request, and records usage.
 
 | Goal | Start here |
 | --- | --- |
-| Try TokKeeper locally | [Quickstart](/docs/quickstart) |
+| Try airmux locally | [Quickstart](/docs/quickstart) |
 | Move an existing application | [OpenAI SDK](/docs/guides/openai-sdk) or [Anthropic SDK](/docs/guides/anthropic-sdk) |
 | Add request controls | [Policy workflow](/docs/guides/policy-workflow) |
 | Plan production infrastructure | [Deployment overview](/docs/deployment) |
@@ -46,5 +46,5 @@ the request, and records usage.
 | Understand the design | [Architecture](/docs/concepts/architecture) |
 
 <Info>
-  TokKeeper is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
+  airmux is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 </Info>

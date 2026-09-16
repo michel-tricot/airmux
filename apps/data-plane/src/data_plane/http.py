@@ -76,7 +76,7 @@ class ResponseHeadersMiddleware:
                 if streaming:
                     headers["x-accel-buffering"] = "no"
                 if message["status"] == HTTPStatus.UNAUTHORIZED:
-                    headers.setdefault("www-authenticate", 'Bearer realm="tokkeeper"')
+                    headers.setdefault("www-authenticate", 'Bearer realm="airmux"')
             await send(message)
 
         await self.app(scope, receive, send_headers)

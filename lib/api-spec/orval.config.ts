@@ -17,10 +17,10 @@ const writeAuthority = async (config: Parameters<InputTransformerFn>[0]) => {
     Object.values(operations ?? {}).flatMap((operation) => {
       const definition = operation as {
         operationId?: string;
-        'x-tokkeeper-authority'?: Array<{ scope: string; anyOf: string[] }>;
+        'x-airmux-authority'?: Array<{ scope: string; anyOf: string[] }>;
       };
-      if (!definition.operationId || !definition['x-tokkeeper-authority']?.length) return [];
-      return [[camelCase(definition.operationId), { checks: definition['x-tokkeeper-authority'] }] as const];
+      if (!definition.operationId || !definition['x-airmux-authority']?.length) return [];
+      return [[camelCase(definition.operationId), { checks: definition['x-airmux-authority'] }] as const];
     }),
   );
   const operationNames = policies.map(([name]) => name);

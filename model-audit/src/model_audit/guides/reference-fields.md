@@ -25,12 +25,12 @@ Neither is ever empty, so a consumer never branches on a missing icon.
   Twelve vendors have no colour variant upstream; for those this names the monochrome slug
 
 Reka has no mark upstream at all, so both fields name a generated monogram, written by
-`tokkeeper-audit providers sync <provider> --only icons` on a 404. It is the only file under
+`airmux-audit providers sync <provider> --only icons` on a 404. It is the only file under
 `icons/` not traceable to lobehub.
 
 Normalization: width, height and the upstream flex styling dropped so the consumer owns
 sizing and layout; titles dropped so it owns the accessible name; every local id namespaced
-`tokkeeper-{slug}-` so two marks on one page cannot collide on a gradient id. It is markup,
+`airmux-{slug}-` so two marks on one page cannot collide on a gradient id. It is markup,
 not data: whatever renders it sanitizes it.
 
 ## homepage, docs

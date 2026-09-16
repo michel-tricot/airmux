@@ -3,7 +3,7 @@ title: "Authentication and scopes"
 description: "Distinguish browser sessions, management keys, inference keys, principals, roles, and tenancy scopes."
 ---
 
-TokKeeper has separate credentials for management and inference. They are not interchangeable.
+airmux has separate credentials for management and inference. They are not interchangeable.
 
 | Credential | Prefix or transport | Purpose |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ the target scope. A management key cannot delegate authority its caller or key p
 ## Create a management key
 
 ```bash
-tokkeeper management-keys create \
+airmux management-keys create \
   --org "$ORG_ID" \
   --workspace production \
   --label deployment-automation \
@@ -55,7 +55,7 @@ The token is shown once. Revoking a management key also revokes keys delegated f
 ## Inference keys
 
 ```bash
-tokkeeper inference-keys create checkout-service --workspace production
+airmux inference-keys create checkout-service --workspace production
 ```
 
 An inference key authenticates one workspace's model requests and model discovery and is the unit targeted by selected-key policies. Revocation
