@@ -21,7 +21,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs:
-      [changes, workflows, frontend, backend, python-distributions, installation-smoke, installation, gateway-acceptance, gateway-results, acceptance, browser-acceptance]
+      [
+        changes,
+        workflows,
+        frontend,
+        backend,
+        python-distributions,
+        installation-smoke,
+        installation,
+        gateway-acceptance,
+        gateway-results,
+        acceptance,
+        browser-acceptance,
+      ]
     if: always()
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
