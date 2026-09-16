@@ -205,6 +205,8 @@ class _StubHandler(BaseHTTPRequestHandler):
 
 
 class _StubServer(ThreadingHTTPServer):
+    request_queue_size = 128
+
     def __init__(self, address: tuple[str, int]) -> None:
         super().__init__(address, _StubHandler)
         self._request_count = 0

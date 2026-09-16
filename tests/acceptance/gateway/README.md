@@ -109,7 +109,8 @@ no request history during load.
 Each proxied workload also has its own direct-before and direct-after windows, including streaming and the policy
 workload. All three use the same request fields, fixed provider response, concurrency, HTTP/1.1 settings and one
 persistent connection per worker. Only the model name differs at ingress; direct requests use the translated upstream
-name. Streaming controls request usage just as the gateway does. The provider rejects mismatched payloads. The 100
+name. Streaming controls request usage just as the gateway does. The provider rejects mismatched payloads and retains idle HTTP connections for one hour, avoiding server-side expiry
+races while the bracketed control windows run. Client keepalive expiry stays at five seconds. The 100
 policies apply to the proxy and leave this request's token limit unchanged.
 
 For round r, the incremental HTTP proxy latency estimate is:

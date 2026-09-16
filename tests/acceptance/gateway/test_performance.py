@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import sqlite3
 from pathlib import Path
@@ -282,3 +283,17 @@ def test_performance_round_uses_the_supplied_revision_harness(gateway: Gateway, 
     assert all(min(timings.direct_before.latency_ms) > 40 for timings in result.overhead)
     bundle = yaml.safe_load((directory / "bundle.yml").read_text())
     assert bundle["keys"][0]["token"] == "sk-inf-revision-harness"
+
+
+async def test_performance_upstream_preserves_idle_connections_between_controls(tmp_path: Path):
+    provider = performance.FastProvider(tmp_path, 0)
+    try:
+        provider.start()
+        async with httpx.AsyncClient(trust_env=False, limits=httpx.Limits(keepalive_expiry=None)) as client:
+            before = await client.get(provider.url + "/readyz")
+            await asyncio.sleep(6)
+            after = await client.get(provider.url + "/readyz")
+            assert before.status_code == after.status_code == 200
+            assert before.extensions["network_stream"] is after.extensions["network_stream"]
+    finally:
+        provider.close()

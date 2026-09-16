@@ -164,6 +164,7 @@ OVERHEAD_METHOD = (
     "Durable SQLite event collection is enabled and included; authentication, translation, policy and metering stay active. "
     "Model inference, external network/provider variability, control-plane traffic, periodic polling/export, startup and warmup are excluded. "
     "Controls match request fields (using the upstream model name), response fixture, streaming, concurrency and HTTP/1.1 keepalive limits. "
+    "The local upstream retains idle connections for one hour; client keepalive expiry stays at five seconds. "
     "One sequential closed-loop request per connection; windows run separately without competing direct/proxied load. "
     "Client parsing, the extra local HTTP hop, scheduling, queueing and connection-pool effects are included. "
     "Round ranges and maximum direct-control drift show noise, not confidence intervals; non-positive estimates are retained. "
@@ -537,7 +538,14 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
         "overhead_comparisons": [change.model_dump() for change in overhead_changes],
         "metering_event_counts": event_counts,
         "upstream_delay_ms": upstream_delay_ms,
-        "connection_settings": {"http_version": "1.1", "max_connections_per_client": 1, "keepalive_connections_per_client": 1, "timeout_s": 10},
+        "connection_settings": {
+            "http_version": "1.1",
+            "max_connections_per_client": 1,
+            "keepalive_connections_per_client": 1,
+            "keepalive_expiry_s": 5,
+            "timeout_s": 10,
+        },
+        "upstream_settings": {"server_keepalive_timeout_s": 3600},
         "gateway_settings": {"workers": 1, "event_store": "sqlite", "reload_interval_s": 3600, "export_interval_s": 3600},
         "runner": {name: os.environ.get(name) for name in ("RUNNER_OS", "RUNNER_ARCH", "RUNNER_NAME", "ImageOS", "ImageVersion")},
         "base_revision": base_revision,
