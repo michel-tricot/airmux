@@ -57,6 +57,7 @@ class GatewayTransport(httpx.BaseTransport):
 NOW = datetime.now(tz=UTC)
 ORG = uuid7()
 WORKSPACE = uuid7()
+USER = uuid7()
 
 CONTROL_PLANE_URL = "http://cp.test"
 
@@ -89,10 +90,10 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
     return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
 
 
-def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE):
+def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE, user: UUID = USER):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, token_hash=token_hash(token))
+    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token))
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):

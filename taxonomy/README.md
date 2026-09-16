@@ -1,17 +1,17 @@
 # Taxonomy maintenance
 
-This directory is generated provider catalog data consumed by TokKeeper. Maintain it from the
-repository root through `tokkeeper-audit`. Do not invoke internal task modules under
+This directory is generated provider catalog data consumed by airmux. Maintain it from the
+repository root through `airmux-audit`. Do not invoke internal task modules under
 `model-audit/src/model_audit/catalog_tasks/` directly and do not edit `taxonomy.yml` or `behavior.json`.
 
 ## Choose the workflow
 
 | Goal | Command or guide |
 | --- | --- |
-| Inspect provider source readiness | `uv run tokkeeper-audit providers sources` |
+| Inspect provider source readiness | `uv run airmux-audit providers sources` |
 | Add a provider | `agent guide provider-onboarding`, then `providers onboard <provider>` |
-| Refresh one provider | `uv run tokkeeper-audit providers sync <provider>` |
-| Refresh all active providers | `uv run tokkeeper-audit providers sync` |
+| Refresh one provider | `uv run airmux-audit providers sync <provider>` |
+| Refresh all active providers | `uv run airmux-audit providers sync` |
 | Refresh models or prices | `providers sync <provider> --only models` or `--only pricing` |
 | Refresh schemas or icons | `providers sync <provider> --only schemas` or `--only icons` |
 | Add a sourced exception | `agent guide model-update`, then `models add` |
@@ -24,8 +24,8 @@ repository root through `tokkeeper-audit`. Do not invoke internal task modules u
 Run these before and after maintenance:
 
 ```bash
-uv run tokkeeper-audit cases coverage
-uv run tokkeeper-audit taxonomy validate
+uv run airmux-audit cases coverage
+uv run airmux-audit taxonomy validate
 ```
 
 ## Skill, guide, and CLI
@@ -37,13 +37,13 @@ evidence, and review rules. The CLI performs deterministic acquisition and mutat
 List and read guides with:
 
 ```bash
-uv run tokkeeper-audit agent guides
-uv run tokkeeper-audit agent guide provider-onboarding
-uv run tokkeeper-audit agent guide provider-sync
-uv run tokkeeper-audit agent guide model-update
-uv run tokkeeper-audit agent guide behavior-audit
-uv run tokkeeper-audit agent guide gateway-investigation
-uv run tokkeeper-audit agent guide taxonomy-generation
+uv run airmux-audit agent guides
+uv run airmux-audit agent guide provider-onboarding
+uv run airmux-audit agent guide provider-sync
+uv run airmux-audit agent guide model-update
+uv run airmux-audit agent guide behavior-audit
+uv run airmux-audit agent guide gateway-investigation
+uv run airmux-audit agent guide taxonomy-generation
 ```
 
 Use the CLI alone for a known repeatable operation such as refreshing an unchanged model
@@ -81,9 +81,9 @@ Add one auto-discovered source module with a typed `ProviderDefinition` and expl
 normalization. There is no provider registry and users do not write YAML definitions.
 
 ```bash
-uv run tokkeeper-audit agent guide provider-onboarding
+uv run airmux-audit agent guide provider-onboarding
 export EXAMPLE_API_KEY=...
-uv run tokkeeper-audit providers onboard example
+uv run airmux-audit providers onboard example
 ```
 
 Use `--replace` when intentionally reapplying a changed definition to an active provider.
@@ -93,12 +93,12 @@ component, builds taxonomy, and validates it.
 ## Refresh providers and models
 
 ```bash
-uv run tokkeeper-audit providers sync anthropic
-uv run tokkeeper-audit providers sync anthropic --only models
-uv run tokkeeper-audit providers sync anthropic --only pricing
-uv run tokkeeper-audit providers sync anthropic --only schemas --only parameters
-uv run tokkeeper-audit providers sync anthropic --only icons
-uv run tokkeeper-audit providers sync
+uv run airmux-audit providers sync anthropic
+uv run airmux-audit providers sync anthropic --only models
+uv run airmux-audit providers sync anthropic --only pricing
+uv run airmux-audit providers sync anthropic --only schemas --only parameters
+uv run airmux-audit providers sync anthropic --only icons
+uv run airmux-audit providers sync
 ```
 
 Model and pricing refreshes reacquire the provider catalog before enrichment. An incremental
@@ -111,7 +111,7 @@ For one API-listed model, refresh the provider. Use `models add` only for a curr
 vendor-sourced model that the listing omits:
 
 ```bash
-uv run tokkeeper-audit models add anthropic claude-example \
+uv run airmux-audit models add anthropic claude-example \
   --source https://docs.example.ai/models/claude-example \
   --input-modality text \
   --output-modality text \
@@ -143,9 +143,9 @@ estimates, not billing facts.
 ## Clean rebuild and difference audit
 
 ```bash
-uv run tokkeeper-audit taxonomy rebuild --preserve-as taxonomy_old
-uv run tokkeeper-audit taxonomy diff taxonomy_old taxonomy --summary
-uv run tokkeeper-audit taxonomy diff taxonomy_old taxonomy --format json
+uv run airmux-audit taxonomy rebuild --preserve-as taxonomy_old
+uv run airmux-audit taxonomy diff taxonomy_old taxonomy --summary
+uv run airmux-audit taxonomy diff taxonomy_old taxonomy --format json
 ```
 
 The rebuild renames the complete existing directory and reconstructs providers, candidates,
@@ -167,8 +167,8 @@ the model carries `source_conflicts` plus the conflicting `documentation_url` fo
 The gateway must already be running. Model audit never starts or stops it.
 
 ```bash
-uv run tokkeeper-audit runs plan --provider anthropic --case modalities
-uv run tokkeeper-audit runs execute \
+uv run airmux-audit runs plan --provider anthropic --case modalities
+uv run airmux-audit runs execute \
   --provider anthropic \
   --case modalities \
   --gateway-surface all \
@@ -192,15 +192,15 @@ keep the selected caller surface spelling so the gateway remains responsible for
 Interrupted runs are checkpointed after every pair:
 
 ```bash
-uv run tokkeeper-audit runs resume model-audit/reports/<run>.json --concurrency 100
+uv run airmux-audit runs resume model-audit/reports/<run>.json --concurrency 100
 ```
 
 Review before accepting evidence:
 
 ```bash
-uv run tokkeeper-audit reports show model-audit/reports/<run>.json --gaps
-uv run tokkeeper-audit evidence accept model-audit/reports/<run>.json
-uv run tokkeeper-audit taxonomy validate
+uv run airmux-audit reports show model-audit/reports/<run>.json --gaps
+uv run airmux-audit evidence accept model-audit/reports/<run>.json
+uv run airmux-audit taxonomy validate
 ```
 
 ## Review checklist

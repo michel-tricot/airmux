@@ -37,7 +37,7 @@ regeneration, so record the `.stats.yml` URL in `openapi`, never the hashed URL.
 Better than any pricing page for model ids, because it is the set the API validates
 against. Pricing pages print display names: Z.ai's says `GLM-5.2`, the API wants
 `glm-5.2`. Map an authoritative enum in the provider source or add the sourced exception
-through `tokkeeper-audit models add`.
+through `airmux-audit models add`.
 
 Caveat: an enum can be staler than the docs. Groq's spec still lists `compound-beta` while
 its models page has moved on. When they disagree, prefer the docs and note the conflict.

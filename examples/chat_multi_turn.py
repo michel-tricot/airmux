@@ -70,12 +70,12 @@ def run_turn(gateway: str, api_key: str, model: str, messages: list[dict]) -> st
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    api_key = os.environ.get("TOKKEEPER_INFERENCE_KEY")
+    api_key = os.environ.get("AIRMUX_INFERENCE_KEY")
     if not api_key:
-        print("TOKKEEPER_INFERENCE_KEY is not set, run `uv run tokkeeper quickstart` first")
+        print("AIRMUX_INFERENCE_KEY is not set, run `uv run airmux quickstart` first")
         return 1
-    gateway = os.environ.get("TOKKEEPER_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("TOKKEEPER_MODEL", "openai/gpt-4o-mini")
+    gateway = os.environ.get("AIRMUX_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("AIRMUX_MODEL", "openai/gpt-4o-mini")
     native = model.startswith("deepseek-reasoner")
     print(f"model: {model} ({'native reasoning stream' if native else 'prompted step-by-step, set DEEPSEEK_API_KEY for native reasoning'})\n")
 

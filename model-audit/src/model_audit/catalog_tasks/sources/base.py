@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
     from model_audit.catalog_tasks.types import CatalogObject, CatalogValue
 
-UA = {"User-Agent": "tokkeeper-taxonomy/1.0", "Accept": "application/json"}
+UA = {"User-Agent": "airmux-taxonomy/1.0", "Accept": "application/json"}
 
 
 def per_mtok(value: CatalogValue) -> float | None:
@@ -100,7 +100,7 @@ class ModelSource:
         """Map one vendor record to a catalog record, or None to drop it.
 
         Return None for anything the account cannot call without provisioning: that is the
-        whole point of the catalog, so a model in it is a model tokkeeper can route to today.
+        whole point of the catalog, so a model in it is a model airmux can route to today.
         """
         raise NotImplementedError
 

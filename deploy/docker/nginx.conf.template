@@ -1,16 +1,16 @@
 worker_processes auto;
-pid /tmp/tokkeeper-nginx.pid;
+pid /tmp/airmux-nginx.pid;
 error_log /dev/stderr warn;
 events { worker_connections 1024; }
 http {
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
   access_log /dev/stdout;
-  client_body_temp_path /tmp/tokkeeper-client;
-  proxy_temp_path /tmp/tokkeeper-proxy;
-  fastcgi_temp_path /tmp/tokkeeper-fastcgi;
-  uwsgi_temp_path /tmp/tokkeeper-uwsgi;
-  scgi_temp_path /tmp/tokkeeper-scgi;
+  client_body_temp_path /tmp/airmux-client;
+  proxy_temp_path /tmp/airmux-proxy;
+  fastcgi_temp_path /tmp/airmux-fastcgi;
+  uwsgi_temp_path /tmp/airmux-uwsgi;
+  scgi_temp_path /tmp/airmux-scgi;
   resolver ${NGINX_RESOLVER} valid=5s ipv6=off;
   map $upstream_http_cache_control $api_cache_control {
     default "no-store";

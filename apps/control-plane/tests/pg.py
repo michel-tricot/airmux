@@ -1,7 +1,7 @@
 """Per-test database provisioning against the shared test Postgres server.
 
 conftest.py starts one server per pytest run (in the xdist controller, so workers share it) and
-publishes its admin URL through TOKKEEPER_TEST_PG_URL. Databases are cheap inside that server:
+publishes its admin URL through AIRMUX_TEST_PG_URL. Databases are cheap inside that server:
 setup_control_plane clones the migrated-equivalent template; a test that needs to prove the
 migration chain asks for an empty database instead. Names derive from tmp_path, so every test owns
 its databases and the autouse fixture in conftest.py can drop them without bookkeeping.
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 if TYPE_CHECKING:
     from pathlib import Path
 
-ADMIN_URL_ENV = "TOKKEEPER_TEST_PG_URL"
+ADMIN_URL_ENV = "AIRMUX_TEST_PG_URL"
 TEMPLATE_DB = "cp_template"
 
 

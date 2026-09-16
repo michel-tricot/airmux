@@ -7,7 +7,7 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
-app = typer.Typer(name="tokkeeper", help="Run an LLM gateway or manage a TokKeeper installation", no_args_is_help=True, add_completion=False)
+app = typer.Typer(name="airmux", help="Run an LLM gateway or manage an airmux installation", no_args_is_help=True, add_completion=False)
 console = Console()
 
 
@@ -29,10 +29,10 @@ invocation = Invocation()
 def _show_version(value: bool) -> bool:
     if value:
         try:
-            release = version("tokkeeper")
+            release = version("airmux")
         except PackageNotFoundError:
             release = "unknown"
-        typer.echo(f"tokkeeper {release}")
+        typer.echo(f"airmux {release}")
         raise typer.Exit
     return value
 

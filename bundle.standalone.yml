@@ -1,3 +1,4 @@
 keys:
-  - ${env:TOKKEEPER_INFERENCE_KEY}
+  - token: ${env:AIRMUX_INFERENCE_KEY}
+    user_id: 00000000-0000-0000-0000-000000000001
 taxonomy: taxonomy/taxonomy.yml

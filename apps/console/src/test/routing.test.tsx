@@ -5,7 +5,7 @@ import App from '@/App';
 import { ORG, WORKSPACES } from './msw';
 
 beforeEach(() => {
-  window.localStorage.setItem('tokkeeper_org_id', ORG.id);
+  window.localStorage.setItem('airmux_org_id', ORG.id);
 });
 
 function renderAt(path: string) {
@@ -74,7 +74,7 @@ describe('default workspace selection', () => {
   });
 
   it('redirects /org to the last-selected workspace', async () => {
-    window.localStorage.setItem(`tokkeeper_last_ws_${ORG.id}`, WORKSPACES[1].slug);
+    window.localStorage.setItem(`airmux_last_ws_${ORG.id}`, WORKSPACES[1].slug);
     renderAt('/org');
     await waitFor(() => {
       expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[1].slug}`);
@@ -86,7 +86,7 @@ describe('default workspace selection', () => {
     renderAt(`/org/workspaces/${WORKSPACES[1].slug}/inference-keys`);
     await screen.findByRole('heading', { level: 1, name: 'Inference Keys' });
     await waitFor(() => {
-      expect(window.localStorage.getItem(`tokkeeper_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
+      expect(window.localStorage.getItem(`airmux_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
     });
   });
 });

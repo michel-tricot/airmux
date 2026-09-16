@@ -1,6 +1,6 @@
-# Contributing to TokKeeper
+# Contributing to airmux
 
-TokKeeper is pre-1.0, so focused contributions that strengthen the current design are easier to review than broad
+airmux is pre-1.0, so focused contributions that strengthen the current design are easier to review than broad
 compatibility layers or unrelated cleanup.
 
 ## Start with context
@@ -94,7 +94,7 @@ uv run pytest tests/documentation
 Changes on the inference request path also require the acceptance scenarios and a real request against a running data plane:
 
 ```bash
-uv run pytest tests/acceptance/scenarios
+uv run pytest tests/acceptance/full_stack/scenarios
 ```
 
 ## Open the pull request

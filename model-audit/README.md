@@ -1,7 +1,7 @@
-# TokKeeper model audit
+# airmux model audit
 
 Model audit acquires provider catalogs, generates the applied taxonomy, and identifies
-gateway gaps by comparing identical calls made directly and through a running TokKeeper data
+gateway gaps by comparing identical calls made directly and through a running airmux data
 plane.
 
 The project has four independent verdicts:
@@ -40,19 +40,19 @@ two-sided variance.
 The package owns versioned instructions for agents. List them with:
 
 ```bash
-uv run tokkeeper-audit agent guides
-uv run tokkeeper-audit agent guides --format json
+uv run airmux-audit agent guides
+uv run airmux-audit agent guides --format json
 ```
 
 Read one complete guide before an agent changes or interprets the catalog:
 
 ```bash
-uv run tokkeeper-audit agent guide provider-onboarding
-uv run tokkeeper-audit agent guide provider-sync
-uv run tokkeeper-audit agent guide model-update
-uv run tokkeeper-audit agent guide behavior-audit
-uv run tokkeeper-audit agent guide gateway-investigation
-uv run tokkeeper-audit agent guide taxonomy-generation
+uv run airmux-audit agent guide provider-onboarding
+uv run airmux-audit agent guide provider-sync
+uv run airmux-audit agent guide model-update
+uv run airmux-audit agent guide behavior-audit
+uv run airmux-audit agent guide gateway-investigation
+uv run airmux-audit agent guide taxonomy-generation
 ```
 
 The repository `provider-catalog` skill is only the automatic-discovery adapter. These CLI
@@ -61,23 +61,23 @@ guides are the canonical instructions.
 ## Daily workflow
 
 ```bash
-uv run tokkeeper-audit cases coverage
-uv run tokkeeper-audit providers sources
-uv run tokkeeper-audit providers list
-uv run tokkeeper-audit models list --provider anthropic
-uv run tokkeeper-audit runs plan --model anthropic/claude-fable-5
-uv run tokkeeper-audit runs plan --provider anthropic --case modalities
+uv run airmux-audit cases coverage
+uv run airmux-audit providers sources
+uv run airmux-audit providers list
+uv run airmux-audit models list --provider anthropic
+uv run airmux-audit runs plan --model anthropic/claude-fable-5
+uv run airmux-audit runs plan --provider anthropic --case modalities
 
-export TOKKEEPER_GATEWAY_URL=http://127.0.0.1:8080
-export TOKKEEPER_INFERENCE_KEY=sk-inf-your-key
-uv run tokkeeper-audit runs execute --model anthropic/claude-fable-5
-uv run tokkeeper-audit runs execute --provider anthropic --case modalities --concurrency 8
+export AIRMUX_GATEWAY_URL=http://127.0.0.1:8080
+export AIRMUX_INFERENCE_KEY=sk-inf-your-key
+uv run airmux-audit runs execute --model anthropic/claude-fable-5
+uv run airmux-audit runs execute --provider anthropic --case modalities --concurrency 8
 
-uv run tokkeeper-audit reports show --gaps
-uv run tokkeeper-audit reports list
-uv run tokkeeper-audit reports prune --keep 20 --yes
-uv run tokkeeper-audit evidence accept model-audit/reports/<run>.json
-uv run tokkeeper-audit taxonomy validate
+uv run airmux-audit reports show --gaps
+uv run airmux-audit reports list
+uv run airmux-audit reports prune --keep 20 --yes
+uv run airmux-audit evidence accept model-audit/reports/<run>.json
+uv run airmux-audit taxonomy validate
 ```
 
 The gateway must already be running. Model audit never starts or stops it. Raw HTTP
@@ -121,12 +121,12 @@ every completed direct and gateway pair. If the process is interrupted, resume o
 missing experiments:
 
 ```bash
-uv run tokkeeper-audit runs resume model-audit/reports/<run>.json
+uv run airmux-audit runs resume model-audit/reports/<run>.json
 ```
 
 The checkpoint contains the complete original plan, confirmation count, transient retry policy,
 request timeout, partial results, and completion state. Resume uses the stored gateway URL and
-requires the gateway key through `TOKKEEPER_INFERENCE_KEY` or `--gateway-api-key`.
+requires the gateway key through `AIRMUX_INFERENCE_KEY` or `--gateway-api-key`.
 
 Resume rejects a changed taxonomy, case suite, audit source, or provider definition rather
 than mixing evidence from different harness versions. It preserves original plan order and
@@ -148,7 +148,7 @@ merger.
 Inspect source readiness:
 
 ```bash
-uv run tokkeeper-audit providers sources
+uv run airmux-audit providers sources
 ```
 
 A provider source declares a typed definition and maps its response explicitly:
@@ -203,7 +203,7 @@ Set its credential and run:
 
 ```bash
 export EXAMPLE_API_KEY=...
-uv run tokkeeper-audit providers onboard example
+uv run airmux-audit providers onboard example
 ```
 
 Onboarding:
@@ -228,22 +228,22 @@ or embed an LLM.
 Synchronize every acquisition component for one provider:
 
 ```bash
-uv run tokkeeper-audit providers sync anthropic
+uv run airmux-audit providers sync anthropic
 ```
 
 Synchronize every active provider with available credentials:
 
 ```bash
-uv run tokkeeper-audit providers sync
+uv run airmux-audit providers sync
 ```
 
 Limit a run by repeating `--only`:
 
 ```bash
-uv run tokkeeper-audit providers sync anthropic --only models
-uv run tokkeeper-audit providers sync anthropic --only pricing
-uv run tokkeeper-audit providers sync anthropic --only schemas --only parameters
-uv run tokkeeper-audit providers sync anthropic --only icons
+uv run airmux-audit providers sync anthropic --only models
+uv run airmux-audit providers sync anthropic --only pricing
+uv run airmux-audit providers sync anthropic --only schemas --only parameters
+uv run airmux-audit providers sync anthropic --only icons
 ```
 
 Model and pricing synchronization reacquire the provider model catalog before enrichment.
@@ -277,9 +277,9 @@ Preserve the current directory and reconstruct every generated artifact from pro
 sources:
 
 ```bash
-uv run tokkeeper-audit taxonomy rebuild --preserve-as taxonomy_old
-uv run tokkeeper-audit taxonomy diff taxonomy_old taxonomy --summary
-uv run tokkeeper-audit taxonomy diff taxonomy_old taxonomy --format json
+uv run airmux-audit taxonomy rebuild --preserve-as taxonomy_old
+uv run airmux-audit taxonomy diff taxonomy_old taxonomy --summary
+uv run airmux-audit taxonomy diff taxonomy_old taxonomy --format json
 ```
 
 The diff includes provider fields, every imported model field, applied taxonomy models,
@@ -294,13 +294,13 @@ missing fields for each model without turning absence into an unsupported verdic
 Prefer provider synchronization when the listing contains the model:
 
 ```bash
-uv run tokkeeper-audit providers sync anthropic --only models
+uv run airmux-audit providers sync anthropic --only models
 ```
 
 Add a source-backed model absent from the listing:
 
 ```bash
-uv run tokkeeper-audit models add anthropic claude-example \
+uv run airmux-audit models add anthropic claude-example \
   --source https://docs.example.com/models/claude-example \
   --context-window 200000 \
   --max-output-tokens 8192

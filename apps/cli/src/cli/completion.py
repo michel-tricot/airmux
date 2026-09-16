@@ -14,7 +14,7 @@ Shell = Literal["bash", "zsh", "fish", "powershell", "pwsh"]
 def completion(
     shell: Annotated[Shell | None, typer.Option("--shell", help="Shell to configure; detected automatically by default")] = None,
 ) -> None:
-    """Install shell completion for TokKeeper commands."""
-    installed_shell, path = install(shell=shell, prog_name="tokkeeper", complete_var="_TOKKEEPER_COMPLETE")
+    """Install shell completion for airmux commands."""
+    installed_shell, path = install(shell=shell, prog_name="airmux", complete_var="_AIRMUX_COMPLETE")
     typer.echo(f"Installed {installed_shell} completion at {path}")
     typer.echo("Restart your shell to use it")

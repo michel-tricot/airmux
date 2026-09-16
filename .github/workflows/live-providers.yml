@@ -1,0 +1,66 @@
+name: live-providers
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      distribution-artifact:
+        type: string
+        required: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+        with:
+          enable-cache: false
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - name: Download release distributions
+        if: inputs.distribution-artifact != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ inputs.distribution-artifact }}
+          path: dist
+      - name: Build distributions for scheduled or manual checks
+        if: inputs.distribution-artifact == ''
+        run: ./scripts/build-python-distribution.sh
+      - name: Install candidate wheel
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
+        run: uv tool install dist/airmux-*.whl
+      - name: Verify real providers and metering
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AIRMUX_GATEWAY_BIN: ${{ runner.temp }}/airmux-bin/airmux
+          AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+          DOCKER_HOST: unix:///no-docker.sock
+        run: uv run pytest tests/acceptance/live_providers --junitxml=live-provider-results/live-providers.xml
+      - name: Summarize live-provider results
+        if: always()
+        run: uv run python tests/acceptance/gateway/ci_report.py live-provider-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload live-provider results and diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: live-provider-test-results
+          path: |
+            live-provider-results
+            ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7

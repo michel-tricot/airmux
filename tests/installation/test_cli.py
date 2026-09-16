@@ -18,9 +18,9 @@ from testcontainers.core.container import DockerContainer
 
 @pytest.fixture
 def installation(tmp_path):
-    executable = os.environ.get("TOKKEEPER_INSTALL_BIN")
+    executable = os.environ.get("AIRMUX_INSTALL_BIN")
     if executable is None:
-        pytest.skip("set TOKKEEPER_INSTALL_BIN to test an isolated installation")
+        pytest.skip("set AIRMUX_INSTALL_BIN to test an isolated installation")
     environment = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "NO_COLOR": "1"}
     return executable, environment
 
@@ -33,7 +33,7 @@ def run_cli(installation, directory, *args, check=True):
 
 
 def test_help_inventory_and_version_work_in_every_installation(installation, tmp_path):
-    assert run_cli(installation, tmp_path, "--version").stdout.startswith("tokkeeper ")
+    assert run_cli(installation, tmp_path, "--version").stdout.startswith("airmux ")
     inventory = json.loads(run_cli(installation, tmp_path, "commands", "-f", "json").stdout)
     assert inventory
     for group in ("gateway", "control-plane"):
@@ -45,7 +45,7 @@ def test_help_inventory_and_version_work_in_every_installation(installation, tmp
 def test_installed_gateway_initializes_with_the_shipped_taxonomy(installation, tmp_path):
     result = run_cli(installation, tmp_path, "gateway", "init")
     assert "taxonomy.yml" in result.stdout
-    directory = tmp_path / ".tokkeeper"
+    directory = tmp_path / ".airmux"
     taxonomy = yaml.safe_load((directory / "taxonomy.yml").read_text(encoding="utf-8"))
     assert taxonomy["providers"]
     assert taxonomy["models"]
@@ -63,8 +63,8 @@ def test_internal_modules_are_bundled_in_one_distribution(installation, tmp_path
             """
 from importlib.metadata import PackageNotFoundError, distribution
 
-tokkeeper = distribution("tokkeeper")
-for name in ("tokkeeper-api-models", "tokkeeper-contract", "tokkeeper-control-plane", "tokkeeper-data-plane"):
+airmux = distribution("airmux")
+for name in ("airmux-api-models", "airmux-contract", "airmux-control-plane", "airmux-data-plane"):
     try:
         distribution(name)
     except PackageNotFoundError:
@@ -79,7 +79,7 @@ import control_plane
 import data_plane
 from data_plane.heartbeat import VERSION
 
-assert VERSION == tokkeeper.version
+assert VERSION == airmux.version
 """,
         ],
         cwd=tmp_path,
@@ -122,19 +122,19 @@ def test_installed_control_plane_migrates_and_serves_outside_the_checkout(instal
     schema = yaml.safe_load(run_cli(installation, tmp_path, "control-plane", "openapi").stdout)
     assert "/api/v1/instance/oss/claim" in schema["paths"]
     initialized = run_cli(installation, tmp_path, "control-plane", "init")
-    token = (tmp_path / ".tokkeeper/dataplane.key").read_text().strip()
+    token = (tmp_path / ".airmux/dataplane.key").read_text().strip()
     assert token not in initialized.stdout
     postgres = (
         DockerContainer("postgres:16")
         .with_env("POSTGRES_USER", "test")
         .with_env("POSTGRES_PASSWORD", "test")
-        .with_env("POSTGRES_DB", "tokkeeper")
+        .with_env("POSTGRES_DB", "airmux")
         .with_exposed_ports(5432)
         .with_tmpfs_mount("/var/lib/postgresql/data")
     )
     with postgres:
         executable, environment = installation
-        database = f"postgresql://test:test@{postgres.get_container_host_ip()}:{postgres.get_exposed_port(5432)}/tokkeeper"
+        database = f"postgresql://test:test@{postgres.get_container_host_ip()}:{postgres.get_exposed_port(5432)}/airmux"
         asyncio.run(wait_for_database(database))
         installation = executable, {**environment, "DATABASE_URL": database}
         migrated = run_cli(installation, tmp_path, "control-plane", "migrate")

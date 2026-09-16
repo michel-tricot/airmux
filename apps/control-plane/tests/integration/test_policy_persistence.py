@@ -22,7 +22,7 @@ RULE_DEFINITION = RuleDefinition.model_validate(
 
 
 def definition(rule_id: UUID) -> PolicyDefinition:
-    return PolicyDefinition(target={"kind": "all_keys"}, rule_ids=(rule_id,))
+    return PolicyDefinition(target={"kind": "workspace"}, rule_ids=(rule_id,))
 
 
 @pytest.fixture

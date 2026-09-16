@@ -250,6 +250,14 @@ export const operationAuthority = {
       },
     ],
   },
+  listPolicyUsers: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.read"],
+      },
+    ],
+  },
   listMembers: {
     checks: [
       {

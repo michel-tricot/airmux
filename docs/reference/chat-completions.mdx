@@ -8,14 +8,14 @@ POST /inf/v1/chat/completions
 ```
 
 This route accepts Chat Completions or canonical JSON. Official SDK user-agents and unambiguous OpenAI fields such as
-`max_completion_tokens` select Chat Completions automatically. Set `x-tokkeeper-dialect: openai_native` only for raw
+`max_completion_tokens` select Chat Completions automatically. Set `x-airmux-dialect: openai_native` only for raw
 requests with neither signal when you need a Chat Completions-shaped response.
 
 ## Request
 
 ```bash
 curl https://llm.example.com/inf/v1/chat/completions \
-  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \
+  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "openai/gpt-4o-mini",

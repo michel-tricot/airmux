@@ -5,10 +5,10 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 output="${1:-$root/dist}"
 mkdir -p "$output"
 output="$(cd "$output" && pwd)"
-stage="$(mktemp -d "${TMPDIR:-/tmp}/tokkeeper-build.XXXXXX")"
+stage="$(mktemp -d "${TMPDIR:-/tmp}/airmux-build.XXXXXX")"
 trap 'rm -rf "$stage"' EXIT
 
-cp -R "$root/packaging/tokkeeper/." "$stage"
+cp -R "$root/packaging/airmux/." "$stage"
 cp "$root/LICENSE" "$stage/LICENSE"
 cp "$root/README.md" "$stage/README.md"
 mkdir -p "$stage/src"

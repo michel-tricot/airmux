@@ -1,14 +1,14 @@
 ---
 title: "Use the Anthropic SDK"
-description: "Send Messages API requests through TokKeeper, including cross-provider routing and streaming."
+description: "Send Messages API requests through airmux, including cross-provider routing and streaming."
 ---
 
 The Messages API is available at `/inf/v1/messages`. The client base URL ends at `/inf`; the SDK appends `/v1/messages`.
 
 ```bash
-export TOKKEEPER_URL='http://localhost:8080'
-export TOKKEEPER_INFERENCE_KEY='sk-inf-your-key'
-export TOKKEEPER_MODEL='anthropic/claude-sonnet-4-6'
+export AIRMUX_URL='http://localhost:8080'
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+export AIRMUX_MODEL='anthropic/claude-sonnet-4-6'
 ```
 
 ```python
@@ -17,12 +17,12 @@ import os
 from anthropic import Anthropic
 
 client = Anthropic(
-    base_url=f"{os.environ['TOKKEEPER_URL'].rstrip('/')}/inf",
-    api_key=os.environ["TOKKEEPER_INFERENCE_KEY"],
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf",
+    api_key=os.environ["AIRMUX_INFERENCE_KEY"],
 )
 
 message = client.messages.create(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     max_tokens=256,
     messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
 )
@@ -30,12 +30,12 @@ message = client.messages.create(
 print(message.content[0].text)
 ```
 
-The SDK sends the TokKeeper inference key in `x-api-key`. Provider credentials are resolved separately by the gateway.
+The SDK sends the airmux inference key in `x-api-key`. Provider credentials are resolved separately by the gateway.
 
 ## Route to another provider family
 
 The request dialect and provider route are independent. Keep the Messages request shape and set `model` to any
-compatible catalog model, such as `openai/gpt-4o-mini`. TokKeeper translates the request and renders the response back in
+compatible catalog model, such as `openai/gpt-4o-mini`. airmux translates the request and renders the response back in
 Messages format.
 
 Capability checks happen before the provider call. A request with tools, reasoning, structured output, images, or PDFs
@@ -45,7 +45,7 @@ is rejected when the selected model does not advertise the required capability o
 
 ```python
 with client.messages.stream(
-    model=os.environ["TOKKEEPER_MODEL"],
+    model=os.environ["AIRMUX_MODEL"],
     max_tokens=256,
     messages=[{"role": "user", "content": "Count from one to five."}],
 ) as stream:

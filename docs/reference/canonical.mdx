@@ -1,6 +1,6 @@
 ---
 title: "Canonical API"
-description: "Reference TokKeeper's provider-neutral request, response, content parts, and streaming chunk schema."
+description: "Reference airmux's provider-neutral request, response, content parts, and streaming chunk schema."
 ---
 
 Send canonical JSON to `POST /inf/v1/chat/completions`. Raw requests that no other ingress adapter claims use canonical
@@ -104,4 +104,4 @@ An image needs exactly one of `url` or `data`; inline data also requires `media_
 Incremental chunks carry one `delta` of type `text`, `reasoning`, or `tool_call`. The closing chunk carries
 `finish_reason`, `usage`, and `gateway` with no `delta`, followed by `[DONE]`.
 
-The generated JSON Schemas are committed at `taxonomy/schemas/completion/tokkeeper.request.yaml`, `tokkeeper.response.yaml`, and `tokkeeper.stream.yaml`.
+The generated JSON Schemas are committed at `taxonomy/schemas/completion/airmux.request.yaml`, `airmux.response.yaml`, and `airmux.stream.yaml`.

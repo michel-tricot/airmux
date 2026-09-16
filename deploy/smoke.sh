@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-: "${TOKKEEPER_PUBLIC_URL:?Set TOKKEEPER_PUBLIC_URL}"
+: "${AIRMUX_PUBLIC_URL:?Set AIRMUX_PUBLIC_URL}"
 
 CURL=${CURL:-curl}
-TOKKEEPER_PUBLIC_URL=${TOKKEEPER_PUBLIC_URL%/}
+AIRMUX_PUBLIC_URL=${AIRMUX_PUBLIC_URL%/}
 SMOKE_ATTEMPTS=${SMOKE_ATTEMPTS:-30}
 SMOKE_DELAY_SECONDS=${SMOKE_DELAY_SECONDS:-2}
 
@@ -30,7 +30,7 @@ check() {
   exit 1
 }
 
-check "Console" 200 "$TOKKEEPER_PUBLIC_URL/"
-check "Control plane" 200 "$TOKKEEPER_PUBLIC_URL/api/v1/instance/oss/claim"
+check "Console" 200 "$AIRMUX_PUBLIC_URL/"
+check "Control plane" 200 "$AIRMUX_PUBLIC_URL/api/v1/instance/oss/claim"
 check "Gateway" '401 503' --request POST --header 'Authorization: Bearer invalid' --header 'Content-Type: application/json' --data '{}' \
-  "$TOKKEEPER_PUBLIC_URL/inf/v1/chat/completions"
+  "$AIRMUX_PUBLIC_URL/inf/v1/chat/completions"

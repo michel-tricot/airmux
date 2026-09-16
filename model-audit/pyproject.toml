@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
   "anthropic",
-  "tokkeeper-contract",
+  "airmux-contract",
   "httpx",
   "jsonschema",
   "openai",
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tokkeeper-audit = "model_audit.cli:app"
+airmux-audit = "model_audit.cli:app"
 
 [build-system]
 requires = ["hatchling"]

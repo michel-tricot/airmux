@@ -48,14 +48,14 @@ def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["gateway", "init"])
     assert result.exit_code == 0, result.output
-    directory = tmp_path / ".tokkeeper"
-    assert (directory / "tokkeeper.yml").is_file()
+    directory = tmp_path / ".airmux"
+    assert (directory / "airmux.yml").is_file()
     assert (directory / "taxonomy.yml").is_file()
-    assert ".tokkeeper/taxonomy.yml" in result.output
+    assert ".airmux/taxonomy.yml" in result.output
     key = (directory / "inference.key").read_text().strip()
     status = git_status(tmp_path)
-    assert ".tokkeeper/inference.key" not in status
-    assert ".tokkeeper/taxonomy.yml" in status
+    assert ".airmux/inference.key" not in status
+    assert ".airmux/taxonomy.yml" in status
     assert key not in result.output
     result = runner.invoke(app, ["gateway", "validate"])
     assert result.exit_code == 0, result.output
@@ -66,7 +66,7 @@ def test_gateway_init_then_validate_needs_no_configuration_flags(tmp_path, monke
         path: path.read_bytes()
         for path in (
             directory / ".gitignore",
-            directory / "tokkeeper.yml",
+            directory / "airmux.yml",
             directory / "bundle.yml",
             directory / "taxonomy.yml",
             directory / "inference.key",
@@ -100,15 +100,15 @@ def test_control_plane_init_prepares_connected_configuration_without_a_database(
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["control-plane", "init"])
     assert result.exit_code == 0, result.output
-    config = yaml.safe_load((tmp_path / "tokkeeper.yml").read_text())
+    config = yaml.safe_load((tmp_path / "airmux.yml").read_text())
     assert config["data_plane"]["bundle"]["kind"] == "remote"
     assert config["control_plane"]["database"]["url"] == "${env:DATABASE_URL}"
-    key = (tmp_path / ".tokkeeper/dataplane.key").read_text().strip()
+    key = (tmp_path / ".airmux/dataplane.key").read_text().strip()
     status = git_status(tmp_path)
-    assert ".tokkeeper/dataplane.key" not in status
-    assert "tokkeeper.yml" in status
+    assert ".airmux/dataplane.key" not in status
+    assert "airmux.yml" in status
     assert key not in result.output
-    assert (tmp_path / ".tokkeeper/dataplane.key").stat().st_mode & 0o777 == 0o600
+    assert (tmp_path / ".airmux/dataplane.key").stat().st_mode & 0o777 == 0o600
     monkeypatch.setenv("DATABASE_URL", "postgresql://owner:password@127.0.0.1/example")
     result = runner.invoke(app, ["control-plane", "validate"])
     assert result.exit_code == 0, result.output
@@ -126,7 +126,7 @@ def test_control_plane_openapi_needs_no_configuration(tmp_path, monkeypatch):
 def test_runtime_validation_errors_do_not_print_credentials(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     token = "private-invalid-bootstrap-token"
-    (tmp_path / "tokkeeper.yml").write_text(yaml.safe_dump({"control_plane": {"bootstrap": {"token": token}}}))
+    (tmp_path / "airmux.yml").write_text(yaml.safe_dump({"control_plane": {"bootstrap": {"token": token}}}))
     result = runner.invoke(app, ["control-plane", "validate"])
     assert result.exit_code != 0
     assert "bootstrap" in result.output
@@ -138,12 +138,12 @@ def test_runtime_validation_errors_do_not_print_credentials(tmp_path, monkeypatc
 def test_control_plane_init_rejects_invalid_console_origins_without_writing_files(tmp_path, url):
     result = runner.invoke(app, ["control-plane", "init", "--directory", str(tmp_path), "--console-url", url])
     assert result.exit_code != 0
-    assert not (tmp_path / "tokkeeper.yml").exists()
-    assert not (tmp_path / ".tokkeeper").exists()
+    assert not (tmp_path / "airmux.yml").exists()
+    assert not (tmp_path / ".airmux").exists()
 
 
 def test_control_plane_validate_rejects_unknown_configuration_fields(tmp_path):
-    path = tmp_path / "tokkeeper.yml"
+    path = tmp_path / "airmux.yml"
     path.write_text("control_plane:\n  public_signups: true\n")
     result = runner.invoke(app, ["control-plane", "validate", "--config", str(path)])
     assert result.exit_code != 0
@@ -168,14 +168,14 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     lines = [line.strip() for line in result.output.splitlines()]
     provider = next(line for line in lines if line.startswith("export STUB_API_KEY="))
-    serve = next(line for line in lines if line.startswith("tokkeeper gateway serve"))
-    inference_key = next(line for line in lines if line.startswith("export TOKKEEPER_INFERENCE_KEY="))
+    serve = next(line for line in lines if line.startswith("airmux gateway serve"))
+    inference_key = next(line for line in lines if line.startswith("export AIRMUX_INFERENCE_KEY="))
     assert shlex.split(provider) == ["export", "STUB_API_KEY=your-provider-key"]
-    assert shlex.split(serve) == ["tokkeeper", "gateway", "serve", "--config", str(directory / "tokkeeper.yml")]
-    assert inference_key == f'export TOKKEEPER_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
+    assert shlex.split(serve) == ["airmux", "gateway", "serve", "--config", str(directory / "airmux.yml")]
+    assert inference_key == f'export AIRMUX_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
     assert "curl --fail http://127.0.0.1:8080/readyz" in lines
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
-    assert "x-tokkeeper-dialect" not in result.output.lower()
+    assert "x-airmux-dialect" not in result.output.lower()
     assert '"model":"echo"' in result.output
     assert '"max_completion_tokens":16' in result.output
 
@@ -211,7 +211,7 @@ def test_runtime_subcommand_help_is_available(group):
 
 
 def test_unknown_configuration_variable_has_an_actionable_error(tmp_path):
-    config = tmp_path / "tokkeeper.yml"
+    config = tmp_path / "airmux.yml"
     config.write_text("control_plane:\n  console_url: ${var:missing}\n")
     result = runner.invoke(app, ["control-plane", "validate", "--config", str(config)])
     assert result.exit_code == 1

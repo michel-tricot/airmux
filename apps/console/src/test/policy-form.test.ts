@@ -11,10 +11,12 @@ describe('workspace policy configuration', () => {
     expect(payload.definition.rule_ids).toEqual([secondRuleId, firstRuleId]);
   });
 
-  it('requires a rule and treats an empty key selection as all keys', () => {
+  it('requires a rule and selects the target explicitly', () => {
     expect(policyFormSchema.safeParse({ ...policyDefaults, name: 'Empty' }).success).toBe(false);
-    expect(policyPayload({ ...policyDefaults, name: 'All keys', ruleIds: [firstRuleId] }).definition.target).toEqual({ kind: 'all_keys' });
-    expect(policyPayload({ ...policyDefaults, name: 'One key', keyIds: ['key-1'], ruleIds: [firstRuleId] }).definition.target).toEqual({
+    expect(policyPayload({ ...policyDefaults, name: 'All keys', ruleIds: [firstRuleId] }).definition.target).toEqual({ kind: 'workspace' });
+    expect(
+      policyPayload({ ...policyDefaults, name: 'One key', targetKind: 'selected_keys', keyIds: ['key-1'], ruleIds: [firstRuleId] }).definition.target,
+    ).toEqual({
       kind: 'selected_keys',
       key_ids: ['key-1'],
     });
@@ -67,4 +69,12 @@ describe('shared rule configuration', () => {
       rulePayload({ ...ruleDefaults, name: 'Price', kind: 'price_limit', maxInputPrice: '1.25', maxOutputPrice: '5' }).definition.action,
     ).toEqual({ kind: 'price_limit', max_input_price_per_mtok: '1.25', max_output_price_per_mtok: '5' });
   });
+});
+
+it('requires bounded unique user and key selections without broadening empty targets', () => {
+  const values = { ...policyDefaults, name: 'Users', ruleIds: [firstRuleId], targetKind: 'selected_users' as const };
+  for (const userIds of [[], ['invalid'], [firstRuleId, firstRuleId], Array(1001).fill(firstRuleId)])
+    expect(policyFormSchema.safeParse({ ...values, userIds }).success).toBe(false);
+  expect(policyPayload({ ...values, userIds: [firstRuleId] }).definition.target).toEqual({ kind: 'selected_users', user_ids: [firstRuleId] });
+  expect(policyFormSchema.safeParse({ ...values, targetKind: 'selected_keys', keyIds: [] }).success).toBe(false);
 });

@@ -102,7 +102,7 @@ Anthropic ingress before those checks, so every error on that route is Anthropic
 
 ### Canonical request
 
-The canonical request is `CanonicalRequest` and is published as `tokkeeper.request.yaml`. Its modeled
+The canonical request is `CanonicalRequest` and is published as `airmux.request.yaml`. Its modeled
 fields are:
 
 - `model`, `messages`, and `stream`
@@ -136,7 +136,7 @@ inside a message, part, or tool has no faithful generic translation.
 
 ### Canonical response
 
-The canonical response is `CanonicalResponse` and is published as `tokkeeper.response.yaml`. It carries:
+The canonical response is `CanonicalResponse` and is published as `airmux.response.yaml`. It carries:
 
 - `id` and the caller-facing `model`
 - Typed assistant `content`
@@ -157,7 +157,7 @@ their dialect's native wire shape.
 ### Canonical streaming
 
 A canonical request with `stream: true` receives `text/event-stream`. Each data frame contains one
-`CanonicalChunk` from `tokkeeper.stream.yaml`:
+`CanonicalChunk` from `airmux.stream.yaml`:
 
 - Ordinary chunks carry one typed `text`, `reasoning`, or `tool_call` delta
 - Tool-call fragments use an index; the opening fragment carries the id and name, and argument text accumulates across fragments
@@ -173,7 +173,7 @@ Anthropic streams emit an Anthropic error event.
 The chat route supports both the canonical shape and unmodified OpenAI SDKs. `resolve()` selects the
 ingress adapter in this order:
 
-1. A recognized `x-tokkeeper-dialect` override
+1. A recognized `x-airmux-dialect` override
 2. Each non-canonical adapter's `claims()` result in registry-name order
 3. Canonical as the unclaimed default
 
@@ -293,7 +293,7 @@ adapters and egress adapters never import ingress adapters.
 
 ## Runtime construction and supervision
 
-`tokkeeper gateway serve` sets `TOKKEEPER_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
+`airmux gateway serve` sets `AIRMUX_CONFIG`, optionally enables development mode, and starts Uvicorn. Every
 worker process constructs its own application lifespan and therefore owns:
 
 - One `httpx.AsyncClient` shared by bundle polling, heartbeat, event export, and provider calls
@@ -353,13 +353,13 @@ The checked-in deployment uses a YAML anchor to avoid repeating a shared link:
 
 ```yaml
 vars:
-  cache_dir: .tokkeeper
+  cache_dir: .airmux
 
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
-      url: ${env:TOKKEEPER_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+      url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
       token: ${file:${var:cache_dir}/dataplane.key}
     cache_dir: ${var:cache_dir}
     poll_interval_s: 5
@@ -400,13 +400,13 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `TOKKEEPER_CONFIG`, defaulting to `tokkeeper.yml`.
+The config loader reads the `data_plane` section from `AIRMUX_CONFIG`, defaulting to `airmux.yml`.
 Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
 `:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
 becomes null; required config fields then fail Pydantic validation instead of producing partial
 credentials.
 
-`tokkeeper gateway serve --dev` sets `TOKKEEPER_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
+`airmux gateway serve --dev` sets `AIRMUX_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
 
 ## Bundle acquisition and immutable request state
@@ -472,10 +472,10 @@ snapshot keeps serving. On a fresh start, invalid inputs leave readiness unavail
 persist a last-good snapshot across restarts. The operator owns and protects these files.
 
 The independently installable data-plane wheel and matching contract wheel require neither the control plane nor its ORM
-packages. `tokkeeper gateway init` admits the chosen taxonomy before creating a private directory, generates a random
+packages. `airmux gateway init` admits the chosen taxonomy before creating a private directory, generates a random
 inference key, and writes a bundle referring to the taxonomy. `validate` performs local admission without network access.
 These commands and the file source are supported deployment interfaces, documented in `docs/deployment/gateway.mdx`.
-The `tests/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
+The `tests/acceptance/gateway` suite exercises the installed executable over real HTTP with no database or container runtime.
 
 With the environment secret store, a synthesized provider ref resolves through the conventional
 `{PROVIDER_ID}_API_KEY` environment variable.
@@ -724,7 +724,7 @@ A canonical change affects every caller and provider family:
 2. Map the field or part by hand in every relevant format
 3. Decide explicit reject, adjustment, or support behavior for families that cannot carry it
 4. Add the case to the shared canonical corpus
-5. Run `uv run tokkeeper gateway schema` and review the committed schema diff
+5. Run `uv run airmux gateway schema` and review the committed schema diff
 6. Prove buffered and streamed behavior where applicable
 
 Never replace explicit mappings with reflection. A shared field name is not a protocol guarantee.
@@ -768,7 +768,7 @@ Run the relevant checks from the repository root:
 
 ```bash
 uv run pytest apps/data-plane/tests
-uv run pytest tests/acceptance
+uv run pytest tests/acceptance/full_stack/scenarios
 uv run ruff format --check .
 uv run ruff check .
 uv run ty check

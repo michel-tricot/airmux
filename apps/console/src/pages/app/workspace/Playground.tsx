@@ -32,7 +32,7 @@ function curlFor(request: PlaygroundRequest) {
   const body = JSON.stringify(prepared.body, null, 2).replaceAll("'", "'\"'\"'");
   return [
     "curl '" + window.location.origin + prepared.path + "' \\",
-    '  -H "Authorization: Bearer $TOKKEEPER_INFERENCE_KEY" \\',
+    '  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \\',
     "  -H 'Content-Type: application/json' \\",
     "  --data-raw '" + body + "'",
   ].join('\n');
@@ -48,7 +48,7 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
       open={open}
       onOpenChange={onOpenChange}
       title="Replicate request"
-      description="Set TOKKEEPER_INFERENCE_KEY to an inference key, then run this command from your terminal."
+      description="Set AIRMUX_INFERENCE_KEY to an inference key, then run this command from your terminal."
       contentClassName="sm:max-w-3xl"
     >
       <div className="min-w-0 space-y-3">

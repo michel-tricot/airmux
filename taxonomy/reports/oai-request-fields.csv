@@ -1,4 +1,4 @@
-jsonpath,supported_by,supported_by_excluding_standins,tokkeeper,openai,together,fireworks,groq,xai,deepseek,mistral,cerebras
+jsonpath,supported_by,supported_by_excluding_standins,airmux,openai,together,fireworks,groq,xai,deepseek,mistral,cerebras
 $.max_tokens,9,8,1,1,1,1,1,1,1,1,1
 $.messages,9,8,1,1,1,1,1,1,1,1,1
 $.messages[*].content,9,8,1,1,1,1,1,1,1,1,1

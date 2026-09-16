@@ -38,9 +38,9 @@ IMAGE_URL_BODY = {
         ({**TEXT_BODY, "max_completion_tokens": 5}, {}, True),
         (TEXT_BODY, {"x-stainless-lang": "python"}, False),  # every Stainless-built SDK sends these, not only OpenAI's
         (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0"}, True),
-        (TEXT_BODY, {"x-tokkeeper-dialect": "openai_native"}, True),
-        (TOOL_ROLE_BODY, {"x-tokkeeper-dialect": "canonical"}, False),
-        (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0", "x-tokkeeper-dialect": "canonical"}, False),
+        (TEXT_BODY, {"x-airmux-dialect": "openai_native"}, True),
+        (TOOL_ROLE_BODY, {"x-airmux-dialect": "canonical"}, False),
+        (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0", "x-airmux-dialect": "canonical"}, False),
     ],
 )
 def test_openai_detection(body, headers, expected):

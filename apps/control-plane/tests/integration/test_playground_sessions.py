@@ -26,7 +26,7 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
         expires_at = datetime.fromisoformat(session["expires_at"])
         assert datetime.now(tz=UTC) + timedelta(minutes=4) < expires_at <= datetime.now(tz=UTC) + timedelta(minutes=5)
         cookie = first.headers["set-cookie"]
-        assert "tokkeeper_playground=" in cookie
+        assert "airmux_playground=" in cookie
         assert "HttpOnly" in cookie
         assert "SameSite=strict" in cookie
         assert "Secure" in cookie
@@ -56,7 +56,7 @@ def test_ending_a_playground_session_clears_the_cookie_and_bundle_entry(tmp_path
         ended = client.delete(path, headers=org)
         assert ended.status_code == 200
         assert ended.json()["data"] == {"status": "ended"}
-        assert 'tokkeeper_playground=""' in ended.headers["set-cookie"]
+        assert 'airmux_playground=""' in ended.headers["set-cookie"]
         bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=org).json()["data"])
         assert bundle.keys == []
 

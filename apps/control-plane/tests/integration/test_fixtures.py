@@ -46,7 +46,7 @@ NOW = datetime(2026, 8, 9, tzinfo=UTC)
 
 
 def seed_catalog(tmp_path, *, include_models=True):
-    """The providers the fixtures route traffic to, as `tokkeeper control-plane taxonomy` would leave them."""
+    """The providers the fixtures route traffic to, as `airmux control-plane taxonomy` would leave them."""
 
     async def apply():
         await set_actor("root")
@@ -115,7 +115,7 @@ def test_cli_bootstraps_the_configured_data_plane_before_human_fixtures(tmp_path
     cp = setup_control_plane(tmp_path)
     seed_catalog(tmp_path)
     token = "sk-cp-fixture-bootstrap-secret-that-is-long-enough"
-    config = tmp_path / "tokkeeper.yml"
+    config = tmp_path / "airmux.yml"
     config.write_text(
         f"control_plane:\n  database:\n    url: {cp.db_url}\n  bootstrap:\n    token: {token}\n",
         encoding="utf-8",
@@ -156,7 +156,7 @@ def test_the_cli_names_the_command_that_fills_the_catalog(tmp_path):
     refused = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 
     assert refused.exit_code == 1
-    assert "tokkeeper control-plane taxonomy" in refused.output
+    assert "airmux control-plane taxonomy" in refused.output
 
 
 def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path):
@@ -170,7 +170,7 @@ def test_seeding_refuses_a_catalog_without_the_models_its_policies_use(tmp_path)
 
 
 def test_the_keys_are_seeded_whatever_the_store_can_hold(tmp_path, monkeypatch):
-    """The env store is the default, so `tokkeeper control-plane fixtures` on an unconfigured instance hits it.
+    """The env store is the default, so `airmux control-plane fixtures` on an unconfigured instance hits it.
 
     The rows are the fixture; the value beside them is the store's business. On the env store there
     is nothing to write because the ref already resolves to a variable the operator owns, so a
@@ -246,7 +246,7 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
         "fallback",
         "budget",
     }
-    assert {policy.definition.target.kind for policy in policies} == {"all_keys", "selected_keys"}
+    assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_users", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
     streaming_policy = next(policy for policy in policies if policy.name == "Streaming uses team credentials")
     streaming_match = next(rule for rule in rules if rule.id == streaming_policy.definition.rule_ids[0]).definition.match
@@ -256,6 +256,28 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
     ci_policy = next(policy for policy in policies if policy.name == "CI provider allowlist")
     assert ci_policy.definition.target.kind == "selected_keys"
     assert ci_policy.definition.target.key_ids == (str(ci_key.id),)
+    checkout_key = next(key for key in inference_keys if key.label == "checkout-service")
+    production_limits = {
+        policy.definition.target.kind: (
+            policy,
+            next(rule for rule in rules if rule.id == policy.definition.rule_ids[0]).definition.action,
+        )
+        for policy in policies
+        if policy.name in {"Output token ceiling", "Michel output token ceiling", "Checkout output token ceiling"}
+    }
+    assert set(production_limits) == {"workspace", "selected_users", "selected_keys"}
+    for kind, limit in (("workspace", 4096), ("selected_users", 1024), ("selected_keys", 512)):
+        policy, action = production_limits[kind]
+        assert policy.enabled
+        assert policy.workspace_id == checkout_key.workspace_id
+        assert action.kind == "request_limits"
+        assert action.max_output_tokens == limit
+    user_target = production_limits["selected_users"][0].definition.target
+    assert user_target.kind == "selected_users"
+    assert user_target.user_ids == (checkout_key.user_id,)
+    key_target = production_limits["selected_keys"][0].definition.target
+    assert key_target.kind == "selected_keys"
+    assert key_target.key_ids == (str(checkout_key.id),)
     team_credentials = next(rule for rule in rules if rule.name == "Streaming team credentials")
     assert sum(team_credentials.id in policy.definition.rule_ids for policy in policies) == 2
 

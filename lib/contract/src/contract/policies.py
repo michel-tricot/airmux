@@ -19,8 +19,8 @@ class _PolicyModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False, json_schema_serialization_defaults_required=True)
 
 
-class AllKeys(_PolicyModel):
-    kind: Literal["all_keys"]
+class WorkspaceTarget(_PolicyModel):
+    kind: Literal["workspace"]
 
 
 class SelectedKeys(_PolicyModel):
@@ -36,7 +36,20 @@ class SelectedKeys(_PolicyModel):
         return keys
 
 
-PolicyTarget = Annotated[AllKeys | SelectedKeys, Field(discriminator="kind")]
+class SelectedUsers(_PolicyModel):
+    kind: Literal["selected_users"]
+    user_ids: tuple[UUID, ...] = Field(min_length=1, max_length=1000)
+
+    @field_validator("user_ids")
+    @classmethod
+    def unique_users(cls, user_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
+        if len(user_ids) != len(set(user_ids)):
+            msg = "Selected users must be unique"
+            raise ValueError(msg)
+        return user_ids
+
+
+PolicyTarget = Annotated[WorkspaceTarget | SelectedUsers | SelectedKeys, Field(discriminator="kind")]
 
 
 class AllRequests(_PolicyModel):

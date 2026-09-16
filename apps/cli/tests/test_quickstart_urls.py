@@ -97,8 +97,8 @@ def _plain_invocation():
 @pytest.fixture
 def _no_ambient_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("TOKKEEPER_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRMUX_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
 
 @pytest.mark.usefixtures("_no_ambient_config")
@@ -119,8 +119,8 @@ def test_an_explicit_url_beats_dev():
 def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
     """A development run must not be redirected by whatever org the machine last logged into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("TOKKEEPER_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.delenv("AIRMUX_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     from cli.profiles import Profile, set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
 
     upsert_profile("prod", Profile(scope="instance", control_plane_url="https://prod.example.com", token="t"))
@@ -152,25 +152,25 @@ def test_explicit_urls_win_over_everything():
 
 @pytest.mark.usefixtures("_no_ambient_config")
 def test_one_url_uses_one_origin_for_every_service():
-    assert resolve_deployment_urls("https://tokkeeper.example.com/", "", "", "") == (
-        "https://tokkeeper.example.com",
-        "https://tokkeeper.example.com",
-        "https://tokkeeper.example.com",
+    assert resolve_deployment_urls("https://airmux.example.com/", "", "", "") == (
+        "https://airmux.example.com",
+        "https://airmux.example.com",
+        "https://airmux.example.com",
     )
 
 
 def test_one_url_cannot_be_combined_with_split_service_urls():
     with pytest.raises(typer.BadParameter, match="--url cannot be combined"):
-        resolve_deployment_urls("https://tokkeeper.example.com", "", "", "https://gateway.example.com")
+        resolve_deployment_urls("https://airmux.example.com", "", "", "https://gateway.example.com")
 
 
 def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
-    """tokkeeper.yml configures the servers, not the CLI. Reading it would point a run at whatever
+    """airmux.yml configures the servers, not the CLI. Reading it would point a run at whatever
     checkout it happened to start in rather than at the deployment the user signed into."""
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("TOKKEEPER_CONTROL_PLANE_URL", raising=False)
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
-    (tmp_path / "tokkeeper.yml").write_text("data_plane:\n  control_plane:\n    url: http://somewhere.else:9999\n", encoding="utf-8")
+    monkeypatch.delenv("AIRMUX_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
+    (tmp_path / "airmux.yml").write_text("data_plane:\n  control_plane:\n    url: http://somewhere.else:9999\n", encoding="utf-8")
 
     assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
 
@@ -370,20 +370,20 @@ def _quickstart(
 
 
 def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, saved, verified = _quickstart(
         monkeypatch,
         claimed=True,
         model="anthropic/claude-test",
-        urls=["--url", "https://tokkeeper.example.com/"],
+        urls=["--url", "https://airmux.example.com/"],
     )
 
     assert result.exit_code == 0, result.output
-    assert saved["values"].control_plane_url == "https://tokkeeper.example.com"
-    assert saved["values"].console_url == "https://tokkeeper.example.com"
-    assert saved["values"].gateway_url == "https://tokkeeper.example.com"
-    assert verified == [("https://tokkeeper.example.com", "inference-token", "anthropic/claude-test")]
+    assert saved["values"].control_plane_url == "https://airmux.example.com"
+    assert saved["values"].console_url == "https://airmux.example.com"
+    assert saved["values"].gateway_url == "https://airmux.example.com"
+    assert verified == [("https://airmux.example.com", "inference-token", "anthropic/claude-test")]
 
 
 def test_quickstart_has_no_private_connection_override():
@@ -394,7 +394,7 @@ def test_quickstart_has_no_private_connection_override():
 
 
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, login_calls, saved, verified = _quickstart(monkeypatch, claimed=True, model="anthropic/claude-test")
 
@@ -405,12 +405,12 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout
     assert "Verified anthropic/claude-test" in result.stdout
-    assert "x-tokkeeper-dialect" not in result.stdout
+    assert "x-airmux-dialect" not in result.stdout
     assert "openai/gpt-5-nano" not in result.stdout
 
 
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(monkeypatch, claimed=False, model=None)
 
@@ -422,7 +422,7 @@ def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(
 
 
 def test_quickstart_does_not_report_ready_when_the_gateway_request_fails(monkeypatch, tmp_path):
-    monkeypatch.setenv("TOKKEEPER_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
     result, _login_calls, _saved, verified = _quickstart(
         monkeypatch,

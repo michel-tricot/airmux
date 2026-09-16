@@ -192,7 +192,7 @@ def checkpoint_interval(experiment_count: int) -> int:
 
 def _reproduce(result: PairResult, gateway_url: str) -> str:
     return (
-        f"uv run tokkeeper-audit runs execute --model {result.model_id} --provider-surface {result.surface_id} "
+        f"uv run airmux-audit runs execute --model {result.model_id} --provider-surface {result.surface_id} "
         f"--gateway-surface {result.gateway_surface_id} "
         f"--case {result.case_id} --transport {result.transport} --gateway-url {gateway_url}"
     )
@@ -288,10 +288,10 @@ def _html(document: ReportDocument) -> str:
     resume = (
         ""
         if document.complete
-        else f'<code class="command">uv run tokkeeper-audit runs resume model-audit/reports/{html.escape(document.run.run_id)}.json</code>'
+        else f'<code class="command">uv run airmux-audit runs resume model-audit/reports/{html.escape(document.run.run_id)}.json</code>'
     )
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>TokKeeper model audit {html.escape(document.run.run_id)}</title>
+<html lang="en"><head><meta charset="utf-8"><title>airmux model audit {html.escape(document.run.run_id)}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"><style>{STYLE}</style></head>
 <body><main>
 <header class="masthead"><div><p class="eyebrow">Gateway behavior audit</p><h1>Model audit</h1>
@@ -318,11 +318,11 @@ def _checkpoint_html(document: ReportDocument) -> str:
     completed = len(document.results)
     run_id = html.escape(document.run.run_id)
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>TokKeeper model audit {run_id}</title>
+<html lang="en"><head><meta charset="utf-8"><title>airmux model audit {run_id}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1"><style>{STYLE}</style></head>
 <body><main class="checkpoint"><section class="checkpoint-card"><p class="eyebrow">Gateway behavior audit</p><h1>Run interrupted</h1>
 <p>{completed} of {planned} experiments completed. Resume the remaining experiments with:</p>
-<code class="command">uv run tokkeeper-audit runs resume model-audit/reports/{run_id}.json</code></section></main></body></html>"""
+<code class="command">uv run airmux-audit runs resume model-audit/reports/{run_id}.json</code></section></main></body></html>"""
 
 
 def _experiment_identity(experiment: Experiment) -> tuple[str, ...]:

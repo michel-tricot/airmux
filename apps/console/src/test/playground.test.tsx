@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
-beforeEach(() => window.localStorage.setItem('tokkeeper_org_id', ORG.id));
+beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('playground', () => {
   it('labels playground sessions in recent activity without exposing their ids', async () => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
@@ -87,7 +87,7 @@ describe('playground', () => {
         });
       }),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
-        dialect = request.headers.get('x-tokkeeper-dialect') ?? '';
+        dialect = request.headers.get('x-airmux-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
@@ -135,8 +135,8 @@ describe('playground', () => {
     await user.click(screen.getByRole('button', { name: 'View cURL' }));
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
-    expect(curlDialog).toHaveTextContent('Authorization: Bearer $TOKKEEPER_INFERENCE_KEY');
-    expect(curlDialog).not.toHaveTextContent('x-tokkeeper-dialect');
+    expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRMUX_INFERENCE_KEY');
+    expect(curlDialog).not.toHaveTextContent('x-airmux-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"text": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
@@ -144,7 +144,7 @@ describe('playground', () => {
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
     await user.click(copyCurl);
     expect(await navigator.clipboard.readText()).toContain('/inf/v1/chat/completions');
-    expect(await navigator.clipboard.readText()).not.toContain('x-tokkeeper-dialect');
+    expect(await navigator.clipboard.readText()).not.toContain('x-airmux-dialect');
     expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();

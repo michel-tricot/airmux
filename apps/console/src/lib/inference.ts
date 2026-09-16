@@ -255,7 +255,7 @@ export async function inferenceCompletion(options: InferenceCompletionOptions): 
     headers: {
       'Content-Type': 'application/json',
       'X-Requested-With': 'fetch',
-      'x-tokkeeper-dialect': prepared.dialect,
+      'x-airmux-dialect': prepared.dialect,
     },
     body: JSON.stringify(prepared.body),
     signal: options.signal,
