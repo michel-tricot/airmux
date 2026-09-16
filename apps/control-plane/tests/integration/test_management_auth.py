@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
 
 from contract import BundleV1, uuid7
 
@@ -13,7 +13,10 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
         ws = make_workspace(c, cp.headers(o1))
-        key = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=cp.headers(o1)).json()["data"]
+        headers = cp.headers(o1)
+        key = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json=inference_key_body(c, headers, "k"), headers=headers).json()[
+            "data"
+        ]
         assert c.delete(f"/api/v1/organizations/{o2}/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
         c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=cp.headers(o1))
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"])
@@ -61,7 +64,9 @@ def test_inference_token_is_rejected_on_management_routes(tmp_path):
         org_id = make_org(c, root, "o1")
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         inference = {"authorization": f"Bearer {key['token']}"}
         assert c.get("/api/v1/organizations", headers=inference).status_code == 401
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=inference).status_code == 401
@@ -77,7 +82,7 @@ def test_orgs_cannot_reach_each_other(tmp_path):
         o2 = cp.headers(o2_id)
         c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
         ws = make_workspace(c, o1)
-        key = c.post(f"/api/v1/organizations/{o1_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=o1).json()["data"]
+        key = c.post(f"/api/v1/organizations/{o1_id}/workspaces/{ws}/inference-keys", json=inference_key_body(c, o1, "k"), headers=o1).json()["data"]
 
         assert c.delete(f"/api/v1/organizations/{o2_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=o2).status_code == 404
         assert c.get(f"/api/v1/organizations/{o2_id}/workspaces", headers=o2).json()["data"] == []

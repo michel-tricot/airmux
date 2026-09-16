@@ -309,6 +309,7 @@
                   {
                     "group": "Inference Keys",
                     "pages": [
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-key-owners",
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
                       "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys",
                       "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}"

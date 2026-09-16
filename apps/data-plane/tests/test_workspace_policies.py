@@ -153,9 +153,25 @@ def test_price_limit_checks_input_and_output_catalog_rates(action, allowed):
 def test_request_limits_rejects_excessive_requested_output_tokens():
     key, snap = snapshot([policy({"kind": "request_limits", "max_output_tokens": 500})])
 
-    assert isinstance(evaluate(request(), key, snap), Allow)
-    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 500}), key, snap), Allow)
-    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
+    omitted = evaluate(request(), key, snap)
+    assert isinstance(omitted, Allow)
+    assert omitted.policy_max_output_tokens == 500
+    assert isinstance(evaluate(request().model_copy(update={"max_output_tokens": 500}), key, snap), Allow)
+    assert isinstance(evaluate(request().model_copy(update={"max_output_tokens": 501}), key, snap), Deny)
+
+
+def test_multiple_request_limits_accumulate_the_tightest_ceiling():
+    key, snap = snapshot(
+        [
+            policy({"kind": "request_limits", "max_output_tokens": 2000}),
+            policy({"kind": "request_limits", "max_output_tokens": 500}),
+        ]
+    )
+
+    decision = evaluate(request(), key, snap)
+
+    assert isinstance(decision, Allow)
+    assert decision.policy_max_output_tokens == 500
 
 
 def test_credential_access_selects_the_most_specific_allowed_scope():
@@ -231,7 +247,7 @@ def test_rules_in_one_policy_compose_for_the_targeted_keys():
     key, snap = snapshot([entry])
 
     assert isinstance(evaluate(request(), key, snap), Allow)
-    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
+    assert isinstance(evaluate(request().model_copy(update={"max_output_tokens": 501}), key, snap), Deny)
 
 
 def test_inline_rule_values_can_be_repeated_across_policy_targets():
@@ -266,7 +282,7 @@ def test_each_rule_matches_the_original_request_independently():
     key, snap = snapshot([entry])
 
     assert isinstance(evaluate(request(), key, snap), Allow)
-    assert isinstance(evaluate(request().model_copy(update={"max_tokens": 501}), key, snap), Deny)
+    assert isinstance(evaluate(request().model_copy(update={"max_output_tokens": 501}), key, snap), Deny)
 
 
 def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
@@ -437,18 +453,18 @@ def test_user_targets_cover_all_principal_credentials_and_compose_with_workspace
         policy({"kind": "request_limits", "max_output_tokens": 512}, target={"kind": "selected_keys", "key_ids": [key.key_id]}),
     ]
     _, snap = snapshot(entries)
-    incoming = request().model_copy(update={"stream": stream, "max_tokens": 513})
+    incoming = request().model_copy(update={"stream": stream, "max_output_tokens": 513})
     assert isinstance(evaluate(incoming, key, snap), Deny)
-    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 512}), key, snap), Allow)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_output_tokens": 512}), key, snap), Allow)
     for credential_id in ("second-key", "playground-session"):
         credential = key.model_copy(update={"key_id": credential_id})
-        assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 1025}), credential, snap), Deny)
+        assert isinstance(evaluate(incoming.model_copy(update={"max_output_tokens": 1025}), credential, snap), Deny)
         assert isinstance(evaluate(incoming, credential, snap), Allow)
     other = key.model_copy(update={"key_id": "other", "user_id": uuid7()})
-    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 1025}), other, snap), Allow)
-    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 4097}), other, snap), Deny)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_output_tokens": 1025}), other, snap), Allow)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_output_tokens": 4097}), other, snap), Deny)
     sibling = key.model_copy(update={"workspace_id": uuid7()})
-    assert isinstance(evaluate(incoming.model_copy(update={"max_tokens": 4097}), sibling, snap), Allow)
+    assert isinstance(evaluate(incoming.model_copy(update={"max_output_tokens": 4097}), sibling, snap), Allow)
 
 
 def test_user_targets_share_discovery_and_enforcement_matching():

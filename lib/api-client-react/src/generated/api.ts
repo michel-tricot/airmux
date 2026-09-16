@@ -57,6 +57,7 @@ import type {
   InferenceKeyCreatedOut,
   InferenceKeyIn,
   InferenceKeyOut,
+  InferenceKeyOwnerOut,
   InferenceKeyRevokedOut,
   InstanceRoleIn,
   InvitationAcceptedOut,
@@ -4931,6 +4932,118 @@ export function useListInferenceKeys<TData = Awaited<ReturnType<typeof listInfer
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListInferenceKeysQueryOptions(orgId,workspaceRef,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListInferenceKeyOwnersUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/inference-key-owners`
+}
+
+/**
+ * List principals the caller may select as an inference-key owner.
+ *
+ * Required permission: `inference-keys.manage`.
+ * @summary List Inference Key Owners
+ */
+export const listInferenceKeyOwners = async (orgId: string,
+    workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyOwnerOut[]> => {
+
+  return customFetch<InferenceKeyOwnerOut[]>(getListInferenceKeyOwnersUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInferenceKeyOwnersQueryKey = (orgId: string,
+    workspaceRef: string,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/inference-key-owners`
+    ] as const;
+    }
+
+
+export const getListInferenceKeyOwnersQueryOptions = <TData = Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInferenceKeyOwnersQueryKey(orgId,workspaceRef);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInferenceKeyOwners>>> = ({ signal }) => listInferenceKeyOwners(orgId,workspaceRef, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInferenceKeyOwnersQueryResult = NonNullable<Awaited<ReturnType<typeof listInferenceKeyOwners>>>
+export type ListInferenceKeyOwnersQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListInferenceKeyOwners<TData = Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInferenceKeyOwners>>,
+          TError,
+          Awaited<ReturnType<typeof listInferenceKeyOwners>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInferenceKeyOwners<TData = Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInferenceKeyOwners>>,
+          TError,
+          Awaited<ReturnType<typeof listInferenceKeyOwners>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInferenceKeyOwners<TData = Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Inference Key Owners
+ */
+
+export function useListInferenceKeyOwners<TData = Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeyOwners>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInferenceKeyOwnersQueryOptions(orgId,workspaceRef,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

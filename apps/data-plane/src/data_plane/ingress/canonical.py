@@ -52,6 +52,10 @@ class CanonicalIngress(IngressAdapter):
         return False
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
+        aliases = sorted({"max_tokens", "max_completion_tokens"}.intersection(body))
+        if aliases:
+            message = f"canonical requests use max_output_tokens, not {', '.join(aliases)}"
+            raise ValueError(message)
         return CanonicalRequest.model_validate(body), []
 
     def render_response(self, final: CanonicalResponse) -> Response:

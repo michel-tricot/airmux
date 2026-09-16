@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_workspace, setup_control_plane
 
 from control_plane.authz import Permission
 
@@ -19,7 +19,13 @@ def test_inference_key_listing_carries_the_token_head(tmp_path):
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
 
-        inference_key = _one(c.post(f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers))
+        inference_key = _one(
+            c.post(
+                f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys",
+                json=inference_key_body(c, headers, "k"),
+                headers=headers,
+            )
+        )
         listed = _one(c.get(f"/api/v1/organizations/{org}/workspaces/{workspace}/inference-keys", headers=headers))[0]
 
         assert inference_key["token"].startswith(listed["prefix"])

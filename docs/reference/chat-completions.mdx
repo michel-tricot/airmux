@@ -31,8 +31,8 @@ curl https://llm.example.com/inf/v1/chat/completions \
 | `model` | string | Required catalog model ID |
 | `messages` | array | System, developer, user, assistant, and tool messages |
 | `stream` | boolean | Defaults to `false` |
-| `max_tokens` | integer | Canonical name; minimum 1 |
-| `max_completion_tokens` | integer | Chat Completions alias for `max_tokens` |
+| `max_tokens` | integer | Legacy Chat Completions spelling; minimum 1 |
+| `max_completion_tokens` | integer | Current Chat Completions spelling; minimum 1 |
 | `temperature` | number | Minimum 0 |
 | `top_p` | number | Greater than 0 and at most 1 |
 | `stop` | string or array | Normalized to an array |
@@ -45,6 +45,7 @@ curl https://llm.example.com/inf/v1/chat/completions \
 | `reasoning` | object | Extended reasoning configuration |
 
 Other top-level fields are treated as provider extras. A provider profile either forwards them or reports them as dropped in `gateway.adjustments`.
+Supplying both output-limit fields is invalid. Either field maps to canonical `max_output_tokens`.
 
 ## Response
 

@@ -547,6 +547,8 @@ export interface DeniedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @minimum 0
@@ -674,6 +676,8 @@ export interface InferenceKeyIn {
      * @maxLength 80
      */
   label: string;
+  /** Principal whose identity this key carries into policy evaluation */
+  user_id: string;
 }
 
 export interface InferenceKeyOut {
@@ -687,6 +691,13 @@ export interface InferenceKeyOut {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export interface InferenceKeyOwnerOut {
+  user_id: string;
+  email: string;
+  name: string;
+  service_account: boolean;
 }
 
 export interface InferenceKeyRevokedOut {
@@ -1534,6 +1545,8 @@ export interface RoutedUsageEventV1 {
      * @maximum 2147483647
      */
   output_tokens: number;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
   /**
      * Total estimated cost in USD
      * @minimum 0
@@ -1680,6 +1693,7 @@ export interface UsageEventOut {
   bundle_id: string;
   input_tokens: number;
   output_tokens: number;
+  max_output_tokens: number | null;
   cost_usd: number;
   cost_input_usd: number;
   cost_output_usd: number;

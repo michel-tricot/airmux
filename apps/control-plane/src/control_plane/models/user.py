@@ -177,6 +177,8 @@ class User(Record, Identified, Tombstonable, table=True):
             for record in await owned.find(owned.user_id == self.id):
                 await record.delete()
         await models.ManagementKey.delete_scoped(models.ManagementKey.user_id == self.id)
+        await models.InferenceKey.delete_owned_by(self.id)
+        await models.PlaygroundSession.delete_owned_by(self.id)
         await self.delete()
 
     @classmethod

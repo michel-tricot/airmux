@@ -35,6 +35,7 @@ IMAGE_URL_BODY = {
         (NESTED_TOOLS_BODY, {}, True),
         ({**TEXT_BODY, "tool_choice": {"type": "function", "function": {"name": "w"}}}, {}, True),
         (IMAGE_URL_BODY, {}, True),
+        ({**TEXT_BODY, "max_tokens": 5}, {}, True),
         ({**TEXT_BODY, "max_completion_tokens": 5}, {}, True),
         (TEXT_BODY, {"x-stainless-lang": "python"}, False),  # every Stainless-built SDK sends these, not only OpenAI's
         (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0"}, True),

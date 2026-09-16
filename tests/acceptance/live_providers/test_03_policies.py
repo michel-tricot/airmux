@@ -29,9 +29,9 @@ def test_live_denial_never_reaches_a_provider(live_gateway: LiveGateway, stream:
 def test_live_output_limit_is_enforced_and_forwarded(live_gateway: LiveGateway) -> None:
     live_gateway.gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 32}])
     live_gateway.gateway.start()
-    assert live_gateway.request(max_tokens=33).status_code == 403
+    assert live_gateway.request(max_output_tokens=33).status_code == 403
     assert live_gateway.provider.deliveries == []
-    response = live_gateway.request(max_tokens=32)
+    response = live_gateway.request(max_output_tokens=32)
     assert response.status_code == 200, response.text
     denied, accepted = live_gateway.gateway.events(2)
     assert denied.status == "denied"

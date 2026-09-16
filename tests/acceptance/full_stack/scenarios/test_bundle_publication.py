@@ -31,13 +31,14 @@ def test_new_inference_key_reaches_a_running_data_plane_without_manual_publicati
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
         login = admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
         login.raise_for_status()
-        org_id = login.json()["data"]["orgs"][0]
+        principal = login.json()["data"]
+        org_id = principal["orgs"][0]
         workspaces = admin.get(f"/api/v1/organizations/{org_id}/workspaces")
         workspaces.raise_for_status()
         workspace_id = workspaces.json()["data"][0]["id"]
         inference_key_response = admin.post(
             f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
-            json={"label": "automatic-publication"},
+            json={"label": "automatic-publication", "user_id": principal["user_id"]},
         )
         inference_key_response.raise_for_status()
         token = inference_key_response.json()["data"]["token"]

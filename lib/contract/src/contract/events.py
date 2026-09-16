@@ -38,6 +38,7 @@ class _UsageEventV1(BaseModel):
     bundle_id: UUID = Field(description="Policy bundle used for the request")
     input_tokens: int = Field(description="Total input tokens", ge=0, le=MAX_EVENT_INTEGER)
     output_tokens: int = Field(description="Total output tokens", ge=0, le=MAX_EVENT_INTEGER)
+    max_output_tokens: int | None = Field(description="Effective upstream output-token limit", ge=1, le=MAX_EVENT_INTEGER)
     cost_usd: float = Field(description="Total estimated cost in USD", ge=0)
     cost_input_usd: float = Field(default=0.0, description="Estimated input cost in USD", ge=0)
     cost_output_usd: float = Field(default=0.0, description="Estimated output cost in USD", ge=0)

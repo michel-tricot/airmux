@@ -442,13 +442,13 @@ properties:
     default: false
     title: Stream
     type: boolean
-  max_tokens:
+  max_output_tokens:
     anyOf:
     - minimum: 1
       type: integer
     - type: 'null'
     default: null
-    title: Max Tokens
+    title: Max Output Tokens
   temperature:
     anyOf:
     - minimum: 0

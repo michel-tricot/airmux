@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
 
 from contract import BundleV1
 from control_plane.authz import Permission
@@ -153,9 +153,11 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
         sibling = make_workspace(client, headers, "sibling")
-        caller = client.post(f"/api/v1/organizations/{org}/workspaces/{sibling}/inference-keys", headers=headers, json={"label": "sibling"}).json()[
-            "data"
-        ]
+        caller = client.post(
+            f"/api/v1/organizations/{org}/workspaces/{sibling}/inference-keys",
+            headers=headers,
+            json=inference_key_body(client, headers, "sibling"),
+        ).json()["data"]
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
         definition = policy_definition()
@@ -205,7 +207,10 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
             == 422
         )
         session_headers = {"X-Requested-With": "fetch"}
-        keys = [client.post(f"{base}/inference-keys", headers=session_headers, json={"label": name}).json()["data"] for name in ("First", "Second")]
+        keys = [
+            client.post(f"{base}/inference-keys", headers=session_headers, json={"label": name, "user_id": user_id}).json()["data"]
+            for name in ("First", "Second")
+        ]
         playground = client.put(f"{base}/playground-session", headers=session_headers).json()["data"]
         before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
         credential_ids = {key["id"] for key in keys} | {playground["id"]}
@@ -213,17 +218,17 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
         assert {str(key.user_id) for key in before.keys} == {user_id}
         assert client.delete(f"{base}/members/{user_id}", headers=headers).status_code == 200
         assert client.put(f"{base}/playground-session", headers=session_headers).status_code == 403
-        assert client.post(f"{base}/inference-keys", headers=session_headers, json={"label": "New"}).status_code == 403
+        assert client.post(f"{base}/inference-keys", headers=session_headers, json={"label": "New", "user_id": user_id}).status_code == 403
         assert user_id not in {user["user_id"] for user in client.get(f"{base}/policy-users", headers=headers).json()["data"]}
         retained = client.get(f"{base}/policies", headers=headers).json()["data"]
         assert retained[0]["id"] == policy_id
         assert retained[0]["definition"]["target"] == body["definition"]["target"]
         after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
-        assert {key.key_id for key in after.keys} == credential_ids
+        assert after.keys == []
         assert after.policies == before.policies
         assert client.delete(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers).status_code == 200
         removed = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
-        assert removed.keys == after.keys
+        assert removed.keys == []
         assert removed.policies == after.policies
 
 

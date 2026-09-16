@@ -42,6 +42,7 @@ def request_of(case: Case, **overrides) -> CanonicalRequest:
     request = CanonicalRequest(
         model="gpt-test",
         messages=case.messages,
+        max_output_tokens=4096,
         tools=case.tools or None,
         tool_choice=case.tool_choice,
         stop=case.stop,

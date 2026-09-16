@@ -24,6 +24,7 @@ class Allow:
     provider: ProviderEntry
     candidates: tuple[CredentialEntry, ...]
     profile: CompiledProfile
+    policy_max_output_tokens: int | None
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,11 @@ def evaluate_policies(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot
     candidates = preferred_candidates(state.candidates, key.workspace_id, key.org_id)
     if not candidates:
         return PolicyEvaluation(Deny(code="credential_unavailable", status=402), state.fallback, rules)
-    return PolicyEvaluation(replace(route, candidates=candidates), state.fallback, rules)
+    return PolicyEvaluation(
+        replace(route, candidates=candidates, policy_max_output_tokens=state.policy_max_output_tokens),
+        state.fallback,
+        rules,
+    )
 
 
 def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
@@ -113,4 +118,10 @@ def _route(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decisi
     if provider is None:
         return Deny(code="provider_not_configured", status=502)
     candidates = policy_candidates(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
-    return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])
+    return Allow(
+        model=model,
+        provider=provider,
+        candidates=candidates,
+        profile=snap.profile_index[provider.provider_id],
+        policy_max_output_tokens=None,
+    )

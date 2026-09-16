@@ -75,7 +75,8 @@ export function WorkspaceMembersPanel({
           canRemoveMembers
             ? {
                 title: (member) => `Remove ${member.name} from the workspace?`,
-                description: 'They lose access to this workspace but stay in the organization.',
+                description:
+                  'They lose access to this workspace, and their inference keys and playground sessions here stop working immediately. They stay in the organization.',
                 onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
                 pending: removeMember.isPending,
               }

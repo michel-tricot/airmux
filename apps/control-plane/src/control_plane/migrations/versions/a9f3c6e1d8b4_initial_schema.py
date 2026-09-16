@@ -175,6 +175,7 @@ def upgrade() -> None:
         sa.Column("bundle_id", sa.Uuid(), nullable=False),
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("cost_usd", sa.Float(), nullable=False),
         sa.Column("cost_input_usd", sa.Float(), nullable=False),
         sa.Column("cost_output_usd", sa.Float(), nullable=False),

@@ -205,9 +205,10 @@ def test_internal_plane_ports_are_not_published(https_deployment):
 def test_https_inference_and_minted_secrets_remain_private(https_deployment):
     client, _, _, _, _ = https_deployment
     org = payload(client.post("/api/v1/enroll/org", json={"name": "HTTPS"}))
+    owner = payload(client.get("/api/v1/auth/me"))
     scope = f"/api/v1/organizations/{org['id']}"
     workspace = payload(client.post(scope + "/workspaces", json={"name": "default"}))
-    minted = client.post(f"{scope}/workspaces/{workspace['id']}/inference-keys", json={"label": "https"})
+    minted = client.post(f"{scope}/workspaces/{workspace['id']}/inference-keys", json={"label": "https", "user_id": owner["user_id"]})
     key = payload(minted)
     assert minted.headers["cache-control"] == "no-store"
     payload(client.post("/api/v1/instance/taxonomy/providers", json={"provider_id": "deployment", "base_url": "http://deployment-upstream:9000"}))
