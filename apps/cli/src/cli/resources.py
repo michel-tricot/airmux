@@ -526,16 +526,15 @@ def gateways_list(
 ) -> None:
     """List connected gateways."""
     load_dotenv(find_dotenv(usecwd=True))
-    with access_client(control_plane_url) as c:
-        query: dict[str, str | int | bool] = {"include_offline": include_offline, "limit": limit}
-        rows: list[DataPlaneInstanceOut] = []
-        while True:
-            page = payload_page(ensure_ok(c.get("/api/v1/instance/data-planes", params=query)), DataPlaneInstanceOut)
-            rows.extend(page.items)
-            if not all_pages or page.next_cursor is None:
-                break
-            query["cursor"] = page.next_cursor
-        print_rows("gateways", rows, INSTANCE_COLS, fmt)
+    rows = access_get(
+        "/api/v1/instance/data-planes",
+        control_plane_url,
+        DataPlaneInstanceOut,
+        {"include_offline": include_offline},
+        limit=limit,
+        all_pages=all_pages,
+    )
+    print_rows("gateways", rows, INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")

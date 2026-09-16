@@ -137,9 +137,11 @@ class ProviderCredential(Record, Identified, Tombstonable, UUID7Pageable, table=
             statement = statement.where(cls.org_id == org_id)
             if workspace_id is not None:
                 statement = statement.where(cls.workspace_id == workspace_id)
+        filter_columns = ("org_id", "workspace_id") if workspace_id is not None else ("org_id",)
         return await cls._page(
             statement,
             request,
+            filter_columns=filter_columns,
             cursor_context={"org_id": org_id, "workspace_id": workspace_id},
             columns=(
                 KeyColumn(col(cls.priority), "asc", "int"),

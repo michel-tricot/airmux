@@ -70,6 +70,30 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
             unique=True,
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
+        Index(
+            "org_invitation_pending_email_created_id_idx",
+            "email",
+            "created_at",
+            "id",
+            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+        ),
+        Index(
+            "org_invitation_pending_email_org_created_id_idx",
+            "email",
+            "org_id",
+            "created_at",
+            "id",
+            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+        ),
+        Index(
+            "org_invitation_pending_email_org_workspace_created_id_idx",
+            "email",
+            "org_id",
+            "workspace_id",
+            "created_at",
+            "id",
+            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+        ),
     )
 
     org_id: UUID = Field(foreign_key="org.id", ondelete="CASCADE")
@@ -129,6 +153,7 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
         return await cls._page(
             statement,
             request,
+            filter_columns=("org_id",),
             cursor_context={"org_id": org_id},
             columns=(KeyColumn(col(cls.email), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )
@@ -165,9 +190,17 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
             statement = statement.where(cls.org_id == scope.org_id)
         if scope.level is ScopeLevel.workspace:
             statement = statement.where(cls.workspace_id == scope.workspace_id)
+        filter_columns = (
+            ("email", "org_id", "workspace_id")
+            if scope.level is ScopeLevel.workspace
+            else ("email", "org_id")
+            if scope.level is ScopeLevel.org
+            else ("email",)
+        )
         return await cls._page(
             statement,
             request,
+            filter_columns=filter_columns,
             cursor_context={
                 "email": User.normalize_email(email),
                 "scope": scope.level.value,

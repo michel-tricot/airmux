@@ -122,9 +122,11 @@ class ManagementKey(Record, Identified, Tombstonable, UUID7Pageable, table=True)
             statement = statement.where(cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
         if user_id is not None:
             statement = statement.where(cls.user_id == user_id)
+        filter_columns = ("org_id", "workspace_id") if scope.level is ScopeLevel.workspace else ("org_id",) if scope.level is ScopeLevel.org else ()
         return await cls._page(
             statement,
             request,
+            filter_columns=filter_columns,
             cursor_context={"scope": scope.level.value, "org_id": scope.org_id, "workspace_id": scope.workspace_id, "user_id": user_id},
         )
 

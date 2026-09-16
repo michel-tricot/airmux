@@ -98,6 +98,7 @@ class Org(Record, Identified, Tombstonable, UUID7Pageable, table=True):
         return await cls._page(
             select(cls),
             request,
+            filter_columns=(),
             columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )
 
@@ -109,6 +110,7 @@ class Org(Record, Identified, Tombstonable, UUID7Pageable, table=True):
         return await cls._page(
             statement,
             request,
+            filter_columns=(),
             cursor_context={"user_id": user_id, "visible_org_id": visible_org_id},
             columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )

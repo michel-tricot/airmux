@@ -7,7 +7,7 @@ import typer
 from pydantic import ValidationError
 
 from api_models import DeletedOutUUID, PolicyCreate, PolicyOut, PolicyUpdate
-from cli.client import access_client, ensure_ok, org_path, payload, payload_rows, resolve_workspace
+from cli.client import access_client, access_get, ensure_ok, org_path, payload, resolve_workspace
 from cli.common import console, policies_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 
@@ -19,8 +19,7 @@ POLICY_COLS = [Col("id", "ID"), Col("name", "Name"), Col("enabled", "Enabled"), 
 @policies_app.command("list")
 def list_policies(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List inference policies in the workspace."""
-    with access_client(control_plane_url) as client:
-        policies = payload_rows(ensure_ok(client.get(org_path(f"/workspaces/{resolve_workspace(workspace)}/policies"))), PolicyOut)
+    policies = access_get(org_path(f"/workspaces/{resolve_workspace(workspace)}/policies"), control_plane_url, PolicyOut)
     print_rows("policies", policies, POLICY_COLS, fmt)
 
 

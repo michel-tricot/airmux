@@ -39,7 +39,7 @@ class Bundle(Record, OrgOwned, table=True):
         return await keyset_page(
             select(cls).where(cls.org_id == org_id),
             request,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.version), "asc", "int"),)),
+            Keyset(model=cls, filter_columns=("org_id",), columns=(KeyColumn(col(cls.version), "asc", "int"),)),
             cursor_context={"org_id": org_id},
         )
 

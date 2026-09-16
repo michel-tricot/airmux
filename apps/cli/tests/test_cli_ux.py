@@ -62,6 +62,16 @@ def test_access_get_follows_cursors_only_when_all_pages_is_requested(monkeypatch
     assert all_pages_client.queries == [{"limit": 1}, {"limit": 1, "cursor": "next"}]
 
 
+def test_access_get_accepts_an_unpaged_collection(monkeypatch):
+    response = httpx.Response(200, request=httpx.Request("GET", "http://control-plane/items"), json={"data": [{"id": 1}]})
+    http_client = httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(lambda _request: response))
+    monkeypatch.setattr(client, "access_client", lambda _url: http_client)
+
+    items = client.access_get("/items", "", Item)
+
+    assert [item.id for item in items] == [1]
+
+
 def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(

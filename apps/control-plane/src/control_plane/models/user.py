@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
-from sqlalchemy import CheckConstraint, Column, ForeignKey, func, or_, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, func, or_, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
@@ -46,6 +46,7 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
             "managing_org_id IS NULL OR (service_account AND instance_role IS NULL)",
             name="user_managing_org_requires_org_scoped_service_account",
         ),
+        Index("user_service_account_email_id_idx", "service_account", "email", "id"),
     )
 
     email: str = Field(unique=True, sa_type=CITEXT)
@@ -134,11 +135,17 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
 
     @classmethod
     async def _page_by_email(
-        cls, statement: Select[tuple[Self]], request: PageQuery, *, cursor_context: dict[str, bool | UUID | None] | None = None
+        cls,
+        statement: Select[tuple[Self]],
+        request: PageQuery,
+        *,
+        filter_columns: tuple[str, ...],
+        cursor_context: dict[str, bool | UUID | None] | None = None,
     ) -> PageSlice[Self]:
         return await cls._page(
             statement,
             request,
+            filter_columns=filter_columns,
             cursor_context=cursor_context,
             columns=(KeyColumn(col(cls.email), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )
@@ -148,12 +155,17 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
         statement = select(cls)
         if service_account is not None:
             statement = statement.where(cls.service_account == service_account)
-        return await cls._page_by_email(statement, request, cursor_context={"service_account": service_account})
+        return await cls._page_by_email(
+            statement,
+            request,
+            filter_columns=("service_account",) if service_account is not None else (),
+            cursor_context={"service_account": service_account},
+        )
 
     @classmethod
     async def page_members_of(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
         statement = select(cls).where(col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)))
-        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id})
+        return await cls._page_by_email(statement, request, filter_columns=(), cursor_context={"org_id": org_id})
 
     @classmethod
     async def page_workspace_members(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -162,7 +174,7 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
             .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
             .exists()
         )
-        return await cls._page_by_email(statement, request, cursor_context={"workspace_id": workspace_id})
+        return await cls._page_by_email(statement, request, filter_columns=(), cursor_context={"workspace_id": workspace_id})
 
     @classmethod
     async def page_policy_candidates(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -183,7 +195,7 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
                 )
             )
         )
-        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id, "workspace_id": workspace_id})
+        return await cls._page_by_email(statement, request, filter_columns=(), cursor_context={"org_id": org_id, "workspace_id": workspace_id})
 
     @classmethod
     async def page_candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -193,7 +205,7 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
             .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
             .exists(),
         )
-        return await cls._page_by_email(statement, request, cursor_context={"org_id": org_id, "workspace_id": workspace_id})
+        return await cls._page_by_email(statement, request, filter_columns=(), cursor_context={"org_id": org_id, "workspace_id": workspace_id})
 
     @classmethod
     async def page_inference_key_owners(cls, principal_id: UUID, org_id: UUID, include_managed: bool, request: PageQuery) -> PageSlice[Self]:
@@ -203,6 +215,7 @@ class User(Record, Identified, Tombstonable, UUID7Pageable, table=True):
         return await cls._page_by_email(
             select(cls).where(condition),
             request,
+            filter_columns=(),
             cursor_context={"principal_id": principal_id, "org_id": org_id, "include_managed": include_managed},
         )
 

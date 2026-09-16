@@ -60,7 +60,11 @@ class UsageEvent(Record, table=True):
         return await keyset_page(
             statement,
             page,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.event_id), "desc", "uuid"),)),
+            Keyset(
+                model=cls,
+                filter_columns=("org_id",) if workspace_id is None else ("org_id", "workspace_id"),
+                columns=(KeyColumn(col(cls.event_id), "desc", "uuid"),),
+            ),
             cursor_context={"org_id": org_id, "workspace_id": workspace_id},
         )
 

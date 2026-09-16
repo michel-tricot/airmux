@@ -159,6 +159,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table
         return await cls._page(
             select(cls).where(cls.org_id == org_id, or_(instance_access, org_access, workspace_access)),
             request,
+            filter_columns=("org_id",),
             cursor_context={"org_id": org_id},
             columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )

@@ -63,7 +63,12 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, ta
 
     @classmethod
     async def page_for_workspace(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await cls._page(select(cls).where(cls.workspace_id == workspace_id), request, cursor_context={"workspace_id": workspace_id})
+        return await cls._page(
+            select(cls).where(cls.workspace_id == workspace_id),
+            request,
+            filter_columns=("workspace_id",),
+            cursor_context={"workspace_id": workspace_id},
+        )
 
 
 class InferenceKeyIn(RequestModel):

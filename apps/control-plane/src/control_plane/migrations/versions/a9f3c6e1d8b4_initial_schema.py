@@ -134,6 +134,7 @@ def upgrade() -> None:
     )
     op.create_index("org_name_id_idx", "org", ["name", "id"], unique=False)
     op.create_index("ix_user_managing_org_id", "user", ["managing_org_id"], unique=False)
+    op.create_index("user_service_account_email_id_idx", "user", ["service_account", "email", "id"], unique=False)
     op.create_foreign_key("user_managing_org_id_fkey", "user", "org", ["managing_org_id"], ["id"])
     op.create_table(
         "data_plane_instance",
@@ -510,6 +511,27 @@ def upgrade() -> None:
         "org_invitation",
         ["org_id", "email"],
         unique=True,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
+    )
+    op.create_index(
+        "org_invitation_pending_email_created_id_idx",
+        "org_invitation",
+        ["email", "created_at", "id"],
+        unique=False,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
+    )
+    op.create_index(
+        "org_invitation_pending_email_org_created_id_idx",
+        "org_invitation",
+        ["email", "org_id", "created_at", "id"],
+        unique=False,
+        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
+    )
+    op.create_index(
+        "org_invitation_pending_email_org_workspace_created_id_idx",
+        "org_invitation",
+        ["email", "org_id", "workspace_id", "created_at", "id"],
+        unique=False,
         postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
