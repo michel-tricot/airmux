@@ -58,7 +58,7 @@ def changed_paths(base: str, head: str, root: Path = Path()) -> tuple[str, ...]:
 
 
 def required_jobs(selection: Selection, scope: Scope) -> dict[str, bool]:
-    gateway = {"installation": selection.backend, "gateway-acceptance": selection.backend}
+    gateway = {"installation-smoke": selection.backend, "installation": selection.backend, "gateway-acceptance": selection.backend}
     if scope == "gateway":
         return gateway
     if scope == "docker":

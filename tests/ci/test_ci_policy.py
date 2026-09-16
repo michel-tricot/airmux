@@ -171,6 +171,11 @@ def test_workflow_aggregates_cover_all_validation_jobs():
                 assert "needs.changes.outputs." in jobs[name]["if"]
 
 
+def test_gateway_aggregate_covers_all_gateway_jobs():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
+    assert set(jobs["gateway-results"]["needs"]) == {"changes", *required_jobs(Selection(), "gateway")}
+
+
 def test_security_cancellation_is_pr_only_and_non_pr_groups_are_unique():
     workflow = yaml.safe_load((ROOT / ".github/workflows/dependency-security.yml").read_text())
     assert workflow["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
