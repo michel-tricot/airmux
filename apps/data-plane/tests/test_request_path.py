@@ -8,8 +8,8 @@ import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane, read_and_close_outbox
 from starlette.testclient import TestClient
 
-from airmux_runtime.secrets import Secret
 import data_plane.app as app_module
+from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
 from data_plane.outbox import OUTBOX_CAPACITY, DevNullOutbox
@@ -98,8 +98,7 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
 def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
     outbox = DevNullOutbox()
-    held = outbox.try_reserve(OUTBOX_CAPACITY)
-    assert held is not None
+    monkeypatch.setattr(outbox, "try_reserve", lambda _slots: None)
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()
@@ -110,7 +109,6 @@ def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app,
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": model, "messages": [{"role": "user", "content": "say hi"}]},
         )
-        held.release_unused()
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "metering_capacity_exhausted"

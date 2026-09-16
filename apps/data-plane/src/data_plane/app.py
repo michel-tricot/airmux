@@ -5,7 +5,6 @@ import contextlib
 import logging
 import os
 import signal
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import httpx
@@ -33,24 +32,7 @@ logger = logging.getLogger("data_plane")
 
 
 async def healthz(request: Request) -> JSONResponse:
-    stats = await runtime_of(request).outbox.stats()
-    oldest_age_s = max(0.0, (datetime.now(tz=UTC) - stats.oldest_event_at).total_seconds()) if stats.oldest_event_at is not None else None
-    return JSONResponse(
-        {
-            "status": "ok",
-            "events": {
-                "reserved": stats.reserved,
-                "filled": stats.filled,
-                "durable": stats.durable,
-                "capacity": stats.capacity,
-                "oldest_age_s": oldest_age_s,
-                "reservation_rejections": stats.reservation_rejections,
-                "persisted": stats.persisted_events,
-                "gracefully_drained": stats.gracefully_drained_events,
-                "storage_worker_failures": stats.storage_worker_failures,
-            },
-        }
-    )
+    return JSONResponse({"status": "ok", "events": await runtime_of(request).outbox.stats()})
 
 
 async def readyz(request: Request) -> JSONResponse:

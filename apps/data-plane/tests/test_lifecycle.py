@@ -99,7 +99,7 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
                     input_tokens=0,
                     output_tokens=0,
                     max_output_tokens=None,
-                    cost_usd=0,
+                    cost_usd="0",
                     latency_ms=0,
                     status="denied",
                     stream=False,

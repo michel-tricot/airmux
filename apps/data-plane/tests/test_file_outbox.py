@@ -69,7 +69,7 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
         reservation.release_unused()
         stats = await outbox.stats()
         assert read_events(path) == events[:1]
-        assert stats.durable == 0
+        assert stats["durable"] == 0
     finally:
         await outbox.close()
     reopened = FileOutbox(FileOutboxConfig(path=path))

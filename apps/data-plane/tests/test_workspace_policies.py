@@ -29,7 +29,7 @@ from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
-from data_plane.outbox import OUTBOX_CAPACITY, DevNullOutbox
+from data_plane.outbox import DevNullOutbox
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
 from data_plane.routing import RoutePlan, plan_routes
 
@@ -381,8 +381,8 @@ def test_fallback_reserves_its_maximum_attempts_before_upstream(dp_app, tmp_path
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
     outbox = DevNullOutbox()
-    held = outbox.try_reserve(OUTBOX_CAPACITY - 1)
-    assert held is not None
+    reserve = outbox.try_reserve
+    monkeypatch.setattr(outbox, "try_reserve", lambda slots: None if slots > 1 else reserve(slots))
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     mock_control_plane()
@@ -393,7 +393,6 @@ def test_fallback_reserves_its_maximum_attempts_before_upstream(dp_app, tmp_path
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}]},
         )
-        held.release_unused()
 
     assert result.status_code == 503
     assert result.json()["error"]["code"] == "metering_capacity_exhausted"

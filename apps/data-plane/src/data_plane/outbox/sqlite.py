@@ -145,7 +145,7 @@ class SqliteOutbox(QueuedOutbox):
         sent = await self.export_available()
         if sent:
             stats = await self.stats()
-            logger.info("exported %d usage events to the control plane, %d remain", sent, stats.durable)
+            logger.info("exported %d usage events to the control plane, %d remain", sent, stats["durable"])
 
     def _lease_ttl(self) -> float:
         return max(self._config.flush_interval_s * 3, 5.0)

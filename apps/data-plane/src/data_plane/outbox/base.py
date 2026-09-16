@@ -6,11 +6,11 @@ from abc import ABC, abstractmethod
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, TypeVar
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Never, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
-    from datetime import datetime
+    from collections.abc import Callable, Mapping, Sequence
 
     from contract import UsageEvent
 
@@ -18,25 +18,13 @@ OUTBOX_CAPACITY = 1024
 STORAGE_BATCH_SIZE = 1000
 
 T = TypeVar("T")
+type OutboxStat = int | float | None
 
 
 @dataclass(frozen=True)
 class DurableStats:
     events: int = 0
     oldest_event_at: datetime | None = None
-
-
-@dataclass(frozen=True)
-class OutboxStats:
-    reserved: int
-    filled: int
-    durable: int
-    capacity: int
-    oldest_event_at: datetime | None = None
-    reservation_rejections: int = 0
-    persisted_events: int = 0
-    gracefully_drained_events: int = 0
-    storage_worker_failures: int = 0
 
 
 class StorageWorkerError(RuntimeError):
@@ -53,77 +41,46 @@ class ReservationLeakError(RuntimeError):
 
 
 class OutboxReservation:
-    def __init__(self, outbox: EventOutbox, slots: int) -> None:
+    def __init__(self, slots: int, outbox: QueuedOutbox | None = None) -> None:
         self._outbox = outbox
         self._remaining = slots
         self._released = False
-        self._lock = threading.Lock()
 
     def record(self, event: UsageEvent, /) -> None:
-        with self._lock:
-            if self._released or self._remaining == 0:
-                self._outbox.fail_invariant("usage event recorded without a reserved outbox slot")
+        if self._released or self._remaining == 0:
+            self._fail("usage event recorded without a reserved outbox slot")
+        if self._outbox is not None:
             self._outbox.record_reserved(event)
-            self._remaining -= 1
+        self._remaining -= 1
 
     def release_unused(self) -> None:
-        with self._lock:
-            if self._released:
-                self._outbox.fail_invariant("outbox reservation released twice")
-            self._released = True
+        if self._released:
+            self._fail("outbox reservation released twice")
+        self._released = True
+        if self._outbox is not None:
             self._outbox.release_reserved(self._remaining)
-            self._remaining = 0
+        self._remaining = 0
+
+    def transfer(self) -> OutboxReservation:
+        if self._released or self._remaining == 0:
+            self._fail("outbox reservation transferred without a reserved slot")
+        self._remaining -= 1
+        return OutboxReservation(1, self._outbox)
+
+    def _fail(self, message: str) -> Never:
+        if self._outbox is not None:
+            self._outbox.fail_invariant(message)
+        error = RuntimeError(message)
+        raise error
 
 
 class EventOutbox(ABC):
-    def __init__(self) -> None:
-        self._lock = threading.RLock()
-        self._accepting = True
-        self._reserved = 0
-        self._filled = 0
-        self._reservation_rejections = 0
-        self._persisted_events = 0
-        self._gracefully_drained_events = 0
-        self._storage_worker_failures = 0
-        self._failure: BaseException | None = None
-
-    def try_reserve(self, slots: int, /) -> OutboxReservation | None:
-        if slots < 0:
-            self.fail_invariant("outbox reservation size cannot be negative")
-        with self._lock:
-            if self._failure is not None:
-                raise StorageWorkerError from self._failure
-            if not self._accepting or self._reserved + self._filled + slots > OUTBOX_CAPACITY:
-                self._reservation_rejections += 1
-                return None
-            self._reserved += slots
-        return OutboxReservation(self, slots)
-
     @abstractmethod
-    def record_reserved(self, event: UsageEvent, /) -> None:
+    def try_reserve(self, slots: int, /) -> OutboxReservation | None:
         pass
 
-    def release_reserved(self, slots: int, /) -> None:
-        with self._lock:
-            if slots > self._reserved:
-                self.fail_invariant("outbox reservation accounting underflow")
-            self._reserved -= slots
-
-    def fail_invariant(self, message: str) -> None:
-        error = RuntimeError(message)
-        self._fail(error)
-        raise error
-
-    def _fail(self, error: BaseException) -> None:
-        with self._lock:
-            if self._failure is not None:
-                return
-            self._failure = error
-            self._accepting = False
-            self._storage_worker_failures += 1
-
     @abstractmethod
-    async def stats(self) -> OutboxStats:
+    async def stats(self) -> Mapping[str, OutboxStat]:
         pass
 
     def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
@@ -136,17 +93,37 @@ class EventOutbox(ABC):
 
 class QueuedOutbox(EventOutbox, ABC):
     def __init__(self, thread_name: str) -> None:
-        super().__init__()
+        self._lock = threading.RLock()
+        self._accepting = True
+        self._reserved = 0
+        self._filled = 0
+        self._reservation_rejections = 0
+        self._persisted_events = 0
+        self._gracefully_drained_events = 0
+        self._storage_worker_failures = 0
+        self._failure: BaseException | None = None
         self._events: deque[UsageEvent] = deque()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=thread_name)
         self._drain_scheduled = False
         self._closing = False
-        self._failure_signals: list[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = []
+        self._failure_signal: tuple[asyncio.AbstractEventLoop, asyncio.Event] | None = None
         try:
             self._executor.submit(self._open_storage).result()
         except BaseException:
             self._executor.shutdown()
             raise
+
+    def try_reserve(self, slots: int, /) -> OutboxReservation | None:
+        if slots < 0:
+            self.fail_invariant("outbox reservation size cannot be negative")
+        with self._lock:
+            if self._failure is not None:
+                raise StorageWorkerError from self._failure
+            if not self._accepting or self._reserved + self._filled + slots > OUTBOX_CAPACITY:
+                self._reservation_rejections += 1
+                return None
+            self._reserved += slots
+        return OutboxReservation(slots, self)
 
     def record_reserved(self, event: UsageEvent, /) -> None:
         with self._lock:
@@ -158,6 +135,17 @@ class QueuedOutbox(EventOutbox, ABC):
             self._filled += 1
             self._events.append(event)
             self._schedule_drain()
+
+    def release_reserved(self, slots: int, /) -> None:
+        with self._lock:
+            if slots > self._reserved:
+                self.fail_invariant("outbox reservation accounting underflow")
+            self._reserved -= slots
+
+    def fail_invariant(self, message: str) -> Never:
+        error = RuntimeError(message)
+        self._fail(error)
+        raise error
 
     def _schedule_drain(self) -> None:
         if self._drain_scheduled or self._closing:
@@ -192,17 +180,22 @@ class QueuedOutbox(EventOutbox, ABC):
         return True
 
     def _fail(self, error: BaseException) -> None:
-        super()._fail(error)
         with self._lock:
-            signals = tuple(self._failure_signals)
-        for loop, signal in signals:
+            if self._failure is not None:
+                return
+            self._failure = error
+            self._accepting = False
+            self._storage_worker_failures += 1
+            target = self._failure_signal
+        if target is not None:
+            loop, signal = target
             loop.call_soon_threadsafe(signal.set)
 
     def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         loop = asyncio.get_running_loop()
         signal = asyncio.Event()
         with self._lock:
-            self._failure_signals.append((loop, signal))
+            self._failure_signal = (loop, signal)
             failed = self._failure is not None
         if failed:
             signal.set()
@@ -225,22 +218,23 @@ class QueuedOutbox(EventOutbox, ABC):
             future = self._executor.submit(operation)
         return await asyncio.wrap_future(future)
 
-    async def stats(self) -> OutboxStats:
+    async def stats(self) -> dict[str, int | float | None]:
         durable = await self._storage_call(self._durable_stats)
         with self._lock:
             memory_oldest = self._events[0].occurred_at if self._events else None
             values = tuple(value for value in (memory_oldest, durable.oldest_event_at) if value is not None)
-            return OutboxStats(
-                reserved=self._reserved,
-                filled=self._filled,
-                durable=durable.events,
-                capacity=OUTBOX_CAPACITY,
-                oldest_event_at=min(values) if values else None,
-                reservation_rejections=self._reservation_rejections,
-                persisted_events=self._persisted_events,
-                gracefully_drained_events=self._gracefully_drained_events,
-                storage_worker_failures=self._storage_worker_failures,
-            )
+            oldest = min(values) if values else None
+            return {
+                "reserved": self._reserved,
+                "filled": self._filled,
+                "durable": durable.events,
+                "capacity": OUTBOX_CAPACITY,
+                "oldest_age_s": max(0.0, (datetime.now(tz=UTC) - oldest).total_seconds()) if oldest is not None else None,
+                "reservation_rejections": self._reservation_rejections,
+                "persisted": self._persisted_events,
+                "gracefully_drained": self._gracefully_drained_events,
+                "storage_worker_failures": self._storage_worker_failures,
+            }
 
     async def close(self) -> None:
         with self._lock:

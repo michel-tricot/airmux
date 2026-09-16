@@ -110,9 +110,8 @@ async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox
     )
     try:
         return await session.open(UPSTREAM)
-    except BaseException:
+    finally:
         reservation.release_unused()
-        raise
 
 
 @respx.mock

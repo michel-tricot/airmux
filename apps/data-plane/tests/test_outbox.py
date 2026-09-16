@@ -80,6 +80,21 @@ async def test_reservations_bound_filled_and_unfilled_capacity(tmp_path, http_cl
     await outbox.close()
 
 
+async def test_transferred_slot_outlives_its_parent_reservation(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    reservation = outbox.try_reserve(2)
+    assert reservation is not None
+
+    transferred = reservation.transfer()
+    reservation.release_unused()
+
+    assert (await outbox.stats())["reserved"] == 1
+
+    transferred.record(make_event(uuid7()))
+    transferred.release_unused()
+    await outbox.close()
+
+
 async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     lock = sqlite3.connect(tmp_path / "events.db")
@@ -154,6 +169,17 @@ async def test_build_outbox_selects_kind(tmp_path, http_client):
     await sink.close()
 
 
+async def test_devnull_has_no_queue_capacity_or_stats():
+    outbox = DevNullOutbox()
+    reservation = outbox.try_reserve(OUTBOX_CAPACITY + 1)
+
+    assert reservation is not None
+    assert await outbox.stats() == {}
+
+    reservation.release_unused()
+    await outbox.close()
+
+
 @respx.mock
 async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": BATCH_SIZE, "ingested": BATCH_SIZE}))
@@ -178,10 +204,15 @@ async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, htt
 
     stats = await outbox.stats()
 
-    assert stats.reserved == 1
-    assert stats.filled + stats.durable == 1
-    assert stats.capacity == OUTBOX_CAPACITY
-    assert stats.oldest_event_at == event.occurred_at
+    assert stats["reserved"] == 1
+    filled, durable = stats["filled"], stats["durable"]
+    assert isinstance(filled, int)
+    assert isinstance(durable, int)
+    assert filled + durable == 1
+    assert stats["capacity"] == OUTBOX_CAPACITY
+    oldest_age_s = stats["oldest_age_s"]
+    assert oldest_age_s is not None
+    assert oldest_age_s >= 0
     reservation.release_unused()
     await outbox.close()
 

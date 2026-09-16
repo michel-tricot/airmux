@@ -125,7 +125,8 @@ class StreamSession:
             handoff = stack.pop_all()
 
         renderer = self.ingress.new_stream()
-        return StreamingResponse(self._events(response, handoff, stream_state, renderer), media_type="text/event-stream")
+        reservation = self.reservation.transfer()
+        return StreamingResponse(self._events(response, handoff, stream_state, renderer, reservation), media_type="text/event-stream")
 
     async def _events(
         self,
@@ -133,6 +134,7 @@ class StreamSession:
         handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
         renderer: ResponseStream,
+        reservation: OutboxReservation,
     ) -> AsyncIterator[bytes]:
         async with handoff:
             try:
@@ -147,22 +149,22 @@ class StreamSession:
                 final = self.adapter.finalize(stream_state)
                 for frame in renderer.closing(final, list(self.adjustments)):
                     yield frame
-                record_usage(self.reservation, self.ctx, final, status="ok", request=self.request)
+                record_usage(reservation, self.ctx, final, status="ok", request=self.request)
             except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
                 for frame in renderer.error(self.adapter.map_error(error)):
                     yield frame
                 record_usage(
-                    self.reservation,
+                    reservation,
                     self.ctx,
                     self.adapter.finalize(stream_state),
                     status=status_for_error(error),
                     request=self.request,
                 )
             except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-                record_usage(self.reservation, self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request)
+                record_usage(reservation, self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request)
                 raise
             finally:
-                self.reservation.release_unused()
+                reservation.release_unused()
 
 
 @dataclass(frozen=True)
@@ -191,20 +193,17 @@ class RequestExecution:
         reservation = self.runtime.outbox.try_reserve(1 if isinstance(plan, Deny) else plan.max_attempts)
         if reservation is None:
             raise RequestRejectedError(503, "metering_capacity_exhausted")
-        response: Response | None = None
         try:
             if isinstance(plan, Deny):
                 record_denied(reservation, self.key, self.snapshot.bundle.bundle_id, self.request, self.start)
                 raise RequestRejectedError(plan.status, plan.code, plan.message)
             try:
                 async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
-                    response = await self._execute(plan, reservation)
-                    return response
+                    return await self._execute(plan, reservation)
             except TimeoutError as error:
                 raise RequestRejectedError(504, "fallback_deadline_exceeded", "The fallback time limit was reached") from error
         finally:
-            if not isinstance(response, StreamingResponse):
-                reservation.release_unused()
+            reservation.release_unused()
 
     async def _execute(self, plan: RoutePlan, reservation: OutboxReservation) -> Response:
         attempts = 0
