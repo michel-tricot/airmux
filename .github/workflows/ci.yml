@@ -149,7 +149,7 @@ jobs:
         working-directory: performance-candidate
         run: |
           uv run python tests/acceptance/gateway/performance.py \
-            --base-bin "$(find "$RUNNER_TEMP/performance-base-bin" -maxdepth 1 -type f -perm -u+x)" \
+            --base-bin "$(find -L "$RUNNER_TEMP/performance-base-bin" -maxdepth 1 -type f -perm -u+x)" \
             --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/airmux" \
             --base-revision "$(git -C ../performance-base rev-parse HEAD)" \
             --candidate-revision "$CANDIDATE_REVISION" \
