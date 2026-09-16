@@ -47,6 +47,3 @@ Keep `--ha=false`: this layout owns one `/state` volume and runs one gateway. Us
 
 Repeat the deploy command with the same app name and origin after taking database and volume backups. Moving regions
 requires migrating both the volume and database.
-
-For GitHub Actions, set `FLY_API_TOKEN` as a secret and `FLY_APP` as a variable in the `production` environment, then
-run the checked-in `deploy-fly` workflow.
