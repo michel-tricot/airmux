@@ -29,3 +29,5 @@ Baseline: successful PR runs for `codex/fix-readiness-prompts` on 2026-09-16 UTC
 The longest sampled gateway shard executed for 166 s; frontend took 144 s, installation 53 s, full-stack acceptance 243 s, and performance comparison 218 s. A roughly five-minute ordinary PR is a target, not a guarantee. Docs-only savings remain bounded by the every-PR performance comparison.
 
 After-change Actions measurements will be recorded from this PR's first completed revision using the same definitions.
+
+Fetch job timestamps with `gh api repos/michel-tricot/airmux/actions/runs/RUN_ID/jobs --paginate`. Compare full-validation runs separately from docs-only or frontend-only runs, and record cancelled predecessors separately from completed revisions.
