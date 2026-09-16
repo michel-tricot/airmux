@@ -16,6 +16,9 @@ concurrency:
   group: publish-${{ inputs.tag }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   build:
     if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
@@ -23,6 +26,7 @@ jobs:
     outputs:
       sha: ${{ steps.candidate.outputs.sha }}
       version: ${{ steps.candidate.outputs.version }}
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -91,6 +95,7 @@ jobs:
   publish:
     needs: [build, live-providers]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: release
     permissions:
       contents: read
@@ -160,6 +165,7 @@ jobs:
   announce:
     needs: [build, verify-pypi]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment: release
     permissions:
       contents: write

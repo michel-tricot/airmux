@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 GATES = (
-    ("ci.yml", "ci-correctness", {"frontend", "ci", "installation", "gateway-acceptance", "acceptance"}),
+    ("ci.yml", "ci-correctness", {"workflows", "frontend", "ci", "installation", "gateway-acceptance", "acceptance"}),
     ("docker-deployments.yml", "docker-correctness", {"deployment"}),
     ("dependency-security.yml", "dependency-security", {"python", "javascript"}),
 )
