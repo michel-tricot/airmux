@@ -12,7 +12,7 @@ import respx
 from conftest import make_config, make_outbox
 
 from contract import RoutedUsageEventV1, uuid7
-from data_plane.outbox import OUTBOX_CAPACITY, DevNullOutbox, SqliteOutbox, build_outbox
+from data_plane.outbox import OUTBOX_CAPACITY, DevNullOutbox, EventOutbox, OutboxReservation, SqliteOutbox, build_outbox
 from data_plane.outbox.sqlite import BATCH_SIZE
 
 
@@ -40,14 +40,23 @@ def make_event(request_id) -> RoutedUsageEventV1:
     )
 
 
+def reserve(outbox: EventOutbox) -> OutboxReservation:
+    reservation = outbox.try_reserve()
+    assert reservation is not None
+    return reservation
+
+
+def record(outbox: EventOutbox, event: RoutedUsageEventV1) -> None:
+    reservation = reserve(outbox)
+    reservation.record(event)
+    reservation.release_unused()
+
+
 async def test_reserved_events_roundtrip_in_order(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     events = [make_event(uuid7()), make_event(uuid7())]
-    reservation = outbox.try_reserve(len(events))
-    assert reservation is not None
     for event in events:
-        reservation.record(event)
-    reservation.release_unused()
+        record(outbox, event)
     assert await outbox.next_batch(10) == events
     await outbox.close()
 
@@ -55,35 +64,29 @@ async def test_reserved_events_roundtrip_in_order(tmp_path, http_client):
 async def test_reserved_events_are_idempotent_on_event_id(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    reservation = outbox.try_reserve(2)
-    assert reservation is not None
-    reservation.record(event)
-    reservation.record(event)
-    reservation.release_unused()
+    record(outbox, event)
+    record(outbox, event)
     assert await outbox.next_batch(10) == [event]
     await outbox.close()
 
 
-async def test_reservations_bound_filled_and_unfilled_capacity(tmp_path, http_client):
+async def test_reservations_are_bounded_by_capacity(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
-    reservation = outbox.try_reserve(OUTBOX_CAPACITY)
-    assert reservation is not None
-    assert outbox.try_reserve(1) is None
+    reservations = [reserve(outbox) for _ in range(OUTBOX_CAPACITY)]
+    assert outbox.try_reserve() is None
 
-    reservation.record(make_event(uuid7()))
-    assert outbox.try_reserve(1) is None
-    reservation.release_unused()
+    reservations.pop().release_unused()
+    replacement = reserve(outbox)
 
-    replacement = outbox.try_reserve(OUTBOX_CAPACITY - 1)
-    assert replacement is not None
     replacement.release_unused()
+    for reservation in reservations:
+        reservation.release_unused()
     await outbox.close()
 
 
 async def test_transferred_slot_outlives_its_parent_reservation(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
-    reservation = outbox.try_reserve(2)
-    assert reservation is not None
+    reservation = reserve(outbox)
 
     transferred = reservation.transfer()
     reservation.release_unused()
@@ -99,8 +102,7 @@ async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_clien
     outbox = make_outbox(tmp_path, http_client)
     lock = sqlite3.connect(tmp_path / "events.db")
     lock.execute("BEGIN IMMEDIATE")
-    reservation = outbox.try_reserve(1)
-    assert reservation is not None
+    reservation = reserve(outbox)
 
     started = time.monotonic()
     reservation.record(make_event(uuid7()))
@@ -119,11 +121,8 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
-    reservation = outbox.try_reserve(2)
-    assert reservation is not None
-    reservation.record(make_event(first))
-    reservation.record(make_event(second))
-    reservation.release_unused()
+    record(outbox, make_event(first))
+    record(outbox, make_event(second))
     assert await outbox.export_once() == 2
     assert await outbox.next_batch(10) == []
     sent = json.loads(route.calls.last.request.content)
@@ -136,10 +135,7 @@ async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(503))
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    reservation = outbox.try_reserve(1)
-    assert reservation is not None
-    reservation.record(event)
-    reservation.release_unused()
+    record(outbox, event)
     with pytest.raises(httpx.HTTPStatusError):
         await outbox.export_once()
     assert await outbox.next_batch(10) == [event]
@@ -171,7 +167,7 @@ async def test_build_outbox_selects_kind(tmp_path, http_client):
 
 async def test_devnull_has_no_queue_capacity_or_stats():
     outbox = DevNullOutbox()
-    reservation = outbox.try_reserve(OUTBOX_CAPACITY + 1)
+    reservation = outbox.try_reserve()
 
     assert reservation is not None
     assert await outbox.stats() == {}
@@ -184,11 +180,8 @@ async def test_devnull_has_no_queue_capacity_or_stats():
 async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": BATCH_SIZE, "ingested": BATCH_SIZE}))
     outbox = make_outbox(tmp_path, http_client)
-    reservation = outbox.try_reserve(BATCH_SIZE + 1)
-    assert reservation is not None
     for _ in range(BATCH_SIZE + 1):
-        reservation.record(make_event(uuid7()))
-    reservation.release_unused()
+        record(outbox, make_event(uuid7()))
 
     assert await outbox.export_available() == BATCH_SIZE + 1
     assert await outbox.next_batch(1) == []
@@ -198,9 +191,8 @@ async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
 async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    reservation = outbox.try_reserve(2)
-    assert reservation is not None
-    reservation.record(event)
+    held = reserve(outbox)
+    record(outbox, event)
 
     stats = await outbox.stats()
 
@@ -213,20 +205,21 @@ async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, htt
     oldest_age_s = stats["oldest_age_s"]
     assert oldest_age_s is not None
     assert oldest_age_s >= 0
-    reservation.release_unused()
+    held.release_unused()
     await outbox.close()
 
 
 async def test_close_drains_filled_events_before_closing_storage(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    reservation = outbox.try_reserve(1)
-    assert reservation is not None
-    reservation.record(event)
-    reservation.release_unused()
+    record(outbox, event)
 
     await outbox.close()
 
     reopened = make_outbox(tmp_path, http_client)
     assert await reopened.next_batch(10) == [event]
     await reopened.close()
+
+
+def test_default_outbox_capacity_is_ten_thousand():
+    assert OUTBOX_CAPACITY == 10_000

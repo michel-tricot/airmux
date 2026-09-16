@@ -83,7 +83,7 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
 
     def run() -> None:
         with TestClient(app):
-            reservation = outbox.try_reserve(1)
+            reservation = outbox.try_reserve()
             assert reservation is not None
             reservation.record(
                 DeniedUsageEventV1(

@@ -3,9 +3,9 @@ title: "Usage and activity"
 description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
 ---
 
-airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Before provider spend,
-the gateway reserves enough bounded queue capacity for every possible attempt. It persists events locally on a dedicated
-storage thread and exports durable events to the control plane in batches.
+airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Before each provider
+attempt, the gateway reserves one slot in its bounded queue. It persists events locally on a dedicated storage thread
+and exports durable events to the control plane in batches.
 
 ## Usage event fields
 

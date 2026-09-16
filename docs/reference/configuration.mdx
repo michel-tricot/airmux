@@ -84,7 +84,7 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite export defaults to every 5 seconds. Each worker reserves request capacity in a fixed 1,024-event memory queue,
+SQLite export defaults to every 5 seconds. Each worker reserves one slot per provider attempt in a fixed 10,000-event memory queue,
 persists queued events on one dedicated storage thread, and coordinates export through the shared SQLite outbox. Its
 cache directory defaults to `.airmux` beside the configuration file, and the outbox writes `events.db` there.
 

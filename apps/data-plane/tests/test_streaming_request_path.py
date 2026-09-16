@@ -97,7 +97,7 @@ def _body_gen(response: object) -> AsyncGenerator[bytes]:
 
 
 async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox, http_client: httpx.AsyncClient) -> Response:
-    reservation = outbox.try_reserve(1)
+    reservation = outbox.try_reserve()
     assert reservation is not None
     session = StreamSession(
         adapter=make_adapter(),

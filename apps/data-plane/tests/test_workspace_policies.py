@@ -374,17 +374,30 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
 
 
 @respx.mock
-def test_fallback_reserves_its_maximum_attempts_before_upstream(dp_app, tmp_path, monkeypatch):
+def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_path, monkeypatch):
     api_key, key = make_key()
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
     outbox = DevNullOutbox()
-    reserve = outbox.try_reserve
-    monkeypatch.setattr(outbox, "try_reserve", lambda slots: None if slots > 1 else reserve(slots))
+    first_attempt = outbox.try_reserve()
+    assert first_attempt is not None
+    reservations = iter((first_attempt, None))
+    monkeypatch.setattr(outbox, "try_reserve", lambda: next(reservations))
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
-    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    attempted_models = []
+
+    def upstream(incoming):
+        model = json.loads(incoming.content)["model"]
+        attempted_models.append(model)
+        return (
+            httpx.Response(503, json={"error": {"message": "unavailable"}})
+            if model == MODEL.upstream_model
+            else httpx.Response(200, json=TEXT_NONSTREAM)
+        )
+
+    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
     mock_control_plane()
 
     with TestClient(dp_app) as client:
@@ -396,7 +409,7 @@ def test_fallback_reserves_its_maximum_attempts_before_upstream(dp_app, tmp_path
 
     assert result.status_code == 503
     assert result.json()["error"]["code"] == "metering_capacity_exhausted"
-    assert upstream.call_count == 0
+    assert attempted_models == [MODEL.upstream_model]
 
 
 @pytest.mark.parametrize("failure", ["read_error", "timeout", "attempt_limit", "unmatched_reason", "midstream", "deadline"])

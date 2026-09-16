@@ -71,7 +71,7 @@ async def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, h
         usage=CanonicalUsage(estimated=True),
     )
 
-    reservation = outbox.try_reserve(1)
+    reservation = outbox.try_reserve()
     assert reservation is not None
     record_usage(reservation, ctx, response, "cancelled", request)
     reservation.release_unused()
@@ -117,7 +117,7 @@ async def test_estimation_preserves_reported_input_and_counts_non_text_content(t
         usage=CanonicalUsage(input_tokens=37, estimated=True),
     )
 
-    reservation = outbox.try_reserve(1)
+    reservation = outbox.try_reserve()
     assert reservation is not None
     record_usage(reservation, ctx, response, "cancelled", request)
     reservation.release_unused()
@@ -135,7 +135,7 @@ async def test_denial_uses_the_request_identity_and_elapsed_latency(tmp_path, ht
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
     start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1)
-    reservation = outbox.try_reserve(1)
+    reservation = outbox.try_reserve()
     assert reservation is not None
     record_denied(reservation, key, uuid7(), request, start)
     reservation.release_unused()

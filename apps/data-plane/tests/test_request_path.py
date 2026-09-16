@@ -98,7 +98,7 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
 def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
     outbox = DevNullOutbox()
-    monkeypatch.setattr(outbox, "try_reserve", lambda _slots: None)
+    monkeypatch.setattr(outbox, "try_reserve", lambda: None)
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()

@@ -31,9 +31,9 @@ The request path performs no control-plane, management-database, or usage-storag
   explicitly insecure database store is configured
 - The provider HTTP request
 
-After route planning, every metered request reserves enough bounded in-memory outbox capacity for its
-maximum provider attempts. Usage-event construction and transfer into a reserved slot remain synchronous.
-SQLite and file persistence run on the outbox's dedicated storage thread.
+Immediately before each provider attempt, the request reserves one slot in the bounded in-memory outbox.
+Usage-event construction and transfer into that slot remain synchronous. SQLite and file persistence run
+on the outbox's dedicated storage thread.
 
 The high-level data flow is:
 
@@ -305,7 +305,7 @@ Workers configured with the same cache directory cooperate through local files:
 | `events.db` | SQLite WAL outbox shared by all workers |
 
 Each worker still polls and heartbeats independently. Atomic bundle writes prevent workers from
-renaming one another's temporary files. Each worker has its own 1,024-slot memory queue and storage
+renaming one another's temporary files. Each worker has its own 10,000-slot memory queue and storage
 thread. SQLite serializes their batched writes, and a lease ensures only one worker exports at a time.
 
 The cache directory is local coordination, not distributed coordination. Replicas on different
@@ -631,10 +631,11 @@ before policy, plus missing or unavailable secret values, currently do not produ
 
 ### SQLite outbox
 
-After routing, an allowed request reserves `RoutePlan.max_attempts` slots and a denied request reserves
-one slot. If the fixed 1,024-slot capacity is unavailable, the request returns
-`503 metering_capacity_exhausted` before a provider call. Reserved and filled slots both consume
-capacity. Skipped attempts return unused slots when the request or stream ends.
+An allowed request reserves one slot immediately before each provider attempt, and a denied request
+reserves one slot before recording the denial. If the fixed 10,000-slot capacity is unavailable, the
+request returns `503 metering_capacity_exhausted` before the next provider call. A fallback can therefore
+stop after an earlier failed attempt if capacity fills between attempts. Reserved and filled slots both
+consume capacity. An unused slot returns when its attempt or stream ends.
 
 Recording an event transfers one reserved slot into the in-memory writer queue and never waits for
 SQLite. The storage thread batches `INSERT OR IGNORE` writes keyed by `event_id`, preserving event

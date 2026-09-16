@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from contract import UsageEvent
 
-OUTBOX_CAPACITY = 1024
+OUTBOX_CAPACITY = 10_000
 STORAGE_BATCH_SIZE = 1000
 
 T = TypeVar("T")
@@ -41,31 +41,31 @@ class ReservationLeakError(RuntimeError):
 
 
 class OutboxReservation:
-    def __init__(self, slots: int, outbox: QueuedOutbox | None = None) -> None:
+    def __init__(self, outbox: QueuedOutbox | None = None) -> None:
         self._outbox = outbox
-        self._remaining = slots
+        self._available = True
         self._released = False
 
     def record(self, event: UsageEvent, /) -> None:
-        if self._released or self._remaining == 0:
+        if self._released or not self._available:
             self._fail("usage event recorded without a reserved outbox slot")
         if self._outbox is not None:
             self._outbox.record_reserved(event)
-        self._remaining -= 1
+        self._available = False
 
     def release_unused(self) -> None:
         if self._released:
             self._fail("outbox reservation released twice")
         self._released = True
-        if self._outbox is not None:
-            self._outbox.release_reserved(self._remaining)
-        self._remaining = 0
+        if self._outbox is not None and self._available:
+            self._outbox.release_reserved()
+        self._available = False
 
     def transfer(self) -> OutboxReservation:
-        if self._released or self._remaining == 0:
+        if self._released or not self._available:
             self._fail("outbox reservation transferred without a reserved slot")
-        self._remaining -= 1
-        return OutboxReservation(1, self._outbox)
+        self._available = False
+        return OutboxReservation(self._outbox)
 
     def _fail(self, message: str) -> Never:
         if self._outbox is not None:
@@ -76,7 +76,7 @@ class OutboxReservation:
 
 class EventOutbox(ABC):
     @abstractmethod
-    def try_reserve(self, slots: int, /) -> OutboxReservation | None:
+    def try_reserve(self) -> OutboxReservation | None:
         pass
 
     @abstractmethod
@@ -113,17 +113,15 @@ class QueuedOutbox(EventOutbox, ABC):
             self._executor.shutdown()
             raise
 
-    def try_reserve(self, slots: int, /) -> OutboxReservation | None:
-        if slots < 0:
-            self.fail_invariant("outbox reservation size cannot be negative")
+    def try_reserve(self) -> OutboxReservation | None:
         with self._lock:
             if self._failure is not None:
                 raise StorageWorkerError from self._failure
-            if not self._accepting or self._reserved + self._filled + slots > OUTBOX_CAPACITY:
+            if not self._accepting or self._reserved + self._filled >= OUTBOX_CAPACITY:
                 self._reservation_rejections += 1
                 return None
-            self._reserved += slots
-        return OutboxReservation(slots, self)
+            self._reserved += 1
+        return OutboxReservation(self)
 
     def record_reserved(self, event: UsageEvent, /) -> None:
         with self._lock:
@@ -136,11 +134,11 @@ class QueuedOutbox(EventOutbox, ABC):
             self._events.append(event)
             self._schedule_drain()
 
-    def release_reserved(self, slots: int, /) -> None:
+    def release_reserved(self) -> None:
         with self._lock:
-            if slots > self._reserved:
+            if self._reserved == 0:
                 self.fail_invariant("outbox reservation accounting underflow")
-            self._reserved -= slots
+            self._reserved -= 1
 
     def fail_invariant(self, message: str) -> Never:
         error = RuntimeError(message)

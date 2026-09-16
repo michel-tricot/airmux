@@ -12,7 +12,7 @@ from pydantic import TypeAdapter, ValidationError
 from airmux_runtime.config import ConfigContext
 from contract import RoutedUsageEventV1, UsageEvent, uuid7
 from data_plane.config import Config, FileOutboxConfig
-from data_plane.outbox import FileOutbox, build_outbox
+from data_plane.outbox import EventOutbox, FileOutbox, build_outbox
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,15 +42,19 @@ def event_of(index: int) -> RoutedUsageEventV1:
     )
 
 
+def record(outbox: EventOutbox, event: UsageEvent) -> None:
+    reservation = outbox.try_reserve()
+    assert reservation is not None
+    reservation.record(event)
+    reservation.release_unused()
+
+
 def write_events(path: Path, start: int, count: int) -> None:
     outbox = FileOutbox(FileOutboxConfig(path=path))
-    reservation = outbox.try_reserve(count)
-    assert reservation is not None
     try:
         for index in range(start, start + count):
-            reservation.record(event_of(index))
+            record(outbox, event_of(index))
     finally:
-        reservation.release_unused()
         asyncio.run(outbox.close())
 
 
@@ -63,10 +67,7 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
     events = [event_of(0), event_of(1)]
     outbox = build_outbox(FileOutboxConfig(path=path), http_client)
     try:
-        reservation = outbox.try_reserve(1)
-        assert reservation is not None
-        reservation.record(events[0])
-        reservation.release_unused()
+        record(outbox, events[0])
         stats = await outbox.stats()
         assert read_events(path) == events[:1]
         assert stats["durable"] == 0
@@ -74,10 +75,7 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
         await outbox.close()
     reopened = FileOutbox(FileOutboxConfig(path=path))
     try:
-        reservation = reopened.try_reserve(1)
-        assert reservation is not None
-        reservation.record(events[1])
-        reservation.release_unused()
+        record(reopened, events[1])
         await reopened.stats()
         assert read_events(path) == events
     finally:
@@ -89,13 +87,10 @@ def test_file_events_from_concurrent_threads_remain_complete(tmp_path):
     path = tmp_path / "events.jsonl"
     outbox = FileOutbox(FileOutboxConfig(path=path))
     events = [event_of(index) for index in range(100)]
-    reservation = outbox.try_reserve(len(events))
-    assert reservation is not None
     try:
         with ThreadPoolExecutor(max_workers=8) as executor:
-            list(executor.map(reservation.record, events))
+            list(executor.map(lambda event: record(outbox, event), events))
     finally:
-        reservation.release_unused()
         asyncio.run(outbox.close())
     assert {event.event_id for event in read_events(path)} == {event.event_id for event in events}
     assert len(read_events(path)) == len(events)

@@ -190,22 +190,22 @@ class RequestExecution:
         if self.snapshot.provider_param_aliases.intersection(self.request.extra):
             raise RequestRejectedError(400, "invalid_request", "Provider parameter aliases must use canonical names")
         plan = plan_routes(self.request, self.key, self.snapshot)
-        reservation = self.runtime.outbox.try_reserve(1 if isinstance(plan, Deny) else plan.max_attempts)
-        if reservation is None:
-            raise RequestRejectedError(503, "metering_capacity_exhausted")
-        try:
-            if isinstance(plan, Deny):
+        if isinstance(plan, Deny):
+            reservation = self.runtime.outbox.try_reserve()
+            if reservation is None:
+                raise RequestRejectedError(503, "metering_capacity_exhausted")
+            try:
                 record_denied(reservation, self.key, self.snapshot.bundle.bundle_id, self.request, self.start)
                 raise RequestRejectedError(plan.status, plan.code, plan.message)
-            try:
-                async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
-                    return await self._execute(plan, reservation)
-            except TimeoutError as error:
-                raise RequestRejectedError(504, "fallback_deadline_exceeded", "The fallback time limit was reached") from error
-        finally:
-            reservation.release_unused()
+            finally:
+                reservation.release_unused()
+        try:
+            async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
+                return await self._execute(plan)
+        except TimeoutError as error:
+            raise RequestRejectedError(504, "fallback_deadline_exceeded", "The fallback time limit was reached") from error
 
-    async def _execute(self, plan: RoutePlan, reservation: OutboxReservation) -> Response:
+    async def _execute(self, plan: RoutePlan) -> Response:
         attempts = 0
         failure: AttemptFailure | None = None
         for decision in (plan.primary, *plan.backups):
@@ -216,7 +216,13 @@ class RequestExecution:
                 if credential is None:
                     continue
                 attempts += 1
-                outcome = await self._attempt(decision, entry, credential, reservation)
+                reservation = self.runtime.outbox.try_reserve()
+                if reservation is None:
+                    raise RequestRejectedError(503, "metering_capacity_exhausted")
+                try:
+                    outcome = await self._attempt(decision, entry, credential, reservation)
+                finally:
+                    reservation.release_unused()
                 if isinstance(outcome, Response):
                     return outcome
                 failure = outcome
