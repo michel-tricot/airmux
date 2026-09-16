@@ -5,16 +5,22 @@ surfaces. Each scenario gets an isolated directory and Postgres database. Securi
 management APIs start only the control plane. Nothing imports `control_plane` or `data_plane`.
 
 `stack_harness.py` owns deployment setup and an authenticated HTTP provider; `conftest.py` exposes its fixture and
-Postgres lifecycle hooks. Tests live in `scenarios/` and run on every PR update and push to main:
+Postgres lifecycle hooks. API scenarios live in `scenarios/`, while `browser/` drives the console through Chromium.
+Both run on every PR update and push to main:
 
 ```bash
 uv run pytest tests/acceptance/full_stack/scenarios
+uv run playwright install chromium
+uv run pytest tests/acceptance/full_stack/browser
 ```
 
 Keep scenarios here when they prove a boundary that standalone gateway tests cannot: remote bundle publication,
 organization/workspace isolation, credential resolution, transactional security races, outage operation and durable
 export into the control plane. Protocol details, SDK decoding and local bundle setup belong in the
 [standalone suite](../gateway/README.md).
+
+Browser scenarios cover boundaries that component tests cannot prove: one-time credential handling, navigation and
+authorization against real services, inference recovery, and server-side membership revocation with reload recovery.
 
 Event replay uses real inference events. A forwarding HTTP proxy commits the first batch into the control plane, then
 returns an unavailable response instead of its acknowledgement. The test observes identical event IDs delivered again,
