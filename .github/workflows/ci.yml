@@ -79,22 +79,6 @@ jobs:
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
         run: uv run pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
-      - name: Gateway level 1 - basics
-        run: uv run pytest tests/acceptance/gateway/test_01_basic.py -n auto --junitxml=gateway-results/01-basic.xml
-      - name: Gateway level 2 - protocols
-        run: uv run pytest tests/acceptance/gateway/test_02_protocols.py tests/acceptance/gateway/test_openai_sdk.py -n auto --junitxml=gateway-results/02-protocols.xml
-      - name: Gateway level 3 - features
-        run: uv run pytest tests/acceptance/gateway/test_03_features.py -n auto --junitxml=gateway-results/03-features.xml
-      - name: Gateway level 4 - policies
-        run: uv run pytest tests/acceptance/gateway/test_04_policies.py -n auto --junitxml=gateway-results/04-policies.xml
-      - name: Gateway level 5 - advanced policies
-        run: uv run pytest tests/acceptance/gateway/test_05_advanced_policies.py -n auto --junitxml=gateway-results/05-advanced-policies.xml
-      - name: Gateway level 6 - failures and fallback
-        run: uv run pytest tests/acceptance/gateway/test_06_failures.py -n auto --junitxml=gateway-results/06-failures.xml
-      - name: Gateway level 7 - runtime and CLI lifecycle
-        run: uv run pytest tests/acceptance/gateway/test_07_runtime.py tests/acceptance/gateway/test_gateway.py tests/acceptance/gateway/test_local_mode.py -n auto --junitxml=gateway-results/07-runtime.xml
-      - name: Gateway level 8 - metering and pricing
-        run: uv run pytest tests/acceptance/gateway/test_08_metering.py -n auto --junitxml=gateway-results/08-metering.xml
       - name: Summarize gateway test results
         if: always()
         run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
@@ -102,10 +86,93 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: gateway-integration
+          name: gateway-integration-installation
           path: |
             gateway-results
             ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7
+
+  gateway-acceptance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - level: 01-basic
+            tests: tests/acceptance/gateway/test_01_basic.py
+          - level: 02-protocols
+            tests: tests/acceptance/gateway/test_02_protocols.py tests/acceptance/gateway/test_openai_sdk.py
+          - level: 03-features
+            tests: tests/acceptance/gateway/test_03_features.py
+          - level: 04-policies
+            tests: tests/acceptance/gateway/test_04_policies.py
+          - level: 05-advanced-policies
+            tests: tests/acceptance/gateway/test_05_advanced_policies.py
+          - level: 06-failures
+            tests: tests/acceptance/gateway/test_06_failures.py
+          - level: 07-runtime
+            tests: tests/acceptance/gateway/test_07_runtime.py tests/acceptance/gateway/test_gateway.py tests/acceptance/gateway/test_local_mode.py
+          - level: 08-metering
+            tests: tests/acceptance/gateway/test_08_metering.py
+    env:
+      DOCKER_HOST: unix:///no-docker.sock
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - run: ./scripts/build-python-distribution.sh
+      - name: Rebuild wheel from source distribution
+        run: |
+          mkdir dist-from-sdist
+          uv build --wheel --out-dir dist-from-sdist dist/tokkeeper-*.tar.gz
+      - name: Install rebuilt release
+        env:
+          UV_TOOL_DIR: ${{ runner.temp }}/tokkeeper-tools
+          UV_TOOL_BIN_DIR: ${{ runner.temp }}/tokkeeper-bin
+        run: uv tool install dist-from-sdist/tokkeeper-*.whl
+      - name: Run gateway level
+        run: uv run pytest ${{ matrix.tests }} -n auto --junitxml=gateway-results/${{ matrix.level }}.xml
+        env:
+          TOKKEEPER_GATEWAY_BIN: ${{ runner.temp }}/tokkeeper-bin/tokkeeper
+          TOKKEEPER_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
+      - name: Summarize gateway test results
+        if: always()
+        run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload gateway results and diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: gateway-integration-${{ matrix.level }}
+          path: |
+            gateway-results
+            ${{ runner.temp }}/gateway-artifacts
+          retention-days: 7
+
+  gateway-results:
+    runs-on: ubuntu-latest
+    needs: [installation, gateway-acceptance]
+    if: always()
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: '3.13'
+      - run: uv sync --all-packages --frozen
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: gateway-integration-*
+          path: gateway-results
+      - name: Summarize all gateway test results
+        run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload combined gateway results and diagnostics
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: gateway-integration
+          path: gateway-results
           retention-days: 7
 
   gateway-performance:
@@ -150,6 +217,7 @@ jobs:
         run: |
           uv run python tests/acceptance/gateway/performance.py \
             --base-bin "$RUNNER_TEMP/performance-base-bin/tokkeeper" \
+            --base-harness ../performance-base/tests/acceptance/gateway \
             --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/tokkeeper" \
             --base-revision "$(git -C ../performance-base rev-parse HEAD)" \
             --candidate-revision "$CANDIDATE_REVISION" \
