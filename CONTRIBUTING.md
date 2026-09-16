@@ -107,3 +107,40 @@ Keep each pull request limited to one user-visible outcome. Its description shou
 - Any documentation or generated contracts updated
 
 CI must pass before merge. Review feedback should be resolved in code, tests, or documentation rather than only explained in the discussion.
+
+## Main branch protection
+
+The active [Protect Main ruleset](https://github.com/michel-tricot/airmux/rules/20767120) requires a pull request and
+allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches must be
+up to date with `main` before merging, and review conversations must be resolved.
+
+Three stable checks are required, each bound to the GitHub Actions App (integration ID `15368`):
+
+| Required check | Coverage |
+| --- | --- |
+| `ci-correctness` | Frontend, backend, installation, every gateway acceptance shard, and full-stack acceptance |
+| `docker-correctness` | Both compact and split Docker deployments |
+| `dependency-security` | Python and JavaScript dependency audits |
+
+These gates run even after an upstream failure and succeed only when every dependency succeeds. Failed, cancelled,
+skipped, or missing dependencies fail the gate. Pending or missing required checks block merging, and updating a
+branch after `main` advances requires checks against the new base. `gateway-results` publishes diagnostics and is
+not a required correctness check. Gateway performance and live-provider runs are separate from correctness gates.
+
+There are no administrator, automation, or deploy-key bypasses. The owner follows the same pull request and CI rules.
+The owner is currently the only collaborator, so approvals are not required. When an independent collaborator with
+review permissions is added, set `required_approving_review_count` to `1` and `require_last_push_approval` to `true`
+in the ruleset payload and apply it. Keep stale-review dismissal enabled. Do not add a bypass to avoid failing CI.
+
+The versioned configuration is [.github/rulesets/protect-main.json](.github/rulesets/protect-main.json). Workflow
+check names and this payload must change together. An administrator can apply the payload to the existing ruleset:
+
+```bash
+gh api --method PUT repos/michel-tricot/airmux/rulesets/20767120 \
+  --input .github/rulesets/protect-main.json
+gh api repos/michel-tricot/airmux/rules/branches/main
+```
+
+Use current-base status checks for this personally owned private repository. A merge queue is unavailable here.
+When a required workflow is broken, repair it through a pull request; protection intentionally keeps `main` blocked
+until the required checks pass. Test the gates locally with `uv run pytest tests/documentation/test_merge_policy.py`.
