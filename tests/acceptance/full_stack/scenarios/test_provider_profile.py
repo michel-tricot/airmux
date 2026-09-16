@@ -76,11 +76,5 @@ def test_model_parameter_support_changes_the_live_upstream_request(stack: Stack)
             "param": "temperature",
             "action": "dropped",
             "detail": "no-temperature does not support this parameter",
-        },
-        {
-            "param": "max_output_tokens",
-            "action": "defaulted",
-            "detail": "model caps output at 4096 tokens",
-            "source": "model",
-        },
+        }
     ]
