@@ -7,7 +7,8 @@ One inference request follows the same stages regardless of caller dialect or pr
 
 <Steps>
   <Step title="Authenticate">
-    The gateway loads its current bundle set, hashes the bearer token, and looks up the active inference-key entry.
+    The gateway captures its current bundle set and selects the first non-empty credential: bearer token, `x-api-key`,
+    then the protected playground cookie. It hashes the selected token and looks up the active inference-key entry.
     Missing, unknown, expired, or not-yet-adopted keys are rejected.
   </Step>
 
@@ -43,7 +44,7 @@ One inference request follows the same stages regardless of caller dialect or pr
 
   <Step title="Account">
     TokKeeper records tokens, cache usage, estimated status, cost, latency, route, credential metadata, bundle ID, and
-    outcome. The local outbox exports the event to the control plane.
+    outcome. The event's request ID matches the response's `X-Request-ID` header. The local outbox exports the event to the control plane.
   </Step>
 </Steps>
 

@@ -12,9 +12,13 @@ http {
   uwsgi_temp_path /tmp/tokkeeper-uwsgi;
   scgi_temp_path /tmp/tokkeeper-scgi;
   resolver ${NGINX_RESOLVER} valid=5s ipv6=off;
+  map $upstream_http_cache_control $api_cache_control {
+    default "no-store";
+    "no-store, no-transform" "no-store, no-transform";
+  }
   map $uri $private_cache_control {
     default "";
-    ~^/(api|inf)/ "no-store";
+    ~^/(api|inf)/ $api_cache_control;
   }
   server {
     listen 8080;
@@ -28,6 +32,7 @@ http {
     add_header X-Frame-Options "DENY" always;
     add_header Cache-Control $private_cache_control always;
     proxy_hide_header Cache-Control;
+    proxy_hide_header X-Content-Type-Options;
     proxy_set_header Host $http_host;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto ${PUBLIC_SCHEME};

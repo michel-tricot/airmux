@@ -62,7 +62,8 @@ operation.
 
 ## Use your existing client
 
-Any client that can target one of TokKeeper's exposed HTTP APIs and send a bearer token can connect. That includes SDKs,
+Any client that can target one of TokKeeper's exposed HTTP APIs and send an inference key through
+`Authorization: Bearer` or `x-api-key` can connect. That includes SDKs,
 agent frameworks, CLIs, services, and raw HTTP integrations.
 
 | API | Endpoint |
@@ -70,6 +71,7 @@ agent frameworks, CLIs, services, and raw HTTP integrations.
 | Chat Completions | `POST /inf/v1/chat/completions` |
 | Responses | `POST /inf/v1/responses` |
 | Messages | `POST /inf/v1/messages` |
+| Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
 | Canonical | `POST /inf/v1/chat/completions` |
 
 The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with a TokKeeper inference key:

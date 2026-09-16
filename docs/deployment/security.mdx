@@ -29,18 +29,19 @@ The default file-backed secret store writes one owner-readable file per provider
 caches contain token hashes and secret references, not plaintext tokens or provider values. Usage and audit records can
 still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
 
-Do not log bearer headers, request bodies, provider keys, or one-time token responses. Limit access to application logs,
-database exports, volume snapshots, and support bundles.
+Do not log `Authorization`, `x-api-key`, authentication-cookie values, request bodies, provider keys, or one-time token
+responses. Limit access to application logs, database exports, volume snapshots, and support bundles.
 
 ## Browser boundary
 
-The all-in-one proxy sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`,
-`X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY`. Preserve equivalent behavior if you replace the
-checked-in proxy.
+The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The all-in-one proxy
+also sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`, and `X-Frame-Options: DENY`.
+Preserve equivalent behavior if you replace the checked-in proxy. See the [response headers](/docs/reference/inference#response-headers)
+for streaming cache directives and the authentication challenge.
 
 Playground requests may authenticate with a same-origin cookie. The gateway requires an `X-Requested-With` header and
-rejects cross-site fetch metadata for cookie-authenticated inference. Normal applications should use bearer inference
-keys.
+rejects cross-site fetch metadata for cookie-authenticated inference. Normal applications should send inference keys
+through `Authorization: Bearer` or `x-api-key`.
 
 ## Incident response
 

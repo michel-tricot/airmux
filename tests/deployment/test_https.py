@@ -151,7 +151,7 @@ def test_private_api_and_inference_responses_are_not_cacheable(https_deployment)
     client, signup, _, _, _ = https_deployment
     for response in (signup, client.get("/api/v1/auth/me"), client.get("/api/v1/not-a-resource"), client.post("/inf/v1/chat/completions", json={})):
         assert response.headers.get("cache-control") == "no-store", (response.url, response.headers)
-        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers.get_list("x-content-type-options") == ["nosniff"]
         assert response.headers["x-frame-options"] == "DENY"
         assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
@@ -225,5 +225,7 @@ def test_https_inference_and_minted_secrets_remain_private(https_deployment):
     for stream in (False, True):
         response = client.post(path, headers=headers, json={**body, "stream": stream})
         assert response.status_code == 200, response.text
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get_list("cache-control") == ["no-store, no-transform" if stream else "no-store"]
+        assert response.headers.get_list("x-content-type-options") == ["nosniff"]
+        assert uuid.UUID(response.headers["x-request-id"]).version == 7
         assert "deployment ready" in response.text
