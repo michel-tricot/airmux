@@ -7,12 +7,12 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 ## Contract and execution
 
 Each policy has a name, priority, target, and an unordered nonempty collection of rules. Each rule has
-a stable UUID, typed request match, and one typed action. Rules compose within and across policies:
+a typed request match and one typed action. Rules are inline values with no identity or lifecycle outside their policy. They compose within and across policies:
 every matching restriction must pass. Lower policy priorities run first, and policy UUID breaks ties.
-Priority cannot override a restriction. A policy may reference at most one fallback rule, and the
+Priority cannot override a restriction. A policy may contain at most one fallback rule, and the
 first matching policy with one supplies the ordered backup list.
 
-The control plane validates request matches and references when saving. Its existing transaction
+The control plane validates request matches and catalog names when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
 matches when admitting a bundle, indexes them by workspace, and keeps the previous bundle if
 admission fails. In-flight requests use their original snapshot. Changes take effect after the
@@ -20,7 +20,7 @@ gateway adopts the published bundle, not synchronously with the management respo
 
 `@bundle_input` marks models and columns whose changes require bundle republication. Its scope
 identifies affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
-workspace row lock, match/reference validation, active-policy capacity check, and flush.
+workspace row lock, match and action validation, active-policy capacity check, and flush.
 Autoflush is suppressed until validation finishes, and capacity is counted directly in the
 database so previously loaded policy objects cannot hide a concurrent activation. Callers do
 not acquire a separate lock or invoke validation themselves.
@@ -99,9 +99,10 @@ admins/owners can manage policies. Workspace members and viewers can read them. 
 need `policies.read` or `policies.manage` within their existing authority scope. Every write is
 covered by database audit triggers.
 
-Rules are workspace resources at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules`. Policies
-reference those rules by ID, so a single live rule can be reused across policies. Updating the rule
-changes every use in the next bundle. Deletion returns 409 while any policy references it.
+Rule definitions are stored inline in each policy. Explicit duplication is intentional: a restriction has meaning only within
+the policy that names and targets it, and copying the value avoids hidden cross-policy mutation, reference validation, orphaned
+rules, and a second permission and lifecycle surface. If repeated construction becomes a demonstrated problem, add an explicit
+copy operation rather than shared mutable enforcement.
 
 The policy API is `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`, supporting list,
 create, patch, and delete. Successful responses use the standard envelope. Create example:
@@ -113,7 +114,18 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
   "priority": 100,
   "definition": {
     "target": { "kind": "workspace" },
-    "rule_ids": ["fallback-rule-uuid"]
+    "rules": [
+      {
+        "match": { "kind": "all_requests" },
+        "action": {
+          "kind": "fallback",
+          "models": ["anthropic/claude-sonnet-4-6"],
+          "on": ["timeout"],
+          "max_attempts": 2,
+          "timeout_ms": 30000
+        }
+      }
+    ]
   }
 }
 ```
@@ -125,7 +137,6 @@ rejected. CLI commands use the same generated request and response types:
 
 ```sh
 airmux policies list -w production -f json
-airmux rules create rule.json -w production
 airmux policies create policy.json -w production
 airmux policies update POLICY_ID changes.json -w production
 airmux policies delete POLICY_ID -w production

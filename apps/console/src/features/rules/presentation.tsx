@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { RuleOut } from '@workspace/api-client-react';
+import type { RuleDefinitionInput, RuleDefinitionOutput } from '@workspace/api-client-react';
 import { ModelBadge } from '@/components/shared/model-badge';
 import { Badge } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -38,8 +38,10 @@ export function ModelBadges({ names, ordered = false, maxVisible = 2 }: { names:
   );
 }
 
-function actionSummary(rule: RuleOut): string {
-  const { action } = rule.definition;
+type RuleDefinition = RuleDefinitionInput | RuleDefinitionOutput;
+
+function actionSummary(definition: RuleDefinition): string {
+  const { action } = definition;
   switch (action.kind) {
     case 'models':
       return `Models: ${action.names.join(', ')}`;
@@ -60,8 +62,8 @@ function actionSummary(rule: RuleOut): string {
   }
 }
 
-export function RuleActionSummary({ rule, maxVisible }: { rule: RuleOut; maxVisible?: number }) {
-  const { action } = rule.definition;
+export function RuleActionSummary({ definition, maxVisible }: { definition: RuleDefinition; maxVisible?: number }) {
+  const { action } = definition;
   if (action.kind === 'models')
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -76,11 +78,11 @@ export function RuleActionSummary({ rule, maxVisible }: { rule: RuleOut; maxVisi
         <ModelBadges names={action.models} ordered maxVisible={maxVisible} />
       </span>
     );
-  return actionSummary(rule);
+  return actionSummary(definition);
 }
 
-export function RuleMatchSummary({ rule }: { rule: RuleOut }) {
-  const { match } = rule.definition;
+export function RuleMatchSummary({ definition }: { definition: RuleDefinition }) {
+  const { match } = definition;
   if (match.kind === 'all_requests') return 'Every request';
   const details = [
     match.stream === true ? 'Streaming' : match.stream === false ? 'Non-streaming' : '',

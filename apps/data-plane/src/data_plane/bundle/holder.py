@@ -54,7 +54,7 @@ class BundleSnapshot:
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(profile_index),
             provider_param_aliases=frozenset(spelling for profile in profile_index.values() for spelling in profile.respelled),
-            policy_index=compile_policies(bundle.policies, bundle.rules),
+            policy_index=compile_policies(bundle.policies),
         )
 
 

@@ -270,15 +270,6 @@
                     ]
                   },
                   {
-                    "group": "Rules",
-                    "pages": [
-                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
-                      "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules",
-                      "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}",
-                      "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}"
-                    ]
-                  },
-                  {
                     "group": "Policies",
                     "pages": [
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policy-users",

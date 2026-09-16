@@ -72,7 +72,7 @@ database. The sole cold-path exception is resolving the selected provider secret
 ## Configuration bundles
 
 The control plane compiles one complete bundle per organization. A bundle contains active inference-key hashes,
-providers, models, provider-credential references, enabled policies, and referenced rules. It never contains inference
+providers, models, provider-credential references, and enabled policies with inline rule definitions. It never contains inference
 tokens or provider secret values.
 
 Remote gateways poll a manifest, validate new bundles, build lookup indexes, swap them atomically, and cache the

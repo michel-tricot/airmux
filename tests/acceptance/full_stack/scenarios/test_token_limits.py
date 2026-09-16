@@ -20,19 +20,16 @@ def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
         workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
         scope = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}"
-        rule = _payload(
-            admin.post(
-                f"{scope}/rules",
-                json={
-                    "name": "One output token",
-                    "definition": {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1}},
-                },
-            )
-        )
         _payload(
             admin.post(
                 f"{scope}/policies",
-                json={"name": "One output token", "definition": {"target": {"kind": "workspace"}, "rule_ids": [rule["id"]]}},
+                json={
+                    "name": "One output token",
+                    "definition": {
+                        "target": {"kind": "workspace"},
+                        "rules": [{"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1}}],
+                    },
+                },
             )
         )
     body = {"model": "quirk", "messages": [{"role": "user", "content": "hi"}]}

@@ -1,9 +1,8 @@
 import { z } from 'zod';
-import type { RuleCreate, RuleDefinitionInput, RuleOut } from '@workspace/api-client-react';
+import type { RuleDefinitionInput, RuleDefinitionOutput } from '@workspace/api-client-react';
 
 export const ruleFormSchema = z
   .object({
-    name: z.string().trim().min(1).max(200),
     match: z.enum(['all_requests', 'request']),
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
@@ -45,7 +44,6 @@ export const ruleFormSchema = z
 export type RuleForm = z.infer<typeof ruleFormSchema>;
 
 export const ruleDefaults: RuleForm = {
-  name: '',
   match: 'all_requests',
   matchModels: [],
   matchStream: 'any',
@@ -83,7 +81,7 @@ function action(values: RuleForm): RuleDefinitionInput['action'] {
   }
 }
 
-export function rulePayload(values: RuleForm): RuleCreate {
+export function rulePayload(values: RuleForm): RuleDefinitionInput {
   const match: RuleDefinitionInput['match'] =
     values.match === 'all_requests'
       ? { kind: 'all_requests' }
@@ -93,14 +91,13 @@ export function rulePayload(values: RuleForm): RuleCreate {
           capabilities: values.matchCapabilities,
           ...(values.matchStream === 'any' ? {} : { stream: values.matchStream === 'streaming' }),
         };
-  return { name: values.name, definition: { match, action: action(values) } };
+  return { match, action: action(values) };
 }
 
-export function ruleForm(rule: RuleOut): RuleForm {
-  const { match, action } = rule.definition;
+export function ruleForm(rule: RuleDefinitionInput | RuleDefinitionOutput): RuleForm {
+  const { match, action } = rule;
   return {
     ...ruleDefaults,
-    name: rule.name,
     match: match.kind,
     matchModels: match.kind === 'request' ? (match.models ?? []) : [],
     matchStream: match.kind !== 'request' || match.stream == null ? 'any' : match.stream ? 'streaming' : 'non_streaming',
@@ -108,7 +105,9 @@ export function ruleForm(rule: RuleOut): RuleForm {
     kind: action.kind,
     names: action.kind === 'models' || action.kind === 'providers' ? action.names : action.kind === 'fallback' ? action.models : [],
     ...(action.kind === 'deny' ? { message: action.message } : {}),
-    ...(action.kind === 'price_limit' ? { maxInputPrice: action.max_input_price_per_mtok, maxOutputPrice: action.max_output_price_per_mtok } : {}),
+    ...(action.kind === 'price_limit'
+      ? { maxInputPrice: String(action.max_input_price_per_mtok), maxOutputPrice: String(action.max_output_price_per_mtok) }
+      : {}),
     ...(action.kind === 'request_limits' ? { maxOutputTokens: action.max_output_tokens } : {}),
     ...(action.kind === 'credential_access' ? { credentialScopes: action.scopes } : {}),
     ...(action.kind === 'fallback' ? { reasons: action.on, maxAttempts: action.max_attempts, timeoutMs: action.timeout_ms } : {}),

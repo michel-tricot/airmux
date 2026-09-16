@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
-    from contract.policies import Fallback, PolicyAction, PolicyEntry, RuleEntry
+    from contract.policies import Fallback, PolicyAction, PolicyEntry
     from data_plane.canonical import CanonicalRequest
     from data_plane.profiles import CompiledProfile
 
@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class ModelActionContext:
     policy: PolicyEntry
-    rule: RuleEntry
     key: KeyEntry
     model: ModelEntry
     provider: ProviderEntry
