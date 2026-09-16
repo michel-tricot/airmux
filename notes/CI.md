@@ -9,7 +9,9 @@ uses only runner `jq` and succeeds only when every correctness job succeeds.
 `security.yml` runs dependency audits on pull requests, main, and weekly. Its stable `dependency-security` aggregate
 requires both ecosystem audits and dependency review when the event supports it. Repository CodeQL default setup,
 secret scanning, action restrictions, branch protection, tag protection, and the release environment are recorded in
-`.github/policy`. `scripts/github-policy diff` reads live settings without mutation; `apply` is the explicit write path.
+`.github/policy`. Private repositories without GitHub Advanced Security use locked `pip-audit` and `bun audit` as the
+free-tier dependency-review fallback. `scripts/github-policy diff` reads live settings without mutation; `apply` is the
+explicit write path.
 
 `nightly.yml` owns Python 3.13/3.14 Linux/macOS compatibility, repeated gateway performance, real providers, longer
 concurrency runs, and a cold Docker build. Manual runs accept a full SHA and reject commits outside main. Benchmark

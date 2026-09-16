@@ -50,7 +50,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/dependency-review-action@284c089a1c4d8e8673b7398cdb8df358a9de47ad
+      - name: Check dependency review availability
+        id: dependency_review_support
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status="$(gh api "repos/$GITHUB_REPOSITORY" --jq '.security_and_analysis.advanced_security.status // "unavailable"' 2>/dev/null || true)"
+          if [[ "$status" == "enabled" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Dependency review is unavailable; pip-audit and bun audit are the free-tier fallback." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.dependency_review_support.outputs.available == 'true'
+        uses: actions/dependency-review-action@284c089a1c4d8e8673b7398cdb8df358a9de47ad
 
   dependency-security:
     runs-on: ubuntu-latest

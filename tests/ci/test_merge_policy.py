@@ -50,6 +50,16 @@ def test_main_requires_only_stable_aggregate_checks():
     }
 
 
+def test_dependency_review_uses_the_documented_free_tier_fallback_when_unavailable():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/security.yml").read_text())
+    steps = workflow["jobs"]["dependency-review"]["steps"]
+    support = next(step for step in steps if step.get("id") == "dependency_review_support")
+    review = next(step for step in steps if str(step.get("uses", "")).startswith("actions/dependency-review-action@"))
+    assert ".security_and_analysis.advanced_security.status" in support["run"]
+    assert "pip-audit and bun audit are the free-tier fallback" in support["run"]
+    assert review["if"] == "steps.dependency_review_support.outputs.available == 'true'"
+
+
 def test_ci_runs_every_correctness_job_unconditionally_and_discovers_suites():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     assert set(workflow["jobs"]) == CI_JOBS | {"required"}
