@@ -174,8 +174,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -184,10 +182,11 @@ jobs:
           ref: ${{ needs.prepare.outputs.sha }}
       - name: Create the protected release tag
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
+          test -n "$GH_TOKEN"
           if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
             test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           else

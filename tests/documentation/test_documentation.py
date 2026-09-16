@@ -127,6 +127,7 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
     assert "Prepare release" in development
     assert "Publish release" in development
+    assert "prefilled pull request link" in development
 
 
 def test_documentation_covers_safe_upgrades() -> None:

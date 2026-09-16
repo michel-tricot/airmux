@@ -60,16 +60,11 @@ def current(repo: str) -> dict[str, object]:
     environment = gh(repo, "GET", "environments/release")
     sources = gh(repo, "GET", "environments/release/deployment-branch-policies")
     actions = gh(repo, "GET", "actions/permissions")
-    workflow_permissions = gh(repo, "GET", "actions/permissions/workflow")
     assert isinstance(actions, dict)
     selected = gh(repo, "GET", "actions/permissions/selected-actions") if actions.get("allowed_actions") == "selected" else {}
     repository = gh(repo, "GET", "")
     codeql = gh_optional(repo, "code-scanning/default-setup")
-    assert isinstance(environment, dict)
-    assert isinstance(sources, dict)
-    assert isinstance(actions, dict)
-    assert isinstance(workflow_permissions, dict)
-    assert isinstance(selected, dict)
+    assert isinstance(environment, dict) and isinstance(sources, dict) and isinstance(actions, dict) and isinstance(selected, dict)
     assert isinstance(repository, dict)
     actions["selected_actions_url"] = selected
     return {
@@ -79,7 +74,6 @@ def current(repo: str) -> dict[str, object]:
         "release-environment.json": environment,
         "release-sources.json": sources["branch_policies"],
         "actions.json": actions,
-        "workflow-permissions.json": workflow_permissions,
         "security.json": {"security_and_analysis": repository.get("security_and_analysis"), "codeql_default_setup": codeql},
     }
 
@@ -136,7 +130,6 @@ def apply(repo: Annotated[str, typer.Option()] = os.environ.get("GITHUB_REPOSITO
     assert isinstance(actions, dict)
     gh(repo, "PUT", "actions/permissions", {key: value for key, value in actions.items() if key != "selected_actions_url"})
     gh(repo, "PUT", "actions/permissions/selected-actions", actions["selected_actions_url"])
-    gh(repo, "PUT", "actions/permissions/workflow", expected["workflow-permissions.json"])
     security = expected["security.json"]
     assert isinstance(security, dict)
     gh(repo, "PATCH", "", {"security_and_analysis": security["security_and_analysis"]})

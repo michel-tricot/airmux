@@ -14,10 +14,10 @@ def steps(job: str) -> str:
 
 
 def prepare_steps() -> str:
-    return "\n".join(step.get("run", "") for step in PREPARE_RELEASE["jobs"]["release-pr"]["steps"])
+    return "\n".join(step.get("run", "") for step in PREPARE_RELEASE["jobs"]["release-branch"]["steps"])
 
 
-def test_release_pr_bumps_only_the_public_project_and_dispatches_required_checks():
+def test_release_branch_bumps_only_the_public_project_and_links_to_a_pull_request():
     bump = PREPARE_RELEASE[True]["workflow_dispatch"]["inputs"]["bump"]
     assert bump["type"] == "choice"
     assert bump["options"] == ["patch", "minor", "major"]
@@ -26,9 +26,9 @@ def test_release_pr_bumps_only_the_public_project_and_dispatches_required_checks
     assert 'test "$(git diff --name-only)" = "packaging/airmux/pyproject.toml"' in commands
     assert 'test -z "$(git ls-files --others --exclude-standard)"' in commands
     assert "refs/heads/$RELEASE_BRANCH" in commands
-    assert "gh pr create" in commands
-    assert 'gh workflow run ci.yml --ref "$RELEASE_BRANCH"' in commands
-    assert 'gh workflow run security.yml --ref "$RELEASE_BRANCH"' in commands
+    assert "compare/main...$RELEASE_BRANCH?expand=1" in commands
+    assert "gh pr create" not in commands
+    assert "gh workflow run" not in commands
 
 
 def test_release_derives_sha_and_consumes_exact_successful_main_artifact():
@@ -48,10 +48,9 @@ def test_release_uses_official_publisher_with_narrow_permissions():
     publisher = next(step for step in jobs["publish"]["steps"] if step.get("uses", "").startswith("pypa/gh-action-pypi-publish@"))
     assert len(publisher["uses"].rsplit("@", 1)[1]) == 40
     assert jobs["publish"]["permissions"] == {"contents": "read", "id-token": "write"}
-    assert jobs["tag"]["permissions"] == {"contents": "write"}
     assert jobs["announce"]["permissions"] == {"contents": "write"}
     for name, job in jobs.items():
-        if name not in {"prepare", "tag", "publish", "announce"}:
+        if name not in {"prepare", "publish", "announce"}:
             assert job.get("permissions", RELEASE["permissions"]) == {"contents": "read"}
 
 
@@ -65,6 +64,9 @@ def test_release_verifies_registry_bytes_and_gateway_before_announcement():
 
 def test_release_creates_the_immutable_tag_after_candidate_checks():
     tag = RELEASE["jobs"]["tag"]
+    tag_step = next(step for step in tag["steps"] if step.get("name") == "Create the protected release tag")
     assert set(tag["needs"]) == {"prepare", "installation", "live-providers"}
+    assert tag_step["env"]["GH_TOKEN"] == "${{ secrets.RELEASE_GITHUB_TOKEN }}"
+    assert 'test -n "$GH_TOKEN"' in tag_step["run"]
     assert "refs/tags/$RELEASE_TAG" in steps("tag")
     assert RELEASE["jobs"]["publish"]["needs"] == ["prepare", "tag"]
