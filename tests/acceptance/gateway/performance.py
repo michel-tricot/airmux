@@ -58,7 +58,7 @@ class PerformanceGateway(Gateway):
             "kind": "sqlite",
             "cache_dir": "usage",
             "flush_interval_s": 3600,
-            "control_plane": {"url": "http://127.0.0.1:1", "token": "benchmark-export-token"},
+            "control_plane": {"url": "http://127.0.0.1:1", "management_key": "benchmark-export-token"},
         }
         self.config_path.write_text(yaml.safe_dump(configuration), encoding="utf-8")
 
@@ -395,8 +395,8 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 "model_id": "model-a",
                 "provider_id": "stub",
                 "upstream_model": "upstream-model-a",
-                "input_price_per_mtok": 2,
-                "output_price_per_mtok": 5,
+                "input_price_per_mtok": "2",
+                "output_price_per_mtok": "5",
                 "context_window": 128000,
                 "max_output_tokens": 4096,
                 "input_modalities": ["text"],

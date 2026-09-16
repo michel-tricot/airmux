@@ -1,6 +1,6 @@
 ---
 title: 'Configuration reference'
-description: 'Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores.'
+description: 'Reference Docker variables, runtime YAML sections, references, bundle sources, event outboxes, and secret stores.'
 ---
 
 airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
@@ -23,53 +23,46 @@ migrations while the control plane keeps the pooled URL.
 ## YAML structure
 
 ```yaml
-vars:
-  cache_dir: .airmux
-
 control_plane:
   database:
     url: ${env:DATABASE_URL:-postgresql+asyncpg://airmux:airmux@127.0.0.1:5432/airmux}
   bootstrap:
-    token: ${file:${var:cache_dir}/dataplane.key}
+    token: ${file:.airmux/dataplane.key}
   console_url: ${env:AIRMUX_CONSOLE_URL:-http://127.0.0.1:5000}
   public_signup: ${env:AIRMUX_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
-    root: ${var:cache_dir}/secrets
 
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane_link
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:${var:cache_dir}/dataplane.key}
-    cache_dir: ${var:cache_dir}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
     heartbeat_interval_s: 30
   events:
     kind: sqlite
     control_plane: *control_plane_link
-    cache_dir: ${var:cache_dir}
     flush_interval_s: 5
   secrets:
     kind: file
-    root: ${var:cache_dir}/secrets
 ```
 
 Both planes must configure the same secret store. A remote data plane uses a management key with bundle-read, usage-ingest, and heartbeat permissions.
 
-## References and variables
+## References
 
-| Syntax                   | Behavior                                                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `${env:NAME}`            | Environment value; a missing reference resolves the enclosing scalar to null and required-field validation fails |
-| `${env:NAME:-fallback}`  | Environment value with a fallback                                                                                |
-| `${file:path}`           | Trimmed file contents                                                                                            |
-| `${file:path:-fallback}` | File contents with a fallback when absent                                                                        |
-| `${var:name}`            | Text substitution from the top-level `vars` mapping                                                              |
+| Syntax                   | Behavior                                               |
+| ------------------------ | ------------------------------------------------------ |
+| `${env:NAME}`            | Environment value; a missing value is an error         |
+| `${env:NAME:-fallback}`  | Environment value with a fallback                      |
+| `${file:path}`           | Trimmed file contents; a missing file is an error      |
+| `${file:path:-fallback}` | File contents with a fallback when the file is missing |
 
-Refs can appear inside a larger string. Variables resolve before environment and file refs. Relative file references and runtime
-paths resolve against the containing configuration file; a local bundle resolves its taxonomy and key references against the bundle file.
+References must occupy the whole YAML scalar. The loader does not discover `.env` files or mutate the process environment;
+CLI startup owns optional `.env` loading. Relative file references and runtime paths resolve against the containing
+configuration file. A local bundle resolves its taxonomy and key references against the bundle file.
 
 ## Bundle sources
 
@@ -88,7 +81,8 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
+SQLite flush defaults to 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file, and the
+outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through the same outbox.
 
 The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
 files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
@@ -102,8 +96,7 @@ Use it on a local POSIX filesystem. File write failures propagate to the request
 | ------------------- | ---------------------------------------------------------------------- |
 | `file`              | One private file per credential; default managed deployment            |
 | `env`               | One effective credential per provider; standalone or single-tenant use |
-| `insecure_database` | Postgres-backed prototype store                                        |
-| `memory`            | Tests and ephemeral development                                        |
+| `insecure_database` | Postgres-backed prototype store; requires `airmux-runtime[insecure-database]` |
 
 The environment store checks `AIRMUX_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
 are not part of its lookup, so it cannot isolate tenant-specific values.

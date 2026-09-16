@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from contract import FileStoreConfig
+from airmux_runtime.secrets import FileStoreConfig
 from control_plane.config import (
     DEFAULT_CONSOLE_URL,
     DEFAULT_DATABASE_URL,
@@ -18,9 +18,10 @@ from control_plane.config import (
 DATABASE_SECTION = f"control_plane:\n  database:\n    url: ${{env:DATABASE_URL:-{DEFAULT_DATABASE_URL}}}\n"
 
 
-def test_database_url_falls_back_without_a_config_file(tmp_path, monkeypatch):
+def test_database_url_rejects_a_missing_config_file(tmp_path, monkeypatch):
     monkeypatch.setenv("AIRMUX_CONFIG", str(tmp_path / "missing.yml"))
-    assert database_url() == "postgresql+asyncpg://airmux:airmux@127.0.0.1:5432/airmux"
+    with pytest.raises(FileNotFoundError):
+        database_url()
 
 
 def test_database_url_comes_from_the_environment(tmp_path, monkeypatch):
@@ -67,6 +68,8 @@ def test_the_shipped_config_loads_with_and_without_a_database_url(tmp_path, monk
     repo_config = Path(__file__).resolve().parents[4] / "airmux.yml"
     monkeypatch.chdir(tmp_path)
     (tmp_path / "airmux.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / ".airmux").mkdir()
+    (tmp_path / ".airmux" / "dataplane.key").write_text("sk-cp-one-shared-pool-secret-that-is-long-enough", encoding="utf-8")
     monkeypatch.delenv("AIRMUX_CONFIG", raising=False)
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
@@ -123,7 +126,7 @@ def test_container_config_uses_shared_credentials_and_separate_secret_storage(tm
 
     assert settings.database.url == "postgresql+asyncpg://someone:secret@db.internal:5432/app"
     assert settings.console_url == "https://console.example.com"
-    assert settings.secrets == FileStoreConfig(root=tmp_path / "secrets")
+    assert settings.secrets == FileStoreConfig(path=tmp_path / "secrets")
     assert settings.bootstrap == DataPlaneBootstrap(token=token)
 
 
@@ -164,9 +167,9 @@ def test_secret_store_paths_resolve_from_config_directory(tmp_path, monkeypatch,
     directory = tmp_path / "deployment"
     directory.mkdir()
     config_file = directory / "airmux.yml"
-    explicit_root = "" if root is None else f"    root: {root}\n"
-    config_file.write_text("control_plane:\n  secrets:\n    kind: file\n" + explicit_root)
+    explicit_path = "" if root is None else f"    path: {root}\n"
+    config_file.write_text("control_plane:\n  secrets:\n    kind: file\n" + explicit_path)
     monkeypatch.chdir(tmp_path)
     settings = load_settings(config_file)
     assert isinstance(settings.secrets, FileStoreConfig)
-    assert settings.secrets.root == directory / (root or ".airmux/secrets")
+    assert settings.secrets.path == directory / (root or ".airmux/secrets")

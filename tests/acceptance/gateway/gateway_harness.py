@@ -134,10 +134,10 @@ class Gateway:
                     "model_id": model,
                     "provider_id": name,
                     "upstream_model": f"upstream-{model}",
-                    "input_price_per_mtok": 2,
-                    "output_price_per_mtok": 5,
-                    "cache_read_price_per_mtok": 0.25,
-                    "cache_write_price_per_mtok": 2.5,
+                    "input_price_per_mtok": "2",
+                    "output_price_per_mtok": "5",
+                    "cache_read_price_per_mtok": "0.25",
+                    "cache_write_price_per_mtok": "2.5",
                     "context_window": 128000,
                     "max_output_tokens": 4096,
                     "input_modalities": ["text", "image", "pdf"],
@@ -247,7 +247,7 @@ class Gateway:
         assert len({event.event_id for event in events}) == count
         assert all(event.event_id.version == 7 and event.request_id.version == 7 for event in events)
         assert all(event.org_id == UUID(int=0) and event.workspace_id == UUID(int=0) for event in events)
-        assert all(event.cost_usd == pytest.approx(event.cost_input_usd + event.cost_output_usd, rel=1e-12, abs=1e-15) for event in events)
+        assert all(event.cost_usd == event.cost_input_usd + event.cost_output_usd for event in events)
         assert all(secret not in contents for secret in (UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY))
         return events
 

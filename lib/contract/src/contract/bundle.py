@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.money import UsdRate
 from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
 
@@ -49,10 +50,10 @@ class ModelEntry(BaseModel):
     model_id: str  # what the caller asks for
     provider_id: str
     upstream_model: str  # what the provider is sent
-    input_price_per_mtok: float  # USD per million input tokens
-    output_price_per_mtok: float  # USD per million output tokens
-    cache_read_price_per_mtok: float  # USD per million cache-read input tokens
-    cache_write_price_per_mtok: float  # USD per million cache-write input tokens
+    input_price_per_mtok: UsdRate  # USD per million input tokens
+    output_price_per_mtok: UsdRate  # USD per million output tokens
+    cache_read_price_per_mtok: UsdRate  # USD per million cache-read input tokens
+    cache_write_price_per_mtok: UsdRate  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
     input_modalities: list[Modality] = Field(min_length=1, max_length=len(MODALITIES))

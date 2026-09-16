@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from decimal import Decimal
 from gzip import compress
 from typing import TYPE_CHECKING, cast
 
 import yaml
 
+from airmux_runtime.taxonomy import dump_taxonomy
 from contract import MODALITIES, Modality
+from contract.money import parse_fixed_point
 from model_audit.cases import load_cases, load_features
 from model_audit.evidence import write_behavior
 from model_audit.surfaces import discover
@@ -37,6 +40,19 @@ HEADER = """\
 #
 # Behavioral fields merge provider catalog evidence with promoted direct API observations.
 """
+
+
+def _rate(value: object) -> Decimal:
+    if value is None:
+        return Decimal(0)
+    if isinstance(value, Decimal):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return Decimal(value)
+    if isinstance(value, str):
+        return parse_fixed_point(value)
+    message = "catalog pricing must use exact decimals"
+    raise TypeError(message)
 
 
 def _behaviors(root: Path) -> tuple[BehaviorRecord, ...]:
@@ -154,7 +170,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
         models_path = taxonomy / "models" / f"{provider_id}.json"
         if not models_path.exists():
             continue
-        for model in json.loads(models_path.read_text(encoding="utf-8")).get("models", []):
+        for model in json.loads(models_path.read_text(encoding="utf-8"), parse_float=Decimal).get("models", []):
             if not model.get("context_length"):
                 continue
             model_id = f"{provider_id}/{model['id']}"
@@ -175,10 +191,10 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                     "model_id": model_id,
                     "provider_id": provider_id,
                     "upstream_model": model.get("upstream_id") or model["id"],
-                    "input_price_per_mtok": float(price.get("input_per_mtok") or 0),
-                    "output_price_per_mtok": float(price.get("output_per_mtok") or 0),
-                    "cache_read_price_per_mtok": float(price.get("cached_input_per_mtok") or 0),
-                    "cache_write_price_per_mtok": float(price.get("cache_write_per_mtok") or 0),
+                    "input_price_per_mtok": _rate(price.get("input_per_mtok")),
+                    "output_price_per_mtok": _rate(price.get("output_per_mtok")),
+                    "cache_read_price_per_mtok": _rate(price.get("cached_input_per_mtok")),
+                    "cache_write_price_per_mtok": _rate(price.get("cache_write_per_mtok")),
                     "context_window": int(model["context_length"]),
                     "max_output_tokens": cast("int | None", model.get("max_output_tokens")),
                     "input_modalities": input_modalities,
@@ -196,7 +212,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
 
 
 def render(specification: dict[str, list[dict[str, object]]]) -> str:
-    return HEADER + yaml.safe_dump(specification, sort_keys=False, width=200, allow_unicode=True)
+    return HEADER + dump_taxonomy(specification)
 
 
 def write(root: Path, *, check: bool = False) -> tuple[int, int, bool]:

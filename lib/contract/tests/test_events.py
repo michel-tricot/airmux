@@ -25,7 +25,7 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "input_tokens": 1,
         "output_tokens": 1,
         "max_output_tokens": 128,
-        "cost_usd": 0,
+        "cost_usd": "0",
         "latency_ms": 1,
         "status": "ok",
         "stream": False,
@@ -52,3 +52,24 @@ def test_early_denial_rejects_provider_and_credential_data():
 def test_usage_events_accept_opaque_key_ids():
     event = USAGE_EVENT_ADAPTER.validate_python(usage_event())
     assert event.key_id == "external-key"
+
+
+def test_usage_event_cost_must_equal_its_exact_components() -> None:
+    with pytest.raises(ValidationError, match="cost_usd must equal"):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(cost_usd="0.3", cost_input_usd="0.1", cost_output_usd="0.200000000001"))
+
+
+def test_denied_usage_event_cost_must_be_zero() -> None:
+    with pytest.raises(ValidationError, match="denied events must have zero cost"):
+        USAGE_EVENT_ADAPTER.validate_python(
+            usage_event(
+                status="denied",
+                provider_id="",
+                credential_id=None,
+                credential_scope=None,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd="0.1",
+                cost_input_usd="0.1",
+            )
+        )

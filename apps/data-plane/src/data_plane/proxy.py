@@ -14,7 +14,7 @@ import httpx
 from pydantic import ValidationError
 from starlette.responses import Response, StreamingResponse
 
-from contract import SecretStoreUnavailableError
+from airmux_runtime.secrets import SecretStoreUnavailableError
 from data_plane.canonical import CanonicalAdjustment, CanonicalGatewayInfo, CanonicalRequest, CanonicalResponse, CanonicalUsage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, ModelEntry, Secret
+    from airmux_runtime.secrets import Secret
+    from contract import CredentialEntry, KeyEntry, ModelEntry
     from contract.policies import FallbackReason
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.credentials import CredentialResolver

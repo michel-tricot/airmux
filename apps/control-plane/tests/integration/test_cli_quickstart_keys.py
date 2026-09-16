@@ -13,8 +13,9 @@ import typer
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, setup_control_plane
 
+from airmux_runtime.secrets import EnvStoreConfig
 from cli.auth import seed_provider_credentials
-from contract import EnvStoreConfig, SecretPurpose, SecretRef
+from contract import SecretPurpose, SecretRef
 
 OPENAI_KEY = "sk-openai-from-the-operator-1111"
 

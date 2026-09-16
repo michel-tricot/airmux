@@ -313,7 +313,7 @@ with the required SQLite and atomic-rename semantics.
 a secret-store config, a discriminated event-outbox config, and the CLI-derived development flag.
 
 There is no global control-plane setting. Each component that uses the control plane owns a complete
-`ControlPlaneLink` containing its URL and token. The bundle poller and event exporter may use
+`ControlPlaneLink` containing its URL and management key. The bundle poller and event exporter may use
 different links; the data plane does not validate that they match.
 
 ### Remote mode
@@ -321,28 +321,24 @@ different links; the data plane does not validate that they match.
 The checked-in deployment uses a YAML anchor to avoid repeating a shared link:
 
 ```yaml
-vars:
-  cache_dir: .airmux
-
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:${var:cache_dir}/dataplane.key}
-    cache_dir: ${var:cache_dir}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
 
   events:
     kind: sqlite
     control_plane: *control_plane
-    cache_dir: ${var:cache_dir}
     flush_interval_s: 5
 ```
 
 The anchor is YAML reuse only. Both nested configs validate their own complete link, and no equality
-constraint is applied after parsing. The omitted secret-store setting defaults to environment
-variables.
+constraint is applied after parsing. The omitted bundle and event `cache_dir` fields both default to
+`.airmux` beside the configuration file, so the SQLite outbox writes `.airmux/events.db`. The omitted
+secret-store setting defaults to environment variables.
 
 The control-plane management key defines the bundle set. An instance-scoped key receives the latest
 bundle for every organization, while an organization-scoped key receives only that organization's
@@ -369,11 +365,10 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `AIRMUX_CONFIG`, defaulting to `airmux.yml`.
-Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
-`:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
-becomes null; required config fields then fail Pydantic validation instead of producing partial
-credentials.
+The command entry point selects an explicit configuration path and the shared loader reads its
+`data_plane` section. Environment and file references must occupy the whole scalar and may use `:-`
+defaults. Missing files, sections, and unresolved references fail startup. The loader does not
+discover `.env` files or mutate the process environment.
 
 `airmux gateway serve --dev` sets `AIRMUX_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.

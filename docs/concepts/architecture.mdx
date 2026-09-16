@@ -69,6 +69,21 @@ reconciliation, routing, streaming, and usage measurement.
 The request path reads immutable indexes built from its current in-memory bundle. It does not query the control-plane
 database. The sole cold-path exception is resolving the selected provider secret through the configured secret store.
 
+## Shared package boundaries
+
+`contract` is the pure interchange waist between the planes. It contains versioned bundle, event, policy, taxonomy,
+identifier, and secret-reference values with validation and serialization, but no configuration loading, filesystem
+access, network access, secret values, or adapters. Importing a wire type therefore cannot load process infrastructure
+or a database driver.
+
+`airmux_runtime` contains the process facilities with multiple consumers: deterministic YAML configuration loading,
+private file creation, secret interfaces, and secret adapters. It is not a general shared-code bucket and cannot contain
+plane-specific domain logic or import either plane.
+
+Postgres secret storage remains available for split deployments, but its driver is an optional
+`airmux-runtime[insecure-database]` dependency. Base runtime and standalone data-plane installations stay independent of
+database drivers. Selecting that adapter without the extra fails during startup, before traffic is accepted.
+
 ## Configuration bundles
 
 The control plane compiles one complete bundle per organization. A bundle contains active inference-key hashes,

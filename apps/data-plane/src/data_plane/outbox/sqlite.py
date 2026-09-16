@@ -116,7 +116,7 @@ class SqliteOutbox(EventOutbox):
             return 0
         response = await self._http_client.post(
             f"{self._config.control_plane.url}/api/v1/events",
-            headers={"authorization": f"Bearer {self._config.control_plane.token}"},
+            headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
             json=[event.model_dump(mode="json") for event in events],
         )
         response.raise_for_status()

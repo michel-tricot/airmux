@@ -7,4 +7,4 @@ class ControlPlaneLink(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     url: str = Field(min_length=1)
-    token: str = Field(min_length=1)
+    management_key: str = Field(min_length=1)

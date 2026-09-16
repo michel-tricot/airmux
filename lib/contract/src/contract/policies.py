@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from contract.events import CredentialScope
+from contract.money import UsdRate
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
@@ -97,8 +97,8 @@ class StrictParameters(_PolicyModel):
 
 class PriceLimit(_PolicyModel):
     kind: Literal["price_limit"]
-    max_input_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
-    max_output_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
+    max_input_price_per_mtok: UsdRate
+    max_output_price_per_mtok: UsdRate
 
 
 class RequestLimits(_PolicyModel):

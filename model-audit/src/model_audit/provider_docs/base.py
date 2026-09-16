@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import html
-import math
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import cast
 
 import httpx
@@ -40,11 +40,11 @@ def token_count(value: str | None) -> int | None:
     return int(float(match.group(1).replace(",", "")) * scale)
 
 
-def documented_price(value: str) -> float | None:
+def documented_price(value: str) -> Decimal | None:
     if value.lower() == "free":
-        return 0.0
+        return Decimal(0)
     match = re.fullmatch(r"\\?\$([\d.]+)", value)
-    return float(match.group(1)) if match is not None else None
+    return Decimal(match.group(1)) if match is not None else None
 
 
 def documented_flag(value: str) -> bool | None:
@@ -55,9 +55,9 @@ def html_cells(fragment: str) -> list[str]:
     return [html.unescape(re.sub(r"<[^>]+>", "", value)).strip() for value in re.findall(r"<td[^>]*>(.*?)</td>", fragment, flags=re.DOTALL)]
 
 
-def markdown_price(markdown: str, label: str) -> float | None:
+def markdown_price(markdown: str, label: str) -> Decimal | None:
     match = re.search(rf"\|\s*(?:\[)?{re.escape(label)}(?:\]\([^)]+\))?\s*\|\s*\\?\$([\d.]+)", markdown, flags=re.IGNORECASE)
-    return float(match.group(1)) if match is not None else None
+    return Decimal(match.group(1)) if match is not None else None
 
 
 def markdown_modalities(markdown: str, label: str) -> list[str] | None:
@@ -66,13 +66,6 @@ def markdown_modalities(markdown: str, label: str) -> list[str] | None:
 
 
 def _same_documented_value(current: object, documented: object) -> bool:
-    if (
-        isinstance(current, (int, float))
-        and not isinstance(current, bool)
-        and isinstance(documented, (int, float))
-        and not isinstance(documented, bool)
-    ):
-        return math.isclose(float(current), float(documented), rel_tol=0, abs_tol=1e-9)
     return current == documented
 
 
