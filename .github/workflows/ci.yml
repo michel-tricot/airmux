@@ -136,7 +136,7 @@ jobs:
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/performance-base-bin
         run: |
           ./scripts/build-python-distribution.sh "$RUNNER_TEMP/performance-base-dist"
-          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-base-dist/*.whl
+          uv tool install --python 3.13 "$RUNNER_TEMP"/performance-base-dist/airmux-*.whl
       - name: Build and install candidate gateway
         working-directory: performance-candidate
         env:
@@ -149,7 +149,7 @@ jobs:
         working-directory: performance-candidate
         run: |
           uv run python tests/acceptance/gateway/performance.py \
-            --base-bin "$RUNNER_TEMP/performance-base-bin/"* \
+            --base-bin "$RUNNER_TEMP/performance-base-bin/airmux" \
             --candidate-bin "$RUNNER_TEMP/performance-candidate-bin/airmux" \
             --base-revision "$(git -C ../performance-base rev-parse HEAD)" \
             --candidate-revision "$CANDIDATE_REVISION" \
