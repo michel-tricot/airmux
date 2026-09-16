@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '23 7 * * *'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA from main to build and validate as an installed distribution
+        type: string
+        required: true
   workflow_call:
     inputs:
       ref:
@@ -23,8 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          fetch-depth: 0
           persist-credentials: false
           ref: ${{ inputs.ref || github.sha }}
+      - name: Verify immutable source
+        env:
+          CANDIDATE_SHA: ${{ inputs.ref || github.sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          git merge-base --is-ancestor HEAD origin/main
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
           enable-cache: false
