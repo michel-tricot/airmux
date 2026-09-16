@@ -228,10 +228,13 @@ gh workflow run publish.yml --ref main -f tag=v0.1.1 -f sha="$(git rev-parse 'v0
 ```
 
 The tag must resolve to that exact SHA, the commit must belong to `main`, and the tag version must match the public
-distribution version. The workflow builds one candidate wheel and source distribution, rebuilds the wheel from
+distribution version. The workflow also requires the latest successful main-push runs of `ci.yml`,
+`docker-deployments.yml`, and `dependency-security.yml` for exactly that commit. Missing, pending, failed, cancelled,
+or untrusted runs block publication. The workflow builds one candidate wheel and source distribution, rebuilds the wheel from
 the source distribution, and verifies the rebuilt installation and gateway. A required live-provider job installs
 the original candidate wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies,
 fallback, and metering. Both gates must pass before any upload or GitHub release announcement.
+The build, provider tests, publication, and PyPI verification share the validated SHA and immutable artifact ID.
 
 The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
 `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `release`; missing credentials fail the gate.
@@ -242,6 +245,16 @@ If `airmux` does not exist on PyPI yet, configure a pending publisher with proje
 [PyPI first-upload guide](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
 Verify the project name and all four publisher fields before dispatching a candidate; no stored PyPI token is used.
 A successful first upload proves that the renamed workflow can obtain the publishing identity.
+
+The [release-policy payloads](https://github.com/michel-tricot/airmux/tree/main/.github/release-policy) record the
+GitHub settings. `Release Tag Creation` restricts `v*` tag creation to repository administrators; the sole administrator
+and intended release actor is `michel-tricot`. `Immutable Release Tags` prohibits updates and deletion without any
+bypass, including for the release actor. These are separate rulesets so creation permission cannot permit replacement.
+Adding an administrator grants release-tag creation permission and requires an explicit policy review.
+The `release` environment allows only `v*` tags and `main`, with administrator bypass disabled. Main remains an
+approved source for scheduled and manually dispatched provider checks, which have read-only repository permissions.
+There are no required reviewers while the owner is the only administrator, so scheduled checks need no approval.
+Arbitrary branches and non-release tags cannot access these environment credentials.
 
 After upload, the workflow downloads both artifacts for the exact version from PyPI, compares the registry digests
 and downloaded bytes against the tested candidate, and installs the downloaded wheel into a fresh tool environment

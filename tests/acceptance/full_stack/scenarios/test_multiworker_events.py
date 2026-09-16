@@ -23,6 +23,7 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
 
     def requests(client_id: int) -> None:
         with httpx.Client(base_url=stack.dp_url, headers={"Authorization": f"Bearer {stack.caller_api_key}"}, timeout=30) as client:
+            assert _poll(lambda: client.get("/readyz").status_code == 200, 60), "selected data plane worker never served a bundle"
             for request_id in range(PER_CLIENT):
                 response = client.post(
                     "/inf/v1/chat/completions",

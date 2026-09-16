@@ -60,6 +60,7 @@ def test_workflow_security_boundaries(path):
     for name, job in workflow["jobs"].items():
         permissions = job.get("permissions", workflow["permissions"])
         expected_permissions = {
+            "build": {"contents": "read", "actions": "read"},
             "publish": {"contents": "read", "id-token": "write"},
             "announce": {"contents": "write"},
         }.get(name, {"contents": "read"})
