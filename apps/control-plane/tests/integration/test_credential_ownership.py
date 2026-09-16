@@ -133,9 +133,9 @@ def test_workspace_membership_removal_revokes_only_owned_credentials_in_that_wor
         owner_second_key = _create_key(client, second_path, owner_second, owner_id, "owner-second")
         other_first_key = _create_key(client, first_path, other_first, other_id, "other-first")
         owner_first_session = client.put(f"/api/v1/organizations/{org_id}/workspaces/{first}/playground-session", headers=owner_first).json()["data"]
-        owner_second_session = client.put(
-            f"/api/v1/organizations/{org_id}/workspaces/{second}/playground-session", headers=owner_second
-        ).json()["data"]
+        owner_second_session = client.put(f"/api/v1/organizations/{org_id}/workspaces/{second}/playground-session", headers=owner_second).json()[
+            "data"
+        ]
         other_first_session = client.put(f"/api/v1/organizations/{org_id}/workspaces/{first}/playground-session", headers=other_first).json()["data"]
 
         removed = client.delete(
