@@ -213,6 +213,31 @@ export interface Catalog {
   credentials?: CredentialEntry[];
 }
 
+export const WorkspaceTargetValue = {
+  kind: 'workspace',
+} as const;
+export type WorkspaceTarget = typeof WorkspaceTargetValue;
+
+export interface SelectedUsers {
+  kind: 'selected_users';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  user_ids: string[];
+}
+
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
 export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
 
 
@@ -321,50 +346,14 @@ export interface RuleDefinitionOutput {
   action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback;
 }
 
-export interface RuleEntry {
-  id: string;
-  workspace_id: string;
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  name: string;
-  definition: RuleDefinitionOutput;
-}
-
-export const WorkspaceTargetValue = {
-  kind: 'workspace',
-} as const;
-export type WorkspaceTarget = typeof WorkspaceTargetValue;
-
-export interface SelectedUsers {
-  kind: 'selected_users';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     */
-  user_ids: string[];
-}
-
-export interface SelectedKeys {
-  kind: 'selected_keys';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  key_ids: string[];
-}
-
-export interface PolicyDefinition {
+export interface PolicyDefinitionOutput {
   target: WorkspaceTarget | SelectedUsers | SelectedKeys;
   /**
-     * Unordered reusable rule references; a policy may contain at most one fallback rule
+     * Unordered inline rule definitions; a policy may contain at most one fallback rule
      * @minItems 1
      * @maxItems 100
      */
-  rule_ids: string[];
+  rules: RuleDefinitionOutput[];
 }
 
 export interface PolicyEntry {
@@ -380,7 +369,7 @@ export interface PolicyEntry {
      * @maximum 10000
      */
   priority: number;
-  definition: PolicyDefinition;
+  definition: PolicyDefinitionOutput;
 }
 
 /**
@@ -393,7 +382,6 @@ export interface BundleV1 {
   issued_at: string;
   keys: KeyEntry[];
   catalog: Catalog;
-  rules: RuleEntry[];
   policies: PolicyEntry[];
 }
 
@@ -1236,6 +1224,49 @@ export interface PlaygroundSessionReadyOut {
   status: 'ready';
 }
 
+export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
+
+
+export const RequestMatchInputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatchInput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models?: string[];
+  stream?: boolean | null;
+  /** @maxItems 3 */
+  capabilities?: RequestMatchInputCapabilitiesItem[];
+}
+
+export interface PriceLimitInput {
+  kind: 'price_limit';
+  max_input_price_per_mtok: number | string;
+  max_output_price_per_mtok: number | string;
+}
+
+export interface RuleDefinitionInput {
+  match: AllRequests | RequestMatchInput;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback;
+}
+
+export interface PolicyDefinitionInput {
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
+  /**
+     * Unordered inline rule definitions; a policy may contain at most one fallback rule
+     * @minItems 1
+     * @maxItems 100
+     */
+  rules: RuleDefinitionInput[];
+}
+
 export interface PolicyCreate {
   /**
      * Display name for the workspace policy
@@ -1251,8 +1282,8 @@ export interface PolicyCreate {
      * @maximum 10000
      */
   priority?: number;
-  /** Workspace, user, or inference key target and reusable rules */
-  definition: PolicyDefinition;
+  /** Workspace, user, or inference key target and inline rules */
+  definition: PolicyDefinitionInput;
 }
 
 export interface PolicyOrder {
@@ -1267,7 +1298,7 @@ export interface PolicyOut {
   name: string;
   enabled: boolean;
   priority: number;
-  definition: PolicyDefinition;
+  definition: PolicyDefinitionOutput;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -1280,14 +1311,8 @@ export interface PolicyUpdate {
   enabled?: boolean | null;
   /** Replacement priority, with lower numbers first; omit to leave unchanged */
   priority?: number | null;
-  /** Replace the complete target and reusable rules; omit to leave unchanged */
-  definition?: PolicyDefinition | null;
-}
-
-export interface PriceLimitInput {
-  kind: 'price_limit';
-  max_input_price_per_mtok: number | string;
-  max_output_price_per_mtok: number | string;
+  /** Replace the complete target and inline rules; omit to leave unchanged */
+  definition?: PolicyDefinitionInput | null;
 }
 
 /**
@@ -1437,28 +1462,6 @@ export interface ProviderOut {
   deleted_at: string | null;
 }
 
-export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
-
-
-export const RequestMatchInputCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
-
-export interface RequestMatchInput {
-  kind: 'request';
-  /**
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  models?: string[];
-  stream?: boolean | null;
-  /** @maxItems 3 */
-  capabilities?: RequestMatchInputCapabilitiesItem[];
-}
-
 /**
  * How the routed request ended
  */
@@ -1572,40 +1575,6 @@ export interface RoutedUsageEventV1 {
   credential_id: string;
   /** Scope of the provider credential used for the request */
   credential_scope: RoutedUsageEventV1CredentialScope;
-}
-
-export interface RuleDefinitionInput {
-  match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitInput | RequestLimits | CredentialAccess | Fallback;
-}
-
-export interface RuleCreate {
-  /**
-     * Display name for the reusable workspace rule
-     * @minLength 1
-     * @maxLength 200
-     */
-  name: string;
-  /** Request match and action shared by every policy that references this rule */
-  definition: RuleDefinitionInput;
-}
-
-export interface RuleOut {
-  id: string;
-  org_id: string;
-  workspace_id: string;
-  name: string;
-  definition: RuleDefinitionOutput;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface RuleUpdate {
-  /** Replacement display name; omit to leave unchanged */
-  name?: string | null;
-  /** Replacement request match and action; omit to leave unchanged */
-  definition?: RuleDefinitionInput | null;
 }
 
 export interface ServiceAccountIn {

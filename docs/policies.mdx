@@ -7,16 +7,16 @@ Workspace policies control which inference requests airmux accepts, which routes
 
 ## Policy model
 
-A **rule** owns one request match and one action. A **policy** applies to its workspace, selected users, or selected inference keys and
-references one or more reusable rules.
+A **rule definition** is an inline value containing one request match and one action. A **policy** applies one to 100 rule definitions to
+its workspace, selected users, or selected inference keys.
 
 - Every matching restriction must pass
 - Rules within one policy are unordered
 - All matching policies compose
 - Lower policy priority numbers are evaluated first
 - The first matching fallback policy supplies the fallback plan
-- Editing a shared rule updates every policy that references it
-- A referenced rule cannot be deleted
+- Exact duplicate rule definitions are invalid
+- Editing one policy cannot change another policy
 
 Changes take effect after a gateway adopts the workspace's newly published bundle. Saving a policy and observing it at
 every gateway are not one synchronous operation.
@@ -205,23 +205,7 @@ authentication failure may try another credential in the same selected scope.
 
 ## Complete API shapes
 
-Create the reusable rule first at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules`:
-
-```json
-{
-  "name": "Approved production pricing",
-  "definition": {
-    "match": {"kind": "all_requests"},
-    "action": {
-      "kind": "price_limit",
-      "max_input_price_per_mtok": "2.50",
-      "max_output_price_per_mtok": "10.00"
-    }
-  }
-}
-```
-
-Then attach the returned rule ID at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`:
+Create one self-contained resource at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`:
 
 ```json
 {
@@ -230,7 +214,16 @@ Then attach the returned rule ID at `/api/v1/organizations/{org_id}/workspaces/{
   "priority": 20,
   "definition": {
     "target": {"kind": "workspace"},
-    "rule_ids": ["00000000-0000-0000-0000-000000000001"]
+    "rules": [
+      {
+        "match": {"kind": "all_requests"},
+        "action": {
+          "kind": "price_limit",
+          "max_input_price_per_mtok": "2.50",
+          "max_output_price_per_mtok": "10.00"
+        }
+      }
+    ]
   }
 }
 ```

@@ -6,6 +6,11 @@ from pydantic import ValidationError
 from contract import uuid7
 from contract.policies import PolicyDefinition, RequestMatch, RuleDefinition
 
+RULE = {
+    "match": {"kind": "all_requests"},
+    "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
+}
+
 
 @pytest.mark.parametrize(
     "match",
@@ -61,7 +66,7 @@ def test_selected_keys_requires_nonempty_unique_identifiers():
             PolicyDefinition.model_validate(
                 {
                     "target": {"kind": "selected_keys", "key_ids": ids},
-                    "rule_ids": [uuid7()],
+                    "rules": [RULE],
                 }
             )
 
@@ -83,7 +88,9 @@ def test_new_policy_actions_have_strict_valid_contracts(action):
 
 def test_policy_requires_rules_and_rejects_the_legacy_single_action_shape():
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": []})
+        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": []})
+    with pytest.raises(ValidationError):
+        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": ["00000000-0000-0000-0000-000000000000"]})
     with pytest.raises(ValidationError):
         PolicyDefinition.model_validate(
             {
@@ -97,15 +104,15 @@ def test_policy_requires_rules_and_rejects_the_legacy_single_action_shape():
 @pytest.mark.parametrize("user_ids", [[], ["invalid"], [str(uuid7())] * 2, [str(uuid7()) for _ in range(1001)]])
 def test_selected_users_reject_invalid_selections(user_ids):
     with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": user_ids}, "rule_ids": [uuid7()]})
+        PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": user_ids}, "rules": [RULE]})
 
 
 def test_workspace_and_selected_user_targets_are_strict():
     user_id = uuid7()
-    definition = PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": [user_id]}, "rule_ids": [uuid7()]})
+    definition = PolicyDefinition.model_validate({"target": {"kind": "selected_users", "user_ids": [user_id]}, "rules": [RULE]})
     assert definition.target.kind == "selected_users"
     assert definition.model_dump(mode="json")["target"] == {"kind": "selected_users", "user_ids": [str(user_id)]}
-    assert PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": [uuid7()]}).target.kind == "workspace"
+    assert PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": [RULE]}).target.kind == "workspace"
     for target in ({"kind": "all_keys"}, {"kind": "workspace", "workspace_id": user_id}):
         with pytest.raises(ValidationError):
-            PolicyDefinition.model_validate({"target": target, "rule_ids": [uuid7()]})
+            PolicyDefinition.model_validate({"target": target, "rules": [RULE]})

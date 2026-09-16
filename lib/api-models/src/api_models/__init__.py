@@ -1767,7 +1767,7 @@ class WorkspaceTarget(BaseModel):
     kind: Annotated[Literal["workspace"], Field(title="Kind")]
 
 
-class Name5(RootModel[str]):
+class Name4(RootModel[str]):
     root: Annotated[
         str,
         Field(
@@ -1783,7 +1783,7 @@ class WorkspaceUpdate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    name: Annotated[Name5 | None, Field(description="Replacement workspace name", title="Name")] = None
+    name: Annotated[Name4 | None, Field(description="Replacement workspace name", title="Name")] = None
 
 
 class BundleManifest(BaseModel):
@@ -2038,80 +2038,6 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
-class PolicyDefinition(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    target: Annotated[
-        WorkspaceTarget | SelectedUsers | SelectedKeys,
-        Field(discriminator="kind", title="Target"),
-    ]
-    rule_ids: Annotated[
-        list[UUID],
-        Field(
-            description="Unordered reusable rule references; a policy may contain at most one fallback rule",
-            max_length=100,
-            min_length=1,
-            title="Rule Ids",
-        ),
-    ]
-
-
-class PolicyEntry(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    id: Annotated[UUID, Field(title="Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
-    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
-    definition: PolicyDefinition
-
-
-class PolicyOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(title="Name")]
-    enabled: Annotated[bool, Field(title="Enabled")]
-    priority: Annotated[int, Field(title="Priority")]
-    definition: PolicyDefinition
-    created_at: Annotated[AwareDatetime, Field(title="Created At")]
-    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-
-
-class PolicyUpdate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    name: Annotated[
-        Name3 | None,
-        Field(
-            description="Replacement display name; omit to leave unchanged",
-            title="Name",
-        ),
-    ] = None
-    enabled: Annotated[
-        bool | None,
-        Field(
-            description="Enable or disable this policy; omit to leave unchanged",
-            title="Enabled",
-        ),
-    ] = None
-    priority: Annotated[
-        Priority | None,
-        Field(
-            description="Replacement priority, with lower numbers first; omit to leave unchanged",
-            title="Priority",
-        ),
-    ] = None
-    definition: Annotated[
-        PolicyDefinition | None,
-        Field(description="Replace the complete target and reusable rules; omit to leave unchanged"),
-    ] = None
-
-
 class RuleDefinitionInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2132,44 +2058,6 @@ class RuleDefinitionOutput(BaseModel):
         AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimitOutput | RequestLimits | CredentialAccess | Fallback,
         Field(discriminator="kind", title="Action"),
     ]
-
-
-class RuleEntry(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    id: Annotated[UUID, Field(title="Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
-    definition: RuleDefinitionOutput
-
-
-class RuleOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    name: Annotated[str, Field(title="Name")]
-    definition: RuleDefinitionOutput
-    created_at: Annotated[AwareDatetime, Field(title="Created At")]
-    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-
-
-class RuleUpdate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    name: Annotated[
-        Name3 | None,
-        Field(
-            description="Replacement display name; omit to leave unchanged",
-            title="Name",
-        ),
-    ] = None
-    definition: Annotated[
-        RuleDefinitionInput | None,
-        Field(description="Replacement request match and action; omit to leave unchanged"),
-    ] = None
 
 
 class Scope(BaseModel):
@@ -2225,14 +2113,6 @@ class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
 
 
-class EnvelopePolicyOut(BaseModel):
-    data: PolicyOut
-
-
-class EnvelopeRuleOut(BaseModel):
-    data: RuleOut
-
-
 class EnvelopeTaxonomyApplyOut(BaseModel):
     data: TaxonomyApplyOut
 
@@ -2243,14 +2123,6 @@ class EnvelopeWorkspaceMembershipOut(BaseModel):
 
 class EnvelopeListOrgMemberOut(BaseModel):
     data: Annotated[list[OrgMemberOut], Field(title="Data")]
-
-
-class EnvelopeListPolicyOut(BaseModel):
-    data: Annotated[list[PolicyOut], Field(title="Data")]
-
-
-class EnvelopeListRuleOut(BaseModel):
-    data: Annotated[list[RuleOut], Field(title="Data")]
 
 
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
@@ -2300,6 +2172,141 @@ class OrgServiceAccountCreatedOut(BaseModel):
     management_key: ManagementKeyCreatedOut
 
 
+class PolicyDefinitionInput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[
+        WorkspaceTarget | SelectedUsers | SelectedKeys,
+        Field(discriminator="kind", title="Target"),
+    ]
+    rules: Annotated[
+        list[RuleDefinitionInput],
+        Field(
+            description="Unordered inline rule definitions; a policy may contain at most one fallback rule",
+            max_length=100,
+            min_length=1,
+            title="Rules",
+        ),
+    ]
+
+
+class PolicyDefinitionOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    target: Annotated[
+        WorkspaceTarget | SelectedUsers | SelectedKeys,
+        Field(discriminator="kind", title="Target"),
+    ]
+    rules: Annotated[
+        list[RuleDefinitionOutput],
+        Field(
+            description="Unordered inline rule definitions; a policy may contain at most one fallback rule",
+            max_length=100,
+            min_length=1,
+            title="Rules",
+        ),
+    ]
+
+
+class PolicyEntry(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[UUID, Field(title="Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
+    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
+    definition: PolicyDefinitionOutput
+
+
+class PolicyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    name: Annotated[str, Field(title="Name")]
+    enabled: Annotated[bool, Field(title="Enabled")]
+    priority: Annotated[int, Field(title="Priority")]
+    definition: PolicyDefinitionOutput
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class PolicyUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        Name3 | None,
+        Field(
+            description="Replacement display name; omit to leave unchanged",
+            title="Name",
+        ),
+    ] = None
+    enabled: Annotated[
+        bool | None,
+        Field(
+            description="Enable or disable this policy; omit to leave unchanged",
+            title="Enabled",
+        ),
+    ] = None
+    priority: Annotated[
+        Priority | None,
+        Field(
+            description="Replacement priority, with lower numbers first; omit to leave unchanged",
+            title="Priority",
+        ),
+    ] = None
+    definition: Annotated[
+        PolicyDefinitionInput | None,
+        Field(description="Replace the complete target and inline rules; omit to leave unchanged"),
+    ] = None
+
+
+class BundleV1(BaseModel):
+    """
+    A complete, versioned policy snapshot for one organization's model traffic.
+    """
+
+    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+    keys: Annotated[list[KeyEntry], Field(title="Keys")]
+    catalog: Catalog
+    policies: Annotated[list[PolicyEntry], Field(title="Policies")]
+
+
+class EnvelopeBundleV1(BaseModel):
+    data: BundleV1
+
+
+class EnvelopeManagementKeyCreatedOut(BaseModel):
+    data: ManagementKeyCreatedOut
+
+
+class EnvelopeManagementKeyOut(BaseModel):
+    data: ManagementKeyOut
+
+
+class EnvelopeOrgServiceAccountCreatedOut(BaseModel):
+    data: OrgServiceAccountCreatedOut
+
+
+class EnvelopePolicyOut(BaseModel):
+    data: PolicyOut
+
+
+class EnvelopeListManagementKeyOut(BaseModel):
+    data: Annotated[list[ManagementKeyOut], Field(title="Data")]
+
+
+class EnvelopeListPolicyOut(BaseModel):
+    data: Annotated[list[PolicyOut], Field(title="Data")]
+
+
 class PolicyCreate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2330,60 +2337,6 @@ class PolicyCreate(BaseModel):
         ),
     ] = 100
     definition: Annotated[
-        PolicyDefinition,
-        Field(description="Workspace, user, or inference key target and reusable rules"),
+        PolicyDefinitionInput,
+        Field(description="Workspace, user, or inference key target and inline rules"),
     ]
-
-
-class RuleCreate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    name: Annotated[
-        str,
-        Field(
-            description="Display name for the reusable workspace rule",
-            max_length=200,
-            min_length=1,
-            title="Name",
-        ),
-    ]
-    definition: Annotated[
-        RuleDefinitionInput,
-        Field(description="Request match and action shared by every policy that references this rule"),
-    ]
-
-
-class BundleV1(BaseModel):
-    """
-    A complete, versioned policy snapshot for one organization's model traffic.
-    """
-
-    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
-    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-    keys: Annotated[list[KeyEntry], Field(title="Keys")]
-    catalog: Catalog
-    rules: Annotated[list[RuleEntry], Field(title="Rules")]
-    policies: Annotated[list[PolicyEntry], Field(title="Policies")]
-
-
-class EnvelopeBundleV1(BaseModel):
-    data: BundleV1
-
-
-class EnvelopeManagementKeyCreatedOut(BaseModel):
-    data: ManagementKeyCreatedOut
-
-
-class EnvelopeManagementKeyOut(BaseModel):
-    data: ManagementKeyOut
-
-
-class EnvelopeOrgServiceAccountCreatedOut(BaseModel):
-    data: OrgServiceAccountCreatedOut
-
-
-class EnvelopeListManagementKeyOut(BaseModel):
-    data: Annotated[list[ManagementKeyOut], Field(title="Data")]

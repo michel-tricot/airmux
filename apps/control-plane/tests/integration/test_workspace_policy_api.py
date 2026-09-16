@@ -13,15 +13,8 @@ RULE_DEFINITIONS = (
 )
 
 
-def create_rules(client, base, headers):
-    return [
-        client.post(f"{base}/rules", headers=headers, json={"name": f"Rule {index}", "definition": definition}).json()["data"]
-        for index, definition in enumerate(RULE_DEFINITIONS, start=1)
-    ]
-
-
-def policy_definition(rules, target=None):
-    return {"target": target or {"kind": "workspace"}, "rule_ids": [rule["id"] for rule in rules]}
+def policy_definition(rules=RULE_DEFINITIONS, target=None):
+    return {"target": target or {"kind": "workspace"}, "rules": list(rules)}
 
 
 def test_workspace_policy_crud_validation_and_isolation(tmp_path):
@@ -33,18 +26,17 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         sibling = make_workspace(client, headers, "staging")
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
-        rules = create_rules(client, base, headers)
         body = {
             "name": "Team credentials only",
             "enabled": True,
             "priority": 100,
-            "definition": policy_definition(rules),
+            "definition": policy_definition(),
         }
         created = client.post(path, headers=headers, json=body)
         assert created.status_code == 200, created.text
         policy = created.json()["data"]
         assert policy["workspace_id"] == str(workspace)
-        assert policy["definition"]["rule_ids"] == [rule["id"] for rule in rules]
+        assert policy["definition"]["rules"] == list(RULE_DEFINITIONS)
         assert [item["id"] for item in client.get(path, headers=headers).json()["data"]] == [policy["id"]]
         sibling_path = f"/api/v1/organizations/{org}/workspaces/{sibling}/policies/{policy['id']}"
         assert client.patch(sibling_path, headers=headers, json={"enabled": False}).status_code == 404
@@ -52,7 +44,7 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
             **body,
             "definition": {
                 **body["definition"],
-                "rule_ids": [],
+                "rules": [],
             },
         }
         assert client.post(path, headers=headers, json=invalid).status_code == 422
@@ -70,7 +62,6 @@ def test_workspace_policy_permissions(tmp_path, role):
         headers = cp.headers(org)
         workspace = make_workspace(client, headers, "production")
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
-        rules = create_rules(client, base, headers)
         member = client.post("/api/v1/auth/signup", json={"email": "member@example.com", "name": "Member", "password": "hunter2-hunter2"}).json()[
             "data"
         ]
@@ -82,7 +73,7 @@ def test_workspace_policy_permissions(tmp_path, role):
             == 200
         )
         path = f"{base}/policies"
-        definition = policy_definition(rules)
+        definition = policy_definition()
         created = client.post(path, headers=headers, json={"name": "Team credentials", "definition": definition}).json()["data"]
         session_headers = {"X-Requested-With": "fetch"}
         assert client.get(path, headers=session_headers).status_code == 200
@@ -102,7 +93,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         workspace = make_workspace(client, headers, "production")
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
-        definition = policy_definition(create_rules(client, base, headers))
+        definition = policy_definition()
         policies = [
             client.post(path, headers=headers, json={"name": name, "priority": priority, "definition": definition}).json()["data"]
             for name, priority in (("First", 10), ("Second", 20), ("Third", 30))
@@ -139,12 +130,8 @@ def test_policy_rejects_multiple_fallback_rules(tmp_path):
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         action = {"kind": "fallback", "models": [MODEL["model_id"]], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}
         fallback_rules = [
-            client.post(
-                f"{base}/rules",
-                headers=headers,
-                json={"name": f"Fallback {index}", "definition": {"match": {"kind": "all_requests"}, "action": action}},
-            ).json()["data"]
-            for index in range(2)
+            {"match": {"kind": "all_requests"}, "action": action},
+            {"match": {"kind": "request", "models": [MODEL["model_id"]]}, "action": action},
         ]
         definition = policy_definition(fallback_rules)
 
@@ -154,24 +141,9 @@ def test_policy_rejects_multiple_fallback_rules(tmp_path):
         ]
         assert client.patch(f"{base}/policies/{policy['id']}", headers=headers, json={"definition": definition}).status_code == 422
 
-        restriction = client.post(
-            f"{base}/rules",
-            headers=headers,
-            json={
-                "name": "Restriction",
-                "definition": {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1000}},
-            },
-        ).json()["data"]
+        restriction = {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1000}}
         valid_definition = policy_definition([fallback_rules[0], restriction])
         assert client.patch(f"{base}/policies/{policy['id']}", headers=headers, json={"definition": valid_definition}).status_code == 200
-        assert (
-            client.patch(
-                f"{base}/rules/{restriction['id']}",
-                headers=headers,
-                json={"definition": {"match": {"kind": "all_requests"}, "action": action}},
-            ).status_code
-            == 422
-        )
 
 
 def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_writes(tmp_path):
@@ -186,11 +158,11 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         ]
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
-        rules = create_rules(client, base, headers)
-        definition = policy_definition(rules)
+        definition = policy_definition()
         definitions = [
             {**definition, "target": {"kind": "selected_keys", "key_ids": [caller["id"]]}},
-            {**definition, "rule_ids": [str(workspace)]},
+            policy_definition([{"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}}]),
+            policy_definition([{"match": {"kind": "all_requests"}, "action": {"kind": "providers", "names": ["unknown"]}}]),
         ]
         for definition in definitions:
             response = client.post(path, headers=headers, json={"name": "Invalid", "definition": definition})
@@ -213,8 +185,7 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
             "data"
         ]
         user_id = member["user_id"]
-        rules = create_rules(client, base, headers)
-        body = {"name": "User restrictions", "definition": policy_definition(rules, {"kind": "selected_users", "user_ids": [user_id]})}
+        body = {"name": "User restrictions", "definition": policy_definition(target={"kind": "selected_users", "user_ids": [user_id]})}
         assert client.post(f"{base}/policies", headers=headers, json=body).status_code == 422
         assert client.put(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers, json={"role": "member"}).status_code == 200
         assert client.post(f"{base}/policies", headers=headers, json=body).status_code == 422
@@ -225,12 +196,11 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
         candidates = client.get(f"{base}/policy-users", headers=headers).json()["data"]
         assert user_id in {user["user_id"] for user in candidates}
         sibling_base = f"/api/v1/organizations/{org}/workspaces/{sibling}"
-        sibling_rules = create_rules(client, sibling_base, headers)
         assert (
             client.post(
                 f"{sibling_base}/policies",
                 headers=headers,
-                json={**body, "definition": policy_definition(sibling_rules, body["definition"]["target"])},
+                json={**body, "definition": policy_definition(target=body["definition"]["target"])},
             ).status_code
             == 422
         )
@@ -269,10 +239,9 @@ def test_policy_user_picker_includes_service_accounts_and_org_administrators(tmp
         assert client.put(f"/api/v1/organizations/{org}/users/{service['id']}", headers=headers, json={"role": "admin"}).status_code == 200
         candidates = client.get(f"{base}/policy-users", headers=headers).json()["data"]
         assert any(user["user_id"] == service["id"] and user["service_account"] for user in candidates)
-        rules = create_rules(client, base, headers)
         response = client.post(
             f"{base}/policies",
             headers=headers,
-            json={"name": "CI restrictions", "definition": policy_definition(rules, {"kind": "selected_users", "user_ids": [service["id"]]})},
+            json={"name": "CI restrictions", "definition": policy_definition(target={"kind": "selected_users", "user_ids": [service["id"]]})},
         )
         assert response.status_code == 200, response.text

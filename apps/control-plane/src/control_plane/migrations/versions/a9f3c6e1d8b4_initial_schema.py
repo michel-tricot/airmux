@@ -55,7 +55,6 @@ TOMBSTONED = (
     "org_membership",
     "playground_session",
     "policy",
-    "rule",
     "provider",
     "provider_credential",
     "user",
@@ -72,7 +71,6 @@ AUDITED = (
     ("org_membership", ("user_id", "org_id")),
     ("playground_session", ("id",)),
     ("policy", ("id",)),
-    ("rule", ("id",)),
     ("provider", ("id",)),
     ("provider_credential", ("id",)),
     ("user", ("id",)),
@@ -532,21 +530,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("address"),
     )
     op.create_table(
-        "rule",
-        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
-        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("org_id", sa.Uuid(), nullable=False),
-        sa.Column("workspace_id", sa.Uuid(), nullable=False),
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=200), nullable=False),
-        sa.Column("definition", sa.JSON(), nullable=False),
-        sa.ForeignKeyConstraint(["org_id"], ["org.id"]),
-        sa.ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("workspace_id", "name", name="rule_workspace_id_name_key"),
-    )
-    op.create_table(
         "policy",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -598,7 +581,6 @@ def downgrade() -> None:
     op.drop_index("policy_active_workspace_id_idx", table_name="policy")
     op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
     op.drop_table("policy")
-    op.drop_table("rule")
     op.drop_table("playground_session")
     op.drop_table("runtime_configuration")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")

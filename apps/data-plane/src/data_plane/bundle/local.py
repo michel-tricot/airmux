@@ -17,7 +17,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
-from contract.policies import PolicyEntry, RuleEntry
+from contract.policies import PolicyEntry
 from contract.refs import resolve_refs
 from contract.taxonomy import TaxonomySpec, parse_taxonomy
 from data_plane.bundle.base import BundleSource
@@ -51,7 +51,6 @@ class LocalBundleSpec(BaseModel):
 
     keys: list[LocalKey] = Field(min_length=1)
     taxonomy: Path | TaxonomySpec
-    rules: tuple[RuleEntry, ...] = ()
     policies: tuple[PolicyEntry, ...] = ()
 
     @field_validator("keys")
@@ -92,7 +91,6 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
         org_id=LOCAL_ORG,
         issued_at=now,
         keys=keys,
-        rules=spec.rules,
         policies=spec.policies,
         catalog=Catalog(
             providers=[

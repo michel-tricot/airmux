@@ -98,7 +98,6 @@ class GatewayKey(TypedDict):
 class GatewayBundle(TypedDict):
     keys: list[GatewayKey]
     taxonomy: str
-    rules: list[dict[str, object]]
     policies: list[dict[str, object]]
 
 
@@ -120,7 +119,6 @@ class Gateway:
         self.bundle: GatewayBundle = {
             "keys": [{"token": INFERENCE_KEY, "user_id": str(uuid7())}, {"token": SECOND_KEY, "user_id": str(uuid7())}],
             "taxonomy": "taxonomy.yml",
-            "rules": [],
             "policies": [],
         }
         self.process: subprocess.Popen[bytes] | None = None
@@ -163,16 +161,7 @@ class Gateway:
         target: dict[str, object] | None = None,
         priority: int = 100,
     ) -> None:
-        rules: list[dict[str, object]] = [
-            {
-                "id": str(uuid7()),
-                "workspace_id": LOCAL_WORKSPACE,
-                "name": f"Rule {index}",
-                "definition": {"match": match or {"kind": "all_requests"}, "action": action},
-            }
-            for index, action in enumerate(actions)
-        ]
-        self.bundle["rules"] = [*self.bundle["rules"], *rules]
+        rules = [{"match": match or {"kind": "all_requests"}, "action": action} for action in actions]
         self.bundle["policies"] = [
             *self.bundle["policies"],
             {
@@ -180,7 +169,7 @@ class Gateway:
                 "workspace_id": LOCAL_WORKSPACE,
                 "name": f"Policy {priority}",
                 "priority": priority,
-                "definition": {"target": target or {"kind": "workspace"}, "rule_ids": [rule["id"] for rule in rules]},
+                "definition": {"target": target or {"kind": "workspace"}, "rules": rules},
             },
         ]
 
