@@ -2735,7 +2735,7 @@ paths:
       tags:
       - Workspace Policies
       summary: Create Policy
-      description: 'Create a workspace inference policy; budgets are recorded but not yet enforced.
+      description: 'Create a workspace inference policy.
 
 
         Required permission: `policies.manage`.'
@@ -4632,69 +4632,6 @@ components:
       - kind
       - names
       title: AllowedProviders
-    Budget-Input:
-      properties:
-        kind:
-          type: string
-          const: budget
-          title: Kind
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        amount_usd:
-          anyOf:
-          - type: number
-            exclusiveMinimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Amount Usd
-        sharing:
-          type: string
-          enum:
-          - shared
-          - per_key
-          title: Sharing
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      - period
-      - amount_usd
-      - sharing
-      title: Budget
-    Budget-Output:
-      properties:
-        kind:
-          type: string
-          const: budget
-          title: Kind
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        amount_usd:
-          type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Amount Usd
-        sharing:
-          type: string
-          enum:
-          - shared
-          - per_key
-          title: Sharing
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      - period
-      - amount_usd
-      - sharing
-      title: Budget
     BundleManifest:
       properties:
         bundles:
@@ -7287,7 +7224,7 @@ components:
           default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition'
-          description: Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced
+          description: Workspace, user, or inference key target and reusable rules
       additionalProperties: false
       type: object
       required:
@@ -8109,12 +8046,10 @@ components:
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Input'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/Budget-Input'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -8151,12 +8086,10 @@ components:
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Output'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/Budget-Output'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'

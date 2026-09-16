@@ -205,23 +205,6 @@ authentication failure may try another credential in the same selected scope.
   not provide exactly-once generation.
 </Info>
 
-### Budget
-
-```json
-{
-  "kind": "budget",
-  "period": "month",
-  "amount_usd": "250.00",
-  "sharing": "shared"
-}
-```
-
-`period` is `day` or `month`; `sharing` is `shared` or `per_key`.
-
-<Warning>
-  Budget enforcement is not implemented. Saving or enabling a budget rule does not limit spending.
-</Warning>
-
 ## Complete API shapes
 
 Create the reusable rule first at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules`:

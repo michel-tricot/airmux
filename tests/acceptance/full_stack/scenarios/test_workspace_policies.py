@@ -62,19 +62,31 @@ def test_policy_changes_reach_running_gateway_and_preserve_workspace_scope(stack
         assert response.status_code == 200
         _payload(admin.patch(f"{policies_path}/{policy['id']}", json={"enabled": False}))
         assert _poll(lambda: stack.request().status_code == 200, 30), "disabling the policy was not published"
-        budget_rule_id = _create_rule(
+        output_limit_rule_id = _create_rule(
             admin,
             rules_path,
-            "Budget preview",
+            "Output token ceiling",
             {"kind": "all_requests"},
-            {"kind": "budget", "period": "day", "amount_usd": "0.000001", "sharing": "shared"},
+            {"kind": "request_limits", "max_output_tokens": 1},
         )
-        _create_policy(admin, policies_path, "Budget preview", budget_rule_id)
+        _create_policy(admin, policies_path, "Output token ceiling", output_limit_rule_id)
+        assert _poll(
+            lambda: (
+                httpx.post(
+                    f"{stack.dp_url}/inf/v1/chat/completions",
+                    headers={"authorization": f"Bearer {stack.caller_api_key}"},
+                    json={"model": MODEL, "messages": [{"role": "user", "content": "limited"}], "max_tokens": 2},
+                    timeout=10,
+                ).status_code
+                == 403
+            ),
+            30,
+        ), "the running gateway did not enforce the published output limit"
         enabled = _payload(admin.patch(f"{policies_path}/{policy['id']}", json={"enabled": True}))
         assert enabled["enabled"] is True
         assert _poll(lambda: stack.request().status_code == 403, 30)
         _payload(admin.delete(f"{policies_path}/{policy['id']}"))
-        assert _poll(lambda: stack.request().status_code == 200, 30), "deletion did not publish, or the budget policy enforced"
+        assert _poll(lambda: stack.request().status_code == 200, 30), "deletion did not publish"
 
 
 @pytest.mark.parametrize("stream", [False, True])

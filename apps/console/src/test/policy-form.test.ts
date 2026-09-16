@@ -50,17 +50,12 @@ describe('shared rule configuration', () => {
   });
 
   it('validates action-specific fields', () => {
-    expect(ruleFormSchema.safeParse({ ...ruleDefaults, name: 'Budget', kind: 'budget', amount: '-1' }).success).toBe(false);
     expect(ruleFormSchema.safeParse({ ...ruleDefaults, name: 'Price', kind: 'price_limit', maxInputPrice: '-1' }).success).toBe(false);
     expect(ruleFormSchema.safeParse({ ...ruleDefaults, name: 'Credentials', kind: 'credential_access', credentialScopes: [] }).success).toBe(false);
     expect(ruleFormSchema.safeParse({ ...ruleDefaults, name: 'Match', match: 'request' }).success).toBe(false);
   });
 
-  it('builds budget, request limit, and price actions', () => {
-    expect(rulePayload({ ...ruleDefaults, name: 'Budget', kind: 'budget', amount: '10.25' }).definition.action).toMatchObject({
-      kind: 'budget',
-      amount_usd: '10.25',
-    });
+  it('builds request limit and price actions', () => {
     expect(rulePayload({ ...ruleDefaults, name: 'Tokens', kind: 'request_limits', maxOutputTokens: 2048 }).definition.action).toEqual({
       kind: 'request_limits',
       max_output_tokens: 2048,

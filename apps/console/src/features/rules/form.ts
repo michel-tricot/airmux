@@ -8,7 +8,7 @@ export const ruleFormSchema = z
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
     matchCapabilities: z.array(z.enum(['tools', 'reasoning', 'structured_output'])),
-    kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback', 'budget']),
+    kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback']),
     names: z.array(z.string()),
     message: z.string(),
     maxInputPrice: z.string(),
@@ -18,9 +18,6 @@ export const ruleFormSchema = z
     reasons: z.array(z.enum(['rate_limited', 'upstream_unavailable', 'timeout'])),
     maxAttempts: z.number(),
     timeoutMs: z.number(),
-    amount: z.string(),
-    period: z.enum(['day', 'month']),
-    sharing: z.enum(['shared', 'per_key']),
   })
   .superRefine((values, context) => {
     const issue = (field: string, message: string) => context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
@@ -43,8 +40,6 @@ export const ruleFormSchema = z
       if (!Number.isInteger(values.timeoutMs) || values.timeoutMs < 100 || values.timeoutMs > 120000)
         issue('timeoutMs', 'Enter a whole number from 100 to 120000');
     }
-    if (values.kind === 'budget' && (!/^\d{1,10}(\.\d{1,6})?$/.test(values.amount) || Number(values.amount) <= 0))
-      issue('amount', 'Enter a positive USD amount with at most six decimal places');
   });
 
 export type RuleForm = z.infer<typeof ruleFormSchema>;
@@ -65,9 +60,6 @@ export const ruleDefaults: RuleForm = {
   reasons: ['rate_limited', 'upstream_unavailable', 'timeout'],
   maxAttempts: 3,
   timeoutMs: 30000,
-  amount: '',
-  period: 'day',
-  sharing: 'shared',
 };
 
 function action(values: RuleForm): RuleDefinitionInput['action'] {
@@ -88,8 +80,6 @@ function action(values: RuleForm): RuleDefinitionInput['action'] {
       return { kind: 'credential_access', scopes: values.credentialScopes };
     case 'fallback':
       return { kind: 'fallback', models: values.names, on: values.reasons, max_attempts: values.maxAttempts, timeout_ms: values.timeoutMs };
-    case 'budget':
-      return { kind: 'budget', period: values.period, amount_usd: values.amount, sharing: values.sharing };
   }
 }
 
@@ -122,6 +112,5 @@ export function ruleForm(rule: RuleOut): RuleForm {
     ...(action.kind === 'request_limits' ? { maxOutputTokens: action.max_output_tokens } : {}),
     ...(action.kind === 'credential_access' ? { credentialScopes: action.scopes } : {}),
     ...(action.kind === 'fallback' ? { reasons: action.on, maxAttempts: action.max_attempts, timeoutMs: action.timeout_ms } : {}),
-    ...(action.kind === 'budget' ? { amount: action.amount_usd, period: action.period, sharing: action.sharing } : {}),
   };
 }

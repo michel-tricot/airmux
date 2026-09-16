@@ -5605,7 +5605,7 @@ export const getCreatePolicyUrl = (orgId: string,
 }
 
 /**
- * Create a workspace inference policy; budgets are recorded but not yet enforced.
+ * Create a workspace inference policy.
  *
  * Required permission: `policies.manage`.
  * @summary Create Policy

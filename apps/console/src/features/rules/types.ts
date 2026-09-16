@@ -31,7 +31,6 @@ export const ruleTypes = [
   },
   { kind: 'deny', label: 'Deny requests', formName: 'deny rule', description: 'Block matching requests with a custom message.' },
   { kind: 'fallback', label: 'Model fallbacks', formName: 'model fallback rule', description: 'Retry selected upstream failures on backup models.' },
-  { kind: 'budget', label: 'Budget', formName: 'budget rule', description: 'Describe a future spending allowance without enforcement.' },
 ] as const satisfies readonly { kind: RuleKind; label: string; formName: string; description: string }[];
 
 export function ruleType(kind: RuleKind) {
