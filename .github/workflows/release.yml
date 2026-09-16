@@ -23,6 +23,7 @@ jobs:
       version: ${{ steps.source.outputs.version }}
       tag: ${{ steps.source.outputs.tag }}
       artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+      container-artifact-id: ${{ steps.container.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -92,12 +93,34 @@ jobs:
           sha256sum --check SHA256SUMS
           echo "Source commit: $RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
           cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+      - name: Download the exact container validated by main CI
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: container-${{ steps.source.outputs.sha }}
+          run-id: ${{ steps.checks.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+          path: container
+      - name: Verify the container candidate digest
+        env:
+          RELEASE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          cd container
+          sha256sum --check SHA256SUMS
+          echo "Container candidate: container-${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
       - name: Retain the verified release candidate in this run
         id: candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-candidate-${{ steps.source.outputs.sha }}
           path: candidate
+          if-no-files-found: error
+          retention-days: 30
+      - name: Retain the verified container candidate in this run
+        id: container
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-container-${{ steps.source.outputs.sha }}
+          path: container
           if-no-files-found: error
           retention-days: 30
 
@@ -201,11 +224,18 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ needs.prepare.outputs.artifact-id }}
           path: candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.container-artifact-id }}
+          path: container
       - name: Verify candidate and isolate publishable distributions
         run: |
           cd candidate
@@ -215,6 +245,23 @@ jobs:
         with:
           packages-dir: candidate
           skip-existing: true
+      - name: Publish the validated container image
+        id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/michel-tricot/airmux
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          cd container
+          sha256sum --check SHA256SUMS
+          gzip -dc airmux-image.tar.gz | docker load
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag airmux:ci "$IMAGE:$VERSION"
+          push_output="$(docker push "$IMAGE:$VERSION")"
+          echo "$push_output"
+          digest="$(printf '%s\n' "$push_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]*\).*$/\1/p' | tail -1)"
+          test -n "$digest"
+          echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
 
   verify-pypi:
     needs: [prepare, publish]
@@ -262,8 +309,30 @@ jobs:
             ${{ runner.temp }}/pypi-artifacts
           retention-days: 7
 
+  verify-container:
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      image: ${{ steps.verify.outputs.image }}
+    steps:
+      - name: Pull and verify the published image
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ needs.publish.outputs.image }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker pull "$IMAGE"
+          test "$(docker run --rm --entrypoint airmux "$IMAGE" --version)" = "airmux $VERSION"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
   announce:
-    needs: [prepare, verify-pypi]
+    needs: [prepare, verify-pypi, verify-container]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release
@@ -278,11 +347,13 @@ jobs:
       - name: Publish the verified GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ needs.verify-container.outputs.image }}
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           notes="Version: $VERSION
-          Source commit: $RELEASE_SHA"
+          Source commit: $RELEASE_SHA
+          Container: $IMAGE"
           gh release create "$RELEASE_TAG" --verify-tag --target "$RELEASE_SHA" --title "airmux $VERSION" --generate-notes --notes "$notes"

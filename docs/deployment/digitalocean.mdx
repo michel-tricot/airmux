@@ -28,10 +28,11 @@ Add at least one provider API key for the local `quickstart` command.
 ## Start and claim
 
 ```bash
+docker build -t airmux:local .
 docker compose \
   -f docker-compose.yml \
   -f deploy/digitalocean/compose.yml \
-  up -d --build --wait
+  up -d --wait
 
 airmux quickstart \
   --url https://llm.example.com

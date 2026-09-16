@@ -35,6 +35,16 @@ One public distribution avoids exposing the repository decomposition as an insta
 release builds and verifies its wheel and source distribution before publishing them. The release tag must match the public
 distribution version, and the installed behavior suite exercises the same artifact users receive.
 
+The container is also one release artifact. It contains the public distribution, console assets, Nginx, and deployment
+scripts, and selects `setup`, `control-plane`, `data-plane`, `console`, or `all-in-one` at startup. Role selection is not
+application configuration. The default all-in-one role and split Compose topology call the same finite setup
+implementation before any serving role starts. Administrative CLI and standalone gateway commands explicitly override the
+container entry point instead of adding a second command dispatcher to the role script.
+
+Main CI builds that image once from the validated Python candidate, exercises every topology against it, and archives the
+image by source commit. The release workflow verifies and publishes that exact archive to GHCR under the public version;
+it does not rebuild role-specific images.
+
 ## Local configuration
 
 Runtime commands resolve `--config`, then `AIRMUX_CONFIG`. Gateway commands use `./.airmux/airmux.yml`, falling back to

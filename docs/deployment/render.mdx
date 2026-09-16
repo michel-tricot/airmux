@@ -32,7 +32,7 @@ Provider keys remain on the machine running `quickstart` until the CLI stores th
 ## Custom domain and updates
 
 For a custom domain, set `AIRMUX_CONSOLE_URL` to its exact HTTPS origin and redeploy. Trigger updates manually after
-backing up the database and persistent disk. Migrations run during startup.
+backing up the database and persistent disk. The all-in-one role runs setup before starting its services.
 
 Keep one application instance in this layout because its gateway owns one persistent disk. Use the
 [split deployment model](/docs/deployment/scaling) for horizontal gateway scaling.

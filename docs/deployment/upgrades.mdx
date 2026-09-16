@@ -8,8 +8,8 @@ or database schema. Use the same release for every component unless its release 
 rolling-compatible path.
 
 <Warning>
-  Control-plane and all-in-one containers run the forward database migration during startup. The CLI has no
-  operator-facing downgrade command. Do not run an older release against a database migrated by a newer release.
+  The `setup` role runs the forward database migration. The CLI has no operator-facing downgrade command. Do not run an
+  older release against a database migrated by a newer release.
 </Warning>
 
 ## Prepare a recovery point
@@ -25,21 +25,22 @@ Before replacing any process:
 Include each gateway's identity, accepted bundle, and SQLite usage outbox in the state snapshot. Restoring only the
 database or only `/state` can leave credential metadata, secret values, bundles, and pending usage out of sync.
 
+Set `AIRMUX_IMAGE` to the target `ghcr.io/michel-tricot/airmux` digest before replacing either topology.
+
 ## Upgrade the full platform
 
 Follow the deployment-specific replacement procedure for [Docker Compose](/docs/deployment/docker),
 [Fly.io](/docs/deployment/fly), [Render](/docs/deployment/render), or
 [DigitalOcean](/docs/deployment/digitalocean). Preserve the public origin, database, and state mounts.
 
-Replace an all-in-one container as one unit. On startup, it migrates the database, applies the shipped catalog, and then
-starts the control plane, gateway, and console.
+Replace an all-in-one container as one unit. Its role runs setup, then starts the control plane, gateway, and console.
 
 For a split deployment:
 
 1. Remove every gateway from public traffic and stop it after active streams finish
-2. Replace the control plane and wait for its health check
-3. Replace each gateway with the same release
-4. Wait for each gateway's `/readyz` response before restoring traffic
+2. Replace the setup service with the new image digest and wait for successful completion
+3. Replace the control plane, gateways, and console with that exact digest
+4. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
 
 ## Verify the release
 

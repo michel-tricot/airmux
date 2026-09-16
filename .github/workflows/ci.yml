@@ -289,15 +289,11 @@ jobs:
   docker:
     needs: package
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        compose-file: [docker-compose.yml, docker-compose.split.yml]
+    timeout-minutes: 30
     env:
       AIRMUX_PYTHON_BUILD: python-candidate
-      DEPLOYMENT_PROJECT: airmux-test
-      DEPLOYMENT_FILE: ${{ matrix.compose-file }}
+      AIRMUX_IMAGE: airmux:ci
+      DEPLOYMENT_IMAGE: airmux:ci
       DEPLOYMENT_URL: http://localhost:8080
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -309,20 +305,60 @@ jobs:
           artifact-ids: ${{ needs.package.outputs.artifact-id }}
           path: candidate
       - run: cd candidate && sha256sum --check SHA256SUMS
-      - run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --build --wait --wait-timeout 180
-      - if: matrix.compose-file == 'docker-compose.yml'
-        run: echo 'DEPLOYMENT_COMPACT_IMAGE=airmux:local' >> "$GITHUB_ENV"
-      - if: matrix.compose-file == 'docker-compose.split.yml'
-        run: echo 'DEPLOYMENT_GATEWAY_IMAGE=airmux-data-plane:local' >> "$GITHUB_ENV"
-      - run: uv run --no-sync pytest tests/deployment --junitxml=docker-results/docker.xml
+      - name: Build the candidate image once
+        id: image
+        run: docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
+      - name: Exercise the all-in-one topology
         env:
-          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts
-      - name: Preserve Docker failure logs
-        if: failure()
+          DEPLOYMENT_PROJECT: airmux-all-in-one
+          DEPLOYMENT_FILE: docker-compose.yml
+          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/all-in-one
+        run: |
+          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --wait --wait-timeout 180
+          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/all-in-one.xml
+      - name: Preserve all-in-one logs
+        if: always() && steps.image.outcome == 'success'
         continue-on-error: true
         run: |
-          mkdir -p "$RUNNER_TEMP/docker-artifacts"
-          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/compose.log"
+          mkdir -p "$RUNNER_TEMP/docker-artifacts/all-in-one"
+          docker compose -p airmux-all-in-one -f docker-compose.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/all-in-one/compose.log"
+      - name: Stop the all-in-one topology
+        if: always() && steps.image.outcome == 'success'
+        run: docker compose -p airmux-all-in-one -f docker-compose.yml down -v
+      - name: Exercise the split topology
+        if: always() && steps.image.outcome == 'success'
+        env:
+          DEPLOYMENT_PROJECT: airmux-split
+          DEPLOYMENT_FILE: docker-compose.split.yml
+          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/split
+        run: |
+          docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --wait --wait-timeout 180
+          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/split.xml
+      - name: Preserve split logs
+        if: always() && steps.image.outcome == 'success'
+        continue-on-error: true
+        run: |
+          mkdir -p "$RUNNER_TEMP/docker-artifacts/split"
+          docker compose -p airmux-split -f docker-compose.split.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/split/compose.log"
+      - name: Stop the split topology
+        if: always() && steps.image.outcome == 'success'
+        run: docker compose -p airmux-split -f docker-compose.split.yml down -v
+      - name: Exercise standalone image roles
+        if: always() && steps.image.outcome == 'success'
+        run: uv run --no-sync pytest tests/deployment/test_gateway_container.py tests/deployment/test_volume.py --junitxml=docker-results/standalone.xml
+      - name: Archive the validated image
+        run: |
+          mkdir -p container
+          docker image save "$AIRMUX_IMAGE" | gzip -9 > container/airmux-image.tar.gz
+          cd container
+          sha256sum airmux-image.tar.gz > SHA256SUMS
+      - name: Upload the validated image
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: container-${{ github.sha }}
+          path: container
+          if-no-files-found: error
+          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
       - name: Summarize Docker results
         if: always()
         continue-on-error: true
@@ -332,13 +368,11 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: docker-${{ matrix.compose-file }}-${{ github.sha }}
+          name: docker-${{ github.sha }}
           path: |
             docker-results
             ${{ runner.temp }}/docker-artifacts
           retention-days: 7
-      - if: always()
-        run: docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" down -v
 
   required:
     runs-on: ubuntu-latest

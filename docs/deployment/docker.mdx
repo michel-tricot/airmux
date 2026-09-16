@@ -7,11 +7,15 @@ The default `docker-compose.yml` runs two containers: airmux and Postgres.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
+Build from a checkout as shown below, or set `AIRMUX_IMAGE` to a published version or digest such as
+`ghcr.io/michel-tricot/airmux:X.Y.Z`. Use a digest for reproducible production deployment.
+
 ## Start
 
 ```bash
 cp .env.example .env
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
@@ -55,11 +59,13 @@ does not rotate the password already stored by Postgres.
 
 ## Update
 
-Check out the intended release, take a backup, then rebuild:
+Check out the intended release, take a backup, then build the image once and replace the stack:
 
 ```bash
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 ```
 
-Startup applies the baseline migration and shipped catalog before serving. The image prepares volume ownership and runs
-application processes as UID `10001`.
+The image defaults to the `all-in-one` role. That role runs the same finite `setup` operation used by split deployments,
+then starts the control plane, gateway, and console. Setup creates the bootstrap key only when absent, applies forward
+migrations and the shipped taxonomy, and exits before serving begins. Application processes run as UID `10001`.

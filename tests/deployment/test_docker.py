@@ -105,6 +105,9 @@ def assert_unprivileged(compose, service, expected):
 
 def assert_process_layout(compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
+    services = ("airmux",) if compact else ("setup", "control-plane", *gateways, "console")
+    containers = [docker(*compose, "ps", "--all", "--quiet", service) for service in services]
+    assert len({docker("inspect", "--format", "{{.Image}}", container) for container in containers}) == 1
     if compact:
         assert_unprivileged(compose, gateways[0], ("airmux control-plane serve", "airmux gateway serve", "nginx: master"))
         return

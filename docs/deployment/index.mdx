@@ -3,10 +3,16 @@ title: "Deployment overview"
 description: "Choose an all-in-one or split airmux deployment and identify the required database, state, network, and public URL."
 ---
 
-Choose [gateway only](/docs/deployment/gateway) for a Python inference service managed through local files, with no Docker,
-Postgres, or control plane. Choose the full platform for the console, centralized management, and usage collection.
+One release provides one Python distribution and one container image. Choose how to run that release:
 
-For the full platform, start with the all-in-one image unless you need to size or restart the services independently.
+| Shape | Purpose |
+| --- | --- |
+| All-in-one | Default full platform on one application host plus Postgres |
+| Split | Independent setup, console, control-plane, and gateway processes with separately scalable gateways |
+| [Gateway only](/docs/deployment/gateway) | Local-file inference without Postgres or a control plane |
+
+For the full platform, start with all-in-one unless you need to size or restart the services independently. Split does
+not permit mixed releases: every role must use the same image digest until cross-version bundle compatibility is defined.
 
 <Columns cols={2}>
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
@@ -39,7 +45,8 @@ Install the [airmux CLI](/docs/reference/cli#installation) on the machine you us
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
 
-The all-in-one container listens on port `8080` and serves the console, `/api/v1`, `/inf/v1`, `/healthz`, and `/readyz` from one origin.
+The image defaults to the all-in-one role. Its container listens on port `8080` and serves the console, `/api/v1`,
+`/inf/v1`, `/healthz`, and `/readyz` from one origin.
 
 ## Claim the instance
 

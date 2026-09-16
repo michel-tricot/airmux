@@ -16,11 +16,7 @@ services:
 
   airmux:
     image: ${AIRMUX_IMAGE:-airmux:local}
-    build:
-      context: .
-      target: all-in-one
-      args:
-        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
+    command: all-in-one
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}

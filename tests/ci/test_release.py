@@ -47,19 +47,35 @@ def test_release_uses_official_publisher_with_narrow_permissions():
     jobs = RELEASE["jobs"]
     publisher = next(step for step in jobs["publish"]["steps"] if step.get("uses", "").startswith("pypa/gh-action-pypi-publish@"))
     assert len(publisher["uses"].rsplit("@", 1)[1]) == 40
-    assert jobs["publish"]["permissions"] == {"contents": "read", "id-token": "write"}
+    assert jobs["publish"]["permissions"] == {"contents": "read", "id-token": "write", "packages": "write"}
     assert jobs["announce"]["permissions"] == {"contents": "write"}
     for name, job in jobs.items():
-        if name not in {"prepare", "publish", "announce"}:
+        if name not in {"prepare", "publish", "verify-container", "announce"}:
             assert job.get("permissions", RELEASE["permissions"]) == {"contents": "read"}
 
 
 def test_release_verifies_registry_bytes_and_gateway_before_announcement():
-    assert set(RELEASE["jobs"]["announce"]["needs"]) == {"prepare", "verify-pypi"}
+    assert set(RELEASE["jobs"]["announce"]["needs"]) == {"prepare", "verify-pypi", "verify-container"}
     verify = steps("verify-pypi")
     assert "pypi_artifacts.py" in verify
     assert "test_01_basic.py::test_ready_gateway_completes_and_records_usage" in verify
     assert RELEASE["jobs"]["live-providers"]["needs"] == "prepare"
+
+
+def test_release_publishes_the_exact_ci_container_candidate():
+    prepare = steps("prepare")
+    publish = steps("publish")
+    verify = steps("verify-container")
+
+    assert "container-${RELEASE_SHA}" in prepare
+    assert "sha256sum --check SHA256SUMS" in prepare
+    assert "docker load" in publish
+    image_step = next(step for step in RELEASE["jobs"]["publish"]["steps"] if step.get("id") == "image")
+    assert image_step["env"]["IMAGE"] == "ghcr.io/michel-tricot/airmux"
+    assert "docker push" in publish
+    assert "docker pull" in verify
+    assert "--entrypoint airmux" in verify
+    assert "Container: $IMAGE" in steps("announce")
 
 
 def test_release_creates_the_immutable_tag_after_candidate_checks():

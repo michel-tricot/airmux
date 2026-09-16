@@ -1,9 +1,13 @@
 #!/usr/bin/env sh
 set -eu
 
-prepare_control_plane() {
+AIRMUX_CONSOLE_URL=${AIRMUX_CONSOLE_URL:-${RENDER_EXTERNAL_URL:-http://localhost:8080}}
+export AIRMUX_CONSOLE_URL
+
+setup() {
   umask 077
   mkdir -p /state/runtime /state/secrets
+  chmod 700 /state/runtime /state/secrets
   if [ ! -f /state/runtime/dataplane.key ]; then
     airmux control-plane bootstrap-keygen --out /state/runtime/dataplane.key
   fi
@@ -37,8 +41,11 @@ start_console() {
 }
 
 case "${1:-}" in
+  setup)
+    setup
+    exit 0
+    ;;
   control-plane)
-    prepare_control_plane
     start_control_plane 0.0.0.0
     ;;
   data-plane)
@@ -48,7 +55,7 @@ case "${1:-}" in
     start_console
     ;;
   all-in-one)
-    prepare_control_plane
+    setup
     start_control_plane 127.0.0.1 &
     control_plane_pid=$!
     start_data_plane 127.0.0.1 &
@@ -57,7 +64,7 @@ case "${1:-}" in
     console_pid=$!
     ;;
   *)
-    echo 'Expected all-in-one, console, control-plane, or data-plane' >&2
+    echo 'Expected all-in-one, console, control-plane, data-plane, or setup' >&2
     exit 2
     ;;
 esac

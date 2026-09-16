@@ -29,7 +29,8 @@ flyctl secrets set --app my-airmux --stage \
   DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE'
 ```
 
-Keep Managed Postgres in session pooling mode. Startup uses the direct URL for migrations and the pooled URL for application traffic.
+Keep Managed Postgres in session pooling mode. The all-in-one setup step uses the direct URL for migrations and the
+pooled URL for application traffic.
 
 ## Deploy and claim
 

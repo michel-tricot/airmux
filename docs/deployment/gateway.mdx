@@ -1,6 +1,6 @@
 ---
 title: 'Gateway only'
-description: 'Install the inference gateway as a Python service with a local taxonomy and no Docker, Postgres, or control plane.'
+description: 'Run the inference gateway with a local taxonomy and no Postgres or control plane.'
 ---
 
 Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
@@ -120,17 +120,18 @@ Keep plaintext key files private and out of version control.
 After initialization above, run from the directory containing `.airmux/` and the referenced taxonomy:
 
 ```bash
-docker build --target data-plane -t airmux-gateway:local .
+docker build -t airmux:local .
 docker run --rm --user "$(id -u):$(id -g)" \
+  --entrypoint airmux \
   --mount "type=bind,source=$PWD,target=/config,readonly" \
   -e OPENAI_API_KEY -p 8080:8081 \
-  airmux-gateway:local serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
+  airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
 ```
 
-The image entry point is `airmux gateway`, so `validate --config ...` and `serve --help` work as container arguments.
-Matching the host user allows it to read the private generated key. The read-only mount preserves the relative taxonomy
-reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No control plane or database
-is needed for this configuration.
+The same image also runs full-platform roles, so standalone administrative commands explicitly override its role entry
+point with `airmux`. Matching the host user allows it to read the private generated key. The read-only mount preserves
+the relative taxonomy reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No
+control plane or database is needed for this configuration.
 
 ## Collect usage events locally
 
