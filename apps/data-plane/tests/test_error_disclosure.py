@@ -70,6 +70,10 @@ def test_provider_echo_of_a_non_header_shaped_credential_is_redacted(api_key, dp
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert response.status_code == 400
-    assert response.json()["error"] == {"code": "[REDACTED]", "message": "invalid credential [REDACTED]"}
+    assert response.json()["error"] == {
+        "type": "invalid_request_error",
+        "code": "[REDACTED]",
+        "message": "invalid credential [REDACTED]",
+    }
     assert credential not in response.text
     assert credential not in caplog.text

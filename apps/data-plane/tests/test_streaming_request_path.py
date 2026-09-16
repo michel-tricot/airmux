@@ -15,7 +15,6 @@ from starlette.testclient import TestClient
 from contract import uuid7
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress.base import Ctx, UpstreamRequest
-from data_plane.ingress import CANONICAL
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.proxy import StreamSession
 
@@ -68,9 +67,14 @@ def test_streaming_end_to_end(api_key, dp_app):
         body = b"".join(r.iter_bytes())
     text_body = body.decode()
     events = [json.loads(line[6:]) for line in text_body.splitlines() if line.startswith("data: ") and line != "data: [DONE]"]
-    text = "".join(e["delta"]["text"] for e in events if e.get("delta", {}).get("type") == "text")
+    text = "".join(e["choices"][0]["delta"].get("content", "") for e in events if e["choices"])
     assert text == "héllo \U0001f30d world"
-    assert events[-1]["usage"] == {"input_tokens": 5, "output_tokens": 7, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": False}
+    assert events[-1]["usage"] == {
+        "prompt_tokens": 5,
+        "completion_tokens": 7,
+        "total_tokens": 12,
+        "prompt_tokens_details": {"cached_tokens": 0},
+    }
     assert text_body.rstrip().endswith("data: [DONE]")
 
 
@@ -95,7 +99,7 @@ def _body_gen(response: object) -> AsyncGenerator[bytes]:
 async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox, http_client: httpx.AsyncClient) -> Response:
     session = StreamSession(
         adapter=make_adapter(),
-        ingress=INGRESS[CANONICAL],
+        ingress=INGRESS["openai_chat_completions"],
         ctx=ctx,
         request=request,
         adjustments=(),

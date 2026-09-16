@@ -29,7 +29,7 @@ def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
         json={
             "model": "quirk",
             "messages": [{"role": "user", "content": "hi"}],
-            "max_output_tokens": 32,
+            "max_completion_tokens": 32,
             "top_k": 5,
             "min_p": 0.1,
         },
@@ -38,7 +38,7 @@ def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
 
-    wire = json.loads(body["content"][0]["text"])
+    wire = json.loads(body["choices"][0]["message"]["content"])
     assert wire["max_completion_tokens"] == 32
     assert "max_tokens" not in wire
     assert wire["top_k"] == 5
@@ -69,7 +69,7 @@ def test_model_parameter_support_changes_the_live_upstream_request(stack: Stack)
     assert response.status_code == 200, response.text
     body = response.json()
 
-    wire = json.loads(body["content"][0]["text"])
+    wire = json.loads(body["choices"][0]["message"]["content"])
     assert "temperature" not in wire
     assert body["gateway"]["adjustments"] == [
         {

@@ -35,7 +35,7 @@ A policy contains its target and every rule it enforces. This example limits eve
   </Step>
 
   <Step title="Verify behavior">
-    After a gateway adopts the new bundle, a canonical request with `max_output_tokens` greater than `1024` returns
+    After a gateway adopts the new bundle, a Chat Completions request with `max_completion_tokens` greater than `1024` returns
     `403 policy_denied`. A request that omits the field sends `1024` upstream and reports a `defaulted` adjustment with
     `source: policy`. If several matching policies set limits, the tightest ceiling applies.
   </Step>

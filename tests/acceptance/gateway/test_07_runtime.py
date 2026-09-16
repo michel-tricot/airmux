@@ -145,7 +145,7 @@ def test_bad_reload_preserves_snapshot_and_valid_replacement_recovers(gateway: G
         response = gateway.request()
         preserved.append(response)
         assert response.status_code == 200, response.text
-        assert text_of("canonical", response) == TEXT
+        assert text_of("openai_chat_completions", response) == TEXT
         assert gateway.events(1 + len(preserved))[-1].bundle_id == first.bundle_id
         readiness = httpx.get(f"{gateway.url}/readyz", timeout=1)
         assert readiness.status_code == 200

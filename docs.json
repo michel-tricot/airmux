@@ -81,7 +81,6 @@
               "docs/reference/chat-completions",
               "docs/reference/responses",
               "docs/reference/messages",
-              "docs/reference/canonical",
               "docs/reference/errors"
             ]
           },

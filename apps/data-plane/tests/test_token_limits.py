@@ -19,10 +19,7 @@ def test_native_output_token_limits_enter_canonical_before_policy(dialect):
     body = (
         {"model": MODEL.model_id, "input": "hi", "max_output_tokens": 8}
         if dialect == "openai_responses"
-        else {
-            **BODY,
-            "max_completion_tokens" if dialect == "openai_native" else "max_tokens" if dialect == "anthropic" else "max_output_tokens": 8,
-        }
+        else {**BODY, "max_completion_tokens" if dialect == "openai_chat_completions" else "max_tokens": 8}
     )
     request, _ = INGRESS[dialect].parse(body)
     assert request.max_output_tokens == 8
@@ -31,20 +28,19 @@ def test_native_output_token_limits_enter_canonical_before_policy(dialect):
 
 def test_openai_chat_rejects_both_output_limit_spellings():
     with pytest.raises(ValueError, match="not both"):
-        INGRESS["openai_native"].parse({**BODY, "max_tokens": 8, "max_completion_tokens": 9})
+        INGRESS["openai_chat_completions"].parse({**BODY, "max_tokens": 8, "max_completion_tokens": 9})
 
 
 @pytest.mark.parametrize(
     ("dialect", "body"),
     [
-        ("canonical", {**BODY, "max_tokens": 8}),
-        ("canonical", {**BODY, "max_completion_tokens": 8}),
-        ("openai_native", {**BODY, "max_output_tokens": 8}),
+        ("openai_chat_completions", {**BODY, "max_output_tokens": 8}),
+        ("openai_responses", {"model": MODEL.model_id, "input": "hi", "max_tokens": 8}),
         ("anthropic", {**BODY, "max_tokens": 8, "max_output_tokens": 8}),
     ],
 )
 def test_each_ingress_rejects_other_protocols_output_limit_spellings(dialect, body):
-    with pytest.raises(ValueError, match="use"):
+    with pytest.raises(ValueError, match=r"max.*tokens"):
         INGRESS[dialect].parse(body)
 
 
@@ -61,10 +57,7 @@ def test_output_limits_reject_non_positive_values(dialect, limit):
     body = (
         {"model": MODEL.model_id, "input": "hi", "max_output_tokens": limit}
         if dialect == "openai_responses"
-        else {
-            **BODY,
-            "max_completion_tokens" if dialect == "openai_native" else "max_tokens" if dialect == "anthropic" else "max_output_tokens": limit,
-        }
+        else {**BODY, "max_completion_tokens" if dialect == "openai_chat_completions" else "max_tokens": limit}
     )
 
     with pytest.raises(ValueError, match="greater than or equal to 1"):

@@ -11,8 +11,7 @@ if TYPE_CHECKING:
 
 
 INPUT_TOKEN_LIMITS: dict[Dialect, str] = {
-    "canonical": "max_output_tokens",
-    "openai_native": "max_completion_tokens",
+    "openai_chat_completions": "max_completion_tokens",
     "openai_responses": "max_output_tokens",
     "anthropic": "max_tokens",
 }
@@ -93,7 +92,7 @@ def test_model_caps_clamp_a_permitted_limit_before_sending_it(gateway: Gateway, 
     provider = gateway.add_provider(family)
     gateway.taxonomy["models"][0]["max_output_tokens"] = 8
     gateway.start()
-    response = gateway.request(max_output_tokens=9)
+    response = gateway.request(max_completion_tokens=9)
     assert response.status_code == 200, response.text
     assert provider.requests[0].body[OUTPUT_TOKEN_LIMITS[family]] == 8
     assert response.json()["gateway"]["adjustments"][0] == {
@@ -168,12 +167,12 @@ def test_openai_chat_rejects_ambiguous_output_limits_before_upstream(gateway: Ga
     gateway.start()
 
     response = gateway.request(
-        "openai_native",
-        body={**request_body("openai_native"), "max_tokens": 8, "max_completion_tokens": 9},
+        "openai_chat_completions",
+        body={**request_body("openai_chat_completions"), "max_tokens": 8, "max_completion_tokens": 9},
     )
 
     assert response.status_code == 400
-    assert error_of("openai_native", response) == "invalid_request"
+    assert error_of("openai_chat_completions", response) == "invalid_request"
     assert provider.requests == []
 
 

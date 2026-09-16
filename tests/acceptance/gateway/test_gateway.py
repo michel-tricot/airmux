@@ -141,7 +141,7 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
             process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
                 eventually(lambda: client.get("/readyz").status_code == 200)
-                headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
+                headers = {"Authorization": f"Bearer {key}"}
                 body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
                 verify_gateway_requests(client, headers, body, key)
                 taxonomy["models"][0]["model_id"] = "changed"

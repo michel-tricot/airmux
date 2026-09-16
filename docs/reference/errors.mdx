@@ -7,10 +7,6 @@ airmux keeps the error envelope native to the caller surface.
 
 <CodeGroup>
 
-```json Canonical
-{"error": {"code": "unknown_model", "message": ""}}
-```
-
 ```json Chat Completions or Responses
 {"error": {"type": "invalid_request_error", "code": "unknown_model", "message": ""}}
 ```
@@ -21,16 +17,14 @@ airmux keeps the error envelope native to the caller surface.
 
 </CodeGroup>
 
-Chat Completions authentication failures, malformed JSON, and invalid dialect overrides use the canonical error shape
-because they occur before dialect resolution. Messages, Responses, and model discovery bind their error format before
-authentication; model discovery uses the OpenAI error shape.
+Authentication, parsing, policy, provider, and buffered execution failures use the protocol bound to the request path.
+Model discovery uses the OpenAI error shape.
 
 ## Gateway codes
 
 | HTTP | Code | Meaning |
 | --- | --- | --- |
 | 400 | `invalid_request` | Malformed JSON or a value failed schema validation |
-| 400 | `invalid_dialect` | Unknown `x-airmux-dialect` value |
 | 400 | `unsupported_feature` | Surface, model, or provider cannot represent a requested feature |
 | 400 | `unsupported_input_modality` | Model does not support an input image or PDF |
 | 401 | `missing_bearer_token` | No non-empty bearer token, API-key header, or playground cookie |

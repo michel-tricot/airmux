@@ -24,7 +24,7 @@ from contract import UsageEvent, uuid7
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-Dialect = Literal["canonical", "openai_native", "openai_responses", "anthropic"]
+Dialect = Literal["openai_chat_completions", "openai_responses", "anthropic"]
 PROTOCOLS = json.loads((Path(__file__).parent / "protocols.json").read_text())
 DIALECTS = tuple(PROTOCOLS["ingress"])
 FAMILIES = tuple(PROTOCOLS["egress"])
@@ -32,14 +32,12 @@ INFERENCE_KEY = "sk-inf-integration-first"
 SECOND_KEY = "sk-inf-integration-second"
 LOCAL_WORKSPACE = str(UUID(int=0))
 REQUEST_INPUTS: dict[Dialect, dict[str, object]] = {
-    "canonical": {"messages": [{"role": "user", "content": "hi"}]},
-    "openai_native": {"messages": [{"role": "user", "content": "hi"}]},
+    "openai_chat_completions": {"messages": [{"role": "user", "content": "hi"}]},
     "openai_responses": {"input": "hi"},
     "anthropic": {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 128},
 }
 ERROR_FIELDS: dict[Dialect, str] = {
-    "canonical": "code",
-    "openai_native": "code",
+    "openai_chat_completions": "code",
     "openai_responses": "code",
     "anthropic": "type",
 }
@@ -61,7 +59,7 @@ def request_body(dialect: Dialect, model: str = "model-a", **parameters: object)
 
 def text_of(dialect: Dialect, response: httpx.Response) -> str:
     body = response.json()
-    if dialect == "openai_native":
+    if dialect == "openai_chat_completions":
         return body["choices"][0]["message"]["content"]
     if dialect == "openai_responses":
         return "".join(part["text"] for item in body["output"] if item["type"] == "message" for part in item["content"])
@@ -74,9 +72,7 @@ def stream_payloads(response: httpx.Response) -> list[dict]:
 
 def streamed_text(dialect: Dialect, response: httpx.Response) -> str:
     payloads = stream_payloads(response)
-    if dialect == "canonical":
-        return "".join(event["delta"]["text"] for event in payloads if event.get("delta", {}).get("type") == "text")
-    if dialect == "openai_native":
+    if dialect == "openai_chat_completions":
         return "".join(choice["delta"].get("content", "") for event in payloads for choice in event.get("choices", []))
     if dialect == "openai_responses":
         return "".join(event["delta"] for event in payloads if event.get("type") == "response.output_text.delta")
@@ -219,12 +215,12 @@ class Gateway:
                 self.process.kill()
                 self.process.wait(timeout=5)
 
-    def headers(self, dialect: Dialect = "canonical", key: str = INFERENCE_KEY) -> dict[str, str]:
-        return {"Authorization": f"Bearer {key}", "X-airmux-Dialect": dialect}
+    def headers(self, _dialect: Dialect = "openai_chat_completions", key: str = INFERENCE_KEY) -> dict[str, str]:
+        return {"Authorization": f"Bearer {key}"}
 
     def request(
         self,
-        dialect: Dialect = "canonical",
+        dialect: Dialect = "openai_chat_completions",
         *,
         model: str = "model-a",
         body: dict[str, object] | None = None,

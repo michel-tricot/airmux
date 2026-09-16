@@ -1,15 +1,14 @@
 ---
 title: "Chat Completions"
-description: "Reference the Chat Completions-compatible request, response, streaming, and dialect-selection behavior."
+description: "Reference the Chat Completions-compatible request, response, streaming, and error behavior."
 ---
 
 ```text
 POST /inf/v1/chat/completions
 ```
 
-This route accepts Chat Completions or canonical JSON. Official SDK user-agents and unambiguous OpenAI fields such as
-`max_completion_tokens` select Chat Completions automatically. Set `x-airmux-dialect: openai_native` only for raw
-requests with neither signal when you need a Chat Completions-shaped response.
+This route always accepts and returns OpenAI Chat Completions. Headers and request-body fields cannot select another
+caller protocol.
 
 ## Request
 

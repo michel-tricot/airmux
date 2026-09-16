@@ -12,8 +12,6 @@ from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
 if TYPE_CHECKING:
-    from starlette.datastructures import Headers
-
     from data_plane.canonical import CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
@@ -116,10 +114,7 @@ class AnthropicResponseStream:
 
 class AnthropicIngress(IngressAdapter):
     dialect = "anthropic"
-
-    def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
-        """Never claims on the chat route: /inf/v1/messages binds this dialect directly."""
-        return False
+    path = "/inf/v1/messages"
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         if "max_output_tokens" in body:

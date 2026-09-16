@@ -183,7 +183,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         )
     )
     payload(client.post(f"{base}/provider-credentials", json={"provider": provider, "value": "deployment-test-key"}))
-    headers = {"Authorization": f"Bearer {key['token']}", "x-airmux-dialect": "openai_native"}
+    headers = {"Authorization": f"Bearer {key['token']}"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
     eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))

@@ -80,7 +80,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
             eventually(lambda: client.get("/readyz").status_code == 200)
             body = {"model": "echo", "messages": [{"role": "user", "content": "hello"}]}
-            headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
+            headers = {"Authorization": f"Bearer {key}"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401
             response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
             assert_completion(response)

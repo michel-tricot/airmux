@@ -358,7 +358,9 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
     mock_control_plane()
     with TestClient(dp_app) as client:
         result = client.post(
-            "/inf/v1/chat/completions", headers={"Authorization": f"Bearer {api_key}"}, json={**request().model_dump(mode="json"), "stream": stream}
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}], "stream": stream},
         )
     assert result.status_code == (503 if restricted else 200)
     outbox = make_outbox(tmp_path, http_client)
@@ -403,7 +405,7 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
         result = client.post(
             "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
-            json={**request().model_dump(mode="json"), "stream": failure == "midstream"},
+            json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}], "stream": failure == "midstream"},
         )
     expected_status = {"attempt_limit": 503, "unmatched_reason": 429, "deadline": 504}.get(failure, 200)
     assert result.status_code == expected_status
@@ -439,9 +441,13 @@ def test_repeated_request_preserves_rate_limited_status_during_credential_cooldo
     mock_control_plane()
     with TestClient(dp_app) as client:
         for _ in range(2):
-            response = client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {api_key}"}, json=request().model_dump(mode="json"))
+            response = client.post(
+                "/inf/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}]},
+            )
             assert response.status_code == 429
-        assert response.json()["error"] == {"code": "429", "message": "rate limited"}
+        assert response.json()["error"] == {"type": "invalid_request_error", "code": "429", "message": "rate limited"}
 
 
 @pytest.mark.parametrize("stream", [False, True])

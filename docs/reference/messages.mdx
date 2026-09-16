@@ -33,7 +33,7 @@ curl https://llm.example.com/inf/v1/messages \
 | `max_tokens` | Required; minimum 1; maps to canonical `max_output_tokens` |
 | `stream` | Boolean |
 | `temperature`, `top_p` | Sampling fields |
-| `stop_sequences` | Canonical stop-sequence alias |
+| `stop_sequences` | Maps to the gateway's internal stop sequences |
 | `tools`, `tool_choice` | Tool definitions and selection |
 | `thinking` | Reasoning type, token budget, and display settings |
 | `output_config` | Reasoning effort and structured-output format |

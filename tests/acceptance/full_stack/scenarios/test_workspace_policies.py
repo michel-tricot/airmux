@@ -153,7 +153,7 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
             {"kind": "selected_users", "user_ids": [user_id]},
         )
 
-        def completion(token: str | None, max_output_tokens: int) -> httpx.Response:
+        def completion(token: str | None, max_completion_tokens: int) -> httpx.Response:
             authentication = (
                 {"authorization": f"Bearer {token}"}
                 if token is not None
@@ -165,7 +165,7 @@ def test_user_targets_cover_keys_and_playground_after_bundle_adoption(stack: Sta
                 json={
                     "model": MODEL,
                     "messages": [{"role": "user", "content": "Hi"}],
-                    "max_output_tokens": max_output_tokens,
+                    "max_completion_tokens": max_completion_tokens,
                     "stream": stream,
                 },
                 timeout=10,
