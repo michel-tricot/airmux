@@ -78,7 +78,7 @@ jobs:
       - name: Disable Docker for standalone gateway tests
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
-        run: uv run pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py --junitxml=gateway-results/00-reporting.xml
+        run: uv run pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
       - name: Gateway level 1 - basics
         run: uv run pytest tests/acceptance/gateway/test_01_basic.py -n auto --junitxml=gateway-results/01-basic.xml
       - name: Gateway level 2 - protocols

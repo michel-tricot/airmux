@@ -164,7 +164,15 @@ The repository publishes one `tokkeeper` distribution containing the CLI, contra
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
 Publishing a GitHub release with a tag such as `v0.1.0` runs `publish-python.yml`. The workflow rejects a tag that differs
 from the public distribution version, builds one wheel and source distribution, rebuilds the wheel from its source
-distribution, and runs the installed behavior suite before publishing from a separate job.
+distribution, and runs the installed behavior suite. A required live-provider job then installs the actual release
+wheel and verifies OpenAI and Anthropic requests, tools, structured output, policies, fallback, and metering.
+The separate PyPI publication job requires both the build and live-provider jobs to succeed. Configure
+`OPENAI_API_KEY` and `ANTHROPIC_API_KEY` as environment secrets in `pypi`; missing credentials fail the gate.
+
+The same live suite runs nightly on main and can be dispatched manually. It does not run on ordinary PRs.
+See the [live-provider suite README](https://github.com/michel-tricot/tokkeeper/blob/main/tests/acceptance/live_providers/README.md)
+for local execution, request bounds, and model maintenance. The existing trigger starts after GitHub release
+metadata is published; these checks gate the package publication to PyPI.
 
 ## Run deployment tests
 

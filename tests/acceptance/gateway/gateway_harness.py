@@ -110,6 +110,7 @@ class Gateway:
         self.executable = os.environ.get("TOKKEEPER_GATEWAY_BIN", str(Path(sys.executable).parent / "tokkeeper"))
         self.environment = {**os.environ, "STUB_API_KEY": UPSTREAM_KEY, "BACKUP_API_KEY": UPSTREAM_KEY, "DOCKER_HOST": "unix:///no-docker.sock"}
         self.providers: list[Upstream] = []
+        self.sensitive_values: tuple[str, ...] = ()
         self.taxonomy: dict[str, list[dict[str, object]]] = {"providers": [], "models": []}
         self.bundle: GatewayBundle = {"keys": [INFERENCE_KEY, SECOND_KEY], "taxonomy": "taxonomy.yml", "rules": [], "policies": []}
         self.process: subprocess.Popen[bytes] | None = None
@@ -229,13 +230,14 @@ class Gateway:
         model: str = "model-a",
         body: dict[str, object] | None = None,
         key: str = INFERENCE_KEY,
+        timeout_s: float = 15,
         **parameters: object,
     ) -> httpx.Response:
         response = httpx.post(
             self.url + PROTOCOLS["ingress"][dialect],
             headers=self.headers(dialect, key),
             json=body if body is not None else {**request_body(dialect, model), **parameters},
-            timeout=15,
+            timeout=timeout_s,
         )
         with (self.directory / "responses.jsonl").open("a", encoding="utf-8") as responses:
             responses.write(json.dumps({"status": response.status_code, "body": response.text}, ensure_ascii=False) + "\n")
@@ -267,7 +269,7 @@ class Gateway:
         if artifacts:
             destination = Path(artifacts) / self.scenario
             destination.mkdir(parents=True, exist_ok=True)
-            secrets = (UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *self.bundle["keys"])
+            secrets = (*self.sensitive_values, UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY, *self.bundle["keys"])
             for path in self.directory.rglob("*"):
                 if path.is_file():
                     contents = path.read_text(encoding="utf-8")

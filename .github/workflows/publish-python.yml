@@ -55,8 +55,17 @@ jobs:
           path: dist/tokkeeper*
           if-no-files-found: error
 
-  publish:
+  live-providers:
     needs: build
+    uses: ./.github/workflows/live-providers.yml
+    with:
+      ref: ${{ github.event.release.tag_name }}
+      distribution-artifact: python-distributions
+    permissions:
+      contents: read
+
+  publish:
+    needs: [build, live-providers]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:

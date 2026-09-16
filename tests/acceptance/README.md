@@ -5,6 +5,8 @@ The suites keep separate harnesses and CI jobs:
 
 - [Gateway](gateway/README.md): standalone gateway scenarios, protocol variations, policies, metering,
   and performance comparisons, without a control plane, Postgres, or Docker
+- [Live providers](live_providers/README.md): pinned OpenAI and Anthropic requests, native usage and pricing
+  verification, run nightly, manually, and as a prerequisite for PyPI releases
 - [Full stack](full_stack/README.md): control plane and gateway scenarios, including authentication,
   bundle publication, organization isolation, event export, and replay, with a throwaway Postgres server
 

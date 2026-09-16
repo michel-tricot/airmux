@@ -32,6 +32,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/documentation"]
 asyncio_mode = "auto"
+pythonpath = [".", "tests/acceptance/gateway"]
 
 [tool.ruff]
 line-length = 150
