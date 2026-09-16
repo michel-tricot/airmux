@@ -11,6 +11,8 @@ import httpx
 from stack_harness import STUB_API_KEY, _poll, _StubServer
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from stack_harness import Stack
 
 WORKERS = 4
@@ -47,13 +49,13 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     assert len({event["request_id"] for event in events}) == expected
 
 
-def test_upstream_accepts_a_full_concurrent_connection_burst() -> None:
+def test_upstream_accepts_a_full_concurrent_connection_burst(tmp_path: Path) -> None:
     body = json.dumps({"model": "echo", "messages": [{"role": "user", "content": "hi"}]}).encode()
     request = (
         f"POST /chat/completions HTTP/1.1\r\nHost: localhost\r\nAuthorization: Bearer {STUB_API_KEY}\r\n"
         f"Content-Length: {len(body)}\r\nContent-Type: application/json\r\n\r\n"
     ).encode() + body
-    with _StubServer(("127.0.0.1", 0)) as upstream, ExitStack() as connections:
+    with _StubServer(("127.0.0.1", 0), tmp_path / "upstream.log") as upstream, ExitStack() as connections:
         clients = [connections.enter_context(socket.create_connection(("127.0.0.1", upstream.server_port), timeout=1)) for _ in range(CONCURRENCY)]
         upstream.start()
         try:

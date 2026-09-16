@@ -54,10 +54,22 @@ jobs:
       - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
       - run: uv run airmux-audit cases coverage
       - run: uv run airmux-audit taxonomy validate
-      - run: uv run pytest apps/control-plane/tests/unit
+      - run: uv run pytest apps/control-plane/tests/unit --junitxml=backend-results/unit.xml
         env:
           DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
-      - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit
+      - run: uv run pytest -n auto --ignore=apps/control-plane/tests/unit --junitxml=backend-results/integration.xml
+      - name: Summarize backend test results
+        if: always()
+        continue-on-error: true
+        run: uv run python tests/acceptance/gateway/ci_report.py backend-results --summary "$GITHUB_STEP_SUMMARY"
+      - name: Upload backend test results
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: backend-test-results
+          path: backend-results/*.xml
+          retention-days: 7
 
   installation:
     runs-on: ubuntu-latest
@@ -88,7 +100,7 @@ jobs:
       - name: Disable Docker for standalone gateway tests
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
       - name: Verify gateway CI reporting and performance comparisons
-        run: uv run pytest tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
+        run: uv run pytest tests/acceptance/test_diagnostics.py tests/acceptance/gateway/test_ci_report.py tests/acceptance/gateway/test_performance.py tests/acceptance/gateway/test_live_provider_setup.py --junitxml=gateway-results/00-reporting.xml
       - name: Summarize gateway test results
         if: always()
         run: uv run python tests/acceptance/gateway/ci_report.py gateway-results --summary "$GITHUB_STEP_SUMMARY"
@@ -253,13 +265,19 @@ jobs:
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
       - run: uv run pytest tests/acceptance/full_stack/scenarios --junitxml=acceptance-results/full-stack.xml
+        env:
+          AIRMUX_STACK_ARTIFACTS: ${{ runner.temp }}/full-stack-artifacts
       - name: Summarize full-stack acceptance results
         if: always()
+        continue-on-error: true
         run: uv run python tests/acceptance/gateway/ci_report.py acceptance-results --summary "$GITHUB_STEP_SUMMARY"
       - name: Upload full-stack acceptance results
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: full-stack-acceptance
-          path: acceptance-results
+          path: |
+            acceptance-results/*.xml
+            ${{ runner.temp }}/full-stack-artifacts
           retention-days: 7
