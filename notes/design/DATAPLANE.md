@@ -367,8 +367,9 @@ data_plane:
 ```
 
 The anchor is YAML reuse only. Both nested configs validate their own complete link, and no equality
-constraint is applied after parsing. The omitted secret-store setting defaults to environment
-variables.
+constraint is applied after parsing. The omitted bundle and event `cache_dir` fields both default to
+`.airmux` beside the configuration file, so the SQLite outbox writes `.airmux/events.db`. The omitted
+secret-store setting defaults to environment variables.
 
 The control-plane management key defines the bundle set. An instance-scoped key receives the latest
 bundle for every organization, while an organization-scoped key receives only that organization's

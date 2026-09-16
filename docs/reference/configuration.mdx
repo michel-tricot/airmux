@@ -84,7 +84,8 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
+SQLite flush defaults to 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file, and the
+outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through the same outbox.
 
 The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
 files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
