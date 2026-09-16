@@ -460,10 +460,44 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
     return RevisionMeasurements(measurements=measurements, overhead=overhead_measurements, metering_events=event_count)
 
 
+def run_round(  # noqa: PLR0913 one benchmark round pairs the measured workload with its revision's fixture harness
+    directory: Path, executable: Path, revision: Revision, round_number: int, settings: Settings, *, harness_directory: Path
+) -> RevisionMeasurements:
+    worker = """import runpy, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+performance = runpy.run_path(sys.argv[2])
+settings = performance["Settings"](float(sys.argv[7]), int(sys.argv[8]), float(sys.argv[9]))
+measurements = performance["run_revision"](Path(sys.argv[3]), Path(sys.argv[4]), sys.argv[5], int(sys.argv[6]), settings)
+print(measurements.model_dump_json())
+"""
+    result = subprocess.run(  # noqa: S603 the benchmark executes its own workload with the supplied trusted checkout harness
+        [
+            sys.executable,
+            "-c",
+            worker,
+            str(harness_directory.resolve()),
+            str(Path(__file__).resolve()),
+            str(directory.resolve()),
+            str(executable.resolve()),
+            revision,
+            str(round_number),
+            str(settings.duration_s),
+            str(settings.warmup),
+            str(settings.upstream_delay_ms),
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    return RevisionMeasurements.model_validate_json(result.stdout)
+
+
 @app.command()
 def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
     *,
     base_bin: Annotated[Path, typer.Option(exists=True, dir_okay=False)],
+    base_harness: Annotated[Path, typer.Option(exists=True, file_okay=False)],
     candidate_bin: Annotated[Path, typer.Option(exists=True, dir_okay=False)],
     output: Annotated[Path, typer.Option()],
     base_revision: Annotated[str, typer.Option()],
@@ -483,12 +517,13 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
         order: tuple[Revision, ...] = ("base", "candidate") if round_number % 2 else ("candidate", "base")
         for revision in order:
             typer.echo(f"Round {round_number}/{rounds}: {revision}")
-            result = run_revision(
+            result = run_round(
                 directory / revision,
                 base_bin if revision == "base" else candidate_bin,
                 revision,
                 round_number,
                 Settings(duration_s, warmup, upstream_delay_ms),
+                harness_directory=base_harness if revision == "base" else Path(__file__).parent,
             )
             measurements.extend(result.measurements)
             overhead_measurements.extend(result.overhead)

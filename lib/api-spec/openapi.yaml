@@ -1891,6 +1891,52 @@ paths:
       - scope: workspace_scope
         anyOf:
         - workspaces.update
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policy-users:
+    get:
+      tags:
+      - Workspace Policies
+      summary: List Policy Users
+      operationId: list_policy_users
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_WorkspaceMemberCandidateOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.read
+      description: 'Required permission: `policies.read`.'
   /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
@@ -4484,17 +4530,6 @@ components:
       - occurred_at
       title: ActivityOut
       description: One audited change, identifying what changed, who changed it, and when.
-    AllKeys:
-      properties:
-        kind:
-          type: string
-          const: all_keys
-          title: Kind
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      title: AllKeys
     AllRequests:
       properties:
         kind:
@@ -6023,6 +6058,10 @@ components:
           type: string
           format: uuid
           title: Workspace Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
         token_hash:
           type: string
           title: Token Hash
@@ -6037,6 +6076,7 @@ components:
       - key_id
       - org_id
       - workspace_id
+      - user_id
       - token_hash
       title: KeyEntry
       description: 'An active inference key included in a policy bundle.
@@ -7159,7 +7199,7 @@ components:
           default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition'
-          description: Inference key target and reusable rules. Budgets are not yet enforced
+          description: Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced
       additionalProperties: false
       type: object
       required:
@@ -7170,14 +7210,16 @@ components:
       properties:
         target:
           oneOf:
-          - $ref: '#/components/schemas/AllKeys'
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
           - $ref: '#/components/schemas/SelectedKeys'
           title: Target
           discriminator:
             propertyName: kind
             mapping:
-              all_keys: '#/components/schemas/AllKeys'
               selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
         rule_ids:
           items:
             type: string
@@ -8216,6 +8258,26 @@ components:
       - kind
       - key_ids
       title: SelectedKeys
+    SelectedUsers:
+      properties:
+        kind:
+          type: string
+          const: selected_users
+          title: Kind
+        user_ids:
+          items:
+            type: string
+            format: uuid
+          type: array
+          maxItems: 1000
+          minItems: 1
+          title: User Ids
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - user_ids
+      title: SelectedUsers
     ServiceAccountIn:
       properties:
         name:
@@ -8698,6 +8760,17 @@ components:
       - member
       - viewer
       title: WorkspaceRole
+    WorkspaceTarget:
+      properties:
+        kind:
+          type: string
+          const: workspace
+          title: Kind
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      title: WorkspaceTarget
     WorkspaceUpdate:
       properties:
         name:

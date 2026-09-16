@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import httpx
 import pytest
-from gateway_harness import DIALECTS, SECOND_KEY, error_of
+from gateway_harness import DIALECTS, INFERENCE_KEY, SECOND_KEY, error_of, eventually
 
 if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
@@ -64,3 +65,28 @@ def test_intersecting_model_allowlists_only_permit_their_common_models(gateway: 
         assert gateway.request(dialect, model=model).status_code == status
     assert [request.body["model"] for request in provider.requests] == ["upstream-model-b"]
     assert [event.status for event in gateway.events(3)] == ["denied", "ok", "denied"]
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
+def test_user_policy_covers_multiple_credentials_and_adopts_identity_changes(gateway: Gateway, dialect: Dialect, stream: bool):
+    provider = gateway.add_provider()
+    user_id = gateway.bundle["keys"][0]["user_id"]
+    other_user_id = gateway.bundle["keys"][1]["user_id"]
+    third_key = "sk-inf-another-user-credential"
+    gateway.bundle["keys"] = [*gateway.bundle["keys"], {"token": third_key, "user_id": user_id}]
+    gateway.add_policy([{"kind": "models", "names": ["model-a", "model-b"]}], target={"kind": "workspace"})
+    gateway.add_policy([{"kind": "models", "names": ["model-b"]}], target={"kind": "selected_users", "user_ids": [user_id]})
+    gateway.start()
+    for key in (INFERENCE_KEY, third_key):
+        assert gateway.request(dialect, key=key, stream=stream).status_code == 403
+        permitted = gateway.request(dialect, key=key, model="model-b", stream=stream)
+        assert permitted.status_code == 200, permitted.text
+    assert gateway.request(dialect, key=SECOND_KEY, stream=stream).status_code == 200
+    discovered = gateway.headers(key=INFERENCE_KEY)
+    assert [model["id"] for model in httpx.get(f"{gateway.url}/inf/v1/models", headers=discovered).json()["data"]] == ["model-b"]
+    gateway.bundle["keys"][0]["user_id"] = other_user_id
+    gateway.write_files()
+    eventually(lambda: gateway.request(dialect, stream=stream).status_code == 200)
+    assert gateway.request(dialect, key=third_key, stream=stream).status_code == 403
+    assert len(provider.requests) >= 4

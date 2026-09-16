@@ -37,20 +37,27 @@ LOCAL_WORKSPACE = UUID(int=0)
 _NAMESPACE = UUID("6c1a8f7e-4b62-4b8e-9f0d-2a52e07f1a11")
 
 
+class LocalKey(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
+
+    token: Annotated[str, Field(pattern=r"^sk-inf-\S+$", max_length=512)]
+    user_id: UUID
+
+
 class LocalBundleSpec(BaseModel):
     """Local inference keys and policies with an inline or file-backed taxonomy."""
 
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
-    keys: list[Annotated[str, Field(pattern=r"^sk-inf-\S+$", max_length=512)]] = Field(min_length=1)
+    keys: list[LocalKey] = Field(min_length=1)
     taxonomy: Path | TaxonomySpec
     rules: tuple[RuleEntry, ...] = ()
     policies: tuple[PolicyEntry, ...] = ()
 
     @field_validator("keys")
     @classmethod
-    def unique_keys(cls, keys: list[str]) -> list[str]:
-        if len(keys) != len(set(keys)):
+    def unique_keys(cls, keys: list[LocalKey]) -> list[LocalKey]:
+        if len(keys) != len({key.token for key in keys}):
             message = "inference keys must be unique"
             raise ValueError(message)
         return keys
@@ -62,8 +69,8 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
         message = "a local taxonomy must contain providers and models"
         raise ValueError(message)
     keys = [
-        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, token_hash=token_hash(token))
-        for position, token in enumerate(spec.keys)
+        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, user_id=key.user_id, token_hash=token_hash(key.token))
+        for position, key in enumerate(spec.keys)
     ]
     credentials = [
         CredentialEntry(

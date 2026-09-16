@@ -157,10 +157,14 @@ To compare any two installed gateways locally, choose a fresh output directory:
 ```bash
 uv run python tests/acceptance/gateway/performance.py \
   --base-bin /path/to/base/bin/airmux \
+  --base-harness /path/to/base/checkout/tests/acceptance/gateway \
   --candidate-bin /path/to/candidate/bin/airmux \
   --base-revision BASE_SHA --candidate-revision CANDIDATE_SHA \
   --output "$(mktemp -d)"
 ```
+
+Each gateway uses the fixture harness from its own checkout, so contract changes do not prevent the
+older gateway from starting. Both revisions run the candidate benchmark's measured workloads.
 
 Use `--rounds 3 --duration-s 0.1 --warmup 1` for a harness smoke check. Short runs are not useful regression evidence.
 Use `--upstream-delay-ms 50` to repeat the same experiment with 50ms of deterministic provider wait per request.
@@ -174,6 +178,11 @@ Run benchmarks alone, without pytest parallelization or other local load. Full-s
 correctness; remote polling/export performance and worker scaling need separate benchmark workloads.
 
 ## CI failure display
+
+The eight gateway acceptance levels run in parallel CI jobs with fail-fast disabled. Each job installs
+the release rebuilt from its source distribution and retains its own reports and diagnostics. The
+gateway-results job combines those artifacts and the installation reports into one summary and the
+gateway-integration artifact, including when a level fails.
 
 The installation job's Actions summary shows installation checks, reporting checks, counts by level and expandable assertion/setup-error tracebacks
 with the complete parameterized test name. Its `always()` reporting step runs after a failing test level; later levels

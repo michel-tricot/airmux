@@ -7,7 +7,7 @@ import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/u
 import { useProviders } from '@/features/credentials/hooks';
 import { useInferenceKeys } from '@/features/keys/hooks';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { usePolicies, usePolicyMutations } from '@/features/policies/hooks';
+import { usePolicies, usePolicyMutations, usePolicyUsers } from '@/features/policies/hooks';
 import { policyAccess } from '@/features/policies/policy';
 import { useRuleMutations, useRules } from '@/features/rules/hooks';
 import type { RuleKind } from '@/features/rules/types';
@@ -32,6 +32,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const policies = usePolicies(orgId, workspaceRef, canRead);
   const rules = useRules(orgId, workspaceRef, canRead);
   const keys = useInferenceKeys(orgId, workspaceRef, { enabled: canManage });
+  const users = usePolicyUsers(orgId, workspaceRef, canManage);
   const catalog = useProviders(orgId, workspaceRef, { enabled: canManage });
   const policyMutations = usePolicyMutations(orgId, workspaceRef);
   const ruleMutations = useRuleMutations(orgId, workspaceRef);
@@ -41,7 +42,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const [editingRuleKind, setEditingRuleKind] = useState<RuleKind | null>(null);
   const [ruleTypeOpen, setRuleTypeOpen] = useState(false);
   const [ruleOpen, setRuleOpen] = useState(false);
-  const policyEditorReady = keys.data !== undefined && rules.data !== undefined;
+  const policyEditorReady = keys.data !== undefined && users.data !== undefined && rules.data !== undefined;
   const ruleEditorReady = catalog.data !== undefined;
   const usageReady = policies.data !== undefined;
   const usageByRuleId = new Map<string, number>();
@@ -68,7 +69,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
     <PageShell>
       <PageHeader
         title="Policies"
-        description="Build reusable rules once, then attach them to policies that target sets of inference keys."
+        description="Build reusable rules once, then attach them to policies that apply to the workspace, selected users, or selected keys."
         actions={
           canManage && (
             <div className="flex gap-2">
@@ -85,6 +86,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         }
       />
       {canManage && keys.isError && <ErrorState error={keys.error} resource="inference keys" onRetry={() => void keys.refetch()} />}
+      {canManage && users.isError && <ErrorState error={users.error} resource="workspace users" onRetry={() => void users.refetch()} />}
       {canManage && catalog.isError && <ErrorState error={catalog.error} resource="model catalog" onRetry={() => void catalog.refetch()} />}
       <Tabs defaultValue="policies">
         <TabsList className="mb-4">
@@ -128,13 +130,14 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
           />
         </TabsContent>
       </Tabs>
-      {canManage && keys.data && rules.data && (
+      {canManage && keys.data && users.data && rules.data && (
         <PolicyEditor
           key={editingPolicy ? `${editingPolicy.id}:${editingPolicy.updated_at}` : 'new-policy'}
           policy={editingPolicy}
           open={policyOpen}
           onOpenChange={setPolicyOpen}
           keys={keys.data}
+          users={users.data}
           rules={rules.data}
           pending={policyMutations.create.isPending || policyMutations.update.isPending}
           ruleComposer={

@@ -30,7 +30,7 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
     enabled: true,
     priority,
     definition: {
-      target: { kind: 'all_keys' },
+      target: { kind: 'workspace' },
       rule_ids: [`rule-${id}`],
     },
     created_at: now,
@@ -251,7 +251,7 @@ describe('workspace policies', () => {
     const user = userEvent.setup();
     const multiRulePolicy = {
       ...policy('policy-1', 'Production', 0),
-      definition: { target: { kind: 'all_keys' } as const, rule_ids: initialRules.map((item) => item.id) },
+      definition: { target: { kind: 'workspace' } as const, rule_ids: initialRules.map((item) => item.id) },
     };
     server.use(
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () =>
@@ -429,4 +429,42 @@ describe('workspace policies', () => {
     expect(screen.queryByRole('button', { name: /Reorder/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Drag policies/)).not.toBeInTheDocument();
   });
+});
+
+it('shows workspace, principal, and key policies when inspecting an inference key', async () => {
+  const user = userEvent.setup();
+  const key: Api.InferenceKeyOut = {
+    id: 'key-1',
+    org_id: ORG.id,
+    workspace_id: WORKSPACES[0].id,
+    user_id: 'principal-1',
+    label: 'Application',
+    prefix: 'sk-inf',
+    revoked: false,
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  };
+  const policies: Api.PolicyOut[] = [
+    policy('workspace', 'Workspace restriction', 0),
+    {
+      ...policy('user', 'Principal restriction', 1),
+      definition: { target: { kind: 'selected_users', user_ids: [key.user_id] }, rule_ids: ['rule-user'] },
+    },
+    { ...policy('key', 'Key restriction', 2), definition: { target: { kind: 'selected_keys', key_ids: [key.id] }, rule_ids: ['rule-key'] } },
+    { ...policy('other', 'Other principal', 3), definition: { target: { kind: 'selected_users', user_ids: ['other'] }, rule_ids: ['rule-other'] } },
+    { ...policy('disabled', 'Disabled restriction', 4), enabled: false },
+  ];
+  server.use(
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ data: policies })),
+  );
+  window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/inference-keys`);
+  render(<App />);
+  await user.click(await screen.findByRole('button', { name: 'Inspect policies for Application' }));
+  expect(screen.getByText('Workspace restriction')).toBeVisible();
+  expect(screen.getByText('Principal restriction')).toBeVisible();
+  expect(screen.getByText('Key restriction')).toBeVisible();
+  expect(screen.queryByText('Other principal')).not.toBeInTheDocument();
+  expect(screen.queryByText('Disabled restriction')).not.toBeInTheDocument();
 });

@@ -32,7 +32,7 @@ def test_output_token_alias_cannot_bypass_live_policy(stack: Stack) -> None:
         _payload(
             admin.post(
                 f"{scope}/policies",
-                json={"name": "One output token", "definition": {"target": {"kind": "all_keys"}, "rule_ids": [rule["id"]]}},
+                json={"name": "One output token", "definition": {"target": {"kind": "workspace"}, "rule_ids": [rule["id"]]}},
             )
         )
     body = {"model": "quirk", "messages": [{"role": "user", "content": "hi"}]}

@@ -18,7 +18,7 @@ def annotation(message: str) -> str:
 
 @app.command()
 def report(directory: Path, summary: Annotated[Path, typer.Option()]) -> None:
-    reports = sorted(directory.glob("*.xml"))
+    reports = sorted(directory.rglob("*.xml"))
     sections = ["## Acceptance test results", "", "| Suite / level | Tests | Failures | Errors | Skipped |", "| --- | ---: | ---: | ---: | ---: |"]
     failures: list[tuple[str, str, str]] = []
     for path in reports:

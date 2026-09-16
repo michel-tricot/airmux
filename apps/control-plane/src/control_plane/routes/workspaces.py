@@ -84,6 +84,14 @@ async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> En
     return Envelope(data=WorkspaceOut.model_validate(await workspace.apply(body).save()))
 
 
+@router.get("/{workspace_ref}/policy-users", tags=["Workspace Policies"], dependencies=[require("api", workspace_scope, Permission.policies_read)])
+async def list_policy_users(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
+    users = await User.policy_candidates(workspace.org_id, workspace.id)
+    return Envelope(
+        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
+    )
+
+
 @router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_read)])
 async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
     """List the members of a workspace and their workspace roles."""

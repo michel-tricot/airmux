@@ -212,7 +212,11 @@ export function PolicyTable({
                   header: 'Applies to',
                   headClassName: 'min-w-28 whitespace-nowrap',
                   cell: (policy) =>
-                    policy.definition.target.kind === 'all_keys' ? 'All keys' : `${policy.definition.target.key_ids.length} selected keys`,
+                    policy.definition.target.kind === 'workspace'
+                      ? 'Workspace'
+                      : policy.definition.target.kind === 'selected_users'
+                        ? `${policy.definition.target.user_ids.length} selected users`
+                        : `${policy.definition.target.key_ids.length} selected keys`,
                 },
                 { key: 'priority', header: 'Priority', cell: (policy) => policy.priority },
                 {
