@@ -186,6 +186,10 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -195,9 +199,10 @@ jobs:
         with:
           artifact-id: ${{ needs.package.outputs.artifact-id }}
       - name: Run discovered installation suites
+        if: matrix.shard == 0
         run: uv run --no-sync pytest tests/installation/portable tests/installation/integration -n auto --junitxml=gateway-results/installation.xml
       - name: Run the discovered gateway suite without Docker
-        run: uv run --no-sync pytest tests/acceptance/gateway -n auto --junitxml=gateway-results/gateway.xml
+        run: uv run --no-sync pytest tests/acceptance/gateway -n auto -m "not performance" --shard "${{ matrix.shard }}/4" --junitxml=gateway-results/gateway.xml
         env:
           AIRMUX_GATEWAY_ARTIFACTS: ${{ runner.temp }}/gateway-artifacts
           DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
@@ -210,7 +215,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: gateway-${{ github.sha }}
+          name: gateway-${{ matrix.shard }}-${{ github.sha }}
           path: |
             gateway-results
             ${{ runner.temp }}/gateway-artifacts

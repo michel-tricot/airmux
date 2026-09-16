@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from gateway_harness import Gateway
 
+pytestmark = pytest.mark.performance
+
 
 def measurement(revision: Revision, round_number: int, total_ms: float, first_content_ms: float, qps: float) -> Measurement:
     return Measurement(

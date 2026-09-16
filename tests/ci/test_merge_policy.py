@@ -69,6 +69,9 @@ def test_ci_runs_every_correctness_job_unconditionally_and_discovers_suites():
         assert job.get("continue-on-error", False) is False
     commands = "\n".join(step.get("run", "") for job in workflow["jobs"].values() for step in job.get("steps", []))
     assert "tests/acceptance/gateway -n auto" in commands
+    assert workflow["jobs"]["gateway"]["strategy"]["matrix"]["shard"] == [0, 1, 2, 3]
+    assert '--shard "${{ matrix.shard }}/4"' in commands
+    assert '-m "not performance"' in commands
     assert "pytest -n 2 tests/acceptance/full_stack/scenarios" in commands
     assert "pytest tests/installation/portable" in commands
     assert "test_01_basic.py" not in commands
@@ -85,6 +88,8 @@ def test_exactly_four_workflows_separate_pr_nightly_and_release_work():
     assert "pull_request" not in nightly[True]
     assert "pull_request" not in release[True]
     assert set(release[True]["workflow_dispatch"]["inputs"]) == {"tag"}
+    nightly_commands = "\n".join(step.get("run", "") for job in nightly["jobs"].values() for step in job.get("steps", []))
+    assert "pytest -m performance tests/acceptance/gateway" in nightly_commands
 
 
 def test_package_once_graph_feeds_every_black_box_job():

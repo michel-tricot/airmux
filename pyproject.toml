@@ -33,6 +33,7 @@ dev = [
 testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/ci", "tests/documentation", "tests/workflows"]
 asyncio_mode = "auto"
 pythonpath = [".", "tests/acceptance/gateway"]
+markers = ["performance: performance harness coverage owned by nightly CI"]
 
 [tool.ruff]
 line-length = 150
