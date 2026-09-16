@@ -1932,7 +1932,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      x-tokkeeper-authority:
+      x-airmux-authority:
       - scope: workspace_scope
         anyOf:
         - policies.read
