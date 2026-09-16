@@ -7,7 +7,7 @@ control_plane:
   public_signup: ${env:AIRMUX_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
-    root: /state/secrets
+    path: /state/secrets
 
 data_plane:
   bundle:
@@ -25,4 +25,4 @@ data_plane:
     flush_interval_s: 5
   secrets:
     kind: file
-    root: /state/secrets
+    path: /state/secrets

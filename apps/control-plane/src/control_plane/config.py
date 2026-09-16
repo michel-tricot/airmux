@@ -5,8 +5,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 
-from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from contract.config import ConfigContext
+from airmux_runtime.config import ConfigContext, load_config_section
+from airmux_runtime.secrets import EnvStoreConfig, SecretsConfig
 from control_plane.keys import validate_management_key_token
 from control_plane.throttling import ThrottleConfig
 
@@ -68,7 +68,7 @@ class Settings(BaseModel):
 
 def database_url() -> str:
     """Load the database section alone for migration contexts that do not need full settings."""
-    section = load_config_section("control_plane")
+    section = load_config_section("control_plane", Path(os.environ.get("AIRMUX_CONFIG", "airmux.yml")).resolve())
     return DatabaseConfig.model_validate(section.get("database") or {}).url
 
 

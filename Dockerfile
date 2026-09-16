@@ -6,12 +6,14 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY pyproject.toml uv.lock ./
 COPY lib/api-models/pyproject.toml lib/api-models/
 COPY lib/contract/pyproject.toml lib/contract/
+COPY lib/runtime/pyproject.toml lib/runtime/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
 COPY apps/cli/pyproject.toml apps/cli/
 COPY apps/data-plane/pyproject.toml apps/data-plane/README.md apps/data-plane/
 RUN uv sync --only-group backend --frozen --no-install-workspace
 COPY lib/api-models lib/api-models
 COPY lib/contract lib/contract
+COPY lib/runtime lib/runtime
 COPY apps/control-plane/src apps/control-plane/src
 COPY apps/data-plane/src apps/data-plane/src
 COPY apps/cli/src apps/cli/src
@@ -23,6 +25,7 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 COPY pyproject.toml uv.lock ./
 COPY lib/api-models/pyproject.toml lib/api-models/
 COPY lib/contract/pyproject.toml lib/contract/
+COPY lib/runtime/pyproject.toml lib/runtime/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
 COPY apps/cli/pyproject.toml apps/cli/
 COPY apps/data-plane/pyproject.toml apps/data-plane/README.md apps/data-plane/

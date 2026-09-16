@@ -11,7 +11,8 @@ from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, Str
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col
 
-from contract import CredentialScope, SecretNotFoundError, SecretPurpose, SecretRef, SecretRejectedError, SecretStore
+from airmux_runtime.secrets import SecretNotFoundError, SecretRejectedError, SecretStore
+from contract import CredentialScope, SecretPurpose, SecretRef
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable

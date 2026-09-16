@@ -6,8 +6,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from contract.config import ConfigContext, ConfigPath
+from airmux_runtime.config import ConfigContext, ConfigPath, load_config_section
+from airmux_runtime.secrets import EnvStoreConfig, SecretsConfig
 from data_plane.bundle.config import BundleConfig
 from data_plane.control_plane_link import ControlPlaneLink
 

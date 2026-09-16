@@ -10,6 +10,7 @@ import httpx
 import pytest
 import respx
 
+from airmux_runtime.secrets import Secret
 from contract import (
     INFERENCE_TOKEN_PREFIX,
     BundleV1,
@@ -18,7 +19,6 @@ from contract import (
     KeyEntry,
     ModelEntry,
     ProviderEntry,
-    Secret,
     SecretPurpose,
     SecretRef,
     token_hash,

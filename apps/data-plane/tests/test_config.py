@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from contract import FileStoreConfig
-from contract.config import ConfigContext
+from airmux_runtime.config import ConfigContext
+from airmux_runtime.secrets import FileStoreConfig
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, load_config
 
@@ -195,13 +195,13 @@ def test_container_config_separates_gateway_state_from_shared_credentials(tmp_pa
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.events.control_plane == config.bundle.control_plane
     assert config.events.cache_dir == config.bundle.cache_dir
-    assert config.secrets == FileStoreConfig(root=tmp_path / "secrets")
+    assert config.secrets == FileStoreConfig(path=tmp_path / "secrets")
 
 
 @pytest.mark.parametrize("configured_path", [None, "state", "/absolute/state"])
 def test_nested_paths_resolve_during_validation(tmp_path, configured_path):
     paths = {} if configured_path is None else {"cache_dir": configured_path}
-    secrets = {} if configured_path is None else {"root": configured_path}
+    secrets = {} if configured_path is None else {"path": configured_path}
     link = {"url": "http://cp.test", "token": "dp-token"}
     config = Config.model_validate(
         {
@@ -216,7 +216,7 @@ def test_nested_paths_resolve_during_validation(tmp_path, configured_path):
     assert isinstance(config.secrets, FileStoreConfig)
     assert config.bundle.cache_dir == tmp_path / (configured_path or ".airmux")
     assert config.events.cache_dir == tmp_path / (configured_path or ".airmux")
-    assert config.secrets.root == tmp_path / (configured_path or ".airmux/secrets")
+    assert config.secrets.path == tmp_path / (configured_path or ".airmux/secrets")
 
 
 def test_local_bundle_path_resolves_during_validation(tmp_path):
@@ -242,4 +242,4 @@ def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
     assert isinstance(config.secrets, FileStoreConfig)
     assert config.bundle.path == directory / "bundle.yml"
     assert config.events.cache_dir == directory / ".airmux"
-    assert config.secrets.root == directory / ".airmux/secrets"
+    assert config.secrets.path == directory / ".airmux/secrets"

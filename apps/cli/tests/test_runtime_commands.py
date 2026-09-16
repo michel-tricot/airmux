@@ -156,7 +156,7 @@ def test_control_plane_init_requires_database_url_when_validating(tmp_path, monk
     assert runner.invoke(app, ["control-plane", "init"]).exit_code == 0
     result = runner.invoke(app, ["control-plane", "validate"])
     assert result.exit_code != 0
-    assert "database.url" in result.output
+    assert "DATABASE_URL" in result.output
 
 
 def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
@@ -212,9 +212,9 @@ def test_runtime_subcommand_help_is_available(group):
     assert "--port" in Text.from_ansi(result.output).plain
 
 
-def test_unknown_configuration_variable_has_an_actionable_error(tmp_path):
+def test_removed_configuration_variable_syntax_is_rejected(tmp_path):
     config = tmp_path / "airmux.yml"
     config.write_text("control_plane:\n  console_url: ${var:missing}\n")
     result = runner.invoke(app, ["control-plane", "validate", "--config", str(config)])
     assert result.exit_code == 1
-    assert "vars block does not define" in result.output
+    assert "whole YAML value" in result.output

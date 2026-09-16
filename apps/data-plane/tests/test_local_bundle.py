@@ -13,7 +13,7 @@ from conftest import make_outbox
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
-from contract import FileStoreConfig, Secret
+from airmux_runtime.secrets import FileStoreConfig, Secret
 from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
@@ -193,8 +193,8 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     second_path.write_text(BUNDLE_YML.replace("sk-inf-local-dev", "sk-inf-second"), encoding="utf-8")
     first_bundle = load_local(first_path, NOW)
     second_bundle = load_local(second_path, NOW)
-    first_secrets = FileStoreConfig(root=tmp_path / "first-secrets")
-    second_secrets = FileStoreConfig(root=tmp_path / "second-secrets")
+    first_secrets = FileStoreConfig(path=tmp_path / "first-secrets")
+    second_secrets = FileStoreConfig(path=tmp_path / "second-secrets")
     asyncio.run(first_secrets.build().put(first_bundle.catalog.credentials[0].ref, Secret("sk-first")))
     asyncio.run(second_secrets.build().put(second_bundle.catalog.credentials[0].ref, Secret("sk-second")))
     first_events = tmp_path / "first-events"

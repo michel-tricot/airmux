@@ -14,6 +14,7 @@ members = [
     "airmux-contract",
     "airmux-control-plane",
     "airmux-data-plane",
+    "airmux-runtime",
     "airmux-workspace",
     "model-audit",
 ]
@@ -50,6 +51,7 @@ dependencies = [
     { name = "airmux-contract" },
     { name = "airmux-control-plane" },
     { name = "airmux-data-plane" },
+    { name = "airmux-runtime" },
     { name = "httpx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -64,6 +66,7 @@ requires-dist = [
     { name = "airmux-contract", editable = "lib/contract" },
     { name = "airmux-control-plane", editable = "apps/control-plane" },
     { name = "airmux-data-plane", editable = "apps/data-plane" },
+    { name = "airmux-runtime", editable = "lib/runtime" },
     { name = "httpx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -88,19 +91,11 @@ name = "airmux-contract"
 version = "0.0.0"
 source = { editable = "lib/contract" }
 dependencies = [
-    { name = "asyncpg" },
     { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "asyncpg" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "python-dotenv" },
-    { name = "pyyaml" },
-]
+requires-dist = [{ name = "pydantic", specifier = ">=2" }]
 
 [[package]]
 name = "airmux-control-plane"
@@ -108,6 +103,7 @@ version = "0.0.0"
 source = { editable = "apps/control-plane" }
 dependencies = [
     { name = "airmux-contract" },
+    { name = "airmux-runtime" },
     { name = "alembic" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
@@ -121,6 +117,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "airmux-contract", editable = "lib/contract" },
+    { name = "airmux-runtime", editable = "lib/runtime" },
     { name = "alembic" },
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg" },
@@ -137,6 +134,7 @@ version = "0.0.0"
 source = { editable = "apps/data-plane" }
 dependencies = [
     { name = "airmux-contract" },
+    { name = "airmux-runtime" },
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -148,6 +146,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "airmux-contract", editable = "lib/contract" },
+    { name = "airmux-runtime", editable = "lib/runtime" },
     { name = "httpx", extras = ["http2"] },
     { name = "pydantic", specifier = ">=2" },
     { name = "pyyaml" },
@@ -155,6 +154,32 @@ requires-dist = [
     { name = "tiktoken" },
     { name = "uvicorn", extras = ["standard"] },
 ]
+
+[[package]]
+name = "airmux-runtime"
+version = "0.0.0"
+source = { editable = "lib/runtime" }
+dependencies = [
+    { name = "airmux-contract" },
+    { name = "anyio" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+insecure-database = [
+    { name = "asyncpg" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "airmux-contract", editable = "lib/contract" },
+    { name = "anyio" },
+    { name = "asyncpg", marker = "extra == 'insecure-database'" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "pyyaml" },
+]
+provides-extras = ["insecure-database"]
 
 [[package]]
 name = "airmux-workspace"

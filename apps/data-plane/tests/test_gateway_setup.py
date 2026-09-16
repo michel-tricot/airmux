@@ -9,6 +9,7 @@ import yaml
 from pydantic import ValidationError
 from typer.testing import CliRunner
 
+from airmux_runtime.config import MissingConfigReferenceError
 from cli.gateway import gateway_app as app
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
@@ -68,7 +69,7 @@ def test_local_keys_reject_unusable_or_duplicate_tokens(tmp_path, monkeypatch, k
     bundle.write_text(
         yaml.safe_dump({"keys": [{"token": key, "user_id": "00000000-0000-0000-0000-000000000001"} for key in keys], "taxonomy": TAXONOMY})
     )
-    with pytest.raises(ValidationError):
+    with pytest.raises((MissingConfigReferenceError, ValidationError)):
         load_local(bundle, datetime.now(tz=UTC))
 
 

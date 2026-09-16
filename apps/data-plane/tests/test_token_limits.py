@@ -5,7 +5,8 @@ import json
 import pytest
 from conftest import MODEL, PROVIDER, make_bundle
 
-from contract import Catalog, Secret
+from airmux_runtime.secrets import Secret
+from contract import Catalog
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY

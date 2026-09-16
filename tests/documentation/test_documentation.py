@@ -27,6 +27,7 @@ INTERNAL_DISTRIBUTIONS = {
     "airmux-contract",
     "airmux-control-plane",
     "airmux-data-plane",
+    "airmux-runtime",
 }
 BUNDLED_PROJECTS = (
     "apps/cli/pyproject.toml",
@@ -34,6 +35,7 @@ BUNDLED_PROJECTS = (
     "apps/data-plane/pyproject.toml",
     "lib/api-models/pyproject.toml",
     "lib/contract/pyproject.toml",
+    "lib/runtime/pyproject.toml",
 )
 
 

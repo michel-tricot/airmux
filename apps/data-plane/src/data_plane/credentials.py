@@ -12,13 +12,15 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from contract import CredentialEntry, SecretNotFoundError, SecretStoreUnavailableError
+from airmux_runtime.secrets import SecretNotFoundError, SecretStoreUnavailableError
+from contract import CredentialEntry
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from uuid import UUID
 
-    from contract import BundleV1, Secret, SecretStore
+    from airmux_runtime.secrets import Secret, SecretReader
+    from contract import BundleV1
 
 logger = logging.getLogger("data_plane")
 
@@ -67,7 +69,7 @@ class CredentialResolver:
     it is a fact about infrastructure, and a store that is down must not look like a missing key.
     """
 
-    def __init__(self, store: SecretStore, ttl_s: float = CACHE_TTL_S, negative_ttl_s: float = NEGATIVE_TTL_S) -> None:
+    def __init__(self, store: SecretReader, ttl_s: float = CACHE_TTL_S, negative_ttl_s: float = NEGATIVE_TTL_S) -> None:
         self.store = store
         self.ttl_s = ttl_s
         self.negative_ttl_s = negative_ttl_s

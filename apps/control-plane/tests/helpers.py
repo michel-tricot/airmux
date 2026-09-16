@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
-from contract import MemoryStoreConfig
+from airmux_runtime.secrets import FileStoreConfig
 from control_plane.app import create_app
 from control_plane.authority import principal_permissions
 from control_plane.authz import ALL_PERMISSIONS, InstanceRole, Permission, Scope
@@ -209,7 +209,7 @@ def setup_control_plane(tmp_path, secrets=None, *, public_signup: bool = True, t
     url = setup_db(tmp_path)
     settings = Settings(
         database=DatabaseConfig(url=url),
-        secrets=secrets if secrets is not None else MemoryStoreConfig(),
+        secrets=secrets if secrets is not None else FileStoreConfig(path=tmp_path / "secrets"),
         public_signup=public_signup,
         throttling=throttling if throttling is not None else ThrottleConfig(),
     )

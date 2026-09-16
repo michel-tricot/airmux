@@ -352,22 +352,17 @@ different links; the data plane does not validate that they match.
 The checked-in deployment uses a YAML anchor to avoid repeating a shared link:
 
 ```yaml
-vars:
-  cache_dir: .airmux
-
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:${var:cache_dir}/dataplane.key}
-    cache_dir: ${var:cache_dir}
+      token: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
 
   events:
     kind: sqlite
     control_plane: *control_plane
-    cache_dir: ${var:cache_dir}
     flush_interval_s: 5
 ```
 
@@ -400,11 +395,10 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `AIRMUX_CONFIG`, defaulting to `airmux.yml`.
-Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
-`:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
-becomes null; required config fields then fail Pydantic validation instead of producing partial
-credentials.
+The command entry point selects an explicit configuration path and the shared loader reads its
+`data_plane` section. Environment and file references must occupy the whole scalar and may use `:-`
+defaults. Missing files, sections, and unresolved references fail startup. The loader does not
+discover `.env` files or mutate the process environment.
 
 `airmux gateway serve --dev` sets `AIRMUX_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
