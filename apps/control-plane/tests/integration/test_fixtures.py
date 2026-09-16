@@ -244,7 +244,6 @@ def test_policy_fixtures_cover_actions_targets_request_matches_and_states(tmp_pa
         "request_limits",
         "credential_access",
         "fallback",
-        "budget",
     }
     assert {policy.definition.target.kind for policy in policies} == {"workspace", "selected_users", "selected_keys"}
     assert {policy.enabled for policy in policies} == {True, False}
