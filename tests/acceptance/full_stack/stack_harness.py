@@ -18,6 +18,7 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, TextIO
 from uuid import uuid4
 
@@ -26,10 +27,10 @@ import pytest
 import yaml
 from dotenv import dotenv_values
 from testcontainers.core.container import DockerContainer
+from tests.diagnostics import retain_logs
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
-    from pathlib import Path
 
 ORG = "org-acc"
 ADMIN_EMAIL = "admin@acceptance.test"
@@ -200,12 +201,18 @@ class _StubHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()
 
-    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent
+    def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
+        server = self.server
+        assert isinstance(server, _StubServer)
+        server.record_response(code)
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override
         return
 
 
 class _StubServer(ThreadingHTTPServer):
-    def __init__(self, address: tuple[str, int]) -> None:
+    def __init__(self, address: tuple[str, int], log_path: Path) -> None:
+        self.log = log_path.open("a", encoding="utf-8")
         super().__init__(address, _StubHandler)
         self._request_count = 0
         self._request_lock = threading.Lock()
@@ -216,6 +223,15 @@ class _StubServer(ThreadingHTTPServer):
 
     def start(self) -> None:
         threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def record_response(self, status: int | str) -> None:
+        with self._request_lock:
+            self.log.write(json.dumps({"time": time.monotonic(), "request": self._request_count, "status": status}) + "\n")
+            self.log.flush()
+
+    def server_close(self) -> None:
+        super().server_close()
+        self.log.close()
 
     @property
     def request_count(self) -> int:
@@ -240,8 +256,9 @@ class Stack:
         self.org_id = ""
         self.provisioned = False
         self.env: dict[str, str] = {}
+        self.sensitive_values: tuple[str, ...] = (ADMIN_PASSWORD, STUB_API_KEY, "sk-stub", self.db_url)
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
-        self._stub = _StubServer(("127.0.0.1", self.stub_port))
+        self._stub = _StubServer(("127.0.0.1", self.stub_port), tmp / "upstream.log")
         self._stub.start()
 
     # setup ----------------------------------------------------------------
@@ -289,6 +306,7 @@ class Stack:
             self._run([_bin("airmux"), "control-plane", "taxonomy", "--file", "taxonomy.yml", "--config", str(self.config_path)], self.env)
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
             _payload(session.post(f"/api/v1/organizations/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
+            self.sensitive_values = (*self.sensitive_values, *session.cookies.values())
 
         secrets = {
             "AIRMUX_INFERENCE_KEY": caller["token"],
@@ -427,10 +445,20 @@ class Stack:
         log.close()
 
     def teardown(self) -> None:
-        for name in list(self._procs):
-            self.stop(name)  # SIGTERM so a multi-worker uvicorn reaps its workers; escalates to kill if it hangs
-        self._stub.shutdown()
-        self._stub.server_close()
+        try:
+            for name in list(self._procs):
+                self.stop(name)
+            self._stub.shutdown()
+            self._stub.server_close()
+        finally:
+            artifacts = os.environ.get("AIRMUX_STACK_ARTIFACTS")
+            if artifacts:
+                secrets = (
+                    *self.sensitive_values,
+                    self.caller_api_key,
+                    *(value for name, value in self.env.items() if name.startswith("AIRMUX_") and ("KEY" in name or "TOKEN" in name)),
+                )
+                retain_logs(self.tmp, Path(artifacts) / self.tmp.name, ("cp.log", "dp.log", "upstream.log", "commands.log"), secrets)
 
     # observation ----------------------------------------------------------
 
@@ -473,7 +501,8 @@ class Stack:
     # internals ------------------------------------------------------------
 
     def _run(self, cmd: list[str], env: dict[str, str]) -> None:
-        subprocess.run(cmd, cwd=self.tmp, env=env, check=True, capture_output=True, text=True)  # noqa: S603 harness runs trusted local console scripts
+        with (self.tmp / "commands.log").open("a", encoding="utf-8") as log:
+            subprocess.run(cmd, cwd=self.tmp, env=env, check=True, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 harness runs trusted local console scripts
 
     def _spawn(self, name: str, cmd: list[str]) -> None:
         log = (self.tmp / f"{name}.log").open("a", encoding="utf-8")
