@@ -169,7 +169,7 @@ def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch
     config = Config(
         bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)),
         events=SqliteOutboxConfig(
-            control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+            control_plane=ControlPlaneLink(url="http://cp.test", management_key="dp-token"),
             cache_dir=tmp_path,
             flush_interval_s=0.01,
         ),
@@ -204,7 +204,7 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
             bundle=LocalBundleConfig(kind="local", path=first_path),
             secrets=first_secrets,
             events=SqliteOutboxConfig(
-                control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+                control_plane=ControlPlaneLink(url="http://cp.test", management_key="dp-token"),
                 cache_dir=first_events,
                 flush_interval_s=3600,
             ),
@@ -215,7 +215,7 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
             bundle=LocalBundleConfig(kind="local", path=second_path),
             secrets=second_secrets,
             events=SqliteOutboxConfig(
-                control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+                control_plane=ControlPlaneLink(url="http://cp.test", management_key="dp-token"),
                 cache_dir=second_events,
                 flush_interval_s=3600,
             ),

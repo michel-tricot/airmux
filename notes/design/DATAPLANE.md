@@ -344,7 +344,7 @@ with the required SQLite and atomic-rename semantics.
 a secret-store config, a discriminated event-outbox config, and the CLI-derived development flag.
 
 There is no global control-plane setting. Each component that uses the control plane owns a complete
-`ControlPlaneLink` containing its URL and token. The bundle poller and event exporter may use
+`ControlPlaneLink` containing its URL and management key. The bundle poller and event exporter may use
 different links; the data plane does not validate that they match.
 
 ### Remote mode
@@ -357,7 +357,7 @@ data_plane:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:.airmux/dataplane.key}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
 
   events:

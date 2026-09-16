@@ -14,7 +14,7 @@ data_plane:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://control-plane:8000}
-      token: ${file:/state/runtime/dataplane.key}
+      management_key: ${file:/state/runtime/dataplane.key}
     cache_dir: /state/data-plane
     poll_interval_s: 5
     heartbeat_interval_s: 30

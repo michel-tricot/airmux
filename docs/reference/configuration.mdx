@@ -41,7 +41,7 @@ data_plane:
     kind: remote
     control_plane: &control_plane_link
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:.airmux/dataplane.key}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
     heartbeat_interval_s: 30
   events:

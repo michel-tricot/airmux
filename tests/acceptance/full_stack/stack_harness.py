@@ -391,7 +391,7 @@ class Stack:
         secrets_store = (
             {"kind": "file", "path": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
         )
-        control_plane_link = {"url": self.cp_url, "token": "${env:AIRMUX_DATAPLANE_TOKEN}"}
+        control_plane_link = {"url": self.cp_url, "management_key": "${env:AIRMUX_DATAPLANE_TOKEN}"}
         outbox_config = (
             {"kind": "devnull"}
             if outbox_kind == "devnull"
