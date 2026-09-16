@@ -12,7 +12,6 @@ ROOT = Path(__file__).parents[2]
 CI_JOBS = {"quality", "python-unit", "python-integration", "frontend", "package", "gateway", "full-stack", "browser", "docker"}
 GATES = (("ci.yml", "required", CI_JOBS), ("security.yml", "dependency-security", {"pip-audit", "bun-audit", "dependency-review"}))
 FULL_RUN = "github.event_name != 'pull_request' || github.event.pull_request.draft == false"
-DRAFT_RUN = "github.event_name == 'pull_request' && github.event.pull_request.draft == true"
 PULL_REQUEST_FULL_RUN = "github.event_name == 'pull_request' && github.event.pull_request.draft == false"
 GATED_FULL_RUN = f"always() && ({FULL_RUN})"
 
@@ -21,7 +20,6 @@ def selected_jobs(workflow, event_name, draft):
     conditions = {
         None: True,
         FULL_RUN: event_name != "pull_request" or draft is False,
-        DRAFT_RUN: event_name == "pull_request" and draft is True,
         PULL_REQUEST_FULL_RUN: event_name == "pull_request" and draft is False,
         GATED_FULL_RUN: event_name != "pull_request" or draft is False,
     }
@@ -94,8 +92,10 @@ def test_dependency_review_uses_the_documented_free_tier_fallback_when_unavailab
 
 def test_ci_runs_every_correctness_job_when_full_checks_are_required_and_discovers_suites():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
-    assert set(workflow["jobs"]) == CI_JOBS | {"draft-smoke", "required"}
-    for name in ("quality", "python-unit", "python-integration", "frontend", "package"):
+    assert set(workflow["jobs"]) == CI_JOBS | {"required"}
+    for name in ("quality", "python-unit", "frontend"):
+        assert "if" not in workflow["jobs"][name]
+    for name in ("python-integration", "package"):
         assert workflow["jobs"][name]["if"] == FULL_RUN
     for name in ("gateway", "full-stack", "browser", "docker"):
         assert "if" not in workflow["jobs"][name]
@@ -113,23 +113,15 @@ def test_ci_runs_every_correctness_job_when_full_checks_are_required_and_discove
     assert "matrix.tests" not in commands
     assert "paths:" not in (ROOT / ".github/workflows/ci.yml").read_text()
     assert "paths-ignore:" not in (ROOT / ".github/workflows/ci.yml").read_text()
-
-
-def test_draft_smoke_only_formats_and_lints_without_synchronizing_the_workspace():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
-    smoke = workflow["jobs"]["draft-smoke"]
-    assert smoke["if"] == DRAFT_RUN
-    commands = [step["run"] for step in smoke["steps"] if "run" in step]
-    assert commands == ["uvx --from ruff==0.16.1 ruff format --check .", "uvx --from ruff==0.16.1 ruff check ."]
-    assert all("setup-python" not in step.get("uses", "") for step in smoke["steps"])
-    assert not any(token in "\n".join(commands) for token in ("uv sync", "bun", "docker", "pytest", "playwright", "audit", "build"))
+    frontend_build = next(step for step in workflow["jobs"]["frontend"]["steps"] if step.get("run", "").endswith(" build"))
+    assert frontend_build["if"] == FULL_RUN
 
 
 @pytest.mark.parametrize(
     ("event_name", "activity", "draft", "expected_ci", "expected_security"),
     [
-        ("pull_request", "opened", True, {"draft-smoke"}, set()),
-        ("pull_request", "synchronize", True, {"draft-smoke"}, set()),
+        ("pull_request", "opened", True, {"quality", "python-unit", "frontend"}, set()),
+        ("pull_request", "synchronize", True, {"quality", "python-unit", "frontend"}, set()),
         ("pull_request", "ready_for_review", False, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-review", "dependency-security"}),
         ("pull_request", "synchronize", False, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-review", "dependency-security"}),
         ("push", None, None, CI_JOBS | {"required"}, {"pip-audit", "bun-audit", "dependency-security"}),

@@ -15,20 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  draft-smoke:
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == true
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
-      - run: uvx --from ruff==0.16.1 ruff format --check .
-      - run: uvx --from ruff==0.16.1 ruff check .
-
   quality:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -78,7 +65,6 @@ jobs:
           retention-days: 7
 
   python-unit:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -126,7 +112,6 @@ jobs:
           retention-days: 7
 
   frontend:
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -142,7 +127,8 @@ jobs:
       - run: mkdir -p frontend-results
       - run: bun run --filter '@workspace/gateway-console' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/console.xml
       - run: bun run --filter '@workspace/api-client-react' coverage -- --reporter=default --reporter=junit --outputFile=frontend-results/client.xml
-      - run: bun run --filter '@workspace/gateway-console' build
+      - if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+        run: bun run --filter '@workspace/gateway-console' build
       - name: Summarize frontend results
         if: always()
         continue-on-error: true
