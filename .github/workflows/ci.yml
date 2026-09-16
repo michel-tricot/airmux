@@ -110,7 +110,98 @@ jobs:
           path: backend-results/*.xml
           retention-days: 7
 
+  python-distributions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          python-version: '3.13'
+      - run: ./scripts/build-python-distribution.sh
+      - name: Rebuild candidate wheel from source distribution
+        run: uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
+      - name: Verify distribution metadata
+        run: uv run --no-project --with pytest python -m pytest -c /dev/null -p no:cacheprovider tests/installation/test_distribution.py
+        env:
+          AIRMUX_DISTRIBUTION_DIR: dist
+      - name: Upload candidate wheel
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-wheel
+          path: dist-from-sdist/airmux-*.whl
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload portable installation tests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: installation-tests
+          path: |
+            tests/installation/conftest.py
+            tests/installation/test_cli.py
+            tests/installation/test_gateway.py
+          if-no-files-found: error
+          retention-days: 7
+
+  installation-smoke:
+    needs: python-distributions
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.13', '3.14']
+    env:
+      AIRMUX_INSTALL_PYTHON: ${{ matrix.python }}
+      DOCKER_HOST: unix:///no-docker.sock
+    steps:
+      - name: Configure isolated installation and record smoke start time
+        run: |
+          printf '%s\n' "SMOKE_STARTED=$(date +%s)" \
+            "UV_TOOL_DIR=$RUNNER_TEMP/airmux-tools" \
+            "UV_TOOL_BIN_DIR=$RUNNER_TEMP/airmux-bin" \
+            "AIRMUX_INSTALL_BIN=$RUNNER_TEMP/airmux-bin/airmux" >> "$GITHUB_ENV"
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: candidate-wheel
+          path: ${{ runner.temp }}/candidate-wheel
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: installation-tests
+          path: ${{ runner.temp }}/installation-tests
+      - name: Install candidate and minimal test runner
+        working-directory: ${{ runner.temp }}
+        run: |
+          uv tool install --python "${{ matrix.python }}" candidate-wheel/airmux-*.whl
+          uv venv --python "${{ matrix.python }}" smoke-runner
+          uv pip install --python smoke-runner/bin/python pytest httpx pyyaml
+      - name: Verify installed CLI and real gateway outside the source tree
+        working-directory: ${{ runner.temp }}
+        run: smoke-runner/bin/python -I -m pytest installation-tests --basetemp smoke-state --junitxml=gateway-results/00-installation.xml
+      - name: Record compatibility runner cost
+        if: always()
+        run: |
+          elapsed=$(( $(date +%s) - SMOKE_STARTED ))
+          echo "Python ${{ matrix.python }} on ${{ matrix.os }}: ${elapsed}s elapsed on runner. Matrix concurrency: 2; queued time is shown in the Actions job timeline." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload installation results and gateway logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: gateway-integration-installation-${{ matrix.os }}-${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/gateway-results
+            ${{ runner.temp }}/smoke-state/**/gateway.log
+          retention-days: 7
+
   installation:
+    needs: python-distributions
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -125,19 +216,17 @@ jobs:
           echo "AIRMUX_GATEWAY_BIN=$RUNNER_TEMP/airmux-bin/airmux" >> "$GITHUB_ENV"
           echo "AIRMUX_GATEWAY_ARTIFACTS=$RUNNER_TEMP/gateway-artifacts" >> "$GITHUB_ENV"
       - run: uv sync --all-packages --frozen
-      - run: ./scripts/build-python-distribution.sh
-      - name: Rebuild wheel from source distribution
-        run: |
-          mkdir dist-from-sdist
-          uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: candidate-wheel
+          path: dist-from-sdist
       - name: Install rebuilt release
         env:
           UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
           UV_TOOL_BIN_DIR: ${{ runner.temp }}/airmux-bin
         run: uv tool install dist-from-sdist/airmux-*.whl
-      - run: uv run pytest tests/installation --junitxml=gateway-results/00-installation.xml
+      - run: uv run pytest tests/installation/integration --junitxml=gateway-results/00-installation.xml
         env:
-          AIRMUX_DISTRIBUTION_DIR: dist
           AIRMUX_INSTALL_BIN: ${{ runner.temp }}/airmux-bin/airmux
       - name: Disable Docker for standalone gateway tests
         run: echo "DOCKER_HOST=unix:///no-docker.sock" >> "$GITHUB_ENV"
@@ -157,6 +246,7 @@ jobs:
           retention-days: 7
 
   gateway-acceptance:
+    needs: python-distributions
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -190,11 +280,10 @@ jobs:
           enable-cache: true
           python-version: '3.13'
       - run: uv sync --all-packages --frozen
-      - run: ./scripts/build-python-distribution.sh
-      - name: Rebuild wheel from source distribution
-        run: |
-          mkdir dist-from-sdist
-          uv build --wheel --out-dir dist-from-sdist dist/airmux-*.tar.gz
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: candidate-wheel
+          path: dist-from-sdist
       - name: Install rebuilt release
         env:
           UV_TOOL_DIR: ${{ runner.temp }}/airmux-tools
@@ -221,7 +310,7 @@ jobs:
   gateway-results:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [installation, gateway-acceptance]
+    needs: [installation-smoke, installation, gateway-acceptance]
     if: always()
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
