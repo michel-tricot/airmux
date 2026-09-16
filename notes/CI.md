@@ -30,6 +30,16 @@ The longest sampled gateway shard executed for 166 s; frontend took 144 s, insta
 
 The first obsolete security run, [35048719555](https://github.com/michel-tricot/airmux/actions/runs/35048719555), was cancelled at 02:38:00 UTC after the second PR push, 13 s after creation. Its replacement was queued independently. Non-PR isolation and PR-only in-progress cancellation are covered by the workflow policy test.
 
-After-change Actions measurements will be recorded from this PR's first completed revision using the same definitions.
+After-change sample: PR #189, revision `7e0d1714`, on 2026-09-16 UTC. Workflow and script edits intentionally select full validation, so this comparison measures scheduling overhead and runner availability rather than docs-only savings.
+
+| Workflow | Run | Workflow elapsed | Longest job execution | Runner queue per job |
+| --- | --- | --- | --- | --- |
+| CI | [35048795873](https://github.com/michel-tricot/airmux/actions/runs/35048795873) | 590 s | Backend 297 s | 3 to 117 s |
+| Docker | [35048795869](https://github.com/michel-tricot/airmux/actions/runs/35048795869) | 452 s | Split deployment 174 s | 2 to 111 s |
+| Security | [35048795731](https://github.com/michel-tricot/airmux/actions/runs/35048795731) | 215 s | Python audit 15 s | 44 to 196 s |
+
+Docker execution was similar to baseline (174 s versus 169 s); its classifier executed for 18 s and aggregate for 14 s. The Python audit executed for 15 s versus 19 s before, but queued for 196 s versus 3 s. Higher elapsed times in this sample are dominated by runner queues and waiting for obsolete workflow cancellation. No five-minute elapsed-time claim or measured docs-only speedup follows from this full-validation sample.
+
+CI's longest execution was 297 s versus 282 s before; full-stack acceptance took 293 s versus 243 s, frontend 200 s versus 144 s, and performance comparison 214 s versus 218 s. The classifier executed for 18 s, documentation/workflow checks for 19 s, and the final aggregate for 16 s. The CI workflow waited 167 s for the prior revision to finish cancellation before its initial jobs were created. Every validation job and both aggregate gates passed in this sample. The measurements keep the five-minute execution target plausible, but do not demonstrate an elapsed-time improvement under these queue conditions.
 
 Fetch job timestamps with `gh api repos/michel-tricot/airmux/actions/runs/RUN_ID/jobs --paginate`. Compare full-validation runs separately from docs-only or frontend-only runs, and record cancelled predecessors separately from completed revisions.
