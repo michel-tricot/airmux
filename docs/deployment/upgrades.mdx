@@ -1,0 +1,84 @@
+---
+title: "Upgrade and rollback"
+description: "Replace an airmux release safely, verify the new deployment, and restore a consistent recovery point when rollback is necessary."
+---
+
+airmux is pre-1.0 and does not promise cross-version compatibility between the control plane, gateways, configuration,
+or database schema. Upgrade every component from one release together unless that release explicitly documents a
+rolling-compatible path.
+
+<Warning>
+  Control-plane and all-in-one container startup runs the forward database migration before serving. The CLI has no
+  operator-facing downgrade command. Do not run an older release against a database already migrated by a newer release.
+</Warning>
+
+## Prepare a recovery point
+
+Before replacing any process:
+
+1. Read the [target release notes](https://github.com/michel-tricot/airmux/releases) and configuration changes
+2. Record the current release or image digest
+3. Stop new inference traffic and allow active streams to finish
+4. Back up Postgres, runtime credentials, provider secrets, and every gateway state directory together
+5. Confirm that the database backup and state snapshot can be restored on isolated infrastructure
+
+The state snapshot must include each gateway's identity, accepted bundle, and SQLite usage outbox. Restoring only the
+database or only `/state` can leave credential metadata, secret values, bundles, and pending usage out of sync.
+
+## Upgrade the full platform
+
+Use the deployment-specific replacement procedure for [Docker Compose](/docs/deployment/docker),
+[Fly.io](/docs/deployment/fly), [Render](/docs/deployment/render), or
+[DigitalOcean](/docs/deployment/digitalocean). Preserve the public origin, database, and state mounts.
+
+For an all-in-one deployment, replace the container as one unit. Startup migrates the database, applies the shipped
+catalog, and then starts the control plane, gateway, and console.
+
+For a split deployment:
+
+1. Remove every gateway from public traffic and stop it after active streams finish
+2. Replace the control plane and wait for its health check
+3. Replace each gateway with the same release
+4. Wait for each gateway's `/readyz` response before restoring traffic
+
+## Verify the release
+
+Check the public route and management context:
+
+```bash
+curl --fail https://llm.example.com/healthz
+curl --fail https://llm.example.com/readyz
+airmux doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
+airmux gateways list
+airmux bundles list
+```
+
+Then send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the
+requests appear in `airmux events list` and that `/healthz` does not report a growing pending-event queue.
+
+## Roll back
+
+If verification fails after migration:
+
+1. Stop the new release and all inference traffic
+2. Restore Postgres and every state directory from the same recovery point
+3. Redeploy the recorded previous release
+4. Repeat the health, readiness, buffered, streaming, and usage checks
+
+Do not attempt an application-only rollback against the newer database schema. A forward fix can avoid restoration
+only when the newer release notes explicitly say the database and bundle contracts remain compatible.
+
+## Upgrade a gateway-only installation
+
+Back up the standalone directory, replace the installed tool, and validate before serving:
+
+```bash
+VERSION=X.Y.Z
+cp -a .airmux ".airmux-backup-$VERSION"
+uv tool install --reinstall "airmux==$VERSION"
+airmux gateway validate --config .airmux/airmux.yml
+airmux gateway serve --config .airmux/airmux.yml
+```
+
+Make a real buffered and streaming request before removing the backup. To roll back, reinstall the previous package
+version and restore its matching standalone directory.

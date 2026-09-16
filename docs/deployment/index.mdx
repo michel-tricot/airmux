@@ -21,6 +21,9 @@ For the full platform, start with the all-in-one image unless you need to size o
   <Card title="DigitalOcean" icon="droplet" href="/docs/deployment/digitalocean">
     Add automatic HTTPS to Docker Compose on a Droplet.
   </Card>
+  <Card title="Upgrade and rollback" icon="rotate" href="/docs/deployment/upgrades">
+    Replace a release safely and restore one recovery point if verification fails.
+  </Card>
 </Columns>
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
@@ -67,4 +70,5 @@ airmux doctor --control-plane-url https://llm.example.com --gateway-url https://
 
 `quickstart` is the final proof because it performs a real inference request through the public route.
 
-Continue with [operations](/docs/deployment/operations) and [security](/docs/deployment/security) before production traffic.
+Continue with [operations](/docs/deployment/operations), [security](/docs/deployment/security), and
+[upgrade and rollback](/docs/deployment/upgrades) before production traffic.
