@@ -116,6 +116,22 @@ async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_clien
     await outbox.close()
 
 
+async def test_one_storage_pass_drains_the_current_queue(tmp_path, http_client, monkeypatch):
+    outbox = make_outbox(tmp_path, http_client)
+    monkeypatch.setattr(outbox, "_schedule_drain", lambda: None)
+    try:
+        for _ in range(1001):
+            record(outbox, make_event(uuid7()))
+
+        await outbox._storage_call(outbox._persist_one_batch)
+        stats = await outbox.stats()
+
+        assert stats["filled"] == 0
+        assert stats["durable"] == 1001
+    finally:
+        await outbox.close()
+
+
 @respx.mock
 async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))

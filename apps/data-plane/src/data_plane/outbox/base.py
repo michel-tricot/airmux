@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from contract import UsageEvent
 
 OUTBOX_CAPACITY = 10_000
-STORAGE_BATCH_SIZE = 1000
 
 T = TypeVar("T")
 type OutboxStat = int | float | None
@@ -164,7 +163,7 @@ class QueuedOutbox(EventOutbox, ABC):
 
     def _persist_one_batch(self) -> bool:
         with self._lock:
-            events = tuple(list(self._events)[:STORAGE_BATCH_SIZE])
+            events = tuple(self._events)
         if not events:
             return False
         self._persist(events)
