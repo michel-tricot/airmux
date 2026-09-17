@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from contract import KeyEntry, ModelEntry, RoutedUsageStatus
     from data_plane.canonical import CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import Ctx
-    from data_plane.outbox import EventOutbox
 
 
 logger = logging.getLogger("data_plane")
@@ -93,42 +92,38 @@ def _prompt_text(request: CanonicalRequest) -> str:
     return "\n".join(value for value in (messages, tools, response_format, reasoning) if value)
 
 
-def record_denied(
-    outbox: EventOutbox,
+def denied_event(
     key: KeyEntry,
     bundle_id: UUID,
     request: CanonicalRequest,
     start: RequestStart,
-) -> None:
-    outbox.record(
-        DeniedUsageEventV1(
-            event_id=uuid7(),
-            request_id=start.request_id,
-            occurred_at=datetime.now(tz=UTC),
-            org_id=key.org_id,
-            workspace_id=key.workspace_id,
-            key_id=key.key_id,
-            model_id=request.model,
-            provider_id="",
-            bundle_id=bundle_id,
-            input_tokens=0,
-            output_tokens=0,
-            cost_usd=ZERO_USD,
-            max_output_tokens=None,
-            latency_ms=int((time.monotonic() - start.started_at) * 1000),
-            status="denied",
-            stream=request.stream,
-        )
+) -> DeniedUsageEventV1:
+    return DeniedUsageEventV1(
+        event_id=uuid7(),
+        request_id=start.request_id,
+        occurred_at=datetime.now(tz=UTC),
+        org_id=key.org_id,
+        workspace_id=key.workspace_id,
+        key_id=key.key_id,
+        model_id=request.model,
+        provider_id="",
+        bundle_id=bundle_id,
+        input_tokens=0,
+        output_tokens=0,
+        cost_usd=ZERO_USD,
+        max_output_tokens=None,
+        latency_ms=int((time.monotonic() - start.started_at) * 1000),
+        status="denied",
+        stream=request.stream,
     )
 
 
-def record_usage(
-    outbox: EventOutbox,
+def usage_event(
     ctx: Ctx,
     response: CanonicalResponse,
     status: RoutedUsageStatus,
     request: CanonicalRequest,
-) -> None:
+) -> RoutedUsageEventV1:
     usage = response.usage
     if usage.estimated:
         usage = CanonicalUsage(
@@ -140,31 +135,29 @@ def record_usage(
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    outbox.record(
-        RoutedUsageEventV1(
-            event_id=uuid7(),
-            request_id=ctx.request_id,
-            occurred_at=datetime.now(tz=UTC),
-            org_id=ctx.org_id,
-            workspace_id=ctx.workspace_id,
-            key_id=ctx.key_id,
-            model_id=ctx.model.model_id,
-            provider_id=ctx.provider.provider_id,
-            bundle_id=ctx.bundle_id,
-            input_tokens=usage.input_tokens,
-            output_tokens=usage.output_tokens,
-            max_output_tokens=request.max_output_tokens,
-            cache_read_tokens=usage.cache_read_tokens,
-            cache_write_tokens=usage.cache_write_tokens,
-            cost_usd=cost_in + cost_out,
-            cost_input_usd=cost_in,
-            cost_output_usd=cost_out,
-            latency_ms=latency_ms,
-            status=status,
-            stream=ctx.stream,
-            credential_id=ctx.credential_id,
-            credential_scope=ctx.credential_scope,
-        ),
+    event = RoutedUsageEventV1(
+        event_id=uuid7(),
+        request_id=ctx.request_id,
+        occurred_at=datetime.now(tz=UTC),
+        org_id=ctx.org_id,
+        workspace_id=ctx.workspace_id,
+        key_id=ctx.key_id,
+        model_id=ctx.model.model_id,
+        provider_id=ctx.provider.provider_id,
+        bundle_id=ctx.bundle_id,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        max_output_tokens=request.max_output_tokens,
+        cache_read_tokens=usage.cache_read_tokens,
+        cache_write_tokens=usage.cache_write_tokens,
+        cost_usd=cost_in + cost_out,
+        cost_input_usd=cost_in,
+        cost_output_usd=cost_out,
+        latency_ms=latency_ms,
+        status=status,
+        stream=ctx.stream,
+        credential_id=ctx.credential_id,
+        credential_scope=ctx.credential_scope,
     )
     logger.info(
         "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d max_output_tokens=%s "
@@ -183,3 +176,4 @@ def record_usage(
         cost_in + cost_out,
         latency_ms,
     )
+    return event

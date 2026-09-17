@@ -84,14 +84,17 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite flush defaults to 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file, and the
-outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through the same outbox.
+SQLite export defaults to every 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file,
+and the outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through that outbox.
 
 The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
-files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
-Threads and processes sharing a local file serialize their writes. Restarting appends to the existing file.
-It has no export queue, deduplication, rotation, or `fsync` guarantee; health reports zero pending events.
-Use it on a local POSIX filesystem. File write failures propagate to the request instead of silently discarding usage.
+files with mode `0600`. It appends one complete usage event per line, and processes sharing a local file serialize their
+writes. Restarting appends to the existing file. It has no export queue, deduplication, rotation, or `fsync` guarantee.
+Use it on a local POSIX filesystem. A file write failure terminates the worker instead of silently discarding usage.
+
+SQLite and file requests do not wait for local persistence. If the outbox cannot accept an event, the gateway returns
+`503 metering_capacity_exhausted` before starting that provider attempt. Graceful shutdown writes accepted events to
+local storage. `SIGKILL`, machine failure, power loss, or storage failure can lose events not yet written.
 
 ## Secret stores
 

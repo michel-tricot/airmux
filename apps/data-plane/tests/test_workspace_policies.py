@@ -19,14 +19,17 @@ from conftest import (
     make_key,
     make_outbox,
     mock_control_plane,
+    read_and_close_outbox,
 )
 from starlette.testclient import TestClient
 
+import data_plane.app as app_module
 from contract import Catalog, uuid7
 from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
+from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
 from data_plane.routing import RoutePlan, plan_routes
 
@@ -364,12 +367,54 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
             json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}], "stream": stream},
         )
     assert result.status_code == (503 if restricted else 200)
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
+    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
     assert [(event.model_id, event.status) for event in events] == (
         [(MODEL.model_id, "upstream_error")] if restricted else [(MODEL.model_id, "upstream_error"), ("backup", "ok")]
     )
+
+
+@respx.mock
+def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_path, monkeypatch):
+    api_key, key = make_key()
+    backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
+    fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
+    outbox = DevNullOutbox()
+    reservations = iter((outbox.reserve(),))
+
+    def reserve():
+        try:
+            return next(reservations)
+        except StopIteration as error:
+            raise OutboxFullError from error
+
+    monkeypatch.setattr(outbox, "reserve", reserve)
+    monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
+    attempted_models = []
+
+    def upstream(incoming):
+        model = json.loads(incoming.content)["model"]
+        attempted_models.append(model)
+        return (
+            httpx.Response(503, json={"error": {"message": "unavailable"}})
+            if model == MODEL.upstream_model
+            else httpx.Response(200, json=TEXT_NONSTREAM)
+        )
+
+    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
+    mock_control_plane()
+
+    with TestClient(dp_app) as client:
+        result = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}]},
+        )
+
+    assert result.status_code == 503
+    assert result.json()["error"]["code"] == "metering_capacity_exhausted"
+    assert attempted_models == [MODEL.upstream_model]
 
 
 @pytest.mark.parametrize("failure", ["read_error", "timeout", "attempt_limit", "unmatched_reason", "midstream", "deadline"])
@@ -414,9 +459,7 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
         assert "invalid_upstream_response" in result.text
     if failure == "deadline":
         assert "fallback_deadline_exceeded" in result.text
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
+    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
     assert [event.model_id for event in events] == (
         [MODEL.model_id, "backup"] if failure in {"read_error", "timeout", "attempt_limit"} else [MODEL.model_id]
     )

@@ -26,7 +26,8 @@ if TYPE_CHECKING:
     from typing import Self
 
 Revision = Literal["base", "candidate"]
-Scenario = Literal["upstream", "buffered", "stream", "policies"]
+Scenario = Literal["upstream", "buffered", "buffered_devnull", "stream", "policies"]
+EventStore = Literal["sqlite", "devnull"]
 Metric = Literal["p50_ms", "p95_ms", "p99_ms", "first_content_p50_ms", "requests_per_second"]
 WORKLOADS: tuple[tuple[Scenario, int], ...] = (
     ("upstream", 1),
@@ -35,6 +36,9 @@ WORKLOADS: tuple[tuple[Scenario, int], ...] = (
     ("stream", 1),
     ("buffered", 8),
     ("buffered", 32),
+    ("buffered_devnull", 1),
+    ("buffered_devnull", 8),
+    ("buffered_devnull", 32),
     ("policies", 1),
 )
 LATENCY_METRICS: tuple[Metric, ...] = ("p50_ms", "p95_ms", "p99_ms", "first_content_p50_ms")
@@ -51,15 +55,21 @@ class Settings(NamedTuple):
 
 
 class PerformanceGateway(Gateway):
+    event_store: EventStore = "sqlite"
+
     def write_files(self) -> None:
         super().write_files()
         configuration = yaml.safe_load(self.config_path.read_text())
-        configuration["data_plane"]["events"] = {
-            "kind": "sqlite",
-            "cache_dir": "usage",
-            "flush_interval_s": 3600,
-            "control_plane": {"url": "http://127.0.0.1:1", "management_key": "benchmark-export-token"},
-        }
+        configuration["data_plane"]["events"] = (
+            {
+                "kind": "sqlite",
+                "cache_dir": "usage",
+                "flush_interval_s": 3600,
+                "control_plane": {"url": "http://127.0.0.1:1", "management_key": "benchmark-export-token"},
+            }
+            if self.event_store == "sqlite"
+            else {"kind": "devnull"}
+        )
         self.config_path.write_text(yaml.safe_dump(configuration), encoding="utf-8")
 
     def close(self) -> None:
@@ -161,7 +171,7 @@ OVERHEAD_METHOD = (
     "means of warmed direct-before and direct-after windows from the proxied window mean. Streaming uses first non-empty content. "
     "Report the median of these signed round estimates; no subtraction of p95/p99 and no per-request overhead percentile. "
     "Throughput cost = 100 * (1 - proxied RPS / mean(direct-before RPS, direct-after RPS)). "
-    "Durable SQLite event collection is enabled and included; authentication, translation, policy and metering stay active. "
+    "Buffered workloads identify durable SQLite or dev-null event collection; authentication, translation, policy and metering stay active. "
     "Model inference, external network/provider variability, control-plane traffic, periodic polling/export, startup and warmup are excluded. "
     "Controls match request fields (using the upstream model name), response fixture, streaming, concurrency and HTTP/1.1 keepalive limits. "
     "The local upstream retains idle connections for one hour; client keepalive expiry stays at five seconds. "
@@ -412,6 +422,11 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
         provider.start()
         gateway.start()
         for scenario, concurrency in WORKLOADS:
+            event_store: EventStore = "devnull" if scenario == "buffered_devnull" else "sqlite"
+            if gateway.event_store != event_store:
+                gateway.stop()
+                gateway.event_store = event_store
+                gateway.start()
             if scenario == "policies":
                 gateway.stop()
                 for priority in range(POLICY_COUNT):
@@ -447,7 +462,8 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 continue
             proxied = window(True, scenario, concurrency, body)
             after = window(False, scenario, concurrency, body)
-            event_count += settings.warmup * concurrency + len(proxied.latency_ms)
+            if gateway.event_store == "sqlite":
+                event_count += settings.warmup * concurrency + len(proxied.latency_ms)
             measurements.append(proxied)
             overhead_measurements.append(OverheadMeasurement(direct_before=before, proxied=proxied, direct_after=after))
         with sqlite3.connect(directory / "usage/events.db") as events:
@@ -546,7 +562,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
             "timeout_s": 10,
         },
         "upstream_settings": {"server_keepalive_timeout_s": 3600},
-        "gateway_settings": {"workers": 1, "event_store": "sqlite", "reload_interval_s": 3600, "export_interval_s": 3600},
+        "gateway_settings": {"workers": 1, "event_stores": ["sqlite", "devnull"], "reload_interval_s": 3600, "export_interval_s": 3600},
         "runner": {name: os.environ.get(name) for name in ("RUNNER_OS", "RUNNER_ARCH", "RUNNER_NAME", "ImageOS", "ImageVersion")},
         "base_revision": base_revision,
         "candidate_revision": candidate_revision,
@@ -561,6 +577,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
             {
                 "scenario": scenario,
                 "concurrency": concurrency,
+                "event_store": "devnull" if scenario == "buffered_devnull" else "sqlite",
                 "direct_request": request_body(scenario, direct=True),
                 "proxied_request": request_body(scenario, direct=False),
             }
@@ -577,7 +594,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
         "",
         (
             f"Medians across {rounds} rounds, {duration_s:g}s per workload, {warmup} warmup requests per connection. "
-            "One gateway worker, durable SQLite event collection enabled; periodic export excluded."
+            "One gateway worker, durable SQLite and dev-null event collection measured separately; periodic export excluded."
         ),
         "",
         "| Workload | Concurrency | Metric | Base | Candidate | Change |",

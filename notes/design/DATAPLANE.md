@@ -25,12 +25,15 @@ Its hard boundaries are architectural, not conventions:
 - `evaluate()` remains pure and synchronous, with no I/O, clock access, or hidden state
 - Starlette is the HTTP framework; Pydantic validation is applied deliberately at protocol boundaries
 
-The request path performs no control-plane or management-database I/O. It can still perform three kinds of I/O:
+The request path performs no control-plane, management-database, or usage-storage I/O. It performs two kinds of I/O:
 
 - A provider-secret store read on a credential cache miss, including PostgreSQL only when the
   explicitly insecure database store is configured
 - The provider HTTP request
-- A synchronous local SQLite write when the durable event outbox is enabled
+
+Immediately before each provider attempt, the request reserves one slot in the bounded in-memory outbox.
+Usage-event construction and transfer into that slot remain synchronous. SQLite and file persistence run
+on the outbox's dedicated storage thread.
 
 The high-level data flow is:
 
@@ -254,7 +257,8 @@ The canonical models are an internal interface shared by ingress, policy, routin
 | `credentials.py` | Credential-scope indexing and secret-store resolution |
 | `profiles.py`, `reconcile.py` | Precompiled provider facts and request adjustments |
 | `metering.py`, `outbox/` | Usage calculation, durable buffering, and control-plane export |
-| `proxy.py` | The one request orchestration path shared by all caller and provider combinations |
+| `proxy.py` | Request routing, fallback, and buffered provider attempts |
+| `streaming.py` | Streaming provider lifecycle, folding, cancellation, and accounting |
 
 `formats` exists only when a wire spelling has two consumers. OpenAI and Anthropic formats are used
 on both ingress and egress, so their mappings live there. Ingress adapters never import egress
@@ -270,13 +274,14 @@ worker process constructs its own application lifespan and therefore owns:
 - One selected `BundleSource`
 - One `CredentialResolver` and secret-store instance
 - One selected `EventOutbox`
+- One dedicated storage thread when the SQLite or file outbox is selected
 - One frozen `Runtime` exposed through Starlette request state
 
 The HTTP client enables HTTP/2, caps the connection pool, and has explicit connect, read, write, and
 pool timeouts. Components receive it at construction; they do not create per-request clients.
 
 Bundle and outbox implementations start their own workers inside one `asyncio.TaskGroup`. Current
-task names are `bundle poll`, `heartbeat`, `local bundle reload`, and `event export`.
+task names are `bundle poll`, `heartbeat`, `local bundle reload`, `event storage`, and `event export`.
 
 All periodic work uses `run_periodic()`:
 
@@ -284,7 +289,8 @@ All periodic work uses `run_periodic()`:
 - Any undeclared exception escapes the loop
 - A worker that returns or fails unexpectedly logs at critical level and sends `SIGTERM` to its process
 - Task-group cancellation stops sibling workers
-- Normal shutdown cancels workers, closes the outbox, and closes the shared HTTP client
+- Normal shutdown cancels remote export, closes the queue to reservations, drains filled events to local storage,
+  verifies that no reservations remain, closes storage on its owning thread, and closes the shared HTTP client
 
 The process exit is deliberate. A single-process deployment relies on its supervisor to restart it.
 Under Uvicorn multi-worker mode, the parent process replaces the failed worker.
@@ -300,8 +306,8 @@ Workers configured with the same cache directory cooperate through local files:
 | `events.db` | SQLite WAL outbox shared by all workers |
 
 Each worker still polls and heartbeats independently. Atomic bundle writes prevent workers from
-renaming one another's temporary files. SQLite serializes event writes, and a lease ensures only one
-worker exports at a time.
+renaming one another's temporary files. Each worker has its own 10,000-slot memory queue and storage
+thread. SQLite serializes their batched writes, and a lease ensures only one worker exports at a time.
 
 The cache directory is local coordination, not distributed coordination. Replicas on different
 hosts have separate caches, instance ids, and outboxes unless the deployment supplies a filesystem
@@ -509,7 +515,7 @@ meaning.
 
 ## Request execution
 
-The HTTP boundary and orchestration in `proxy.py` serve every caller/provider combination:
+The HTTP boundary and orchestration in `proxy.py` and `streaming.py` serve every caller/provider combination:
 
 1. Mint the request ID and start time, capture the current bundle snapshot, and authenticate the caller
 2. Use the route-bound ingress adapter and read a JSON object
@@ -595,7 +601,7 @@ Each adapter creates its own `StreamState`. `finalize(state)` must return a vali
 what makes cancellation accounting possible.
 
 `StreamSession` opens the upstream response inside an async exit stack, then hands ownership of that
-stack to the `StreamingResponse` iterator. The provider connection therefore remains open for the
+stack to the downstream response lifecycle. The provider connection therefore remains open for the
 life of the downstream stream and closes on completion, error, or disconnect.
 
 On a normal end, the adapter validates the provider's terminal event, finalizes accumulated state,
@@ -626,8 +632,16 @@ before policy, plus missing or unavailable secret values, currently do not produ
 
 ### SQLite outbox
 
-`SqliteOutbox.record()` performs a local transaction and `INSERT OR IGNORE` keyed by `event_id`. It
-does no network work. The export loop:
+An allowed request reserves one slot immediately before each provider attempt, and a denied request
+reserves one slot before recording the denial. If the fixed 10,000-slot capacity is unavailable, the
+request returns `503 metering_capacity_exhausted` before the next provider call. A fallback can therefore
+stop after an earlier failed attempt if capacity fills between attempts. Reserved and filled slots both
+consume capacity. An unused slot returns when its attempt or stream ends.
+
+Recording an event transfers one reserved slot into the in-memory writer queue and never waits for
+SQLite. The storage thread batches `INSERT OR IGNORE` writes keyed by `event_id`, preserving event
+order within the worker. SQLite connections are created, used, and closed only on that thread. The
+export loop crosses the same thread to:
 
 1. Acquires or renews the single-row lease
 2. Reads up to 1,000 events in insertion order
@@ -639,8 +653,14 @@ acknowledgement can replay the batch; the control plane upserts on `event_id`, m
 idempotent. A control-plane outage leaves requests serving and events accumulating on disk until
 export succeeds.
 
-`DevNullOutbox` discards events and starts no worker. It is intended for standalone development,
-load tests, or deployments that meter elsewhere.
+The memory queue is not a billing ledger. Graceful shutdown drains every filled event into local
+storage without waiting for control-plane export. `SIGKILL`, machine failure, power loss, or a storage
+failure can lose events accepted into memory but not yet persisted. A storage-thread failure is fatal
+to the worker because metered traffic cannot continue safely.
+
+The file outbox uses the same reservation queue and storage-thread handoff, then appends each batch in
+one `O_APPEND` write. `DevNullOutbox` completes reserved slots immediately
+and starts no worker. It is intended for standalone development, load tests, or deployments that meter elsewhere.
 
 ## Changing or extending the data plane
 
