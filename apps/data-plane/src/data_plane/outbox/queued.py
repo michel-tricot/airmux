@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 from abc import abstractmethod
 from collections import deque
@@ -8,6 +9,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Never, TypeVar
 
+from airmux_runtime.observability import log_event
 from data_plane.outbox.base import EventOutbox, OutboxClosedError, OutboxFullError, OutboxStat
 
 if TYPE_CHECKING:
@@ -19,6 +21,7 @@ if TYPE_CHECKING:
 CAPACITY = 10_000
 
 T = TypeVar("T")
+logger = logging.getLogger("data_plane")
 
 
 class _StorageWorkerError(RuntimeError):
@@ -35,7 +38,7 @@ class _ReservationLeakError(RuntimeError):
 
 
 class QueuedOutbox(EventOutbox):
-    def __init__(self, thread_name: str, metrics: DataPlaneMetrics | None = None) -> None:
+    def __init__(self, thread_name: str, metrics: DataPlaneMetrics) -> None:
         super().__init__(metrics)
         self._lock = threading.RLock()
         self._accepting = True
@@ -211,12 +214,10 @@ class QueuedOutbox(EventOutbox):
                     raise _StorageWorkerError from self._failure
             outcome = "success"
         finally:
-            if self._metrics is not None:
-                self._metrics.observe_metering_shutdown_drain(outcome)
+            log_event(logger, logging.INFO if outcome == "success" else logging.ERROR, "metering_shutdown_drain", outcome=outcome)
 
     def _update_queue_metrics(self) -> None:
-        if self._metrics is not None:
-            self._metrics.set_metering_queue(self._reserved + self._filled, CAPACITY)
+        self._metrics.set_metering_queue(self._reserved + self._filled, CAPACITY)
 
     def _drain_and_close(self) -> None:
         try:

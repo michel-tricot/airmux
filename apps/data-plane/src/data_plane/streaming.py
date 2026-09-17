@@ -11,6 +11,7 @@ from starlette.responses import Response, StreamingResponse
 
 from data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.metering import status_for_error, usage_event
+from data_plane.metrics import upstream_outcome
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -102,7 +103,7 @@ class _StreamResponse(StreamingResponse):
                     status=status_for_error(error),
                     request=self._session.request,
                 ),
-                _upstream_outcome(error),
+                upstream_outcome(error),
             )
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             self._record(self._cancelled_event(), "cancelled")
@@ -120,13 +121,3 @@ class _StreamResponse(StreamingResponse):
         self._reservation.record(event)
         self._session.metrics.observe_upstream(self._session.egress_kind, outcome, self._session.attempt_started_at)
         self._recorded = True
-
-
-def _upstream_outcome(error: Exception) -> UpstreamOutcome:
-    if isinstance(error, httpx.TimeoutException):
-        return "timeout"
-    if isinstance(error, httpx.HTTPError):
-        return "unreachable"
-    if isinstance(error, UpstreamProtocolError):
-        return "protocol_error"
-    return "provider_error"

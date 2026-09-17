@@ -69,26 +69,22 @@ class OutboxReservation:
 
 
 class EventOutbox(ABC):
-    def __init__(self, metrics: DataPlaneMetrics | None = None) -> None:
+    def __init__(self, metrics: DataPlaneMetrics) -> None:
         self._metrics = metrics
 
     def reserve(self) -> OutboxReservation:
         try:
             self._reserve()
         except OutboxClosedError:
-            if self._metrics is not None:
-                self._metrics.observe_metering_admission("closed")
+            self._metrics.observe_metering_admission("closed")
             raise
         except OutboxFullError:
-            if self._metrics is not None:
-                self._metrics.observe_metering_admission("full")
+            self._metrics.observe_metering_admission("full")
             raise
         except Exception:
-            if self._metrics is not None:
-                self._metrics.observe_metering_admission("closed")
+            self._metrics.observe_metering_admission("closed")
             raise
-        if self._metrics is not None:
-            self._metrics.observe_metering_admission("accepted")
+        self._metrics.observe_metering_admission("accepted")
         return OutboxReservation(self._record_reserved, self._release_reserved, self._fail_reservation)
 
     def _reserve(self) -> None:

@@ -147,7 +147,7 @@ class ThrottleMiddleware:
             client = scope.get("client")
             identity = client[0] if client else "unknown"
             decision = await self.backend.consume(throttle_key(f"ip:{group}", identity), quota(self.config, group))
-            self.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
+            self.metrics.observe_throttle(decision.reason if isinstance(decision, Denied) else "allowed")
             if isinstance(decision, Denied):
                 await denied_response(decision)(scope, receive, send)
                 return
@@ -164,7 +164,7 @@ async def check_identity(request: Request, identity: UUID) -> None:
     decision = await request.app.state.throttle_backend.consume(
         throttle_key(f"principal:{group}", str(identity)), quota(request.app.state.settings.throttling, group)
     )
-    request.app.state.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
+    request.app.state.metrics.observe_throttle(decision.reason if isinstance(decision, Denied) else "allowed")
     if isinstance(decision, Denied):
         raise ThrottledError(decision)
 
@@ -174,6 +174,6 @@ async def check_account(request: Request, email: str) -> None:
     decision = await request.app.state.throttle_backend.consume(
         throttle_key("account", f"{client}:{email.strip().casefold()}"), request.app.state.settings.throttling.account
     )
-    request.app.state.metrics.throttle_decisions.labels(decision.reason if isinstance(decision, Denied) else "allowed").inc()
+    request.app.state.metrics.observe_throttle(decision.reason if isinstance(decision, Denied) else "allowed")
     if isinstance(decision, Denied):
         raise ThrottledError(decision)

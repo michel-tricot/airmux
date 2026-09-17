@@ -7,7 +7,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
@@ -30,6 +29,7 @@ from data_plane.egress.base import Ctx, UpstreamProtocolError, UpstreamResponseE
 from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.http import render_rejection
 from data_plane.metering import RequestStart, denied_event, status_for_error, status_for_upstream, usage_event
+from data_plane.metrics import upstream_outcome
 from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from data_plane.egress.base import EgressAdapter, UpstreamRequest
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
-    from data_plane.metrics import UpstreamOutcome
     from data_plane.outbox import OutboxReservation
 
 
@@ -62,8 +61,7 @@ async def complete(request: Request, context: InferenceContext, ingress: Ingress
         if body.get("stream") is True:
             route = request.scope["state"]["metrics_route"]
             request.scope["state"]["metrics_stream"] = True
-            runtime.metrics.inflight.labels(route, "false").dec()
-            runtime.metrics.inflight.labels(route, "true").inc()
+            runtime.metrics.relabel_inflight_stream(route)
         canonical_request, adjustments = _parse(body, ingress)
         execution = RequestExecution(
             request=canonical_request,
@@ -211,7 +209,7 @@ class RequestExecution:
             _check_upstream(response)
             final = adapter.transform_response(response.content, ctx)
         except UpstreamResponseError as error:
-            self.runtime.metrics.observe_upstream(egress_kind, _upstream_outcome(error), attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             status = status_for_upstream(error.status)
             if status == "credential_rejected":
                 self.runtime.credentials.forget(entry)
@@ -227,7 +225,7 @@ class RequestExecution:
             )
             return AttemptFailure(rendered, reason, error.status in {httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN, httpx.codes.TOO_MANY_REQUESTS})
         except httpx.HTTPError as error:
-            self.runtime.metrics.observe_upstream(egress_kind, _upstream_outcome(error), attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
             return AttemptFailure(rendered, "timeout" if isinstance(error, httpx.TimeoutException) else "upstream_unavailable", False)
         except UpstreamProtocolError as error:
@@ -292,13 +290,3 @@ def _record_upstream_error(
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
     return CanonicalResponse(id=str(ctx.request_id), model=ctx.model.model_id, content=[], finish_reason=None, usage=CanonicalUsage(estimated=True))
-
-
-def _upstream_outcome(error: UpstreamResponseError | httpx.HTTPError) -> UpstreamOutcome:
-    if isinstance(error, httpx.TimeoutException):
-        return "timeout"
-    if isinstance(error, httpx.HTTPError):
-        return "unreachable"
-    if error.status < HTTPStatus.INTERNAL_SERVER_ERROR:
-        return "rejected"
-    return "provider_error"

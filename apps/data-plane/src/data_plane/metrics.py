@@ -4,10 +4,12 @@ import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Literal
 
+import httpx
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 from starlette.responses import Response
 
+from data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.runtime import runtime_of
 
 if TYPE_CHECKING:
@@ -18,6 +20,11 @@ if TYPE_CHECKING:
 type HttpOutcome = Literal["success", "rejected", "failed"]
 type UpstreamOutcome = Literal["success", "cancelled", "rejected", "timeout", "unreachable", "protocol_error", "provider_error"]
 type HttpRequestLabels = tuple[str, str, str, bool]
+type BundlePollOutcome = Literal["unchanged", "adopted", "rejected", "failed"]
+type CredentialCacheResult = Literal["hit", "miss", "negative_hit", "backend_unavailable"]
+type CredentialLoadOutcome = Literal["success", "missing", "backend_unavailable"]
+type MeteringAdmissionOutcome = Literal["accepted", "full", "closed"]
+type MeteringExportOutcome = Literal["success", "failed"]
 
 
 class DataPlaneMetrics:
@@ -106,9 +113,6 @@ class DataPlaneMetrics:
         self.metering_export_duration = Histogram(
             "airmux_data_plane_metering_export_duration_seconds", "Metering export duration", ("outcome",), registry=self.registry
         )
-        self.metering_shutdown_drains = Counter(
-            "airmux_data_plane_metering_shutdown_drains_total", "Metering shutdown drain outcomes", ("outcome",), registry=self.registry
-        )
         self.metering_outbox_oldest_age.set_function(
             lambda: max(0.0, time.time() - self._outbox_oldest_at) if self._outbox_oldest_at is not None else 0.0
         )
@@ -120,7 +124,6 @@ class DataPlaneMetrics:
             self.metering_admission.labels(outcome).inc(0)
         for outcome in ("success", "failed"):
             self.metering_exports.labels(outcome).inc(0)
-            self.metering_shutdown_drains.labels(outcome).inc(0)
 
     def observe_http(self, request: HttpRequestLabels, status: int, elapsed: float) -> None:
         route, method, dialect, stream = request
@@ -133,7 +136,30 @@ class DataPlaneMetrics:
         self.upstream_attempts.labels(kind, outcome).inc()
         self.upstream_duration.labels(kind, outcome).observe(time.monotonic() - started_at)
 
-    def observe_metering_admission(self, outcome: str) -> None:
+    def relabel_inflight_stream(self, route: str) -> None:
+        self.inflight.labels(route, "false").dec()
+        self.inflight.labels(route, "true").inc()
+
+    def observe_credential_cache(self, result: CredentialCacheResult) -> None:
+        self.credential_cache_requests.labels(result).inc()
+
+    def observe_credential_load(self, result: CredentialCacheResult, outcome: CredentialLoadOutcome, started_at: float) -> None:
+        self.observe_credential_cache(result)
+        self.credential_load_duration.labels(outcome).observe(time.monotonic() - started_at)
+
+    def observe_bundle_adopted(self, snapshots: int) -> None:
+        self.observe_bundle_poll("adopted")
+        self.bundle_snapshots.set(snapshots)
+        self.bundle_last_adopted.set(time.time())
+
+    def observe_bundle_poll(self, outcome: BundlePollOutcome) -> None:
+        self.bundle_poll.labels(outcome).inc()
+        if outcome == "rejected":
+            self.bundle_manifest_rejected.set(1)
+        elif outcome in {"unchanged", "adopted"}:
+            self.bundle_manifest_rejected.set(0)
+
+    def observe_metering_admission(self, outcome: MeteringAdmissionOutcome) -> None:
         self.metering_admission.labels(outcome).inc()
 
     def set_metering_queue(self, depth: int, capacity: int) -> None:
@@ -144,12 +170,23 @@ class DataPlaneMetrics:
         self.metering_outbox_pending.set(pending)
         self._outbox_oldest_at = oldest_at.timestamp() if oldest_at is not None else None
 
-    def observe_metering_export(self, outcome: str, started_at: float) -> None:
+    def observe_metering_export(self, outcome: MeteringExportOutcome, started_at: float) -> None:
         self.metering_exports.labels(outcome).inc()
         self.metering_export_duration.labels(outcome).observe(time.monotonic() - started_at)
 
-    def observe_metering_shutdown_drain(self, outcome: str) -> None:
-        self.metering_shutdown_drains.labels(outcome).inc()
+
+def upstream_outcome(
+    error: UpstreamResponseError | UpstreamProtocolError | UpstreamStreamError | httpx.HTTPError,
+) -> UpstreamOutcome:
+    if isinstance(error, httpx.TimeoutException):
+        return "timeout"
+    if isinstance(error, httpx.HTTPError):
+        return "unreachable"
+    if isinstance(error, UpstreamProtocolError):
+        return "protocol_error"
+    if isinstance(error, UpstreamResponseError):
+        return "rejected" if error.status < HTTPStatus.INTERNAL_SERVER_ERROR else "provider_error"
+    return "provider_error"
 
 
 async def metrics_endpoint(request: Request) -> Response:

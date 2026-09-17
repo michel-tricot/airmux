@@ -74,9 +74,9 @@ class CredentialResolver:
     def __init__(
         self,
         store: SecretReader,
+        metrics: DataPlaneMetrics,
         ttl_s: float = CACHE_TTL_S,
         negative_ttl_s: float = NEGATIVE_TTL_S,
-        metrics: DataPlaneMetrics | None = None,
     ) -> None:
         self.store = store
         self.ttl_s = ttl_s
@@ -118,13 +118,13 @@ class CredentialResolver:
         self._prune(now)
         cached = self._values.get(key)
         if cached is not None and cached[0] > now:
-            self._record_cache("hit" if cached[1] is not None else "negative_hit")
+            self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
             return cached[1]
         lock = self._locks.setdefault(key, asyncio.Lock())
         async with lock:
             cached = self._values.get(key)
             if cached is not None and cached[0] > time.monotonic():
-                self._record_cache("hit" if cached[1] is not None else "negative_hit")
+                self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
                 return cached[1]
             return await self._load(key, entry)
 
@@ -133,26 +133,17 @@ class CredentialResolver:
         try:
             secret = await self.store.get(entry.ref)
         except SecretNotFoundError:
-            self._record_load("miss", "missing", started_at)
+            self.metrics.observe_credential_load("miss", "missing", started_at)
             log_event(logger, logging.WARNING, "credential_missing", outcome="missing")
             self._values[key] = (time.monotonic() + self.negative_ttl_s, None)
             return None
         except SecretStoreUnavailableError:
-            self._record_load("backend_unavailable", "backend_unavailable", started_at)
+            self.metrics.observe_credential_load("backend_unavailable", "backend_unavailable", started_at)
             self._locks.pop(key, None)
             raise
-        self._record_load("miss", "success", started_at)
+        self.metrics.observe_credential_load("miss", "success", started_at)
         self._values[key] = (time.monotonic() + self.ttl_s, secret)
         return secret
-
-    def _record_cache(self, result: str) -> None:
-        if self.metrics is not None:
-            self.metrics.credential_cache_requests.labels(result).inc()
-
-    def _record_load(self, result: str, outcome: str, started_at: float) -> None:
-        if self.metrics is not None:
-            self.metrics.credential_cache_requests.labels(result).inc()
-            self.metrics.credential_load_duration.labels(outcome).observe(time.monotonic() - started_at)
 
     def _prune(self, now: float) -> None:
         for key, (expires, _) in tuple(self._values.items()):

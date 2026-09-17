@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 __all__ = ["DevNullOutbox", "EventOutbox", "FileOutbox", "OutboxFullError", "OutboxReservation", "SqliteOutbox", "build_outbox"]
 
 
-def build_outbox(config: OutboxConfig, http_client: httpx.AsyncClient, metrics: DataPlaneMetrics | None = None) -> EventOutbox:
+def build_outbox(config: OutboxConfig, http_client: httpx.AsyncClient, metrics: DataPlaneMetrics) -> EventOutbox:
     if isinstance(config, DevNullOutboxConfig):
         return DevNullOutbox(metrics)
     if isinstance(config, FileOutboxConfig):

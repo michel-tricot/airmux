@@ -32,6 +32,7 @@ from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
 
 if TYPE_CHECKING:
@@ -130,6 +131,7 @@ def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: floa
             flush_interval_s=flush_interval_s,
         ),
         http_client=http_client,
+        metrics=DataPlaneMetrics(),
     )
 
 

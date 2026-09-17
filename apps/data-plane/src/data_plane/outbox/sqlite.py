@@ -63,7 +63,7 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 
 
 class SqliteOutbox(QueuedOutbox):
-    def __init__(self, config: SqliteOutboxConfig, http_client: httpx.AsyncClient, metrics: DataPlaneMetrics | None = None) -> None:
+    def __init__(self, config: SqliteOutboxConfig, http_client: httpx.AsyncClient, metrics: DataPlaneMetrics) -> None:
         self._config = config
         self._http_client = http_client
         self._owner = str(os.getpid())
@@ -142,17 +142,14 @@ class SqliteOutbox(QueuedOutbox):
             response.raise_for_status()
             await self.acknowledge([str(event.event_id) for event in events])
         except (httpx.HTTPError, OSError, sqlite3.Error):
-            if self._metrics is not None:
-                self._metrics.observe_metering_export("failed", started_at)
+            self._metrics.observe_metering_export("failed", started_at)
             raise
-        if self._metrics is not None:
-            self._metrics.observe_metering_export("success", started_at)
+        self._metrics.observe_metering_export("success", started_at)
         return len(events)
 
     def _update_backlog_metrics(self) -> None:
-        if self._metrics is not None:
-            backlog = self._durable_backlog()
-            self._metrics.set_metering_outbox(backlog.events, backlog.oldest_event_at)
+        backlog = self._durable_backlog()
+        self._metrics.set_metering_outbox(backlog.events, backlog.oldest_event_at)
 
     async def refresh_metrics(self) -> None:
         await self._storage_call(self._update_backlog_metrics)

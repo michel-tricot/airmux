@@ -13,6 +13,7 @@ from pydantic import TypeAdapter, ValidationError
 from airmux_runtime.config import ConfigContext
 from contract import RoutedUsageEventV1, UsageEvent, uuid7
 from data_plane.config import Config, FileOutboxConfig
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import EventOutbox, FileOutbox, build_outbox
 
 if TYPE_CHECKING:
@@ -49,7 +50,7 @@ def record(outbox: EventOutbox, event: UsageEvent) -> None:
 
 
 def write_events(path: Path, start: int, count: int) -> None:
-    outbox = FileOutbox(FileOutboxConfig(path=path))
+    outbox = FileOutbox(FileOutboxConfig(path=path), DataPlaneMetrics())
     try:
         for index in range(start, start + count):
             record(outbox, event_of(index))
@@ -64,14 +65,14 @@ def read_events(path: Path) -> list[UsageEvent]:
 async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_path, http_client):
     path = tmp_path / "nested/events.jsonl"
     events = [event_of(0), event_of(1)]
-    outbox = build_outbox(FileOutboxConfig(path=path), http_client)
+    outbox = build_outbox(FileOutboxConfig(path=path), http_client, DataPlaneMetrics())
     try:
         record(outbox, events[0])
     finally:
         await outbox.close()
     assert read_events(path) == events[:1]
 
-    reopened = FileOutbox(FileOutboxConfig(path=path))
+    reopened = FileOutbox(FileOutboxConfig(path=path), DataPlaneMetrics())
     try:
         record(reopened, events[1])
     finally:
@@ -82,7 +83,7 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
 
 def test_file_events_do_not_wait_for_advisory_locks(tmp_path):
     path = tmp_path / "events.jsonl"
-    outbox = FileOutbox(FileOutboxConfig(path=path))
+    outbox = FileOutbox(FileOutboxConfig(path=path), DataPlaneMetrics())
     event = event_of(0)
     executor = ThreadPoolExecutor(max_workers=1)
     with path.open("a") as event_file:
@@ -99,7 +100,7 @@ def test_file_events_do_not_wait_for_advisory_locks(tmp_path):
 
 def test_file_events_from_concurrent_threads_remain_complete(tmp_path):
     path = tmp_path / "events.jsonl"
-    outbox = FileOutbox(FileOutboxConfig(path=path))
+    outbox = FileOutbox(FileOutboxConfig(path=path), DataPlaneMetrics())
     events = [event_of(index) for index in range(100)]
     try:
         with ThreadPoolExecutor(max_workers=8) as executor:

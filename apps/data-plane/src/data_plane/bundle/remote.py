@@ -58,7 +58,6 @@ class RemoteBundleSource(BundleSource):
             raise
         if not changed:
             self._holder.record_poll("unchanged")
-        self._holder.accept_manifest()
 
     async def run(self) -> None:
         await run_periodic(

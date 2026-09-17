@@ -27,7 +27,7 @@ async def run_publisher(factory: async_sessionmaker[AsyncSession], metrics: Cont
                 publication = await publish_next(now)
                 pending = await BundleState.pending_count()
         except PublicationError as error:
-            metrics.bundle_publications.labels("failed").inc()
+            metrics.observe_bundle_publication("failed")
             logger.exception(
                 "bundle publication failed for organization %s at generations %d/%d",
                 error.org_id,
@@ -47,12 +47,12 @@ async def run_publisher(factory: async_sessionmaker[AsyncSession], metrics: Cont
             if getattr(error.orig, "sqlstate", None) == "40001":
                 logger.info("bundle publication snapshot changed; retrying")
                 continue
-            metrics.bundle_publications.labels("failed").inc()
+            metrics.observe_bundle_publication("failed")
             logger.exception("bundle publisher database failure")
             await asyncio.sleep(1)
             continue
         except Exception:
-            metrics.bundle_publications.labels("failed").inc()
+            metrics.observe_bundle_publication("failed")
             logger.exception("bundle publisher failure")
             await asyncio.sleep(1)
             continue
@@ -60,4 +60,4 @@ async def run_publisher(factory: async_sessionmaker[AsyncSession], metrics: Cont
         if publication is None:
             await asyncio.sleep(1)
         else:
-            metrics.bundle_publications.labels("success").inc()
+            metrics.observe_bundle_publication("success")

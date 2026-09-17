@@ -14,6 +14,7 @@ import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.proxy import RequestRejectedError, _transform
 
@@ -105,7 +106,7 @@ def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
 @respx.mock
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
 def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
-    outbox = DevNullOutbox()
+    outbox = DevNullOutbox(DataPlaneMetrics())
 
     def reject_reservation():
         raise OutboxFullError

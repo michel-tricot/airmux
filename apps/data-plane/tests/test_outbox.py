@@ -166,17 +166,17 @@ async def test_metrics_refresh_reads_the_shared_durable_backlog(tmp_path, http_c
 
 async def test_build_outbox_selects_kind(tmp_path, http_client):
     config = make_config(tmp_path)
-    sqlite = build_outbox(config.events, http_client)
+    sqlite = build_outbox(config.events, http_client, DataPlaneMetrics())
     assert isinstance(sqlite, SqliteOutbox)
     devnull = make_config(tmp_path, outbox_kind="devnull")
-    sink = build_outbox(devnull.events, http_client)
+    sink = build_outbox(devnull.events, http_client, DataPlaneMetrics())
     assert isinstance(sink, DevNullOutbox)
     await sqlite.close()
     await sink.close()
 
 
 async def test_devnull_has_no_queue_capacity_or_stats():
-    outbox = DevNullOutbox()
+    outbox = DevNullOutbox(DataPlaneMetrics())
     with outbox.reserve():
         assert await outbox.stats() == {}
 
@@ -229,3 +229,8 @@ async def test_close_drains_filled_events_before_closing_storage(tmp_path, http_
 
 def test_default_outbox_capacity_is_ten_thousand():
     assert CAPACITY == 10_000
+
+
+def test_metrics_do_not_expose_shutdown_only_state():
+    metrics = generate_latest(DataPlaneMetrics().registry).decode()
+    assert "airmux_data_plane_metering_shutdown_drains" not in metrics

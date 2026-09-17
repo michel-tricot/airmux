@@ -46,7 +46,7 @@ async def test_poll_admits_every_bundle_in_the_authorized_manifest(tmp_path, htt
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
     respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
     respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
 
     await _remote_source(tmp_path, holder, http_client).once()
 
@@ -63,7 +63,7 @@ async def test_poll_swaps_and_persists(tmp_path, http_client):
     bundle = make_remote_bundle()
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
     respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
 
     await _remote_source(tmp_path, holder, http_client).once()
 
@@ -79,10 +79,10 @@ async def test_cached_bundle_keeps_serving_when_control_plane_is_unreachable(tmp
     bundle = make_remote_bundle()
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
     respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
-    first_holder = BundleHolder()
+    first_holder = BundleHolder(DataPlaneMetrics())
     await _remote_source(tmp_path, first_holder, http_client).once()
 
-    restarted_holder = BundleHolder()
+    restarted_holder = BundleHolder(DataPlaneMetrics())
     _remote_source(tmp_path, restarted_holder, http_client)._load_cached()
 
     assert restarted_holder.current.snapshots[ORG].bundle.bundle_id == bundle.bundle_id
@@ -93,7 +93,7 @@ async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_pat
     bundle = make_remote_bundle()
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
     respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     error = OSError("cache unavailable")
 
     def fail_write(*_args):
@@ -112,7 +112,7 @@ async def test_poll_same_bundle_is_a_noop(tmp_path, http_client):
     bundle = make_remote_bundle()
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
     respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=bundle_response(bundle))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
     (tmp_path / "bundles.json").unlink()
@@ -129,7 +129,7 @@ async def test_poll_revocation_updates_holder(tmp_path, http_client):
     route = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first))
     respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
     respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
     assert make_key("k1")[1].token_hash in holder.current.key_index
@@ -157,7 +157,7 @@ async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http
 
 
 async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=True))
@@ -169,7 +169,7 @@ async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
 
 
 async def test_readiness_fails_when_metering_cannot_accept_work():
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
     request = Request({"type": "http"})
     request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=False))
@@ -185,7 +185,7 @@ async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_
     manifest = respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
     respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
     respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
@@ -209,7 +209,7 @@ async def test_poll_fetches_only_the_org_whose_bundle_changed(tmp_path, http_cli
     first_fetch = respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
     changed_fetch = respx.get(f"http://cp.test/api/v1/bundles/{changed.bundle_id}").mock(return_value=bundle_response(changed))
     second_fetch = respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = _remote_source(tmp_path, holder, http_client)
     await source.once()
 
@@ -229,7 +229,7 @@ async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_
     mismatched = make_remote_bundle(key_ids=("mismatched",))
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(expected))
     respx.get(f"http://cp.test/api/v1/bundles/{expected.bundle_id}").mock(return_value=bundle_response(mismatched))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
 
     with pytest.raises(ValueError, match="does not match manifest entry"):
         await _remote_source(tmp_path, holder, http_client).once()
@@ -246,7 +246,7 @@ async def test_poll_rejects_a_token_hash_shared_by_two_org_bundles(tmp_path, htt
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(first, second))
     respx.get(f"http://cp.test/api/v1/bundles/{first.bundle_id}").mock(return_value=bundle_response(first))
     respx.get(f"http://cp.test/api/v1/bundles/{second.bundle_id}").mock(return_value=bundle_response(second))
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
 
     with pytest.raises(ValueError, match="token hash appears in more than one bundle"):
         await _remote_source(tmp_path, holder, http_client).once()

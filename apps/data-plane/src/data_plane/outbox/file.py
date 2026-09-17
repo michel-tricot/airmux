@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class FileOutbox(QueuedOutbox):
-    def __init__(self, config: FileOutboxConfig, metrics: DataPlaneMetrics | None = None) -> None:
+    def __init__(self, config: FileOutboxConfig, metrics: DataPlaneMetrics) -> None:
         self._config = config
         super().__init__("airmux-file-outbox", metrics)
 

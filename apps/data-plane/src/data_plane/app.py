@@ -88,7 +88,7 @@ def create_app(config: Config) -> ASGIApp:
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,
-                    credentials=CredentialResolver(secret_store, metrics=metrics),
+                    credentials=CredentialResolver(secret_store, metrics),
                     http_client=http_client,
                     metrics=metrics,
                 )

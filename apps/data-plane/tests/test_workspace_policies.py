@@ -29,6 +29,7 @@ from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
 from data_plane.routing import RoutePlan, plan_routes
@@ -380,7 +381,7 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
-    outbox = DevNullOutbox()
+    outbox = DevNullOutbox(DataPlaneMetrics())
     reservations = iter((outbox.reserve(),))
 
     def reserve():

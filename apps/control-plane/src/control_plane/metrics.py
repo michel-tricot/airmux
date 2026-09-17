@@ -12,6 +12,8 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 type HttpOutcome = Literal["success", "rejected", "failed"]
+type BundlePublicationOutcome = Literal["success", "failed"]
+type ThrottleOutcome = Literal["allowed", "quota", "capacity"]
 
 
 class ControlPlaneMetrics:
@@ -59,6 +61,12 @@ class ControlPlaneMetrics:
         outcome: HttpOutcome = "success" if status < HTTPStatus.BAD_REQUEST else "rejected" if status < HTTPStatus.INTERNAL_SERVER_ERROR else "failed"
         self.http_requests.labels(route, method, outcome, f"{status // 100}xx").inc()
         self.http_duration.labels(route, method, outcome).observe(elapsed)
+
+    def observe_throttle(self, outcome: ThrottleOutcome) -> None:
+        self.throttle_decisions.labels(outcome).inc()
+
+    def observe_bundle_publication(self, outcome: BundlePublicationOutcome) -> None:
+        self.bundle_publications.labels(outcome).inc()
 
     def observe_bundle_backlog(self, pending: int) -> None:
         now = time.monotonic()
