@@ -23,6 +23,7 @@ it('shows bundle generation history under organization Activity without publishi
   expect(await screen.findByText('bundle-1')).toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Policies' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /republish/i })).not.toBeInTheDocument();
+  expect(screen.queryByText(/queued|publication|data planes adopt/i)).not.toBeInTheDocument();
 });
 
 it('keeps Activity available for bundle readers without audit permission', async () => {
@@ -31,30 +32,6 @@ it('keeps Activity available for bundle readers without audit permission', async
   expect(await screen.findByRole('tab', { name: 'Activity' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.queryByRole('tab', { name: 'Members' })).not.toBeInTheDocument();
   expect(await screen.findByText('No configuration bundles have been generated yet.')).toBeInTheDocument();
-});
-
-it('distinguishes queued and failed configuration publication from data-plane adoption', async () => {
-  server.use(
-    http.get('/api/v1/organizations/:orgId/bundles/status', () =>
-      HttpResponse.json({
-        data: {
-          desired_revision: 4,
-          published_revision: 3,
-          status: 'failed',
-          latest_bundle: { id: bundle.id, version: bundle.version, issued_at: bundle.issued_at },
-          last_attempt_at: bundle.issued_at,
-          failure: { category: 'compilation_failed', message: 'Configuration could not be published' },
-        } satisfies Api.BundlePublicationStatusOut,
-      }),
-    ),
-  );
-  open('/org/settings');
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Activity' }));
-  expect(await screen.findByText('Publication failed')).toBeVisible();
-  expect(screen.getByText(/previous bundle remains available/i)).toBeVisible();
-  expect(screen.queryByText(/data planes have adopted/i)).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Republish' })).toBeEnabled();
 });
 
 it('organizes workspace settings into selectable categories', async () => {
@@ -125,14 +102,6 @@ it('allows an organization-only invitation when workspaces are unavailable', asy
 
 it('republishes configuration from Instance Administration and updates the bundle history', async () => {
   let bundles = [bundle];
-  let publication: Api.BundlePublicationStatusOut = {
-    desired_revision: 1,
-    published_revision: 1,
-    status: 'current',
-    latest_bundle: { id: bundle.id, version: bundle.version, issued_at: bundle.issued_at },
-    last_attempt_at: bundle.issued_at,
-    failure: null,
-  };
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', orgs: [ORG.id] } }),
@@ -140,26 +109,19 @@ it('republishes configuration from Instance Administration and updates the bundl
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json({ data: ORG })),
     http.get('/api/v1/users', () => HttpResponse.json({ data: [] })),
     http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })),
-    http.get('/api/v1/organizations/:orgId/bundles/status', () => HttpResponse.json({ data: publication })),
     http.post('/api/v1/organizations/:orgId/bundles/republish', () => {
       const published = { ...bundle, id: 'bundle-2', version: 2 };
       bundles = [...bundles, published];
-      publication = {
-        desired_revision: 2,
-        published_revision: 2,
-        status: 'current',
-        latest_bundle: { id: published.id, version: published.version, issued_at: published.issued_at },
-        last_attempt_at: published.issued_at,
-        failure: null,
-      };
       return HttpResponse.json({
         data: {
           queued_revision: 2,
           publication: {
-            ...publication,
+            desired_revision: 2,
             published_revision: 1,
             status: 'pending',
             latest_bundle: { id: bundle.id, version: bundle.version, issued_at: bundle.issued_at },
+            last_attempt_at: bundle.issued_at,
+            failure: null,
           },
         },
       });

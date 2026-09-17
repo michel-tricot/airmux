@@ -23,7 +23,6 @@ import {
   getListActivityQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
-import { configurationSaved } from '@/features/telemetry/hooks';
 
 export function useInstanceManagementKeys(params?: ListInstanceManagementKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListInstanceManagementKeys(params, { query: { enabled } });
@@ -90,7 +89,6 @@ export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: strin
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
-          configurationSaved(queryClient, orgId),
         ]),
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
@@ -106,7 +104,6 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
-          configurationSaved(queryClient, orgId),
         ]),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },

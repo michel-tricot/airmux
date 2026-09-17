@@ -60,15 +60,17 @@ def test_instance_owner_login_navigation_dialogs_and_logout(stack: Stack) -> Non
         expect(page.get_by_role("row").filter(has_text="Created in browser")).to_have_count(0)
 
 
-def test_configuration_history_distinguishes_publication_from_data_plane_adoption(stack: Stack) -> None:
+def test_configuration_history_hides_publication_internals(stack: Stack) -> None:
     with running_console(stack) as console:
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
         page = console.page
+        status_requests: list[str] = []
+        page.on("request", lambda request: status_requests.append(request.url) if "/bundles/status" in request.url else None)
         page.goto(f"{console.url}/instance/organizations/{stack.org_id}")
         page.get_by_role("tab", name="Configuration bundles", exact=True).click()
         expect(page.get_by_role("heading", name="Configuration bundles", exact=True)).to_be_visible()
-        expect(page.get_by_text("Current", exact=True)).to_be_visible()
-        expect(page.get_by_text("Published by the control plane. Data planes adopt it on their next successful poll.", exact=True)).to_be_visible()
+        expect(page.get_by_text(re.compile("queued|publication|data planes adopt", re.IGNORECASE))).to_have_count(0)
+        assert status_requests == []
 
 
 @pytest.mark.parametrize("role", ["owner", "admin", "member"])

@@ -1,6 +1,5 @@
 import { SettingsLayout } from '@/components/shared/settings-layout';
 import { BundleHistory } from '@/components/shared/bundle-history';
-import { BundlePublicationStatus } from '@/components/shared/bundle-publication-status';
 import { useChangeOrgRoleMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useState } from 'react';
 import * as z from 'zod';
@@ -14,7 +13,7 @@ import {
 } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
-import { useBundlePublication, useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
+import { useBundles, useOrgActivity } from '@/features/telemetry/hooks';
 import { Dropdown, Card, Button, Badge, ConfirmButton, Input, TabsContent } from '@/components/ui/elements';
 import { Plus, Settings, RefreshCw, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
@@ -53,7 +52,6 @@ export default function AppOrgSettings() {
   const canIssueKey = authorization.can(managementKeyAccess.org.issue);
   const canRevokeKeys = authorization.can(managementKeyAccess.org.revoke);
   const canReadBundles = authorization.can(telemetryAccess.bundles.read);
-  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
   const changeRole = useChangeOrgRoleMutation();
   const canChangeRole = authorization.can(orgMemberAccess.add);
   const canReadMembers = authorization.can(orgMemberAccess.read);
@@ -350,7 +348,7 @@ export default function AppOrgSettings() {
                 />
               </Card>
             )}
-            {canReadBundles && <ConfigurationHistory orgId={orgId} canRepublish={canPublishBundles} />}
+            {canReadBundles && <ConfigurationHistory orgId={orgId} />}
           </TabsContent>
         )}
       </SettingsLayout>
@@ -517,27 +515,16 @@ export default function AppOrgSettings() {
   );
 }
 
-function ConfigurationHistory({ orgId, canRepublish }: { orgId: string; canRepublish: boolean }) {
+function ConfigurationHistory({ orgId }: { orgId: string }) {
   const bundlesQuery = useBundles(orgId);
-  const publicationQuery = useBundlePublication(orgId);
-  const republish = useRepublishBundleMutation(orgId);
   return (
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Configuration history</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Configuration bundles are published after changes are saved. Data planes adopt them on their next successful poll.
+          Configuration bundles are generated automatically when organization configuration changes.
         </p>
       </div>
-      <BundlePublicationStatus
-        publication={publicationQuery.data}
-        isLoading={publicationQuery.isLoading}
-        isError={publicationQuery.isError}
-        error={publicationQuery.error}
-        onRetry={() => publicationQuery.refetch()}
-        onRepublish={canRepublish ? () => republish.mutate({ orgId }) : undefined}
-        republishPending={republish.isPending}
-      />
       <BundleHistory
         bundles={bundlesQuery.data}
         isLoading={bundlesQuery.isLoading}

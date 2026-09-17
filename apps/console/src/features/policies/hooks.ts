@@ -8,7 +8,6 @@ import {
   useReorderPolicies,
   useUpdatePolicy,
 } from '@workspace/api-client-react';
-import { configurationSaved } from '@/features/telemetry/hooks';
 
 export function usePolicies(orgId: string, workspaceRef: string, enabled: boolean) {
   return useListPolicies(orgId, workspaceRef, { query: { enabled } });
@@ -17,13 +16,10 @@ export function usePolicies(orgId: string, workspaceRef: string, enabled: boolea
 export function usePolicyMutations(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   const queryKey = getListPoliciesQueryKey(orgId, workspaceRef);
-  const invalidate = () => Promise.all([queryClient.invalidateQueries({ queryKey }), configurationSaved(queryClient, orgId)]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey });
   const reorder = useReorderPolicies({
     mutation: {
-      onSuccess: (orderedPolicies) => {
-        queryClient.setQueryData(queryKey, orderedPolicies);
-        return configurationSaved(queryClient, orgId);
-      },
+      onSuccess: (orderedPolicies) => queryClient.setQueryData(queryKey, orderedPolicies),
       onSettled: () => queryClient.invalidateQueries({ queryKey }),
       meta: { errorMessage: 'The policy order could not be saved. Try reordering the policies again.' },
     },
