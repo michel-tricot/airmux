@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, cast
 import httpx
 import pytest
 import respx
-from conftest import make_outbox
+from conftest import make_outbox, read_and_close_outbox
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
@@ -64,10 +64,7 @@ def _write(tmp_path, text=BUNDLE_YML):
 
 
 def _recorded(cache_dir, http_client):
-    outbox = make_outbox(cache_dir, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
-    return events
+    return read_and_close_outbox(make_outbox(cache_dir, http_client))
 
 
 def test_the_compiled_bundle_authenticates_the_plaintext_key(tmp_path):

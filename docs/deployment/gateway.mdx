@@ -146,7 +146,8 @@ data_plane:
 Keep the existing `bundle` and `secrets` sections. The path resolves against the configuration file's directory.
 Every line is a versioned usage event from the shared contract, including routed attempts, policy denials, and
 cancelled streams. Authentication and request parsing failures do not create usage events.
-Events are readable while the gateway runs and append across restarts. Fallback produces one event per attempted
+Events become readable while the gateway runs and append across restarts. Graceful shutdown writes accepted events to
+the file, while an abrupt process or machine failure can lose events not yet written. Fallback produces one event per attempted
 route, with the same request ID connecting the attempts. See [event outboxes](/docs/reference/configuration#event-outboxes)
 for filesystem and durability semantics.
 
