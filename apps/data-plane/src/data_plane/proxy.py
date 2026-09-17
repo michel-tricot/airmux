@@ -1,23 +1,21 @@
-"""Inference request execution and stream accounting."""
+"""Inference request routing and provider attempts."""
 
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-import anyio
 import httpx
 from pydantic import ValidationError
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response
 
 from airmux_runtime.secrets import SecretStoreUnavailableError
 from data_plane.canonical import CanonicalAdjustment, CanonicalGatewayInfo, CanonicalRequest, CanonicalResponse, CanonicalUsage
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
+from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError
 from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.http import render_rejection
 from data_plane.metering import RequestStart, denied_event, status_for_error, status_for_upstream, usage_event
@@ -26,22 +24,19 @@ from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
 from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
+from data_plane.streaming import StreamSession
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
-
     from starlette.requests import Request
-    from starlette.types import Receive, Scope, Send
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialEntry, KeyEntry, ModelEntry, UsageEvent
+    from contract import CredentialEntry, KeyEntry, ModelEntry
     from contract.policies import FallbackReason
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.credentials import CredentialResolver
-    from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
+    from data_plane.egress.base import EgressAdapter, UpstreamRequest
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
-    from data_plane.ingress.base import ResponseStream
     from data_plane.outbox import OutboxReservation
 
 
@@ -49,7 +44,22 @@ logger = logging.getLogger("data_plane")
 
 
 async def complete(request: Request, context: InferenceContext, ingress: IngressAdapter) -> Response:
-    return await _run(IncomingRequest(body=await _body(request), context=context, ingress=ingress), runtime_of(request))
+    try:
+        canonical_request, adjustments = _parse(await _body(request), ingress)
+        execution = RequestExecution(
+            request=canonical_request,
+            key=context.key,
+            snapshot=context.snapshot,
+            ingress=ingress,
+            parse_adjustments=tuple(adjustments),
+            runtime=runtime_of(request),
+            start=context.start,
+        )
+        return await execution.run()
+    except RequestRejectedError as error:
+        return render_rejection(ingress, error)
+    except OutboxFullError:
+        return render_rejection(ingress, RequestRejectedError(503, "metering_capacity_exhausted"))
 
 
 async def _body(request: Request) -> dict[str, Any]:
@@ -60,32 +70,6 @@ async def _body(request: Request) -> dict[str, Any]:
     if not isinstance(body, dict):
         raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
     return body
-
-
-@dataclass(frozen=True)
-class IncomingRequest:
-    body: dict[str, Any]
-    context: InferenceContext
-    ingress: IngressAdapter
-
-
-async def _run(incoming: IncomingRequest, runtime: Runtime) -> Response:
-    try:
-        request, parse_adjustments = _parse(incoming.body, incoming.ingress)
-        execution = RequestExecution(
-            request=request,
-            key=incoming.context.key,
-            snapshot=incoming.context.snapshot,
-            ingress=incoming.ingress,
-            parse_adjustments=tuple(parse_adjustments),
-            runtime=runtime,
-            start=incoming.context.start,
-        )
-        return await execution.run()
-    except RequestRejectedError as error:
-        return render_rejection(incoming.ingress, error)
-    except OutboxFullError:
-        return render_rejection(incoming.ingress, RequestRejectedError(503, "metering_capacity_exhausted"))
 
 
 def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
@@ -108,103 +92,6 @@ def _transform(adapter: EgressAdapter, request: CanonicalRequest, model: ModelEn
         raise RequestRejectedError(400, "unsupported_feature", str(error)) from error
     except (TypeError, ValueError) as error:
         raise RequestRejectedError(400, "invalid_request", str(error)) from error
-
-
-class _StreamAccounting:
-    def __init__(self, reservation: OutboxReservation, cancelled_event: Callable[[], UsageEvent]) -> None:
-        self.reservation = reservation
-        self._cancelled_event = cancelled_event
-        self._recorded = False
-
-    def record(self, event: UsageEvent) -> None:
-        self.reservation.record(event)
-        self._recorded = True
-
-    def cancel(self) -> None:
-        if not self._recorded:
-            self.record(self._cancelled_event())
-
-
-class _StreamResponse(StreamingResponse):
-    def __init__(
-        self,
-        body: AsyncIterator[bytes],
-        handoff: contextlib.AsyncExitStack,
-        accounting: _StreamAccounting,
-    ) -> None:
-        super().__init__(body, media_type="text/event-stream")
-        self._handoff = handoff
-        self._accounting = accounting
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        with self._accounting.reservation:
-            async with self._handoff:
-                try:
-                    await super().__call__(scope, receive, send)
-                finally:
-                    self._accounting.cancel()
-
-
-@dataclass(frozen=True)
-class StreamSession:
-    """Request state shared by opening and folding one provider stream."""
-
-    adapter: EgressAdapter
-    ingress: IngressAdapter
-    ctx: Ctx
-    request: CanonicalRequest
-    adjustments: tuple[CanonicalAdjustment, ...]
-    reservation: OutboxReservation
-    http_client: httpx.AsyncClient
-
-    async def open(self, upstream: UpstreamRequest) -> Response:
-        async with contextlib.AsyncExitStack() as stack:
-            response = await _open_response(stack, self.http_client, upstream)
-            stream_state = self.adapter.new_stream_state(self.ctx)
-            handoff = stack.pop_all()
-
-        renderer = self.ingress.new_stream()
-        reservation = self.reservation.transfer()
-        accounting = _StreamAccounting(
-            reservation,
-            lambda: usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request),
-        )
-        return _StreamResponse(self._events(response, stream_state, renderer, accounting), handoff, accounting)
-
-    async def _events(
-        self,
-        response: httpx.Response,
-        stream_state: StreamState,
-        renderer: ResponseStream,
-        accounting: _StreamAccounting,
-    ) -> AsyncIterator[bytes]:
-        try:
-            for frame in renderer.start(self.ctx):
-                yield frame
-            async for payload in response.aiter_bytes():
-                for event in self.adapter.frame(payload, stream_state):
-                    for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
-                        for frame in renderer.chunk(canonical_chunk):
-                            yield frame
-            self.adapter.validate_stream(stream_state)
-            final = self.adapter.finalize(stream_state)
-            for frame in renderer.closing(final, list(self.adjustments)):
-                yield frame
-            accounting.record(usage_event(self.ctx, final, status="ok", request=self.request))
-        except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
-            for frame in renderer.error(self.adapter.map_error(error)):
-                yield frame
-            accounting.record(
-                usage_event(
-                    self.ctx,
-                    self.adapter.finalize(stream_state),
-                    status=status_for_error(error),
-                    request=self.request,
-                )
-            )
-        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            accounting.record(usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request))
-            raise
 
 
 @dataclass(frozen=True)
@@ -355,18 +242,6 @@ async def _resolve_credential(entry: CredentialEntry, resolver: CredentialResolv
         logger.warning("secret store unavailable for credential %s", entry.ref.secret_id)
         raise RequestRejectedError(503, "credential_backend_unavailable") from error
     return secret
-
-
-async def _open_response(
-    stack: contextlib.AsyncExitStack,
-    http_client: httpx.AsyncClient,
-    upstream: UpstreamRequest,
-) -> httpx.Response:
-    response = await stack.enter_async_context(http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
-    if response.is_error:
-        body = await response.aread()
-        raise UpstreamResponseError(response.status_code, body)
-    return response
 
 
 def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]:

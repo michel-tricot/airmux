@@ -257,7 +257,8 @@ The canonical models are an internal interface shared by ingress, policy, routin
 | `credentials.py` | Credential-scope indexing and secret-store resolution |
 | `profiles.py`, `reconcile.py` | Precompiled provider facts and request adjustments |
 | `metering.py`, `outbox/` | Usage calculation, durable buffering, and control-plane export |
-| `proxy.py` | The one request orchestration path shared by all caller and provider combinations |
+| `proxy.py` | Request routing, fallback, and buffered provider attempts |
+| `streaming.py` | Streaming provider lifecycle, folding, cancellation, and accounting |
 
 `formats` exists only when a wire spelling has two consumers. OpenAI and Anthropic formats are used
 on both ingress and egress, so their mappings live there. Ingress adapters never import egress
@@ -514,7 +515,7 @@ meaning.
 
 ## Request execution
 
-The HTTP boundary and orchestration in `proxy.py` serve every caller/provider combination:
+The HTTP boundary and orchestration in `proxy.py` and `streaming.py` serve every caller/provider combination:
 
 1. Mint the request ID and start time, capture the current bundle snapshot, and authenticate the caller
 2. Use the route-bound ingress adapter and read a JSON object
@@ -600,7 +601,7 @@ Each adapter creates its own `StreamState`. `finalize(state)` must return a vali
 what makes cancellation accounting possible.
 
 `StreamSession` opens the upstream response inside an async exit stack, then hands ownership of that
-stack to the `StreamingResponse` iterator. The provider connection therefore remains open for the
+stack to the downstream response lifecycle. The provider connection therefore remains open for the
 life of the downstream stream and closes on completion, error, or disconnect.
 
 On a normal end, the adapter validates the provider's terminal event, finalizes accumulated state,

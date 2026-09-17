@@ -17,7 +17,7 @@ from contract import uuid7
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import REGISTRY as INGRESS
-from data_plane.proxy import StreamSession
+from data_plane.streaming import StreamSession
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
