@@ -88,6 +88,7 @@ def test_event_tail_walks_pages_until_the_previous_newest_event(monkeypatch):
     queries = []
 
     monkeypatch.setattr(resources, "payload_page", lambda _response, _payload_type: next(pages))
+
     def respond(request: httpx.Request) -> httpx.Response:
         queries.append((request.url.path, dict(request.url.params)))
         return httpx.Response(200, request=request, json={"data": []})
