@@ -609,10 +609,31 @@ export interface DeniedUsageEventV1 {
   credential_scope?: null;
 }
 
+export interface OrgOut {
+  id: string;
+  name: string;
+  slug: string;
+  personal_for: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface InvitationPreviewOut {
+  email: string;
+  org_id: string;
+  org_name: string;
+  org_role: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  workspace_role: string | null;
+  expires_at: string;
+}
+
 export interface EnrollOut {
+  orgs: OrgOut[];
   personal_org_id: string | null;
-  org_count: number;
-  pending_invitation_count: number;
+  pending_invitations: InvitationPreviewOut[];
 }
 
 export interface EventsIngestedOut {
@@ -714,17 +735,6 @@ export interface InvitationAcceptedOut {
   org_id: string;
   workspace_id: string | null;
   status: 'accepted';
-}
-
-export interface InvitationPreviewOut {
-  email: string;
-  org_id: string;
-  org_name: string;
-  org_role: string;
-  workspace_id: string | null;
-  workspace_name: string | null;
-  workspace_role: string | null;
-  expires_at: string;
 }
 
 export interface InvitationTokenIn {
@@ -893,7 +903,7 @@ export interface MeOut {
   email: string;
   name: string;
   instance_role: InstanceRole | null;
-  org_count: number;
+  orgs: string[];
 }
 
 export type OrgRole = typeof OrgRole[keyof typeof OrgRole];
@@ -1174,16 +1184,6 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
-export interface OrgOut {
-  id: string;
-  name: string;
-  slug: string;
-  personal_for: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
 export interface UserOut {
   id: string;
   email: string;
@@ -1194,7 +1194,7 @@ export interface UserOut {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-  org_count: number;
+  orgs: string[];
 }
 
 export interface OrgServiceAccountCreatedOut {
@@ -1253,24 +1253,6 @@ export interface PlaygroundSessionReadyOut {
   expires_at: string;
   status: 'ready';
 }
-
-export interface PolicyOut {
-  id: string;
-  org_id: string;
-  workspace_id: string;
-  name: string;
-  enabled: boolean;
-  priority: number;
-  definition: PolicyDefinitionOutput;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-/**
- * @maxItems 100
- */
-export type PolicyCollection = PolicyOut[];
 
 export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
 
@@ -1331,6 +1313,19 @@ export interface PolicyCreate {
 export interface PolicyOrder {
   /** Every workspace policy ID, from first to last evaluation priority */
   policy_ids: string[];
+}
+
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface PolicyUpdate {
@@ -1794,39 +1789,9 @@ export interface PageActivityOut {
   page: PageInfo;
 }
 
-export interface PageUserOut {
-  /** @maxItems 200 */
-  items: UserOut[];
-  page: PageInfo;
-}
-
 export interface PageOrgOut {
   /** @maxItems 200 */
   items: OrgOut[];
-  page: PageInfo;
-}
-
-export interface PageWorkspaceOut {
-  /** @maxItems 200 */
-  items: WorkspaceOut[];
-  page: PageInfo;
-}
-
-export interface PageWorkspaceMembershipOut {
-  /** @maxItems 200 */
-  items: WorkspaceMembershipOut[];
-  page: PageInfo;
-}
-
-export interface PageInferenceKeyOut {
-  /** @maxItems 200 */
-  items: InferenceKeyOut[];
-  page: PageInfo;
-}
-
-export interface PageOrgMemberOut {
-  /** @maxItems 200 */
-  items: OrgMemberOut[];
   page: PageInfo;
 }
 
@@ -1906,71 +1871,9 @@ export type ListUsersParams = {
  * Filter by principal type: true for service accounts and false for human users
  */
 service_account?: boolean | null;
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
 };
 
 export type ListOrgsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListWorkspacesParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListMembersParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListInferenceKeysParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListOrgUsersParams = {
 /**
  * Opaque continuation token from the previous page
  */

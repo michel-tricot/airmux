@@ -49,7 +49,7 @@ it('organizes workspace settings into selectable categories', async () => {
 it('keeps workspace members visible when member candidates are unavailable', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-      paged([
+      enveloped([
         {
           user_id: 'user-2',
           workspace_id: WORKSPACES[0].id,
@@ -101,10 +101,10 @@ it('republishes configuration from Instance Administration and updates the bundl
   let bundles = [bundle];
   server.use(
     http.get('/api/v1/auth/me', () =>
-      HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', org_count: 1 } }),
+      HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', orgs: [ORG.id] } }),
     ),
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json({ data: ORG })),
-    http.get('/api/v1/users', () => paged([])),
+    http.get('/api/v1/users', () => enveloped([])),
     http.get('/api/v1/organizations/:orgId/bundles', () => paged(bundles)),
     http.post('/api/v1/organizations/:orgId/bundles/republish', () => {
       const published = { ...bundle, id: 'bundle-2', version: 2 };

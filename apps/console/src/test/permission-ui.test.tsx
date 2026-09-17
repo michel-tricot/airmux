@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 const ORG_MEMBER_PERMISSIONS: Api.Permission[] = ['organizations.read', 'workspaces.create', 'catalog.read'];
 const WORKSPACE_MEMBER_PERMISSIONS: Api.Permission[] = [
@@ -57,7 +57,7 @@ describe('permission-aware organization console', () => {
     server.use(
       http.get('/api/v1/organizations/:orgId/users', orgMembers),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-        paged<Api.WorkspaceMembershipOut>([
+        enveloped<Api.WorkspaceMembershipOut>([
           {
             user_id: 'user-1',
             workspace_id: WORKSPACES[0].id,
@@ -152,7 +152,7 @@ describe('permission-aware organization console', () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () =>
-        paged<Api.InferenceKeyOut>([
+        enveloped<Api.InferenceKeyOut>([
           {
             id: 'key-1',
             org_id: ORG.id,

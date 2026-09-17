@@ -8,7 +8,7 @@ from sqlalchemy import JSON, Table, inspect, text
 from sqlmodel import Field, col, or_, select
 
 from control_plane.db import current_session
-from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
+from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
@@ -53,7 +53,8 @@ class AuditLog(Record, table=True):
         return await keyset_page(
             select(cls),
             request,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+            col(cls.id),
+            int,
         )
 
     @classmethod
@@ -73,7 +74,8 @@ class AuditLog(Record, table=True):
         return await keyset_page(
             statement,
             request,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+            col(cls.id),
+            int,
         )
 
 

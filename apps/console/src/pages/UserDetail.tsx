@@ -28,7 +28,6 @@ import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
 import { AccountKindBadge } from '@/components/shared/account-display';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
-import { useUserOrganizations } from '@/features/enrollment/hooks';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -48,7 +47,6 @@ export default function UserDetail() {
   const canReadKeys = authorization.can(managementKeyAccess.instance.read);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const membershipsQuery = useUserOrganizations(userId);
   const managementKeysQuery = useInstanceManagementKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
@@ -62,7 +60,7 @@ export default function UserDetail() {
   if (userQuery.isError) return <ErrorState error={userQuery.error} resource="user" onRetry={() => userQuery.refetch()} />;
   if (!user) return <ErrorState message="User not found" />;
 
-  const memberOrgIds = new Set(membershipsQuery.data?.map((membership) => membership.org_id));
+  const memberOrgIds = new Set(user.orgs);
   const memberships = orgs?.filter((org) => memberOrgIds.has(org.id));
   const available = orgs?.filter((org) => !memberOrgIds.has(org.id));
   return (

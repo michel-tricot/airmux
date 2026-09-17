@@ -2,8 +2,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   getEnrollmentQueryKey,
   getListInvitationsQueryKey,
-  getListMembersInfiniteQueryKey,
-  getListOrgUsersInfiniteQueryKey,
+  getListMembersQueryKey,
+  getListOrgUsersQueryKey,
   getMeQueryKey,
   useAcceptInvitation,
   useCreateInvitation,
@@ -55,10 +55,10 @@ export function useAcceptInvitationMutation() {
         const invalidations = [
           queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
-          queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(accepted.org_id) }),
+          queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(accepted.org_id) }),
         ];
         if (accepted.workspace_id) {
-          invalidations.push(queryClient.invalidateQueries({ queryKey: getListMembersInfiniteQueryKey(accepted.org_id, accepted.workspace_id) }));
+          invalidations.push(queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(accepted.org_id, accepted.workspace_id) }));
         }
         return Promise.all(invalidations);
       },

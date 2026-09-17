@@ -748,7 +748,7 @@ paths:
       tags:
       - Enrollment
       summary: Get Current Enrollment
-      description: 'Summarize the current user''s visible organizations and pending invitations.
+      description: 'List the current user''s visible organizations, personal organization, and pending invitations.
 
 
         Authentication: human account using a browser session or control-plane management key.'
@@ -760,62 +760,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_EnrollOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: An authenticated human account is required
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-  /api/v1/enroll/organizations:
-    get:
-      tags:
-      - Enrollment
-      summary: List Enrollment Orgs
-      description: 'List the current user''s visible organizations.
-
-
-        Authentication: human account using a browser session or control-plane management key.'
-      operationId: list_enrollment_orgs
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_OrgOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: An authenticated human account is required
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-  /api/v1/enroll/invitations:
-    get:
-      tags:
-      - Enrollment
-      summary: List Enrollment Invitations
-      description: 'List pending invitations visible to the current user.
-
-
-        Authentication: human account using a browser session or control-plane management key.'
-      operationId: list_enrollment_invitations
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_InvitationPreviewOut__'
         '422':
           description: Validation Error
           content:
@@ -1224,49 +1168,6 @@ paths:
       - scope: instance_scope
         anyOf:
         - principals.manage
-  /api/v1/users/{user_id}/organizations:
-    get:
-      tags:
-      - Instance Users
-      summary: List User Organizations
-      description: 'List one principal''s organization memberships.
-
-
-        Required permission: `principals.read`.'
-      operationId: list_user_organizations
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: User Id
-        description: User or service-account ID
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_MembershipOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: instance_scope
-        anyOf:
-        - principals.read
   /api/v1/users:
     get:
       tags:
@@ -1290,32 +1191,13 @@ paths:
           - type: 'null'
           title: Service Account
         description: 'Filter by principal type: true for service accounts and false for human users'
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/CursorToken'
-          - type: 'null'
-          title: Cursor
-        description: Opaque continuation token from the previous page
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PageEnvelope_UserOut_'
+                $ref: '#/components/schemas/Envelope_list_UserOut__'
         '422':
           description: Validation Error
           content:
@@ -1862,32 +1744,13 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/CursorToken'
-          - type: 'null'
-          title: Cursor
-        description: Opaque continuation token from the previous page
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PageEnvelope_WorkspaceOut_'
+                $ref: '#/components/schemas/Envelope_list_WorkspaceOut__'
         '422':
           description: Validation Error
           content:
@@ -2131,32 +1994,13 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/CursorToken'
-          - type: 'null'
-          title: Cursor
-        description: Opaque continuation token from the previous page
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PageEnvelope_WorkspaceMembershipOut_'
+                $ref: '#/components/schemas/Envelope_list_WorkspaceMembershipOut__'
         '422':
           description: Validation Error
           content:
@@ -2518,32 +2362,13 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/CursorToken'
-          - type: 'null'
-          title: Cursor
-        description: Opaque continuation token from the previous page
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PageEnvelope_InferenceKeyOut_'
+                $ref: '#/components/schemas/Envelope_list_InferenceKeyOut__'
         '422':
           description: Validation Error
           content:
@@ -2698,7 +2523,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_PolicyCollection_'
+                $ref: '#/components/schemas/Envelope_list_PolicyOut__'
         '422':
           description: Validation Error
           content:
@@ -3441,32 +3266,13 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - $ref: '#/components/schemas/CursorToken'
-          - type: 'null'
-          title: Cursor
-        description: Opaque continuation token from the previous page
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PageEnvelope_OrgMemberOut_'
+                $ref: '#/components/schemas/Envelope_list_OrgMemberOut__'
         '422':
           description: Validation Error
           content:
@@ -5181,23 +4987,27 @@ components:
       title: DenyRequest
     EnrollOut:
       properties:
+        orgs:
+          items:
+            $ref: '#/components/schemas/OrgOut'
+          type: array
+          title: Orgs
         personal_org_id:
           anyOf:
           - type: string
             format: uuid
           - type: 'null'
           title: Personal Org Id
-        org_count:
-          type: integer
-          title: Org Count
-        pending_invitation_count:
-          type: integer
-          title: Pending Invitation Count
+        pending_invitations:
+          items:
+            $ref: '#/components/schemas/InvitationPreviewOut'
+          type: array
+          title: Pending Invitations
       type: object
       required:
+      - orgs
       - personal_org_id
-      - org_count
-      - pending_invitation_count
+      - pending_invitations
       title: EnrollOut
     Envelope_BundleManifest_:
       properties:
@@ -5447,14 +5257,6 @@ components:
       required:
       - data
       title: Envelope[PlaygroundSessionReadyOut]
-    Envelope_PolicyCollection_:
-      properties:
-        data:
-          $ref: '#/components/schemas/PolicyCollection'
-      type: object
-      required:
-      - data
-      title: Envelope[PolicyCollection]
     Envelope_PolicyOut_:
       properties:
         data:
@@ -5530,6 +5332,17 @@ components:
       required:
       - data
       title: Envelope[list[DataPlaneInstanceOut]]
+    Envelope_list_InferenceKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InferenceKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[InferenceKeyOut]]
     Envelope_list_InferenceKeyOwnerOut__:
       properties:
         data:
@@ -5541,17 +5354,6 @@ components:
       required:
       - data
       title: Envelope[list[InferenceKeyOwnerOut]]
-    Envelope_list_InvitationPreviewOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InvitationPreviewOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[InvitationPreviewOut]]
     Envelope_list_ManagementKeyOut__:
       properties:
         data:
@@ -5563,17 +5365,6 @@ components:
       required:
       - data
       title: Envelope[list[ManagementKeyOut]]
-    Envelope_list_MembershipOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/MembershipOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[MembershipOut]]
     Envelope_list_OrgInvitationOut__:
       properties:
         data:
@@ -5585,17 +5376,17 @@ components:
       required:
       - data
       title: Envelope[list[OrgInvitationOut]]
-    Envelope_list_OrgOut__:
+    Envelope_list_OrgMemberOut__:
       properties:
         data:
           items:
-            $ref: '#/components/schemas/OrgOut'
+            $ref: '#/components/schemas/OrgMemberOut'
           type: array
           title: Data
       type: object
       required:
       - data
-      title: Envelope[list[OrgOut]]
+      title: Envelope[list[OrgMemberOut]]
     Envelope_list_PolicyOut__:
       properties:
         data:
@@ -5618,6 +5409,17 @@ components:
       required:
       - data
       title: Envelope[list[ProviderCredentialOut]]
+    Envelope_list_UserOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UserOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[UserOut]]
     Envelope_list_WorkspaceMemberCandidateOut__:
       properties:
         data:
@@ -5629,6 +5431,28 @@ components:
       required:
       - data
       title: Envelope[list[WorkspaceMemberCandidateOut]]
+    Envelope_list_WorkspaceMembershipOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceMembershipOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[WorkspaceMembershipOut]]
+    Envelope_list_WorkspaceOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[WorkspaceOut]]
     EventsIngestedOut:
       properties:
         received:
@@ -6290,16 +6114,19 @@ components:
           anyOf:
           - $ref: '#/components/schemas/InstanceRole'
           - type: 'null'
-        org_count:
-          type: integer
-          title: Org Count
+        orgs:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Orgs
       type: object
       required:
       - user_id
       - email
       - name
       - instance_role
-      - org_count
+      - orgs
       title: MeOut
     MembershipOut:
       properties:
@@ -7031,36 +6858,6 @@ components:
       - data
       - page
       title: PageEnvelope[BundleOut]
-    PageEnvelope_InferenceKeyOut_:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InferenceKeyOut'
-          type: array
-          maxItems: 200
-          title: Data
-        page:
-          $ref: '#/components/schemas/PageInfo'
-      type: object
-      required:
-      - data
-      - page
-      title: PageEnvelope[InferenceKeyOut]
-    PageEnvelope_OrgMemberOut_:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/OrgMemberOut'
-          type: array
-          maxItems: 200
-          title: Data
-        page:
-          $ref: '#/components/schemas/PageInfo'
-      type: object
-      required:
-      - data
-      - page
-      title: PageEnvelope[OrgMemberOut]
     PageEnvelope_OrgOut_:
       properties:
         data:
@@ -7091,51 +6888,6 @@ components:
       - data
       - page
       title: PageEnvelope[UsageEventOut]
-    PageEnvelope_UserOut_:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UserOut'
-          type: array
-          maxItems: 200
-          title: Data
-        page:
-          $ref: '#/components/schemas/PageInfo'
-      type: object
-      required:
-      - data
-      - page
-      title: PageEnvelope[UserOut]
-    PageEnvelope_WorkspaceMembershipOut_:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/WorkspaceMembershipOut'
-          type: array
-          maxItems: 200
-          title: Data
-        page:
-          $ref: '#/components/schemas/PageInfo'
-      type: object
-      required:
-      - data
-      - page
-      title: PageEnvelope[WorkspaceMembershipOut]
-    PageEnvelope_WorkspaceOut_:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/WorkspaceOut'
-          type: array
-          maxItems: 200
-          title: Data
-        page:
-          $ref: '#/components/schemas/PageInfo'
-      type: object
-      required:
-      - data
-      - page
-      title: PageEnvelope[WorkspaceOut]
     PageInfo:
       properties:
         next_cursor:
@@ -7247,11 +6999,6 @@ components:
       - expires_at
       - status
       title: PlaygroundSessionReadyOut
-    PolicyCollection:
-      items:
-        $ref: '#/components/schemas/PolicyOut'
-      type: array
-      maxItems: 100
     PolicyCreate:
       properties:
         name:
@@ -8566,9 +8313,12 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
-        org_count:
-          type: integer
-          title: Org Count
+        orgs:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Orgs
       type: object
       required:
       - id
@@ -8580,7 +8330,7 @@ components:
       - created_at
       - updated_at
       - deleted_at
-      - org_count
+      - orgs
       title: UserOut
     ValidationError:
       properties:

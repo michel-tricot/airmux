@@ -6,7 +6,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from control_plane.authz import Actor, OrgRole, ScopeLevel
+from control_plane.authority import visible_org_ids
+from control_plane.authz import OrgRole
 from control_plane.deps import ActingUserDep, ActorDep, CookieUserDep, browser_scoped, public, user_scoped
 from control_plane.models import Org, OrgInvitation, OrgMembership
 from control_plane.models.common.wire import Envelope
@@ -23,9 +24,9 @@ router = APIRouter(prefix="/enroll")
 
 
 class EnrollOut(BaseModel):
+    orgs: list[OrgOut]
     personal_org_id: UUID | None
-    org_count: int
-    pending_invitation_count: int
+    pending_invitations: list[InvitationPreviewOut]
 
 
 def _invitation_preview(invitation: OrgInvitation, org_name: str, workspace_name: str | None) -> InvitationPreviewOut:
@@ -41,38 +42,22 @@ def _invitation_preview(invitation: OrgInvitation, org_name: str, workspace_name
     )
 
 
-def _visible_org_id(actor: Actor) -> UUID | None:
-    return actor.grant.scope.org_id if actor.grant.scope.level in {ScopeLevel.org, ScopeLevel.workspace} else None
-
-
 @router.get("", tags=["Enrollment"], dependencies=[user_scoped("api")])
 async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut]:
-    """Summarize the current user's visible organizations and pending invitations."""
-    now = datetime.now(tz=UTC)
-    visible_org_id = _visible_org_id(actor)
+    """List the current user's visible organizations, personal organization, and pending invitations."""
+    orgs = await Org.joined_by(user.id)
+    visible = frozenset(visible_org_ids(actor, (org.id for org in orgs)))
+    orgs = [org for org in orgs if org.id in visible]
     personal = await Org.personal_of(user.id)
-    personal_visible = personal is not None and (visible_org_id is None or personal.id == visible_org_id)
+    personal_visible = personal is not None and bool(visible_org_ids(actor, (personal.id,)))
+    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC), actor.grant.scope)
     return Envelope(
         data=EnrollOut(
+            orgs=[OrgOut.model_validate(org) for org in orgs],
             personal_org_id=personal.id if personal_visible and personal else None,
-            org_count=await Org.count_joined_by(user.id, visible_org_id),
-            pending_invitation_count=await OrgInvitation.count_pending_for_email(user.email, now, actor.grant.scope),
+            pending_invitations=[_invitation_preview(invitation, org_name, workspace_name) for invitation, org_name, workspace_name in invitations],
         )
     )
-
-
-@router.get("/organizations", tags=["Enrollment"], dependencies=[user_scoped("api")])
-async def list_enrollment_orgs(user: ActingUserDep, actor: ActorDep) -> Envelope[list[OrgOut]]:
-    """List the current user's visible organizations."""
-    organizations = await Org.joined_by(user.id, _visible_org_id(actor))
-    return Envelope(data=[OrgOut.model_validate(org) for org in organizations])
-
-
-@router.get("/invitations", tags=["Enrollment"], dependencies=[user_scoped("api")])
-async def list_enrollment_invitations(user: ActingUserDep, actor: ActorDep) -> Envelope[list[InvitationPreviewOut]]:
-    """List pending invitations visible to the current user."""
-    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC), actor.grant.scope)
-    return Envelope(data=[_invitation_preview(invitation, org_name, workspace_name) for invitation, org_name, workspace_name in invitations])
 
 
 @router.post("/org", tags=["Enrollment"], dependencies=[browser_scoped("api")])

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import App from '@/App';
-import { enveloped, paged, server } from './msw';
+import { paged, server } from './msw';
 import { now } from './fixtures';
 
 function installUser(instanceRole: Api.InstanceRole | null = null) {
@@ -15,7 +15,7 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
     instance_role: instanceRole,
     service_account: false,
     managing_org_id: null,
-    org_count: 0,
+    orgs: [],
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -23,12 +23,11 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
   server.use(
     http.get('/api/v1/auth/me', () =>
       HttpResponse.json<{ data: Api.MeOut }>({
-        data: { user_id: 'admin-user', name: 'Admin', email: 'admin@example.com', instance_role: 'owner', org_count: 0 },
+        data: { user_id: 'admin-user', name: 'Admin', email: 'admin@example.com', instance_role: 'owner', orgs: [] },
       }),
     ),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),
     http.get('/api/v1/organizations', () => paged([])),
-    http.get('/api/v1/users/target-user/organizations', () => enveloped([])),
     http.put('/api/v1/users/target-user/instance-role', async ({ request }) => {
       const body = (await request.json()) as Api.InstanceRoleIn;
       user = { ...user, instance_role: body.instance_role };

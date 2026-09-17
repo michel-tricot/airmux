@@ -5,7 +5,7 @@ from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKeyConstraint, Index
+from sqlalchemy import ForeignKeyConstraint
 from sqlmodel import Field
 
 from control_plane.models.common.base import Record
@@ -20,10 +20,7 @@ class DataPlaneInstance(Record, table=True):
     data planes, and the org link is cleared on deletion while the row survives as history.
     """
 
-    __table_args__: ClassVar = (
-        ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="SET NULL"),
-        Index("data_plane_instance_seen_id_idx", "last_seen", "instance_id"),
-    )
+    __table_args__: ClassVar = (ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="SET NULL"),)
 
     instance_id: UUID = Field(primary_key=True)
     org_id: UUID | None = None

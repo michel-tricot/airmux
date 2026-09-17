@@ -5,14 +5,14 @@ from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, func, or_, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, or_, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.authz import InstanceRole, OrgRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, NotOwnedError, PageQuery, PageSlice, Tombstonable, slugify
+from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn
@@ -43,7 +43,6 @@ class User(Record, Identified, Tombstonable, table=True):
             "managing_org_id IS NULL OR (service_account AND instance_role IS NULL)",
             name="user_managing_org_requires_org_scoped_service_account",
         ),
-        Index("user_service_account_id_idx", "service_account", "id"),
     )
 
     email: str = Field(unique=True, sa_type=CITEXT)
@@ -129,32 +128,6 @@ class User(Record, Identified, Tombstonable, table=True):
             .exists(),
             order_by=col(cls.email),
         )
-
-    @classmethod
-    async def page_for_instance(cls, request: PageQuery, service_account: bool | None) -> PageSlice[Self]:
-        conditions = (cls.service_account == service_account,) if service_account is not None else ()
-        return await cls.page(request, *conditions)
-
-    @classmethod
-    async def page_members_of(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        condition = col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id))
-        return await cls.page(request, condition)
-
-    @classmethod
-    async def page_workspace_members(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        condition = (
-            select(WorkspaceMembership.user_id)
-            .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
-            .exists()
-        )
-        return await cls.page(request, condition)
-
-    @classmethod
-    async def membership_counts(cls, user_ids: tuple[UUID, ...]) -> dict[UUID, int]:
-        if not user_ids:
-            return {}
-        query = select(OrgMembership.user_id, func.count()).where(col(OrgMembership.user_id).in_(user_ids)).group_by(col(OrgMembership.user_id))
-        return {result[0]: int(result[1]) for result in (await current_session().execute(query)).all()}
 
     @classmethod
     async def owned_by(cls, org_id: UUID, user_id: UUID) -> Self:
@@ -271,9 +244,9 @@ class UserOut(RecordOut[User]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    org_count: int
+    orgs: list[UUID]
 
-    api_extra: ClassVar[frozenset[str]] = frozenset({"org_count"})
+    api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})
 
 
 class OrgServiceAccountCreatedOut(BaseModel):

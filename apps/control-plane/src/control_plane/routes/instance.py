@@ -32,4 +32,4 @@ async def list_data_planes(include_offline: bool = False) -> Envelope[list[DataP
 @router.get("/activity", tags=["Instance Activity"], dependencies=[require("api", instance_scope, Permission.audit_read)])
 async def list_instance_activity(page: PageDep) -> PageEnvelope[ActivityOut]:
     """List the most recent audited changes across the instance."""
-    return PageEnvelope.from_slice(await AuditLog.recent(page), ActivityOut)
+    return PageEnvelope.from_slice(await AuditLog.recent(page), ActivityOut.model_validate)

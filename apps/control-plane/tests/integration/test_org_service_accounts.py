@@ -64,7 +64,7 @@ def test_org_admin_creates_an_org_owned_service_account_with_a_management_key(tm
         assert service_account["service_account"] is True
         assert service_account["instance_role"] is None
         assert service_account["managing_org_id"] == str(org_id)
-        assert service_account["org_count"] == 1
+        assert service_account["orgs"] == [str(org_id)]
         assert membership == {
             "user_id": service_account["id"],
             "org_id": str(org_id),

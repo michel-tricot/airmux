@@ -12,8 +12,7 @@ from control_plane.authz import Permission, Scope, WorkspaceRole
 from control_plane.deps import ActorDep, OrgDep, PlaygroundCookie, WorkspaceDep, org_scope, require, workspace_scope
 from control_plane.keys import PLAYGROUND_SESSION_TTL, create_inference_key_for_workspace, rotate_playground_session
 from control_plane.models import InferenceKey, Org, OrgMembership, PlaygroundSession, User, Workspace, WorkspaceMembership
-from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
+from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.inference_key import InferenceKeyCreatedOut, InferenceKeyIn, InferenceKeyOut, InferenceKeyOwnerOut, InferenceKeyRevokedOut
 from control_plane.models.playground_session import PlaygroundSessionEndedOut, PlaygroundSessionReadyOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
@@ -57,9 +56,10 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
     tags=["Organization Workspaces"],
     dependencies=[require("api", org_scope, Permission.workspaces_read, Permission.organizations_read)],
 )
-async def list_workspaces(org_id: OrgDep, actor: ActorDep, page: PageDep) -> PageEnvelope[WorkspaceOut]:
+async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
     """List workspaces the caller can read in an organization."""
-    return PageEnvelope.from_slice(await readable_workspaces(actor, org_id, page), WorkspaceOut)
+    visible = await readable_workspaces(actor, org_id)
+    return Envelope(data=[WorkspaceOut.model_validate(workspace) for workspace in visible])
 
 
 @router.get("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require("api", workspace_scope, Permission.workspaces_read)])
@@ -93,22 +93,22 @@ async def list_policy_users(workspace: WorkspaceDep) -> Envelope[list[WorkspaceM
 
 
 @router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require("api", workspace_scope, Permission.members_read)])
-async def list_members(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMembershipOut]:
+async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
     """List the members of a workspace and their workspace roles."""
-    users = await User.page_workspace_members(workspace.id, page)
-    roles = await WorkspaceMembership.roles_for_workspace_users(workspace.id, tuple(user.id for user in users.items))
-    return PageEnvelope.from_slice(
-        users.map(
-            lambda user: WorkspaceMembershipOut(
+    memberships = await User.workspace_members(workspace.id)
+    return Envelope(
+        data=[
+            WorkspaceMembershipOut(
                 user_id=user.id,
                 workspace_id=workspace.id,
                 email=user.email,
                 name=user.name,
                 service_account=user.service_account,
-                role=roles[user.id],
+                role=membership.role,
                 status="member",
             )
-        )
+            for membership, user in memberships
+        ]
     )
 
 
@@ -251,9 +251,10 @@ async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) ->
     tags=["Workspace Inference Keys"],
     dependencies=[require("api", workspace_scope, Permission.inference_keys_read)],
 )
-async def list_inference_keys(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[InferenceKeyOut]:
+async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[InferenceKeyOut]]:
     """List inference-key metadata for a workspace without returning secret tokens."""
-    return PageEnvelope.from_slice(await InferenceKey.page_for_workspace(workspace.id, page), InferenceKeyOut)
+    keys = await InferenceKey.find(InferenceKey.workspace_id == workspace.id, order_by=col(InferenceKey.id))
+    return Envelope(data=[InferenceKeyOut.model_validate(key) for key in keys])
 
 
 @router.delete(

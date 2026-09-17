@@ -1,16 +1,9 @@
 from __future__ import annotations
 
 import base64
-import json
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, setup_control_plane
-
-
-def _invalid_version_cursor(cursor: str) -> str:
-    payload = json.loads(base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)))
-    payload["v"] += 1
-    return base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode().rstrip("=")
+from helpers import make_org, setup_control_plane
 
 
 def test_collection_pages_cover_empty_middle_exact_and_final_pages(tmp_path):
@@ -56,14 +49,15 @@ def test_cursor_survives_renamed_anchor_and_excludes_concurrent_insert(tmp_path)
 def test_invalid_and_oversized_cursors_are_generic(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    make_user(tmp_path, "member@example.com")
     with TestClient(cp.app) as client:
-        first = client.get("/api/v1/users", params={"limit": 1, "service_account": False}, headers=root).json()
+        make_org(client, root, "first")
+        make_org(client, root, "second")
+        first = client.get("/api/v1/organizations", params={"limit": 1}, headers=root).json()
         cursor = first["page"]["next_cursor"]
         assert cursor is not None
 
-        invalid = ("%%%", "a" * 513, _invalid_version_cursor(cursor))
+        invalid = ("%%%", "a" * 513, base64.urlsafe_b64encode(b"not-a-uuid").decode().rstrip("="))
         for token in invalid:
-            response = client.get("/api/v1/users", params={"cursor": token}, headers=root)
+            response = client.get("/api/v1/organizations", params={"cursor": token}, headers=root)
             assert response.status_code == 422
             assert response.json() == {"detail": "invalid cursor"}

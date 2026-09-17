@@ -5,14 +5,13 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint, func
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
-from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.bundle import Bundle
-from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable
+from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
@@ -86,26 +85,12 @@ class Org(Record, Identified, Tombstonable, table=True):
         return await cls.first(cls.personal_for == user_id)
 
     @classmethod
-    async def joined_by(cls, user_id: UUID, visible_org_id: UUID | None = None) -> list[Self]:
+    async def joined_by(cls, user_id: UUID) -> list[Self]:
         """The orgs the user is a member of, by name; the mirror of User.members_of, one query like it."""
-        conditions = [col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id))]
-        if visible_org_id is not None:
-            conditions.append(cls.id == visible_org_id)
         return await cls.find(
-            *conditions,
+            col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)),
             order_by=col(cls.name),
         )
-
-    @classmethod
-    async def page_all(cls, request: PageQuery) -> PageSlice[Self]:
-        return await cls.page(request)
-
-    @classmethod
-    async def count_joined_by(cls, user_id: UUID, visible_org_id: UUID | None) -> int:
-        statement = select(func.count()).select_from(cls).where(col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)))
-        if visible_org_id is not None:
-            statement = statement.where(cls.id == visible_org_id)
-        return (await current_session().execute(statement)).scalar_one()
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the org and everything scoped to it: workspaces with their keys, members and

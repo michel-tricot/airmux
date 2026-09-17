@@ -184,8 +184,7 @@ class QuickstartClient:
     def get(self, path: str):
         data = self.catalog if path == "/api/v1/instance/taxonomy" else self.credentials
         serialized = data.model_dump(mode="json") if isinstance(data, TaxonomyOut) else [item.model_dump(mode="json") for item in data]
-        body = {"data": serialized} if isinstance(data, TaxonomyOut) else {"data": serialized, "page": {"next_cursor": None}}
-        return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json=body)
+        return httpx.Response(200, request=httpx.Request("GET", f"http://control-plane{path}"), json={"data": serialized})
 
     def post(self, path: str, json: dict):
         self.posts.append((path, json))

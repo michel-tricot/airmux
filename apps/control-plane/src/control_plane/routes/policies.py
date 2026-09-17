@@ -7,13 +7,13 @@ from fastapi import APIRouter
 from control_plane.authz import Permission
 from control_plane.deps import WorkspaceDep, require, workspace_scope
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.policy import Policy, PolicyCollection, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
+from control_plane.models.policy import Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 
 router = APIRouter(prefix="/organizations/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
 
 @router.get("", dependencies=[require("api", workspace_scope, Permission.policies_read)])
-async def list_policies(workspace: WorkspaceDep) -> Envelope[PolicyCollection]:
+async def list_policies(workspace: WorkspaceDep) -> Envelope[list[PolicyOut]]:
     """List workspace inference policies in evaluation order."""
     return Envelope(data=[PolicyOut.model_validate(policy) for policy in await Policy.for_workspace(workspace.id)])
 

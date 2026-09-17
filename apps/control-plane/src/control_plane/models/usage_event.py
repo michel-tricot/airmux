@@ -10,7 +10,7 @@ from sqlmodel import Field, col, select
 
 from contract import CredentialScope, UsageStatus, UsdAmount
 from contract.money import ZERO_USD
-from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
+from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
@@ -60,10 +60,8 @@ class UsageEvent(Record, table=True):
         return await keyset_page(
             statement,
             page,
-            Keyset(
-                model=cls,
-                columns=(KeyColumn(col(cls.event_id), "desc", "uuid"),),
-            ),
+            col(cls.event_id),
+            UUID,
         )
 
 

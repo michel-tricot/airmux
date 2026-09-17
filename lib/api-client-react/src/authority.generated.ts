@@ -122,14 +122,6 @@ export const operationAuthority = {
       },
     ],
   },
-  listUserOrganizations: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["principals.read"],
-      },
-    ],
-  },
   listUsers: {
     checks: [
       {

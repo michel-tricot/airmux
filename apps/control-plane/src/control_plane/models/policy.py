@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, ClassVar, Self, override
+from typing import TYPE_CHECKING, ClassVar, Self, override
 from uuid import UUID
 
 from pydantic import field_validator, model_validator
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, func, text
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, text
 from sqlmodel import Field, col, select
 
 from contract.policies import (
@@ -32,8 +32,6 @@ from control_plane.models.user import User
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Dialect
-
-MAX_WORKSPACE_POLICIES = 100
 
 
 class PolicyDefinitionType(TypeDecorator[PolicyDefinition]):
@@ -109,12 +107,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         session = current_session()
         with session.no_autoflush:
             await session.execute(select(Workspace.id).where(col(Workspace.id) == self.workspace_id).with_for_update())
-            policy_count = (
-                await session.execute(select(func.count()).select_from(Policy).where(Policy.workspace_id == self.workspace_id, Policy.id != self.id))
-            ).scalar_one()
-            if policy_count >= MAX_WORKSPACE_POLICIES:
-                msg = f"A workspace may contain at most {MAX_WORKSPACE_POLICIES} policies"
-                raise InvalidPolicyError(msg)
             await self._validate_configuration()
             return await super().save()
 
@@ -218,6 +210,3 @@ class PolicyOut(RecordOut[Policy]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-
-
-type PolicyCollection = Annotated[list[PolicyOut], Field(max_length=MAX_WORKSPACE_POLICIES)]

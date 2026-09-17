@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import ClassVar, Literal, Self
+from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import CheckConstraint, delete, func
+from sqlalchemy import CheckConstraint, delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Field, col, select
 
@@ -40,24 +40,6 @@ class OrgMembership(Record, Tombstonable, table=True):
     @classmethod
     async def delete_with_org(cls, org_id: UUID) -> None:
         await current_session().execute(delete(cls).where(col(cls.org_id) == org_id))
-
-    @classmethod
-    async def for_user(cls, user_id: UUID) -> list[Self]:
-        return await cls.find(cls.user_id == user_id, order_by=col(cls.org_id))
-
-    @classmethod
-    async def roles_for_org_users(cls, org_id: UUID, user_ids: tuple[UUID, ...]) -> dict[UUID, OrgRole]:
-        if not user_ids:
-            return {}
-        memberships = await cls.find(cls.org_id == org_id, col(cls.user_id).in_(user_ids))
-        return {membership.user_id: OrgRole(membership.role) for membership in memberships}
-
-    @classmethod
-    async def count_for_user(cls, user_id: UUID, visible_org_id: UUID | None = None) -> int:
-        statement = select(func.count()).select_from(cls).where(cls.user_id == user_id)
-        if visible_org_id is not None:
-            statement = statement.where(cls.org_id == visible_org_id)
-        return (await current_session().execute(statement)).scalar_one()
 
     async def _lock_org(self) -> None:
         from control_plane.models.org import Org  # noqa: PLC0415 org imports membership, so the two only meet at call time

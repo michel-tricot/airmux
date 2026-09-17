@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import App from '@/App';
-import { ORG, enveloped, paged, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 function renderAt(path: string) {
   window.history.replaceState(null, '', path);
@@ -31,22 +31,21 @@ function withTwoOrgs() {
           email: 'dev@example.com',
           name: 'Dev',
           instance_role: null,
-          org_count: 2,
+          orgs: [ORG.id, ORG2.id],
         },
       }),
     ),
     http.get('/api/v1/enroll', () =>
-      HttpResponse.json<{ data: Api.EnrollOut }>({ data: { personal_org_id: ORG.id, org_count: 2, pending_invitation_count: 0 } }),
+      HttpResponse.json<{ data: Api.EnrollOut }>({ data: { orgs: [ORG, ORG2], personal_org_id: ORG.id, pending_invitations: [] } }),
     ),
-    http.get('/api/v1/enroll/organizations', () => enveloped([ORG, ORG2])),
     http.get('/api/v1/organizations/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
-        return paged<Api.WorkspaceOut>([
+        return enveloped<Api.WorkspaceOut>([
           { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       if (params.orgId === ORG2.id) {
-        return paged<Api.WorkspaceOut>([
+        return enveloped<Api.WorkspaceOut>([
           { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
@@ -125,7 +124,7 @@ describe('sign-in gate', () => {
             email: 'dev@example.com',
             name: 'Dev',
             instance_role: null,
-            org_count: 1,
+            orgs: [ORG.id],
           },
         }),
       ),
@@ -146,7 +145,7 @@ describe('sign-in gate', () => {
       http.get('/api/v1/instance/oss/claim', () => HttpResponse.json<{ data: Api.ClaimOut }>({ data: { claimed: false, public_signup: false } })),
       http.post('/api/v1/auth/signup', () =>
         HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', org_count: 0 },
+          data: { user_id: 'owner-1', email: 'owner@example.com', name: 'Owner', instance_role: 'owner', orgs: [] },
         }),
       ),
     );
@@ -204,7 +203,7 @@ describe('sign-in gate', () => {
       http.get('/api/v1/auth/me', () =>
         signedIn
           ? HttpResponse.json<{ data: Api.MeOut }>({
-              data: { user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, org_count: 1 },
+              data: { user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, orgs: [ORG.id] },
             })
           : new HttpResponse(null, { status: 401 }),
       ),

@@ -34,7 +34,7 @@ async def update_org(org_id: OrgDep, body: OrgUpdate) -> Envelope[OrgOut]:
 @router.get("", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_read)])
 async def list_orgs(page: PageDep) -> PageEnvelope[OrgOut]:
     """List every organization on the instance."""
-    return PageEnvelope.from_slice(await Org.page_all(page), OrgOut)
+    return PageEnvelope.from_slice(await Org.page(page), OrgOut.model_validate)
 
 
 @router.get("/{org_id}", tags=["Organization Settings"], dependencies=[require("api", org_scope, Permission.organizations_read)])

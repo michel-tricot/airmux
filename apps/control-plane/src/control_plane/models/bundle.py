@@ -8,7 +8,7 @@ from sqlalchemy import Index
 from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
-from control_plane.models.common import KeyColumn, Keyset, OrgOwned, PageQuery, PageSlice, keyset_page
+from control_plane.models.common import OrgOwned, PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
@@ -39,7 +39,9 @@ class Bundle(Record, OrgOwned, table=True):
         return await keyset_page(
             select(cls).where(cls.org_id == org_id),
             request,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.version), "asc", "int"),)),
+            col(cls.version),
+            int,
+            "asc",
         )
 
 

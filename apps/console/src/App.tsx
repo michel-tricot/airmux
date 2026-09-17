@@ -23,7 +23,6 @@ import { orgRoutes } from '@/pages/app/routes';
 import { instanceRoutes } from '@/pages/instance-routes';
 import { useRequiredParam } from '@/lib/route';
 import { PlaygroundProvider } from '@/features/playground/state';
-import { useEnrollmentOrgs } from '@/features/enrollment/hooks';
 
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const Invite = lazy(() => import('@/pages/Invite'));
@@ -74,20 +73,17 @@ export function createQueryClient(): QueryClient {
 function AppSection() {
   const { orgId, setOrgId } = useSession();
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), retry: false } });
-  const orgs = useEnrollmentOrgs({ enabled: enrollment.isSuccess });
 
   useEffect(() => {
-    if (orgId && orgs.data && !orgs.data.some((org) => org.id === orgId)) setOrgId(null);
-  }, [orgId, orgs.data, setOrgId]);
+    if (orgId && enrollment.data && !enrollment.data.orgs.some((org) => org.id === orgId)) setOrgId(null);
+  }, [enrollment.data, orgId, setOrgId]);
 
-  if (enrollment.isLoading || orgs.isLoading) return <Splash>Loading organizations...</Splash>;
-  if (enrollment.isError || !enrollment.data || orgs.isError || !orgs.data) {
-    return (
-      <ErrorState message="Could not load your organizations. Try again." onRetry={() => void Promise.all([enrollment.refetch(), orgs.refetch()])} />
-    );
+  if (enrollment.isLoading) return <Splash>Loading organizations...</Splash>;
+  if (enrollment.isError || !enrollment.data) {
+    return <ErrorState message="Could not load your organizations. Try again." onRetry={() => enrollment.refetch()} />;
   }
 
-  if (!orgId || !orgs.data.some((org) => org.id === orgId)) return <Redirect to="/orgs" />;
+  if (!orgId || !enrollment.data.orgs.some((org) => org.id === orgId)) return <Redirect to="/orgs" />;
 
   return (
     <AuthorizationProvider scope={{ level: 'org', orgId }}>

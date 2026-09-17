@@ -10,12 +10,12 @@ import {
   useRevokeManagementKey,
   useUpdateManagementKeyPermissions,
   getListWorkspaceManagementKeysQueryKey,
-  useListInferenceKeysInfinite,
+  useListInferenceKeys,
   useCreateInferenceKey,
   useRevokeInferenceKey,
   getListInstanceManagementKeysQueryKey,
   getListOrgManagementKeysQueryKey,
-  getListInferenceKeysInfiniteQueryKey,
+  getListInferenceKeysQueryKey,
   type ListInstanceManagementKeysParams,
   type ListOrgManagementKeysParams,
   useListInferenceKeyOwners,
@@ -23,7 +23,6 @@ import {
   getListActivityInfiniteQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
-import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useInstanceManagementKeys(params?: ListInstanceManagementKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListInstanceManagementKeys(params, { query: { enabled } });
@@ -74,7 +73,7 @@ export function useRevokeOrgManagementKeyMutation(orgId: string, params?: ListOr
 }
 
 export function useInferenceKeys(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInferenceKeysInfinite(orgId, workspaceRef, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
+  return useListInferenceKeys(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useInferenceKeyOwners(orgId: string, workspaceRef: string) {
@@ -87,7 +86,7 @@ export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: strin
     mutation: {
       onSuccess: () =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListInferenceKeysInfiniteQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
@@ -102,7 +101,7 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
     mutation: {
       onSuccess: () =>
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: getListInferenceKeysInfiniteQueryKey(orgId, workspaceRef) }),
+          queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),

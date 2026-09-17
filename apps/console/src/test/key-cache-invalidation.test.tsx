@@ -15,7 +15,7 @@ import {
   useRevokeOrgManagementKeyMutation,
   useRevokeInferenceKeyMutation,
 } from '@/features/keys/hooks';
-import { ORG, enveloped, paged, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 let queryClient: QueryClient;
@@ -109,7 +109,7 @@ describe('key cache invalidation across pages', () => {
   it('creating an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => paged(keys)),
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => enveloped(keys)),
       http.post(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
         return HttpResponse.json<{ data: Api.InferenceKeyCreatedOut }>({ data: { id: 'ifk-2', token: 'tok-once' } });
@@ -129,7 +129,7 @@ describe('key cache invalidation across pages', () => {
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => paged([inferenceKey('ifk-1', revoked)])),
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => enveloped([inferenceKey('ifk-1', revoked)])),
       http.delete(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
         return HttpResponse.json<{ data: Api.InferenceKeyRevokedOut }>({ data: { id: 'ifk-1', status: 'revoked' } });

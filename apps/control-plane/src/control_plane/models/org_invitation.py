@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator, model_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, func, text
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
@@ -147,24 +147,6 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         if scope.level is ScopeLevel.workspace:
             query = query.where(cls.workspace_id == scope.workspace_id)
         return [(result[0], result[1], result[2]) for result in (await current_session().execute(query)).all()]
-
-    @classmethod
-    async def count_pending_for_email(cls, email: str, now: datetime, scope: Scope) -> int:
-        statement = (
-            select(func.count())
-            .select_from(cls)
-            .where(
-                cls.email == User.normalize_email(email),
-                col(cls.accepted_at).is_(None),
-                col(cls.revoked_at).is_(None),
-                col(cls.expires_at) > now,
-            )
-        )
-        if scope.level is not ScopeLevel.instance:
-            statement = statement.where(cls.org_id == scope.org_id)
-        if scope.level is ScopeLevel.workspace:
-            statement = statement.where(cls.workspace_id == scope.workspace_id)
-        return (await current_session().execute(statement)).scalar_one()
 
     @classmethod
     async def for_token(cls, token: str, *, lock: bool = False) -> Self | None:

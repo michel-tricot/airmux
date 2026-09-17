@@ -28,7 +28,7 @@ from api_models import (
 if TYPE_CHECKING:
     import httpx
 
-from cli.client import access_get, api_error, ensure_ok, payload, payload_page, resolve_control_plane_url
+from cli.client import api_error, ensure_ok, payload, payload_rows, resolve_control_plane_url
 from cli.common import CONNECTION, GETTING_STARTED, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import (
@@ -146,7 +146,7 @@ def seed_provider_credentials(
         return []
     credentials = client.get("/api/v1/instance/provider-credentials")
     existing = (
-        {credential.provider_name: credential.enabled for credential in payload_page(credentials, ProviderCredentialOut).items}
+        {credential.provider_name: credential.enabled for credential in payload_rows(credentials, ProviderCredentialOut)}
         if credentials.is_success
         else {}
     )
@@ -172,7 +172,7 @@ def configured_model(client: httpx.Client) -> str | None:
     if not catalog.is_success or not credentials.is_success:
         return None
     taxonomy = payload(catalog, TaxonomyOut)
-    configured = {credential.provider_name for credential in payload_page(credentials, ProviderCredentialOut).items if credential.enabled}
+    configured = {credential.provider_name for credential in payload_rows(credentials, ProviderCredentialOut) if credential.enabled}
     provider_ids = {provider.id for provider in taxonomy.providers if provider.name in configured}
     models = sorted(model.name for model in taxonomy.models if model.provider_id in provider_ids)
     return models[0] if models else None
@@ -192,8 +192,7 @@ def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: 
 
 def _personal_org(client: httpx.Client, email: str, requested_name: str) -> OrgOut:
     enrollment = _payload_or_die(client.get("/api/v1/enroll"), "organization lookup", EnrollOut)
-    organizations = payload_page(ensure_ok(client.get("/api/v1/enroll/organizations")), OrgOut).items
-    existing = next((organization for organization in organizations if organization.id == enrollment.personal_org_id), None)
+    existing = next((organization for organization in enrollment.orgs if organization.id == enrollment.personal_org_id), None)
     if existing is not None:
         _step(f"Organization [bold]{existing.name}[/bold]")
         return existing
@@ -231,9 +230,7 @@ def _organization_management_key(client: httpx.Client, org_id: str) -> str:
 
 
 def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]) -> WorkspaceOut:
-    listed = payload_page(
-        ensure_ok(client.get(f"/api/v1/organizations/{org_id}/workspaces", params={"limit": 200}, headers=bearer)), WorkspaceOut
-    ).items
+    listed = payload_rows(ensure_ok(client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=bearer)), WorkspaceOut)
     workspace = next((candidate for candidate in listed if candidate.slug == "default"), None)
     if workspace is None:
         workspace = _payload_or_die(
@@ -467,9 +464,8 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
 
     with access_client(control_plane_url) as client:
         standing = payload(ensure_ok(client.get("/api/v1/enroll")), EnrollOut)
-    organizations = access_get("/api/v1/enroll/organizations", control_plane_url, OrgOut)
     rows = [
         {**organization.model_dump(mode="json"), "kind": "personal" if organization.id == standing.personal_org_id else "member"}
-        for organization in organizations
+        for organization in standing.orgs
     ]
     print_rows("orgs", rows, MINE_COLS, fmt)

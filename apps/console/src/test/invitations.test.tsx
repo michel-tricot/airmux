@@ -40,27 +40,21 @@ describe('organization invitations', () => {
       http.get('/api/v1/enroll', () =>
         HttpResponse.json<{ data: Api.EnrollOut }>({
           data: {
+            orgs: [],
             personal_org_id: null,
-            org_count: 0,
-            pending_invitation_count: 1,
+            pending_invitations: [
+              {
+                email: 'dev@example.com',
+                org_id: ORG.id,
+                org_name: ORG.name,
+                org_role: 'member',
+                workspace_id: WORKSPACES[0].id,
+                workspace_name: WORKSPACES[0].name,
+                workspace_role: 'viewer',
+                expires_at: '2026-08-24T12:00:00Z',
+              },
+            ],
           },
-        }),
-      ),
-      http.get('/api/v1/enroll/organizations', () => enveloped([])),
-      http.get('/api/v1/enroll/invitations', () =>
-        HttpResponse.json({
-          data: [
-            {
-              email: 'dev@example.com',
-              org_id: ORG.id,
-              org_name: ORG.name,
-              org_role: 'member',
-              workspace_id: WORKSPACES[0].id,
-              workspace_name: WORKSPACES[0].name,
-              workspace_role: 'viewer',
-              expires_at: '2026-08-24T12:00:00Z',
-            },
-          ],
         }),
       ),
     );
@@ -224,7 +218,7 @@ describe('organization invitations', () => {
       http.post('/api/v1/auth/signup', async ({ request }) => {
         signupBody = (await request.json()) as Api.SignupIn;
         return HttpResponse.json<{ data: Api.MeOut }>({
-          data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, org_count: 0 },
+          data: { user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] },
         });
       }),
     );

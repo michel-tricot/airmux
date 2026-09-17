@@ -65,6 +65,7 @@ from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, p
 from cli.profiles import active_profile, load_config, upsert_profile
 
 if TYPE_CHECKING:
+    import httpx
     from rich.table import Table
 
 ORG_COLS = [
@@ -164,13 +165,9 @@ WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspa
 
 
 @workspaces_app.command("list")
-def workspaces_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
+def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List your workspaces."""
-    print_rows(
-        "workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut, limit=limit, all_pages=all_pages), WORKSPACE_COLS, fmt
-    )
+    print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut), WORKSPACE_COLS, fmt)
 
 
 @workspaces_app.command("use")
@@ -195,14 +192,12 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
 @workspace_members_app.command("list")
 def workspace_members_list(
     workspace: WorkspaceOption = "",
-    limit: LimitOption = 50,
-    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
-    rows = access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut, limit=limit, all_pages=all_pages)
+    rows = access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut)
     print_rows("members", rows, MEMBER_COLS, fmt)
 
 
@@ -234,8 +229,6 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 @inference_keys_app.command("list")
 def inference_keys_list(
     workspace: WorkspaceOption = "",
-    limit: LimitOption = 50,
-    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
@@ -243,7 +236,7 @@ def inference_keys_list(
     workspace_ref = resolve_workspace(workspace)
     print_rows(
         "inference keys",
-        access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut, limit=limit, all_pages=all_pages),
+        access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut),
         KEY_COLS,
         fmt,
     )
@@ -281,7 +274,7 @@ USER_COLS = [
     Col("email", "Email"),
     Col("name", "Name", max_width=30),
     Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
-    Col("org_count", "Orgs", style="cyan"),
+    Col("orgs", "Orgs", style="cyan", max_width=40),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
 
@@ -310,28 +303,22 @@ def service_accounts_create(
 
 
 @service_accounts_app.command("list")
-def service_accounts_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
+def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List machine accounts."""
-    rows = access_get("/api/v1/users", control_plane_url, UserOut, {"service_account": True}, limit=limit, all_pages=all_pages)
+    rows = access_get("/api/v1/users", control_plane_url, UserOut, {"service_account": True})
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
-def users_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
+def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every account and the organizations it belongs to."""
-    print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut, limit=limit, all_pages=all_pages), USER_COLS, fmt)
+    print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut), USER_COLS, fmt)
 
 
 @org_members_app.command("list")
-def org_members_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
+def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
-    print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut, limit=limit, all_pages=all_pages), ORG_MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
 
 
 @org_members_app.command("add")
@@ -532,6 +519,21 @@ def events_list(
     print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut, limit=limit, all_pages=all_pages), EVENT_COLS, fmt)
 
 
+def _events_since(client: httpx.Client, path: str, newest_event_id: str | None) -> list[UsageEventOut]:
+    cursor = None
+    events = []
+    while True:
+        params = {"limit": 200, **({"cursor": cursor} if cursor else {})}
+        page = payload_page(ensure_ok(client.get(path, params=params)), UsageEventOut)
+        for event in page.items:
+            if str(event.event_id) == newest_event_id:
+                return list(reversed(events))
+            events.append(event)
+        if newest_event_id is None or page.next_cursor is None:
+            return list(reversed(events))
+        cursor = page.next_cursor
+
+
 @events_app.command("tail")
 def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """Follow requests as they happen."""
@@ -552,27 +554,26 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
     with access_client(control_plane_url) as c:
         resp = c.get(path, params={"limit": keep})
         ensure_ok(resp)
-        rows.extend(reversed(payload_page(resp, UsageEventOut).items))
-        seen = deque((str(event.event_id) for event in rows), maxlen=max(keep, 400))
+        initial = payload_page(resp, UsageEventOut)
+        rows.extend(reversed(initial.items))
+        newest_event_id = str(initial.items[0].event_id) if initial.items else None
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    page = payload_page(ensure_ok(c.get(path, params={"limit": 200})), UsageEventOut)
-                    for event in reversed(page.items):
-                        if str(event.event_id) in seen:
-                            continue
+                    batch = _events_since(c, path, newest_event_id)
+                    for event in batch:
                         emit(event)
-                        seen.append(str(event.event_id))
+                    if batch:
+                        newest_event_id = str(batch[-1].event_id)
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    page = payload_page(ensure_ok(c.get(path, params={"limit": 200})), UsageEventOut)
-                    batch = [event for event in reversed(page.items) if str(event.event_id) not in seen]
+                    batch = _events_since(c, path, newest_event_id)
                     fresh_ids = {str(event.event_id) for event in batch}
                     if batch:
                         rows.extend(batch)
-                        seen.extend(fresh_ids)
+                        newest_event_id = str(batch[-1].event_id)
                     live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")

@@ -25,7 +25,7 @@ class _PageInfo(BaseModel):
 
 class _PageWire(BaseModel):
     data: list[object]
-    page: _PageInfo | None = None
+    page: _PageInfo
 
 
 @dataclass(frozen=True)
@@ -110,13 +110,17 @@ def ensure_ok(resp: httpx.Response) -> httpx.Response:
 
 
 def payload[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> PayloadT:
-    """The data field of an enveloped response; every control plane response is {"data": ...}, unwrapped here and in payload_page only."""
+    """The data field of an enveloped response; every control plane response is {"data": ...}."""
     return payload_type.model_validate(resp.json()["data"])
+
+
+def payload_rows[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> list[PayloadT]:
+    return [payload_type.model_validate(item) for item in resp.json()["data"]]
 
 
 def payload_page[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> Page[PayloadT]:
     page = _PageWire.model_validate(resp.json())
-    return Page(items=[payload_type.model_validate(item) for item in page.data], next_cursor=page.page.next_cursor if page.page else None)
+    return Page(items=[payload_type.model_validate(item) for item in page.data], next_cursor=page.page.next_cursor)
 
 
 def access_get[PayloadT: BaseModel](  # noqa: PLR0913, PLR0917 pagination controls belong at the typed request seam
@@ -129,8 +133,9 @@ def access_get[PayloadT: BaseModel](  # noqa: PLR0913, PLR0917 pagination contro
 ) -> list[PayloadT]:
     with access_client(control_plane_url) as c:
         query = dict(params or {})
-        if limit is not None:
-            query["limit"] = limit
+        if limit is None:
+            return payload_rows(ensure_ok(c.get(path, params=query)), payload_type)
+        query["limit"] = limit
         items: list[PayloadT] = []
         while True:
             page = payload_page(ensure_ok(c.get(path, params=query)), payload_type)

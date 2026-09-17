@@ -9,14 +9,13 @@ from __future__ import annotations
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException
+from sqlmodel import col
 
 from control_plane.authz import Permission, Scope
 from control_plane.deps import ActorDep, instance_scope, require
 from control_plane.models import Org, OrgMembership, User
-from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
+from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.org_membership import MembershipOut
 from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
@@ -27,7 +26,7 @@ router = APIRouter()
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     """Create a machine principal with an optional instance role."""
     user = User.new_service_account(body.name, body.instance_role)
-    return Envelope(data=_user_out(await user.save(), 0))
+    return Envelope(data=_user_out(await user.save(), []))
 
 
 @router.post(
@@ -47,8 +46,8 @@ async def create_instance_service_account_management_key(
     return Envelope(data=await issue_management_key(body, actor, Scope.instance(), principal_id=service_account.id))
 
 
-def _user_out(user: User, org_count: int) -> UserOut:
-    return UserOut.model_validate({**user.model_dump(), "org_count": org_count})
+def _user_out(user: User, orgs: list[UUID]) -> UserOut:
+    return UserOut.model_validate({**user.model_dump(), "orgs": orgs})
 
 
 @router.get("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
@@ -57,27 +56,8 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
     user = await User.find_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    counts = await User.membership_counts((user_id,))
-    return Envelope(data=_user_out(user, counts.get(user_id, 0)))
-
-
-@router.get("/users/{user_id}/organizations", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
-async def list_user_organizations(user_id: UUID) -> Envelope[list[MembershipOut]]:
-    """List one principal's organization memberships."""
-    if await User.find_by_id(user_id) is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    memberships = await OrgMembership.for_user(user_id)
-    return Envelope(
-        data=[
-            MembershipOut(
-                user_id=membership.user_id,
-                org_id=membership.org_id,
-                role=membership.role,
-                status="member",
-            )
-            for membership in memberships
-        ]
-    )
+    memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
+    return Envelope(data=_user_out(user, [membership.org_id for membership in memberships]))
 
 
 @router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
@@ -99,11 +79,15 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
 
 
 @router.get("/users", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
-async def list_users(page: PageDep, service_account: bool | None = None) -> PageEnvelope[UserOut]:
+async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
     """List human users and service accounts across the instance."""
-    users = await User.page_for_instance(page, service_account)
-    counts = await User.membership_counts(tuple(user.id for user in users.items))
-    return PageEnvelope.from_slice(users.map(lambda user: _user_out(user, counts.get(user.id, 0))))
+    conditions = () if service_account is None else (User.service_account == service_account,)
+    users = await User.find(*conditions, order_by=col(User.email))
+    memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))
+    orgs_by_user: dict[UUID, list[UUID]] = {}
+    for membership in memberships:
+        orgs_by_user.setdefault(membership.user_id, []).append(membership.org_id)
+    return Envelope(data=[_user_out(user, orgs_by_user.get(user.id, [])) for user in users])
 
 
 @router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
@@ -111,5 +95,5 @@ async def change_instance_role(user_id: UUID, body: InstanceRoleIn) -> Envelope[
     user = await User.change_instance_role(user_id, body.instance_role)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    counts = await User.membership_counts((user_id,))
-    return Envelope(data=_user_out(user, counts.get(user_id, 0)))
+    memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
+    return Envelope(data=_user_out(user, [membership.org_id for membership in memberships]))

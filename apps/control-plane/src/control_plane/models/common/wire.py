@@ -23,14 +23,8 @@ class PageEnvelope[T](Envelope[list[T]]):
     page: PageInfo
 
     @classmethod
-    def from_slice[Source](cls, page: PageSlice[Source], output: type[T] | Callable[[Source], T] | None = None) -> Self:
-        if output is None:
-            items = list(page.items)
-        elif isinstance(output, type) and issubclass(output, BaseModel):
-            items = [output.model_validate(item) for item in page.items]
-        else:
-            items = [output(item) for item in page.items]
-        return cls(data=items, page=PageInfo(next_cursor=page.next_cursor))
+    def from_slice[Source](cls, page: PageSlice[Source], transform: Callable[[Source], T]) -> Self:
+        return cls(data=[transform(item) for item in page.items], page=PageInfo(next_cursor=page.next_cursor))
 
 
 class DeletedOut[I](BaseModel):

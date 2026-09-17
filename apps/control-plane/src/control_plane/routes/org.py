@@ -24,22 +24,23 @@ router = APIRouter(prefix="/organizations/{org_id}")
 
 
 @router.get("/users", tags=["Organization Members"], dependencies=[require("api", org_scope, Permission.members_read)])
-async def list_org_users(org_id: OrgDep, page: PageDep) -> PageEnvelope[OrgMemberOut]:
+async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
     """List the human users and service accounts that belong to an organization."""
-    members = await User.page_members_of(org_id, page)
-    roles = await OrgMembership.roles_for_org_users(org_id, tuple(user.id for user in members.items))
-    return PageEnvelope.from_slice(
-        members.map(
-            lambda user: OrgMemberOut(
+    members = await User.members_of(org_id)
+    memberships = {membership.user_id: membership for membership in await OrgMembership.find(OrgMembership.org_id == org_id)}
+    return Envelope(
+        data=[
+            OrgMemberOut(
                 user_id=user.id,
                 email=user.email,
                 name=user.name,
                 service_account=user.service_account,
-                role=roles[user.id],
+                role=memberships[user.id].role,
                 status="member",
                 managed=user.managing_org_id == org_id,
             )
-        )
+            for user in members
+        ]
     )
 
 
@@ -100,7 +101,7 @@ async def create_org_service_account(
     )
     return Envelope(
         data=OrgServiceAccountCreatedOut(
-            service_account=UserOut.model_validate({**service_account.model_dump(), "org_count": 1}),
+            service_account=UserOut.model_validate({**service_account.model_dump(), "orgs": [org_id]}),
             membership=MembershipOut(user_id=service_account.id, org_id=org_id, role=OrgRole(membership.role), status="member"),
             management_key=management_key,
         )
@@ -153,13 +154,13 @@ async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
 @router.get("/bundles", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])
 async def list_bundles(org_id: OrgDep, page: PageDep) -> PageEnvelope[BundleOut]:
     """List policy bundle metadata for an organization."""
-    return PageEnvelope.from_slice(await Bundle.page_for_org(org_id, page), BundleOut)
+    return PageEnvelope.from_slice(await Bundle.page_for_org(org_id, page), BundleOut.model_validate)
 
 
 @router.get("/events", tags=["Organization Usage Events"], dependencies=[require("api", org_scope, Permission.usage_read)])
 async def list_org_events(org_id: OrgDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events across an organization with cursor pagination."""
-    return PageEnvelope.from_slice(await UsageEvent.for_scope(org_id, None, page), UsageEventOut)
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(org_id, None, page), UsageEventOut.model_validate)
 
 
 @router.get(
@@ -167,10 +168,10 @@ async def list_org_events(org_id: OrgDep, page: PageDep) -> PageEnvelope[UsageEv
 )
 async def list_workspace_events(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events for one workspace with cursor pagination."""
-    return PageEnvelope.from_slice(await UsageEvent.for_scope(workspace.org_id, workspace.id, page), UsageEventOut)
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(workspace.org_id, workspace.id, page), UsageEventOut.model_validate)
 
 
 @router.get("/activity", tags=["Organization Activity"], dependencies=[require("api", org_scope, Permission.audit_read)])
 async def list_activity(org_id: OrgDep, page: PageDep) -> PageEnvelope[ActivityOut]:
     """List the most recent audited changes in an organization."""
-    return PageEnvelope.from_slice(await AuditLog.for_org(org_id, page), ActivityOut)
+    return PageEnvelope.from_slice(await AuditLog.for_org(org_id, page), ActivityOut.model_validate)

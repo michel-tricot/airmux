@@ -350,12 +350,6 @@ class DenyRequest(BaseModel):
     message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
 
 
-class EnrollOut(BaseModel):
-    personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
-    org_count: Annotated[int, Field(title="Org Count")]
-    pending_invitation_count: Annotated[int, Field(title="Pending Invitation Count")]
-
-
 class EnvelopeBundleOut(BaseModel):
     data: BundleOut
 
@@ -386,10 +380,6 @@ class EnvelopeDeletedOutUUID(BaseModel):
 
 class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
-
-
-class EnvelopeEnrollOut(BaseModel):
-    data: EnrollOut
 
 
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
@@ -606,7 +596,7 @@ class MeOut(BaseModel):
     email: Annotated[str, Field(title="Email")]
     name: Annotated[str, Field(title="Name")]
     instance_role: InstanceRole | None
-    org_count: Annotated[int, Field(title="Org Count")]
+    orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
 class ModelEntry(BaseModel):
@@ -1729,7 +1719,7 @@ class UserOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-    org_count: Annotated[int, Field(title="Org Count")]
+    orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
 class ValidationError(BaseModel):
@@ -1831,8 +1821,18 @@ class CredentialEntry(BaseModel):
     version: Annotated[int, Field(title="Version")]
 
 
+class EnrollOut(BaseModel):
+    orgs: Annotated[list[OrgOut], Field(title="Orgs")]
+    personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
+    pending_invitations: Annotated[list[InvitationPreviewOut], Field(title="Pending Invitations")]
+
+
 class EnvelopeBundleManifest(BaseModel):
     data: BundleManifest
+
+
+class EnvelopeEnrollOut(BaseModel):
+    data: EnrollOut
 
 
 class EnvelopeEventsIngestedOut(BaseModel):
@@ -1911,28 +1911,32 @@ class EnvelopeWorkspaceOut(BaseModel):
     data: WorkspaceOut
 
 
+class EnvelopeListInferenceKeyOut(BaseModel):
+    data: Annotated[list[InferenceKeyOut], Field(title="Data")]
+
+
 class EnvelopeListInferenceKeyOwnerOut(BaseModel):
     data: Annotated[list[InferenceKeyOwnerOut], Field(title="Data")]
-
-
-class EnvelopeListInvitationPreviewOut(BaseModel):
-    data: Annotated[list[InvitationPreviewOut], Field(title="Data")]
 
 
 class EnvelopeListOrgInvitationOut(BaseModel):
     data: Annotated[list[OrgInvitationOut], Field(title="Data")]
 
 
-class EnvelopeListOrgOut(BaseModel):
-    data: Annotated[list[OrgOut], Field(title="Data")]
-
-
 class EnvelopeListProviderCredentialOut(BaseModel):
     data: Annotated[list[ProviderCredentialOut], Field(title="Data")]
 
 
+class EnvelopeListUserOut(BaseModel):
+    data: Annotated[list[UserOut], Field(title="Data")]
+
+
 class EnvelopeListWorkspaceMemberCandidateOut(BaseModel):
     data: Annotated[list[WorkspaceMemberCandidateOut], Field(title="Data")]
+
+
+class EnvelopeListWorkspaceOut(BaseModel):
+    data: Annotated[list[WorkspaceOut], Field(title="Data")]
 
 
 class HTTPValidationError(BaseModel):
@@ -2055,16 +2059,6 @@ class PageEnvelopeBundleOut(BaseModel):
     page: PageInfo
 
 
-class PageEnvelopeInferenceKeyOut(BaseModel):
-    data: Annotated[list[InferenceKeyOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeOrgMemberOut(BaseModel):
-    data: Annotated[list[OrgMemberOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
 class PageEnvelopeOrgOut(BaseModel):
     data: Annotated[list[OrgOut], Field(max_length=200, title="Data")]
     page: PageInfo
@@ -2072,16 +2066,6 @@ class PageEnvelopeOrgOut(BaseModel):
 
 class PageEnvelopeUsageEventOut(BaseModel):
     data: Annotated[list[UsageEventOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeUserOut(BaseModel):
-    data: Annotated[list[UserOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeWorkspaceOut(BaseModel):
-    data: Annotated[list[WorkspaceOut], Field(max_length=200, title="Data")]
     page: PageInfo
 
 
@@ -2168,8 +2152,12 @@ class EnvelopeWorkspaceMembershipOut(BaseModel):
     data: WorkspaceMembershipOut
 
 
-class EnvelopeListMembershipOut(BaseModel):
-    data: Annotated[list[MembershipOut], Field(title="Data")]
+class EnvelopeListOrgMemberOut(BaseModel):
+    data: Annotated[list[OrgMemberOut], Field(title="Data")]
+
+
+class EnvelopeListWorkspaceMembershipOut(BaseModel):
+    data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
 
 
 class ManagementKeyCreatedOut(BaseModel):
@@ -2213,11 +2201,6 @@ class OrgServiceAccountCreatedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     management_key: ManagementKeyCreatedOut
-
-
-class PageEnvelopeWorkspaceMembershipOut(BaseModel):
-    data: Annotated[list[WorkspaceMembershipOut], Field(max_length=200, title="Data")]
-    page: PageInfo
 
 
 class PolicyDefinitionInput(BaseModel):
@@ -2355,10 +2338,6 @@ class EnvelopeListPolicyOut(BaseModel):
     data: Annotated[list[PolicyOut], Field(title="Data")]
 
 
-class PolicyCollection(RootModel[list[PolicyOut]]):
-    root: Annotated[list[PolicyOut], Field(max_length=100)]
-
-
 class PolicyCreate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2392,7 +2371,3 @@ class PolicyCreate(BaseModel):
         PolicyDefinitionInput,
         Field(description="Workspace, user, or inference key target and inline rules"),
     ]
-
-
-class EnvelopePolicyCollection(BaseModel):
-    data: PolicyCollection

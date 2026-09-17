@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import Index, UniqueConstraint, or_
+from sqlalchemy import UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, OrgOwned, PageQuery, PageSlice, Tombstonable
+from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from airmux_runtime.secrets import SecretStore
 
 DERIVED_SLUG_FALLBACK = "workspace"
-type ReadableRoles = tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]
 
 
 def _as_uuid(value: str) -> UUID | None:
@@ -50,7 +49,6 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
         UniqueConstraint("org_id", "slug", name="workspace_org_id_slug_key"),
-        Index("workspace_org_id_idx", "org_id", "id"),
     )
 
     org_id: UUID = Field(foreign_key="org.id")
@@ -126,41 +124,6 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
             .exists()
         )
         return await cls.find(cls.org_id == org_id, or_(instance_access, org_access, workspace_access), order_by=col(cls.name))
-
-    @classmethod
-    async def page_readable_by(
-        cls,
-        principal_id: UUID,
-        org_id: UUID,
-        request: PageQuery,
-        *,
-        roles: ReadableRoles,
-    ) -> PageSlice[Self]:
-        instance_roles, org_roles, workspace_roles = roles
-        instance_access = select(User.id).where(col(User.id) == principal_id, col(User.instance_role).in_(instance_roles)).exists()
-        org_access = (
-            select(OrgMembership.user_id)
-            .where(
-                col(OrgMembership.user_id) == principal_id,
-                col(OrgMembership.org_id) == org_id,
-                col(OrgMembership.role).in_(org_roles),
-            )
-            .exists()
-        )
-        workspace_access = (
-            select(WorkspaceMembership.user_id)
-            .where(
-                col(WorkspaceMembership.user_id) == principal_id,
-                col(WorkspaceMembership.workspace_id) == col(cls.id),
-                col(WorkspaceMembership.role).in_(workspace_roles),
-            )
-            .exists()
-        )
-        return await cls.page(
-            request,
-            cls.org_id == org_id,
-            or_(instance_access, org_access, workspace_access),
-        )
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the workspace with the rows scoped to it: its inference keys, its members, and the

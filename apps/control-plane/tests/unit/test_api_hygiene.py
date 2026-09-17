@@ -255,10 +255,12 @@ def test_paginated_operations_share_one_query_contract():
     spec = app.openapi()
     operations = {operation["operationId"]: operation for methods in spec["paths"].values() for operation in methods.values()}
     contracts = []
+    paginated = set()
     offenders = []
     for route in api_routes(app):
         if route.response_model is None or not issubclass(route.response_model, PageEnvelope):
             continue
+        paginated.add(route.name)
         actual = {
             parameter["name"]: parameter for parameter in operations[route.name].get("parameters", []) if parameter["name"] in {"cursor", "limit"}
         }
@@ -267,6 +269,14 @@ def test_paginated_operations_share_one_query_contract():
         else:
             contracts.append(actual)
     assert offenders == []
+    assert paginated == {
+        "list_activity",
+        "list_bundles",
+        "list_instance_activity",
+        "list_org_events",
+        "list_orgs",
+        "list_workspace_events",
+    }
     assert contracts
     assert all(contract == contracts[0] for contract in contracts)
     cursor_schema = contracts[0]["cursor"]["schema"]["anyOf"][0]

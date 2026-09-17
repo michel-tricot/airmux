@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field as PydanticField
 from pydantic import SecretStr, field_validator
-from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, Index, String, UniqueConstraint, or_
+from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, String, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col
 
@@ -67,8 +67,6 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
             postgresql_nulls_not_distinct=True,
         ),
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
-        Index("provider_credential_org_order_idx", "org_id", "priority", "name", "id"),
-        Index("provider_credential_workspace_order_idx", "org_id", "workspace_id", "priority", "name", "id"),
     )
 
     org_id: UUID | None = Field(default=None, foreign_key="org.id")

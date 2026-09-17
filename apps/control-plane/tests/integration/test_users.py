@@ -162,13 +162,13 @@ def test_membership_lifecycle_and_listing(tmp_path):
 
         listed = _users(c, root)
         assert [u["id"] for u in listed] == [uid]
-        assert listed[0]["org_count"] == 2
+        assert sorted(listed[0]["orgs"]) == sorted([str(o1), str(o2)])
 
         deleted = c.delete(f"/api/v1/organizations/{o2}/users/{uid}", headers=cp.headers(o2)).json()["data"]
         assert deleted["id"] == f"{uid}/{o2}"
         assert deleted["deleted_at"] is not None
         assert c.delete(f"/api/v1/organizations/{o2}/users/{uid}", headers=cp.headers(o2)).status_code == 404
-        assert _users(c, root)[0]["org_count"] == 1
+        assert _users(c, root)[0]["orgs"] == [str(o1)]
 
 
 def test_org_user_listing_is_scoped_to_the_acting_org(tmp_path):

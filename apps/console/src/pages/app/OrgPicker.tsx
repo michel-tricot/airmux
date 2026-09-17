@@ -10,7 +10,6 @@ import { Badge, Card, Button, Input, Label } from '@/components/ui/elements';
 import { Building2, Mail } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
 import { formatDate } from '@/lib/format';
-import { useEnrollmentInvitations, useEnrollmentOrgs } from '@/features/enrollment/hooks';
 
 const personalOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -22,15 +21,13 @@ export default function AppOrgPicker() {
     setLocation('/org');
   };
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), retry: false } });
-  const orgsQuery = useEnrollmentOrgs({ enabled: enrollment.isSuccess });
-  const invitationsQuery = useEnrollmentInvitations({ enabled: enrollment.isSuccess });
   const form = useForm<z.infer<typeof personalOrgSchema>>({
     resolver: zodResolver(personalOrgSchema),
     defaultValues: { name: '' },
   });
 
-  const orgs = orgsQuery.data;
-  const pendingInvitations = invitationsQuery.data ?? [];
+  const orgs = enrollment.data?.orgs;
+  const pendingInvitations = enrollment.data?.pending_invitations ?? [];
   const single = orgs?.length === 1 ? orgs[0].id : null;
 
   useEffect(() => {
@@ -46,7 +43,7 @@ export default function AppOrgPicker() {
     if (org) pickOrg(org.id);
   });
 
-  if (enrollment.isLoading || orgsQuery.isLoading || invitationsQuery.isLoading || single) {
+  if (enrollment.isLoading || single) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30">
         <LoadingState label="Loading organizations..." />
@@ -54,13 +51,10 @@ export default function AppOrgPicker() {
     );
   }
 
-  if (enrollment.isError || !enrollment.data || orgsQuery.isError || invitationsQuery.isError) {
+  if (enrollment.isError || !enrollment.data) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 p-4">
-        <ErrorState
-          message="Could not load your organizations. Try again."
-          onRetry={() => void Promise.all([enrollment.refetch(), orgsQuery.refetch(), invitationsQuery.refetch()])}
-        />
+        <ErrorState message="Could not load your organizations. Try again." onRetry={() => enrollment.refetch()} />
       </div>
     );
   }

@@ -12,7 +12,6 @@ import { Alert, AlertDescription, Card, Button, Input, Label, Dropdown } from '@
 import { TerminalSquare, CheckCircle2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { ErrorState, LoadingState } from '@/components/shared/states';
-import { useEnrollmentOrgs } from '@/features/enrollment/hooks';
 
 const INSTANCE_SCOPE = 'instance';
 
@@ -36,12 +35,11 @@ export default function CliApprove() {
     { query: { queryKey: getCliAuthRequestDetailsQueryKey({ code: submitted ?? '' }), enabled: submitted !== null, retry: false } },
   );
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), enabled: submitted !== null, retry: false } });
-  const orgsQuery = useEnrollmentOrgs({ enabled: submitted !== null && enrollment.isSuccess });
   const approve = useCliAuthApprove();
   const createPersonalOrg = useCreatePersonalOrgMutation();
   const submitPersonalOrg = (name: string) => createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setTarget(org.id) });
 
-  const orgs = orgsQuery.data ?? [];
+  const orgs = enrollment.data?.orgs ?? [];
   const canApproveInstance = details.data?.can_approve_instance ?? false;
   const selected = target || (canApproveInstance ? INSTANCE_SCOPE : orgs[0]?.id) || '';
   const targets = [

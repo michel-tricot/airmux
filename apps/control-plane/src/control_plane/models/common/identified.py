@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel, select
 
 from contract import uuid7
 from control_plane.db import current_session
-from control_plane.models.common.pagination import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
+from control_plane.models.common.pagination import PageQuery, PageSlice, keyset_page
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection
@@ -63,5 +63,6 @@ class Identified(SQLModel):
         return await keyset_page(
             select(cls).where(*conditions),
             request,
-            Keyset(model=cls, columns=(KeyColumn(id_column, "desc", "uuid"),)),
+            id_column,
+            UUID,
         )

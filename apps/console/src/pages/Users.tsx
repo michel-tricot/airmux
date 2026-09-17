@@ -65,9 +65,6 @@ export default function UsersList() {
           loadingLabel="Loading users..."
           empty="No users found."
           emptyIcon={Users}
-          hasNextPage={usersQuery.hasNextPage}
-          isFetchingNextPage={usersQuery.isFetchingNextPage}
-          onLoadMore={() => void usersQuery.fetchNextPage()}
           columns={[
             {
               key: 'user',
@@ -89,7 +86,7 @@ export default function UsersList() {
               cellClassName: 'text-right',
               cell: (user) => (
                 <Badge variant="secondary" className="font-mono">
-                  {user.org_count}
+                  {user.orgs.length}
                 </Badge>
               ),
             },

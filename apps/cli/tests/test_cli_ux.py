@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from api_models import ModelOut, ProviderOut, TaxonomyOut
 from cli import client, diagnostics, resources
+from cli.client import Page
 from cli.main import app
 from cli.profiles import Profile, upsert_profile
 
@@ -18,6 +19,10 @@ runner = CliRunner()
 
 class Item(BaseModel):
     id: int
+
+
+class Event(BaseModel):
+    event_id: int
 
 
 class PaginatedClient:
@@ -70,6 +75,32 @@ def test_access_get_accepts_an_unpaged_collection(monkeypatch):
     items = client.access_get("/items", "", Item)
 
     assert [item.id for item in items] == [1]
+
+
+def test_event_tail_walks_pages_until_the_previous_newest_event(monkeypatch):
+    pages = iter(
+        (
+            Page(items=[Event(event_id=5), Event(event_id=4)], next_cursor="older"),
+            Page(items=[Event(event_id=3), Event(event_id=2)], next_cursor="oldest"),
+            Page(items=[Event(event_id=1), Event(event_id=0)], next_cursor=None),
+        )
+    )
+    queries = []
+
+    monkeypatch.setattr(resources, "payload_page", lambda _response, _payload_type: next(pages))
+    def respond(request: httpx.Request) -> httpx.Response:
+        queries.append((request.url.path, dict(request.url.params)))
+        return httpx.Response(200, request=request, json={"data": []})
+
+    with httpx.Client(base_url="http://control-plane", transport=httpx.MockTransport(respond)) as events_client:
+        events = resources._events_since(events_client, "/events", "1")
+
+    assert [event.event_id for event in events] == [2, 3, 4, 5]
+    assert queries == [
+        ("/events", {"limit": "200"}),
+        ("/events", {"limit": "200", "cursor": "older"}),
+        ("/events", {"limit": "200", "cursor": "oldest"}),
+    ]
 
 
 def test_status_shows_the_active_context_without_its_token(tmp_path, monkeypatch):
