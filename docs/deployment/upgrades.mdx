@@ -1,6 +1,6 @@
 ---
-title: "Upgrade and rollback"
-description: "Replace an airmux release safely, verify the new deployment, and restore a consistent recovery point when rollback is necessary."
+title: 'Upgrade and rollback'
+description: 'Replace an airmux release safely, verify the new deployment, and restore a consistent recovery point when rollback is necessary.'
 ---
 
 airmux is pre-1.0. It does not promise cross-version compatibility between the control plane, gateways, configuration,
@@ -8,8 +8,8 @@ or database schema. Use the same release for every component unless its release 
 rolling-compatible path.
 
 <Warning>
-  Control-plane and all-in-one containers run the forward database migration during startup. The CLI has no
-  operator-facing downgrade command. Do not run an older release against a database migrated by a newer release.
+  Control-plane and all-in-one containers run the forward database migration during startup. The CLI has no operator-facing downgrade command. Do not
+  run an older release against a database migrated by a newer release.
 </Warning>
 
 ## Prepare a recovery point
@@ -50,7 +50,6 @@ curl --fail https://llm.example.com/healthz
 curl --fail https://llm.example.com/readyz
 airmux doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
 airmux gateways list
-airmux bundles list
 ```
 
 Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the

@@ -1,14 +1,14 @@
 ---
-title: "Production operations"
-description: "Monitor readiness, preserve state, update safely, and diagnose control-plane or gateway failures."
+title: 'Production operations'
+description: 'Monitor readiness, preserve state, update safely, and diagnose control-plane or gateway failures.'
 ---
 
 ## Health endpoints
 
-| Endpoint | Healthy response | Failure meaning |
-| --- | --- | --- |
+| Endpoint   | Healthy response                   | Failure meaning                               |
+| ---------- | ---------------------------------- | --------------------------------------------- |
 | `/healthz` | `200` with queued-event statistics | Process or control-plane proxy is unavailable |
-| `/readyz` | `200 {"status":"ready"}` | No bundle or latest manifest was rejected |
+| `/readyz`  | `200 {"status":"ready"}`           | No bundle or latest manifest was rejected     |
 
 The data-plane health payload includes pending outbox events and the age of the oldest queued event. Alert on a growing
 queue or oldest age, even while inference remains available.
@@ -19,7 +19,6 @@ queue or oldest age, even while inference remains available.
 airmux status
 airmux doctor
 airmux gateways list --all
-airmux bundles list
 airmux events tail
 ```
 
@@ -45,11 +44,11 @@ cross-version compatibility between planes, deploy one release across all compon
 
 ## Common failures
 
-| Symptom | Check |
-| --- | --- |
-| `bundle_unavailable` | Bundle poll authentication, control-plane URL, and cached state mount |
+| Symptom                          | Check                                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `bundle_unavailable`             | Bundle poll authentication, control-plane URL, and cached state mount        |
 | `/readyz` says `bundle rejected` | Gateway logs for an invalid provider, model, credential, or policy reference |
-| `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
-| Usage missing from console | `/healthz` pending count and control-plane event-ingest reachability |
-| New key returns `invalid_token` | Wait for bundle adoption, then inspect `bundles list` and gateway logs |
-| Streams pause or buffer | Reverse-proxy buffering and read timeout |
+| `credential_backend_unavailable` | Secret-store mount, permissions, and availability                            |
+| Usage missing from console       | `/healthz` pending count and control-plane event-ingest reachability         |
+| New key returns `invalid_token`  | Wait for adoption, then inspect gateway readiness and logs                   |
+| Streams pause or buffer          | Reverse-proxy buffering and read timeout                                     |

@@ -32,12 +32,7 @@
           },
           {
             "group": "Features",
-            "pages": [
-              "docs/features/model-routing",
-              "docs/features/provider-credentials",
-              "docs/policies",
-              "docs/features/usage"
-            ]
+            "pages": ["docs/features/model-routing", "docs/features/provider-credentials", "docs/policies", "docs/features/usage"]
           },
           {
             "group": "Concepts",
@@ -86,12 +81,7 @@
           },
           {
             "group": "Operations",
-            "pages": [
-              "docs/reference/cli",
-              "docs/reference/configuration",
-              "docs/reference/models-and-providers",
-              "docs/reference/management-api"
-            ]
+            "pages": ["docs/reference/cli", "docs/reference/configuration", "docs/reference/models-and-providers", "docs/reference/management-api"]
           },
           {
             "group": "Control plane endpoints",
@@ -156,7 +146,6 @@
                   {
                     "group": "Model Catalog",
                     "pages": [
-                      "GET /api/v1/instance/bundles/status",
                       "GET /api/v1/instance/taxonomy",
                       "POST /api/v1/instance/taxonomy",
                       "POST /api/v1/instance/taxonomy/providers",
@@ -186,11 +175,7 @@
                 "pages": [
                   {
                     "group": "Settings",
-                    "pages": [
-                      "GET /api/v1/organizations/{org_id}",
-                      "PATCH /api/v1/organizations/{org_id}",
-                      "DELETE /api/v1/organizations/{org_id}"
-                    ]
+                    "pages": ["GET /api/v1/organizations/{org_id}", "PATCH /api/v1/organizations/{org_id}", "DELETE /api/v1/organizations/{org_id}"]
                   },
                   {
                     "group": "Members",
@@ -239,14 +224,6 @@
                       "PATCH /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
                       "DELETE /api/v1/organizations/{org_id}/provider-credentials/{credential_id}",
                       "PUT /api/v1/organizations/{org_id}/provider-credentials/{credential_id}/value"
-                    ]
-                  },
-                  {
-                    "group": "Bundles",
-                    "pages": [
-                      "POST /api/v1/organizations/{org_id}/bundles/republish",
-                      "GET /api/v1/organizations/{org_id}/bundles/status",
-                      "GET /api/v1/organizations/{org_id}/bundles"
                     ]
                   },
                   {

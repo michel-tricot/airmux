@@ -85,8 +85,8 @@ airmux doctor
 
 Resolution order is explicit option, `--dev` where supported, environment, active profile, then local default.
 
-| Environment variable          | Purpose                                           |
-| ----------------------------- | ------------------------------------------------- |
+| Environment variable       | Purpose                                           |
+| -------------------------- | ------------------------------------------------- |
 | `AIRMUX_CONTROL_PLANE_URL` | Override the management origin                    |
 | `AIRMUX_GATEWAY_URL`       | Override the inference origin used by diagnostics |
 | `AIRMUX_MANAGEMENT_KEY`    | Override the saved profile token                  |
@@ -108,13 +108,13 @@ airmux commands -f table
 
 Top-level help groups commands by task:
 
-| Category | Commands |
-| --- | --- |
-| Getting started | `quickstart`, `commands` |
-| Connection | `login`, `profiles`, `status`, `doctor` |
-| Goodies | `completion` |
-| Services | `gateway`, `control-plane` |
-| Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, bundles, and events |
+| Category         | Commands                                                                 |
+| ---------------- | ------------------------------------------------------------------------ |
+| Getting started  | `quickstart`, `commands`                                                 |
+| Connection       | `login`, `profiles`, `status`, `doctor`                                  |
+| Goodies          | `completion`                                                             |
+| Services         | `gateway`, `control-plane`                                               |
+| Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, and events |
 
 Each command group's help keeps its subcommands in one flat list.
 
@@ -150,7 +150,6 @@ Each command group's help keeps its subcommands in one flat list.
 | `models`               | `list`                                   |
 | `rules`                | `create`, `list`, `update`, `delete`     |
 | `policies`             | `create`, `list`, `update`, `delete`     |
-| `bundles`              | `list`, `republish`                      |
 | `gateways`             | `list`                                   |
 | `events`               | `list`, `tail`                           |
 | `catalog`              | `apply`                                  |

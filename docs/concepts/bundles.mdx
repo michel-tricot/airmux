@@ -1,6 +1,6 @@
 ---
-title: "Bundles and consistency"
-description: "Understand how management changes become immutable gateway snapshots and what happens during outages."
+title: 'Bundles and consistency'
+description: 'Understand how management changes become immutable gateway snapshots and what happens during outages.'
 ---
 
 A bundle is a complete, versioned configuration snapshot for one organization. It is the only management state needed on the inference request path.
@@ -20,8 +20,8 @@ It excludes plaintext inference tokens and provider secret values.
 ## Publication flow
 
 1. A management transaction changes bundle-relevant state
-2. The control plane advances the affected organization's desired revision
-3. It compiles and stores a new immutable bundle
+2. A database trigger advances the affected global or organization generation in that transaction
+3. A background publisher compiles and stores a new immutable bundle
 4. A gateway polls the bundle manifest
 5. The gateway fetches changed bundles and validates their policy actions and workspace limits
 6. It writes the accepted set to disk and atomically swaps in-memory indexes
@@ -43,4 +43,4 @@ A request uses one immutable snapshot from authentication through routing, so it
 - A gateway that rejects the latest manifest keeps its current bundle but reports `503` from `/readyz`
 - Secret-store availability remains a runtime dependency for uncached provider credentials
 
-Use `airmux bundles list`, `airmux gateways list`, `/healthz`, and `/readyz` to investigate convergence.
+Use `airmux doctor`, `airmux gateways list`, `/healthz`, `/readyz`, and gateway logs to investigate convergence.
