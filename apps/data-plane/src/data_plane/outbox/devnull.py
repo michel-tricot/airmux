@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from data_plane.outbox.base import EventOutbox, OutboxReservation
+from typing import TYPE_CHECKING
+
+from data_plane.outbox.base import EventOutbox
+
+if TYPE_CHECKING:
+    from contract import UsageEvent
 
 
 class DevNullOutbox(EventOutbox):
-    def try_reserve(self) -> OutboxReservation:
-        return OutboxReservation()
-
-    async def stats(self) -> dict[str, int | float | None]:
-        return {}
-
-    async def close(self) -> None:
+    def _record_reserved(self, _event: UsageEvent, /) -> None:
         pass

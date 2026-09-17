@@ -10,9 +10,8 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 | `/healthz` | `200` with queued-event statistics | Process or control-plane proxy is unavailable |
 | `/readyz` | `200 {"status":"ready"}` | No bundle or latest manifest was rejected |
 
-The data-plane health payload reports reserved slots, filled memory slots, durable events awaiting export, the fixed
-capacity, oldest event age, reservation rejections, persisted and gracefully drained events, and storage-worker failures.
-Alert on sustained filled or durable backlog, reservation rejections, storage failures, or growing oldest age.
+The data-plane health payload includes diagnostics for the configured event outbox. Alert when it reports rejected
+events or storage failures, or when its backlog or oldest event age grows.
 
 ## CLI diagnostics
 

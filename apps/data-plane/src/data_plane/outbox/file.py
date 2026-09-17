@@ -4,7 +4,7 @@ import fcntl
 import os
 from typing import TYPE_CHECKING
 
-from data_plane.outbox.base import DurableStats, QueuedOutbox
+from data_plane.outbox.queued import QueuedOutbox
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -29,9 +29,6 @@ class FileOutbox(QueuedOutbox):
             self._event_file.flush()
         finally:
             fcntl.flock(self._event_file.fileno(), fcntl.LOCK_UN)
-
-    def _durable_stats(self) -> DurableStats:
-        return DurableStats()
 
     def _close_storage(self) -> None:
         self._event_file.close()

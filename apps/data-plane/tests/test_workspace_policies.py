@@ -29,7 +29,7 @@ from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
-from data_plane.outbox import DevNullOutbox
+from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
 from data_plane.routing import RoutePlan, plan_routes
 
@@ -381,10 +381,15 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
     outbox = DevNullOutbox()
-    first_attempt = outbox.try_reserve()
-    assert first_attempt is not None
-    reservations = iter((first_attempt, None))
-    monkeypatch.setattr(outbox, "try_reserve", lambda: next(reservations))
+    reservations = iter((outbox.reserve(),))
+
+    def reserve():
+        try:
+            return next(reservations)
+        except StopIteration as error:
+            raise OutboxFullError from error
+
+    monkeypatch.setattr(outbox, "reserve", reserve)
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     attempted_models = []
 

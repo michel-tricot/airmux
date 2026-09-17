@@ -97,21 +97,17 @@ def _body_gen(response: object) -> AsyncGenerator[bytes]:
 
 
 async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox, http_client: httpx.AsyncClient) -> Response:
-    reservation = outbox.try_reserve()
-    assert reservation is not None
-    session = StreamSession(
-        adapter=make_adapter(),
-        ingress=INGRESS["openai_chat_completions"],
-        ctx=ctx,
-        request=request,
-        adjustments=(),
-        reservation=reservation,
-        http_client=http_client,
-    )
-    try:
+    with outbox.reserve() as reservation:
+        session = StreamSession(
+            adapter=make_adapter(),
+            ingress=INGRESS["openai_chat_completions"],
+            ctx=ctx,
+            request=request,
+            adjustments=(),
+            reservation=reservation,
+            http_client=http_client,
+        )
         return await session.open(UPSTREAM)
-    finally:
-        reservation.release_unused()
 
 
 @respx.mock

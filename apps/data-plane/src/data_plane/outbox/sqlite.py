@@ -4,21 +4,24 @@ import logging
 import os
 import sqlite3
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import httpx
 from pydantic import TypeAdapter
 
 from contract import UsageEvent
-from data_plane.outbox.base import DurableStats, QueuedOutbox
+from data_plane.outbox.queued import QueuedOutbox
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
     import asyncio
     from collections.abc import Sequence
+    from datetime import datetime
     from pathlib import Path
 
     from data_plane.config import SqliteOutboxConfig
+    from data_plane.outbox.base import OutboxStat
 
 logger = logging.getLogger("data_plane")
 USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
@@ -30,6 +33,12 @@ _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS outbox(event_id TEXT PRIMARY KEY, body TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS flush_lease(id INTEGER PRIMARY KEY CHECK(id = 1), owner TEXT NOT NULL, expires REAL NOT NULL)",
 )
+
+
+@dataclass(frozen=True)
+class _DurableBacklog:
+    events: int
+    oldest_event_at: datetime | None
 
 
 def _connect(cache_dir: Path) -> sqlite3.Connection:
@@ -103,11 +112,15 @@ class SqliteOutbox(QueuedOutbox):
     async def acknowledge(self, event_ids: Sequence[str], /) -> None:
         await self._storage_call(lambda: self._acknowledge(event_ids))
 
-    def _durable_stats(self) -> DurableStats:
+    def _durable_backlog(self) -> _DurableBacklog:
         (events,) = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()
         first = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT 1").fetchone()
         oldest = USAGE_EVENT_ADAPTER.validate_json(first[0]).occurred_at if first is not None else None
-        return DurableStats(events=events, oldest_event_at=oldest)
+        return _DurableBacklog(events=events, oldest_event_at=oldest)
+
+    async def stats(self) -> dict[str, OutboxStat]:
+        durable = await self._storage_call(self._durable_backlog)
+        return {**self._queue_stats(durable.oldest_event_at), "durable": durable.events}
 
     async def export_once(self) -> int:
         if not await self.claim_export(self._lease_ttl(), time.time()):

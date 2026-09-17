@@ -83,29 +83,27 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
 
     def run() -> None:
         with TestClient(app):
-            reservation = outbox.try_reserve()
-            assert reservation is not None
-            reservation.record(
-                DeniedUsageEventV1(
-                    event_id=uuid7(),
-                    request_id=uuid7(),
-                    occurred_at=datetime.now(tz=UTC),
-                    org_id=uuid7(),
-                    workspace_id=uuid7(),
-                    key_id="test",
-                    model_id="test",
-                    provider_id="",
-                    bundle_id=uuid7(),
-                    input_tokens=0,
-                    output_tokens=0,
-                    max_output_tokens=None,
-                    cost_usd="0",
-                    latency_ms=0,
-                    status="denied",
-                    stream=False,
+            with outbox.reserve() as reservation:
+                reservation.record(
+                    DeniedUsageEventV1(
+                        event_id=uuid7(),
+                        request_id=uuid7(),
+                        occurred_at=datetime.now(tz=UTC),
+                        org_id=uuid7(),
+                        workspace_id=uuid7(),
+                        key_id="test",
+                        model_id="test",
+                        provider_id="",
+                        bundle_id=uuid7(),
+                        input_tokens=0,
+                        output_tokens=0,
+                        max_output_tokens=None,
+                        cost_usd="0",
+                        latency_ms=0,
+                        status="denied",
+                        stream=False,
+                    )
                 )
-            )
-            reservation.release_unused()
             assert failed.wait(1)
             assert terminated.wait(1)
 

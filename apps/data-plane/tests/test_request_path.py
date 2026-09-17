@@ -12,7 +12,8 @@ import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
-from data_plane.outbox import OUTBOX_CAPACITY, DevNullOutbox
+from data_plane.outbox import DevNullOutbox, OutboxFullError
+from data_plane.outbox.queued import CAPACITY
 from data_plane.proxy import RequestRejectedError, _transform
 
 
@@ -90,7 +91,7 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
     assert health.status_code == 200
     assert health.json()["events"]["reserved"] == 0
     assert health.json()["events"]["filled"] + health.json()["events"]["durable"] == 1
-    assert health.json()["events"]["capacity"] == OUTBOX_CAPACITY
+    assert health.json()["events"]["capacity"] == CAPACITY
     assert health.json()["events"]["oldest_age_s"] >= 0
 
 
@@ -98,7 +99,11 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
 def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
     outbox = DevNullOutbox()
-    monkeypatch.setattr(outbox, "try_reserve", lambda: None)
+
+    def reject_reservation():
+        raise OutboxFullError
+
+    monkeypatch.setattr(outbox, "reserve", reject_reservation)
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()

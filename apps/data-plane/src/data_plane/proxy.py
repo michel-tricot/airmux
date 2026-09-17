@@ -20,7 +20,8 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.http import render_rejection
-from data_plane.metering import RequestStart, record_denied, record_usage, status_for_error, status_for_upstream
+from data_plane.metering import RequestStart, denied_event, status_for_error, status_for_upstream, usage_event
+from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
 from data_plane.routing import RoutePlan, plan_routes
@@ -82,6 +83,8 @@ async def _run(incoming: IncomingRequest, runtime: Runtime) -> Response:
         return await execution.run()
     except RequestRejectedError as error:
         return render_rejection(incoming.ingress, error)
+    except OutboxFullError:
+        return render_rejection(incoming.ingress, RequestRejectedError(503, "metering_capacity_exhausted"))
 
 
 def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
@@ -136,35 +139,35 @@ class StreamSession:
         renderer: ResponseStream,
         reservation: OutboxReservation,
     ) -> AsyncIterator[bytes]:
-        async with handoff:
-            try:
-                for frame in renderer.start(self.ctx):
-                    yield frame
-                async for payload in response.aiter_bytes():
-                    for event in self.adapter.frame(payload, stream_state):
-                        for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
-                            for frame in renderer.chunk(canonical_chunk):
-                                yield frame
-                self.adapter.validate_stream(stream_state)
-                final = self.adapter.finalize(stream_state)
-                for frame in renderer.closing(final, list(self.adjustments)):
-                    yield frame
-                record_usage(reservation, self.ctx, final, status="ok", request=self.request)
-            except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
-                for frame in renderer.error(self.adapter.map_error(error)):
-                    yield frame
-                record_usage(
-                    reservation,
-                    self.ctx,
-                    self.adapter.finalize(stream_state),
-                    status=status_for_error(error),
-                    request=self.request,
-                )
-            except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-                record_usage(reservation, self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request)
-                raise
-            finally:
-                reservation.release_unused()
+        with reservation:
+            async with handoff:
+                try:
+                    for frame in renderer.start(self.ctx):
+                        yield frame
+                    async for payload in response.aiter_bytes():
+                        for event in self.adapter.frame(payload, stream_state):
+                            for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
+                                for frame in renderer.chunk(canonical_chunk):
+                                    yield frame
+                    self.adapter.validate_stream(stream_state)
+                    final = self.adapter.finalize(stream_state)
+                    for frame in renderer.closing(final, list(self.adjustments)):
+                        yield frame
+                    reservation.record(usage_event(self.ctx, final, status="ok", request=self.request))
+                except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
+                    for frame in renderer.error(self.adapter.map_error(error)):
+                        yield frame
+                    reservation.record(
+                        usage_event(
+                            self.ctx,
+                            self.adapter.finalize(stream_state),
+                            status=status_for_error(error),
+                            request=self.request,
+                        )
+                    )
+                except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+                    reservation.record(usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request))
+                    raise
 
 
 @dataclass(frozen=True)
@@ -191,14 +194,9 @@ class RequestExecution:
             raise RequestRejectedError(400, "invalid_request", "Provider parameter aliases must use canonical names")
         plan = plan_routes(self.request, self.key, self.snapshot)
         if isinstance(plan, Deny):
-            reservation = self.runtime.outbox.try_reserve()
-            if reservation is None:
-                raise RequestRejectedError(503, "metering_capacity_exhausted")
-            try:
-                record_denied(reservation, self.key, self.snapshot.bundle.bundle_id, self.request, self.start)
-                raise RequestRejectedError(plan.status, plan.code, plan.message)
-            finally:
-                reservation.release_unused()
+            with self.runtime.outbox.reserve() as reservation:
+                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
+            raise RequestRejectedError(plan.status, plan.code, plan.message)
         try:
             async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
                 return await self._execute(plan)
@@ -216,13 +214,8 @@ class RequestExecution:
                 if credential is None:
                     continue
                 attempts += 1
-                reservation = self.runtime.outbox.try_reserve()
-                if reservation is None:
-                    raise RequestRejectedError(503, "metering_capacity_exhausted")
-                try:
+                with self.runtime.outbox.reserve() as reservation:
                     outcome = await self._attempt(decision, entry, credential, reservation)
-                finally:
-                    reservation.release_unused()
                 if isinstance(outcome, Response):
                     return outcome
                 failure = outcome
@@ -291,10 +284,10 @@ class RequestExecution:
         except UpstreamProtocolError as error:
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
         except asyncio.CancelledError:
-            record_usage(reservation, ctx, _empty_response(ctx), status="cancelled", request=request)
+            reservation.record(usage_event(ctx, _empty_response(ctx), status="cancelled", request=request))
             raise
         final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
-        record_usage(reservation, ctx, final, status="ok", request=request)
+        reservation.record(usage_event(ctx, final, status="ok", request=request))
         return self.ingress.render_response(final)
 
     def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
@@ -353,7 +346,7 @@ def _record_upstream_error(
     reservation: OutboxReservation,
 ) -> CanonicalError:
     status = status_for_upstream(error.status) if isinstance(error, UpstreamResponseError) else status_for_error(error)
-    record_usage(reservation, ctx, _empty_response(ctx), status=status, request=request)
+    reservation.record(usage_event(ctx, _empty_response(ctx), status=status, request=request))
     return adapter.map_error(error)
 
 

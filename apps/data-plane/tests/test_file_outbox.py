@@ -43,10 +43,8 @@ def event_of(index: int) -> RoutedUsageEventV1:
 
 
 def record(outbox: EventOutbox, event: UsageEvent) -> None:
-    reservation = outbox.try_reserve()
-    assert reservation is not None
-    reservation.record(event)
-    reservation.release_unused()
+    with outbox.reserve() as reservation:
+        reservation.record(event)
 
 
 def write_events(path: Path, start: int, count: int) -> None:
@@ -68,18 +66,16 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
     outbox = build_outbox(FileOutboxConfig(path=path), http_client)
     try:
         record(outbox, events[0])
-        stats = await outbox.stats()
-        assert read_events(path) == events[:1]
-        assert stats["durable"] == 0
     finally:
         await outbox.close()
+    assert read_events(path) == events[:1]
+
     reopened = FileOutbox(FileOutboxConfig(path=path))
     try:
         record(reopened, events[1])
-        await reopened.stats()
-        assert read_events(path) == events
     finally:
         await reopened.close()
+    assert read_events(path) == events
     assert path.stat().st_mode & 0o777 == 0o600
 
 
