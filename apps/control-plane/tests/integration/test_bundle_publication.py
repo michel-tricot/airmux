@@ -215,8 +215,8 @@ def test_compiler_failure_preserves_management_change_and_last_valid_bundle(tmp_
                 break
             assert datetime.now(tz=UTC).timestamp() < deadline
             time.sleep(0.1)
-        current = wait_for_publication(client, org_id, headers)
-        assert current["bundle_id"] == initial["bundle_id"]
+        current = BundleManifest.model_validate(client.get("/api/v1/bundles/manifest", headers=headers).json()["data"])
+        assert [str(reference.bundle_id) for reference in current.bundles] == [initial["bundle_id"]]
         keys = client.get(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", headers=headers).json()["data"]
         assert [stored["id"] for stored in keys] == [key["id"]]
         assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1

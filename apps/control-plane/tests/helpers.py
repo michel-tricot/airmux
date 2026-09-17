@@ -24,9 +24,9 @@ from control_plane.app import create_app
 from control_plane.authority import principal_permissions
 from control_plane.authz import ALL_PERMISSIONS, InstanceRole, Permission, Scope
 from control_plane.config import DatabaseConfig, Settings
-from control_plane.db import standalone_transaction
+from control_plane.db import standalone_engine, standalone_transaction, transaction
 from control_plane.keys import ManagementKeyGrant, create_management_key
-from control_plane.models import User, set_actor
+from control_plane.models import BundleState, User, set_actor
 from control_plane.throttling import ThrottleConfig
 
 PROVIDER = {
@@ -155,19 +155,36 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
 
 def wait_for_publication(client, org_id: UUID, headers: dict[str, str], after: UUID | str | None = None, timeout: float = 5.0) -> dict:
     deadline = time.monotonic() + timeout
-    while True:
-        manifest_response = client.get("/api/v1/bundles/manifest", headers=headers)
-        assert manifest_response.status_code == 200, manifest_response.text
-        references = manifest_response.json()["data"]["bundles"]
-        reference = next((reference for reference in references if reference["org_id"] == str(org_id)), None)
-        if reference is not None and (after is None or reference["bundle_id"] != str(after)):
-            bundle_response = client.get(f"/api/v1/bundles/{reference['bundle_id']}", headers=headers)
-            assert bundle_response.status_code == 200, bundle_response.text
-            return bundle_response.json()["data"]
-        if time.monotonic() >= deadline:
-            message = f"bundle was not published after {after}"
-            raise AssertionError(message)
-        time.sleep(0.02)
+    after_id = UUID(str(after)) if after is not None else None
+
+    async def current_bundle_id() -> UUID:
+        async with standalone_engine(client.app.state.settings.database.url) as factory:
+            while True:
+                async with transaction(factory):
+                    state = await BundleState.get(org_id)
+                    current = (
+                        state is not None
+                        and state.current_bundle_id is not None
+                        and state.current_bundle_id != after_id
+                        and state.published_global_generation == await BundleState.global_generation()
+                        and state.published_org_generation == state.desired_generation
+                    )
+                if current:
+                    return state.current_bundle_id
+                if time.monotonic() >= deadline:
+                    message = f"bundle was not published after {after}"
+                    raise AssertionError(message)
+                await asyncio.sleep(0.02)
+
+    bundle_id = asyncio.run(current_bundle_id())
+    manifest_response = client.get("/api/v1/bundles/manifest", headers=headers)
+    assert manifest_response.status_code == 200, manifest_response.text
+    references = manifest_response.json()["data"]["bundles"]
+    reference = next((reference for reference in references if reference["org_id"] == str(org_id)), None)
+    assert reference == {"org_id": str(org_id), "bundle_id": str(bundle_id)}
+    bundle_response = client.get(f"/api/v1/bundles/{bundle_id}", headers=headers)
+    assert bundle_response.status_code == 200, bundle_response.text
+    return bundle_response.json()["data"]
 
 
 def inference_key_body(client, headers: dict[str, str], label: str) -> dict[str, str]:
