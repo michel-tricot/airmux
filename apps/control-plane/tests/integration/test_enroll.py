@@ -20,7 +20,9 @@ def _signup(c, email="m@example.com"):
 
 
 def _orgs(c, headers):
-    return c.get("/api/v1/enroll/organizations", headers=headers).json()["data"]
+    response = c.get("/api/v1/enroll/organizations", headers=headers)
+    assert set(response.json()) == {"data"}
+    return response.json()["data"]
 
 
 def test_personal_org_is_born_with_its_creator_as_member(tmp_path):

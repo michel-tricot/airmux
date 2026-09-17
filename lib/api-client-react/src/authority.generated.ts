@@ -386,19 +386,19 @@ export const operationAuthority = {
       },
     ],
   },
-  createInstanceProviderCredential: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["provider-credentials.manage"],
-      },
-    ],
-  },
   listInstanceProviderCredentials: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["provider-credentials.read"],
+      },
+    ],
+  },
+  createInstanceProviderCredential: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["provider-credentials.manage"],
       },
     ],
   },

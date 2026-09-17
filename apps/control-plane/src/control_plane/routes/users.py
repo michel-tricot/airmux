@@ -62,20 +62,21 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
 
 
 @router.get("/users/{user_id}/organizations", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
-async def list_user_organizations(user_id: UUID, page: PageDep) -> PageEnvelope[MembershipOut]:
+async def list_user_organizations(user_id: UUID) -> Envelope[list[MembershipOut]]:
     """List one principal's organization memberships."""
     if await User.find_by_id(user_id) is None:
         raise HTTPException(status_code=404, detail="User not found")
-    memberships = await OrgMembership.page_for_user(user_id, page)
-    return PageEnvelope.from_slice(
-        memberships.map(
-            lambda membership: MembershipOut(
+    memberships = await OrgMembership.for_user(user_id)
+    return Envelope(
+        data=[
+            MembershipOut(
                 user_id=membership.user_id,
                 org_id=membership.org_id,
                 role=membership.role,
                 status="member",
             )
-        )
+            for membership in memberships
+        ]
     )
 
 

@@ -392,6 +392,10 @@ class EnvelopeEnrollOut(BaseModel):
     data: EnrollOut
 
 
+class EnvelopeListDataPlaneInstanceOut(BaseModel):
+    data: Annotated[list[DataPlaneInstanceOut], Field(title="Data")]
+
+
 class EventsIngestedOut(BaseModel):
     received: Annotated[int, Field(title="Received")]
     ingested: Annotated[int, Field(title="Ingested")]
@@ -1907,6 +1911,30 @@ class EnvelopeWorkspaceOut(BaseModel):
     data: WorkspaceOut
 
 
+class EnvelopeListInferenceKeyOwnerOut(BaseModel):
+    data: Annotated[list[InferenceKeyOwnerOut], Field(title="Data")]
+
+
+class EnvelopeListInvitationPreviewOut(BaseModel):
+    data: Annotated[list[InvitationPreviewOut], Field(title="Data")]
+
+
+class EnvelopeListOrgInvitationOut(BaseModel):
+    data: Annotated[list[OrgInvitationOut], Field(title="Data")]
+
+
+class EnvelopeListOrgOut(BaseModel):
+    data: Annotated[list[OrgOut], Field(title="Data")]
+
+
+class EnvelopeListProviderCredentialOut(BaseModel):
+    data: Annotated[list[ProviderCredentialOut], Field(title="Data")]
+
+
+class EnvelopeListWorkspaceMemberCandidateOut(BaseModel):
+    data: Annotated[list[WorkspaceMemberCandidateOut], Field(title="Data")]
+
+
 class HTTPValidationError(BaseModel):
     detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
 
@@ -2027,33 +2055,8 @@ class PageEnvelopeBundleOut(BaseModel):
     page: PageInfo
 
 
-class PageEnvelopeDataPlaneInstanceOut(BaseModel):
-    data: Annotated[list[DataPlaneInstanceOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
 class PageEnvelopeInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeInferenceKeyOwnerOut(BaseModel):
-    data: Annotated[list[InferenceKeyOwnerOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeInvitationPreviewOut(BaseModel):
-    data: Annotated[list[InvitationPreviewOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeMembershipOut(BaseModel):
-    data: Annotated[list[MembershipOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeOrgInvitationOut(BaseModel):
-    data: Annotated[list[OrgInvitationOut], Field(max_length=200, title="Data")]
     page: PageInfo
 
 
@@ -2067,11 +2070,6 @@ class PageEnvelopeOrgOut(BaseModel):
     page: PageInfo
 
 
-class PageEnvelopeProviderCredentialOut(BaseModel):
-    data: Annotated[list[ProviderCredentialOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
 class PageEnvelopeUsageEventOut(BaseModel):
     data: Annotated[list[UsageEventOut], Field(max_length=200, title="Data")]
     page: PageInfo
@@ -2079,11 +2077,6 @@ class PageEnvelopeUsageEventOut(BaseModel):
 
 class PageEnvelopeUserOut(BaseModel):
     data: Annotated[list[UserOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
-class PageEnvelopeWorkspaceMemberCandidateOut(BaseModel):
-    data: Annotated[list[WorkspaceMemberCandidateOut], Field(max_length=200, title="Data")]
     page: PageInfo
 
 
@@ -2175,6 +2168,10 @@ class EnvelopeWorkspaceMembershipOut(BaseModel):
     data: WorkspaceMembershipOut
 
 
+class EnvelopeListMembershipOut(BaseModel):
+    data: Annotated[list[MembershipOut], Field(title="Data")]
+
+
 class ManagementKeyCreatedOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
@@ -2216,11 +2213,6 @@ class OrgServiceAccountCreatedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     management_key: ManagementKeyCreatedOut
-
-
-class PageEnvelopeManagementKeyOut(BaseModel):
-    data: Annotated[list[ManagementKeyOut], Field(max_length=200, title="Data")]
-    page: PageInfo
 
 
 class PageEnvelopeWorkspaceMembershipOut(BaseModel):
@@ -2353,6 +2345,10 @@ class EnvelopeOrgServiceAccountCreatedOut(BaseModel):
 
 class EnvelopePolicyOut(BaseModel):
     data: PolicyOut
+
+
+class EnvelopeListManagementKeyOut(BaseModel):
+    data: Annotated[list[ManagementKeyOut], Field(title="Data")]
 
 
 class EnvelopeListPolicyOut(BaseModel):

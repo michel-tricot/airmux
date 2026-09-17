@@ -250,28 +250,6 @@ def test_response_schemas_are_envelopes():
     assert offenders == []
 
 
-def test_get_collections_are_paginated_or_schema_bounded():
-    app = make_app()
-    spec = app.openapi()
-    offenders = []
-    operations = {operation["operationId"]: operation for methods in spec["paths"].values() for operation in methods.values()}
-    for route in api_routes(app):
-        if "GET" not in (route.methods or ()) or route.response_model is None:
-            continue
-        response_ref = operations[route.name]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"]
-        response_name = response_ref.rsplit("/", 1)[1]
-        response_schema = spec["components"]["schemas"][response_name]
-        data_schema = response_schema["properties"]["data"]
-        if data_schema.get("type") != "array":
-            continue
-        if issubclass(route.response_model, PageEnvelope):
-            if data_schema.get("maxItems") != 200:
-                offenders.append(f"{route.path}: paginated data is not capped at 200")
-        elif "maxItems" not in data_schema:
-            offenders.append(f"{route.path}: unbounded collection")
-    assert offenders == []
-
-
 def test_paginated_operations_share_one_query_contract():
     app = make_app()
     spec = app.openapi()

@@ -4,17 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 it.each(['Never', '30 days'])('creates a workspace management key with expiry %s and reveals it once', async (expiry) => {
   const workspace = WORKSPACES[0];
   let keys: Api.ManagementKeyOut[] = [];
   server.use(
-    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => paged([])),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', ({ params }) => {
       expect(params.orgId).toBe(ORG.id);
       expect(params.workspaceRef).toBe(workspace.id);
-      return paged(keys);
+      return enveloped(keys);
     }),
     http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/management-keys', async ({ params, request }) => {
       expect(params.workspaceRef).toBe(workspace.id);

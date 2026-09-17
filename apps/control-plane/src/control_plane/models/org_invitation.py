@@ -15,7 +15,7 @@ from contract import token_hash
 from control_plane.authz import Scope, ScopeLevel
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, OrgOwned, PageQuery, PageSlice, Tombstonable
+from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordCreate, RecordOut, RequestModel
@@ -70,33 +70,6 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
             unique=True,
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
-        Index(
-            "org_invitation_pending_org_id_idx",
-            "org_id",
-            "id",
-            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
-        ),
-        Index(
-            "org_invitation_pending_email_id_idx",
-            "email",
-            "id",
-            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
-        ),
-        Index(
-            "org_invitation_pending_email_org_id_idx",
-            "email",
-            "org_id",
-            "id",
-            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
-        ),
-        Index(
-            "org_invitation_pending_email_org_workspace_id_idx",
-            "email",
-            "org_id",
-            "workspace_id",
-            "id",
-            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
-        ),
     )
 
     org_id: UUID = Field(foreign_key="org.id", ondelete="CASCADE")
@@ -147,12 +120,12 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
-    async def page_for_org(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await cls.page(
-            request,
+    async def for_org(cls, org_id: UUID) -> list[Self]:
+        return await cls.find(
             cls.org_id == org_id,
             col(cls.accepted_at).is_(None),
             col(cls.revoked_at).is_(None),
+            order_by=col(cls.email),
         )
 
     @classmethod
@@ -176,21 +149,6 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         return [(result[0], result[1], result[2]) for result in (await current_session().execute(query)).all()]
 
     @classmethod
-    async def page_pending_for_email(cls, email: str, now: datetime, scope: Scope, request: PageQuery) -> PageSlice[Self]:
-        normalized_email = User.normalize_email(email)
-        conditions = (
-            cls.email == normalized_email,
-            col(cls.accepted_at).is_(None),
-            col(cls.revoked_at).is_(None),
-            col(cls.expires_at) > now,
-        )
-        if scope.level is not ScopeLevel.instance:
-            conditions = (*conditions, cls.org_id == scope.org_id)
-        if scope.level is ScopeLevel.workspace:
-            conditions = (*conditions, cls.workspace_id == scope.workspace_id)
-        return await cls.page(request, *conditions)
-
-    @classmethod
     async def count_pending_for_email(cls, email: str, now: datetime, scope: Scope) -> int:
         statement = (
             select(func.count())
@@ -207,18 +165,6 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         if scope.level is ScopeLevel.workspace:
             statement = statement.where(cls.workspace_id == scope.workspace_id)
         return (await current_session().execute(statement)).scalar_one()
-
-    @classmethod
-    async def preview_names(cls, invitation_ids: tuple[UUID, ...]) -> dict[UUID, tuple[str, str | None]]:
-        if not invitation_ids:
-            return {}
-        query = (
-            select(cls.id, Org.name, Workspace.name)
-            .join(Org, col(Org.id) == col(cls.org_id))
-            .outerjoin(Workspace, col(Workspace.id) == col(cls.workspace_id))
-            .where(col(cls.id).in_(invitation_ids))
-        )
-        return {result[0]: (result[1], result[2]) for result in (await current_session().execute(query)).all()}
 
     @classmethod
     async def for_token(cls, token: str, *, lock: bool = False) -> Self | None:

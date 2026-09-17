@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
 
 const bundle: Api.BundleOut = { id: 'bundle-1', org_id: ORG.id, version: 1, issued_at: '2026-09-11T12:00:00Z' };
 
@@ -34,7 +34,7 @@ it('keeps Activity available for bundle readers without audit permission', async
 });
 
 it('organizes workspace settings into selectable categories', async () => {
-  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => paged([])));
+  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])));
   open(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
   const user = userEvent.setup();
   expect(await screen.findByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');

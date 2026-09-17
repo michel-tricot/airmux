@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import ClassVar, Literal, Self
+from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint, Index
-from sqlmodel import Field, col, select
+from sqlmodel import Field
 
-from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
@@ -39,20 +38,6 @@ class DataPlaneInstance(Record, table=True):
     def status(self, now: datetime) -> Literal["online", "offline"]:
         last_seen = self.last_seen if self.last_seen.tzinfo else self.last_seen.replace(tzinfo=UTC)
         return "online" if now - last_seen < self.STALE_AFTER else "offline"
-
-    @classmethod
-    async def page_for_instance(cls, request: PageQuery, include_offline: bool, now: datetime) -> PageSlice[Self]:
-        statement = select(cls)
-        if not include_offline:
-            statement = statement.where(col(cls.last_seen) > now - cls.STALE_AFTER)
-        return await keyset_page(
-            statement,
-            request,
-            Keyset(
-                model=cls,
-                columns=(KeyColumn(col(cls.last_seen), "desc", "datetime"), KeyColumn(col(cls.instance_id), "desc", "uuid")),
-            ),
-        )
 
 
 class DataPlaneInstanceOut(RecordOut[DataPlaneInstance]):

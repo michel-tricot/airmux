@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 const USER: Api.UserOut = {
@@ -79,12 +79,12 @@ function installAdminHandlers() {
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json<{ data: Api.OrgOut }>({ data: ORG })),
     http.get('/api/v1/users', () => paged([USER])),
     http.get('/api/v1/users/:userId', () => HttpResponse.json<{ data: Api.UserOut }>({ data: USER })),
-    http.get('/api/v1/users/:userId/organizations', () => paged([{ user_id: USER.id, org_id: ORG.id, role: 'owner', status: 'member' }])),
-    http.get('/api/v1/instance/management-keys', () => paged([MANAGEMENT_KEY])),
+    http.get('/api/v1/users/:userId/organizations', () => enveloped([{ user_id: USER.id, org_id: ORG.id, role: 'owner', status: 'member' }])),
+    http.get('/api/v1/instance/management-keys', () => enveloped([MANAGEMENT_KEY])),
     http.get('/api/v1/instance/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [PROVIDER], models: [] } })),
-    http.get('/api/v1/instance/provider-credentials', () => paged([PROVIDER_CREDENTIAL])),
+    http.get('/api/v1/instance/provider-credentials', () => enveloped([PROVIDER_CREDENTIAL])),
     http.get('/api/v1/instance/data-planes', () =>
-      paged<Api.DataPlaneInstanceOut>([
+      enveloped<Api.DataPlaneInstanceOut>([
         {
           instance_id: 'data-plane-1',
           org_id: null,
@@ -143,7 +143,7 @@ describe('instance administration routes', () => {
     });
     server.use(
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () => paged([member()])),
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => paged([])),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])),
       http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members/:userId', async ({ params, request }) => {
         expect(params.userId).toBe('user-2');
         role = ((await request.json()) as Api.WorkspaceMembershipIn).role;
@@ -195,7 +195,7 @@ describe('instance administration routes', () => {
         return HttpResponse.json<{ data: Api.ProviderCredentialOut }>({ data: { ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 } });
       }),
       http.get('/api/v1/instance/provider-credentials', () =>
-        paged<Api.ProviderCredentialOut>(
+        enveloped<Api.ProviderCredentialOut>(
           submitted
             ? [PROVIDER_CREDENTIAL, { ...PROVIDER_CREDENTIAL, id: 'provider-credential-2', name: 'backup', priority: 200 }]
             : [PROVIDER_CREDENTIAL],
@@ -233,7 +233,7 @@ describe('instance administration routes', () => {
   it('counts only active management keys on the dashboard', async () => {
     server.use(
       http.get('/api/v1/instance/management-keys', () =>
-        paged<Api.ManagementKeyOut>([
+        enveloped<Api.ManagementKeyOut>([
           MANAGEMENT_KEY,
           { ...MANAGEMENT_KEY, id: 'management-key-2', status: 'expired' },
           { ...MANAGEMENT_KEY, id: 'management-key-3', status: 'revoked', revoked_at: now },

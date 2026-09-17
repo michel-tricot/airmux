@@ -5,7 +5,7 @@ import {
   useListActivityInfinite,
   useListBundlesInfinite,
   useRepublishBundle,
-  useListDataPlanesInfinite,
+  useListDataPlanes,
   useListInstanceActivityInfinite,
   getListBundlesInfiniteQueryKey,
   type ListOrgEventsParams,
@@ -51,9 +51,7 @@ export function useRepublishBundleMutation(orgId: string) {
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListDataPlanesInfinite(undefined, {
-    query: { enabled, refetchInterval: 10_000, ...paginatedQueryOptions, select: flattenPages },
-  });
+  return useListDataPlanes(undefined, { query: { enabled, refetchInterval: 10_000 } });
 }
 
 export function useInstanceActivity(params: { limit?: number }, { enabled = true }: EnabledQueryOptions = {}) {

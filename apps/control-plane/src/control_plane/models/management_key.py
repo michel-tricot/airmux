@@ -6,13 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index
+from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import Field, col
 
 from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable
+from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut, RequestModel
@@ -40,8 +40,6 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="management_key_workspace_needs_org"),
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
-        Index("management_key_org_id_idx", "org_id", "id"),
-        Index("management_key_workspace_id_idx", "org_id", "workspace_id", "id"),
     )
 
     user_id: UUID = Field(foreign_key="user.id")
@@ -114,7 +112,7 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
                 await key.delete_with_descendants()
 
     @classmethod
-    async def page_for_scope(cls, scope: Scope, user_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
+    async def for_scope(cls, scope: Scope, user_id: UUID | None) -> list[Self]:
         scope_conditions = (
             (cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
             if scope.level is ScopeLevel.workspace
@@ -123,7 +121,7 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
             else ()
         )
         user_conditions = (cls.user_id == user_id,) if user_id is not None else ()
-        return await cls.page(request, *scope_conditions, *user_conditions)
+        return await cls.find(*scope_conditions, *user_conditions, order_by=col(cls.id))
 
 
 class ManagementKeyOut(RecordOut[ManagementKey]):

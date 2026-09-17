@@ -49,8 +49,9 @@ Growing collections add page metadata:
 }
 ```
 
-Bounded collections, such as a workspace's policies and rules, remain `{"data": [...]}`. Errors retain FastAPI's
-`{"detail": ...}` shape and are not enveloped.
+Configuration, status, and selection endpoints return the complete set as `{"data": [...]}`. This includes management
+keys, provider credentials, data-plane status, invitations, enrollment choices, and candidate pickers. Errors retain
+FastAPI's `{"detail": ...}` shape and are not enveloped.
 
 ## Example
 
@@ -86,7 +87,8 @@ a one-time secret. Store the returned value immediately; later list and get oper
 
 ## Pagination
 
-Growing collection endpoints use cursor pagination:
+Collections that callers browse incrementally use cursor pagination. Pagination is not added to an endpoint merely
+because it is scoped or returns a list; consumers of configuration and selection endpoints need the complete set.
 
 - `limit` is the maximum number of results per page, defaults to 50, and accepts 1 through 200
 - `cursor` is the opaque `page.next_cursor` returned by the preceding request

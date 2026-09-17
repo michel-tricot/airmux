@@ -15,7 +15,7 @@ from airmux_runtime.secrets import SecretNotFoundError, SecretRejectedError, Sec
 from contract import CredentialScope, SecretPurpose, SecretRef
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable
+from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
@@ -69,8 +69,6 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
         Index("provider_credential_org_order_idx", "org_id", "priority", "name", "id"),
         Index("provider_credential_workspace_order_idx", "org_id", "workspace_id", "priority", "name", "id"),
-        Index("provider_credential_org_id_idx", "org_id", "id"),
-        Index("provider_credential_workspace_id_idx", "org_id", "workspace_id", "id"),
     )
 
     org_id: UUID | None = Field(default=None, foreign_key="org.id")
@@ -129,17 +127,6 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     async def for_instance(cls) -> list[Self]:
         """Instance credentials in the order the data plane tries them."""
         return await cls.find(col(cls.org_id).is_(None), order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
-
-    @classmethod
-    async def page_for_scope(cls, org_id: UUID | None, workspace_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        conditions = (
-            (cls.org_id == org_id, cls.workspace_id == workspace_id)
-            if workspace_id is not None
-            else (col(cls.org_id).is_(None),)
-            if org_id is None
-            else (cls.org_id == org_id,)
-        )
-        return await cls.page(request, *conditions)
 
     async def delete_with_value(self, store: SecretStore) -> None:
         """Delete the credential and the value behind it.

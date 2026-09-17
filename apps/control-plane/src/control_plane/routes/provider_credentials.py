@@ -9,8 +9,7 @@ from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
 from control_plane.authz import Permission, Scope
 from control_plane.deps import OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Provider, ProviderCredential, Workspace
-from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
+from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.provider_credential import (
     ProviderCredentialIn,
     ProviderCredentialOut,
@@ -97,9 +96,10 @@ async def create_instance_provider_credential(body: ProviderCredentialIn, reques
     tags=["Instance Provider Credentials"],
     dependencies=[require("api", instance_scope, Permission.provider_credentials_read)],
 )
-async def list_instance_provider_credentials(page: PageDep) -> PageEnvelope[ProviderCredentialOut]:
+async def list_instance_provider_credentials() -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials owned by the instance."""
-    return PageEnvelope.from_slice(await ProviderCredential.page_for_scope(None, None, page), ProviderCredentialOut)
+    credentials = await ProviderCredential.for_instance()
+    return Envelope(data=[ProviderCredentialOut.model_validate(credential) for credential in credentials])
 
 
 @router.post(
@@ -132,9 +132,10 @@ async def create_workspace_provider_credential(
     tags=["Organization Provider Credentials"],
     dependencies=[require("api", org_scope, Permission.provider_credentials_read)],
 )
-async def list_org_provider_credentials(org_id: OrgDep, page: PageDep) -> PageEnvelope[ProviderCredentialOut]:
+async def list_org_provider_credentials(org_id: OrgDep) -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials owned by an organization, including its workspace credentials."""
-    return PageEnvelope.from_slice(await ProviderCredential.page_for_scope(org_id, None, page), ProviderCredentialOut)
+    credentials = await ProviderCredential.for_org(org_id)
+    return Envelope(data=[ProviderCredentialOut.model_validate(credential) for credential in credentials])
 
 
 @router.get(
@@ -142,9 +143,10 @@ async def list_org_provider_credentials(org_id: OrgDep, page: PageDep) -> PageEn
     tags=["Workspace Provider Credentials"],
     dependencies=[require("api", workspace_scope, Permission.provider_credentials_read)],
 )
-async def list_workspace_provider_credentials(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[ProviderCredentialOut]:
+async def list_workspace_provider_credentials(workspace: WorkspaceDep) -> Envelope[list[ProviderCredentialOut]]:
     """List provider credentials stored specifically for one workspace."""
-    return PageEnvelope.from_slice(await ProviderCredential.page_for_scope(workspace.org_id, workspace.id, page), ProviderCredentialOut)
+    credentials = await ProviderCredential.for_org(workspace.org_id, workspace.id)
+    return Envelope(data=[ProviderCredentialOut.model_validate(credential) for credential in credentials])
 
 
 @router.get(

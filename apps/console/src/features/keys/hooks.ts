@@ -1,24 +1,24 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
-  useListInstanceManagementKeysInfinite,
-  useListWorkspaceManagementKeysInfinite,
+  useListInstanceManagementKeys,
+  useListWorkspaceManagementKeys,
   useCreateWorkspaceManagementKey,
   type ManagementKeyOut,
-  useListOrgManagementKeysInfinite,
+  useListOrgManagementKeys,
   useCreateInstanceManagementKey,
   useCreateOrgManagementKey,
   useRevokeManagementKey,
   useUpdateManagementKeyPermissions,
-  getListWorkspaceManagementKeysInfiniteQueryKey,
+  getListWorkspaceManagementKeysQueryKey,
   useListInferenceKeysInfinite,
   useCreateInferenceKey,
   useRevokeInferenceKey,
-  getListInstanceManagementKeysInfiniteQueryKey,
-  getListOrgManagementKeysInfiniteQueryKey,
+  getListInstanceManagementKeysQueryKey,
+  getListOrgManagementKeysQueryKey,
   getListInferenceKeysInfiniteQueryKey,
   type ListInstanceManagementKeysParams,
   type ListOrgManagementKeysParams,
-  useListInferenceKeyOwnersInfinite,
+  useListInferenceKeyOwners,
   getListBundlesInfiniteQueryKey,
   getListActivityInfiniteQueryKey,
 } from '@workspace/api-client-react';
@@ -26,18 +26,18 @@ import type { EnabledQueryOptions } from '@/features/query-options';
 import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useInstanceManagementKeys(params?: ListInstanceManagementKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceManagementKeysInfinite(params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
+  return useListInstanceManagementKeys(params, { query: { enabled } });
 }
 
 export function useOrgManagementKeys(orgId: string, params?: ListOrgManagementKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgManagementKeysInfinite(orgId, params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
+  return useListOrgManagementKeys(orgId, params, { query: { enabled } });
 }
 
 export function useCreateInstanceManagementKeyMutation(params?: ListInstanceManagementKeysParams) {
   const queryClient = useQueryClient();
   return useCreateInstanceManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysInfiniteQueryKey(params) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysQueryKey(params) }),
       meta: { errorMessage: 'We couldn’t generate the management key. Please try again.' },
     },
   });
@@ -47,7 +47,7 @@ export function useCreateOrgManagementKeyMutation(orgId: string, params?: ListOr
   const queryClient = useQueryClient();
   return useCreateOrgManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId, params) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId, params) }),
       meta: { errorMessage: 'We couldn’t generate the management key. Please try again.' },
     },
   });
@@ -57,7 +57,7 @@ export function useRevokeInstanceManagementKeyMutation(params?: ListInstanceMana
   const queryClient = useQueryClient();
   return useRevokeManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysInfiniteQueryKey(params) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysQueryKey(params) }),
       meta: { errorMessage: 'We couldn’t revoke the management key. Please try again.' },
     },
   });
@@ -67,7 +67,7 @@ export function useRevokeOrgManagementKeyMutation(orgId: string, params?: ListOr
   const queryClient = useQueryClient();
   return useRevokeManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId, params) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId, params) }),
       meta: { errorMessage: 'We couldn’t revoke the management key. Please try again.' },
     },
   });
@@ -78,9 +78,7 @@ export function useInferenceKeys(orgId: string, workspaceRef: string, { enabled 
 }
 
 export function useInferenceKeyOwners(orgId: string, workspaceRef: string) {
-  return useListInferenceKeyOwnersInfinite(orgId, workspaceRef, undefined, {
-    query: { ...paginatedQueryOptions, select: flattenPages },
-  });
+  return useListInferenceKeyOwners(orgId, workspaceRef);
 }
 
 export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: string) {
@@ -125,18 +123,16 @@ export function useUpdateManagementKeyPermissionsMutation() {
 
 function invalidateManagementKeyLists(queryClient: QueryClient, key: Pick<ManagementKeyOut, 'org_id' | 'workspace_id'>) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysInfiniteQueryKey() }),
-    ...(key.org_id ? [queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(key.org_id) })] : []),
+    queryClient.invalidateQueries({ queryKey: getListInstanceManagementKeysQueryKey() }),
+    ...(key.org_id ? [queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(key.org_id) })] : []),
     ...(key.org_id && key.workspace_id
-      ? [queryClient.invalidateQueries({ queryKey: getListWorkspaceManagementKeysInfiniteQueryKey(key.org_id, key.workspace_id) })]
+      ? [queryClient.invalidateQueries({ queryKey: getListWorkspaceManagementKeysQueryKey(key.org_id, key.workspace_id) })]
       : []),
   ]);
 }
 
 export function useWorkspaceManagementKeys(orgId: string, workspaceId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListWorkspaceManagementKeysInfinite(orgId, workspaceId, undefined, {
-    query: { enabled, ...paginatedQueryOptions, select: flattenPages },
-  });
+  return useListWorkspaceManagementKeys(orgId, workspaceId, undefined, { query: { enabled } });
 }
 
 export function useCreateWorkspaceManagementKeyMutation() {

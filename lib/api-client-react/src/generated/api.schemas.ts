@@ -1788,39 +1788,9 @@ export interface WorkspaceUpdate {
   name?: string | null;
 }
 
-export interface PageManagementKeyOut {
-  /** @maxItems 200 */
-  items: ManagementKeyOut[];
-  page: PageInfo;
-}
-
-export interface PageOrgOut {
-  /** @maxItems 200 */
-  items: OrgOut[];
-  page: PageInfo;
-}
-
-export interface PageInvitationPreviewOut {
-  /** @maxItems 200 */
-  items: InvitationPreviewOut[];
-  page: PageInfo;
-}
-
-export interface PageDataPlaneInstanceOut {
-  /** @maxItems 200 */
-  items: DataPlaneInstanceOut[];
-  page: PageInfo;
-}
-
 export interface PageActivityOut {
   /** @maxItems 200 */
   items: ActivityOut[];
-  page: PageInfo;
-}
-
-export interface PageMembershipOut {
-  /** @maxItems 200 */
-  items: MembershipOut[];
   page: PageInfo;
 }
 
@@ -1830,21 +1800,15 @@ export interface PageUserOut {
   page: PageInfo;
 }
 
-export interface PageOrgInvitationOut {
+export interface PageOrgOut {
   /** @maxItems 200 */
-  items: OrgInvitationOut[];
+  items: OrgOut[];
   page: PageInfo;
 }
 
 export interface PageWorkspaceOut {
   /** @maxItems 200 */
   items: WorkspaceOut[];
-  page: PageInfo;
-}
-
-export interface PageWorkspaceMemberCandidateOut {
-  /** @maxItems 200 */
-  items: WorkspaceMemberCandidateOut[];
   page: PageInfo;
 }
 
@@ -1857,18 +1821,6 @@ export interface PageWorkspaceMembershipOut {
 export interface PageInferenceKeyOut {
   /** @maxItems 200 */
   items: InferenceKeyOut[];
-  page: PageInfo;
-}
-
-export interface PageInferenceKeyOwnerOut {
-  /** @maxItems 200 */
-  items: InferenceKeyOwnerOut[];
-  page: PageInfo;
-}
-
-export interface PageProviderCredentialOut {
-  /** @maxItems 200 */
-  items: ProviderCredentialOut[];
   page: PageInfo;
 }
 
@@ -1895,16 +1847,6 @@ export type ListInstanceManagementKeysParams = {
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
 };
 
 export type ListOrgManagementKeysParams = {
@@ -1912,16 +1854,6 @@ export type ListOrgManagementKeysParams = {
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
 };
 
 export type ListWorkspaceManagementKeysParams = {
@@ -1929,16 +1861,6 @@ export type ListWorkspaceManagementKeysParams = {
  * Return only management keys issued to this principal
  */
 user_id?: string | null;
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
 };
 
 export type MyPermissionsParams = {
@@ -1959,63 +1881,14 @@ export type CliAuthRequestDetailsParams = {
 code: string;
 };
 
-export type ListEnrollmentOrgsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListEnrollmentInvitationsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
 export type ListDataPlanesParams = {
 /**
  * Include data planes whose most recent heartbeat is outside the online window
  */
 include_offline?: boolean;
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
 };
 
 export type ListInstanceActivityParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListUserOrganizationsParams = {
 /**
  * Opaque continuation token from the previous page
  */
@@ -2058,33 +1931,7 @@ cursor?: CursorToken | null;
 limit?: number;
 };
 
-export type ListInvitationsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
 export type ListWorkspacesParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListPolicyUsersParams = {
 /**
  * Opaque continuation token from the previous page
  */
@@ -2110,72 +1957,7 @@ cursor?: CursorToken | null;
 limit?: number;
 };
 
-export type ListMemberCandidatesParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
 export type ListInferenceKeysParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListInferenceKeyOwnersParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListInstanceProviderCredentialsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListOrgProviderCredentialsParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
-export type ListWorkspaceProviderCredentialsParams = {
 /**
  * Opaque continuation token from the previous page
  */

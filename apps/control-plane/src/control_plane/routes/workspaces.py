@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from sqlmodel import col
 
 from contract import PLAYGROUND_COOKIE, token_hash
 from control_plane.authority import ensure_inference_key_owner, is_allowed, readable_workspaces
@@ -84,10 +85,10 @@ async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> En
 
 
 @router.get("/{workspace_ref}/policy-users", tags=["Workspace Policies"], dependencies=[require("api", workspace_scope, Permission.policies_read)])
-async def list_policy_users(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMemberCandidateOut]:
-    users = await User.page_policy_candidates(workspace.org_id, workspace.id, page)
-    return PageEnvelope.from_slice(
-        users.map(lambda user: WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account))
+async def list_policy_users(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
+    users = await User.policy_candidates(workspace.org_id, workspace.id)
+    return Envelope(
+        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
     )
 
 
@@ -116,11 +117,11 @@ async def list_members(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[W
     tags=["Workspace Members"],
     dependencies=[require("api", workspace_scope, Permission.members_manage)],
 )
-async def list_member_candidates(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[WorkspaceMemberCandidateOut]:
+async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
     """List organization members who can be added to a workspace."""
-    users = await User.page_candidates_for_workspace(workspace.org_id, workspace.id, page)
-    return PageEnvelope.from_slice(
-        users.map(lambda user: WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account))
+    users = await User.candidates_for_workspace(workspace.org_id, workspace.id)
+    return Envelope(
+        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
     )
 
 
@@ -233,12 +234,15 @@ async def create_inference_key(body: InferenceKeyIn, workspace: WorkspaceDep, ac
     tags=["Workspace Inference Keys"],
     dependencies=[require("api", workspace_scope, Permission.inference_keys_manage)],
 )
-async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep, page: PageDep) -> PageEnvelope[InferenceKeyOwnerOut]:
+async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) -> Envelope[list[InferenceKeyOwnerOut]]:
     """List principals the caller may select as an inference-key owner."""
-    include_managed = await is_allowed(actor, Permission.members_manage, Scope.workspace(workspace.org_id, workspace.id))
-    owners = await User.page_inference_key_owners(actor.principal_id, workspace.org_id, include_managed, page)
-    return PageEnvelope.from_slice(
-        owners.map(lambda owner: InferenceKeyOwnerOut(user_id=owner.id, email=owner.email, name=owner.name, service_account=owner.service_account))
+    current = await User.find_by_id(actor.principal_id)
+    owners = [current] if current is not None else []
+    if await is_allowed(actor, Permission.members_manage, Scope.workspace(workspace.org_id, workspace.id)):
+        managed = await User.find(User.managing_org_id == workspace.org_id, col(User.service_account).is_(True), order_by=col(User.name))
+        owners = [*owners, *(owner for owner in managed if owner.id != actor.principal_id)]
+    return Envelope(
+        data=[InferenceKeyOwnerOut(user_id=owner.id, email=owner.email, name=owner.name, service_account=owner.service_account) for owner in owners]
     )
 
 

@@ -28,7 +28,7 @@ from api_models import (
 if TYPE_CHECKING:
     import httpx
 
-from cli.client import AllPagesOption, LimitOption, access_get, api_error, ensure_ok, payload, payload_page, resolve_control_plane_url
+from cli.client import access_get, api_error, ensure_ok, payload, payload_page, resolve_control_plane_url
 from cli.common import CONNECTION, GETTING_STARTED, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import (
@@ -192,7 +192,7 @@ def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: 
 
 def _personal_org(client: httpx.Client, email: str, requested_name: str) -> OrgOut:
     enrollment = _payload_or_die(client.get("/api/v1/enroll"), "organization lookup", EnrollOut)
-    organizations = payload_page(ensure_ok(client.get("/api/v1/enroll/organizations", params={"limit": 200})), OrgOut).items
+    organizations = payload_page(ensure_ok(client.get("/api/v1/enroll/organizations")), OrgOut).items
     existing = next((organization for organization in organizations if organization.id == enrollment.personal_org_id), None)
     if existing is not None:
         _step(f"Organization [bold]{existing.name}[/bold]")
@@ -461,15 +461,13 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
 
 
 @orgs_app.command("mine")
-def orgs_mine(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
+def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the organizations you belong to."""
     from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     with access_client(control_plane_url) as client:
         standing = payload(ensure_ok(client.get("/api/v1/enroll")), EnrollOut)
-    organizations = access_get("/api/v1/enroll/organizations", control_plane_url, OrgOut, limit=limit, all_pages=all_pages)
+    organizations = access_get("/api/v1/enroll/organizations", control_plane_url, OrgOut)
     rows = [
         {**organization.model_dump(mode="json"), "kind": "personal" if organization.id == standing.personal_org_id else "member"}
         for organization in organizations

@@ -2,14 +2,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   useListOrgUsersInfinite,
   useListMembersInfinite,
-  useListMemberCandidatesInfinite,
+  useListMemberCandidates,
   useAddMember,
   useRemoveMember,
   useCreateOrgServiceAccount,
   useDeleteOrgServiceAccount,
   useCreateOrgServiceAccountManagementKey,
   getListOrgUsersInfiniteQueryKey,
-  getListOrgManagementKeysInfiniteQueryKey,
+  getListOrgManagementKeysQueryKey,
   getListMembersInfiniteQueryKey,
   getMyPermissionsQueryKey,
   getListInferenceKeysInfiniteQueryKey,
@@ -36,7 +36,7 @@ export function useCreateOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
@@ -49,7 +49,7 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
     mutation: {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersInfiniteQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
         void queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) });
         void queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) });
       },
@@ -62,7 +62,7 @@ export function useCreateOrgServiceAccountManagementKeyMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useCreateOrgServiceAccountManagementKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysInfiniteQueryKey(orgId) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t generate the service account key. Please try again.' },
     },
   });
@@ -73,9 +73,7 @@ export function useWorkspaceMembers(orgId: string, workspaceRef: string, { enabl
 }
 
 export function useWorkspaceMemberCandidates(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListMemberCandidatesInfinite(orgId, workspaceRef, undefined, {
-    query: { enabled, ...paginatedQueryOptions, select: flattenPages },
-  });
+  return useListMemberCandidates(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useAddWorkspaceMemberMutation(orgId: string, workspaceRef: string) {

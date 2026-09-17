@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { createQueryClient } from '@/App';
 import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
-import { ORG, paged, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 const workspaceRef = 'production';
 const currentUser = { user_id: 'user-1', name: 'Dev', email: 'dev@example.com' };
@@ -15,7 +15,7 @@ it('defaults inference-key ownership to the current principal and offers only el
   let submitted: Api.InferenceKeyIn | undefined;
   server.use(
     http.get(`/api/v1/organizations/${ORG.id}/workspaces/${workspaceRef}/inference-key-owners`, () =>
-      paged<Api.InferenceKeyOwnerOut>([
+      enveloped<Api.InferenceKeyOwnerOut>([
         { ...currentUser, service_account: false },
         { user_id: 'service-1', name: 'Production App', email: 'production@app.invalid', service_account: true },
       ]),

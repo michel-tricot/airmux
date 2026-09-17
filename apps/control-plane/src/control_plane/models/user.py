@@ -150,45 +150,6 @@ class User(Record, Identified, Tombstonable, table=True):
         return await cls.page(request, condition)
 
     @classmethod
-    async def page_policy_candidates(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        condition = col(cls.id).in_(
-            select(OrgMembership.user_id).where(
-                OrgMembership.org_id == org_id,
-                or_(
-                    col(OrgMembership.role).in_((OrgRole.owner, OrgRole.admin)),
-                    select(WorkspaceMembership.user_id)
-                    .where(
-                        WorkspaceMembership.user_id == OrgMembership.user_id,
-                        WorkspaceMembership.org_id == org_id,
-                        WorkspaceMembership.workspace_id == workspace_id,
-                    )
-                    .exists(),
-                ),
-            )
-        )
-        return await cls.page(request, condition)
-
-    @classmethod
-    async def page_candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await cls.page(
-            request,
-            col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
-            ~select(WorkspaceMembership.user_id)
-            .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
-            .exists(),
-        )
-
-    @classmethod
-    async def page_inference_key_owners(cls, principal_id: UUID, org_id: UUID, include_managed: bool, request: PageQuery) -> PageSlice[Self]:
-        condition = col(cls.id) == principal_id
-        if include_managed:
-            condition = or_(condition, (col(cls.managing_org_id) == org_id) & col(cls.service_account).is_(True))
-        return await cls.page(
-            request,
-            condition,
-        )
-
-    @classmethod
     async def membership_counts(cls, user_ids: tuple[UUID, ...]) -> dict[UUID, int]:
         if not user_ids:
             return {}

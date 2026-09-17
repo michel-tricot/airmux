@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
 
 const ORG_MEMBER_PERMISSIONS: Api.Permission[] = ['organizations.read', 'workspaces.create', 'catalog.read'];
 const WORKSPACE_MEMBER_PERMISSIONS: Api.Permission[] = [
@@ -106,7 +106,7 @@ describe('permission-aware organization console', () => {
         }),
       ),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/provider-credentials', () =>
-        paged<Api.ProviderCredentialOut>([
+        enveloped<Api.ProviderCredentialOut>([
           {
             id: 'credential-1',
             provider_id: 'provider-1',

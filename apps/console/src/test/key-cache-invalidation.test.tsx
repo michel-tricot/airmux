@@ -15,7 +15,7 @@ import {
   useRevokeOrgManagementKeyMutation,
   useRevokeInferenceKeyMutation,
 } from '@/features/keys/hooks';
-import { ORG, paged, server } from './msw';
+import { ORG, enveloped, paged, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 let queryClient: QueryClient;
@@ -69,7 +69,7 @@ describe('key cache invalidation across pages', () => {
   it('revoking an management key refreshes a filtered management-key list', async () => {
     let key = managementKey('ak-1');
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => paged([key])),
+      http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => enveloped([key])),
       http.delete('/api/v1/management-keys/:keyId', () => {
         key = managementKey('ak-1', now);
         return HttpResponse.json<{ data: Api.ManagementKeyRevokedOut }>({ data: { id: 'ak-1', status: 'revoked', revoked_at: now } });
@@ -89,7 +89,7 @@ describe('key cache invalidation across pages', () => {
   it('creating a management key refetches the management-key list', async () => {
     const keys = [managementKey('ak-1')];
     server.use(
-      http.get('/api/v1/instance/management-keys', () => paged(keys)),
+      http.get('/api/v1/instance/management-keys', () => enveloped(keys)),
       http.post('/api/v1/instance/management-keys', () => {
         keys.push(managementKey('ak-2'));
         return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({ data: { ...managementKey('ak-2'), token: 'tok-once' } });
@@ -150,8 +150,8 @@ describe('key cache invalidation across pages', () => {
 it('refreshes filtered instance and organization key lists after editing permissions', async () => {
   let key = managementKey('editable');
   server.use(
-    http.get('/api/v1/instance/management-keys', () => paged([key])),
-    http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => paged([key])),
+    http.get('/api/v1/instance/management-keys', () => enveloped([key])),
+    http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => enveloped([key])),
     http.put('/api/v1/management-keys/:keyId/permissions', () => {
       key = { ...key, permissions: ['usage.read'] };
       return HttpResponse.json({ data: key });

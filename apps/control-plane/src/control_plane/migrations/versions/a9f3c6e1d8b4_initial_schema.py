@@ -386,8 +386,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
-    op.create_index("management_key_org_id_idx", "management_key", ["org_id", "id"], unique=False)
-    op.create_index("management_key_workspace_id_idx", "management_key", ["org_id", "workspace_id", "id"], unique=False)
     op.create_table(
         "inference_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -458,14 +456,12 @@ def upgrade() -> None:
         ),
     )
     op.create_index("provider_credential_org_order_idx", "provider_credential", ["org_id", "priority", "name", "id"], unique=False)
-    op.create_index("provider_credential_org_id_idx", "provider_credential", ["org_id", "id"], unique=False)
     op.create_index(
         "provider_credential_workspace_order_idx",
         "provider_credential",
         ["org_id", "workspace_id", "priority", "name", "id"],
         unique=False,
     )
-    op.create_index("provider_credential_workspace_id_idx", "provider_credential", ["org_id", "workspace_id", "id"], unique=False)
     op.create_table(
         "org_invitation",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -512,34 +508,6 @@ def upgrade() -> None:
         "org_invitation",
         ["org_id", "email"],
         unique=True,
-        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
-    )
-    op.create_index(
-        "org_invitation_pending_org_id_idx",
-        "org_invitation",
-        ["org_id", "id"],
-        unique=False,
-        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
-    )
-    op.create_index(
-        "org_invitation_pending_email_id_idx",
-        "org_invitation",
-        ["email", "id"],
-        unique=False,
-        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
-    )
-    op.create_index(
-        "org_invitation_pending_email_org_id_idx",
-        "org_invitation",
-        ["email", "org_id", "id"],
-        unique=False,
-        postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
-    )
-    op.create_index(
-        "org_invitation_pending_email_org_workspace_id_idx",
-        "org_invitation",
-        ["email", "org_id", "workspace_id", "id"],
-        unique=False,
         postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
@@ -632,17 +600,13 @@ def downgrade() -> None:
     op.drop_table("runtime_configuration")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
     op.drop_table("org_invitation")
-    op.drop_index("provider_credential_workspace_id_idx", table_name="provider_credential")
     op.drop_index("provider_credential_workspace_order_idx", table_name="provider_credential")
-    op.drop_index("provider_credential_org_id_idx", table_name="provider_credential")
     op.drop_index("provider_credential_org_order_idx", table_name="provider_credential")
     op.drop_table("provider_credential")
     op.drop_index("inference_key_workspace_id_idx", table_name="inference_key")
     op.drop_table("inference_key")
     op.drop_index("ix_workspace_membership_workspace_id", table_name="workspace_membership")
     op.drop_table("workspace_membership")
-    op.drop_index("management_key_workspace_id_idx", table_name="management_key")
-    op.drop_index("management_key_org_id_idx", table_name="management_key")
     op.drop_table("management_key")
     op.drop_index("workspace_org_id_idx", table_name="workspace")
     op.drop_table("workspace")

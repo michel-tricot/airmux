@@ -86,26 +86,19 @@ class Org(Record, Identified, Tombstonable, table=True):
         return await cls.first(cls.personal_for == user_id)
 
     @classmethod
-    async def joined_by(cls, user_id: UUID) -> list[Self]:
+    async def joined_by(cls, user_id: UUID, visible_org_id: UUID | None = None) -> list[Self]:
         """The orgs the user is a member of, by name; the mirror of User.members_of, one query like it."""
+        conditions = [col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id))]
+        if visible_org_id is not None:
+            conditions.append(cls.id == visible_org_id)
         return await cls.find(
-            col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)),
+            *conditions,
             order_by=col(cls.name),
         )
 
     @classmethod
     async def page_all(cls, request: PageQuery) -> PageSlice[Self]:
         return await cls.page(request)
-
-    @classmethod
-    async def page_joined_by(cls, user_id: UUID, visible_org_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        conditions = [col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id))]
-        if visible_org_id is not None:
-            conditions.append(cls.id == visible_org_id)
-        return await cls.page(
-            request,
-            *conditions,
-        )
 
     @classmethod
     async def count_joined_by(cls, user_id: UUID, visible_org_id: UUID | None) -> int:

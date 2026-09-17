@@ -9,8 +9,7 @@ from pydantic import BaseModel
 from control_plane.authz import Actor, OrgRole, ScopeLevel
 from control_plane.deps import ActingUserDep, ActorDep, CookieUserDep, browser_scoped, public, user_scoped
 from control_plane.models import Org, OrgInvitation, OrgMembership
-from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
-from control_plane.models.common.wire import Envelope, PageEnvelope
+from control_plane.models.common.wire import Envelope
 from control_plane.models.org import OrgCreate, OrgOut
 from control_plane.models.org_invitation import (
     InvitationAcceptedOut,
@@ -63,17 +62,17 @@ async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut
 
 
 @router.get("/organizations", tags=["Enrollment"], dependencies=[user_scoped("api")])
-async def list_enrollment_orgs(user: ActingUserDep, actor: ActorDep, page: PageDep) -> PageEnvelope[OrgOut]:
+async def list_enrollment_orgs(user: ActingUserDep, actor: ActorDep) -> Envelope[list[OrgOut]]:
     """List the current user's visible organizations."""
-    return PageEnvelope.from_slice(await Org.page_joined_by(user.id, _visible_org_id(actor), page), OrgOut)
+    organizations = await Org.joined_by(user.id, _visible_org_id(actor))
+    return Envelope(data=[OrgOut.model_validate(org) for org in organizations])
 
 
 @router.get("/invitations", tags=["Enrollment"], dependencies=[user_scoped("api")])
-async def list_enrollment_invitations(user: ActingUserDep, actor: ActorDep, page: PageDep) -> PageEnvelope[InvitationPreviewOut]:
+async def list_enrollment_invitations(user: ActingUserDep, actor: ActorDep) -> Envelope[list[InvitationPreviewOut]]:
     """List pending invitations visible to the current user."""
-    invitations = await OrgInvitation.page_pending_for_email(user.email, datetime.now(tz=UTC), actor.grant.scope, page)
-    names = await OrgInvitation.preview_names(tuple(invitation.id for invitation in invitations.items))
-    return PageEnvelope.from_slice(invitations.map(lambda invitation: _invitation_preview(invitation, *names[invitation.id])))
+    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC), actor.grant.scope)
+    return Envelope(data=[_invitation_preview(invitation, org_name, workspace_name) for invitation, org_name, workspace_name in invitations])
 
 
 @router.post("/org", tags=["Enrollment"], dependencies=[browser_scoped("api")])

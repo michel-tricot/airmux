@@ -11,7 +11,7 @@ from sqlmodel import Field, col, select
 from control_plane.authz import OrgRole
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import KeyColumn, Keyset, PageQuery, PageSlice, Tombstonable, keyset_page
+from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RequestModel
 
@@ -42,12 +42,8 @@ class OrgMembership(Record, Tombstonable, table=True):
         await current_session().execute(delete(cls).where(col(cls.org_id) == org_id))
 
     @classmethod
-    async def page_for_user(cls, user_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await keyset_page(
-            select(cls).where(cls.user_id == user_id),
-            request,
-            Keyset(model=cls, columns=(KeyColumn(col(cls.org_id), "asc", "uuid"),)),
-        )
+    async def for_user(cls, user_id: UUID) -> list[Self]:
+        return await cls.find(cls.user_id == user_id, order_by=col(cls.org_id))
 
     @classmethod
     async def roles_for_org_users(cls, org_id: UUID, user_ids: tuple[UUID, ...]) -> dict[UUID, OrgRole]:

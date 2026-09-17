@@ -4,12 +4,10 @@ import {
   useCreatePolicy,
   useDeletePolicy,
   useListPolicies,
-  useListPolicyUsersInfinite,
+  useListPolicyUsers,
   useReorderPolicies,
   useUpdatePolicy,
 } from '@workspace/api-client-react';
-import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
-
 export function usePolicies(orgId: string, workspaceRef: string, enabled: boolean) {
   return useListPolicies(orgId, workspaceRef, { query: { enabled } });
 }
@@ -38,5 +36,5 @@ export function usePolicyMutations(orgId: string, workspaceRef: string) {
 }
 
 export function usePolicyUsers(orgId: string, workspaceRef: string, enabled: boolean) {
-  return useListPolicyUsersInfinite(orgId, workspaceRef, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
+  return useListPolicyUsers(orgId, workspaceRef, { query: { enabled } });
 }

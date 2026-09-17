@@ -124,11 +124,13 @@ def access_get[PayloadT: BaseModel](  # noqa: PLR0913, PLR0917 pagination contro
     control_plane_url: str,
     payload_type: type[PayloadT],
     params: QueryParams | None = None,
-    limit: int = 50,
+    limit: int | None = None,
     all_pages: bool = False,
 ) -> list[PayloadT]:
     with access_client(control_plane_url) as c:
-        query = {**(params or {}), "limit": limit}
+        query = dict(params or {})
+        if limit is not None:
+            query["limit"] = limit
         items: list[PayloadT] = []
         while True:
             page = payload_page(ensure_ok(c.get(path, params=query)), payload_type)

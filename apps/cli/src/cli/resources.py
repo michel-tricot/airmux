@@ -362,8 +362,6 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
     workspace_id: str = typer.Option("", "--workspace", help="Workspace target within the selected organization"),
     instance: bool = typer.Option(False, "--instance", help="List keys at instance scope"),
     user_id: str = typer.Option("", "--user", help="Only keys for this principal"),
-    limit: LimitOption = 50,
-    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
@@ -381,14 +379,7 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
     )
     print_rows(
         "management keys",
-        access_get(
-            path,
-            control_plane_url,
-            ManagementKeyOut,
-            {"user_id": user_id} if user_id else None,
-            limit=limit,
-            all_pages=all_pages,
-        ),
+        access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None),
         MANAGEMENT_KEY_COLS,
         fmt,
     )
@@ -518,9 +509,7 @@ INSTANCE_COLS = [
 
 @gateways_app.command("list")
 def gateways_list(
-    include_offline: bool = typer.Option(False, "--include-offline", help="Include gateways that are offline"),
-    limit: LimitOption = 50,
-    all_pages: AllPagesOption = False,
+    all_: bool = typer.Option(False, "--all", help="Include gateways that are offline"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
@@ -530,9 +519,7 @@ def gateways_list(
         "/api/v1/instance/data-planes",
         control_plane_url,
         DataPlaneInstanceOut,
-        {"include_offline": include_offline},
-        limit=limit,
-        all_pages=all_pages,
+        {"include_offline": all_},
     )
     print_rows("gateways", rows, INSTANCE_COLS, fmt)
 
@@ -695,17 +682,15 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
 
 
 @provider_credentials_app.command("list")
-def provider_credentials_list(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+def provider_credentials_list(
     workspace: WorkspaceOption = "",
     org_wide: bool = typer.Option(False, "--org", help="List every credential in the org rather than one workspace's"),
-    limit: LimitOption = 50,
-    all_pages: AllPagesOption = False,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """List provider keys, in the order they are tried."""
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
-    rows = access_get(path, control_plane_url, ProviderCredentialOut, limit=limit, all_pages=all_pages)
+    rows = access_get(path, control_plane_url, ProviderCredentialOut)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
 
 

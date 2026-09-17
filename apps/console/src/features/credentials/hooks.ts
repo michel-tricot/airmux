@@ -1,22 +1,21 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListInstanceProviderCredentialsInfinite,
+  useListInstanceProviderCredentials,
   useCreateInstanceProviderCredential,
-  useListWorkspaceProviderCredentialsInfinite,
+  useListWorkspaceProviderCredentials,
   useCreateWorkspaceProviderCredential,
   useRotateProviderCredential,
   useUpdateProviderCredential,
   useDeleteProviderCredential,
   useGetInstanceTaxonomy,
   useGetWorkspaceTaxonomy,
-  getListInstanceProviderCredentialsInfiniteQueryKey,
-  getListWorkspaceProviderCredentialsInfiniteQueryKey,
+  getListInstanceProviderCredentialsQueryKey,
+  getListWorkspaceProviderCredentialsQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
-import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useInstanceProviderCredentials({ enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceProviderCredentialsInfinite(undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
+  return useListInstanceProviderCredentials({ query: { enabled } });
 }
 
 export function useInstanceProviders({ enabled = true }: EnabledQueryOptions = {}) {
@@ -27,16 +26,14 @@ export function useAddInstanceCredentialMutation() {
   const queryClient = useQueryClient();
   return useCreateInstanceProviderCredential({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceProviderCredentialsInfiniteQueryKey() }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceProviderCredentialsQueryKey() }),
       meta: { errorMessage: 'We couldn’t store the key. Please try again.' },
     },
   });
 }
 
 export function useProviderCredentials(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListWorkspaceProviderCredentialsInfinite(orgId, workspaceRef, undefined, {
-    query: { enabled, ...paginatedQueryOptions, select: flattenPages },
-  });
+  return useListWorkspaceProviderCredentials(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useProviders(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
@@ -47,7 +44,7 @@ export function useAddCredentialMutation(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   return useCreateWorkspaceProviderCredential({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsInfiniteQueryKey(orgId, workspaceRef) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t store the key. Please try again.' },
     },
   });
@@ -57,7 +54,7 @@ export function useRotateCredentialMutation(orgId: string, workspaceRef: string)
   const queryClient = useQueryClient();
   return useRotateProviderCredential({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsInfiniteQueryKey(orgId, workspaceRef) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t rotate the key. Please try again.' },
     },
   });
@@ -67,7 +64,7 @@ export function useUpdateCredentialMutation(orgId: string, workspaceRef: string)
   const queryClient = useQueryClient();
   return useUpdateProviderCredential({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsInfiniteQueryKey(orgId, workspaceRef) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t update the key. Please try again.' },
     },
   });
@@ -77,7 +74,7 @@ export function useDeleteCredentialMutation(orgId: string, workspaceRef: string)
   const queryClient = useQueryClient();
   return useDeleteProviderCredential({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsInfiniteQueryKey(orgId, workspaceRef) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t delete the key. Please try again.' },
     },
   });

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import App from '@/App';
-import { ORG, paged, server } from './msw';
+import { ORG, enveloped, paged, server } from './msw';
 
 function renderAt(path: string) {
   window.history.replaceState(null, '', path);
@@ -38,7 +38,7 @@ function withTwoOrgs() {
     http.get('/api/v1/enroll', () =>
       HttpResponse.json<{ data: Api.EnrollOut }>({ data: { personal_org_id: ORG.id, org_count: 2, pending_invitation_count: 0 } }),
     ),
-    http.get('/api/v1/enroll/organizations', () => paged([ORG, ORG2])),
+    http.get('/api/v1/enroll/organizations', () => enveloped([ORG, ORG2])),
     http.get('/api/v1/organizations/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
         return paged<Api.WorkspaceOut>([
