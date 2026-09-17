@@ -199,8 +199,8 @@ uv run python tests/acceptance/gateway/ci_report.py /tmp/gateway-results --summa
 
 ## Event collection
 
-The harness configures `events: {kind: file, path: usage/events.jsonl}`. The sink appends complete JSON Lines, flushes
-each event, creates new files privately, and locks writes across threads and processes on a local POSIX filesystem.
+The harness configures `events: {kind: file, path: usage/events.jsonl}`. The sink appends complete JSON Lines, creates
+new files privately, and appends each batch in one write across threads and processes on a local POSIX filesystem.
 It is an inspectable local log, with no export, deduplication, rotation, or `fsync` guarantee.
 
 Events describe metered routes: authentication and parsing failures produce no event, policy denial produces a denied

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import os
 from typing import TYPE_CHECKING
 
@@ -20,15 +19,13 @@ class FileOutbox(QueuedOutbox):
 
     def _open_storage(self) -> None:
         self._config.path.parent.mkdir(parents=True, exist_ok=True)
-        self._event_file = os.fdopen(os.open(self._config.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a", encoding="utf-8")
+        self._event_file = os.open(self._config.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
 
     def _persist(self, events: Sequence[UsageEvent], /) -> None:
-        fcntl.flock(self._event_file.fileno(), fcntl.LOCK_EX)
-        try:
-            self._event_file.writelines(event.model_dump_json() + "\n" for event in events)
-            self._event_file.flush()
-        finally:
-            fcntl.flock(self._event_file.fileno(), fcntl.LOCK_UN)
+        body = "".join(event.model_dump_json() + "\n" for event in events).encode()
+        if os.write(self._event_file, body) != len(body):
+            message = "incomplete event batch write"
+            raise OSError(message)
 
     def _close_storage(self) -> None:
-        self._event_file.close()
+        os.close(self._event_file)

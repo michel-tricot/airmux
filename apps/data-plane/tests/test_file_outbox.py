@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -77,6 +78,23 @@ async def test_file_events_flush_asynchronously_and_append_after_reopening(tmp_p
         await reopened.close()
     assert read_events(path) == events
     assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_file_events_do_not_wait_for_advisory_locks(tmp_path):
+    path = tmp_path / "events.jsonl"
+    outbox = FileOutbox(FileOutboxConfig(path=path))
+    event = event_of(0)
+    executor = ThreadPoolExecutor(max_workers=1)
+    with path.open("a") as event_file:
+        fcntl.flock(event_file.fileno(), fcntl.LOCK_EX)
+        try:
+            record(outbox, event)
+            close = executor.submit(asyncio.run, outbox.close())
+            close.result(timeout=1)
+        finally:
+            fcntl.flock(event_file.fileno(), fcntl.LOCK_UN)
+            executor.shutdown()
+    assert read_events(path) == [event]
 
 
 def test_file_events_from_concurrent_threads_remain_complete(tmp_path):
