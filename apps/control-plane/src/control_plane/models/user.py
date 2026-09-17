@@ -133,12 +133,12 @@ class User(Record, Identified, Tombstonable, table=True):
     @classmethod
     async def page_for_instance(cls, request: PageQuery, service_account: bool | None) -> PageSlice[Self]:
         partition = {"service_account": service_account} if service_account is not None else None
-        return await cls.page(request, partition=partition, cursor_context={"service_account": service_account})
+        return await cls.page(request, partition=partition)
 
     @classmethod
     async def page_members_of(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
         condition = col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id))
-        return await cls.page(request, condition, cursor_context={"org_id": org_id})
+        return await cls.page(request, condition)
 
     @classmethod
     async def page_workspace_members(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -147,7 +147,7 @@ class User(Record, Identified, Tombstonable, table=True):
             .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
             .exists()
         )
-        return await cls.page(request, condition, cursor_context={"workspace_id": workspace_id})
+        return await cls.page(request, condition)
 
     @classmethod
     async def page_policy_candidates(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -166,7 +166,7 @@ class User(Record, Identified, Tombstonable, table=True):
                 ),
             )
         )
-        return await cls.page(request, condition, cursor_context={"org_id": org_id, "workspace_id": workspace_id})
+        return await cls.page(request, condition)
 
     @classmethod
     async def page_candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
@@ -176,7 +176,6 @@ class User(Record, Identified, Tombstonable, table=True):
             ~select(WorkspaceMembership.user_id)
             .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
             .exists(),
-            cursor_context={"org_id": org_id, "workspace_id": workspace_id},
         )
 
     @classmethod
@@ -187,7 +186,6 @@ class User(Record, Identified, Tombstonable, table=True):
         return await cls.page(
             request,
             condition,
-            cursor_context={"principal_id": principal_id, "org_id": org_id, "include_managed": include_managed},
         )
 
     @classmethod

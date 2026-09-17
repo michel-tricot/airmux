@@ -127,7 +127,6 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
             request,
             *conditions,
             partition=partition,
-            cursor_context={"user_id": user_id},
         )
 
 

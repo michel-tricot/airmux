@@ -92,9 +92,9 @@ Growing collection endpoints use cursor pagination:
 - `cursor` is the opaque `page.next_cursor` returned by the preceding request
 - `page.next_cursor` is `null` when no later page exists
 
-Do not decode, edit, or reuse a cursor with another endpoint, tenant, scope, or filter. Invalid, oversized, stale-version,
-and mismatched cursors return `422` with `{"detail":"invalid cursor"}`. Cursors identify a position, not a database row,
-so traversal can continue if the item at the previous page boundary is deleted.
+Do not decode or edit a cursor. Invalid, oversized, stale-version, and incompatible resource cursors return `422` with
+`{"detail":"invalid cursor"}`. Cursors identify a position, not a database row, so traversal can continue if the item at
+the previous page boundary is deleted.
 
 ```bash
 curl 'https://llm.example.com/api/v1/organizations/$ORG_ID/workspaces?limit=50' \

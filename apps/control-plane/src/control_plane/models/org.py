@@ -105,7 +105,6 @@ class Org(Record, Identified, Tombstonable, table=True):
         return await cls.page(
             request,
             *conditions,
-            cursor_context={"user_id": user_id, "visible_org_id": visible_org_id},
         )
 
     @classmethod

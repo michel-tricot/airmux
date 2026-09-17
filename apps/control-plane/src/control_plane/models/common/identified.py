@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel, select
 
 from contract import uuid7
 from control_plane.db import current_session
-from control_plane.models.common.pagination import CursorScalar, KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
+from control_plane.models.common.pagination import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -59,8 +59,7 @@ class Identified(SQLModel):
         cls,
         request: PageQuery,
         *conditions: ColumnElement[bool] | bool,
-        partition: Mapping[str, CursorScalar] | None = None,
-        cursor_context: Mapping[str, CursorScalar] | None = None,
+        partition: Mapping[str, str | int | bool | UUID | None] | None = None,
     ) -> PageSlice[Self]:
         mapper = cast("Mapper[Any]", inspect(cls))
         id_column = cast("InstrumentedAttribute[UUID]", mapper.all_orm_descriptors["id"])
@@ -69,10 +68,8 @@ class Identified(SQLModel):
         for name, value in partition_values.items():
             column = cast("InstrumentedAttribute[Any]", mapper.all_orm_descriptors[name])
             statement = statement.where(column.is_(None) if value is None else column == value)
-        context = {**partition_values, **(cursor_context or {})}
         return await keyset_page(
             statement,
             request,
             Keyset(model=cls, partition_columns=tuple(partition_values), columns=(KeyColumn(id_column, "desc", "uuid"),)),
-            cursor_context=context,
         )

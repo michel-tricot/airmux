@@ -4,7 +4,7 @@ import base64
 import json
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, setup_control_plane
+from helpers import make_org, make_user, setup_control_plane
 
 
 def _invalid_version_cursor(cursor: str) -> str:
@@ -53,7 +53,7 @@ def test_cursor_survives_renamed_anchor_and_excludes_concurrent_insert(tmp_path)
         assert len(ids) == len(set(ids)) == 4
 
 
-def test_invalid_mismatched_and_oversized_cursors_are_generic(tmp_path):
+def test_invalid_and_oversized_cursors_are_generic(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     make_user(tmp_path, "member@example.com")
@@ -67,28 +67,3 @@ def test_invalid_mismatched_and_oversized_cursors_are_generic(tmp_path):
             response = client.get("/api/v1/users", params={"cursor": token}, headers=root)
             assert response.status_code == 422
             assert response.json() == {"detail": "invalid cursor"}
-
-        changed_filter = client.get("/api/v1/users", params={"cursor": cursor, "service_account": True}, headers=root)
-        assert changed_filter.status_code == 422
-        assert changed_filter.json() == {"detail": "invalid cursor"}
-
-
-def test_cursor_cannot_cross_tenant_scopes(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as client:
-        first_org = make_org(client, root, "first")
-        second_org = make_org(client, root, "second")
-        first_headers = cp.headers(first_org)
-        for name in ("alpha", "bravo", "charlie"):
-            make_workspace(client, first_headers, name)
-
-        first = client.get(f"/api/v1/organizations/{first_org}/workspaces", params={"limit": 1}, headers=first_headers).json()
-        response = client.get(
-            f"/api/v1/organizations/{second_org}/workspaces",
-            params={"cursor": first["page"]["next_cursor"]},
-            headers=cp.headers(second_org),
-        )
-
-        assert response.status_code == 422
-        assert response.json() == {"detail": "invalid cursor"}

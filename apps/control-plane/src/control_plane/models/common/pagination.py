@@ -17,7 +17,7 @@ from control_plane.db import current_session
 from control_plane.models.common.wire import RequestModel
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable
 
     from sqlalchemy.orm import InstrumentedAttribute
     from sqlalchemy.orm.mapper import Mapper
@@ -27,7 +27,6 @@ CURSOR_VERSION = 1
 MAX_CURSOR_LENGTH = 512
 
 type CursorToken = Annotated[str, StringConstraints(min_length=1, max_length=MAX_CURSOR_LENGTH, pattern=r"^[A-Za-z0-9_-]+$")]
-type CursorScalar = str | int | bool | UUID | datetime | None
 type Direction = Literal["asc", "desc"]
 type AnchorKind = Literal["uuid", "int", "str", "datetime"]
 
@@ -99,14 +98,6 @@ def _digest(value: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(value.encode()).digest()[:18]).decode().rstrip("=")
 
 
-def _context_fingerprint(context: Mapping[str, CursorScalar]) -> str:
-    normalized = {
-        key: value.isoformat() if isinstance(value, datetime) else str(value) if isinstance(value, UUID) else value
-        for key, value in sorted(context.items())
-    }
-    return _digest(json.dumps(normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=True))
-
-
 def _serialize_anchor(value: object, kind: AnchorKind) -> str:
     if kind == "uuid" and isinstance(value, UUID):
         return str(value)
@@ -140,11 +131,10 @@ def _parse_anchor(value: object, kind: AnchorKind) -> UUID | int | str | datetim
     return value
 
 
-def _encode_cursor[T](keyset: Keyset[T], context: Mapping[str, CursorScalar], item: T) -> CursorToken:
+def _encode_cursor[T](keyset: Keyset[T], item: T) -> CursorToken:
     payload = {
         "a": [_serialize_anchor(getattr(item, column.column.key), column.kind) for column in keyset.columns],
         "n": keyset.namespace,
-        "q": _context_fingerprint(context),
         "v": CURSOR_VERSION,
     }
     token = base64.urlsafe_b64encode(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).decode().rstrip("=")
@@ -153,15 +143,15 @@ def _encode_cursor[T](keyset: Keyset[T], context: Mapping[str, CursorScalar], it
     return token
 
 
-def _decode_cursor[T](token: str, keyset: Keyset[T], context: Mapping[str, CursorScalar]) -> tuple[UUID | int | str | datetime, ...]:
+def _decode_cursor[T](token: str, keyset: Keyset[T]) -> tuple[UUID | int | str | datetime, ...]:
     if len(token) > MAX_CURSOR_LENGTH:
         raise InvalidCursorError
     try:
         raw = base64.b64decode(token + "=" * (-len(token) % 4), altchars=b"-_", validate=True)
         payload = json.loads(raw)
-        if not isinstance(payload, dict) or set(payload) != {"v", "n", "q", "a"}:
+        if not isinstance(payload, dict) or set(payload) != {"v", "n", "a"}:
             raise InvalidCursorError
-        if payload["v"] != CURSOR_VERSION or payload["n"] != keyset.namespace or payload["q"] != _context_fingerprint(context):
+        if payload["v"] != CURSOR_VERSION or payload["n"] != keyset.namespace:
             raise InvalidCursorError
         anchors = payload["a"]
         if not isinstance(anchors, list) or len(anchors) != len(keyset.columns):
@@ -184,14 +174,11 @@ async def keyset_page[T](
     statement: Select[tuple[T]],
     request: PageQuery,
     keyset: Keyset[T],
-    *,
-    cursor_context: Mapping[str, CursorScalar] | None = None,
 ) -> PageSlice[T]:
-    context = cursor_context or {}
     if request.cursor is not None:
-        statement = statement.where(_after(keyset, _decode_cursor(request.cursor, keyset, context)))
+        statement = statement.where(_after(keyset, _decode_cursor(request.cursor, keyset)))
     ordering = [column.column.asc() if column.direction == "asc" else column.column.desc() for column in keyset.columns]
     items = tuple((await current_session().execute(statement.order_by(*ordering).limit(request.limit + 1))).scalars().all())
     visible = items[: request.limit]
-    next_cursor = _encode_cursor(keyset, context, visible[-1]) if len(items) > request.limit else None
+    next_cursor = _encode_cursor(keyset, visible[-1]) if len(items) > request.limit else None
     return PageSlice(items=visible, next_cursor=next_cursor)

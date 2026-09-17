@@ -74,7 +74,6 @@ class AuditLog(Record, table=True):
             statement,
             request,
             Keyset(model=cls, partition_columns=(), columns=(KeyColumn(col(cls.id), "desc", "int"),)),
-            cursor_context={"org_id": org_id},
         )
 
 

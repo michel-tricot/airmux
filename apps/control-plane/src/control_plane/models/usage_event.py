@@ -65,7 +65,6 @@ class UsageEvent(Record, table=True):
                 partition_columns=("org_id",) if workspace_id is None else ("org_id", "workspace_id"),
                 columns=(KeyColumn(col(cls.event_id), "desc", "uuid"),),
             ),
-            cursor_context={"org_id": org_id, "workspace_id": workspace_id},
         )
 
 
