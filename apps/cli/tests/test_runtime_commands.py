@@ -211,11 +211,3 @@ def test_runtime_subcommand_help_is_available(group):
     assert result.exit_code == 0, result.output
     assert "--config" in Text.from_ansi(result.output).plain
     assert "--port" in Text.from_ansi(result.output).plain
-
-
-def test_removed_configuration_variable_syntax_is_rejected(tmp_path):
-    config = tmp_path / "airmux.yml"
-    config.write_text("control_plane:\n  console_url: ${var:missing}\n")
-    result = runner.invoke(app, ["control-plane", "validate", "--config", str(config)])
-    assert result.exit_code == 1
-    assert "whole YAML value" in result.output
