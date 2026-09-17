@@ -9,7 +9,7 @@ import pytest
 from test_docker import docker
 
 
-def test_empty_cloud_volume_is_writable_by_unprivileged_services():
+def test_named_volume_is_writable_by_default_user():
     image = os.environ.get("DEPLOYMENT_IMAGE")
     if image is None:
         pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
@@ -21,7 +21,7 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
                 "run",
                 "--rm",
                 "--mount",
-                f"type=volume,src={volume},dst=/state,volume-nocopy",
+                f"type=volume,src={volume},dst=/state",
                 "--env",
                 "DATABASE_URL=postgresql+asyncpg://airmux:airmux@127.0.0.1:1/airmux",
                 image,
@@ -35,7 +35,7 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
             "--entrypoint",
             "sh",
             "--mount",
-            f"type=volume,src={volume},dst=/state,volume-nocopy",
+            f"type=volume,src={volume},dst=/state",
             image,
             "-ec",
             "test $(id -u) = 10001; touch /state/runtime/key /state/secrets/key /state/data-plane/outbox; echo writable",
@@ -48,14 +48,17 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
         docker("volume", "rm", volume)
 
 
-def test_console_accepts_flys_ipv6_resolver():
+@pytest.mark.parametrize("user", [None, "0:0"])
+def test_console_accepts_flys_ipv6_resolver(user):
     image = os.environ.get("DEPLOYMENT_IMAGE")
     if image is None:
         pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
+    user_args = () if user is None else ("--user", user)
     container = docker(
         "run",
         "--detach",
         "--rm",
+        *user_args,
         "--env",
         "NGINX_RESOLVER=fdaa::3",
         "--env",
@@ -75,6 +78,14 @@ def test_image_defaults_to_airmux_and_rejects_unknown_roles():
     if image is None:
         pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
     assert docker("inspect", "--format", "{{json .Config.Cmd}}", image) == '["airmux"]'
-    result = subprocess.run(["docker", "run", "--rm", image, "unknown"], capture_output=True, text=True, check=False)  # noqa: S603,S607 controlled Docker test command
-    assert result.returncode == 2
-    assert "Expected airmux, console, control-plane, data-plane, or setup" in result.stderr
+    assert docker("inspect", "--format", "{{json .Config.User}}", image) == '"10001:10001"'
+    for user in (None, "0:0"):
+        user_args = () if user is None else ("--user", user)
+        result = subprocess.run(  # noqa: S603 controlled Docker test command
+            ["docker", "run", "--rm", *user_args, image, "unknown"],  # noqa: S607 controlled Docker executable
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 2
+        assert "Expected airmux, console, control-plane, data-plane, or setup" in result.stderr

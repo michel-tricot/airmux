@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -11,6 +12,7 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
+from airmux_runtime.config import load_yaml
 from airmux_runtime.files import GENERATED_STATE_GITIGNORE, write_new_configuration
 from airmux_runtime.taxonomy import parse_taxonomy
 from control_plane.app import create_app
@@ -79,9 +81,21 @@ def configuration_environment(config: Path) -> Iterator[None]:
             os.environ["AIRMUX_CONFIG"] = selected
 
 
-def bootstrap_keygen(path: Path) -> None:
+def bootstrap_keygen(config: Path) -> tuple[Path, bool]:
+    document = load_yaml(config)
+    control_plane = document.get("control_plane") if isinstance(document, dict) else None
+    bootstrap = control_plane.get("bootstrap") if isinstance(control_plane, dict) else None
+    token = bootstrap.get("token") if isinstance(bootstrap, dict) else None
+    match = re.fullmatch(r"\$\{file:(.+)\}", token) if isinstance(token, str) else None
+    if match is None or ":-" in match.group(1):
+        message = "control_plane.bootstrap.token must be a file reference"
+        raise ValueError(message)
+    path = config.parent / match.group(1)
+    if path.is_file() and not path.is_symlink():
+        return path, False
     token, _ = new_management_key()
     write_new_configuration(path.parent, {path.name: token})
+    return path, True
 
 
 def initialize(directory: Path, console_url: str) -> None:

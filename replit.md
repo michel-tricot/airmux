@@ -42,7 +42,7 @@ See `.env.example`. Key variables:
 | `AIRMUX_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRMUX_INFERENCE_KEY` | Caller inference key |
 
-`uv run airmux control-plane bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
+`uv run airmux control-plane bootstrap-keygen` ensures the configured shared pool key exists. Control-plane startup authorizes it.
 
 ## Project layout
 

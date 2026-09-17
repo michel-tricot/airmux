@@ -6,11 +6,7 @@ export AIRMUX_CONSOLE_URL
 
 setup() {
   umask 077
-  mkdir -p /state/runtime /state/secrets
-  chmod 700 /state/runtime /state/secrets
-  if [ ! -f /state/runtime/dataplane.key ]; then
-    airmux control-plane bootstrap-keygen --out /state/runtime/dataplane.key
-  fi
+  airmux control-plane bootstrap-keygen --config "$AIRMUX_CONFIG"
   DATABASE_URL="${DIRECT_DATABASE_URL:-$DATABASE_URL}" airmux control-plane migrate --config /app/deploy/docker/migrate.yml
   airmux control-plane taxonomy --config "$AIRMUX_CONFIG" --file /app/taxonomy/taxonomy.yml
 }

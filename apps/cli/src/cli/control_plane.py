@@ -33,15 +33,15 @@ def init(
 @control_plane_app.command()
 @runtime_command
 def bootstrap_keygen(
-    out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".airmux/dataplane.key"),
+    config: ConfigOption = None,
 ) -> None:
-    """Create a private bootstrap key for an existing configuration."""
+    """Ensure the configured private bootstrap key exists."""
     from control_plane.operations import (  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
         bootstrap_keygen as generate_bootstrap_key,
     )
 
-    generate_bootstrap_key(out)
-    typer.echo(f"Wrote {out}")
+    path, created = generate_bootstrap_key(configuration_path(config, "control-plane"))
+    typer.echo(f"{'Wrote' if created else 'Found'} {path}")
 
 
 @control_plane_app.command()

@@ -28,8 +28,9 @@ uv run airmux control-plane migrate
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-Run `bootstrap-keygen` once. It creates `.airmux/dataplane.key`; keep it with the matching local database. This leaves
-the instance unclaimed so the normal onboarding flow remains available.
+`bootstrap-keygen` ensures the file referenced by `control_plane.bootstrap.token` exists. In the checked-in configuration
+that is `.airmux/dataplane.key`; keep it with the matching local database. This leaves the instance unclaimed so the
+normal onboarding flow remains available.
 
 ## Start the services
 

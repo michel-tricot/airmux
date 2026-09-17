@@ -46,9 +46,8 @@ RUN bun run --filter '@workspace/gateway-console' build
 
 FROM python:3.13-slim-bookworm AS image
 RUN groupadd --system --gid 10001 airmux && useradd --system --uid 10001 --gid airmux --home-dir /state --shell /usr/sbin/nologin airmux \
-    && mkdir -p /state/runtime /state/secrets /state/data-plane \
-    && chown -R airmux:airmux /state \
-    && apt-get update && apt-get install -y --no-install-recommends nginx gettext-base tini gosu \
+    && install -d -m 0700 -o airmux -g airmux /state /state/runtime /state/secrets /state/data-plane \
+    && apt-get update && apt-get install -y --no-install-recommends nginx gettext-base tini \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=selected-python-build /app /app
 COPY --from=console-build /app/apps/console/dist/public /usr/share/nginx/html
@@ -59,5 +58,6 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/doc
     AIRMUX_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8000 FORWARDED_ALLOW_IPS=127.0.0.1
 WORKDIR /state
 EXPOSE 8000 8080 8081
-ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
+USER 10001:10001
+ENTRYPOINT ["/usr/bin/tini", "--", "/app/deploy/docker/start.sh"]
 CMD ["airmux"]

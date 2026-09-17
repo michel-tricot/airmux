@@ -15,8 +15,11 @@ def test_dockerfile_builds_one_role_based_image() -> None:
     stages = re.findall(r"^FROM .+ AS ([a-z0-9-]+)$", dockerfile, re.MULTILINE)
 
     assert not ROLES.intersection(stages)
-    assert 'ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]' in dockerfile
+    assert "gosu" not in dockerfile
+    assert "USER 10001:10001" in dockerfile
+    assert 'ENTRYPOINT ["/usr/bin/tini", "--", "/app/deploy/docker/start.sh"]' in dockerfile
     assert 'CMD ["airmux"]' in dockerfile
+    assert not (ROOT / "deploy/docker/entrypoint.sh").exists()
 
 
 def test_compose_topologies_project_the_same_image_into_roles() -> None:
@@ -52,6 +55,7 @@ def test_container_start_script_accepts_only_the_documented_roles() -> None:
 
     assert set(re.findall(r"^  ([a-z][a-z-]+)\)$", script, re.MULTILINE)) == ROLES
     assert "Expected airmux, console, control-plane, data-plane, or setup" in script
+    assert "/state" not in script
 
 
 def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
