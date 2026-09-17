@@ -245,8 +245,6 @@ def upgrade() -> None:
         "bundle",
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("issued_at", UTCDateTime(), nullable=False),
         sa.Column("global_generation", sa.BigInteger(), nullable=False),
         sa.Column("org_generation", sa.BigInteger(), nullable=False),
         sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -257,7 +255,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("org_id", "global_generation", "org_generation", name="bundle_org_generation_key"),
-        sa.UniqueConstraint("org_id", "version", name="bundle_org_id_version_key"),
     )
     op.create_table(
         "model",

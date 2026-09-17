@@ -50,7 +50,7 @@ def test_taxonomy_dry_run_is_read_only(tmp_path):
             "models": {"created": 1, "updated": 0, "unchanged": 0},
         }
         assert client.get("/api/v1/instance/taxonomy", headers=root).json()["data"] == {"providers": [], "models": []}
-        assert client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"]["bundle_id"] == before["bundle_id"]
+        assert wait_for_publication(client, org_id, org)["bundle_id"] == before["bundle_id"]
 
 
 def test_taxonomy_apply_reports_unchanged_and_updated_entries(tmp_path):

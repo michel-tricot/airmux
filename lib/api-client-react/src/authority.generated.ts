@@ -554,14 +554,6 @@ export const operationAuthority = {
       },
     ],
   },
-  bundleLatest: {
-    checks: [
-      {
-        scope: "bundle_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
   ingestEvents: {
     checks: [
       {

@@ -1905,13 +1905,6 @@ cursor?: CursorToken | null;
 limit?: number;
 };
 
-export type BundleLatestParams = {
-/**
- * Organization whose latest bundle to return; omit to use the credential's scope
- */
-org_id?: string | null;
-};
-
 export type ApplyInstanceTaxonomyParams = {
 /**
  * Validate and report changes without applying them

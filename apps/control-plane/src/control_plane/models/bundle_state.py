@@ -33,16 +33,6 @@ class BundleState(Record, table=True):
     next_attempt_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
 
     @classmethod
-    async def request_republication(cls, org_id: UUID) -> None:
-        insert = pg_insert(cls).values(org_id=org_id, desired_generation=1)
-        await current_session().execute(
-            insert.on_conflict_do_update(
-                index_elements=["org_id"],
-                set_={"desired_generation": col(cls.desired_generation) + 1},
-            )
-        )
-
-    @classmethod
     async def ensure(cls, org_id: UUID) -> Self:
         state = await cls.get(org_id)
         if state is not None:

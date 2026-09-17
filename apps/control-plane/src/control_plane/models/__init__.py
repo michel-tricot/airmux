@@ -4,13 +4,11 @@ from control_plane.models.audit import AuditLog, audited, set_actor
 from control_plane.models.auth_identity import AuthIdentity
 from control_plane.models.auth_session import AuthSession
 from control_plane.models.bundle import Bundle
-from control_plane.models.bundle_input import bundle_input
-from control_plane.models.bundle_state import BundleGenerations, BundleState
+from control_plane.models.bundle_state import BundleState
 from control_plane.models.cli_auth_request import CliAuthRequest
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.data_plane_instance import DataPlaneInstance
-from control_plane.models.global_bundle_state import GlobalBundleState
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.insecure_vault_secret import InsecureVaultSecret
 from control_plane.models.management_key import ManagementKey
@@ -32,11 +30,9 @@ __all__ = [
     "AuthIdentity",
     "AuthSession",
     "Bundle",
-    "BundleGenerations",
     "BundleState",
     "CliAuthRequest",
     "DataPlaneInstance",
-    "GlobalBundleState",
     "Identified",
     "InferenceKey",
     "InsecureVaultSecret",
@@ -58,6 +54,5 @@ __all__ = [
     "Workspace",
     "WorkspaceMembership",
     "audited",
-    "bundle_input",
     "set_actor",
 ]

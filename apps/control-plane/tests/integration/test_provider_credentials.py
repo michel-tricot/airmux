@@ -43,8 +43,7 @@ def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
 
 
 def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
-    wait_for_publication(client, UUID(headers["X-Test-Org-Id"]), headers)
-    return BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=headers).json()["data"])
+    return BundleV1.model_validate(wait_for_publication(client, UUID(headers["X-Test-Org-Id"]), headers))
 
 
 def _stored(cp, credential: dict) -> str:
@@ -136,9 +135,8 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
         response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         assert response.status_code == 200, response.text
         credential = response.json()["data"]
-        wait_for_publication(c, UUID(org["X-Test-Org-Id"]), org)
-        bundle_response = c.get("/api/v1/bundle/latest", headers=org)
-        entry = BundleV1.model_validate(bundle_response.json()["data"]).catalog.credentials[0]
+        bundle = BundleV1.model_validate(wait_for_publication(c, UUID(org["X-Test-Org-Id"]), org))
+        entry = bundle.catalog.credentials[0]
         rotated = c.put(f"{_credential_path(credential)}/value", json={"value": "sk-rotated-9999"}, headers=org)
         assert rotated.status_code == 200, rotated.text
 
@@ -153,7 +151,7 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
 
         assert run_in_db(tmp_path, stored_values) == ["sk-rotated-9999"]
         assert run_in_db(tmp_path, vault_connections) == 1
-        assert KEY not in bundle_response.text
+        assert KEY not in bundle.model_dump_json()
         assert set(entry.model_dump()) == {"ref", "priority", "version"}
         assert c.delete(_credential_path(credential), headers=org).status_code == 200
 
@@ -331,10 +329,9 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
-        wait_for_publication(c, org_id, org)
-        payload = c.get("/api/v1/bundle/latest", headers=org).text
-        assert KEY not in payload
-        entry = _latest_bundle(c, org).catalog.credentials[0]
+        bundle = _latest_bundle(c, org)
+        assert KEY not in bundle.model_dump_json()
+        entry = bundle.catalog.credentials[0]
         assert entry.ref.service == "openai"
         assert entry.ref.purpose == "provider"
         assert entry.version == 1

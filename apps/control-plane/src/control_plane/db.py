@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -27,7 +27,9 @@ def current_session() -> AsyncSession:
 
 
 @asynccontextmanager
-async def transaction(factory: async_sessionmaker[AsyncSession], *, isolation_level: str | None = None) -> AsyncIterator[AsyncSession]:
+async def transaction(
+    factory: async_sessionmaker[AsyncSession], *, isolation_level: Literal["REPEATABLE READ"] | None = None
+) -> AsyncIterator[AsyncSession]:
     """One unit of work: the body flushes, commit happens here on success, close rolls back on failure."""
     async with factory() as session:
         token = _session.set(session)
@@ -54,7 +56,7 @@ async def standalone_engine(database_url: str) -> AsyncIterator[async_sessionmak
 
 
 @asynccontextmanager
-async def standalone_transaction(database_url: str, *, isolation_level: str | None = None) -> AsyncIterator[AsyncSession]:
+async def standalone_transaction(database_url: str, *, isolation_level: Literal["REPEATABLE READ"] | None = None) -> AsyncIterator[AsyncSession]:
     """One unit of work for non-request code that needs exactly one transaction."""
     async with standalone_engine(database_url) as factory, transaction(factory, isolation_level=isolation_level) as session:
         yield session

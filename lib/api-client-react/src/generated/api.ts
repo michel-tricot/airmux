@@ -36,7 +36,6 @@ import type {
 
 import type {
   ApplyInstanceTaxonomyParams,
-  BundleLatestParams,
   BundleManifest,
   BundleV1,
   ClaimOut,
@@ -7893,117 +7892,6 @@ export function useGetBundle<TData = Awaited<ReturnType<typeof getBundle>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetBundleQueryOptions(bundleId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getBundleLatestUrl = (params?: BundleLatestParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/bundle/latest?${stringifiedParams}` : `/api/v1/bundle/latest`
-}
-
-/**
- * Return the newest policy bundle available at the requested organization scope.
- *
- * Required permission: `bundles.read`.
- * @summary Get Latest Bundle
- */
-export const bundleLatest = async (params?: BundleLatestParams, options?: Parameters<typeof customFetch>[1]): Promise<BundleV1> => {
-
-  return customFetch<BundleV1>(getBundleLatestUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getBundleLatestQueryKey = (params?: BundleLatestParams,) => {
-    return [
-    `/api/v1/bundle/latest`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getBundleLatestQueryOptions = <TData = Awaited<ReturnType<typeof bundleLatest>>, TError = ErrorType<void | HTTPValidationError>>(params?: BundleLatestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getBundleLatestQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bundleLatest>>> = ({ signal }) => bundleLatest(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type BundleLatestQueryResult = NonNullable<Awaited<ReturnType<typeof bundleLatest>>>
-export type BundleLatestQueryError = ErrorType<void | HTTPValidationError>
-
-
-export function useBundleLatest<TData = Awaited<ReturnType<typeof bundleLatest>>, TError = ErrorType<void | HTTPValidationError>>(
- params: undefined |  BundleLatestParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleLatest>>,
-          TError,
-          Awaited<ReturnType<typeof bundleLatest>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleLatest<TData = Awaited<ReturnType<typeof bundleLatest>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: BundleLatestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof bundleLatest>>,
-          TError,
-          Awaited<ReturnType<typeof bundleLatest>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useBundleLatest<TData = Awaited<ReturnType<typeof bundleLatest>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: BundleLatestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Get Latest Bundle
- */
-
-export function useBundleLatest<TData = Awaited<ReturnType<typeof bundleLatest>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: BundleLatestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bundleLatest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getBundleLatestQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

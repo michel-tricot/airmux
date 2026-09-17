@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func
-from sqlmodel import col, or_, select
+from sqlmodel import col, or_
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, uuid7
-from control_plane.db import current_session
 from control_plane.models import (
     Bundle,
-    BundleGenerations,
     BundleState,
     InferenceKey,
     Model,
@@ -25,17 +21,12 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
+    from control_plane.models.bundle_state import BundleGenerations
+
 
 class UnknownOrgError(LookupError):
     def __init__(self, org_id: UUID) -> None:
         super().__init__(str(org_id))
-
-
-@dataclass(frozen=True)
-class PublicationResult:
-    org_id: UUID
-    generations: BundleGenerations
-    bundle: Bundle
 
 
 class PublicationError(RuntimeError):
@@ -45,7 +36,7 @@ class PublicationError(RuntimeError):
         super().__init__(f"bundle publication failed for organization {org_id}")
 
 
-async def publish_next(now: datetime) -> PublicationResult | None:
+async def publish_next(now: datetime) -> Bundle | None:
     org_id = await BundleState.next_pending(now)
     if org_id is None:
         return None
@@ -59,18 +50,15 @@ async def publish_next(now: datetime) -> PublicationResult | None:
         bundle = await compile_bundle(org_id, bundle_id, now)
     except Exception as error:
         raise PublicationError(org_id, generations) from error
-    version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
     stored = await Bundle(
         id=bundle_id,
         org_id=org_id,
-        version=version + 1,
-        issued_at=now,
         global_generation=generations.global_,
         org_generation=generations.org,
         payload=bundle.model_dump_json(),
     ).save()
     await state.mark_published(bundle_id, generations)
-    return PublicationResult(org_id=org_id, generations=generations, bundle=stored)
+    return stored
 
 
 async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> BundleV1:

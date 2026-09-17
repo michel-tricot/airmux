@@ -63,27 +63,23 @@ const transformer: InputTransformerFn = async (config) => {
   for (const operations of Object.values(config.paths ?? {})) {
     for (const operation of Object.values(operations ?? {})) {
       const responses = objectOf(objectOf(operation)?.responses);
-      for (const [status, response] of Object.entries(responses ?? {})) {
-        if (!status.startsWith('2')) continue;
-        const content = objectOf(objectOf(objectOf(response)?.content)?.['application/json']);
-        const name = envelopeName(content?.schema);
-        const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
-        if (content && properties && 'data' in properties) {
-          if (name?.startsWith('PageEnvelope_') && 'page' in properties) {
-            const pageName = name.replace('PageEnvelope_', 'Page_');
-            const dataSchema = properties.data as (typeof schemas)[string];
-            const pageSchema = properties.page as (typeof schemas)[string];
-            schemas[pageName] = {
-              type: 'object',
-              properties: { items: dataSchema, page: pageSchema },
-              required: ['items', 'page'],
-            };
-            content.schema = { $ref: `#/components/schemas/${pageName}` };
-          } else {
-            content.schema = properties.data;
-          }
+      const response = objectOf(responses?.['200']);
+      const content = objectOf(objectOf(response?.content)?.['application/json']);
+      const name = envelopeName(content?.schema);
+      const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
+      if (content && properties && 'data' in properties) {
+        if (name?.startsWith('PageEnvelope_') && 'page' in properties) {
+          const pageName = name.replace('PageEnvelope_', 'Page_');
+          const dataSchema = properties.data as (typeof schemas)[string];
+          const pageSchema = properties.page as (typeof schemas)[string];
+          schemas[pageName] = {
+            type: 'object',
+            properties: { items: dataSchema, page: pageSchema },
+            required: ['items', 'page'],
+          };
+          content.schema = { $ref: `#/components/schemas/${pageName}` };
         } else {
-          continue;
+          content.schema = properties.data;
         }
       }
     }

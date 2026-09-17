@@ -18,8 +18,7 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
             "data"
         ]
         assert c.delete(f"/api/v1/organizations/{o2}/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
-        wait_for_publication(c, o1, headers)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, headers))
         assert [k.key_id for k in bundle.keys] == [key["id"]]
 
 
@@ -30,8 +29,8 @@ def test_auth_required_everywhere(tmp_path):
         assert c.get(f"/api/v1/organizations/{uuid7()}/workspaces").status_code == 401
         assert c.get("/api/v1/instance/taxonomy").status_code == 401
         assert c.post("/api/v1/organizations", json={"name": "o1"}, headers={"authorization": "Bearer garbage"}).status_code == 401
-        assert c.get("/api/v1/bundle/latest").status_code == 401
-        assert c.get("/api/v1/bundle/latest", headers={"authorization": "Bearer garbage"}).status_code == 401
+        assert c.get("/api/v1/bundles/manifest").status_code == 401
+        assert c.get("/api/v1/bundles/manifest", headers={"authorization": "Bearer garbage"}).status_code == 401
 
 
 def test_org_scoped_keys_cannot_use_instance_permissions(tmp_path):

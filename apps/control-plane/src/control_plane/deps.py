@@ -146,20 +146,6 @@ async def credential_scope(resolved: ActorDep) -> Scope:
 CredentialScopeDep = Annotated[Scope, Depends(credential_scope)]
 
 
-async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
-    selected = org_id
-    if selected is None and resolved.grant.scope.org_id is not None:
-        selected = resolved.grant.scope.org_id
-    if selected is None:
-        return Scope.instance()
-    if await Org.find_by_id(selected) is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
-    return Scope.org(selected)
-
-
-BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
-
-
 async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> Scope:
     if workspace_ref is not None and org_id is None:
         raise HTTPException(status_code=422, detail="workspace_ref requires org_id")

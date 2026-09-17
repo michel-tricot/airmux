@@ -156,13 +156,14 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
 def wait_for_publication(client, org_id: UUID, headers: dict[str, str], after: UUID | str | None = None, timeout: float = 5.0) -> dict:
     deadline = time.monotonic() + timeout
     while True:
-        response = client.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=headers)
-        if response.status_code == 200:
-            bundle = response.json()["data"]
-            if after is None or bundle["bundle_id"] != str(after):
-                return bundle
-        else:
-            assert response.status_code == 404, response.text
+        manifest_response = client.get("/api/v1/bundles/manifest", headers=headers)
+        assert manifest_response.status_code == 200, manifest_response.text
+        references = manifest_response.json()["data"]["bundles"]
+        reference = next((reference for reference in references if reference["org_id"] == str(org_id)), None)
+        if reference is not None and (after is None or reference["bundle_id"] != str(after)):
+            bundle_response = client.get(f"/api/v1/bundles/{reference['bundle_id']}", headers=headers)
+            assert bundle_response.status_code == 200, bundle_response.text
+            return bundle_response.json()["data"]
         if time.monotonic() >= deadline:
             message = f"bundle was not published after {after}"
             raise AssertionError(message)

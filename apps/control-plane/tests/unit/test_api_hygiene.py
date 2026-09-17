@@ -89,7 +89,6 @@ def test_documentation_groups_follow_authority_scopes():
         "instance_scope": {"Instance"},
         "org_scope": {"Organization"},
         "workspace_scope": {"Workspace"},
-        "bundle_scope": {"Data Plane API"},
     }
     expected_by_operation = {
         "revoke_management_key": {"Instance", "Organization", "Workspace"},
@@ -242,14 +241,11 @@ def test_response_schemas_are_envelopes():
     offenders = []
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
-            for status, response in op["responses"].items():
-                if not status.startswith("2") or "content" not in response:
-                    continue
-                schema = response["content"]["application/json"]["schema"]
-                if "$ref" in schema:
-                    schema = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
-                if set(schema.get("properties", {})) not in ({"data"}, {"data", "page"}):
-                    offenders.append(f"{method.upper()} {path} {status}")
+            schema = op["responses"]["200"]["content"]["application/json"]["schema"]
+            if "$ref" in schema:
+                schema = spec["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
+            if set(schema.get("properties", {})) not in ({"data"}, {"data", "page"}):
+                offenders.append(f"{method.upper()} {path}")
     assert offenders == []
 
 

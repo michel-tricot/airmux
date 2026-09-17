@@ -29,12 +29,9 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
-        wait_for_publication(c, o1, org)
-        latest = c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root)
-        assert latest.status_code == 200
-        bundle = BundleV1.model_validate(latest.json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, org))
         bundles = asyncio.run(_bundles(cp.db_url, o1))
-        assert [entry.version for entry in bundles] == [1]
+        assert len(bundles) == 1
         assert bundle.bundle_id == bundles[-1].id
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
@@ -59,10 +56,9 @@ def test_revocation_lands_in_next_bundle(tmp_path):
             "data"
         ]
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
-        wait_for_publication(c, org_id, org)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, org_id, org))
         assert bundle.keys == []
-        assert [entry.version for entry in asyncio.run(_bundles(cp.db_url, org_id))] == [1]
+        assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1
 
 
 def test_inference_key_changes_publish_without_manual_action(tmp_path):
@@ -78,34 +74,13 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
             json=inference_key_body(c, org, "automatic"),
             headers=org,
         ).json()["data"]
-        wait_for_publication(c, org_id, org)
-        created = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
+        created = BundleV1.model_validate(wait_for_publication(c, org_id, org))
         assert [entry.key_id for entry in created.keys] == [key["id"]]
 
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
-        wait_for_publication(c, org_id, org, created.bundle_id)
-        revoked = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
+        revoked = BundleV1.model_validate(wait_for_publication(c, org_id, org, created.bundle_id))
         assert revoked.bundle_id != created.bundle_id
         assert revoked.keys == []
-
-
-def test_bundle_latest_filters_by_org(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as c:
-        o1 = make_org(c, root, "o1")
-        o2 = make_org(c, root, "o2")
-        first = cp.headers(o1)
-        second = cp.headers(o2)
-        wait_for_publication(c, o1, first)
-        wait_for_publication(c, o2, second)
-        global_latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"])
-        assert global_latest.org_id in {o1, o2}
-        latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=cp.headers(o2)).json()["data"])
-        assert latest.org_id == o2
-        scoped = c.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(o1)})
-        bundle = BundleV1.model_validate(scoped.json()["data"])
-        assert bundle.org_id == o1
 
 
 def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
@@ -188,8 +163,7 @@ def test_new_organization_inherits_current_global_inputs(tmp_path):
     with TestClient(cp.app) as client:
         assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         org_id = make_org(client, root, "created-after-global-change")
-        wait_for_publication(client, org_id, cp.headers(org_id))
-        bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(client, org_id, cp.headers(org_id)))
         assert [provider.provider_id for provider in bundle.catalog.providers] == [PROVIDER["provider_id"]]
 
 
@@ -201,11 +175,7 @@ def test_startup_resumes_durable_pending_work(tmp_path):
         headers = cp.headers(org_id)
         current = wait_for_publication(client, org_id, headers)
 
-    async def queue():
-        async with standalone_transaction(cp.db_url):
-            await BundleState.request_republication(org_id)
-
-    asyncio.run(queue())
+    asyncio.run(_advance_global_generation(cp.db_url))
     with TestClient(cp.app) as restarted:
         published = wait_for_publication(restarted, org_id, cp.headers(org_id), current["bundle_id"])
     assert published["bundle_id"] != current["bundle_id"]
@@ -245,11 +215,11 @@ def test_compiler_failure_preserves_management_change_and_last_valid_bundle(tmp_
                 break
             assert datetime.now(tz=UTC).timestamp() < deadline
             time.sleep(0.1)
-        current = client.get("/api/v1/bundle/latest", headers=headers).json()["data"]
+        current = wait_for_publication(client, org_id, headers)
         assert current["bundle_id"] == initial["bundle_id"]
         keys = client.get(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", headers=headers).json()["data"]
         assert [stored["id"] for stored in keys] == [key["id"]]
-        assert [bundle.version for bundle in asyncio.run(_bundles(cp.db_url, org_id))] == [1]
+        assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1
         monkeypatch.setattr(compiler, "compile_bundle", compile_bundle)
         recovered = wait_for_publication(client, org_id, headers, initial["bundle_id"])
         assert [entry["key_id"] for entry in recovered["keys"]] == [key["id"]]
@@ -261,8 +231,8 @@ def test_failed_publication_backoff_starts_at_one_second_and_caps_at_sixty(tmp_p
         org_id = make_org(client, cp.headers(), "backoff")
 
     async def retry_delays():
+        await _advance_global_generation(cp.db_url)
         async with standalone_transaction(cp.db_url):
-            await BundleState.request_republication(org_id)
             _, generations = await BundleState.target(org_id)
         now = datetime.now(tz=UTC)
         delays = []
@@ -302,8 +272,7 @@ def test_global_change_during_publication_remains_pending(tmp_path, monkeypatch)
         wait_for_publication(client, org_id, cp.headers(org_id))
 
     async def race():
-        async with standalone_transaction(cp.db_url):
-            await BundleState.request_republication(org_id)
+        await _advance_global_generation(cp.db_url)
         entered = asyncio.Event()
         release = asyncio.Event()
         original_compile = compiler.compile_bundle
@@ -337,8 +306,8 @@ def test_global_change_during_publication_remains_pending(tmp_path, monkeypatch)
     first, second = asyncio.run(race())
     assert first is not None
     assert second is not None
-    assert second.generations.global_ > first.generations.global_
-    assert str(BundleV1.model_validate_json(second.bundle.payload).catalog.providers[0].base_url) == "https://new.example/v1"
+    assert second.global_generation > first.global_generation
+    assert str(BundleV1.model_validate_json(second.payload).catalog.providers[0].base_url) == "https://new.example/v1"
 
 
 def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeypatch):
@@ -349,8 +318,7 @@ def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeyp
     original_compile = compiler.compile_bundle
 
     async def race():
-        async with standalone_transaction(cp.db_url):
-            await BundleState.request_republication(org_id)
+        await _advance_global_generation(cp.db_url)
         entered = asyncio.Event()
         release = asyncio.Event()
 
@@ -375,7 +343,7 @@ def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeyp
     assert first is not None
     assert second is None
     pairs = [(bundle.global_generation, bundle.org_generation) for bundle in asyncio.run(_bundles(cp.db_url, org_id))]
-    assert pairs.count((first.generations.global_, first.generations.org)) == 1
+    assert pairs.count((first.global_generation, first.org_generation)) == 1
 
 
 def test_cancelling_publication_rolls_back_and_leaves_generations_pending(tmp_path, monkeypatch):
@@ -385,8 +353,8 @@ def test_cancelling_publication_rolls_back_and_leaves_generations_pending(tmp_pa
         wait_for_publication(client, org_id, cp.headers(org_id))
 
     async def cancel():
+        await _advance_global_generation(cp.db_url)
         async with standalone_transaction(cp.db_url):
-            await BundleState.request_republication(org_id)
             state, generations = await BundleState.target(org_id)
             current_bundle_id = state.current_bundle_id
         entered = asyncio.Event()
@@ -465,6 +433,11 @@ async def _bundles(database_url: str, org_id: UUID) -> list[Bundle]:
         return await Bundle.find(Bundle.org_id == org_id)
 
 
+async def _advance_global_generation(database_url: str) -> None:
+    async with standalone_transaction(database_url):
+        await current_session().execute(text("UPDATE global_bundle_state SET desired_generation = desired_generation + 1 WHERE id = 1"))
+
+
 @pytest.mark.parametrize(
     ("path", "body"),
     [
@@ -498,8 +471,7 @@ def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_
             ]["id"]
         else:
             credential_id = client.put(f"{base}/playground-session", headers=headers).json()["data"]["id"]
-        wait_for_publication(client, org_id, headers)
-        before = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])
+        before = BundleV1.model_validate(wait_for_publication(client, org_id, headers))
 
         async def change_identity():
             async with standalone_transaction(cp.db_url):
@@ -512,8 +484,7 @@ def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_
                 return user.id
 
         user_id = asyncio.run(change_identity())
-        wait_for_publication(client, org_id, headers, before.bundle_id)
-        after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])
+        after = BundleV1.model_validate(wait_for_publication(client, org_id, headers, before.bundle_id))
         assert after.bundle_id != before.bundle_id
         assert after.keys[0].key_id == credential_id
         assert after.keys[0].user_id == user_id

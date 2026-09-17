@@ -74,7 +74,7 @@ Permission names are closed strings grouped by resource:
 - `inference-keys.read|manage`
 - `policies.read|manage`
 - `playground.execute`
-- `bundles.read|publish`
+- `bundles.read`
 - `usage.read|ingest`
 - `data-planes.read|heartbeat`
 - `audit.read`
@@ -90,7 +90,7 @@ a one-time secret. Store the returned value immediately; later list and get oper
 Collections that callers browse incrementally use cursor pagination. Pagination is not added to an endpoint merely
 because it is scoped or returns a list; consumers of configuration and selection endpoints need the complete set.
 
-The paginated collections are organizations, bundle history, usage events, and audit activity. Usage events are paginated
+The paginated collections are organizations, usage events, and audit activity. Usage events are paginated
 at both organization and workspace scope, and audit activity is paginated at instance and organization scope.
 
 - `limit` is the maximum number of results per page, defaults to 50, and accepts 1 through 200
