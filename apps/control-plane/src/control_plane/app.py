@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
+from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger
 from control_plane.authority import AuthorizationError, CredentialError
@@ -19,7 +19,7 @@ from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory, transaction
 from control_plane.deps import get_session
-from control_plane.http import ObservabilityMiddleware
+from control_plane.http import ObservabilityMiddleware, api_routes, route_paths
 from control_plane.metrics import ControlPlaneMetrics, metrics_endpoint
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
@@ -206,9 +206,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(IdentityConflictError, identity_conflict_handler)
     app.add_exception_handler(UnknownProviderError, unknown_provider_handler)
     app.add_exception_handler(Exception, unexpected_handler)
-    app.add_route("/healthz", healthz)
-    app.add_route("/readyz", readyz)
-    app.add_route("/metrics", metrics_endpoint)
+    admin = APIRouter(routes=[Route("/healthz", healthz), Route("/readyz", readyz), Route("/metrics", metrics_endpoint)])
     v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     routers = (
         management_keys_router,
@@ -229,13 +227,10 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     )
     for router in routers:
         v1.include_router(router)
+    app.include_router(admin)
     app.include_router(v1)
-    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=compile_routes(routers), metrics=metrics)
-    metric_routes = (
-        "/healthz",
-        "/readyz",
-        "/metrics",
-        *(f"/api/v1{route.path}" for router in routers for route in router.routes if isinstance(route, APIRoute)),
-    )
+    routes = api_routes(routers)
+    app.add_middleware(ThrottleMiddleware, backend=app.state.throttle_backend, config=throttling, routes=compile_routes(routes), metrics=metrics)
+    metric_routes = (*route_paths((admin,)), *route_paths(routers, prefix="/api/v1"))
     app.add_middleware(ObservabilityMiddleware, metrics=metrics, routes=metric_routes)
     return app

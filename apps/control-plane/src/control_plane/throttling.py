@@ -8,7 +8,6 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, Protocol, cast
 
-from fastapi.routing import APIRoute
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import JSONResponse
 
@@ -17,7 +16,7 @@ if TYPE_CHECKING:
     from re import Pattern
     from uuid import UUID
 
-    from fastapi import APIRouter
+    from fastapi.routing import APIRoute
     from starlette.requests import Request
     from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -98,12 +97,10 @@ type TrafficGroup = Literal["api", "authentication", "cli", "operational"]
 type ThrottleRoute = tuple["Pattern[str]", frozenset[str], TrafficGroup]
 
 
-def compile_routes(routers: tuple[APIRouter, ...]) -> tuple[ThrottleRoute, ...]:
+def compile_routes(routes: tuple[APIRoute, ...]) -> tuple[ThrottleRoute, ...]:
     return tuple(
         (re.compile(f"^/api/v1{route.path_regex.pattern.removeprefix('^')}"), frozenset(route.methods or ()), cast("TrafficGroup", groups[0]))
-        for router in routers
-        for route in router.routes
-        if isinstance(route, APIRoute)
+        for route in routes
         if (
             groups := [group for dependency in route.dependant.dependencies if (group := getattr(dependency.call, "traffic_group", None)) is not None]
         )

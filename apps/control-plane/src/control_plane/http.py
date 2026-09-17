@@ -4,8 +4,9 @@ import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from fastapi.routing import APIRoute
 from starlette.datastructures import MutableHeaders
-from starlette.routing import compile_path
+from starlette.routing import Route, compile_path
 
 from airmux_runtime.observability import request_context
 from contract import uuid7
@@ -13,9 +14,18 @@ from contract import uuid7
 if TYPE_CHECKING:
     from re import Pattern
 
+    from fastapi import APIRouter
     from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
     from control_plane.metrics import ControlPlaneMetrics
+
+
+def api_routes(routers: tuple[APIRouter, ...]) -> tuple[APIRoute, ...]:
+    return tuple(route for router in routers for route in router.routes if isinstance(route, APIRoute))
+
+
+def route_paths(routers: tuple[APIRouter, ...], *, prefix: str = "") -> tuple[str, ...]:
+    return tuple(f"{prefix}{route.path}" for router in routers for route in router.routes if isinstance(route, Route))
 
 
 class ObservabilityMiddleware:

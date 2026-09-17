@@ -109,8 +109,6 @@ def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
     if dev:
         os.environ["AIRMUX_DEV"] = "1"
         run_migrations()
-    else:
-        os.environ.pop("AIRMUX_DEV", None)
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
 
 

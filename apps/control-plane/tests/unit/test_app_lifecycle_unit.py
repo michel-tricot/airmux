@@ -15,6 +15,7 @@ def test_management_routes_use_the_api_prefix():
     paths = set(create_app(settings).openapi()["paths"])
     assert "/api/v1/auth/me" in paths
     assert not any(path.startswith("/v1/") for path in paths)
+    assert not {"/healthz", "/readyz", "/metrics"} & paths
 
 
 def test_app_factories_have_isolated_metric_registries():
