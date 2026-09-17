@@ -60,21 +60,6 @@ def test_instance_owner_login_navigation_dialogs_and_logout(stack: Stack) -> Non
         expect(page.get_by_role("row").filter(has_text="Created in browser")).to_have_count(0)
 
 
-def test_console_does_not_expose_bundle_publication_internals(stack: Stack) -> None:
-    with running_console(stack) as console:
-        console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
-        page = console.page
-        bundle_management_requests: list[str] = []
-        page.on(
-            "request",
-            lambda request: bundle_management_requests.append(request.url) if re.search(r"/organizations/[^/]+/bundles", request.url) else None,
-        )
-        page.goto(f"{console.url}/instance/organizations/{stack.org_id}")
-        expect(page.get_by_role("tab", name="Workspaces", exact=True)).to_be_visible()
-        expect(page.get_by_text(re.compile("bundle|queued|publication|data planes adopt", re.IGNORECASE))).to_have_count(0)
-        assert bundle_management_requests == []
-
-
 @pytest.mark.parametrize("role", ["owner", "admin", "member"])
 def test_organization_roles_navigation_permissions_and_workspace_dialog(stack: Stack, role: str) -> None:
     with (

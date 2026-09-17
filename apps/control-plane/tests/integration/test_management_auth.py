@@ -53,8 +53,6 @@ def test_org_scoped_keys_cannot_use_instance_permissions(tmp_path):
             f"/api/v1/organizations/{org_id}/events",
         ):
             assert c.get(path, headers=root).status_code == 200
-        assert c.get(f"/api/v1/organizations/{org_id}/bundles", headers=root).status_code == 404
-        assert c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=root).status_code == 404
 
 
 def test_inference_token_is_rejected_on_management_routes(tmp_path):

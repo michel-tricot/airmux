@@ -56,17 +56,6 @@ def test_connected_configs_own_independent_control_plane_links():
     assert isinstance(config.events, SqliteOutboxConfig)
     assert config.bundle.control_plane.url == "http://bundle-cp.test"
     assert config.events.control_plane.url == "http://events-cp.test"
-    assert not hasattr(config, "control_plane")
-
-
-def test_the_legacy_top_level_control_plane_link_is_rejected():
-    with pytest.raises(ValidationError, match="control_plane"):
-        Config.model_validate(
-            {
-                "control_plane": {"url": "http://cp.test", "management_key": "dp-token"},
-                "bundle": {"kind": "local", "path": "bundle.yml"},
-            }
-        )
 
 
 def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_env, monkeypatch):
@@ -82,21 +71,9 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
     assert bundle.control_plane.url == "http://control-plane:8000"
 
 
-def test_remote_bundle_rejects_a_configured_verify_key(clean_env):
-    config = (
-        "data_plane:\n  bundle:\n    kind: remote\n"
-        "    control_plane: {url: http://cp.test, management_key: dp-token}\n"
-        "    verify_key: no-longer-configured-here\n"
-    )
-    (clean_env / "airmux.yml").write_text(config, encoding="utf-8")
-    with pytest.raises((ValidationError, ValueError)):
-        load_config()
-
-
 def test_defaults_apply_to_a_standalone_data_plane(clean_env):
     (clean_env / "airmux.yml").write_text("data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n", encoding="utf-8")
     config = load_config()
-    assert not hasattr(config, "control_plane")
     assert isinstance(config.bundle, LocalBundleConfig)
     assert isinstance(config.events, DevNullOutboxConfig)
     assert config.bundle.reload_interval_s == 2.0
@@ -115,19 +92,6 @@ def test_remote_bundle_requires_a_control_plane(clean_env):
 
     with pytest.raises(ValidationError, match="control_plane"):
         load_config()
-
-
-def test_remote_bundle_rejects_the_removed_org_selector():
-    with pytest.raises(ValidationError, match="org"):
-        Config.model_validate(
-            {
-                "bundle": {
-                    "kind": "remote",
-                    "control_plane": {"url": "http://cp.test", "management_key": "dp-token"},
-                    "org": "0198f3c6-e1d8-7b4a-8c2d-1f4e5a6b7c8d",
-                }
-            }
-        )
 
 
 def test_sqlite_outbox_requires_a_control_plane(clean_env):

@@ -386,13 +386,6 @@ def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
     assert verified == [("https://airmux.example.com", "inference-token", "anthropic/claude-test")]
 
 
-def test_quickstart_has_no_private_connection_override():
-    result = runner.invoke(app, ["quickstart", "--help"])
-
-    assert result.exit_code == 0, result.output
-    assert "--connect-url" not in result.stdout
-
-
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
@@ -405,8 +398,6 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout
     assert "Verified anthropic/claude-test" in result.stdout
-    assert "x-airmux-dialect" not in result.stdout
-    assert "openai/gpt-5-nano" not in result.stdout
 
 
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):

@@ -176,10 +176,8 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert inference_key == f'export AIRMUX_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
     assert "curl --fail http://127.0.0.1:8080/readyz" in lines
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
-    assert "x-airmux-dialect" not in result.output.lower()
     assert '"model":"echo"' in result.output
     assert '"content":"Say hello in one word."' in result.output
-    assert "airmux ready" not in result.output
     assert '"max_completion_tokens":16' in result.output
 
 

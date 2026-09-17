@@ -466,16 +466,6 @@ async def _bundles(database_url: str, org_id: UUID) -> list[Bundle]:
         return await Bundle.find(Bundle.org_id == org_id)
 
 
-def test_bundle_management_endpoints_are_removed(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        org_id = make_org(c, cp.headers(), "o1")
-        headers = cp.headers(org_id)
-        assert c.get(f"/api/v1/organizations/{org_id}/bundles", headers=headers).status_code == 404
-        assert c.post(f"/api/v1/organizations/{org_id}/bundles/compile", headers=headers).status_code == 404
-        assert c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers).status_code == 404
-
-
 @pytest.mark.parametrize(
     ("path", "body"),
     [

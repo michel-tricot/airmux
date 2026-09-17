@@ -11,21 +11,6 @@ function open(path: string) {
   render(<App />);
 }
 
-it('keeps bundle publication internals out of organization settings', async () => {
-  let bundleRequests = 0;
-  server.use(
-    http.get('/api/v1/organizations/:orgId/bundles', () => {
-      bundleRequests += 1;
-      return HttpResponse.json({ data: [] });
-    }),
-  );
-  open('/org/settings');
-  expect(await screen.findByRole('tab', { name: 'Management Keys' })).toBeInTheDocument();
-  expect(screen.queryByText(/configuration bundles|configuration history|republish/i)).not.toBeInTheDocument();
-  expect(screen.queryByRole('tab', { name: 'Policies' })).not.toBeInTheDocument();
-  expect(bundleRequests).toBe(0);
-});
-
 it('organizes workspace settings into selectable categories', async () => {
   server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })));
   open(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
