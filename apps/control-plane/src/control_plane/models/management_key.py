@@ -115,19 +115,15 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def page_for_scope(cls, scope: Scope, user_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        partition = (
-            {"org_id": scope.org_id, "workspace_id": scope.workspace_id}
+        scope_conditions = (
+            (cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
             if scope.level is ScopeLevel.workspace
-            else {"org_id": scope.org_id}
+            else (cls.org_id == scope.org_id,)
             if scope.level is ScopeLevel.org
-            else None
+            else ()
         )
-        conditions = (cls.user_id == user_id,) if user_id is not None else ()
-        return await cls.page(
-            request,
-            *conditions,
-            partition=partition,
-        )
+        user_conditions = (cls.user_id == user_id,) if user_id is not None else ()
+        return await cls.page(request, *scope_conditions, *user_conditions)
 
 
 class ManagementKeyOut(RecordOut[ManagementKey]):

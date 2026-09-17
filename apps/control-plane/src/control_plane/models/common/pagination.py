@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import Depends
 from pydantic import Field, StringConstraints
-from sqlalchemy import ColumnElement, Table, UniqueConstraint, and_, inspect, or_
+from sqlalchemy import ColumnElement, Table, and_, inspect, or_
 
 from control_plane.db import current_session
 from control_plane.models.common.wire import RequestModel
@@ -63,28 +63,7 @@ class KeyColumn:
 @dataclass(frozen=True)
 class Keyset[T]:
     model: type[T]
-    partition_columns: tuple[str, ...]
     columns: tuple[KeyColumn, ...]
-
-    def __post_init__(self) -> None:
-        mapper = cast("Mapper[Any]", inspect(self.model))
-        table = cast("Table", mapper.persist_selectable)
-        required = self.partition_columns + tuple(column.column.key for column in self.columns)
-        candidates = [
-            (tuple(column.key for column in table.primary_key.columns), True),
-            *(
-                (tuple(column.key for column in constraint.columns), True)
-                for constraint in table.constraints
-                if isinstance(constraint, UniqueConstraint)
-            ),
-            *((tuple(column.key for column in index.columns), index.unique) for index in table.indexes),
-        ]
-        if not any(
-            candidate[: len(required)] == required or (unique and required[: len(candidate)] == candidate) for candidate, unique in candidates
-        ):
-            joined = ", ".join(required)
-            msg = f"{table.name} needs a pagination index beginning with ({joined})"
-            raise ValueError(msg)
 
     @property
     def namespace(self) -> str:

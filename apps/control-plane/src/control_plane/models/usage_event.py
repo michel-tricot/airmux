@@ -62,7 +62,6 @@ class UsageEvent(Record, table=True):
             page,
             Keyset(
                 model=cls,
-                partition_columns=("org_id",) if workspace_id is None else ("org_id", "workspace_id"),
                 columns=(KeyColumn(col(cls.event_id), "desc", "uuid"),),
             ),
         )

@@ -158,8 +158,8 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
         return await cls.page(
             request,
+            cls.org_id == org_id,
             or_(instance_access, org_access, workspace_access),
-            partition={"org_id": org_id},
         )
 
     async def delete_with_contents(self, store: SecretStore) -> None:

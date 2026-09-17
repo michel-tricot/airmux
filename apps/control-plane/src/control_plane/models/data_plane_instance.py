@@ -50,7 +50,6 @@ class DataPlaneInstance(Record, table=True):
             request,
             Keyset(
                 model=cls,
-                partition_columns=(),
                 columns=(KeyColumn(col(cls.last_seen), "desc", "datetime"), KeyColumn(col(cls.instance_id), "desc", "uuid")),
             ),
         )

@@ -132,8 +132,8 @@ class User(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def page_for_instance(cls, request: PageQuery, service_account: bool | None) -> PageSlice[Self]:
-        partition = {"service_account": service_account} if service_account is not None else None
-        return await cls.page(request, partition=partition)
+        conditions = (cls.service_account == service_account,) if service_account is not None else ()
+        return await cls.page(request, *conditions)
 
     @classmethod
     async def page_members_of(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:

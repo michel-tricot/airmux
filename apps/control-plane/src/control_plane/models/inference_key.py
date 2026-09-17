@@ -63,7 +63,7 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
 
     @classmethod
     async def page_for_workspace(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await cls.page(request, partition={"workspace_id": workspace_id})
+        return await cls.page(request, cls.workspace_id == workspace_id)
 
 
 class InferenceKeyIn(RequestModel):

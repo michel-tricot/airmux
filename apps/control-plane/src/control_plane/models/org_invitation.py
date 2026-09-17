@@ -150,9 +150,9 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
     async def page_for_org(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
         return await cls.page(
             request,
+            cls.org_id == org_id,
             col(cls.accepted_at).is_(None),
             col(cls.revoked_at).is_(None),
-            partition={"org_id": org_id},
         )
 
     @classmethod
@@ -178,21 +178,17 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
     @classmethod
     async def page_pending_for_email(cls, email: str, now: datetime, scope: Scope, request: PageQuery) -> PageSlice[Self]:
         normalized_email = User.normalize_email(email)
-        conditions = [
+        conditions = (
+            cls.email == normalized_email,
             col(cls.accepted_at).is_(None),
             col(cls.revoked_at).is_(None),
             col(cls.expires_at) > now,
-        ]
-        partition: dict[str, str | UUID | None] = {"email": normalized_email}
-        if scope.level is not ScopeLevel.instance:
-            partition["org_id"] = scope.org_id
-        if scope.level is ScopeLevel.workspace:
-            partition["workspace_id"] = scope.workspace_id
-        return await cls.page(
-            request,
-            *conditions,
-            partition=partition,
         )
+        if scope.level is not ScopeLevel.instance:
+            conditions = (*conditions, cls.org_id == scope.org_id)
+        if scope.level is ScopeLevel.workspace:
+            conditions = (*conditions, cls.workspace_id == scope.workspace_id)
+        return await cls.page(request, *conditions)
 
     @classmethod
     async def count_pending_for_email(cls, email: str, now: datetime, scope: Scope) -> int:

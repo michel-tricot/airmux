@@ -53,7 +53,7 @@ class AuditLog(Record, table=True):
         return await keyset_page(
             select(cls),
             request,
-            Keyset(model=cls, partition_columns=(), columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
         )
 
     @classmethod
@@ -73,7 +73,7 @@ class AuditLog(Record, table=True):
         return await keyset_page(
             statement,
             request,
-            Keyset(model=cls, partition_columns=(), columns=(KeyColumn(col(cls.id), "desc", "int"),)),
+            Keyset(model=cls, columns=(KeyColumn(col(cls.id), "desc", "int"),)),
         )
 
 

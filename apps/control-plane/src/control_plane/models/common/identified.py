@@ -11,8 +11,6 @@ from control_plane.db import current_session
 from control_plane.models.common.pagination import KeyColumn, Keyset, PageQuery, PageSlice, keyset_page
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
     from sqlalchemy.engine import Connection
     from sqlalchemy.orm import InstrumentedAttribute
     from sqlalchemy.orm.mapper import Mapper
@@ -59,17 +57,11 @@ class Identified(SQLModel):
         cls,
         request: PageQuery,
         *conditions: ColumnElement[bool] | bool,
-        partition: Mapping[str, str | int | bool | UUID | None] | None = None,
     ) -> PageSlice[Self]:
         mapper = cast("Mapper[Any]", inspect(cls))
         id_column = cast("InstrumentedAttribute[UUID]", mapper.all_orm_descriptors["id"])
-        partition_values = partition or {}
-        statement = select(cls).where(*conditions)
-        for name, value in partition_values.items():
-            column = cast("InstrumentedAttribute[Any]", mapper.all_orm_descriptors[name])
-            statement = statement.where(column.is_(None) if value is None else column == value)
         return await keyset_page(
-            statement,
+            select(cls).where(*conditions),
             request,
-            Keyset(model=cls, partition_columns=tuple(partition_values), columns=(KeyColumn(id_column, "desc", "uuid"),)),
+            Keyset(model=cls, columns=(KeyColumn(id_column, "desc", "uuid"),)),
         )

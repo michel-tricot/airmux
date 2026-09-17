@@ -132,8 +132,14 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def page_for_scope(cls, org_id: UUID | None, workspace_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        partition = {"org_id": org_id, "workspace_id": workspace_id} if workspace_id is not None else {"org_id": org_id}
-        return await cls.page(request, partition=partition)
+        conditions = (
+            (cls.org_id == org_id, cls.workspace_id == workspace_id)
+            if workspace_id is not None
+            else (col(cls.org_id).is_(None),)
+            if org_id is None
+            else (cls.org_id == org_id,)
+        )
+        return await cls.page(request, *conditions)
 
     async def delete_with_value(self, store: SecretStore) -> None:
         """Delete the credential and the value behind it.
