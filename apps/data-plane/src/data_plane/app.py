@@ -32,7 +32,7 @@ logger = logging.getLogger("data_plane")
 
 
 async def healthz(request: Request) -> JSONResponse:
-    return JSONResponse({"status": "ok", "events": await runtime_of(request).outbox.stats()})
+    return JSONResponse({"status": "ok", "events": await runtime_of(request).outbox.backlog()})
 
 
 async def readyz(request: Request) -> JSONResponse:

@@ -187,6 +187,7 @@ async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, htt
         assert isinstance(filled, int)
         assert isinstance(durable, int)
         assert filled + durable == 1
+        assert stats["pending"] == 2
         assert stats["capacity"] == CAPACITY
         oldest_age_s = stats["oldest_age_s"]
         assert oldest_age_s is not None

@@ -13,7 +13,6 @@ from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
 from data_plane.outbox import DevNullOutbox, OutboxFullError
-from data_plane.outbox.queued import CAPACITY
 from data_plane.proxy import RequestRejectedError, _transform
 
 
@@ -89,10 +88,10 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
 
     assert response.status_code == 200
     assert health.status_code == 200
-    assert health.json()["events"]["reserved"] == 0
-    assert health.json()["events"]["filled"] + health.json()["events"]["durable"] == 1
-    assert health.json()["events"]["capacity"] == CAPACITY
-    assert health.json()["events"]["oldest_age_s"] >= 0
+    events = health.json()["events"]
+    assert events.keys() == {"pending", "oldest_age_s"}
+    assert events["pending"] == 1
+    assert events["oldest_age_s"] >= 0
 
 
 @respx.mock

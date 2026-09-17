@@ -120,7 +120,7 @@ class SqliteOutbox(QueuedOutbox):
 
     async def stats(self) -> dict[str, OutboxStat]:
         durable = await self._storage_call(self._durable_backlog)
-        return {**self._queue_stats(durable.oldest_event_at), "durable": durable.events}
+        return {**self._queue_stats(durable.events, durable.oldest_event_at), "durable": durable.events}
 
     async def export_once(self) -> int:
         if not await self.claim_export(self._lease_ttl(), time.time()):

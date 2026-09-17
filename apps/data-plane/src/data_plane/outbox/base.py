@@ -84,6 +84,10 @@ class EventOutbox(ABC):
     async def stats(self) -> Mapping[str, OutboxStat]:
         return {}
 
+    async def backlog(self) -> Mapping[str, OutboxStat]:
+        stats = await self.stats()
+        return {"pending": stats.get("pending", 0), "oldest_age_s": stats.get("oldest_age_s")}
+
     def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         return ()
 

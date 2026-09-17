@@ -157,12 +157,13 @@ class QueuedOutbox(EventOutbox):
             future = self._executor.submit(operation)
         return await asyncio.wrap_future(future)
 
-    def _queue_stats(self, stored_oldest: datetime | None = None) -> dict[str, OutboxStat]:
+    def _queue_stats(self, stored: int = 0, stored_oldest: datetime | None = None) -> dict[str, OutboxStat]:
         with self._lock:
             memory_oldest = self._events[0].occurred_at if self._events else None
             values = tuple(value for value in (memory_oldest, stored_oldest) if value is not None)
             oldest = min(values) if values else None
             return {
+                "pending": self._reserved + self._filled + stored,
                 "reserved": self._reserved,
                 "filled": self._filled,
                 "capacity": CAPACITY,
