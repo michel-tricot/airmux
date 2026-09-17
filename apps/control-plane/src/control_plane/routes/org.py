@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
 from control_plane.models import AuditLog, OrgMembership, UsageEvent, User
 from control_plane.models.audit import ActivityOut
-from control_plane.models.common.wire import DeletedOut, Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
-from control_plane.models.usage_event import UsageEventOut, UsageEventPage
+from control_plane.models.usage_event import UsageEventOut
 from control_plane.models.user import OrgServiceAccountCreatedOut, OrgServiceAccountIn, UserOut
 from control_plane.routes.management_keys import issue_management_key
 
@@ -139,22 +139,20 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
 
 
 @router.get("/events", tags=["Organization Usage Events"], dependencies=[require("api", org_scope, Permission.usage_read)])
-async def list_org_events(org_id: OrgDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+async def list_org_events(org_id: OrgDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events across an organization with cursor pagination."""
-    events = await UsageEvent.for_scope(org_id, None, page)
-    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(org_id, None, page), UsageEventOut.model_validate)
 
 
 @router.get(
     "/workspaces/{workspace_ref}/events", tags=["Workspace Usage Events"], dependencies=[require("api", workspace_scope, Permission.usage_read)]
 )
-async def list_workspace_events(workspace: WorkspaceDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+async def list_workspace_events(workspace: WorkspaceDep, page: PageDep) -> PageEnvelope[UsageEventOut]:
     """List usage events for one workspace with cursor pagination."""
-    events = await UsageEvent.for_scope(workspace.org_id, workspace.id, page)
-    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
+    return PageEnvelope.from_slice(await UsageEvent.for_scope(workspace.org_id, workspace.id, page), UsageEventOut.model_validate)
 
 
 @router.get("/activity", tags=["Organization Activity"], dependencies=[require("api", org_scope, Permission.audit_read)])
-async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
+async def list_activity(org_id: OrgDep, page: PageDep) -> PageEnvelope[ActivityOut]:
     """List the most recent audited changes in an organization."""
-    return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])
+    return PageEnvelope.from_slice(await AuditLog.for_org(org_id, page), ActivityOut.model_validate)

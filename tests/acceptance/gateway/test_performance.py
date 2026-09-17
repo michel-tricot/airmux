@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import json
 import sqlite3
+import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -122,6 +124,45 @@ def test_performance_load_preserves_usage_with_integration_artifacts_enabled(gat
         usage = json.loads(events.execute("SELECT body FROM outbox LIMIT 1").fetchone()[0])
     assert (usage["input_tokens"], usage["output_tokens"], usage["cache_read_tokens"]) == (11, 3, 4)
     assert usage["status"] == "ok"
+
+
+def test_real_request_does_not_wait_for_sqlite_and_sigterm_drains(gateway: Gateway, tmp_path: Path):
+    candidate = performance.PerformanceGateway(tmp_path / "locked-sqlite", "locked-sqlite")
+    candidate.executable = gateway.executable
+    provider = candidate.add_provider()
+    lock: sqlite3.Connection | None = None
+    stopped: threading.Thread | None = None
+    try:
+        candidate.start()
+        lock = sqlite3.connect(candidate.directory / "usage/events.db")
+        lock.execute("BEGIN IMMEDIATE")
+
+        started = time.monotonic()
+        response = candidate.request(timeout_s=2)
+        elapsed = time.monotonic() - started
+
+        assert response.status_code == 200
+        assert elapsed < 1
+        assert len(provider.requests) == 1
+
+        stopped = threading.Thread(target=candidate.stop)
+        stopped.start()
+        assert stopped.is_alive()
+        lock.rollback()
+        lock.close()
+        lock = None
+        stopped.join(timeout=5)
+        assert not stopped.is_alive()
+
+        with sqlite3.connect(candidate.directory / "usage/events.db") as events:
+            assert events.execute("SELECT COUNT(*) FROM outbox").fetchone()[0] == 1
+    finally:
+        if lock is not None:
+            lock.rollback()
+            lock.close()
+        if stopped is not None and stopped.is_alive():
+            stopped.join(timeout=5)
+        candidate.close()
 
 
 def overhead(revision: Revision, round_number: int, direct_ms: float, proxied_ms: float):
@@ -262,7 +303,7 @@ def test_overhead_summary_and_raw_data_reproduce_comparisons(tmp_path: Path, mon
     assert len(report["metering_event_counts"]) == 10
     summary = (output / "summary.md").read_text()
     assert "Incremental gateway overhead" in summary
-    assert "Durable SQLite" in summary
+    assert "SQLite and dev-null" in summary
     assert "Absolute change" in summary
     assert "Potential regression" in summary
     assert "::warning::" in result.output
@@ -281,7 +322,7 @@ def test_performance_round_uses_the_supplied_revision_harness(gateway: Gateway, 
     result = run_round(directory, Path(gateway.executable), "base", 1, Settings(0.1, 1, 50), harness_directory=harness_directory)
     assert {(measurement.scenario, measurement.concurrency) for measurement in result.measurements} == set(performance.WORKLOADS)
     assert all(measurement.revision == "base" and measurement.round == 1 for measurement in result.measurements)
-    assert len(result.overhead) == 5
+    assert len(result.overhead) == 8
     assert all(min(timings.direct_before.latency_ms) > 40 for timings in result.overhead)
     bundle = yaml.safe_load((directory / "bundle.yml").read_text())
     assert bundle["keys"][0]["token"] == "sk-inf-revision-harness"

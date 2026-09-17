@@ -474,6 +474,13 @@ export interface CliAuthStartOut {
   expires_in_seconds: number;
 }
 
+/**
+ * @minLength 1
+ * @maxLength 512
+ * @pattern ^[A-Za-z0-9_-]+$
+ */
+export type CursorToken = string;
+
 export type DataPlaneInstanceOutStatus = typeof DataPlaneInstanceOutStatus[keyof typeof DataPlaneInstanceOutStatus];
 
 
@@ -1204,6 +1211,10 @@ export interface OrgUpdate {
   name?: string | null;
 }
 
+export interface PageInfo {
+  next_cursor: string | null;
+}
+
 export interface PasswordChangeIn {
   /**
      * Current account password
@@ -1758,6 +1769,24 @@ export interface WorkspaceUpdate {
   name?: string | null;
 }
 
+export interface PageActivityOut {
+  /** @maxItems 200 */
+  items: ActivityOut[];
+  page: PageInfo;
+}
+
+export interface PageOrgOut {
+  /** @maxItems 200 */
+  items: OrgOut[];
+  page: PageInfo;
+}
+
+export interface PageUsageEventOut {
+  /** @maxItems 200 */
+  items: UsageEventOut[];
+  page: PageInfo;
+}
+
 export type ListInstanceManagementKeysParams = {
 /**
  * Return only management keys issued to this principal
@@ -1806,6 +1835,10 @@ include_offline?: boolean;
 
 export type ListInstanceActivityParams = {
 /**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
  * Maximum number of results to return
  * @minimum 1
  * @maximum 200
@@ -1820,23 +1853,24 @@ export type ListUsersParams = {
 service_account?: boolean | null;
 };
 
+export type ListOrgsParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
 export type ListOrgEventsParams = {
 /**
- * Return events before this timestamp; use with before_event_id
+ * Opaque continuation token from the previous page
  */
-before?: string | null;
-/**
- * Event ID that disambiguates the before timestamp
- */
-before_event_id?: string | null;
-/**
- * Return events after this timestamp; use with after_event_id
- */
-after?: string | null;
-/**
- * Event ID that disambiguates the after timestamp
- */
-after_event_id?: string | null;
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1
@@ -1847,21 +1881,9 @@ limit?: number;
 
 export type ListWorkspaceEventsParams = {
 /**
- * Return events before this timestamp; use with before_event_id
+ * Opaque continuation token from the previous page
  */
-before?: string | null;
-/**
- * Event ID that disambiguates the before timestamp
- */
-before_event_id?: string | null;
-/**
- * Return events after this timestamp; use with after_event_id
- */
-after?: string | null;
-/**
- * Event ID that disambiguates the after timestamp
- */
-after_event_id?: string | null;
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1
@@ -1871,6 +1893,10 @@ limit?: number;
 };
 
 export type ListActivityParams = {
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: CursorToken | null;
 /**
  * Maximum number of results to return
  * @minimum 1

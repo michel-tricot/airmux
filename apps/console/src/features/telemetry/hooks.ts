@@ -1,17 +1,20 @@
 import {
-  useListOrgEvents,
-  useListWorkspaceEvents,
-  useListActivity,
+  useListOrgEventsInfinite,
+  useListWorkspaceEventsInfinite,
+  useListActivityInfinite,
   useListDataPlanes,
-  useListInstanceActivity,
+  useListInstanceActivityInfinite,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useOrgEvents(orgId: string, params: ListOrgEventsParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgEvents(orgId, params, { query: { enabled, refetchInterval: 3_000 } });
+  return useListOrgEventsInfinite(orgId, params, {
+    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
+  });
 }
 
 export function useWorkspaceEvents(
@@ -20,13 +23,13 @@ export function useWorkspaceEvents(
   params: ListWorkspaceEventsParams,
   { enabled = true }: EnabledQueryOptions = {},
 ) {
-  return useListWorkspaceEvents(orgId, workspaceRef, params, {
-    query: { enabled, refetchInterval: 3_000 },
+  return useListWorkspaceEventsInfinite(orgId, workspaceRef, params, {
+    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
   });
 }
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListActivity(orgId, params, { query: { enabled } });
+  return useListActivityInfinite(orgId, params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
@@ -34,5 +37,5 @@ export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
 }
 
 export function useInstanceActivity(params: { limit?: number }, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceActivity(params, { query: { enabled } });
+  return useListInstanceActivityInfinite(params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }

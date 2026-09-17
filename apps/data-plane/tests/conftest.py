@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -132,9 +133,19 @@ def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: floa
     )
 
 
+def read_and_close_outbox(outbox: SqliteOutbox, limit: int = 10):
+    async def read_and_close():
+        events = await outbox.next_batch(limit)
+        await outbox.close()
+        return events
+
+    return asyncio.run(read_and_close())
+
+
 def mock_control_plane() -> None:
     respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest").mock(return_value=httpx.Response(503))
     respx.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat").mock(return_value=httpx.Response(200))
+    respx.post(f"{CONTROL_PLANE_URL}/api/v1/events").mock(return_value=httpx.Response(503))
 
 
 PLATFORM_CREDENTIAL = make_credential(org=None)

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 function open(path: string) {
   window.localStorage.setItem('airmux_org_id', ORG.id);
@@ -12,7 +12,7 @@ function open(path: string) {
 }
 
 it('organizes workspace settings into selectable categories', async () => {
-  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })));
+  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])));
   open(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
   const user = userEvent.setup();
   expect(await screen.findByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
@@ -27,19 +27,17 @@ it('organizes workspace settings into selectable categories', async () => {
 it('keeps workspace members visible when member candidates are unavailable', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-      HttpResponse.json({
-        data: [
-          {
-            user_id: 'user-2',
-            workspace_id: WORKSPACES[0].id,
-            email: 'member@example.com',
-            name: 'Workspace Member',
-            service_account: false,
-            role: 'member',
-            status: 'member',
-          },
-        ],
-      }),
+      enveloped([
+        {
+          user_id: 'user-2',
+          workspace_id: WORKSPACES[0].id,
+          email: 'member@example.com',
+          name: 'Workspace Member',
+          service_account: false,
+          role: 'member',
+          status: 'member',
+        },
+      ]),
     ),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => new HttpResponse(null, { status: 503 })),
   );

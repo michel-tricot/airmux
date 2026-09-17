@@ -10,7 +10,7 @@ from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import Field, col
 
-from control_plane.authz import Permission, Scope
+from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -110,6 +110,18 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
         for key in keys:
             if key.parent_id not in key_ids:
                 await key.delete_with_descendants()
+
+    @classmethod
+    async def for_scope(cls, scope: Scope, user_id: UUID | None) -> list[Self]:
+        scope_conditions = (
+            (cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
+            if scope.level is ScopeLevel.workspace
+            else (cls.org_id == scope.org_id,)
+            if scope.level is ScopeLevel.org
+            else ()
+        )
+        user_conditions = (cls.user_id == user_id,) if user_id is not None else ()
+        return await cls.find(*scope_conditions, *user_conditions, order_by=col(cls.id))
 
 
 class ManagementKeyOut(RecordOut[ManagementKey]):

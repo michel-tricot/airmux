@@ -5,20 +5,19 @@ import json
 import httpx
 import pytest
 import respx
-from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane, read_and_close_outbox
 from starlette.testclient import TestClient
 
+import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
+from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.proxy import RequestRejectedError, _transform
 
 
 def _recorded(tmp_path, http_client):
-    outbox = make_outbox(tmp_path, http_client)
-    events = outbox.next_batch(10)
-    outbox.close()
-    return events
+    return read_and_close_outbox(make_outbox(tmp_path, http_client))
 
 
 OPENAI_RESPONSE = {
@@ -89,8 +88,35 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
 
     assert response.status_code == 200
     assert health.status_code == 200
-    assert health.json()["events"]["pending"] == 1
-    assert health.json()["events"]["oldest_age_s"] >= 0
+    events = health.json()["events"]
+    assert events.keys() == {"pending", "oldest_age_s"}
+    assert events["pending"] == 1
+    assert events["oldest_age_s"] >= 0
+
+
+@respx.mock
+@pytest.mark.parametrize("model", ["gpt-test", "ghost"])
+def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
+    outbox = DevNullOutbox()
+
+    def reject_reservation():
+        raise OutboxFullError
+
+    monkeypatch.setattr(outbox, "reserve", reject_reservation)
+    monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
+    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": model, "messages": [{"role": "user", "content": "say hi"}]},
+        )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "metering_capacity_exhausted"
+    assert upstream.call_count == 0
 
 
 @respx.mock

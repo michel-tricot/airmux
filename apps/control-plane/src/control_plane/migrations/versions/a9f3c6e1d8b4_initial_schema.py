@@ -199,6 +199,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("event_id"),
     )
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
+    op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
+    op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -635,7 +637,9 @@ def downgrade() -> None:
     op.drop_table("auth_session")
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")
     op.drop_table("provider")
     op.drop_table("data_plane_instance")

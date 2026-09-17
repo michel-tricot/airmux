@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import App from '@/App';
-import { server } from './msw';
+import { paged, server } from './msw';
 import { now } from './fixtures';
 
 function installUser(instanceRole: Api.InstanceRole | null = null) {
@@ -27,7 +27,7 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
       }),
     ),
     http.get('/api/v1/users/target-user', () => HttpResponse.json({ data: user })),
-    http.get('/api/v1/organizations', () => HttpResponse.json({ data: [] })),
+    http.get('/api/v1/organizations', () => paged([])),
     http.put('/api/v1/users/target-user/instance-role', async ({ request }) => {
       const body = (await request.json()) as Api.InstanceRoleIn;
       user = { ...user, instance_role: body.instance_role };

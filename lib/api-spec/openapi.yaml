@@ -949,6 +949,15 @@ paths:
       - ManagementKey: []
       - SessionCookie: []
       parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -965,7 +974,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+                $ref: '#/components/schemas/PageEnvelope_ActivityOut_'
         '422':
           description: Validation Error
           content:
@@ -1250,39 +1259,6 @@ paths:
         - principals.manage
       description: 'Required permission: `principals.manage`.'
   /api/v1/organizations:
-    get:
-      tags:
-      - Instance Organizations
-      summary: List Organizations
-      description: 'List every organization on the instance.
-
-
-        Required permission: `organizations.read`.'
-      operationId: list_orgs
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_OrgOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      x-airmux-authority:
-      - scope: instance_scope
-        anyOf:
-        - organizations.read
     post:
       tags:
       - Instance Organizations
@@ -1292,12 +1268,15 @@ paths:
 
         Required permission: `organizations.create`.'
       operationId: create_org
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/OrgCreate'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1315,13 +1294,63 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
       x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - organizations.create
+    get:
+      tags:
+      - Instance Organizations
+      summary: List Organizations
+      description: 'List every organization on the instance.
+
+
+        Required permission: `organizations.read`.'
+      operationId: list_orgs
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
   /api/v1/organizations/{org_id}:
     patch:
       tags:
@@ -3544,46 +3573,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: before
+      - name: cursor
         in: query
         required: false
         schema:
           anyOf:
-          - type: string
-            format: date-time
+          - $ref: '#/components/schemas/CursorToken'
           - type: 'null'
-          title: Before
-        description: Return events before this timestamp; use with before_event_id
-      - name: before_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Before Event Id
-        description: Event ID that disambiguates the before timestamp
-      - name: after
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: After
-        description: Return events after this timestamp; use with after_event_id
-      - name: after_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: After Event Id
-        description: Event ID that disambiguates the after timestamp
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -3600,7 +3598,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+                $ref: '#/components/schemas/PageEnvelope_UsageEventOut_'
         '422':
           description: Validation Error
           content:
@@ -3643,46 +3641,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: before
+      - name: cursor
         in: query
         required: false
         schema:
           anyOf:
-          - type: string
-            format: date-time
+          - $ref: '#/components/schemas/CursorToken'
           - type: 'null'
-          title: Before
-        description: Return events before this timestamp; use with before_event_id
-      - name: before_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Before Event Id
-        description: Event ID that disambiguates the before timestamp
-      - name: after
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: After
-        description: Return events after this timestamp; use with after_event_id
-      - name: after_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: After Event Id
-        description: Event ID that disambiguates the after timestamp
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -3699,7 +3666,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+                $ref: '#/components/schemas/PageEnvelope_UsageEventOut_'
         '422':
           description: Validation Error
           content:
@@ -3735,6 +3702,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -3751,7 +3727,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+                $ref: '#/components/schemas/PageEnvelope_ActivityOut_'
         '422':
           description: Validation Error
           content:
@@ -4631,6 +4607,11 @@ components:
 
 
         The secret value is not included. A version change tells data planes to refresh their cached value.'
+    CursorToken:
+      type: string
+      maxLength: 512
+      minLength: 1
+      pattern: ^[A-Za-z0-9_-]+$
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -5205,17 +5186,6 @@ components:
       required:
       - data
       title: Envelope[WorkspaceOut]
-    Envelope_list_ActivityOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ActivityOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[ActivityOut]]
     Envelope_list_DataPlaneInstanceOut__:
       properties:
         data:
@@ -5282,17 +5252,6 @@ components:
       required:
       - data
       title: Envelope[list[OrgMemberOut]]
-    Envelope_list_OrgOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/OrgOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[OrgOut]]
     Envelope_list_PolicyOut__:
       properties:
         data:
@@ -5315,17 +5274,6 @@ components:
       required:
       - data
       title: Envelope[list[ProviderCredentialOut]]
-    Envelope_list_UsageEventOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UsageEventOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[UsageEventOut]]
     Envelope_list_UserOut__:
       properties:
         data:
@@ -6745,6 +6693,62 @@ components:
       additionalProperties: false
       type: object
       title: OrgUpdate
+    PageEnvelope_ActivityOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ActivityOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[ActivityOut]
+    PageEnvelope_OrgOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrgOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[OrgOut]
+    PageEnvelope_UsageEventOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UsageEventOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[UsageEventOut]
+    PageInfo:
+      properties:
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - next_cursor
+      title: PageInfo
     PasswordChangeIn:
       properties:
         current_password:

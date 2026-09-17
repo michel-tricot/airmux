@@ -3,8 +3,8 @@ title: "Usage and activity"
 description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
 ---
 
-airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways queue events
-locally and export them to the control plane in batches.
+airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
+without waiting for local persistence. SQLite deployments export durable events to the control plane in batches.
 
 ## Usage event fields
 
@@ -31,7 +31,7 @@ airmux events tail --interval 2 --keep 30
 ```
 
 The console shows workspace usage and instance or organization activity where the current principal has permission. The
-management API supports cursor pagination with an `(occurred_at, event_id)` pair.
+management API supports opaque cursor pagination.
 
 ## Gateway health
 

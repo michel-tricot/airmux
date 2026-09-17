@@ -5,7 +5,6 @@ from urllib.parse import quote
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
-from sqlmodel import col
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission
@@ -60,13 +59,8 @@ async def create_invitation(
 @router.get("", tags=["Organization Invitations"], dependencies=[require("api", org_scope, Permission.members_read)])
 async def list_invitations(org_id: OrgDep) -> Envelope[list[OrgInvitationOut]]:
     """List pending and expired invitations without returning their secret URLs."""
-    invitations = await OrgInvitation.find(
-        OrgInvitation.org_id == org_id,
-        col(OrgInvitation.accepted_at).is_(None),
-        col(OrgInvitation.revoked_at).is_(None),
-        order_by=col(OrgInvitation.email),
-    )
     now = datetime.now(tz=UTC)
+    invitations = await OrgInvitation.for_org(org_id)
     return Envelope(data=[_out(invitation, now) for invitation in invitations])
 
 

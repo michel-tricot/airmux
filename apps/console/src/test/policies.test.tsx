@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 
@@ -207,7 +207,7 @@ it('shows workspace, principal, and key policies when inspecting an inference ke
     { ...policy('disabled', 'Disabled restriction', 4), enabled: false },
   ];
   server.use(
-    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => enveloped([key])),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ data: policies })),
   );
   window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/inference-keys`);

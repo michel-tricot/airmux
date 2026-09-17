@@ -30,12 +30,14 @@ from api_models import (
     WorkspaceOut,
 )
 from cli.client import (
+    AllPagesOption,
+    LimitOption,
     access_client,
     access_get,
     ensure_ok,
     org_path,
     payload,
-    payload_rows,
+    payload_page,
     post_expecting,
     resolve_org_id,
     resolve_workspace,
@@ -61,6 +63,7 @@ from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, p
 from cli.profiles import active_profile, load_config, upsert_profile
 
 if TYPE_CHECKING:
+    import httpx
     from rich.table import Table
 
 ORG_COLS = [
@@ -143,9 +146,11 @@ EVENT_COLS = [
 
 
 @orgs_app.command("list")
-def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def orgs_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List every organization on this instance."""
-    print_rows("orgs", access_get("/api/v1/organizations", control_plane_url, OrgOut), ORG_COLS, fmt)
+    print_rows("orgs", access_get("/api/v1/organizations", control_plane_url, OrgOut, limit=limit, all_pages=all_pages), ORG_COLS, fmt)
 
 
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
@@ -177,10 +182,15 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
 
 
 @workspace_members_app.command("list")
-def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def workspace_members_list(
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("members", access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut), MEMBER_COLS, fmt)
+    rows = access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut)
+    print_rows("members", rows, MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
@@ -209,11 +219,18 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 
 
 @inference_keys_app.command("list")
-def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def inference_keys_list(
+    workspace: WorkspaceOption = "",
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
     """List this workspace's inference keys."""
     workspace_ref = resolve_workspace(workspace)
     print_rows(
-        "inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut), KEY_COLS, fmt
+        "inference keys",
+        access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut),
+        KEY_COLS,
+        fmt,
     )
 
 
@@ -340,7 +357,10 @@ def management_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI
         else f"/api/v1/organizations/{selected_org}/management-keys"
     )
     print_rows(
-        "management keys", access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None), MANAGEMENT_KEY_COLS, fmt
+        "management keys",
+        access_get(path, control_plane_url, ManagementKeyOut, {"user_id": user_id} if user_id else None),
+        MANAGEMENT_KEY_COLS,
+        fmt,
     )
 
 
@@ -455,16 +475,36 @@ def gateways_list(
 ) -> None:
     """List connected gateways."""
     load_dotenv(find_dotenv(usecwd=True))
-    with access_client(control_plane_url) as c:
-        resp = c.get("/api/v1/instance/data-planes", params={"include_offline": all_})
-        ensure_ok(resp)
-        print_rows("gateways", payload_rows(resp, DataPlaneInstanceOut), INSTANCE_COLS, fmt)
+    rows = access_get(
+        "/api/v1/instance/data-planes",
+        control_plane_url,
+        DataPlaneInstanceOut,
+        {"include_offline": all_},
+    )
+    print_rows("gateways", rows, INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
-def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+def events_list(
+    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
     """List recent requests, newest first."""
-    print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut), EVENT_COLS, fmt)
+    print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut, limit=limit, all_pages=all_pages), EVENT_COLS, fmt)
+
+
+def _events_since(client: httpx.Client, path: str, newest_event_id: str | None) -> list[UsageEventOut]:
+    cursor = None
+    events = []
+    while True:
+        params = {"limit": 200, **({"cursor": cursor} if cursor else {})}
+        page = payload_page(ensure_ok(client.get(path, params=params)), UsageEventOut)
+        for event in page.items:
+            if str(event.event_id) == newest_event_id:
+                return list(reversed(events))
+            events.append(event)
+        if newest_event_id is None or page.next_cursor is None:
+            return list(reversed(events))
+        cursor = page.next_cursor
 
 
 @events_app.command("tail")
@@ -487,31 +527,26 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
     with access_client(control_plane_url) as c:
         resp = c.get(path, params={"limit": keep})
         ensure_ok(resp)
-        rows.extend(reversed(payload_rows(resp, UsageEventOut)))
-        cursor = (
-            (rows[-1].occurred_at.isoformat(), str(rows[-1].event_id))
-            if rows
-            else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
-        )
+        initial = payload_page(resp, UsageEventOut)
+        rows.extend(reversed(initial.items))
+        newest_event_id = str(initial.items[0].event_id) if initial.items else None
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
-                    ensure_ok(resp)
-                    for event in payload_rows(resp, UsageEventOut):
+                    batch = _events_since(c, path, newest_event_id)
+                    for event in batch:
                         emit(event)
-                        cursor = (event.occurred_at.isoformat(), str(event.event_id))
+                    if batch:
+                        newest_event_id = str(batch[-1].event_id)
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
-                    ensure_ok(resp)
-                    batch = payload_rows(resp, UsageEventOut)
+                    batch = _events_since(c, path, newest_event_id)
                     fresh_ids = {str(event.event_id) for event in batch}
                     if batch:
                         rows.extend(batch)
-                        cursor = (batch[-1].occurred_at.isoformat(), str(batch[-1].event_id))
+                        newest_event_id = str(batch[-1].event_id)
                     live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")
@@ -629,10 +664,7 @@ def provider_credentials_list(
 ) -> None:
     """List provider keys, in the order they are tried."""
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
-    with access_client(control_plane_url) as c:
-        resp = c.get(path)
-        ensure_ok(resp)
-        rows = payload_rows(resp, ProviderCredentialOut)
+    rows = access_get(path, control_plane_url, ProviderCredentialOut)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
 
 

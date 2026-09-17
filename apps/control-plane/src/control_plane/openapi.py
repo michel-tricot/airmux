@@ -241,11 +241,8 @@ PARAMETER_DESCRIPTIONS = {
     "code": "Device authorization code shown by the CLI",
     "include_offline": "Include data planes whose most recent heartbeat is outside the online window",
     "service_account": "Filter by principal type: true for service accounts and false for human users",
+    "cursor": "Opaque continuation token from the previous page",
     "limit": "Maximum number of results to return",
-    "before": "Return events before this timestamp; use with before_event_id",
-    "before_event_id": "Event ID that disambiguates the before timestamp",
-    "after": "Return events after this timestamp; use with after_event_id",
-    "after_event_id": "Event ID that disambiguates the after timestamp",
 }
 
 

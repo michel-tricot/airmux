@@ -183,6 +183,7 @@ def test_an_instance_credential_can_be_created_and_listed(tmp_path):
 
         listed = c.get("/api/v1/instance/provider-credentials", headers=root)
         assert listed.status_code == 200, listed.text
+        assert set(listed.json()) == {"data"}
         assert [(item["id"], item["status"]) for item in listed.json()["data"]] == [(credential["id"], "unknown")]
 
 
