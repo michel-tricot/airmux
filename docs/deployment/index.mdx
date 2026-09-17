@@ -8,7 +8,7 @@ One release provides one Python distribution and one container image. Choose how
 | Shape | Purpose |
 | --- | --- |
 | airmux | Default full platform on one application host plus Postgres |
-| Split | Independent setup, console, control-plane, and gateway processes with separately scalable gateways |
+| Split | Independent console, control-plane, and gateway processes with separately scalable gateways |
 | [Gateway only](/docs/deployment/gateway) | Local-file inference without Postgres or a control plane |
 
 For the full platform, start with airmux unless you need to size or restart the services independently. Split does
@@ -17,15 +17,6 @@ not permit mixed releases: every role must use the same image digest until cross
 <Columns cols={2}>
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
     Run airmux and Postgres on one host.
-  </Card>
-  <Card title="Fly.io" icon="plane" href="/docs/deployment/fly">
-    Deploy one Machine, a persistent volume, and Managed Postgres.
-  </Card>
-  <Card title="Render" icon="cloud" href="/docs/deployment/render">
-    Use the checked-in Blueprint for a web service, disk, and Postgres.
-  </Card>
-  <Card title="DigitalOcean" icon="droplet" href="/docs/deployment/digitalocean">
-    Add automatic HTTPS to Docker Compose on a Droplet.
   </Card>
   <Card title="Upgrade and rollback" icon="rotate" href="/docs/deployment/upgrades">
     Plan an upgrade and roll back from a consistent recovery point if verification fails.

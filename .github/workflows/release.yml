@@ -254,13 +254,12 @@ jobs:
         run: |
           cd container
           sha256sum --check SHA256SUMS
-          gzip -dc airmux-image.tar.gz | docker load
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          docker tag airmux:ci "$IMAGE:$VERSION"
-          push_output="$(docker push "$IMAGE:$VERSION")"
-          echo "$push_output"
-          digest="$(printf '%s\n' "$push_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]*\).*$/\1/p' | tail -1)"
-          test -n "$digest"
+          candidate="$(cat image)"
+          [[ "$candidate" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" "$candidate"
+          digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
 
   verify-pypi:

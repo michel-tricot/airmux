@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from contextlib import contextmanager
@@ -81,21 +82,19 @@ def configuration_environment(config: Path) -> Iterator[None]:
             os.environ["AIRMUX_CONFIG"] = selected
 
 
-def bootstrap_keygen(config: Path) -> tuple[Path, bool]:
+def _ensure_bootstrap_key(config: Path) -> None:
     document = load_yaml(config)
     control_plane = document.get("control_plane") if isinstance(document, dict) else None
     bootstrap = control_plane.get("bootstrap") if isinstance(control_plane, dict) else None
     token = bootstrap.get("token") if isinstance(bootstrap, dict) else None
     match = re.fullmatch(r"\$\{file:(.+)\}", token) if isinstance(token, str) else None
     if match is None or ":-" in match.group(1):
-        message = "control_plane.bootstrap.token must be a file reference"
-        raise ValueError(message)
+        return
     path = config.parent / match.group(1)
     if path.is_file() and not path.is_symlink():
-        return path, False
+        return
     token, _ = new_management_key()
     write_new_configuration(path.parent, {path.name: token})
-    return path, True
 
 
 def initialize(directory: Path, console_url: str) -> None:
@@ -127,10 +126,14 @@ def initialize(directory: Path, console_url: str) -> None:
     )
 
 
-def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
+def serve(config: Path, *, host: str, port: int, taxonomy: Path | None, dev: bool) -> None:
     os.environ["AIRMUX_CONFIG"] = str(config)
-    if dev:
+    _ensure_bootstrap_key(config)
+    load_settings(config)
+    with database_errors():
         run_migrations()
+    if taxonomy is not None:
+        asyncio.run(apply_catalog(config, taxonomy))
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
 
 

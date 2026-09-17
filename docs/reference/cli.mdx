@@ -30,7 +30,7 @@ For source checkouts and unreleased builds, see [Development](/docs/development)
 | Group           | Commands                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------ |
 | `gateway`       | `init`, `validate`, `serve`, `schema`                                                                  |
-| `control-plane` | `init`, `validate`, `serve`, `migrate`, `bootstrap-keygen`, `owner`, `taxonomy`, `fixtures`, `openapi` |
+| `control-plane` | `init`, `validate`, `serve`, `migrate`, `owner`, `taxonomy`, `fixtures`, `openapi` |
 
 Configuration resolution is `--config/-c`, then `AIRMUX_CONFIG`, then per-runtime defaults; the
 [configuration reference](/docs/reference/configuration) names them.
@@ -48,9 +48,7 @@ For a standalone gateway, follow [Gateway only](/docs/deployment/gateway). For a
 airmux control-plane init --directory deployment --console-url https://llm.example.com
 export DATABASE_URL='postgresql://user:password@localhost:5432/airmux'
 airmux control-plane validate --config deployment/airmux.yml
-airmux control-plane migrate --config deployment/airmux.yml
-airmux control-plane taxonomy --config deployment/airmux.yml --file /path/to/taxonomy.yml
-airmux control-plane serve --config deployment/airmux.yml
+airmux control-plane serve --config deployment/airmux.yml --taxonomy /path/to/taxonomy.yml
 ```
 
 In another terminal, run `airmux gateway serve --config deployment/airmux.yml`. The generated configuration shares a
@@ -58,9 +56,9 @@ private bootstrap key and file secret store between the planes. The same install
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
 
-`serve` runs in the foreground. It does not create accounts or import a taxonomy. Control-plane migrations are explicit;
-`control-plane serve --dev` applies them before starting the development reloader. `gateway serve --dev` reloads Python code
-and cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
+`serve` runs in the foreground. Control-plane startup creates a missing file-backed bootstrap key and applies forward
+migrations. `--taxonomy PATH` applies that taxonomy before serving. It does not create human accounts. `--dev` reloads
+Python code. `gateway serve --dev` cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
 
 `control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `catalog apply` instead uses
 the authenticated management API. `control-plane owner` is local recovery through database access; it promotes an existing

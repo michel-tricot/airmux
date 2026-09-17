@@ -23,14 +23,10 @@ bun install --frozen-lockfile
 uv run pre-commit install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
-uv run airmux control-plane bootstrap-keygen
-uv run airmux control-plane migrate
-uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-`bootstrap-keygen` ensures the file referenced by `control_plane.bootstrap.token` exists. In the checked-in configuration
-that is `.airmux/dataplane.key`; keep it with the matching local database. This leaves the instance unclaimed so the
-normal onboarding flow remains available.
+Control-plane startup creates `.airmux/dataplane.key` when absent, migrates the database, and applies the selected taxonomy.
+Keep the key with the matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
 
 ## Start the services
 
@@ -38,7 +34,7 @@ Run each process in a separate terminal:
 
 | Process | Command | Address |
 | --- | --- | --- |
-| Control plane | `uv run airmux control-plane serve --dev` | `http://127.0.0.1:8000` |
+| Control plane | `uv run airmux control-plane serve --dev --taxonomy taxonomy/taxonomy.yml` | `http://127.0.0.1:8000` |
 | Data plane | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
 | Console | `bun run dev` | `http://127.0.0.1:5000` |
 

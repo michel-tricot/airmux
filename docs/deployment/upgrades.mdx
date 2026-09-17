@@ -8,7 +8,7 @@ or database schema. Use the same release for every component unless its release 
 rolling-compatible path.
 
 <Warning>
-  The `setup` role runs the forward database migration. The CLI has no operator-facing downgrade command. Do not run an
+  Control-plane startup runs the forward database migration. The CLI has no operator-facing downgrade command. Do not run an
   older release against a database migrated by a newer release.
 </Warning>
 
@@ -29,18 +29,15 @@ Set `AIRMUX_IMAGE` to the target `ghcr.io/michel-tricot/airmux` digest before re
 
 ## Upgrade the full platform
 
-Follow the deployment-specific replacement procedure for [Docker Compose](/docs/deployment/docker),
-[Fly.io](/docs/deployment/fly), [Render](/docs/deployment/render), or
-[DigitalOcean](/docs/deployment/digitalocean). Preserve the public origin, database, and state mounts.
+Follow the [Docker Compose](/docs/deployment/docker) replacement procedure. Preserve the public origin, database, and state mounts.
 
-Replace an airmux container as one unit. Its role runs setup, then starts the control plane, gateway, and console.
+Replace an airmux container as one unit. The control plane initializes, then the gateway becomes ready.
 
 For a split deployment:
 
 1. Remove every gateway from public traffic and stop it after active streams finish
-2. Replace the setup service with the new image digest and wait for successful completion
-3. Replace the control plane, gateways, and console with that exact digest
-4. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
+2. Replace the control plane, gateways, and console with the same image digest
+3. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
 
 ## Verify the release
 

@@ -69,10 +69,10 @@ def test_release_publishes_the_exact_ci_container_candidate():
 
     assert "container-${RELEASE_SHA}" in prepare
     assert "sha256sum --check SHA256SUMS" in prepare
-    assert "docker load" in publish
+    assert "docker load" not in publish
     image_step = next(step for step in RELEASE["jobs"]["publish"]["steps"] if step.get("id") == "image")
     assert image_step["env"]["IMAGE"] == "ghcr.io/michel-tricot/airmux"
-    assert "docker push" in publish
+    assert "docker buildx imagetools create" in publish
     assert "docker pull" in verify
     assert "--entrypoint airmux" in verify
     assert "Container: $IMAGE" in steps("announce")

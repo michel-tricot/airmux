@@ -4,8 +4,6 @@ x-gateway: &gateway
   environment:
     AIRMUX_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
   depends_on:
-    setup:
-      condition: service_completed_successfully
     control-plane:
       condition: service_healthy
   healthcheck:
@@ -27,21 +25,6 @@ services:
     volumes:
       - split-pgdata:/var/lib/postgresql/data
 
-  setup:
-    image: ${AIRMUX_IMAGE:-airmux:local}
-    command: setup
-    environment:
-      DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
-      AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
-      AIRMUX_PUBLIC_SIGNUP: ${AIRMUX_PUBLIC_SIGNUP:-false}
-    volumes:
-      - runtime-credentials:/state/runtime
-      - provider-secrets:/state/secrets
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-
   control-plane:
     image: ${AIRMUX_IMAGE:-airmux:local}
     command: control-plane
@@ -51,11 +34,11 @@ services:
       AIRMUX_PUBLIC_SIGNUP: ${AIRMUX_PUBLIC_SIGNUP:-false}
       FORWARDED_ALLOW_IPS: "*"
     volumes:
-      - runtime-credentials:/state/runtime:ro
+      - runtime-credentials:/state/runtime
       - provider-secrets:/state/secrets
     depends_on:
-      setup:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
       interval: 5s

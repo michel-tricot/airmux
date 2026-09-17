@@ -11,9 +11,9 @@ docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
-Every service references `AIRMUX_IMAGE`, so pin that variable to one published digest for coordinated deployments. The one-shot
-`setup` service creates the shared bootstrap credential, migrates Postgres, and applies the shipped taxonomy. The control
-plane and both gateways start only after setup succeeds. The console proxy distributes `/inf/` requests between both gateways.
+Every service references `AIRMUX_IMAGE`, so pin that variable to one published digest for coordinated deployments. The
+control plane creates the shared bootstrap credential, migrates Postgres, and applies the shipped taxonomy before becoming
+healthy. Both gateways start after that health check succeeds. The console proxy distributes `/inf/` requests between them.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
@@ -22,7 +22,7 @@ Install the [airmux CLI](/docs/reference/cli#installation) on the machine you us
 | Volume | Owner |
 | --- | --- |
 | `split-pgdata` | Postgres |
-| `runtime-credentials` | Setup writes; control plane and gateways read |
+| `runtime-credentials` | Control plane writes; gateways read |
 | `provider-secrets` | Control plane writes; gateways read |
 | `gateway-1`, `gateway-2` | One gateway each; identity, bundle cache, usage outbox |
 
@@ -40,8 +40,8 @@ The checked-in split file demonstrates service boundaries, not a multi-host prod
 
 Set `AIRMUX_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address. Protect this path and its data-plane management key.
 
-Keep one control-plane replica. Setup no longer races with serving processes, but multiple control-plane replicas remain
-unsupported until asynchronous bundle publication and replica behavior are proven.
+Keep one control-plane replica. Multiple control-plane replicas remain unsupported until initialization, asynchronous
+bundle publication, and replica behavior are proven.
 
 Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
 cache, and usage outbox volume.

@@ -100,12 +100,12 @@ Module, process, artifact, and topology boundaries are separate decisions. The c
 independent Python modules and processes with `contract` as their only shared import, but one release image contains both
 runtimes, the console assets, Nginx, and the deployment scripts.
 
-The image accepts five roles: `setup`, `control-plane`, `data-plane`, `console`, and `airmux`. Setup is finite and
-owns bootstrap-key creation, forward migrations, and shipped-taxonomy application. The three serving roles perform no
-deployment initialization. The default `airmux` role runs setup, then supervises one process for each serving role.
+The image accepts four roles: `control-plane`, `data-plane`, `console`, and `airmux`. The control plane owns bootstrap-key
+creation, forward migrations, and shipped-taxonomy application. The default `airmux` role supervises one process for each
+serving role and holds the gateway until the control plane is healthy.
 
 The airmux topology uses one application container and Postgres. The split topology projects the same image digest
-into a one-shot setup container, one control plane, one console, and explicit gateway replicas. Each gateway owns a
+into one control plane, one console, and explicit gateway replicas. Each gateway owns a
 distinct persistent cache, identity, and usage outbox. Gateway-only deployments use the same Python distribution or image
 with a local bundle and need neither Postgres nor a control plane.
 

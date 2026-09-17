@@ -32,20 +32,6 @@ def init(
 
 @control_plane_app.command()
 @runtime_command
-def bootstrap_keygen(
-    config: ConfigOption = None,
-) -> None:
-    """Ensure the configured private bootstrap key exists."""
-    from control_plane.operations import (  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
-        bootstrap_keygen as generate_bootstrap_key,
-    )
-
-    path, created = generate_bootstrap_key(configuration_path(config, "control-plane"))
-    typer.echo(f"{'Wrote' if created else 'Found'} {path}")
-
-
-@control_plane_app.command()
-@runtime_command
 def validate(config: ConfigOption = None) -> None:
     """Validate control-plane settings without connecting to the database."""
     from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
@@ -62,15 +48,14 @@ def serve(
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
     port: PortOption = 8000,
-    dev: Annotated[bool, typer.Option("--dev", help="Apply migrations and reload Python code during development")] = False,
+    taxonomy: Annotated[Path | None, typer.Option("--taxonomy", help="Taxonomy to apply before serving")] = None,
+    dev: Annotated[bool, typer.Option("--dev", help="Reload Python code during development")] = False,
 ) -> None:
     """Run the management API in the foreground."""
-    from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
     from control_plane.operations import serve as serve_control_plane  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
-    load_settings(path)
-    serve_control_plane(path, host=host, port=port, dev=dev)
+    serve_control_plane(path, host=host, port=port, taxonomy=taxonomy, dev=dev)
 
 
 @control_plane_app.command()

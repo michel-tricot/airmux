@@ -36,14 +36,14 @@ release builds and verifies its wheel and source distribution before publishing 
 distribution version, and the installed behavior suite exercises the same artifact users receive.
 
 The container is also one release artifact. It contains the public distribution, console assets, Nginx, and deployment
-scripts, and selects `setup`, `control-plane`, `data-plane`, `console`, or `airmux` at startup. Role selection is not
-application configuration. The default `airmux` role and split Compose topology call the same finite setup
-implementation before any serving role starts. Administrative CLI and standalone gateway commands explicitly override the
+scripts, and selects `control-plane`, `data-plane`, `console`, or `airmux` at startup. Role selection is not application
+configuration. The control plane creates its bootstrap credential, migrates Postgres, and applies the selected taxonomy
+before serving. Administrative CLI and standalone gateway commands explicitly override the
 container entry point instead of adding a second command dispatcher to the role script.
 
-Main CI builds that image once from the validated Python candidate, exercises every topology against it, and archives the
-image by source commit. The release workflow verifies and publishes that exact archive to GHCR under the public version;
-it does not rebuild role-specific images.
+Main CI builds that image once from the validated Python candidate, exercises every topology against it, and publishes the
+validated main-branch image under its source commit. The release workflow promotes that digest under the public version;
+it does not rebuild the image.
 
 ## Local configuration
 

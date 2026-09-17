@@ -296,6 +296,9 @@ jobs:
     needs: package
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
     env:
       AIRMUX_PYTHON_BUILD: python-candidate
       AIRMUX_IMAGE: airmux:ci
@@ -352,13 +355,25 @@ jobs:
       - name: Exercise standalone image roles
         if: always() && steps.image.outcome == 'success'
         run: uv run --no-sync pytest tests/deployment/test_gateway_container.py tests/deployment/test_volume.py --junitxml=docker-results/standalone.xml
-      - name: Archive the validated image
+      - name: Publish the validated main image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/michel-tricot/airmux
         run: |
+          candidate="$IMAGE:sha-$GITHUB_SHA"
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag "$AIRMUX_IMAGE" "$candidate"
+          push_output="$(docker push "$candidate")"
+          echo "$push_output"
+          digest="$(printf '%s\n' "$push_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]*\).*$/\1/p' | tail -1)"
+          test -n "$digest"
           mkdir -p container
-          docker image save "$AIRMUX_IMAGE" | gzip -9 > container/airmux-image.tar.gz
+          printf '%s@%s\n' "$IMAGE" "$digest" > container/image
           cd container
-          sha256sum airmux-image.tar.gz > SHA256SUMS
-      - name: Upload the validated image
+          sha256sum image > SHA256SUMS
+      - name: Upload the validated image reference
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: container-${{ github.sha }}

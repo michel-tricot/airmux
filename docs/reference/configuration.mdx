@@ -17,9 +17,6 @@ commands use `./airmux.yml`. The airmux image uses `deploy/docker/airmux.yml`.
 | `POSTGRES_PASSWORD`       | `airmux`                | Initial local Postgres password              |
 | `AIRMUX_IMAGE`            | `airmux:local`          | Image used by every role in either topology  |
 
-Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the `setup` role for
-migrations while the control plane keeps the pooled URL.
-
 ## YAML structure
 
 ```yaml
