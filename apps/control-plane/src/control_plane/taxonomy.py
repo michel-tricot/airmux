@@ -52,7 +52,6 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: bool
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    queued_revision: int | None
 
 
 async def upsert_provider(p: ProviderSpec) -> Provider:

@@ -323,14 +323,12 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
         k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json=inference_key_body(c, org, "k1"), headers=org).json()["data"]
         k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json=inference_key_body(c, org, "k2"), headers=org).json()["data"]
 
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
         wait_for_publication(c, o1, org)
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
         assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(k1["id"], str(ws1)), (k2["id"], str(ws2))}
 
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys/{k1['id']}", headers=org).status_code == 404
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys/{k1['id']}", headers=org).status_code == 200
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
-        wait_for_publication(c, o1, org)
+        wait_for_publication(c, o1, org, bundle.bundle_id)
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
         assert [k.key_id for k in bundle.keys] == [k2["id"]]

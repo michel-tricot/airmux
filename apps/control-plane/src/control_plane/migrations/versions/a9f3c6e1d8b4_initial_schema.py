@@ -34,6 +34,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_ddl_v1
+from control_plane.models.bundle_input import bundle_input_trigger_ddl_v1, bundle_input_trigger_drop_ddl_v1
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
@@ -78,12 +79,43 @@ AUDITED = (
     ("workspace_membership", ("user_id", "workspace_id")),
 )
 
+BUNDLE_INPUTS = (
+    ("inference_key", "org", ("org_id", "workspace_id", "user_id", "token_hash", "revoked")),
+    (
+        "model",
+        "global",
+        (
+            "name",
+            "provider_id",
+            "upstream_model",
+            "egress_kind",
+            "input_price_per_mtok",
+            "output_price_per_mtok",
+            "cache_read_price_per_mtok",
+            "cache_write_price_per_mtok",
+            "context_window",
+            "max_output_tokens",
+            "input_modalities",
+            "output_modalities",
+            "capabilities",
+            "parameter_support",
+        ),
+    ),
+    ("playground_session", "org", ("org_id", "workspace_id", "user_id", "token_hash", "expires_at", "revoked")),
+    ("policy", "org", ("org_id", "workspace_id", "name", "enabled", "priority", "definition")),
+    ("provider", "global", ("name", "kind", "base_url", "param_aliases", "accepted_params", "params_closed")),
+    (
+        "provider_credential",
+        "nullable_org",
+        ("org_id", "workspace_id", "provider_name", "name", "priority", "enabled", "version"),
+    ),
+)
+
 
 def upgrade() -> None:
     if needs_uuidv7_shim(op.get_bind()):
         op.execute(UUIDV7_SHIM_DDL_V1)
     op.execute("CREATE EXTENSION IF NOT EXISTS citext")
-    op.execute("CREATE SEQUENCE configuration_revision_seq")
     op.create_table(
         "audit_log",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -236,7 +268,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("issued_at", UTCDateTime(), nullable=False),
-        sa.Column("configuration_revision", sa.Integer(), nullable=False),
+        sa.Column("global_generation", sa.BigInteger(), nullable=False),
+        sa.Column("org_generation", sa.BigInteger(), nullable=False),
         sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["org_id"],
@@ -244,7 +277,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("org_id", "configuration_revision", name="bundle_org_id_configuration_revision_key"),
+        sa.UniqueConstraint("org_id", "global_generation", "org_generation", name="bundle_org_generation_key"),
         sa.UniqueConstraint("org_id", "version", name="bundle_org_id_version_key"),
     )
     op.create_table(
@@ -501,23 +534,24 @@ def upgrade() -> None:
         postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
-        "global_runtime_configuration",
+        "global_bundle_state",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("desired_revision", sa.Integer(), nullable=False),
+        sa.Column("desired_generation", sa.BigInteger(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.execute("INSERT INTO global_runtime_configuration (id, desired_revision) VALUES (1, 0)")
+    op.execute("INSERT INTO global_bundle_state (id, desired_generation) VALUES (1, 0)")
     op.create_table(
-        "runtime_configuration",
+        "bundle_state",
         sa.Column("org_id", sa.Uuid(), nullable=False),
-        sa.Column("desired_revision", sa.Integer(), nullable=False),
-        sa.Column("published_revision", sa.Integer(), nullable=False),
-        sa.Column("last_attempted_revision", sa.Integer(), nullable=True),
-        sa.Column("last_attempted_at", UTCDateTime(), nullable=True),
+        sa.Column("desired_generation", sa.BigInteger(), nullable=False),
+        sa.Column("published_global_generation", sa.BigInteger(), nullable=False),
+        sa.Column("published_org_generation", sa.BigInteger(), nullable=False),
+        sa.Column("current_bundle_id", sa.Uuid(), nullable=True),
+        sa.Column("failed_global_generation", sa.BigInteger(), nullable=True),
+        sa.Column("failed_org_generation", sa.BigInteger(), nullable=True),
         sa.Column("failure_count", sa.Integer(), nullable=False),
         sa.Column("next_attempt_at", UTCDateTime(), nullable=True),
-        sa.Column("last_error_category", sqlmodel.sql.sqltypes.AutoString(length=50), nullable=True),
-        sa.Column("last_error_message", sqlmodel.sql.sqltypes.AutoString(length=200), nullable=True),
+        sa.ForeignKeyConstraint(["current_bundle_id"], ["bundle.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("org_id"),
     )
@@ -585,9 +619,15 @@ def upgrade() -> None:
     for table, pk_columns in AUDITED:
         for statement in audit_trigger_ddl_v1(table, pk_columns):
             op.execute(statement)
+    for table, scope, columns in BUNDLE_INPUTS:
+        for statement in bundle_input_trigger_ddl_v1(table, scope, columns):
+            op.execute(statement)
 
 
 def downgrade() -> None:
+    for table, _, _ in BUNDLE_INPUTS:
+        for statement in bundle_input_trigger_drop_ddl_v1(table):
+            op.execute(statement)
     for table, _ in AUDITED:
         for statement in audit_trigger_drop_ddl_v1(table):
             op.execute(statement)
@@ -600,8 +640,8 @@ def downgrade() -> None:
     op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
     op.drop_table("policy")
     op.drop_table("playground_session")
-    op.drop_table("runtime_configuration")
-    op.drop_table("global_runtime_configuration")
+    op.drop_table("bundle_state")
+    op.drop_table("global_bundle_state")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
     op.drop_table("org_invitation")
     op.drop_table("provider_credential")
@@ -626,7 +666,6 @@ def downgrade() -> None:
     op.drop_table("org")
     op.drop_table("user")
     op.drop_table("audit_log")
-    op.execute("DROP SEQUENCE configuration_revision_seq")
     op.execute("DROP EXTENSION IF EXISTS citext")
     if needs_uuidv7_shim(op.get_bind()):
         op.execute("DROP FUNCTION uuidv7()")

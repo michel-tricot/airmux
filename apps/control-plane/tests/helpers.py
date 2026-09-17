@@ -153,17 +153,18 @@ def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UU
     return UUID(response.json()["data"]["id"])
 
 
-def wait_for_publication(client, org_id: UUID, headers: dict[str, str], revision: int | None = None, timeout: float = 5.0) -> dict:
+def wait_for_publication(client, org_id: UUID, headers: dict[str, str], after: UUID | str | None = None, timeout: float = 5.0) -> dict:
     deadline = time.monotonic() + timeout
     while True:
-        response = client.get(f"/api/v1/organizations/{org_id}/bundles/status", headers=headers)
-        assert response.status_code == 200, response.text
-        publication = response.json()["data"]
-        reached_revision = revision is None or publication["published_revision"] >= revision
-        if publication["status"] == "current" and reached_revision:
-            return publication
+        response = client.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=headers)
+        if response.status_code == 200:
+            bundle = response.json()["data"]
+            if after is None or bundle["bundle_id"] != str(after):
+                return bundle
+        else:
+            assert response.status_code == 404, response.text
         if time.monotonic() >= deadline:
-            message = f"publication did not become current: {publication}"
+            message = f"bundle was not published after {after}"
             raise AssertionError(message)
         time.sleep(0.02)
 

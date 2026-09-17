@@ -1,13 +1,9 @@
-import { useQueryClient } from '@tanstack/react-query';
 import {
   useListOrgEvents,
   useListWorkspaceEvents,
   useListActivity,
-  useListBundles,
-  useRepublishBundle,
   useListDataPlanes,
   useListInstanceActivity,
-  getListBundlesQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
@@ -31,20 +27,6 @@ export function useWorkspaceEvents(
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListActivity(orgId, params, { query: { enabled } });
-}
-
-export function useBundles(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListBundles(orgId, { query: { enabled } });
-}
-
-export function useRepublishBundleMutation(orgId: string) {
-  const queryClient = useQueryClient();
-  return useRepublishBundle({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-      meta: { errorMessage: 'We couldn’t republish the configuration. Please try again.' },
-    },
-  });
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {

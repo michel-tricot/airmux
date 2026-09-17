@@ -64,47 +64,6 @@ export interface BundleManifest {
   bundles: BundleManifestEntry[];
 }
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: string;
-}
-
-export type PublicationState = typeof PublicationState[keyof typeof PublicationState];
-
-
-export const PublicationState = {
-  current: 'current',
-  pending: 'pending',
-  failed: 'failed',
-} as const;
-
-export interface PublishedBundleOut {
-  id: string;
-  version: number;
-  issued_at: string;
-}
-
-export interface PublicationFailureOut {
-  category: string;
-  message: string;
-}
-
-export interface BundlePublicationStatusOut {
-  desired_revision: number;
-  published_revision: number;
-  status: PublicationState;
-  latest_bundle: PublishedBundleOut | null;
-  last_attempt_at: string | null;
-  failure: PublicationFailureOut | null;
-}
-
-export interface BundleRepublishOut {
-  queued_revision: number;
-  publication: BundlePublicationStatusOut;
-}
-
 /**
  * An active inference key included in a policy bundle.
  *
@@ -743,12 +702,6 @@ export interface InferenceKeyRevokedOut {
   status: 'revoked';
 }
 
-export interface InstancePublicationStatusOut {
-  global_desired_revision: number;
-  pending_organization_count: number;
-  failed_organization_count: number;
-}
-
 export type InstanceRole = typeof InstanceRole[keyof typeof InstanceRole];
 
 
@@ -829,7 +782,6 @@ export const Permission = {
   policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
-  bundlespublish: 'bundles.publish',
   usageread: 'usage.read',
   usageingest: 'usage.ingest',
   'data-planesread': 'data-planes.read',
@@ -1675,7 +1627,6 @@ export interface TaxonomyApplyOut {
   dry_run: boolean;
   providers: TaxonomyChangeCounts;
   models: TaxonomyChangeCounts;
-  queued_revision: number | null;
 }
 
 export interface TaxonomyOut {

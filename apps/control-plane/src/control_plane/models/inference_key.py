@@ -9,10 +9,10 @@ from sqlalchemy import ForeignKeyConstraint
 from sqlmodel import Field, col
 
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
-from control_plane.models.runtime_configuration import bundle_input
 
 
 @audited

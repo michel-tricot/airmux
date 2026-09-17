@@ -15,12 +15,12 @@ from airmux_runtime.secrets import SecretNotFoundError, SecretRejectedError, Sec
 from contract import CredentialScope, SecretPurpose, SecretRef
 from control_plane.db import current_session
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.wire import RecordOut, RecordUpdate, RequestModel
-from control_plane.models.runtime_configuration import bundle_input
 
 DEFAULT_PRIORITY = 100
 ProviderCredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]

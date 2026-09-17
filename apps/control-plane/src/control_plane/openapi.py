@@ -81,7 +81,6 @@ API_TAGS = [
         "x-displayName": "Provider Credentials",
         "description": "Manage provider API keys available across an organization",
     },
-    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect policy bundles"},
     {
         "name": "Organization Usage Events",
         "x-displayName": "Usage Events",
@@ -162,7 +161,6 @@ TAG_GROUPS = [
             "Organization Workspaces",
             "Organization Management Keys",
             "Organization Provider Credentials",
-            "Organization Bundles",
             "Organization Usage Events",
             "Organization Activity",
             "Organization Model Catalog",

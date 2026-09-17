@@ -6,8 +6,4 @@ export const telemetryAccess = {
   orgUsage: operationAuthority.listOrgEvents,
   workspaceUsage: operationAuthority.listWorkspaceEvents,
   dataPlanes: operationAuthority.listDataPlanes,
-  bundles: {
-    read: operationAuthority.listBundles,
-    publish: operationAuthority.republishBundle,
-  },
 } as const;

@@ -21,13 +21,13 @@ from contract.policies import (
 )
 from control_plane.db import current_session
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.model import Model
 from control_plane.models.provider import Provider
-from control_plane.models.runtime_configuration import bundle_input
 from control_plane.models.user import User
 
 if TYPE_CHECKING:

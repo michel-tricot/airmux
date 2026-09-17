@@ -16,7 +16,7 @@ from airmux_runtime.secrets import EnvStoreConfig, InsecureDatabaseStoreConfig, 
 from contract import BundleV1, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.db import current_session
-from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
+from control_plane.models import BundleState, InsecureVaultSecret, Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
 
@@ -423,12 +423,15 @@ def test_a_rejected_key_shows_up_as_invalid(tmp_path):
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
         assert m.credential["status"] == "unknown"
-        before = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
+        wait_for_publication(c, m.org_id, m.org)
+        before = run_in_db(tmp_path, lambda: BundleState.get(m.org_id))
+        assert before is not None
         event = _usage_event(m, "credential_rejected", datetime.now(tz=UTC))
         assert c.post("/api/v1/events", json=[event], headers=m.root).status_code == 200
         assert _status_of(c, m) == "invalid"
-        after = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
-        assert [bundle["id"] for bundle in after] == [bundle["id"] for bundle in before]
+        after = run_in_db(tmp_path, lambda: BundleState.get(m.org_id))
+        assert after is not None
+        assert after.desired_generation == before.desired_generation
 
 
 def test_an_org_data_plane_cannot_change_another_orgs_credential_health(tmp_path):
@@ -563,7 +566,6 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=org)
         entries = _latest_bundle(c, org).catalog.credentials
         assert [entry.ref.name for entry in entries] == ["platform"]
         assert entries[0].ref.org_id is None

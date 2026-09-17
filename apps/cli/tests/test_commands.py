@@ -40,7 +40,7 @@ def test_every_command_is_listed_once():
 
     assert "airmux taxonomy apply" not in paths
     assert "airmux data-planes list" not in paths
-    assert "airmux bundles republish" in paths
+    assert "airmux bundles republish" not in paths
     assert "airmux bundles compile" not in paths
     assert "airmux test verify" not in paths
     assert "airmux test loadgen" not in paths

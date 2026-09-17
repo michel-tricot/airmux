@@ -61,7 +61,6 @@ export const server = setupServer(
   http.get('/api/v1/auth/permissions', () => HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: Object.values(Permission) } })),
   http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [] })),
-  http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json<{ data: Api.BundleOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/activity', () => HttpResponse.json<{ data: Api.ActivityOut[] }>({ data: [] })),
   http.get('/api/v1/organizations/:orgId/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [], models: [] } })),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/taxonomy', () =>

@@ -1,4 +1,3 @@
-import type * as Api from '@workspace/api-client-react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -6,32 +5,25 @@ import { expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
-const bundle: Api.BundleOut = { id: 'bundle-1', org_id: ORG.id, version: 1, issued_at: '2026-09-11T12:00:00Z' };
-
 function open(path: string) {
   window.localStorage.setItem('airmux_org_id', ORG.id);
   window.history.replaceState(null, '', path);
   render(<App />);
 }
 
-it('shows bundle generation history under organization Activity without publishing controls or a Policies category', async () => {
-  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: [bundle] })));
+it('keeps bundle publication internals out of organization settings', async () => {
+  let bundleRequests = 0;
+  server.use(
+    http.get('/api/v1/organizations/:orgId/bundles', () => {
+      bundleRequests += 1;
+      return HttpResponse.json({ data: [] });
+    }),
+  );
   open('/org/settings');
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Activity' }));
-  expect(await screen.findByRole('heading', { name: 'Configuration history' })).toBeInTheDocument();
-  expect(await screen.findByText('bundle-1')).toBeInTheDocument();
+  expect(await screen.findByRole('tab', { name: 'Management Keys' })).toBeInTheDocument();
+  expect(screen.queryByText(/configuration bundles|configuration history|republish/i)).not.toBeInTheDocument();
   expect(screen.queryByRole('tab', { name: 'Policies' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /republish/i })).not.toBeInTheDocument();
-  expect(screen.queryByText(/queued|publication|data planes adopt/i)).not.toBeInTheDocument();
-});
-
-it('keeps Activity available for bundle readers without audit permission', async () => {
-  server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ data: { permissions: ['bundles.read'] } })));
-  open('/org/settings');
-  expect(await screen.findByRole('tab', { name: 'Activity' })).toHaveAttribute('aria-selected', 'true');
-  expect(screen.queryByRole('tab', { name: 'Members' })).not.toBeInTheDocument();
-  expect(await screen.findByText('No configuration bundles have been generated yet.')).toBeInTheDocument();
+  expect(bundleRequests).toBe(0);
 });
 
 it('organizes workspace settings into selectable categories', async () => {
@@ -98,52 +90,4 @@ it('allows an organization-only invitation when workspaces are unavailable', asy
   await user.click(within(dialog).getByRole('button', { name: 'Create invitation' }));
 
   await waitFor(() => expect(submitted).toEqual({ email: 'invitee@example.com', org_role: 'member' }));
-});
-
-it('republishes configuration from Instance Administration and updates the bundle history', async () => {
-  let bundles = [bundle];
-  server.use(
-    http.get('/api/v1/auth/me', () =>
-      HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', orgs: [ORG.id] } }),
-    ),
-    http.get('/api/v1/organizations/:orgId', () => HttpResponse.json({ data: ORG })),
-    http.get('/api/v1/users', () => HttpResponse.json({ data: [] })),
-    http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })),
-    http.post('/api/v1/organizations/:orgId/bundles/republish', () => {
-      const published = { ...bundle, id: 'bundle-2', version: 2 };
-      bundles = [...bundles, published];
-      return HttpResponse.json({
-        data: {
-          queued_revision: 2,
-          publication: {
-            desired_revision: 2,
-            published_revision: 1,
-            status: 'pending',
-            latest_bundle: { id: bundle.id, version: bundle.version, issued_at: bundle.issued_at },
-            last_attempt_at: bundle.issued_at,
-            failure: null,
-          },
-        },
-      });
-    }),
-  );
-  open(`/instance/organizations/${ORG.id}`);
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Configuration bundles' }));
-  await user.click(screen.getByRole('button', { name: 'Republish configuration' }));
-  expect(await screen.findByText('bundle-2')).toBeInTheDocument();
-  expect(screen.getByText('v2')).toBeInTheDocument();
-});
-
-it('refreshes generated configuration history when returning to Activity', async () => {
-  let bundles = [bundle];
-  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })));
-  open('/org/settings');
-  const user = userEvent.setup();
-  await user.click(await screen.findByRole('tab', { name: 'Activity' }));
-  expect(await screen.findByText('bundle-1')).toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: 'Management Keys' }));
-  bundles = [...bundles, { ...bundle, id: 'bundle-2', version: 2 }];
-  await user.click(screen.getByRole('tab', { name: 'Activity' }));
-  expect(await screen.findByText('bundle-2')).toBeInTheDocument();
 });

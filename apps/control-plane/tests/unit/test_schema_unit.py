@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import control_plane
+from control_plane.models.bundle_input import bundle_input_tables
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables
-from control_plane.models.runtime_configuration import runtime_configuration_inputs
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 
@@ -30,8 +30,8 @@ def test_tombstonable_models_inherit_the_lifecycle_fields():
         assert set(cls.model_fields) >= TOMBSTONE_COLUMNS, cls.__name__
 
 
-def test_runtime_configuration_registry_names_real_columns():
-    inputs = runtime_configuration_inputs()
+def test_bundle_input_registry_names_real_columns():
+    inputs = bundle_input_tables()
     assert inputs
     for table, configuration_input in inputs:
         assert set(configuration_input.columns) <= set(table.c.keys()), table.name

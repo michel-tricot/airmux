@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from airmux_runtime.taxonomy import load_taxonomy
 from cli.control_plane import control_plane_app as app
 from contract.taxonomy import TaxonomySpec
-from control_plane.models import AuditLog, Bundle, GlobalRuntimeConfiguration, Model, Org, Provider, RuntimeConfiguration, set_actor
+from control_plane.models import AuditLog, Bundle, BundleState, Model, Org, Provider, set_actor
 from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
@@ -236,7 +236,7 @@ def test_taxonomy_command_applies_and_queues_publication(tmp_path):
     models = run_in_db(tmp_path, Model.find)
     assert "echo-2" in {m.name for m in models}
     assert run_in_db(tmp_path, Bundle.find) == []
-    assert run_in_db(tmp_path, GlobalRuntimeConfiguration.desired) == 2
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
 def test_taxonomy_command_records_one_global_revision_for_every_org(tmp_path):
@@ -247,8 +247,8 @@ def test_taxonomy_command_records_one_global_revision_for_every_org(tmp_path):
     result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
     assert run_in_db(tmp_path, Bundle.find) == []
-    assert run_in_db(tmp_path, RuntimeConfiguration.find) == []
-    assert run_in_db(tmp_path, GlobalRuntimeConfiguration.desired) == 1
+    assert run_in_db(tmp_path, BundleState.find) == []
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
 def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):

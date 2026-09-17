@@ -66,13 +66,6 @@ class BundleManifestEntry(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
 
 
-class BundleOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-
-
 class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
     public_signup: Annotated[bool, Field(title="Public Signup")]
@@ -378,10 +371,6 @@ class EnvelopeListActivityOut(BaseModel):
     data: Annotated[list[ActivityOut], Field(title="Data")]
 
 
-class EnvelopeListBundleOut(BaseModel):
-    data: Annotated[list[BundleOut], Field(title="Data")]
-
-
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
     data: Annotated[list[DataPlaneInstanceOut], Field(title="Data")]
 
@@ -496,12 +485,6 @@ class InferenceKeyOwnerOut(BaseModel):
 class InferenceKeyRevokedOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     status: Annotated[Literal["revoked"], Field(title="Status")]
-
-
-class InstancePublicationStatusOut(BaseModel):
-    global_desired_revision: Annotated[int, Field(title="Global Desired Revision")]
-    pending_organization_count: Annotated[int, Field(title="Pending Organization Count")]
-    failed_organization_count: Annotated[int, Field(title="Failed Organization Count")]
 
 
 class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
@@ -992,7 +975,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1028,7 +1010,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1319,21 +1300,6 @@ class ProviderOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
-
-
-class PublicationFailureOut(BaseModel):
-    category: Annotated[str, Field(title="Category")]
-    message: Annotated[str, Field(title="Message")]
-
-
-class PublicationState(RootModel[Literal["current", "pending", "failed"]]):
-    root: Literal["current", "pending", "failed"]
-
-
-class PublishedBundleOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    version: Annotated[int, Field(title="Version")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
 
 
 class RequestLimits(BaseModel):
@@ -1821,20 +1787,6 @@ class BundleManifest(BaseModel):
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
 
 
-class BundlePublicationStatusOut(BaseModel):
-    desired_revision: Annotated[int, Field(title="Desired Revision")]
-    published_revision: Annotated[int, Field(title="Published Revision")]
-    status: PublicationState
-    latest_bundle: PublishedBundleOut | None
-    last_attempt_at: Annotated[AwareDatetime | None, Field(title="Last Attempt At")]
-    failure: PublicationFailureOut | None
-
-
-class BundleRepublishOut(BaseModel):
-    queued_revision: Annotated[int, Field(title="Queued Revision")]
-    publication: BundlePublicationStatusOut
-
-
 class CredentialEntry(BaseModel):
     """
     A provider credential reference, priority, and version included in a policy bundle.
@@ -1857,14 +1809,6 @@ class EnvelopeBundleManifest(BaseModel):
     data: BundleManifest
 
 
-class EnvelopeBundlePublicationStatusOut(BaseModel):
-    data: BundlePublicationStatusOut
-
-
-class EnvelopeBundleRepublishOut(BaseModel):
-    data: BundleRepublishOut
-
-
 class EnvelopeEnrollOut(BaseModel):
     data: EnrollOut
 
@@ -1883,10 +1827,6 @@ class EnvelopeInferenceKeyCreatedOut(BaseModel):
 
 class EnvelopeInferenceKeyRevokedOut(BaseModel):
     data: InferenceKeyRevokedOut
-
-
-class EnvelopeInstancePublicationStatusOut(BaseModel):
-    data: InstancePublicationStatusOut
 
 
 class EnvelopeInvitationAcceptedOut(BaseModel):
@@ -2127,7 +2067,6 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: Annotated[bool, Field(title="Dry Run")]
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    queued_revision: Annotated[int | None, Field(title="Queued Revision")]
 
 
 class WorkspaceMembershipIn(BaseModel):

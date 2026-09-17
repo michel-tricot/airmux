@@ -35,13 +35,6 @@ async def transaction(factory: async_sessionmaker[AsyncSession], *, isolation_le
             if isolation_level is not None:
                 await session.connection(execution_options={"isolation_level": isolation_level})
             yield session
-            await session.flush()
-            from control_plane.models.runtime_configuration import (  # noqa: PLC0415 transaction teardown owns durable revision recording
-                record_runtime_configuration_changes,
-                runtime_configuration_changes,
-            )
-
-            await record_runtime_configuration_changes(runtime_configuration_changes(session.sync_session))
             await session.commit()
         finally:
             _session.reset(token)

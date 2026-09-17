@@ -99,7 +99,7 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
             for name, priority in (("First", 10), ("Second", 20), ("Third", 30))
         ]
         ordered_ids = [policy["id"] for policy in reversed(policies)]
-        bundles_before = client.get(f"/api/v1/organizations/{org}/bundles", headers=headers).json()["data"]
+        bundle_before = wait_for_publication(client, org, headers)
 
         reordered = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids})
 
@@ -107,10 +107,9 @@ def test_workspace_policy_order_is_replaced_atomically(tmp_path):
         assert [policy["id"] for policy in reordered.json()["data"]] == ordered_ids
         assert [policy["priority"] for policy in reordered.json()["data"]] == [0, 1, 2]
         assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
-        wait_for_publication(client, org, headers)
+        wait_for_publication(client, org, headers, bundle_before["bundle_id"])
         bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=cp.headers(), params={"org_id": str(org)}).json()["data"])
         assert {str(policy.id): policy.priority for policy in bundle.policies} == dict(zip(ordered_ids, range(3), strict=True))
-        assert len(client.get(f"/api/v1/organizations/{org}/bundles", headers=headers).json()["data"]) == len(bundles_before) + 1
 
         incomplete = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids[:-1]})
         assert incomplete.status_code == 422
@@ -225,7 +224,7 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
         retained = client.get(f"{base}/policies", headers=headers).json()["data"]
         assert retained[0]["id"] == policy_id
         assert retained[0]["definition"]["target"] == body["definition"]["target"]
-        wait_for_publication(client, org, headers)
+        wait_for_publication(client, org, headers, before.bundle_id)
         after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org)}).json()["data"])
         assert after.keys == []
         assert after.policies == before.policies

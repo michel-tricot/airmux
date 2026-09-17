@@ -12,8 +12,6 @@ from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
 from api_models import (
-    BundleOut,
-    BundleRepublishOut,
     DataPlaneInstanceOut,
     InferenceKeyCreatedOut,
     InferenceKeyOut,
@@ -43,7 +41,6 @@ from cli.client import (
     resolve_workspace,
 )
 from cli.common import (
-    bundles_app,
     catalog_app,
     console,
     events_app,
@@ -142,12 +139,6 @@ EVENT_COLS = [
     Col("cost_usd", "$ total", fmt=_money),
     Col("latency_ms", "ms"),
     Col("stream", "Stream", fmt=lambda v: "yes" if v else ""),
-]
-BUNDLE_COLS = [
-    Col("id", "ID", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
-    Col("org_id", "Org"),
-    Col("version", "Version"),
-    Col("issued_at", "Issued", no_wrap=True, fmt=fmt_when),
 ]
 
 
@@ -444,23 +435,6 @@ def catalog_apply(
         applied = payload(ensure_ok(response), TaxonomyApplyOut)
     action = "Dry run" if applied.dry_run else "Applied"
     console.print(f"{action}: providers {_change_summary(applied.providers)}; models {_change_summary(applied.models)}")
-    if not applied.dry_run:
-        queued = f"configuration revision {applied.queued_revision}" if applied.queued_revision is not None else "no configuration changes"
-        console.print(f"Queued: {queued}")
-
-
-@bundles_app.command("list")
-def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List published configuration versions."""
-    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url, BundleOut), BUNDLE_COLS, fmt)
-
-
-@bundles_app.command("republish")
-def bundles_republish(control_plane_url: str = "") -> None:
-    """Republish your current configuration for recovery or key rotation."""
-    with access_client(control_plane_url) as c:
-        queued = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(202,)), BundleRepublishOut)
-    console.print(f"Queued configuration revision {queued.queued_revision}")
 
 
 INSTANCE_COLS = [

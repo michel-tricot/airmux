@@ -60,17 +60,19 @@ def test_instance_owner_login_navigation_dialogs_and_logout(stack: Stack) -> Non
         expect(page.get_by_role("row").filter(has_text="Created in browser")).to_have_count(0)
 
 
-def test_configuration_history_hides_publication_internals(stack: Stack) -> None:
+def test_console_does_not_expose_bundle_publication_internals(stack: Stack) -> None:
     with running_console(stack) as console:
         console.login(ADMIN_EMAIL, ADMIN_PASSWORD)
         page = console.page
-        status_requests: list[str] = []
-        page.on("request", lambda request: status_requests.append(request.url) if "/bundles/status" in request.url else None)
+        bundle_management_requests: list[str] = []
+        page.on(
+            "request",
+            lambda request: bundle_management_requests.append(request.url) if re.search(r"/organizations/[^/]+/bundles", request.url) else None,
+        )
         page.goto(f"{console.url}/instance/organizations/{stack.org_id}")
-        page.get_by_role("tab", name="Configuration bundles", exact=True).click()
-        expect(page.get_by_role("heading", name="Configuration bundles", exact=True)).to_be_visible()
-        expect(page.get_by_text(re.compile("queued|publication|data planes adopt", re.IGNORECASE))).to_have_count(0)
-        assert status_requests == []
+        expect(page.get_by_role("tab", name="Workspaces", exact=True)).to_be_visible()
+        expect(page.get_by_text(re.compile("bundle|queued|publication|data planes adopt", re.IGNORECASE))).to_have_count(0)
+        assert bundle_management_requests == []
 
 
 @pytest.mark.parametrize("role", ["owner", "admin", "member"])

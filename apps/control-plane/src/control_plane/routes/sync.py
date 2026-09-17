@@ -69,8 +69,7 @@ async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
 @router.get("/bundle/latest", dependencies=[require("operational", bundle_scope, Permission.bundles_read)])
 async def bundle_latest(scope: BundleScopeDep) -> Envelope[BundleV1]:
     """Return the newest policy bundle available at the requested organization scope."""
-    conditions = (Bundle.org_id == scope.org_id,) if scope.org_id is not None else ()
-    bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
+    bundle = await Bundle.current(scope.org_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this scope")
     return Envelope(data=_bundle(bundle))

@@ -18,7 +18,6 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
             "data"
         ]
         assert c.delete(f"/api/v1/organizations/{o2}/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=cp.headers(o1))
         wait_for_publication(c, o1, headers)
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"])
         assert [k.key_id for k in bundle.keys] == [key["id"]]
@@ -49,13 +48,13 @@ def test_org_scoped_keys_cannot_use_instance_permissions(tmp_path):
         assert c.get(f"/api/v1/organizations/{org_id}/taxonomy", headers=org).status_code == 200
         assert c.get("/api/v1/instance/taxonomy", headers=root).status_code == 200
 
-        assert c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=root).status_code == 202
         for path in (
             f"/api/v1/organizations/{org_id}/workspaces",
-            f"/api/v1/organizations/{org_id}/bundles",
             f"/api/v1/organizations/{org_id}/events",
         ):
             assert c.get(path, headers=root).status_code == 200
+        assert c.get(f"/api/v1/organizations/{org_id}/bundles", headers=root).status_code == 404
+        assert c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=root).status_code == 404
 
 
 def test_inference_token_is_rejected_on_management_routes(tmp_path):

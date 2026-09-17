@@ -409,16 +409,15 @@ HTTPS or a protected private network between the planes. The control plane store
 serialized snapshot and serves it as a typed `BundleV1`; the data plane does not trust an unvalidated
 response or adopt a bundle whose organization and bundle ids differ from its manifest entry.
 
-Bundle availability has three distinct stages:
+Bundle availability has three internal stages:
 
-1. A management transaction commits the desired configuration revision
-2. A control-plane publisher compiles and stores that revision as an immutable bundle
+1. A management transaction commits resource changes and database triggers mark the affected compiled configuration stale
+2. A control-plane publisher compiles that committed state and atomically advances its current-bundle pointer
 3. A data-plane poller fetches, validates, and admits the published bundle
 
-Management requests return after the first stage. They do not wait for compilation or gateway polling. The organization
-publication-status endpoint reports the first two stages, including a safe failure category and retry state. A published bundle
-becomes active on a particular gateway only after that gateway's next successful manifest poll. Compilation failures and poll
-failures both preserve the last admitted bundle.
+Management requests return after the first stage. They do not wait for compilation or gateway polling, and management clients do
+not coordinate with publication state. A published bundle becomes active on a particular gateway only after that gateway's next
+successful manifest poll. Compilation failures and poll failures both preserve the last admitted bundle.
 
 The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
 to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has

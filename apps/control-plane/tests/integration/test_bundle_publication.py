@@ -9,13 +9,13 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, captured_sql, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy import text
 
 from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
 from control_plane import compiler
 from control_plane.compiler import publish_next
-from control_plane.db import standalone_transaction
-from control_plane.models import Bundle, GlobalRuntimeConfiguration, InferenceKey, PlaygroundSession, RuntimeConfiguration, User, set_actor
+from control_plane.db import current_session, standalone_transaction
+from control_plane.models import Bundle, BundleState, InferenceKey, PlaygroundSession, User, set_actor
 
 
 def test_full_flow_to_verified_bundle(tmp_path):
@@ -33,9 +33,9 @@ def test_full_flow_to_verified_bundle(tmp_path):
         latest = c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root)
         assert latest.status_code == 200
         bundle = BundleV1.model_validate(latest.json()["data"])
-        bundles = c.get(f"/api/v1/organizations/{o1}/bundles", headers=org).json()["data"]
-        assert [entry["version"] for entry in bundles] == [1]
-        assert str(bundle.bundle_id) == bundles[-1]["id"]
+        bundles = asyncio.run(_bundles(cp.db_url, o1))
+        assert [entry.version for entry in bundles] == [1]
+        assert bundle.bundle_id == bundles[-1].id
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
@@ -62,8 +62,7 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         wait_for_publication(c, org_id, org)
         bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert bundle.keys == []
-        bundles = c.get(f"/api/v1/organizations/{org_id}/bundles", headers=org).json()["data"]
-        assert [entry["version"] for entry in bundles] == [1]
+        assert [entry.version for entry in asyncio.run(_bundles(cp.db_url, org_id))] == [1]
 
 
 def test_inference_key_changes_publish_without_manual_action(tmp_path):
@@ -84,7 +83,7 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
         assert [entry.key_id for entry in created.keys] == [key["id"]]
 
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
-        wait_for_publication(c, org_id, org)
+        wait_for_publication(c, org_id, org, created.bundle_id)
         revoked = BundleV1.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert revoked.bundle_id != created.bundle_id
         assert revoked.keys == []
@@ -98,12 +97,10 @@ def test_bundle_latest_filters_by_org(tmp_path):
         o2 = make_org(c, root, "o2")
         first = cp.headers(o1)
         second = cp.headers(o2)
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=first)
-        c.post(f"/api/v1/organizations/{o2}/bundles/republish", headers=second)
         wait_for_publication(c, o1, first)
         wait_for_publication(c, o2, second)
         global_latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"])
-        assert global_latest.org_id == o2
+        assert global_latest.org_id in {o1, o2}
         latest = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=cp.headers(o2)).json()["data"])
         assert latest.org_id == o2
         scoped = c.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(o1)})
@@ -119,8 +116,6 @@ def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
         o2 = make_org(c, root, "o2")
         first = cp.headers(o1)
         second = cp.headers(o2)
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=first)
-        c.post(f"/api/v1/organizations/{o2}/bundles/republish", headers=second)
         wait_for_publication(c, o1, first)
         wait_for_publication(c, o2, second)
 
@@ -139,22 +134,7 @@ def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
         assert c.get("/api/v1/bundles/manifest", headers=cp.headers(o1, workspace_id=workspace_id)).status_code == 403
 
 
-def test_republish_queues_a_revision_and_returns_accepted(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as client:
-        org_id = make_org(client, root, "o1")
-        headers = cp.headers(org_id)
-        response = client.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers)
-        assert response.status_code == 202, response.text
-        queued = response.json()["data"]
-        assert queued["queued_revision"] == queued["publication"]["desired_revision"]
-        assert queued["publication"]["status"] == "pending"
-        published = wait_for_publication(client, org_id, headers, queued["queued_revision"])
-        assert published["latest_bundle"]["version"] == 1
-
-
-def test_management_mutation_records_revision_without_compiling_in_request(tmp_path):
+def test_management_mutation_marks_bundle_stale_without_compiling_in_request(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as client:
@@ -170,60 +150,68 @@ def test_management_mutation_records_revision_without_compiling_in_request(tmp_p
         assert response.status_code == 200, response.text
         request_sql = "\n".join(statements)
         assert "INSERT INTO bundle" not in request_sql
-        status = client.get(f"/api/v1/organizations/{org_id}/bundles/status", headers=headers).json()["data"]
-        assert status["desired_revision"] > status["published_revision"]
+        bundle = wait_for_publication(client, org_id, headers)
+        assert [entry["key_id"] for entry in bundle["keys"]] == [response.json()["data"]["id"]]
 
 
-def test_global_change_records_one_watermark_without_updating_each_org(tmp_path):
+def test_global_change_advances_one_generation_without_dirtying_each_org_row(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as client:
         org_ids = [make_org(client, root, f"o{number}") for number in range(3)]
+        current = {org_id: wait_for_publication(client, org_id, cp.headers(org_id))["bundle_id"] for org_id in org_ids}
+
+        async def state_before():
+            async with standalone_transaction(cp.db_url):
+                return await BundleState.global_generation(), {state.org_id: state.desired_generation for state in await BundleState.find()}
+
+        global_before, org_before = asyncio.run(state_before())
         with captured_sql(cp.app) as statements:
             response = client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
         assert response.status_code == 200, response.text
-        updates = [statement for statement in statements if statement.startswith("INSERT INTO global_runtime_configuration")]
-        assert len(updates) == 1
-        assert all("runtime_configuration" not in statement for statement in statements if statement.startswith("UPDATE"))
-        summary = client.get("/api/v1/instance/bundles/status", headers=root).json()["data"]
-        assert summary["pending_organization_count"] == len(org_ids)
+
+        async def state_after():
+            async with standalone_transaction(cp.db_url):
+                return await BundleState.global_generation(), {state.org_id: state.desired_generation for state in await BundleState.find()}
+
+        global_after, org_after = asyncio.run(state_after())
+        assert global_after == global_before + 1
+        assert org_after == org_before
+        assert "INSERT INTO bundle" not in "\n".join(statements)
         for org_id in org_ids:
-            wait_for_publication(client, org_id, cp.headers(org_id), summary["global_desired_revision"])
-        current = client.get("/api/v1/instance/bundles/status", headers=root).json()["data"]
-        assert current["pending_organization_count"] == 0
+            wait_for_publication(client, org_id, cp.headers(org_id), current[org_id])
 
 
-def test_new_organization_inherits_the_current_global_revision(tmp_path):
+def test_new_organization_inherits_current_global_inputs(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as client:
         assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
-        global_revision = client.get("/api/v1/instance/bundles/status", headers=root).json()["data"]["global_desired_revision"]
         org_id = make_org(client, root, "created-after-global-change")
-        status = wait_for_publication(client, org_id, cp.headers(org_id), global_revision)
-        assert status["desired_revision"] == global_revision
+        wait_for_publication(client, org_id, cp.headers(org_id))
         bundle = BundleV1.model_validate(client.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"])
         assert [provider.provider_id for provider in bundle.catalog.providers] == [PROVIDER["provider_id"]]
 
 
-def test_startup_resumes_a_durable_pending_revision(tmp_path):
+def test_startup_resumes_durable_pending_work(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as client:
         org_id = make_org(client, root, "restart")
+        headers = cp.headers(org_id)
+        current = wait_for_publication(client, org_id, headers)
 
     async def queue():
         async with standalone_transaction(cp.db_url):
-            return await RuntimeConfiguration.request_republication(org_id)
+            await BundleState.request_republication(org_id)
 
-    revision = asyncio.run(queue())
-    assert asyncio.run(_bundles(cp.db_url, org_id)) == []
+    asyncio.run(queue())
     with TestClient(cp.app) as restarted:
-        status = wait_for_publication(restarted, org_id, cp.headers(org_id), revision)
-    assert status["published_revision"] == revision
+        published = wait_for_publication(restarted, org_id, cp.headers(org_id), current["bundle_id"])
+    assert published["bundle_id"] != current["bundle_id"]
 
 
-def test_compiler_failure_preserves_management_change_and_exposes_safe_status(tmp_path, monkeypatch):
+def test_compiler_failure_preserves_management_change_and_last_valid_bundle(tmp_path, monkeypatch):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     compile_bundle = compiler.compile_bundle
@@ -236,8 +224,7 @@ def test_compiler_failure_preserves_management_change_and_exposes_safe_status(tm
         org_id = make_org(client, root, "o1")
         headers = cp.headers(org_id)
         workspace_id = make_workspace(client, headers)
-        initial_request = client.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers).json()["data"]
-        initial = wait_for_publication(client, org_id, headers, initial_request["queued_revision"])
+        initial = wait_for_publication(client, org_id, headers)
         monkeypatch.setattr(compiler, "compile_bundle", fail_compile)
         key_response = client.post(
             f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
@@ -248,26 +235,24 @@ def test_compiler_failure_preserves_management_change_and_exposes_safe_status(tm
         key = key_response.json()["data"]
         deadline = datetime.now(tz=UTC).timestamp() + 5
         while True:
-            response = client.get(f"/api/v1/organizations/{org_id}/bundles/status", headers=headers)
-            assert response.status_code == 200, response.text
-            status = response.json()["data"]
-            if status["status"] == "failed":
+
+            async def failure_count():
+                async with standalone_transaction(cp.db_url):
+                    state = await BundleState.get(org_id)
+                    return state.failure_count if state is not None else 0
+
+            if asyncio.run(failure_count()) > 0:
                 break
             assert datetime.now(tz=UTC).timestamp() < deadline
             time.sleep(0.1)
-        assert status["desired_revision"] > initial["published_revision"]
-        assert status["published_revision"] == initial["published_revision"]
-        assert status["latest_bundle"] == initial["latest_bundle"]
-        assert status["failure"] == {"category": "compilation_failed", "message": "Configuration could not be published"}
-        assert "secret-value" not in str(status)
+        current = client.get("/api/v1/bundle/latest", headers=headers).json()["data"]
+        assert current["bundle_id"] == initial["bundle_id"]
         keys = client.get(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", headers=headers).json()["data"]
         assert [stored["id"] for stored in keys] == [key["id"]]
-        assert [bundle["version"] for bundle in client.get(f"/api/v1/organizations/{org_id}/bundles", headers=headers).json()["data"]] == [1]
+        assert [bundle.version for bundle in asyncio.run(_bundles(cp.db_url, org_id))] == [1]
         monkeypatch.setattr(compiler, "compile_bundle", compile_bundle)
-        retry = client.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers).json()["data"]
-        recovered = wait_for_publication(client, org_id, headers, retry["queued_revision"])
-        assert recovered["failure"] is None
-        assert recovered["published_revision"] == retry["queued_revision"]
+        recovered = wait_for_publication(client, org_id, headers, initial["bundle_id"])
+        assert [entry["key_id"] for entry in recovered["keys"]] == [key["id"]]
 
 
 def test_failed_publication_backoff_starts_at_one_second_and_caps_at_sixty(tmp_path):
@@ -277,28 +262,28 @@ def test_failed_publication_backoff_starts_at_one_second_and_caps_at_sixty(tmp_p
 
     async def retry_delays():
         async with standalone_transaction(cp.db_url):
-            revision = await RuntimeConfiguration.request_republication(org_id)
+            await BundleState.request_republication(org_id)
+            _, generations = await BundleState.target(org_id)
         now = datetime.now(tz=UTC)
         delays = []
         for attempt in range(8):
             async with standalone_transaction(cp.db_url):
-                await RuntimeConfiguration.record_failure(org_id, revision, now + timedelta(milliseconds=attempt))
-                configuration = await RuntimeConfiguration.get(org_id)
-                assert configuration is not None
-                assert configuration.next_attempt_at is not None
-                delays.append(round((configuration.next_attempt_at - now - timedelta(milliseconds=attempt)).total_seconds()))
+                await BundleState.record_failure(org_id, generations, now + timedelta(milliseconds=attempt))
+                state = await BundleState.get(org_id)
+                assert state is not None
+                assert state.next_attempt_at is not None
+                delays.append(round((state.next_attempt_at - now - timedelta(milliseconds=attempt)).total_seconds()))
         return delays
 
     assert asyncio.run(retry_delays()) == [1, 2, 4, 8, 16, 32, 60, 60]
 
 
-def test_publish_next_is_idempotent_for_one_revision(tmp_path):
+def test_publish_next_is_idempotent_for_current_generations(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         org_id = make_org(client, cp.headers(), "o1")
         headers = cp.headers(org_id)
-        queued = client.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers).json()["data"]
-        wait_for_publication(client, org_id, headers, queued["queued_revision"])
+        wait_for_publication(client, org_id, headers)
 
     async def no_more_work():
         async with standalone_transaction(cp.db_url, isolation_level="REPEATABLE READ"):
@@ -308,37 +293,52 @@ def test_publish_next_is_idempotent_for_one_revision(tmp_path):
     assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1
 
 
-def test_global_revision_change_aborts_an_older_publication_snapshot(tmp_path):
+def test_global_change_during_publication_remains_pending(tmp_path, monkeypatch):
     cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app):
-        pass
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, root, "global-race")
+        assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        wait_for_publication(client, org_id, cp.headers(org_id))
 
     async def race():
-        async with standalone_transaction(cp.db_url, isolation_level="REPEATABLE READ"):
-            revision = await GlobalRuntimeConfiguration.desired()
-            async with standalone_transaction(cp.db_url):
-                await GlobalRuntimeConfiguration.advance(revision + 1)
-            await GlobalRuntimeConfiguration.lock_for_publication()
-
-    with pytest.raises(DBAPIError) as caught:
-        asyncio.run(race())
-    assert getattr(caught.value.orig, "sqlstate", None) == "40001"
-
-
-def test_desired_watermark_cannot_regress_when_revisions_commit_out_of_order(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app):
-        pass
-
-    async def commit_out_of_order():
         async with standalone_transaction(cp.db_url):
-            await GlobalRuntimeConfiguration.advance(100)
-        async with standalone_transaction(cp.db_url):
-            await GlobalRuntimeConfiguration.advance(99)
-        async with standalone_transaction(cp.db_url):
-            return await GlobalRuntimeConfiguration.desired()
+            await BundleState.request_republication(org_id)
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        original_compile = compiler.compile_bundle
 
-    assert asyncio.run(commit_out_of_order()) == 100
+        async def paused_compile(*args, **kwargs):
+            bundle = await original_compile(*args, **kwargs)
+            entered.set()
+            await release.wait()
+            return bundle
+
+        monkeypatch.setattr(compiler, "compile_bundle", paused_compile)
+
+        async def publish():
+            async with standalone_transaction(cp.db_url, isolation_level="REPEATABLE READ"):
+                return await publish_next(datetime.now(tz=UTC))
+
+        first_task = asyncio.create_task(publish())
+        await entered.wait()
+        async with standalone_transaction(cp.db_url):
+            await set_actor("global-race")
+            provider = await compiler.Provider.first(compiler.Provider.name == PROVIDER["provider_id"])
+            assert provider is not None
+            provider.base_url = "https://new.example/v1"
+            await provider.save()
+        release.set()
+        first = await first_task
+        monkeypatch.setattr(compiler, "compile_bundle", original_compile)
+        second = await publish()
+        return first, second
+
+    first, second = asyncio.run(race())
+    assert first is not None
+    assert second is not None
+    assert second.generations.global_ > first.generations.global_
+    assert str(BundleV1.model_validate_json(second.bundle.payload).catalog.providers[0].base_url) == "https://new.example/v1"
 
 
 def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeypatch):
@@ -350,7 +350,7 @@ def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeyp
 
     async def race():
         async with standalone_transaction(cp.db_url):
-            revision = await RuntimeConfiguration.request_republication(org_id)
+            await BundleState.request_republication(org_id)
         entered = asyncio.Event()
         release = asyncio.Event()
 
@@ -369,23 +369,26 @@ def test_competing_publishers_create_one_bundle_for_a_revision(tmp_path, monkeyp
         await entered.wait()
         second = await publish()
         release.set()
-        return revision, await first, second
+        return await first, second
 
-    revision, first, second = asyncio.run(race())
+    first, second = asyncio.run(race())
     assert first is not None
-    assert first.configuration_revision == revision
     assert second is None
-    assert [bundle.configuration_revision for bundle in asyncio.run(_bundles(cp.db_url, org_id))] == [revision]
+    pairs = [(bundle.global_generation, bundle.org_generation) for bundle in asyncio.run(_bundles(cp.db_url, org_id))]
+    assert pairs.count((first.generations.global_, first.generations.org)) == 1
 
 
-def test_cancelling_publication_rolls_back_and_leaves_revision_pending(tmp_path, monkeypatch):
+def test_cancelling_publication_rolls_back_and_leaves_generations_pending(tmp_path, monkeypatch):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         org_id = make_org(client, cp.headers(), "o1")
+        wait_for_publication(client, org_id, cp.headers(org_id))
 
     async def cancel():
         async with standalone_transaction(cp.db_url):
-            revision = await RuntimeConfiguration.request_republication(org_id)
+            await BundleState.request_republication(org_id)
+            state, generations = await BundleState.target(org_id)
+            current_bundle_id = state.current_bundle_id
         entered = asyncio.Event()
 
         async def paused_compile(*_args, **_kwargs):
@@ -404,14 +407,58 @@ def test_cancelling_publication_rolls_back_and_leaves_revision_pending(tmp_path,
         with pytest.raises(asyncio.CancelledError):
             await publication
         async with standalone_transaction(cp.db_url):
-            status = await RuntimeConfiguration.status(org_id)
-        return revision, status
+            state, target = await BundleState.target(org_id)
+        return generations, current_bundle_id, state, target
 
-    revision, status = asyncio.run(cancel())
-    assert asyncio.run(_bundles(cp.db_url, org_id)) == []
-    assert status.desired_revision == revision
-    assert status.published_revision < revision
-    assert status.status == "pending"
+    generations, current_bundle_id, state, target = asyncio.run(cancel())
+    assert target == generations
+    assert state.current_bundle_id == current_bundle_id
+    assert not state.is_current(target)
+
+
+def test_raw_database_changes_are_published_and_irrelevant_updates_are_ignored(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, root, "raw-sql")
+        headers = cp.headers(org_id)
+        workspace_id = make_workspace(client, headers)
+        key = client.post(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+            json=inference_key_body(client, headers, "raw"),
+            headers=headers,
+        ).json()["data"]
+        assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        current = wait_for_publication(client, org_id, headers)
+
+    async def mutate():
+        async with standalone_transaction(cp.db_url):
+            before_global = await BundleState.global_generation()
+            before_state = await BundleState.get(org_id)
+            assert before_state is not None
+            before_org = before_state.desired_generation
+            await set_actor("raw-editor")
+            await current_session().execute(text("UPDATE provider SET icon = 'changed' WHERE name = :name"), {"name": PROVIDER["provider_id"]})
+        async with standalone_transaction(cp.db_url):
+            assert await BundleState.global_generation() == before_global
+            await set_actor("raw-editor")
+            await current_session().execute(
+                text("UPDATE provider SET base_url = :url WHERE name = :name"),
+                {"url": "https://raw.example/v1", "name": PROVIDER["provider_id"]},
+            )
+            await current_session().execute(text("UPDATE inference_key SET revoked = true WHERE id = :id"), {"id": UUID(key["id"])})
+        async with standalone_transaction(cp.db_url):
+            state = await BundleState.get(org_id)
+            assert state is not None
+            return await BundleState.global_generation(), state.desired_generation, before_global, before_org
+
+    global_generation, org_generation, before_global, before_org = asyncio.run(mutate())
+    assert global_generation == before_global + 1
+    assert org_generation == before_org + 1
+    with TestClient(cp.app) as restarted:
+        published = wait_for_publication(restarted, org_id, cp.headers(org_id), current["bundle_id"])
+    assert published["keys"] == []
+    assert published["catalog"]["providers"][0]["base_url"] == "https://raw.example/v1"
 
 
 async def _bundles(database_url: str, org_id: UUID) -> list[Bundle]:
@@ -419,11 +466,14 @@ async def _bundles(database_url: str, org_id: UUID) -> list[Bundle]:
         return await Bundle.find(Bundle.org_id == org_id)
 
 
-def test_compile_endpoint_is_removed(tmp_path):
+def test_bundle_management_endpoints_are_removed(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         org_id = make_org(c, cp.headers(), "o1")
-        assert c.post(f"/api/v1/organizations/{org_id}/bundles/compile", headers=cp.headers(org_id)).status_code == 404
+        headers = cp.headers(org_id)
+        assert c.get(f"/api/v1/organizations/{org_id}/bundles", headers=headers).status_code == 404
+        assert c.post(f"/api/v1/organizations/{org_id}/bundles/compile", headers=headers).status_code == 404
+        assert c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=headers).status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -473,7 +523,7 @@ def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_
                 return user.id
 
         user_id = asyncio.run(change_identity())
-        wait_for_publication(client, org_id, headers)
+        wait_for_publication(client, org_id, headers, before.bundle_id)
         after = BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(org_id)}).json()["data"])
         assert after.bundle_id != before.bundle_id
         assert after.keys[0].key_id == credential_id

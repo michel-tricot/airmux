@@ -17,12 +17,11 @@ from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import Settings, load_settings
-from control_plane.db import current_session, standalone_transaction
+from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
 from control_plane.keys import new_management_key
 from control_plane.migrate import current_revision, head_revision, run_migrations
 from control_plane.models import Model, User, set_actor
-from control_plane.models.runtime_configuration import record_runtime_configuration_changes, runtime_configuration_changes
 from control_plane.taxonomy import apply_taxonomy
 
 if TYPE_CHECKING:
@@ -33,7 +32,6 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class FixtureResult:
     fixtures: Fixtures
-    queued_revision: int | None
     models: int
 
 
@@ -41,7 +39,6 @@ class FixtureResult:
 class TaxonomyResult:
     providers: int
     models: int
-    queued_revision: int | None
 
 
 @dataclass(frozen=True)
@@ -149,12 +146,6 @@ async def promote_owner(email: str, config: Path) -> tuple[str, bool]:
     return email, False
 
 
-async def _record_configuration_changes() -> int | None:
-    session = current_session()
-    await session.flush()
-    return await record_runtime_configuration_changes(runtime_configuration_changes(session.sync_session))
-
-
 async def seed_fixtures(config: Path) -> FixtureResult:
     settings = load_settings(config)
     with database_errors():
@@ -162,7 +153,7 @@ async def seed_fixtures(config: Path) -> FixtureResult:
             if settings.bootstrap is not None:
                 await bootstrap_data_plane(settings.bootstrap)
             fixtures = await apply_fixtures(datetime.now(tz=UTC), secret_store)
-            return FixtureResult(fixtures, await _record_configuration_changes(), len(await Model.find()))
+            return FixtureResult(fixtures, len(await Model.find()))
 
 
 async def apply_catalog(config: Path, path: Path) -> TaxonomyResult:
@@ -171,4 +162,4 @@ async def apply_catalog(config: Path, path: Path) -> TaxonomyResult:
         async with standalone_transaction(load_settings(config).database.url):
             await set_actor("root")
             providers, models = await apply_taxonomy(taxonomy)
-            return TaxonomyResult(providers, models, await _record_configuration_changes())
+            return TaxonomyResult(providers, models)

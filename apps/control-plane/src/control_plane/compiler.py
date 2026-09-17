@@ -10,14 +10,14 @@ from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, P
 from control_plane.db import current_session
 from control_plane.models import (
     Bundle,
-    GlobalRuntimeConfiguration,
+    BundleGenerations,
+    BundleState,
     InferenceKey,
     Model,
     Org,
     PlaygroundSession,
     Provider,
     ProviderCredential,
-    RuntimeConfiguration,
 )
 from control_plane.models.policy import Policy
 
@@ -34,44 +34,43 @@ class UnknownOrgError(LookupError):
 @dataclass(frozen=True)
 class PublicationResult:
     org_id: UUID
-    configuration_revision: int
+    generations: BundleGenerations
     bundle: Bundle
 
 
 class PublicationError(RuntimeError):
-    def __init__(self, org_id: UUID, configuration_revision: int) -> None:
+    def __init__(self, org_id: UUID, generations: BundleGenerations) -> None:
         self.org_id = org_id
-        self.configuration_revision = configuration_revision
+        self.generations = generations
         super().__init__(f"bundle publication failed for organization {org_id}")
 
 
 async def publish_next(now: datetime) -> PublicationResult | None:
-    candidate = await RuntimeConfiguration.next_pending(now)
-    if candidate is None:
+    org_id = await BundleState.next_pending(now)
+    if org_id is None:
         return None
-    org_id, _ = candidate
-    if not await RuntimeConfiguration.try_lock(org_id):
+    if not await BundleState.try_lock(org_id):
         return None
-    configuration, target_revision = await RuntimeConfiguration.target(org_id)
-    if configuration.published_revision >= target_revision:
+    state, generations = await BundleState.target(org_id)
+    if state.is_current(generations):
         return None
     bundle_id = uuid7()
     try:
         bundle = await compile_bundle(org_id, bundle_id, now)
     except Exception as error:
-        raise PublicationError(org_id, target_revision) from error
-    await GlobalRuntimeConfiguration.lock_for_publication()
+        raise PublicationError(org_id, generations) from error
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
     stored = await Bundle(
         id=bundle_id,
         org_id=org_id,
         version=version + 1,
         issued_at=now,
-        configuration_revision=target_revision,
+        global_generation=generations.global_,
+        org_generation=generations.org,
         payload=bundle.model_dump_json(),
     ).save()
-    await configuration.mark_published(target_revision, now)
-    return PublicationResult(org_id=org_id, configuration_revision=target_revision, bundle=stored)
+    await state.mark_published(bundle_id, generations)
+    return PublicationResult(org_id=org_id, generations=generations, bundle=stored)
 
 
 async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> BundleV1:

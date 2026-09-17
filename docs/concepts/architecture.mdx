@@ -90,19 +90,18 @@ The control plane compiles one complete bundle per organization. A bundle contai
 providers, models, provider-credential references, and enabled policies with inline rule definitions. It never contains inference
 tokens or provider secret values.
 
-Management transactions do not compile bundles. They commit their configuration changes with a durable Postgres revision,
-then a background publisher compiles the newest requested revision in a repeatable-read transaction. Global catalog changes
-advance one instance watermark rather than updating every organization. Publishers coordinate with per-organization advisory
-locks, so multiple control-plane processes can drain the same queue without publishing the same revision twice. Failed
-compilations retain the last good bundle and retry with bounded backoff.
+Management transactions do not compile bundles. Database triggers advance an organization or global generation whenever a
+committed bundle input changes, regardless of whether the write came through the API, ORM, CLI, migration, or raw SQL. A
+background publisher captures the generation pair and compiles the same repeatable-read snapshot. It stores the immutable bundle
+and moves the organization's current-bundle pointer in one transaction.
 
-Postgres already owns the configuration transaction, so its watermarks keep the mutation and publication request atomic and
-survive process loss without another queue service. Advisory locks add only cross-process coordination and release automatically
-with the publication transaction.
+Global and organization generations are independent equality tokens, not a shared ordering. A concurrent change either appears
+in the publisher's snapshot or leaves one generation different from its published value, so it cannot be lost. Per-organization
+advisory locks prevent duplicate publication across control-plane processes. Failed compilation retains the last good bundle and
+retries with bounded backoff.
 
-The organization bundle status distinguishes the control plane's desired revision from its published revision. Publication is
-still separate from data-plane adoption: after the control plane publishes a bundle, each remote gateway observes it on its next
-manifest poll, validates it, and swaps it into memory. The console reports these as separate stages.
+Generation and retry state are internal. Management clients update resources normally and can assume committed changes will be
+materialized. Each remote gateway observes a new current bundle on its next manifest poll, validates it, and swaps it into memory.
 
 Remote gateways poll a manifest, validate new bundles, build lookup indexes, swap them atomically, and cache the
 accepted set on disk. A cached bundle lets a gateway start and continue serving while the control plane is temporarily

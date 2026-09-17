@@ -27,12 +27,6 @@ export const orgRoutes: readonly OrgRouteDefinition[] = [
     label: 'Settings',
     icon: Settings,
     component: OrgSettings,
-    access: anyOf(
-      managementKeyAccess.org.read,
-      telemetryAccess.bundles.read,
-      orgMemberAccess.read,
-      orgMemberAccess.listInvitations,
-      telemetryAccess.orgActivity,
-    ),
+    access: anyOf(managementKeyAccess.org.read, orgMemberAccess.read, orgMemberAccess.listInvitations, telemetryAccess.orgActivity),
   },
 ];
