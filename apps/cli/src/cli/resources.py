@@ -12,7 +12,6 @@ from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
 from api_models import (
-    BundleOut,
     DataPlaneInstanceOut,
     InferenceKeyCreatedOut,
     InferenceKeyOut,
@@ -44,7 +43,6 @@ from cli.client import (
     resolve_workspace,
 )
 from cli.common import (
-    bundles_app,
     catalog_app,
     console,
     events_app,
@@ -144,12 +142,6 @@ EVENT_COLS = [
     Col("cost_usd", "$ total", fmt=_money),
     Col("latency_ms", "ms"),
     Col("stream", "Stream", fmt=lambda v: "yes" if v else ""),
-]
-BUNDLE_COLS = [
-    Col("id", "ID", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
-    Col("org_id", "Org"),
-    Col("version", "Version"),
-    Col("issued_at", "Issued", no_wrap=True, fmt=fmt_when),
 ]
 
 
@@ -463,25 +455,6 @@ def catalog_apply(
         applied = payload(ensure_ok(response), TaxonomyApplyOut)
     action = "Dry run" if applied.dry_run else "Applied"
     console.print(f"{action}: providers {_change_summary(applied.providers)}; models {_change_summary(applied.models)}")
-    if not applied.dry_run:
-        publications = ", ".join(f"{bundle.org_id} v{bundle.version}" for bundle in applied.published)
-        console.print(f"Published: {publications or 'no bundle changes'}")
-
-
-@bundles_app.command("list")
-def bundles_list(
-    limit: LimitOption = 50, all_pages: AllPagesOption = False, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
-    """List published configuration versions."""
-    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url, BundleOut, limit=limit, all_pages=all_pages), BUNDLE_COLS, fmt)
-
-
-@bundles_app.command("republish")
-def bundles_republish(control_plane_url: str = "") -> None:
-    """Republish your current configuration for recovery or key rotation."""
-    with access_client(control_plane_url) as c:
-        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)), BundleOut)
-    console.print(f"Published v{published.version}")
 
 
 INSTANCE_COLS = [

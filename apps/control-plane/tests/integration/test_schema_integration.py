@@ -15,6 +15,7 @@ from sqlmodel import SQLModel
 
 import control_plane
 from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
+from control_plane.models.bundle_input import bundle_input_tables, bundle_input_trigger_ddl_v1
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_tables, touch_trigger_ddl_v1
 
@@ -61,7 +62,10 @@ def _triggers(conn) -> dict[str, str]:
     """Trigger and trigger-function definitions, keyed by name; our trigger names embed the table."""
     triggers = conn.execute(text("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE NOT tgisinternal"))
     functions = conn.execute(
-        text("SELECT proname, pg_get_functiondef(oid) FROM pg_proc WHERE proname LIKE 'touch_timestamps%' OR proname LIKE 'audit_row%'")
+        text(
+            "SELECT proname, pg_get_functiondef(oid) FROM pg_proc "
+            "WHERE proname LIKE 'touch_timestamps%' OR proname LIKE 'audit_row%' OR proname LIKE 'mark_bundle_stale%'"
+        )
     )
     return {row[0]: row[1] for row in [*triggers, *functions]}
 
@@ -74,7 +78,10 @@ def _current_trigger_ddl() -> list[str]:
         for table in audited_tables()
         for statement in audit_trigger_ddl_v1(table.name, tuple(column.name for column in table.primary_key.columns))
     ]
-    return [*touch, *audit]
+    bundle_input = [
+        statement for table, spec in bundle_input_tables() for statement in bundle_input_trigger_ddl_v1(table.name, spec.scope, spec.ignored_columns)
+    ]
+    return [*touch, *audit, *bundle_input]
 
 
 def _created_triggers(url: str) -> dict[str, str]:
@@ -148,8 +155,7 @@ def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db)
     assert _run_sync(url, migrated_columns) == expected
 
 
-def test_touch_triggers_match_between_schema_paths(pg_db):
-    """The current DDL versions and the migrations install the same triggers (invisible to compare_metadata); no tombstoned table lacks its pair."""
+def test_migrations_install_the_current_trigger_schema(pg_db):
     created_triggers = _created_triggers(pg_db("created"))
     migrated_triggers = _run_sync(_migrated_url(pg_db), _triggers)
     assert created_triggers == migrated_triggers
@@ -178,3 +184,11 @@ def test_audit_triggers_cover_every_audited_table(pg_db):
     assert tables
     for table in tables:
         assert f"{table.name}_audit" in created_triggers, table.name
+
+
+def test_bundle_input_triggers_cover_every_declared_table(pg_db):
+    created_triggers = _created_triggers(pg_db("created"))
+    tables = bundle_input_tables()
+    assert tables
+    for table, _ in tables:
+        assert f"{table.name}_bundle_stale" in created_triggers, table.name

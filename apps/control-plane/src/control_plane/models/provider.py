@@ -9,14 +9,14 @@ from sqlmodel import Field
 
 from contract.taxonomy import ProviderSpec
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
-from control_plane.models.runtime_configuration import bundle_input
 
 
 @audited
-@bundle_input(scope="global", columns=("name", "kind", "base_url", "param_aliases", "accepted_params", "params_closed"))
+@bundle_input(scope="global")
 class Provider(Record, Identified, Tombstonable, table=True):
     name: str = Field(unique=True, sa_type=CITEXT)
     kind: str

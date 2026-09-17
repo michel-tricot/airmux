@@ -95,7 +95,7 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Every endpoint returns Envelope: annotate `-> Envelope[XOut]` and return `Envelope(data=XOut.model_validate(row))`.
   Rows never serialize directly. Errors stay FastAPI's `{"detail": ...}`.
 - Action shapes (minted secrets, revocations) are plain BaseModel, exempt from parity by that choice. An action that
-  mints a resource returns that resource's Out (compile returns BundleOut).
+  mints a resource returns that resource's Out.
   Deletions return DeletedOut; revocations are not deletions and keep their own result models.
 - Clients unwrap the envelope in one place each: the console's customFetch, cli client payload helpers, the data plane
   poller. Never unwrap at call sites.
@@ -156,7 +156,7 @@ Line length is 150. Do not reformat unrelated lines to fit; run `ruff format` an
 
 ## CLI
 Anything started from the command line uses typer. Servers expose a typer entry point that wraps uvicorn.
-Commands are resource-first (keys list, bundles compile), grouped in help panels: Setup, Resources, Testing.
+Commands are resource-first (keys list, catalog apply), grouped in help panels: Setup, Resources, Testing.
 Any command that outputs resource data takes -f/--format (table|json|text) via FormatOption and renders
 through _print_rows with a Col spec. Do not print resource data any other way.
 

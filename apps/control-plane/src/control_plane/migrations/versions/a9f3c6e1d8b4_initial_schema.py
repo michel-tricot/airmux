@@ -34,6 +34,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_ddl_v1
+from control_plane.models.bundle_input import bundle_input_trigger_ddl_v1, bundle_input_trigger_drop_ddl_v1
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
@@ -76,6 +77,15 @@ AUDITED = (
     ("user", ("id",)),
     ("workspace", ("id",)),
     ("workspace_membership", ("user_id", "workspace_id")),
+)
+
+BUNDLE_INPUTS = (
+    ("inference_key", "org", ()),
+    ("model", "global", ()),
+    ("playground_session", "org", ()),
+    ("policy", "org", ()),
+    ("provider", "global", ()),
+    ("provider_credential", "nullable_org", ("status", "status_at")),
 )
 
 
@@ -235,17 +245,17 @@ def upgrade() -> None:
         "bundle",
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("issued_at", UTCDateTime(), nullable=False),
-        sa.Column("configuration_revision", sa.Integer(), nullable=False),
+        sa.Column("global_generation", sa.BigInteger(), nullable=False),
+        sa.Column("org_generation", sa.BigInteger(), nullable=False),
         sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["org_id"],
             ["org.id"],
+            ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("org_id", "global_generation", "org_generation", name="bundle_org_generation_key"),
     )
-    op.create_index("bundle_org_version_key", "bundle", ["org_id", "version"], unique=True)
     op.create_table(
         "model",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -500,10 +510,24 @@ def upgrade() -> None:
         postgresql_where=sa.text("accepted_at IS NULL AND revoked_at IS NULL"),
     )
     op.create_table(
-        "runtime_configuration",
+        "global_bundle_state",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("desired_generation", sa.BigInteger(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.execute("INSERT INTO global_bundle_state (id, desired_generation) VALUES (1, 0)")
+    op.create_table(
+        "bundle_state",
         sa.Column("org_id", sa.Uuid(), nullable=False),
-        sa.Column("desired_revision", sa.Integer(), nullable=False),
-        sa.Column("published_revision", sa.Integer(), nullable=False),
+        sa.Column("desired_generation", sa.BigInteger(), nullable=False),
+        sa.Column("published_global_generation", sa.BigInteger(), nullable=False),
+        sa.Column("published_org_generation", sa.BigInteger(), nullable=False),
+        sa.Column("current_bundle_id", sa.Uuid(), nullable=True),
+        sa.Column("failed_global_generation", sa.BigInteger(), nullable=True),
+        sa.Column("failed_org_generation", sa.BigInteger(), nullable=True),
+        sa.Column("failure_count", sa.Integer(), nullable=False),
+        sa.Column("next_attempt_at", UTCDateTime(), nullable=True),
+        sa.ForeignKeyConstraint(["current_bundle_id"], ["bundle.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("org_id"),
     )
@@ -571,9 +595,15 @@ def upgrade() -> None:
     for table, pk_columns in AUDITED:
         for statement in audit_trigger_ddl_v1(table, pk_columns):
             op.execute(statement)
+    for table, scope, ignored_columns in BUNDLE_INPUTS:
+        for statement in bundle_input_trigger_ddl_v1(table, scope, ignored_columns):
+            op.execute(statement)
 
 
 def downgrade() -> None:
+    for table, _, _ in BUNDLE_INPUTS:
+        for statement in bundle_input_trigger_drop_ddl_v1(table):
+            op.execute(statement)
     for table, _ in AUDITED:
         for statement in audit_trigger_drop_ddl_v1(table):
             op.execute(statement)
@@ -586,7 +616,8 @@ def downgrade() -> None:
     op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
     op.drop_table("policy")
     op.drop_table("playground_session")
-    op.drop_table("runtime_configuration")
+    op.drop_table("bundle_state")
+    op.drop_table("global_bundle_state")
     op.drop_index("org_invitation_pending_org_email_key", table_name="org_invitation")
     op.drop_table("org_invitation")
     op.drop_table("provider_credential")
@@ -599,7 +630,6 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")
     op.drop_table("org_membership")
     op.drop_table("model")
-    op.drop_index("bundle_org_version_key", table_name="bundle")
     op.drop_table("bundle")
     op.drop_table("auth_session")
     op.drop_table("auth_identity")

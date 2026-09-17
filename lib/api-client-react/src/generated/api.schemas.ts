@@ -64,13 +64,6 @@ export interface BundleManifest {
   bundles: BundleManifestEntry[];
 }
 
-export interface BundleOut {
-  id: string;
-  org_id: string;
-  version: number;
-  issued_at: string;
-}
-
 /**
  * An active inference key included in a policy bundle.
  *
@@ -796,7 +789,6 @@ export const Permission = {
   policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
-  bundlespublish: 'bundles.publish',
   usageread: 'usage.read',
   usageingest: 'usage.ingest',
   'data-planesread': 'data-planes.read',
@@ -1642,16 +1634,10 @@ export interface TaxonomyChangeCounts {
   unchanged: number;
 }
 
-export interface TaxonomyPublicationOut {
-  org_id: string;
-  version: number;
-}
-
 export interface TaxonomyApplyOut {
   dry_run: boolean;
   providers: TaxonomyChangeCounts;
   models: TaxonomyChangeCounts;
-  published: TaxonomyPublicationOut[];
 }
 
 export interface TaxonomyOut {
@@ -1795,12 +1781,6 @@ export interface PageOrgOut {
   page: PageInfo;
 }
 
-export interface PageBundleOut {
-  /** @maxItems 200 */
-  items: BundleOut[];
-  page: PageInfo;
-}
-
 export interface PageUsageEventOut {
   /** @maxItems 200 */
   items: UsageEventOut[];
@@ -1886,19 +1866,6 @@ cursor?: CursorToken | null;
 limit?: number;
 };
 
-export type ListBundlesParams = {
-/**
- * Opaque continuation token from the previous page
- */
-cursor?: CursorToken | null;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 200
- */
-limit?: number;
-};
-
 export type ListOrgEventsParams = {
 /**
  * Opaque continuation token from the previous page
@@ -1936,13 +1903,6 @@ cursor?: CursorToken | null;
  * @maximum 200
  */
 limit?: number;
-};
-
-export type BundleLatestParams = {
-/**
- * Organization whose latest bundle to return; omit to use the credential's scope
- */
-org_id?: string | null;
 };
 
 export type ApplyInstanceTaxonomyParams = {

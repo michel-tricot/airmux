@@ -514,22 +514,6 @@ export const operationAuthority = {
       },
     ],
   },
-  republishBundle: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.publish"],
-      },
-    ],
-  },
-  listBundles: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
   listOrgEvents: {
     checks: [
       {
@@ -566,14 +550,6 @@ export const operationAuthority = {
     checks: [
       {
         scope: "selected_bundle_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
-  bundleLatest: {
-    checks: [
-      {
-        scope: "bundle_scope",
         anyOf: ["bundles.read"],
       },
     ],

@@ -1,6 +1,3 @@
-import { BundleHistory } from '@/components/shared/bundle-history';
-import { useBundles, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import { telemetryAccess } from '@/features/telemetry/policy';
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -35,10 +32,6 @@ export default function OrganizationDetail() {
 
   const instanceAuthorization = useAuthorization('instance');
   const authorization = useScopedAuthorization({ level: 'org', orgId });
-  const canReadBundles = authorization.can(telemetryAccess.bundles.read);
-  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
-  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
-  const republish = useRepublishBundleMutation(orgId);
   const canReadOrg = authorization.can(orgAccess.read);
   const orgQuery = useOrg(orgId, { enabled: canReadOrg });
   const org = orgQuery.data;
@@ -73,7 +66,7 @@ export default function OrganizationDetail() {
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
   const deleteOrg = useDeleteOrgMutation();
-  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : canReadMembers ? 'members' : 'bundles';
+  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : 'members';
 
   if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
   if (authorization.isError) {
@@ -145,7 +138,6 @@ export default function OrganizationDetail() {
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
           )}
-          {canReadBundles && <TabsTrigger value="bundles">Configuration bundles</TabsTrigger>}
         </TabsList>
 
         {canListWorkspaces && (
@@ -274,33 +266,6 @@ export default function OrganizationDetail() {
                 className="p-0"
               />
             )}
-          </TabsContent>
-        )}
-        {canReadBundles && (
-          <TabsContent value="bundles" className="space-y-4 mt-0">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Configuration bundles</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Generated automatically from organization configuration. Republish to send a fresh snapshot to the data planes.
-                </p>
-              </div>
-              {canPublishBundles && (
-                <Button disabled={republish.isPending} onClick={() => republish.mutate({ orgId })}>
-                  {republish.isPending ? 'Republishing...' : 'Republish configuration'}
-                </Button>
-              )}
-            </div>
-            <BundleHistory
-              bundles={bundlesQuery.data}
-              isLoading={bundlesQuery.isLoading}
-              isError={bundlesQuery.isError}
-              error={bundlesQuery.error}
-              onRetry={() => bundlesQuery.refetch()}
-              hasNextPage={bundlesQuery.hasNextPage}
-              isFetchingNextPage={bundlesQuery.isFetchingNextPage}
-              onLoadMore={() => void bundlesQuery.fetchNextPage()}
-            />
           </TabsContent>
         )}
       </Tabs>

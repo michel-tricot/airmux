@@ -71,7 +71,6 @@ describe('playground', () => {
       updated_at: now,
       deleted_at: null,
     } satisfies Api.ModelOut;
-    let dialect = '';
     let requestedWith = '';
     let requestBody: Record<string, unknown> = {};
     let sessions = 0;
@@ -86,7 +85,6 @@ describe('playground', () => {
         });
       }),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
-        dialect = request.headers.get('x-airmux-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
@@ -110,7 +108,6 @@ describe('playground', () => {
 
     const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
     expect(document.querySelector('[data-playground-scroll-anchor]')).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'API surface' })).not.toBeInTheDocument();
     const maxTokens = screen.getByLabelText('Max tokens');
     await user.click(screen.getByRole('button', { name: 'Increase Max tokens' }));
     expect(maxTokens).toHaveValue(1);
@@ -137,7 +134,6 @@ describe('playground', () => {
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRMUX_INFERENCE_KEY');
-    expect(curlDialog).not.toHaveTextContent('x-airmux-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"content": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
@@ -145,12 +141,9 @@ describe('playground', () => {
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
     await user.click(copyCurl);
     expect(await navigator.clipboard.readText()).toContain('/inf/v1/chat/completions');
-    expect(await navigator.clipboard.readText()).not.toContain('x-airmux-dialect');
     expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
-    expect(dialect).toBe('');
     expect(requestedWith).toBe('fetch');
     expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
 

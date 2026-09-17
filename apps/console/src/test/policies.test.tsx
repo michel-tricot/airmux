@@ -60,13 +60,8 @@ async function dragBelowNext(handle: HTMLElement) {
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 
 describe('workspace policies', () => {
-  it('shows self-contained policies without loading a rule library', async () => {
-    let ruleRequests = 0;
+  it('shows self-contained policies', async () => {
     server.use(
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () => {
-        ruleRequests += 1;
-        return HttpResponse.json({ data: [] });
-      }),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
@@ -75,8 +70,6 @@ describe('workspace policies', () => {
 
     expect(await screen.findByText('First')).toBeVisible();
     expect(screen.getAllByLabelText('1 rule: deny')[0]).toHaveTextContent('First denied');
-    expect(screen.queryByRole('tab', { name: 'Rule library' })).not.toBeInTheDocument();
-    expect(ruleRequests).toBe(0);
   });
 
   it('creates a policy and all of its rules in one mutation', async () => {

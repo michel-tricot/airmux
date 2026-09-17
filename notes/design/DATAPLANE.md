@@ -415,6 +415,16 @@ HTTPS or a protected private network between the planes. The control plane store
 serialized snapshot and serves it as a typed `BundleV1`; the data plane does not trust an unvalidated
 response or adopt a bundle whose organization and bundle ids differ from its manifest entry.
 
+Bundle availability has three internal stages:
+
+1. A management transaction commits resource changes and database triggers mark the affected compiled configuration stale
+2. A control-plane publisher compiles that committed state and atomically advances its current-bundle pointer
+3. A data-plane poller fetches, validates, and admits the published bundle
+
+Management requests return after the first stage. They do not wait for compilation or gateway polling, and management clients do
+not coordinate with publication state. A published bundle becomes active on a particular gateway only after that gateway's next
+successful manifest poll. Compilation failures and poll failures both preserve the last admitted bundle.
+
 The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
 to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has
 zero or multiple bundles; readiness remains the authority for whether it can serve.
@@ -671,7 +681,7 @@ conventions:
 
 1. Add the provider and models to taxonomy
 2. Set `kind`, `base_url`, aliases, `accepted_params`, and `params_closed`
-3. Apply taxonomy, which publishes changed bundle revisions automatically
+3. Apply taxonomy, which queues a durable global revision for asynchronous publication
 4. Prove the actual upstream body and response through a running data plane
 
 No data-plane registry or adapter edit is needed for spelling-only differences.

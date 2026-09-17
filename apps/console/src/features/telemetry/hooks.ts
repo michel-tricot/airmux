@@ -1,13 +1,9 @@
-import { useQueryClient } from '@tanstack/react-query';
 import {
   useListOrgEventsInfinite,
   useListWorkspaceEventsInfinite,
   useListActivityInfinite,
-  useListBundlesInfinite,
-  useRepublishBundle,
   useListDataPlanes,
   useListInstanceActivityInfinite,
-  getListBundlesInfiniteQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
@@ -34,20 +30,6 @@ export function useWorkspaceEvents(
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListActivityInfinite(orgId, params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
-}
-
-export function useBundles(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListBundlesInfinite(orgId, undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
-}
-
-export function useRepublishBundleMutation(orgId: string) {
-  const queryClient = useQueryClient();
-  return useRepublishBundle({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
-      meta: { errorMessage: 'We couldn’t republish the configuration. Please try again.' },
-    },
-  });
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {

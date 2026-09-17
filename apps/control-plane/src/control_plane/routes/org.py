@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException
 
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission, Scope
-from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
-from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
+from control_plane.models import AuditLog, OrgMembership, UsageEvent, User
 from control_plane.models.audit import ActivityOut
-from control_plane.models.bundle import BundleOut
 from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.common.wire import DeletedOut, Envelope, PageEnvelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
@@ -139,22 +136,6 @@ async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: Actor
         await membership.delete()
     await service_account.delete_with_contents()
     return Envelope(data=DeletedOut.of(user_id))
-
-
-@router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_publish)])
-async def republish_bundle(org_id: OrgDep) -> Envelope[BundleOut]:
-    """Request a fresh bundle for the organization's current configuration."""
-    now = datetime.now(tz=UTC)
-    await RuntimeConfiguration.request_republication(org_id)
-    published = await publish_pending(now)
-    bundle = next(bundle for bundle in published if bundle.org_id == org_id)
-    return Envelope(data=BundleOut.model_validate(bundle))
-
-
-@router.get("/bundles", tags=["Organization Bundles"], dependencies=[require("api", org_scope, Permission.bundles_read)])
-async def list_bundles(org_id: OrgDep, page: PageDep) -> PageEnvelope[BundleOut]:
-    """List policy bundle metadata for an organization."""
-    return PageEnvelope.from_slice(await Bundle.page_for_org(org_id, page), BundleOut.model_validate)
 
 
 @router.get("/events", tags=["Organization Usage Events"], dependencies=[require("api", org_scope, Permission.usage_read)])

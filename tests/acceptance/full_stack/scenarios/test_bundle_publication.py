@@ -21,7 +21,7 @@ def _wait(predicate: Callable[[], bool], timeout: float = 30.0) -> bool:
     return False
 
 
-def test_new_inference_key_reaches_a_running_data_plane_without_manual_publication(stack: Stack) -> None:
+def test_configuration_changes_publish_and_reach_a_running_data_plane(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
     stack.collect_credentials()
@@ -41,15 +41,33 @@ def test_new_inference_key_reaches_a_running_data_plane_without_manual_publicati
             json={"label": "automatic-publication", "user_id": principal["user_id"]},
         )
         inference_key_response.raise_for_status()
-        token = inference_key_response.json()["data"]["token"]
+        inference_key = inference_key_response.json()["data"]
+        token = inference_key["token"]
 
-    def accepted() -> bool:
-        response = httpx.post(
-            f"{stack.dp_url}/inf/v1/chat/completions",
-            headers={"authorization": f"Bearer {token}"},
-            json={"model": MODEL, "messages": [{"role": "user", "content": "new key"}]},
-            timeout=10.0,
+        def completion(model: str) -> httpx.Response:
+            return httpx.post(
+                f"{stack.dp_url}/inf/v1/chat/completions",
+                headers={"authorization": f"Bearer {token}"},
+                json={"model": model, "messages": [{"role": "user", "content": "asynchronous configuration"}]},
+                timeout=10.0,
+            )
+
+        assert _wait(lambda: completion(MODEL).status_code == 200), "the running data plane never adopted the automatically published key"
+
+        added_model = "added-after-startup"
+        taxonomy_response = admin.post(
+            "/api/v1/instance/taxonomy/models",
+            json={
+                "model_id": added_model,
+                "provider_id": "stub",
+                "upstream_model": MODEL,
+                "input_modalities": ["text"],
+                "output_modalities": ["text"],
+            },
         )
-        return response.status_code == 200
+        taxonomy_response.raise_for_status()
+        assert _wait(lambda: completion(added_model).status_code == 200), "the running data plane never admitted the added taxonomy model"
 
-    assert _wait(accepted), "the running data plane never adopted the automatically published key"
+        revoked = admin.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{inference_key['id']}")
+        revoked.raise_for_status()
+        assert _wait(lambda: completion(MODEL).status_code == 401), "the running data plane never admitted the key revocation"

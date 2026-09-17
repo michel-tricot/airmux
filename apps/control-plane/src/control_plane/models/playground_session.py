@@ -10,13 +10,13 @@ from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, OrgOwned, Tombstonable, UTCDateTime
 from control_plane.models.common.base import Record
-from control_plane.models.runtime_configuration import bundle_input
 
 
 @audited
-@bundle_input(scope="org", columns=("org_id", "workspace_id", "user_id", "token_hash", "expires_at", "revoked"))
+@bundle_input(scope="org")
 class PlaygroundSession(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"], ondelete="CASCADE"),

@@ -29,6 +29,3 @@ def test_list_endpoints_read_back(tmp_path):
         taxonomy = c.get(f"/api/v1/organizations/{org_id}/taxonomy", headers=org).json()["data"]
         assert [p["name"] for p in taxonomy["providers"]] == ["openai"]
         assert [m["name"] for m in taxonomy["models"]] == ["gpt-test"]
-        bundles = c.get(f"/api/v1/organizations/{org_id}/bundles", headers=org).json()["data"]
-        assert [b["version"] for b in bundles] == [1, 2, 3]
-        assert "payload" not in bundles[0]

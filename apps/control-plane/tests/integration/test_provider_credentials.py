@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
-from uuid import UUID  # noqa: TC003 NamedTuple resolves its annotations at runtime
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane, wait_for_publication
 from pg import db_url_for
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -16,7 +16,7 @@ from airmux_runtime.secrets import EnvStoreConfig, InsecureDatabaseStoreConfig, 
 from contract import BundleV1, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.db import current_session
-from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
+from control_plane.models import BundleState, InsecureVaultSecret, Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
 
@@ -43,7 +43,7 @@ def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
 
 
 def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
-    return BundleV1.model_validate(client.get("/api/v1/bundle/latest", headers=headers).json()["data"])
+    return BundleV1.model_validate(wait_for_publication(client, UUID(headers["X-Test-Org-Id"]), headers))
 
 
 def _stored(cp, credential: dict) -> str:
@@ -135,8 +135,8 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
         response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         assert response.status_code == 200, response.text
         credential = response.json()["data"]
-        bundle_response = c.get("/api/v1/bundle/latest", headers=org)
-        entry = BundleV1.model_validate(bundle_response.json()["data"]).catalog.credentials[0]
+        bundle = BundleV1.model_validate(wait_for_publication(c, UUID(org["X-Test-Org-Id"]), org))
+        entry = bundle.catalog.credentials[0]
         rotated = c.put(f"{_credential_path(credential)}/value", json={"value": "sk-rotated-9999"}, headers=org)
         assert rotated.status_code == 200, rotated.text
 
@@ -151,7 +151,7 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
 
         assert run_in_db(tmp_path, stored_values) == ["sk-rotated-9999"]
         assert run_in_db(tmp_path, vault_connections) == 1
-        assert KEY not in bundle_response.text
+        assert KEY not in bundle.model_dump_json()
         assert set(entry.model_dump()) == {"ref", "priority", "version"}
         assert c.delete(_credential_path(credential), headers=org).status_code == 200
 
@@ -329,9 +329,9 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
-        payload = c.get("/api/v1/bundle/latest", headers=org).text
-        assert KEY not in payload
-        entry = _latest_bundle(c, org).catalog.credentials[0]
+        bundle = _latest_bundle(c, org)
+        assert KEY not in bundle.model_dump_json()
+        entry = bundle.catalog.credentials[0]
         assert entry.ref.service == "openai"
         assert entry.ref.purpose == "provider"
         assert entry.version == 1
@@ -421,12 +421,15 @@ def test_a_rejected_key_shows_up_as_invalid(tmp_path):
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
         assert m.credential["status"] == "unknown"
-        before = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
+        wait_for_publication(c, m.org_id, m.org)
+        before = run_in_db(tmp_path, lambda: BundleState.get(m.org_id))
+        assert before is not None
         event = _usage_event(m, "credential_rejected", datetime.now(tz=UTC))
         assert c.post("/api/v1/events", json=[event], headers=m.root).status_code == 200
         assert _status_of(c, m) == "invalid"
-        after = c.get(f"/api/v1/organizations/{m.org_id}/bundles", headers=m.org).json()["data"]
-        assert [bundle["id"] for bundle in after] == [bundle["id"] for bundle in before]
+        after = run_in_db(tmp_path, lambda: BundleState.get(m.org_id))
+        assert after is not None
+        assert after.desired_generation == before.desired_generation
 
 
 def test_an_org_data_plane_cannot_change_another_orgs_credential_health(tmp_path):
@@ -561,7 +564,6 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post(f"/api/v1/organizations/{org_id}/bundles/republish", headers=org)
         entries = _latest_bundle(c, org).catalog.credentials
         assert [entry.ref.name for entry in entries] == ["platform"]
         assert entries[0].ref.org_id is None

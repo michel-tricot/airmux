@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import make_org, make_workspace, setup_control_plane, wait_for_publication
 
 RULE = {
     "match": {"kind": "all_requests"},
@@ -9,16 +9,13 @@ RULE = {
 }
 
 
-def test_rule_resource_is_removed_and_policy_rules_are_independent(tmp_path):
+def test_policy_rules_are_independent(tmp_path):
     control_plane = setup_control_plane(tmp_path)
     with TestClient(control_plane.app) as client:
         org_id = make_org(client, control_plane.headers(), "inline-rules")
         headers = control_plane.headers(org_id)
         workspace_id = make_workspace(client, headers, "production")
         base = f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}"
-
-        assert client.get(f"{base}/rules", headers=headers).status_code == 404
-        assert client.post(f"{base}/rules", headers=headers, json={"name": "Removed", "definition": RULE}).status_code == 404
 
         policies = [
             client.post(
@@ -38,6 +35,5 @@ def test_rule_resource_is_removed_and_policy_rules_are_independent(tmp_path):
         persisted = client.get(f"{base}/policies", headers=headers).json()["data"]
         assert persisted[0]["definition"] == replacement
         assert persisted[1]["definition"] == {"target": {"kind": "workspace"}, "rules": [RULE]}
-        bundle = client.get("/api/v1/bundle/latest", headers=control_plane.headers(), params={"org_id": str(org_id)}).json()["data"]
-        assert "rules" not in bundle
+        bundle = wait_for_publication(client, org_id, headers)
         assert len(bundle["policies"]) == 2

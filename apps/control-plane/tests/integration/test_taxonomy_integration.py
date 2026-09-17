@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from airmux_runtime.taxonomy import load_taxonomy
 from cli.control_plane import control_plane_app as app
 from contract.taxonomy import TaxonomySpec
-from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
+from control_plane.models import AuditLog, Bundle, BundleState, Model, Org, Provider, set_actor
 from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
@@ -221,7 +221,7 @@ def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
     assert run_in_db(tmp_path, Model.find) == []
 
 
-def test_taxonomy_command_applies_and_compiles(tmp_path):
+def test_taxonomy_command_applies_and_queues_publication(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     _seed_orgs(tmp_path, "org-dev")
@@ -235,19 +235,20 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
     assert result.exit_code == 0, result.output
     models = run_in_db(tmp_path, Model.find)
     assert "echo-2" in {m.name for m in models}
-    assert [b.version for b in run_in_db(tmp_path, Bundle.find)] == [1, 2]
+    assert run_in_db(tmp_path, Bundle.find) == []
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
-def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
+def test_taxonomy_command_records_one_global_revision_for_every_org(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     _seed_orgs(tmp_path, "org-one", "org-two")
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
-    bundles = run_in_db(tmp_path, Bundle.find)
-    orgs = run_in_db(tmp_path, Org.find)
-    assert {b.org_id for b in bundles} == {o.id for o in orgs}
+    assert run_in_db(tmp_path, Bundle.find) == []
+    assert run_in_db(tmp_path, BundleState.find) == []
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
 def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):

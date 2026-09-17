@@ -89,7 +89,6 @@ def test_documentation_groups_follow_authority_scopes():
         "instance_scope": {"Instance"},
         "org_scope": {"Organization"},
         "workspace_scope": {"Workspace"},
-        "bundle_scope": {"Data Plane API"},
     }
     expected_by_operation = {
         "revoke_management_key": {"Instance", "Organization", "Workspace"},
@@ -271,7 +270,6 @@ def test_paginated_operations_share_one_query_contract():
     assert offenders == []
     assert paginated == {
         "list_activity",
-        "list_bundles",
         "list_instance_activity",
         "list_org_events",
         "list_orgs",

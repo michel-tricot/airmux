@@ -15,22 +15,19 @@ from airmux_runtime.secrets import SecretNotFoundError, SecretRejectedError, Sec
 from contract import CredentialScope, SecretPurpose, SecretRef
 from control_plane.db import current_session
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.wire import RecordOut, RecordUpdate, RequestModel
-from control_plane.models.runtime_configuration import bundle_input
 
 DEFAULT_PRIORITY = 100
 ProviderCredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
 
 
 @audited
-@bundle_input(
-    scope="nullable_org",
-    columns=("org_id", "workspace_id", "provider_name", "name", "priority", "enabled", "version"),
-)
+@bundle_input(scope="nullable_org", ignored_columns=("status", "status_at"))
 class ProviderCredential(Record, Identified, Tombstonable, table=True):
     """One provider API key the platform holds on someone's behalf. The value is not here.
 

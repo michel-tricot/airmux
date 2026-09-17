@@ -19,7 +19,6 @@ events or storage failures, or when its backlog or oldest event age grows.
 airmux status
 airmux doctor
 airmux gateways list --all
-airmux bundles list
 airmux events tail
 ```
 
@@ -51,5 +50,5 @@ cross-version compatibility between planes, deploy one release across all compon
 | `/readyz` says `bundle rejected` | Gateway logs for an invalid provider, model, credential, or policy reference |
 | `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
 | Usage missing from console | `/healthz` pending count and control-plane event-ingest reachability |
-| New key returns `invalid_token` | Wait for bundle adoption, then inspect `bundles list` and gateway logs |
+| New key returns `invalid_token` | Wait for adoption, then inspect gateway readiness and logs |
 | Streams pause or buffer | Reverse-proxy buffering and read timeout |

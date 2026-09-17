@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Protocol, cast
 from uuid import UUID
 
@@ -13,7 +12,6 @@ from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
-from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configuration_changes
 from control_plane.sessions import SESSION_COOKIE, verify_session
 from control_plane.throttling import TrafficGroup, check_identity
 
@@ -148,20 +146,6 @@ async def credential_scope(resolved: ActorDep) -> Scope:
 CredentialScopeDep = Annotated[Scope, Depends(credential_scope)]
 
 
-async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
-    selected = org_id
-    if selected is None and resolved.grant.scope.org_id is not None:
-        selected = resolved.grant.scope.org_id
-    if selected is None:
-        return Scope.instance()
-    if await Org.find_by_id(selected) is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
-    return Scope.org(selected)
-
-
-BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
-
-
 async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> Scope:
     if workspace_ref is not None and org_id is None:
         raise HTTPException(status_code=422, detail="workspace_ref requires org_id")
@@ -271,12 +255,6 @@ def browser_scoped(traffic_group: TrafficGroup) -> params.Depends:
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     async with transaction(request.app.state.session_factory) as session:
         yield session
-        changes = runtime_configuration_changes(session.sync_session)
-        if changes:
-            from control_plane.compiler import publish_pending  # noqa: PLC0415 compiler loads every projected model
-
-            await RuntimeConfiguration.advance(changes)
-            await publish_pending(datetime.now(tz=UTC))
 
 
 SessionDep = Annotated["AsyncSession", Depends(get_session, scope="function")]

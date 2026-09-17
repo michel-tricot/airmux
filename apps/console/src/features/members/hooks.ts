@@ -13,7 +13,6 @@ import {
   getListMembersQueryKey,
   getMyPermissionsQueryKey,
   getListInferenceKeysQueryKey,
-  getListBundlesInfiniteQueryKey,
   getListActivityInfiniteQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
@@ -49,7 +48,6 @@ export function useDeleteOrgServiceAccountMutation(orgId: string) {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
         void queryClient.invalidateQueries({ queryKey: getListOrgManagementKeysQueryKey(orgId) });
-        void queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) });
         void queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) });
       },
       meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
@@ -93,7 +91,6 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
-          queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
           queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
       meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },

@@ -66,13 +66,6 @@ class BundleManifestEntry(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
 
 
-class BundleOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-
-
 class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
     public_signup: Annotated[bool, Field(title="Public Signup")]
@@ -348,10 +341,6 @@ class DenyRequest(BaseModel):
     )
     kind: Annotated[Literal["deny"], Field(title="Kind")]
     message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
-
-
-class EnvelopeBundleOut(BaseModel):
-    data: BundleOut
 
 
 class EnvelopeClaimOut(BaseModel):
@@ -990,7 +979,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1026,7 +1014,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1646,11 +1633,6 @@ class TaxonomyOut(BaseModel):
     models: Annotated[list[ModelOut], Field(title="Models")]
 
 
-class TaxonomyPublicationOut(BaseModel):
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-
-
 class TaxonomySpec(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2054,11 +2036,6 @@ class PageEnvelopeActivityOut(BaseModel):
     page: PageInfo
 
 
-class PageEnvelopeBundleOut(BaseModel):
-    data: Annotated[list[BundleOut], Field(max_length=200, title="Data")]
-    page: PageInfo
-
-
 class PageEnvelopeOrgOut(BaseModel):
     data: Annotated[list[OrgOut], Field(max_length=200, title="Data")]
     page: PageInfo
@@ -2101,7 +2078,6 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: Annotated[bool, Field(title="Dry Run")]
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    published: Annotated[list[TaxonomyPublicationOut], Field(title="Published")]
 
 
 class WorkspaceMembershipIn(BaseModel):
