@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, KeyColumn, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
+from control_plane.models.common import Identified, OrgOwned, PageQuery, PageSlice, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
@@ -39,7 +39,7 @@ def _as_uuid(value: str) -> UUID | None:
 
 
 @audited
-class Workspace(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
+class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
     """The scope inference keys live in; membership is drawn from the owning org.
 
     The (id, org_id) unique constraint exists only as the composite foreign key target that
@@ -50,7 +50,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table
     __table_args__: ClassVar = (
         UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
         UniqueConstraint("org_id", "slug", name="workspace_org_id_slug_key"),
-        Index("workspace_org_name_id_idx", "org_id", "name", "id"),
+        Index("workspace_org_id_idx", "org_id", "id"),
     )
 
     org_id: UUID = Field(foreign_key="org.id")
@@ -156,12 +156,10 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table
             )
             .exists()
         )
-        return await cls._page(
-            select(cls).where(cls.org_id == org_id, or_(instance_access, org_access, workspace_access)),
+        return await cls.page(
             request,
-            filter_columns=("org_id",),
-            cursor_context={"org_id": org_id},
-            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+            or_(instance_access, org_access, workspace_access),
+            partition={"org_id": org_id},
         )
 
     async def delete_with_contents(self, store: SecretStore) -> None:

@@ -15,7 +15,7 @@ from contract import token_hash
 from control_plane.authz import Scope, ScopeLevel
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, KeyColumn, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
+from control_plane.models.common import Identified, OrgOwned, PageQuery, PageSlice, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordCreate, RecordOut, RequestModel
@@ -43,7 +43,7 @@ def _new_token() -> str:
 
 
 @audited
-class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
+class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("org_role IN ('admin', 'member')", name="org_invitation_org_role_valid"),
         CheckConstraint(
@@ -71,26 +71,29 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
         Index(
-            "org_invitation_pending_email_created_id_idx",
-            "email",
-            "created_at",
+            "org_invitation_pending_org_id_idx",
+            "org_id",
             "id",
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
         Index(
-            "org_invitation_pending_email_org_created_id_idx",
+            "org_invitation_pending_email_id_idx",
+            "email",
+            "id",
+            postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
+        ),
+        Index(
+            "org_invitation_pending_email_org_id_idx",
             "email",
             "org_id",
-            "created_at",
             "id",
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
         Index(
-            "org_invitation_pending_email_org_workspace_created_id_idx",
+            "org_invitation_pending_email_org_workspace_id_idx",
             "email",
             "org_id",
             "workspace_id",
-            "created_at",
             "id",
             postgresql_where=text("accepted_at IS NULL AND revoked_at IS NULL"),
         ),
@@ -145,17 +148,11 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
 
     @classmethod
     async def page_for_org(cls, org_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        statement = select(cls).where(
-            cls.org_id == org_id,
+        return await cls.page(
+            request,
             col(cls.accepted_at).is_(None),
             col(cls.revoked_at).is_(None),
-        )
-        return await cls._page(
-            statement,
-            request,
-            filter_columns=("org_id",),
-            cursor_context={"org_id": org_id},
-            columns=(KeyColumn(col(cls.email), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
+            partition={"org_id": org_id},
         )
 
     @classmethod
@@ -180,34 +177,21 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, t
 
     @classmethod
     async def page_pending_for_email(cls, email: str, now: datetime, scope: Scope, request: PageQuery) -> PageSlice[Self]:
-        statement = select(cls).where(
-            cls.email == User.normalize_email(email),
+        normalized_email = User.normalize_email(email)
+        conditions = [
             col(cls.accepted_at).is_(None),
             col(cls.revoked_at).is_(None),
             col(cls.expires_at) > now,
-        )
+        ]
+        partition: dict[str, str | UUID | None] = {"email": normalized_email}
         if scope.level is not ScopeLevel.instance:
-            statement = statement.where(cls.org_id == scope.org_id)
+            partition["org_id"] = scope.org_id
         if scope.level is ScopeLevel.workspace:
-            statement = statement.where(cls.workspace_id == scope.workspace_id)
-        filter_columns = (
-            ("email", "org_id", "workspace_id")
-            if scope.level is ScopeLevel.workspace
-            else ("email", "org_id")
-            if scope.level is ScopeLevel.org
-            else ("email",)
-        )
-        return await cls._page(
-            statement,
+            partition["workspace_id"] = scope.workspace_id
+        return await cls.page(
             request,
-            filter_columns=filter_columns,
-            cursor_context={
-                "email": User.normalize_email(email),
-                "scope": scope.level.value,
-                "org_id": scope.org_id,
-                "workspace_id": scope.workspace_id,
-            },
-            columns=(KeyColumn(col(cls.created_at), "asc", "datetime"), KeyColumn(col(cls.id), "asc", "uuid")),
+            *conditions,
+            partition=partition,
         )
 
     @classmethod

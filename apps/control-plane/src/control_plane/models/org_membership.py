@@ -46,7 +46,7 @@ class OrgMembership(Record, Tombstonable, table=True):
         return await keyset_page(
             select(cls).where(cls.user_id == user_id),
             request,
-            Keyset(model=cls, filter_columns=("user_id",), columns=(KeyColumn(col(cls.org_id), "asc", "uuid"),)),
+            Keyset(model=cls, partition_columns=("user_id",), columns=(KeyColumn(col(cls.org_id), "asc", "uuid"),)),
             cursor_context={"user_id": user_id},
         )
 

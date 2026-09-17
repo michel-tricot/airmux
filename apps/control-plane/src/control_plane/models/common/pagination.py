@@ -6,13 +6,12 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import Depends
 from pydantic import Field, StringConstraints
 from sqlalchemy import ColumnElement, Table, UniqueConstraint, and_, inspect, or_
-from sqlmodel import SQLModel
 
 from control_plane.db import current_session
 from control_plane.models.common.wire import RequestModel
@@ -65,13 +64,13 @@ class KeyColumn:
 @dataclass(frozen=True)
 class Keyset[T]:
     model: type[T]
-    filter_columns: tuple[str, ...]
+    partition_columns: tuple[str, ...]
     columns: tuple[KeyColumn, ...]
 
     def __post_init__(self) -> None:
         mapper = cast("Mapper[Any]", inspect(self.model))
         table = cast("Table", mapper.persist_selectable)
-        required = self.filter_columns + tuple(column.column.key for column in self.columns)
+        required = self.partition_columns + tuple(column.column.key for column in self.columns)
         candidates = [
             (tuple(column.key for column in table.primary_key.columns), True),
             *(
@@ -94,27 +93,6 @@ class Keyset[T]:
         table = cast("Table", mapper.persist_selectable)
         ordering = ",".join(f"{column.column.key}:{column.direction}:{column.kind}" for column in self.columns)
         return _digest(f"v{CURSOR_VERSION}:{table.fullname}:{ordering}")
-
-
-class UUID7Pageable(SQLModel):
-    @classmethod
-    async def _page(
-        cls,
-        statement: Select[tuple[Self]],
-        request: PageQuery,
-        *,
-        filter_columns: tuple[str, ...],
-        cursor_context: Mapping[str, CursorScalar] | None = None,
-        columns: tuple[KeyColumn, ...] | None = None,
-    ) -> PageSlice[Self]:
-        mapper = cast("Mapper[Any]", inspect(cls))
-        id_column = cast("InstrumentedAttribute[UUID]", mapper.all_orm_descriptors["id"])
-        return await keyset_page(
-            statement,
-            request,
-            Keyset(model=cls, filter_columns=filter_columns, columns=columns or (KeyColumn(id_column, "asc", "uuid"),)),
-            cursor_context=cursor_context,
-        )
 
 
 def _digest(value: str) -> str:

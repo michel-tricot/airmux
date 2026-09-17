@@ -6,10 +6,10 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint, Index
-from sqlmodel import Field, col, select
+from sqlmodel import Field, col
 
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, NotOwnedError, OrgOwned, PageQuery, PageSlice, Tombstonable, UUID7Pageable
+from control_plane.models.common import Identified, NotOwnedError, OrgOwned, PageQuery, PageSlice, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.runtime_configuration import bundle_input
@@ -17,7 +17,7 @@ from control_plane.models.runtime_configuration import bundle_input
 
 @audited
 @bundle_input(scope="org", columns=("org_id", "workspace_id", "user_id", "token_hash", "revoked"))
-class InferenceKey(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, table=True):
+class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     """org_id stays denormalized beside workspace_id so the compiler collects an org's keys in one
     query and owned_by keeps working; the composite foreign key keeps the pair from disagreeing."""
 
@@ -63,12 +63,7 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, UUID7Pageable, ta
 
     @classmethod
     async def page_for_workspace(cls, workspace_id: UUID, request: PageQuery) -> PageSlice[Self]:
-        return await cls._page(
-            select(cls).where(cls.workspace_id == workspace_id),
-            request,
-            filter_columns=("workspace_id",),
-            cursor_context={"workspace_id": workspace_id},
-        )
+        return await cls.page(request, partition={"workspace_id": workspace_id})
 
 
 class InferenceKeyIn(RequestModel):

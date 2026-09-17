@@ -29,7 +29,7 @@ class UnindexedItem(Base):
 def test_keyset_requires_a_covering_index():
     keyset = Keyset(
         model=IndexedItem,
-        filter_columns=("org_id",),
+        partition_columns=("org_id",),
         columns=(KeyColumn(IndexedItem.id, "asc", "int"),),
     )
 
@@ -38,6 +38,6 @@ def test_keyset_requires_a_covering_index():
     with pytest.raises(ValueError, match="pagination index"):
         Keyset(
             model=UnindexedItem,
-            filter_columns=("org_id",),
+            partition_columns=("org_id",),
             columns=(KeyColumn(UnindexedItem.id, "asc", "int"),),
         )

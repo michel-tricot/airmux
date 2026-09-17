@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import Index, UniqueConstraint, func
+from sqlalchemy import UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.bundle import Bundle
-from control_plane.models.common import Identified, KeyColumn, PageQuery, PageSlice, Tombstonable, UUID7Pageable
+from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
@@ -39,8 +39,8 @@ def _as_uuid(value: str) -> UUID | None:
 
 
 @audited
-class Org(Record, Identified, Tombstonable, UUID7Pageable, table=True):
-    __table_args__: ClassVar = (UniqueConstraint("slug", name="org_slug_key"), Index("org_name_id_idx", "name", "id"))
+class Org(Record, Identified, Tombstonable, table=True):
+    __table_args__: ClassVar = (UniqueConstraint("slug", name="org_slug_key"),)
 
     name: str
     slug: str = Field(sa_type=CITEXT)
@@ -95,24 +95,17 @@ class Org(Record, Identified, Tombstonable, UUID7Pageable, table=True):
 
     @classmethod
     async def page_all(cls, request: PageQuery) -> PageSlice[Self]:
-        return await cls._page(
-            select(cls),
-            request,
-            filter_columns=(),
-            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
-        )
+        return await cls.page(request)
 
     @classmethod
     async def page_joined_by(cls, user_id: UUID, visible_org_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        statement = select(cls).where(col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)))
+        conditions = [col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id))]
         if visible_org_id is not None:
-            statement = statement.where(cls.id == visible_org_id)
-        return await cls._page(
-            statement,
+            conditions.append(cls.id == visible_org_id)
+        return await cls.page(
             request,
-            filter_columns=(),
+            *conditions,
             cursor_context={"user_id": user_id, "visible_org_id": visible_org_id},
-            columns=(KeyColumn(col(cls.name), "asc", "str"), KeyColumn(col(cls.id), "asc", "uuid")),
         )
 
     @classmethod

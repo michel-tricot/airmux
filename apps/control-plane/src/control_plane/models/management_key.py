@@ -8,11 +8,11 @@ from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index
 from sqlalchemy.types import TypeDecorator
-from sqlmodel import Field, col, select
+from sqlmodel import Field, col
 
 from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable, UUID7Pageable
+from control_plane.models.common import Identified, PageQuery, PageSlice, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut, RequestModel
@@ -36,7 +36,7 @@ class PermissionList(TypeDecorator[list[Permission]]):
 
 
 @audited
-class ManagementKey(Record, Identified, Tombstonable, UUID7Pageable, table=True):
+class ManagementKey(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="management_key_workspace_needs_org"),
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
@@ -115,19 +115,19 @@ class ManagementKey(Record, Identified, Tombstonable, UUID7Pageable, table=True)
 
     @classmethod
     async def page_for_scope(cls, scope: Scope, user_id: UUID | None, request: PageQuery) -> PageSlice[Self]:
-        statement = select(cls)
-        if scope.level is ScopeLevel.org:
-            statement = statement.where(cls.org_id == scope.org_id)
-        elif scope.level is ScopeLevel.workspace:
-            statement = statement.where(cls.org_id == scope.org_id, cls.workspace_id == scope.workspace_id)
-        if user_id is not None:
-            statement = statement.where(cls.user_id == user_id)
-        filter_columns = ("org_id", "workspace_id") if scope.level is ScopeLevel.workspace else ("org_id",) if scope.level is ScopeLevel.org else ()
-        return await cls._page(
-            statement,
+        partition = (
+            {"org_id": scope.org_id, "workspace_id": scope.workspace_id}
+            if scope.level is ScopeLevel.workspace
+            else {"org_id": scope.org_id}
+            if scope.level is ScopeLevel.org
+            else None
+        )
+        conditions = (cls.user_id == user_id,) if user_id is not None else ()
+        return await cls.page(
             request,
-            filter_columns=filter_columns,
-            cursor_context={"scope": scope.level.value, "org_id": scope.org_id, "workspace_id": scope.workspace_id, "user_id": user_id},
+            *conditions,
+            partition=partition,
+            cursor_context={"user_id": user_id},
         )
 
 
