@@ -27,10 +27,7 @@ ProviderCredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
 
 
 @audited
-@bundle_input(
-    scope="nullable_org",
-    columns=("org_id", "workspace_id", "provider_name", "name", "priority", "enabled", "version"),
-)
+@bundle_input(scope="nullable_org", ignored_columns=("status", "status_at"))
 class ProviderCredential(Record, Identified, Tombstonable, table=True):
     """One provider API key the platform holds on someone's behalf. The value is not here.
 

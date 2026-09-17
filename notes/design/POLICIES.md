@@ -18,8 +18,8 @@ matches when admitting a bundle, indexes them by workspace, and keeps the previo
 admission fails. In-flight requests use their original snapshot. Changes take effect after the
 gateway adopts the published bundle, not synchronously with the management response.
 
-`@bundle_input` marks models and columns whose changes require bundle republication. Its scope
-identifies affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
+`@bundle_input` marks models whose changes require bundle republication. Its scope identifies
+affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
 workspace row lock, match and action validation, active-policy capacity check, and flush.
 Autoflush is suppressed until validation finishes, and capacity is counted directly in the
 database so previously loaded policy objects cannot hide a concurrent activation. Callers do

@@ -30,8 +30,8 @@ def test_tombstonable_models_inherit_the_lifecycle_fields():
         assert set(cls.model_fields) >= TOMBSTONE_COLUMNS, cls.__name__
 
 
-def test_bundle_input_registry_names_real_columns():
+def test_bundle_input_registry_names_real_ignored_columns():
     inputs = bundle_input_tables()
     assert inputs
-    for table, configuration_input in inputs:
-        assert set(configuration_input.columns) <= set(table.c.keys()), table.name
+    for table, bundle_input in inputs:
+        assert set(bundle_input.ignored_columns) <= set(table.c.keys()), table.name

@@ -8,9 +8,10 @@ bypasses the ORM. Concurrent global and organization changes must not let either
 
 ## Decision
 
-Postgres owns bundle invalidation. Models that contribute to a bundle declare their scope and relevant columns with
-`@bundle_input`. The baseline migration installs a trigger for each declaration. Inserts, deletes, and changes to relevant columns
-advance a durable global or organization generation in the same transaction as the resource write. A rollback rolls back both.
+Postgres owns bundle invalidation. Models that contribute to a bundle declare their scope with `@bundle_input`. The baseline
+migration installs a trigger for each declaration. Inserts, deletes, and changes to any column except database-owned timestamps and
+explicitly ignored operational fields advance a durable global or organization generation in the same transaction as the resource
+write. New columns therefore invalidate by default. A rollback rolls back both.
 
 Global and organization generations are independent. A bundle records the pair it compiled, and an organization's bundle state
 records the desired pair, published pair, and current immutable bundle id. Equality of both pairs means current; no ordering exists
@@ -36,7 +37,7 @@ adopt the complete set.
 ## Invariants
 
 - Every committed relevant write advances the affected generation through a database trigger
-- Updates to irrelevant columns do not advance a generation
+- Updates to database-owned timestamps and explicitly ignored operational fields do not advance a generation
 - A bundle becomes current only with the exact generation pair compiled from its repeatable-read snapshot
 - At most one publisher compiles an organization at a time
 - Failed or cancelled publication leaves the previous current bundle available

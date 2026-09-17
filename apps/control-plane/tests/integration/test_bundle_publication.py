@@ -416,7 +416,7 @@ def test_cancelling_publication_rolls_back_and_leaves_generations_pending(tmp_pa
     assert not state.is_current(target)
 
 
-def test_raw_database_changes_are_published_and_irrelevant_updates_are_ignored(tmp_path):
+def test_raw_database_changes_dirty_bundle_input_tables_by_default(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as client:
@@ -440,7 +440,6 @@ def test_raw_database_changes_are_published_and_irrelevant_updates_are_ignored(t
             await set_actor("raw-editor")
             await current_session().execute(text("UPDATE provider SET icon = 'changed' WHERE name = :name"), {"name": PROVIDER["provider_id"]})
         async with standalone_transaction(cp.db_url):
-            assert await BundleState.global_generation() == before_global
             await set_actor("raw-editor")
             await current_session().execute(
                 text("UPDATE provider SET base_url = :url WHERE name = :name"),
@@ -453,7 +452,7 @@ def test_raw_database_changes_are_published_and_irrelevant_updates_are_ignored(t
             return await BundleState.global_generation(), state.desired_generation, before_global, before_org
 
     global_generation, org_generation, before_global, before_org = asyncio.run(mutate())
-    assert global_generation == before_global + 1
+    assert global_generation == before_global + 2
     assert org_generation == before_org + 1
     with TestClient(cp.app) as restarted:
         published = wait_for_publication(restarted, org_id, cp.headers(org_id), current["bundle_id"])

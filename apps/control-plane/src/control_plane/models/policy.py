@@ -48,7 +48,7 @@ class PolicyDefinitionType(TypeDecorator[PolicyDefinition]):
 
 
 @audited
-@bundle_input(scope="org", columns=("org_id", "workspace_id", "name", "enabled", "priority", "definition"))
+@bundle_input(scope="org")
 class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),

@@ -16,7 +16,7 @@ from control_plane.models.common.base import Record
 
 
 @audited
-@bundle_input(scope="org", columns=("org_id", "workspace_id", "user_id", "token_hash", "expires_at", "revoked"))
+@bundle_input(scope="org")
 class PlaygroundSession(Record, Identified, OrgOwned, Tombstonable, table=True):
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"], ondelete="CASCADE"),

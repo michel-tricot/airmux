@@ -16,25 +16,7 @@ from control_plane.models.common.wire import RecordOut, RequestModel
 
 
 @audited
-@bundle_input(
-    scope="global",
-    columns=(
-        "name",
-        "provider_id",
-        "upstream_model",
-        "egress_kind",
-        "input_price_per_mtok",
-        "output_price_per_mtok",
-        "cache_read_price_per_mtok",
-        "cache_write_price_per_mtok",
-        "context_window",
-        "max_output_tokens",
-        "input_modalities",
-        "output_modalities",
-        "capabilities",
-        "parameter_support",
-    ),
-)
+@bundle_input(scope="global")
 class Model(Record, Identified, Tombstonable, table=True):
     name: str = Field(unique=True)
     provider_id: UUID = Field(foreign_key="provider.id")

@@ -16,7 +16,7 @@ from control_plane.models.common.wire import RecordOut, RequestModel
 
 
 @audited
-@bundle_input(scope="global", columns=("name", "kind", "base_url", "param_aliases", "accepted_params", "params_closed"))
+@bundle_input(scope="global")
 class Provider(Record, Identified, Tombstonable, table=True):
     name: str = Field(unique=True, sa_type=CITEXT)
     kind: str
