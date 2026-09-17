@@ -297,6 +297,9 @@ export default function OrganizationDetail() {
               isError={bundlesQuery.isError}
               error={bundlesQuery.error}
               onRetry={() => bundlesQuery.refetch()}
+              hasNextPage={bundlesQuery.hasNextPage}
+              isFetchingNextPage={bundlesQuery.isFetchingNextPage}
+              onLoadMore={() => void bundlesQuery.fetchNextPage()}
             />
           </TabsContent>
         )}

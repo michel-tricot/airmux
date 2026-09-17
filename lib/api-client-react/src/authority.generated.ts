@@ -138,19 +138,19 @@ export const operationAuthority = {
       },
     ],
   },
-  listOrgs: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["organizations.read"],
-      },
-    ],
-  },
   createOrg: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["organizations.create"],
+      },
+    ],
+  },
+  listOrgs: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
       },
     ],
   },

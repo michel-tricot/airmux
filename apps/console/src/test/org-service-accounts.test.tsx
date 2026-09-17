@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import App from '@/App';
-import { ORG, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 function renderAt(path: string) {
   window.history.replaceState(null, '', path);
@@ -34,7 +34,7 @@ describe('organization service accounts', () => {
           },
         }),
       ),
-      http.get('/api/v1/organizations/:orgId/users', () => HttpResponse.json<{ data: Api.OrgMemberOut[] }>({ data: members })),
+      http.get('/api/v1/organizations/:orgId/users', () => enveloped(members)),
       http.post('/api/v1/organizations/:orgId/service-accounts', async ({ request }) => {
         submitted = await request.json();
         const serviceAccount = {

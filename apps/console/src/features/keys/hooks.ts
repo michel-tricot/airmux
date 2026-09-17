@@ -19,8 +19,8 @@ import {
   type ListInstanceManagementKeysParams,
   type ListOrgManagementKeysParams,
   useListInferenceKeyOwners,
-  getListBundlesQueryKey,
-  getListActivityQueryKey,
+  getListBundlesInfiniteQueryKey,
+  getListActivityInfiniteQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
 
@@ -87,8 +87,8 @@ export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: strin
       onSuccess: () =>
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
-          queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-          queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
@@ -102,8 +102,8 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
       onSuccess: () =>
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
-          queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-          queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(orgId) }),
         ]),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },

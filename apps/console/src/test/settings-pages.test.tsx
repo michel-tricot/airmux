@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, paged, server } from './msw';
 
 const bundle: Api.BundleOut = { id: 'bundle-1', org_id: ORG.id, version: 1, issued_at: '2026-09-11T12:00:00Z' };
 
@@ -15,7 +15,7 @@ function open(path: string) {
 }
 
 it('shows bundle generation history under organization Activity without publishing controls or a Policies category', async () => {
-  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: [bundle] })));
+  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => paged([bundle])));
   open('/org/settings');
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Activity' }));
@@ -34,7 +34,7 @@ it('keeps Activity available for bundle readers without audit permission', async
 });
 
 it('organizes workspace settings into selectable categories', async () => {
-  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => HttpResponse.json({ data: [] })));
+  server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => enveloped([])));
   open(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
   const user = userEvent.setup();
   expect(await screen.findByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');
@@ -49,19 +49,17 @@ it('organizes workspace settings into selectable categories', async () => {
 it('keeps workspace members visible when member candidates are unavailable', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/members', () =>
-      HttpResponse.json({
-        data: [
-          {
-            user_id: 'user-2',
-            workspace_id: WORKSPACES[0].id,
-            email: 'member@example.com',
-            name: 'Workspace Member',
-            service_account: false,
-            role: 'member',
-            status: 'member',
-          },
-        ],
-      }),
+      enveloped([
+        {
+          user_id: 'user-2',
+          workspace_id: WORKSPACES[0].id,
+          email: 'member@example.com',
+          name: 'Workspace Member',
+          service_account: false,
+          role: 'member',
+          status: 'member',
+        },
+      ]),
     ),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/member-candidates', () => new HttpResponse(null, { status: 503 })),
   );
@@ -106,8 +104,8 @@ it('republishes configuration from Instance Administration and updates the bundl
       HttpResponse.json({ data: { user_id: 'user-1', name: 'Owner', email: 'owner@example.com', instance_role: 'owner', orgs: [ORG.id] } }),
     ),
     http.get('/api/v1/organizations/:orgId', () => HttpResponse.json({ data: ORG })),
-    http.get('/api/v1/users', () => HttpResponse.json({ data: [] })),
-    http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })),
+    http.get('/api/v1/users', () => enveloped([])),
+    http.get('/api/v1/organizations/:orgId/bundles', () => paged(bundles)),
     http.post('/api/v1/organizations/:orgId/bundles/republish', () => {
       const published = { ...bundle, id: 'bundle-2', version: 2 };
       bundles = [...bundles, published];
@@ -124,7 +122,7 @@ it('republishes configuration from Instance Administration and updates the bundl
 
 it('refreshes generated configuration history when returning to Activity', async () => {
   let bundles = [bundle];
-  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => HttpResponse.json({ data: bundles })));
+  server.use(http.get('/api/v1/organizations/:orgId/bundles', () => paged(bundles)));
   open('/org/settings');
   const user = userEvent.setup();
   await user.click(await screen.findByRole('tab', { name: 'Activity' }));

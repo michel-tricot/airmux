@@ -86,6 +86,7 @@ def test_management_key_api_creates_lists_and_revokes_one_resource_type(tmp_path
 
         listed = client.get(f"/api/v1/organizations/{org_id}/management-keys", headers=root)
         assert listed.status_code == 200, listed.text
+        assert set(listed.json()) == {"data"}
         stored = next(candidate for candidate in listed.json()["data"] if candidate["id"] == key["id"])
         assert stored["prefix"] == key["token"][:12]
         assert "token" not in stored

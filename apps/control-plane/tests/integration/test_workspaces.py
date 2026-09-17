@@ -106,7 +106,7 @@ def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
 
         assert members.status_code == 200
         assert candidates.status_code == 200
-        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 9
         assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
 
 

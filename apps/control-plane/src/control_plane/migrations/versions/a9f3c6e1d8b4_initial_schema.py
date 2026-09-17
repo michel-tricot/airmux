@@ -189,6 +189,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("event_id"),
     )
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
+    op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
+    op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -243,6 +245,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index("bundle_org_version_key", "bundle", ["org_id", "version"], unique=True)
     op.create_table(
         "model",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -596,11 +599,14 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")
     op.drop_table("org_membership")
     op.drop_table("model")
+    op.drop_index("bundle_org_version_key", table_name="bundle")
     op.drop_table("bundle")
     op.drop_table("auth_session")
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")
     op.drop_table("provider")
     op.drop_table("data_plane_instance")

@@ -14,8 +14,8 @@ import {
   getEnrollmentQueryKey,
   getMeQueryKey,
   type OrgRole,
-  getListBundlesQueryKey,
-  getListActivityQueryKey,
+  getListBundlesInfiniteQueryKey,
+  getListActivityInfiniteQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
 
@@ -66,8 +66,8 @@ function useMembershipInvalidation() {
       queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMyPermissionsQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
-      queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(target.orgId) }),
-      queryClient.invalidateQueries({ queryKey: getListActivityQueryKey(target.orgId) }),
+      queryClient.invalidateQueries({ queryKey: getListBundlesInfiniteQueryKey(target.orgId) }),
+      queryClient.invalidateQueries({ queryKey: getListActivityInfiniteQueryKey(target.orgId) }),
     ]);
 }
 

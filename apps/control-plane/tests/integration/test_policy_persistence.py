@@ -14,6 +14,9 @@ from control_plane.models.policy import InvalidPolicyError
 RULE_DEFINITION = RuleDefinition.model_validate(
     {"match": {"kind": "all_requests"}, "action": {"kind": "credential_access", "scopes": ["workspace", "org"]}}
 )
+LIMIT_RULE_DEFINITION = RuleDefinition.model_validate(
+    {"match": {"kind": "all_requests"}, "action": {"kind": "request_limits", "max_output_tokens": 1}}
+)
 
 
 def definition(rule: RuleDefinition = RULE_DEFINITION) -> PolicyDefinition:
@@ -37,11 +40,21 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
             policy_definition = definition()
-            for position in range(MAX_WORKSPACE_RULES - 1):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=policy_definition).save()
-            disabled = tuple(
-                Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=policy_definition)
-                for position in range(2)
+            existing_count = MAX_WORKSPACE_RULES - (1 if operation == "create" else 2)
+            for position in range(existing_count):
+                existing_definition = (
+                    PolicyDefinition(target={"kind": "workspace"}, rules=(RULE_DEFINITION, LIMIT_RULE_DEFINITION))
+                    if operation == "enable" and position == 0
+                    else policy_definition
+                )
+                await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=existing_definition).save()
+            disabled = (
+                tuple(
+                    Policy(org_id=org_id, workspace_id=workspace_id, name=f"candidate-{position}", enabled=False, definition=policy_definition)
+                    for position in range(2)
+                )
+                if operation == "enable"
+                else ()
             )
             for policy in disabled:
                 await policy.save()
@@ -107,7 +120,9 @@ def test_policy_save_checks_capacity_before_catalog_references(policy_workspace)
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
             valid_definition = definition()
-            for position in range(MAX_WORKSPACE_RULES):
+            two_rules = PolicyDefinition(target={"kind": "workspace"}, rules=(RULE_DEFINITION, LIMIT_RULE_DEFINITION))
+            await Policy(org_id=org_id, workspace_id=workspace_id, name="existing-0", definition=two_rules).save()
+            for position in range(1, MAX_WORKSPACE_RULES - 1):
                 await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=valid_definition).save()
             with pytest.raises(InvalidPolicyError, match=f"at most {MAX_WORKSPACE_RULES} active policy rules"):
                 await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()

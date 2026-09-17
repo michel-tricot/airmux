@@ -57,7 +57,7 @@ const transformer: InputTransformerFn = async (config) => {
     if (typeof ref !== 'string') return null;
     const name = ref?.startsWith('#/components/schemas/') ? ref.slice('#/components/schemas/'.length) : null;
 
-    return name?.startsWith('Envelope_') ? name : null;
+    return name?.startsWith('Envelope_') || name?.startsWith('PageEnvelope_') ? name : null;
   };
 
   for (const operations of Object.values(config.paths ?? {})) {
@@ -67,11 +67,27 @@ const transformer: InputTransformerFn = async (config) => {
       const content = objectOf(objectOf(response?.content)?.['application/json']);
       const name = envelopeName(content?.schema);
       const properties = name ? objectOf(objectOf(schemas[name])?.properties) : undefined;
-      if (content && properties && 'data' in properties) content.schema = properties.data;
+      if (content && properties && 'data' in properties) {
+        if (name?.startsWith('PageEnvelope_') && 'page' in properties) {
+          const pageName = name.replace('PageEnvelope_', 'Page_');
+          const dataSchema = properties.data as (typeof schemas)[string];
+          const pageSchema = properties.page as (typeof schemas)[string];
+          schemas[pageName] = {
+            type: 'object',
+            properties: { items: dataSchema, page: pageSchema },
+            required: ['items', 'page'],
+          };
+          content.schema = { $ref: `#/components/schemas/${pageName}` };
+        } else {
+          content.schema = properties.data;
+        }
+      }
     }
   }
 
-  config.components!.schemas = Object.fromEntries(Object.entries(schemas).filter(([name]) => !name.startsWith('Envelope_')));
+  config.components!.schemas = Object.fromEntries(
+    Object.entries(schemas).filter(([name]) => !name.startsWith('Envelope_') && !name.startsWith('PageEnvelope_')),
+  );
 
   return config;
 };
@@ -93,6 +109,8 @@ export default defineConfig({
       override: {
         query: {
           version: 5,
+          useInfinite: true,
+          useInfiniteQueryParam: 'cursor',
         },
         fetch: {
           includeHttpResponseReturnType: false,

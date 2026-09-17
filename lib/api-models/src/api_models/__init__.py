@@ -174,6 +174,10 @@ class CredentialAccess(BaseModel):
     ]
 
 
+class CursorToken(RootModel[str]):
+    root: Annotated[str, Field(max_length=512, min_length=1, pattern="^[A-Za-z0-9_-]+$")]
+
+
 class DataPlaneInstanceOut(BaseModel):
     instance_id: Annotated[UUID, Field(title="Instance Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")]
@@ -376,14 +380,6 @@ class EnvelopeDeletedOutUUID(BaseModel):
 
 class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
-
-
-class EnvelopeListActivityOut(BaseModel):
-    data: Annotated[list[ActivityOut], Field(title="Data")]
-
-
-class EnvelopeListBundleOut(BaseModel):
-    data: Annotated[list[BundleOut], Field(title="Data")]
 
 
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
@@ -934,6 +930,10 @@ class OrgUpdate(BaseModel):
         extra="forbid",
     )
     name: Annotated[Name2 | None, Field(description="Replacement organization name", title="Name")] = None
+
+
+class PageInfo(BaseModel):
+    next_cursor: Annotated[str | None, Field(title="Next Cursor")]
 
 
 class PasswordChangeIn(BaseModel):
@@ -1923,16 +1923,8 @@ class EnvelopeListOrgInvitationOut(BaseModel):
     data: Annotated[list[OrgInvitationOut], Field(title="Data")]
 
 
-class EnvelopeListOrgOut(BaseModel):
-    data: Annotated[list[OrgOut], Field(title="Data")]
-
-
 class EnvelopeListProviderCredentialOut(BaseModel):
     data: Annotated[list[ProviderCredentialOut], Field(title="Data")]
-
-
-class EnvelopeListUsageEventOut(BaseModel):
-    data: Annotated[list[UsageEventOut], Field(title="Data")]
 
 
 class EnvelopeListUserOut(BaseModel):
@@ -2055,6 +2047,26 @@ class OrgServiceAccountIn(BaseModel):
         ManagementKeyIn,
         Field(description="Initial organization-scoped management key to create for the service account"),
     ]
+
+
+class PageEnvelopeActivityOut(BaseModel):
+    data: Annotated[list[ActivityOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
+class PageEnvelopeBundleOut(BaseModel):
+    data: Annotated[list[BundleOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
+class PageEnvelopeOrgOut(BaseModel):
+    data: Annotated[list[OrgOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
+class PageEnvelopeUsageEventOut(BaseModel):
+    data: Annotated[list[UsageEventOut], Field(max_length=200, title="Data")]
+    page: PageInfo
 
 
 class RuleDefinitionInput(BaseModel):

@@ -34,7 +34,7 @@ describe('customFetch', () => {
       fetchMock.mockResolvedValue(jsonResponse(body));
       vi.stubGlobal('fetch', fetchMock);
 
-      await expect(customFetch('/api/v1/items')).rejects.toThrow('Expected a response envelope containing only data');
+      await expect(customFetch('/api/v1/items')).rejects.toThrow('Expected a response envelope');
     },
   );
 
@@ -43,6 +43,16 @@ describe('customFetch', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(customFetch<{ id: string }>('/api/v1/items')).resolves.toEqual({ id: 'item-1' });
+  });
+
+  it('normalizes a paginated response envelope', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'item-1' }], page: { next_cursor: 'next' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(customFetch('/api/v1/items')).resolves.toEqual({
+      items: [{ id: 'item-1' }],
+      page: { next_cursor: 'next' },
+    });
   });
 
   it('preserves error data and request context', async () => {

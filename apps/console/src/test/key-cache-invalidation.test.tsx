@@ -15,7 +15,7 @@ import {
   useRevokeOrgManagementKeyMutation,
   useRevokeInferenceKeyMutation,
 } from '@/features/keys/hooks';
-import { ORG, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 let queryClient: QueryClient;
@@ -69,7 +69,7 @@ describe('key cache invalidation across pages', () => {
   it('revoking an management key refreshes a filtered management-key list', async () => {
     let key = managementKey('ak-1');
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: [key] })),
+      http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => enveloped([key])),
       http.delete('/api/v1/management-keys/:keyId', () => {
         key = managementKey('ak-1', now);
         return HttpResponse.json<{ data: Api.ManagementKeyRevokedOut }>({ data: { id: 'ak-1', status: 'revoked', revoked_at: now } });
@@ -89,7 +89,7 @@ describe('key cache invalidation across pages', () => {
   it('creating a management key refetches the management-key list', async () => {
     const keys = [managementKey('ak-1')];
     server.use(
-      http.get('/api/v1/instance/management-keys', () => HttpResponse.json<{ data: Api.ManagementKeyOut[] }>({ data: keys })),
+      http.get('/api/v1/instance/management-keys', () => enveloped(keys)),
       http.post('/api/v1/instance/management-keys', () => {
         keys.push(managementKey('ak-2'));
         return HttpResponse.json<{ data: Api.ManagementKeyCreatedOut }>({ data: { ...managementKey('ak-2'), token: 'tok-once' } });
@@ -109,9 +109,7 @@ describe('key cache invalidation across pages', () => {
   it('creating an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () =>
-        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: keys }),
-      ),
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => enveloped(keys)),
       http.post(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
         return HttpResponse.json<{ data: Api.InferenceKeyCreatedOut }>({ data: { id: 'ifk-2', token: 'tok-once' } });
@@ -131,9 +129,7 @@ describe('key cache invalidation across pages', () => {
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
     server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () =>
-        HttpResponse.json<{ data: Api.InferenceKeyOut[] }>({ data: [inferenceKey('ifk-1', revoked)] }),
-      ),
+      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => enveloped([inferenceKey('ifk-1', revoked)])),
       http.delete(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
         return HttpResponse.json<{ data: Api.InferenceKeyRevokedOut }>({ data: { id: 'ifk-1', status: 'revoked' } });
@@ -154,8 +150,8 @@ describe('key cache invalidation across pages', () => {
 it('refreshes filtered instance and organization key lists after editing permissions', async () => {
   let key = managementKey('editable');
   server.use(
-    http.get('/api/v1/instance/management-keys', () => HttpResponse.json({ data: [key] })),
-    http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/instance/management-keys', () => enveloped([key])),
+    http.get(`/api/v1/organizations/${ORG.id}/management-keys`, () => enveloped([key])),
     http.put('/api/v1/management-keys/:keyId/permissions', () => {
       key = { ...key, permissions: ['usage.read'] };
       return HttpResponse.json({ data: key });

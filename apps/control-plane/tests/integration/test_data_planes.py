@@ -32,7 +32,9 @@ def test_heartbeat_registers_and_lists_instances(tmp_path):
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp2), headers=root).status_code == 200
         assert c.post("/api/v1/heartbeat", json=_heartbeat(dp3), headers=root).status_code == 200
         c.post("/api/v1/heartbeat", json=_heartbeat(dp1), headers=org)
-        rows = c.get("/api/v1/instance/data-planes", headers=root).json()["data"]
+        response = c.get("/api/v1/instance/data-planes", headers=root)
+        assert set(response.json()) == {"data"}
+        rows = response.json()["data"]
         assert {r["instance_id"] for r in rows} == {str(dp1), str(dp2), str(dp3)}
         assert {row["instance_id"]: row["org_id"] for row in rows} == {str(dp1): str(org_id), str(dp2): None, str(dp3): None}
         assert all(r["status"] == "online" for r in rows)

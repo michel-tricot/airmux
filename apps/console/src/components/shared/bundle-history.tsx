@@ -9,12 +9,18 @@ export function BundleHistory({
   isError,
   error,
   onRetry,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
 }: {
   bundles: BundleOut[] | undefined;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
   onRetry: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
 }) {
   return (
     <Card>
@@ -25,6 +31,9 @@ export function BundleHistory({
         isError={isError}
         error={error}
         onRetry={onRetry}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={onLoadMore}
         resource="configuration bundles"
         empty="No configuration bundles have been generated yet."
         columns={[

@@ -119,12 +119,9 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
 )
 async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
     """List organization members who can be added to a workspace."""
-    candidates = await User.candidates_for_workspace(workspace.org_id, workspace.id)
+    users = await User.candidates_for_workspace(workspace.org_id, workspace.id)
     return Envelope(
-        data=[
-            WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account)
-            for user in candidates
-        ]
+        data=[WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account) for user in users]
     )
 
 
@@ -257,7 +254,7 @@ async def list_inference_key_owners(workspace: WorkspaceDep, actor: ActorDep) ->
 async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[InferenceKeyOut]]:
     """List inference-key metadata for a workspace without returning secret tokens."""
     keys = await InferenceKey.find(InferenceKey.workspace_id == workspace.id, order_by=col(InferenceKey.id))
-    return Envelope(data=[InferenceKeyOut.model_validate(k) for k in keys])
+    return Envelope(data=[InferenceKeyOut.model_validate(key) for key in keys])
 
 
 @router.delete(

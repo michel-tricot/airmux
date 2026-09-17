@@ -531,6 +531,9 @@ function ConfigurationHistory({ orgId }: { orgId: string }) {
         isError={bundlesQuery.isError}
         error={bundlesQuery.error}
         onRetry={() => bundlesQuery.refetch()}
+        hasNextPage={bundlesQuery.hasNextPage}
+        isFetchingNextPage={bundlesQuery.isFetchingNextPage}
+        onLoadMore={() => void bundlesQuery.fetchNextPage()}
       />
     </section>
   );

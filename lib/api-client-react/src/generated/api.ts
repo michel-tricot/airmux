@@ -11,18 +11,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -30,7 +35,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ActivityOut,
   ApplyInstanceTaxonomyParams,
   BundleLatestParams,
   BundleManifest,
@@ -64,11 +68,13 @@ import type {
   InvitationPreviewOut,
   InvitationTokenIn,
   ListActivityParams,
+  ListBundlesParams,
   ListDataPlanesParams,
   ListInstanceActivityParams,
   ListInstanceManagementKeysParams,
   ListOrgEventsParams,
   ListOrgManagementKeysParams,
+  ListOrgsParams,
   ListUsersParams,
   ListWorkspaceEventsParams,
   ListWorkspaceManagementKeysParams,
@@ -95,6 +101,10 @@ import type {
   OrgServiceAccountCreatedOut,
   OrgServiceAccountIn,
   OrgUpdate,
+  PageActivityOut,
+  PageBundleOut,
+  PageOrgOut,
+  PageUsageEventOut,
   PasswordChangeIn,
   PasswordChangedOut,
   PlaygroundSessionEndedOut,
@@ -115,7 +125,6 @@ import type {
   TaxonomyApplyOut,
   TaxonomyOut,
   TaxonomySpec,
-  UsageEventOut,
   UserOut,
   WorkspaceCreate,
   WorkspaceMemberCandidateOut,
@@ -2296,9 +2305,9 @@ export const getListInstanceActivityUrl = (params?: ListInstanceActivityParams,)
  * Required permission: `audit.read`.
  * @summary List Instance Activity
  */
-export const listInstanceActivity = async (params?: ListInstanceActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<ActivityOut[]> => {
+export const listInstanceActivity = async (params?: ListInstanceActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<PageActivityOut> => {
 
-  return customFetch<ActivityOut[]>(getListInstanceActivityUrl(params),
+  return customFetch<PageActivityOut>(getListInstanceActivityUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2311,11 +2320,84 @@ export const listInstanceActivity = async (params?: ListInstanceActivityParams, 
 
 
 
+export const getListInstanceActivityInfiniteQueryKey = (params?: ListInstanceActivityParams,) => {
+    return [
+    'infinite', `/api/v1/instance/activity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListInstanceActivityQueryKey = (params?: ListInstanceActivityParams,) => {
     return [
     `/api/v1/instance/activity`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getListInstanceActivityInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listInstanceActivity>>, ListInstanceActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(params?: ListInstanceActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInstanceActivityInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstanceActivity>>, QueryKey, ListInstanceActivityParams['cursor']> = ({ signal, pageParam }) => listInstanceActivity({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInstanceActivityInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listInstanceActivity>>>
+export type ListInstanceActivityInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListInstanceActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInstanceActivity>>, ListInstanceActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params: undefined |  ListInstanceActivityParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInstanceActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listInstanceActivity>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInstanceActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInstanceActivity>>, ListInstanceActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListInstanceActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInstanceActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listInstanceActivity>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInstanceActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInstanceActivity>>, ListInstanceActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListInstanceActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Instance Activity
+ */
+
+export function useListInstanceActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInstanceActivity>>, ListInstanceActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListInstanceActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData, QueryKey, ListInstanceActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInstanceActivityInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getListInstanceActivityQueryOptions = <TData = Awaited<ReturnType<typeof listInstanceActivity>>, TError = ErrorType<void | HTTPValidationError>>(params?: ListInstanceActivityParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInstanceActivity>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
@@ -2900,110 +2982,6 @@ export const useChangeInstanceRole = <TError = ErrorType<void | HTTPValidationEr
       return useMutation(getChangeInstanceRoleMutationOptions(options), queryClient);
     }
 
-export const getListOrgsUrl = () => {
-
-
-
-
-  return `/api/v1/organizations`
-}
-
-/**
- * List every organization on the instance.
- *
- * Required permission: `organizations.read`.
- * @summary List Organizations
- */
-export const listOrgs = async ( options?: Parameters<typeof customFetch>[1]): Promise<OrgOut[]> => {
-
-  return customFetch<OrgOut[]>(getListOrgsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListOrgsQueryKey = () => {
-    return [
-    `/api/v1/organizations`
-    ] as const;
-    }
-
-
-export const getListOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListOrgsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgs>>> = ({ signal }) => listOrgs({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListOrgsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgs>>>
-export type ListOrgsQueryError = ErrorType<void | HTTPValidationError>
-
-
-export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listOrgs>>,
-          TError,
-          Awaited<ReturnType<typeof listOrgs>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listOrgs>>,
-          TError,
-          Awaited<ReturnType<typeof listOrgs>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Organizations
- */
-
-export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListOrgsQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
 export const getCreateOrgUrl = () => {
 
 
@@ -3077,6 +3055,190 @@ export const useCreateOrg = <TError = ErrorType<void | HTTPValidationError>,
       > => {
       return useMutation(getCreateOrgMutationOptions(options), queryClient);
     }
+
+export const getListOrgsUrl = (params?: ListOrgsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations?${stringifiedParams}` : `/api/v1/organizations`
+}
+
+/**
+ * List every organization on the instance.
+ *
+ * Required permission: `organizations.read`.
+ * @summary List Organizations
+ */
+export const listOrgs = async (params?: ListOrgsParams, options?: Parameters<typeof customFetch>[1]): Promise<PageOrgOut> => {
+
+  return customFetch<PageOrgOut>(getListOrgsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgsInfiniteQueryKey = (params?: ListOrgsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListOrgsQueryKey = (params?: ListOrgsParams,) => {
+    return [
+    `/api/v1/organizations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOrgsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listOrgs>>, ListOrgsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(params?: ListOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgsInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgs>>, QueryKey, ListOrgsParams['cursor']> = ({ signal, pageParam }) => listOrgs({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgs>>>
+export type ListOrgsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgs>>, ListOrgsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params: undefined |  ListOrgsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgs>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgs>>, ListOrgsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgs>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgs>>, ListOrgsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Organizations
+ */
+
+export function useListOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgs>>, ListOrgsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData, QueryKey, ListOrgsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgsInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(params?: ListOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgs>>> = ({ signal }) => listOrgs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgs>>>
+export type ListOrgsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
+ params: undefined |  ListOrgsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Organizations
+ */
+
+export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: ListOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getUpdateOrgUrl = (orgId: string,) => {
 
@@ -7004,12 +7166,20 @@ export const useRepublishBundle = <TError = ErrorType<void | HTTPValidationError
       return useMutation(getRepublishBundleMutationOptions(options), queryClient);
     }
 
-export const getListBundlesUrl = (orgId: string,) => {
+export const getListBundlesUrl = (orgId: string,
+    params?: ListBundlesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/organizations/${orgId}/bundles`
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/bundles?${stringifiedParams}` : `/api/v1/organizations/${orgId}/bundles`
 }
 
 /**
@@ -7018,9 +7188,10 @@ export const getListBundlesUrl = (orgId: string,) => {
  * Required permission: `bundles.read`.
  * @summary List Bundles
  */
-export const listBundles = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleOut[]> => {
+export const listBundles = async (orgId: string,
+    params?: ListBundlesParams, options?: Parameters<typeof customFetch>[1]): Promise<PageBundleOut> => {
 
-  return customFetch<BundleOut[]>(getListBundlesUrl(orgId),
+  return customFetch<PageBundleOut>(getListBundlesUrl(orgId,params),
   {
     ...options,
     method: 'GET'
@@ -7033,23 +7204,104 @@ export const listBundles = async (orgId: string, options?: Parameters<typeof cus
 
 
 
-export const getListBundlesQueryKey = (orgId: string,) => {
+export const getListBundlesInfiniteQueryKey = (orgId: string,
+    params?: ListBundlesParams,) => {
     return [
-    `/api/v1/organizations/${orgId}/bundles`
+    'infinite', `/api/v1/organizations/${orgId}/bundles`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListBundlesQueryKey = (orgId: string,
+    params?: ListBundlesParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/bundles`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getListBundlesInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listBundles>>, ListBundlesParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListBundlesQueryKey(orgId);
+  const queryKey =  queryOptions?.queryKey ?? getListBundlesInfiniteQueryKey(orgId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBundles>>> = ({ signal }) => listBundles(orgId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBundles>>, QueryKey, ListBundlesParams['cursor']> = ({ signal, pageParam }) => listBundles(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListBundlesInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listBundles>>>
+export type ListBundlesInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListBundlesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listBundles>>, ListBundlesParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListBundlesParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBundles>>,
+          TError,
+          Awaited<ReturnType<typeof listBundles>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListBundlesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listBundles>>, ListBundlesParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBundles>>,
+          TError,
+          Awaited<ReturnType<typeof listBundles>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListBundlesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listBundles>>, ListBundlesParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Bundles
+ */
+
+export function useListBundlesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listBundles>>, ListBundlesParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData, QueryKey, ListBundlesParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListBundlesInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListBundlesQueryOptions = <TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBundlesQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBundles>>> = ({ signal }) => listBundles(orgId,params, { signal, ...requestOptions });
 
 
 
@@ -7063,7 +7315,8 @@ export type ListBundlesQueryError = ErrorType<void | HTTPValidationError>
 
 
 export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>> & Pick<
+ orgId: string,
+    params: undefined |  ListBundlesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listBundles>>,
           TError,
@@ -7073,7 +7326,8 @@ export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, 
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>> & Pick<
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listBundles>>,
           TError,
@@ -7083,7 +7337,8 @@ export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, 
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -7091,11 +7346,12 @@ export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, 
  */
 
 export function useListBundles<TData = Awaited<ReturnType<typeof listBundles>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ orgId: string,
+    params?: ListBundlesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBundles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListBundlesQueryOptions(orgId,options)
+  const queryOptions = getListBundlesQueryOptions(orgId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -7131,9 +7387,9 @@ export const getListOrgEventsUrl = (orgId: string,
  * @summary List Org Events
  */
 export const listOrgEvents = async (orgId: string,
-    params?: ListOrgEventsParams, options?: Parameters<typeof customFetch>[1]): Promise<UsageEventOut[]> => {
+    params?: ListOrgEventsParams, options?: Parameters<typeof customFetch>[1]): Promise<PageUsageEventOut> => {
 
-  return customFetch<UsageEventOut[]>(getListOrgEventsUrl(orgId,params),
+  return customFetch<PageUsageEventOut>(getListOrgEventsUrl(orgId,params),
   {
     ...options,
     method: 'GET'
@@ -7146,12 +7402,91 @@ export const listOrgEvents = async (orgId: string,
 
 
 
+export const getListOrgEventsInfiniteQueryKey = (orgId: string,
+    params?: ListOrgEventsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/events`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListOrgEventsQueryKey = (orgId: string,
     params?: ListOrgEventsParams,) => {
     return [
     `/api/v1/organizations/${orgId}/events`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getListOrgEventsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listOrgEvents>>, ListOrgEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListOrgEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgEventsInfiniteQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgEvents>>, QueryKey, ListOrgEventsParams['cursor']> = ({ signal, pageParam }) => listOrgEvents(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgEventsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgEvents>>>
+export type ListOrgEventsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListOrgEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgEvents>>, ListOrgEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListOrgEventsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgEvents>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgEvents>>, ListOrgEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListOrgEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgEvents>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgEvents>>, ListOrgEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListOrgEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Org Events
+ */
+
+export function useListOrgEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgEvents>>, ListOrgEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListOrgEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgEvents>>, TError, TData, QueryKey, ListOrgEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgEventsInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getListOrgEventsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgEvents>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
@@ -7252,9 +7587,9 @@ export const getListWorkspaceEventsUrl = (orgId: string,
  */
 export const listWorkspaceEvents = async (orgId: string,
     workspaceRef: string,
-    params?: ListWorkspaceEventsParams, options?: Parameters<typeof customFetch>[1]): Promise<UsageEventOut[]> => {
+    params?: ListWorkspaceEventsParams, options?: Parameters<typeof customFetch>[1]): Promise<PageUsageEventOut> => {
 
-  return customFetch<UsageEventOut[]>(getListWorkspaceEventsUrl(orgId,workspaceRef,params),
+  return customFetch<PageUsageEventOut>(getListWorkspaceEventsUrl(orgId,workspaceRef,params),
   {
     ...options,
     method: 'GET'
@@ -7267,6 +7602,14 @@ export const listWorkspaceEvents = async (orgId: string,
 
 
 
+export const getListWorkspaceEventsInfiniteQueryKey = (orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceEventsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/events`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListWorkspaceEventsQueryKey = (orgId: string,
     workspaceRef: string,
     params?: ListWorkspaceEventsParams,) => {
@@ -7274,6 +7617,83 @@ export const getListWorkspaceEventsQueryKey = (orgId: string,
     `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/events`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getListWorkspaceEventsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceEvents>>, ListWorkspaceEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceEventsInfiniteQueryKey(orgId,workspaceRef,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceEvents>>, QueryKey, ListWorkspaceEventsParams['cursor']> = ({ signal, pageParam }) => listWorkspaceEvents(orgId,workspaceRef,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListWorkspaceEventsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceEvents>>>
+export type ListWorkspaceEventsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListWorkspaceEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceEvents>>, ListWorkspaceEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: undefined |  ListWorkspaceEventsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceEvents>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceEvents>>, ListWorkspaceEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceEvents>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceEvents>>, ListWorkspaceEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Workspace Events
+ */
+
+export function useListWorkspaceEventsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceEvents>>, ListWorkspaceEventsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceEventsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceEvents>>, TError, TData, QueryKey, ListWorkspaceEventsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListWorkspaceEventsInfiniteQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getListWorkspaceEventsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceEvents>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
@@ -7377,9 +7797,9 @@ export const getListActivityUrl = (orgId: string,
  * @summary List Organization Activity
  */
 export const listActivity = async (orgId: string,
-    params?: ListActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<ActivityOut[]> => {
+    params?: ListActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<PageActivityOut> => {
 
-  return customFetch<ActivityOut[]>(getListActivityUrl(orgId,params),
+  return customFetch<PageActivityOut>(getListActivityUrl(orgId,params),
   {
     ...options,
     method: 'GET'
@@ -7392,12 +7812,91 @@ export const listActivity = async (orgId: string,
 
 
 
+export const getListActivityInfiniteQueryKey = (orgId: string,
+    params?: ListActivityParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/activity`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListActivityQueryKey = (orgId: string,
     params?: ListActivityParams,) => {
     return [
     `/api/v1/organizations/${orgId}/activity`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getListActivityInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listActivity>>, ListActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListActivityInfiniteQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listActivity>>, QueryKey, ListActivityParams['cursor']> = ({ signal, pageParam }) => listActivity(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListActivityInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listActivity>>>
+export type ListActivityInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listActivity>>, ListActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListActivityParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listActivity>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listActivity>>, ListActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listActivity>>,
+          TError,
+          Awaited<ReturnType<typeof listActivity>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listActivity>>, ListActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Organization Activity
+ */
+
+export function useListActivityInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listActivity>>, ListActivityParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListActivityParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listActivity>>, TError, TData, QueryKey, ListActivityParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListActivityInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getListActivityQueryOptions = <TData = Awaited<ReturnType<typeof listActivity>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
