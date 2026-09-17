@@ -314,23 +314,23 @@ jobs:
       - name: Build the candidate image once
         id: image
         run: docker build --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
-      - name: Exercise the all-in-one topology
+      - name: Exercise the airmux topology
         env:
-          DEPLOYMENT_PROJECT: airmux-all-in-one
+          DEPLOYMENT_PROJECT: airmux
           DEPLOYMENT_FILE: docker-compose.yml
-          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/all-in-one
+          AIRMUX_DEPLOYMENT_ARTIFACTS: ${{ runner.temp }}/docker-artifacts/airmux
         run: |
           docker compose -p "$DEPLOYMENT_PROJECT" -f "$DEPLOYMENT_FILE" up -d --wait --wait-timeout 180
-          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/all-in-one.xml
-      - name: Preserve all-in-one logs
+          uv run --no-sync pytest tests/deployment/test_docker.py tests/deployment/test_https.py --junitxml=docker-results/airmux.xml
+      - name: Preserve airmux logs
         if: always() && steps.image.outcome == 'success'
         continue-on-error: true
         run: |
-          mkdir -p "$RUNNER_TEMP/docker-artifacts/all-in-one"
-          docker compose -p airmux-all-in-one -f docker-compose.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/all-in-one/compose.log"
-      - name: Stop the all-in-one topology
+          mkdir -p "$RUNNER_TEMP/docker-artifacts/airmux"
+          docker compose -p airmux -f docker-compose.yml logs --no-color 2>&1 | sed -e 's/deployment-test-key/[REDACTED]/g' -e 's/deployment-password/[REDACTED]/g' > "$RUNNER_TEMP/docker-artifacts/airmux/compose.log"
+      - name: Stop the airmux topology
         if: always() && steps.image.outcome == 'success'
-        run: docker compose -p airmux-all-in-one -f docker-compose.yml down -v
+        run: docker compose -p airmux -f docker-compose.yml down -v
       - name: Exercise the split topology
         if: always() && steps.image.outcome == 'success'
         env:

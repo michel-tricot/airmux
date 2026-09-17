@@ -25,7 +25,7 @@ def test_empty_cloud_volume_is_writable_by_unprivileged_services():
                 "--env",
                 "DATABASE_URL=postgresql+asyncpg://airmux:airmux@127.0.0.1:1/airmux",
                 image,
-                "all-in-one",
+                "airmux",
             )
         output = docker(
             "run",
@@ -70,11 +70,11 @@ def test_console_accepts_flys_ipv6_resolver():
         docker("rm", "-f", container)
 
 
-def test_image_defaults_to_all_in_one_and_rejects_unknown_roles():
+def test_image_defaults_to_airmux_and_rejects_unknown_roles():
     image = os.environ.get("DEPLOYMENT_IMAGE")
     if image is None:
         pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
-    assert docker("inspect", "--format", "{{json .Config.Cmd}}", image) == '["all-in-one"]'
+    assert docker("inspect", "--format", "{{json .Config.Cmd}}", image) == '["airmux"]'
     result = subprocess.run(["docker", "run", "--rm", image, "unknown"], capture_output=True, text=True, check=False)  # noqa: S603,S607 controlled Docker test command
     assert result.returncode == 2
-    assert "Expected all-in-one, console, control-plane, data-plane, or setup" in result.stderr
+    assert "Expected airmux, console, control-plane, data-plane, or setup" in result.stderr

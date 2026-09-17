@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-role=${1:-all-in-one}
+role=${1:-airmux}
 if [ "$(id -u)" = 0 ]; then
   case "$role" in
     setup)
@@ -16,7 +16,7 @@ if [ "$(id -u)" = 0 ]; then
       mkdir -p /state/data-plane
       chown 10001:10001 /state /state/data-plane
       ;;
-    all-in-one)
+    airmux)
       mkdir -p /state/runtime /state/secrets /state/data-plane
       chown 10001:10001 /state /state/runtime /state/secrets /state/data-plane
       ;;

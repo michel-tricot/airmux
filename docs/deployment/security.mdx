@@ -35,7 +35,7 @@ responses. Limit access to application logs, database exports, volume snapshots,
 
 ## Browser boundary
 
-The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The all-in-one proxy
+The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The airmux proxy
 also sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`, and `X-Frame-Options: DENY`.
 Preserve equivalent behavior if you replace the checked-in proxy. See the [response headers](/docs/reference/inference#response-headers)
 for streaming cache directives and the authentication challenge.

@@ -54,7 +54,7 @@ case "${1:-}" in
   console)
     start_console
     ;;
-  all-in-one)
+  airmux)
     setup
     start_control_plane 127.0.0.1 &
     control_plane_pid=$!
@@ -64,7 +64,7 @@ case "${1:-}" in
     console_pid=$!
     ;;
   *)
-    echo 'Expected all-in-one, console, control-plane, data-plane, or setup' >&2
+    echo 'Expected airmux, console, control-plane, data-plane, or setup' >&2
     exit 2
     ;;
 esac

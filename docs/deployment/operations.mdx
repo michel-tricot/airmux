@@ -38,7 +38,7 @@ Restrict backup access because the default file secret store contains plaintext 
 
 ## Updates
 
-The all-in-one role runs setup before it accepts traffic. Split deployments run the same setup implementation as a
+The `airmux` role runs setup before it accepts traffic. Split deployments run the same setup implementation as a
 one-shot service; serving roles never migrate, create shared credentials, or apply taxonomy. A split gateway can keep
 serving an accepted cached bundle while the control plane is unavailable. Because pre-1.0 releases do not promise
 cross-version compatibility between planes, deploy one image digest across all components. Follow

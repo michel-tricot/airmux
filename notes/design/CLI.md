@@ -36,8 +36,8 @@ release builds and verifies its wheel and source distribution before publishing 
 distribution version, and the installed behavior suite exercises the same artifact users receive.
 
 The container is also one release artifact. It contains the public distribution, console assets, Nginx, and deployment
-scripts, and selects `setup`, `control-plane`, `data-plane`, `console`, or `all-in-one` at startup. Role selection is not
-application configuration. The default all-in-one role and split Compose topology call the same finite setup
+scripts, and selects `setup`, `control-plane`, `data-plane`, `console`, or `airmux` at startup. Role selection is not
+application configuration. The default `airmux` role and split Compose topology call the same finite setup
 implementation before any serving role starts. Administrative CLI and standalone gateway commands explicitly override the
 container entry point instead of adding a second command dispatcher to the role script.
 

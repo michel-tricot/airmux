@@ -3,7 +3,7 @@ title: "Fly.io"
 description: "Deploy one airmux Machine with a persistent volume and Managed Postgres."
 ---
 
-The checked-in `deploy/fly/fly.toml` runs the all-in-one image on one Machine. Keep the application, volume, and database in the same region.
+The checked-in `deploy/fly/fly.toml` runs the airmux image on one Machine. Keep the application, volume, and database in the same region.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
@@ -29,7 +29,7 @@ flyctl secrets set --app my-airmux --stage \
   DIRECT_DATABASE_URL='postgresql://USER:PASSWORD@direct.CLUSTER.flympg.net/DATABASE'
 ```
 
-Keep Managed Postgres in session pooling mode. The all-in-one setup step uses the direct URL for migrations and the
+Keep Managed Postgres in session pooling mode. The airmux setup step uses the direct URL for migrations and the
 pooled URL for application traffic.
 
 ## Deploy and claim

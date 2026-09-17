@@ -1,6 +1,6 @@
 ---
 title: "Docker Compose"
-description: "Run the all-in-one airmux image and Postgres with persistent named volumes."
+description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
 The default `docker-compose.yml` runs two containers: airmux and Postgres.
@@ -66,6 +66,6 @@ docker build -t airmux:local .
 docker compose up -d --wait
 ```
 
-The image defaults to the `all-in-one` role. That role runs the same finite `setup` operation used by split deployments,
+The image defaults to the `airmux` role. That role runs the same finite `setup` operation used by split deployments,
 then starts the control plane, gateway, and console. Setup creates the bootstrap key only when absent, applies forward
 migrations and the shipped taxonomy, and exits before serving begins. Application processes run as UID `10001`.

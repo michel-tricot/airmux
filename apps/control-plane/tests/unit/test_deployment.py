@@ -11,7 +11,9 @@ def test_default_deployment_is_one_application_and_postgres():
     services = compose["services"]
     assert "name" not in compose
     assert set(services) == {"airmux", "postgres"}
-    assert services["airmux"]["build"]["target"] == "all-in-one"
+    assert services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert services["airmux"]["command"] == "airmux"
+    assert "build" not in services["airmux"]
     assert "env_file" not in services["airmux"]
     assert services["airmux"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
 
@@ -28,9 +30,9 @@ def test_split_gateways_have_independent_state_and_no_provider_environment():
     assert "env_file" not in first
     assert "env_file" not in second
     assert "env_file" not in services["control-plane"]
-    assert first["image"] == second["image"]
-    assert "build" in first
-    assert "build" not in second
+    image = "${AIRMUX_IMAGE:-airmux:local}"
+    assert all(services[name]["image"] == image for name in ("setup", "control-plane", "data-plane-1", "data-plane-2", "console"))
+    assert all("build" not in services[name] for name in ("setup", "control-plane", "data-plane-1", "data-plane-2", "console"))
     assert {name for name, service in services.items() if service.get("ports")} == {"console"}
     assert "provider-secrets:/state/secrets:ro" in first["volumes"]
     assert "provider-secrets:/state/secrets:ro" in second["volumes"]
@@ -49,7 +51,7 @@ def test_compose_layouts_do_not_share_database_volumes():
     assert split["services"]["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
 
 
-def test_compose_layouts_do_not_define_a_setup_service():
+def test_split_layout_defines_the_finite_setup_service():
     root = Path(__file__).resolve().parents[4]
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
@@ -59,5 +61,6 @@ def test_compose_layouts_do_not_define_a_setup_service():
     )
 
     assert "setup" not in compact["services"]
-    assert "setup" not in split["services"]
+    assert split["services"]["setup"]["command"] == "setup"
+    assert split["services"]["setup"]["restart"] == "no"
     assert "setup" not in digitalocean["services"]

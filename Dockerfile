@@ -60,4 +60,4 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 AIRMUX_CONFIG=/app/deploy/doc
 WORKDIR /state
 EXPOSE 8000 8080 8081
 ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]
-CMD ["all-in-one"]
+CMD ["airmux"]

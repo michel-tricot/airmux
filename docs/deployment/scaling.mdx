@@ -46,7 +46,7 @@ unsupported until asynchronous bundle publication and replica behavior are prove
 Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
 cache, and usage outbox volume.
 
-## Migrate from all-in-one
+## Move from airmux to split
 
 The default and split Compose files use different named volumes. Migration requires a database dump plus a stopped copy
 of `/state/runtime`, `/state/secrets`, and one gateway's `/state/data-plane`. Restore each into the corresponding split

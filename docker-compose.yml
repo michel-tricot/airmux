@@ -16,7 +16,7 @@ services:
 
   airmux:
     image: ${AIRMUX_IMAGE:-airmux:local}
-    command: all-in-one
+    command: airmux
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}

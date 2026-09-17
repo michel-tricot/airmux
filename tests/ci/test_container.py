@@ -7,7 +7,7 @@ import yaml
 
 ROOT = Path(__file__).parents[2]
 ROLE_IMAGE_VARIABLES = ("AIRMUX_CONTROL_PLANE_IMAGE", "AIRMUX_DATA_PLANE_IMAGE", "AIRMUX_CONSOLE_IMAGE")
-ROLES = {"setup", "control-plane", "data-plane", "console", "all-in-one"}
+ROLES = {"setup", "control-plane", "data-plane", "console", "airmux"}
 
 
 def test_dockerfile_builds_one_role_based_image() -> None:
@@ -16,7 +16,7 @@ def test_dockerfile_builds_one_role_based_image() -> None:
 
     assert not ROLES.intersection(stages)
     assert 'ENTRYPOINT ["/app/deploy/docker/entrypoint.sh"]' in dockerfile
-    assert 'CMD ["all-in-one"]' in dockerfile
+    assert 'CMD ["airmux"]' in dockerfile
 
 
 def test_compose_topologies_project_the_same_image_into_roles() -> None:
@@ -27,7 +27,7 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
 
     assert "build" not in compact["services"]["airmux"]
     assert compact["services"]["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert compact["services"]["airmux"]["command"] == "all-in-one"
+    assert compact["services"]["airmux"]["command"] == "airmux"
 
     services = split["services"]
     for name in ("setup", "control-plane", "data-plane-1", "data-plane-2", "console"):
@@ -51,7 +51,7 @@ def test_container_start_script_accepts_only_the_documented_roles() -> None:
     script = (ROOT / "deploy/docker/start.sh").read_text(encoding="utf-8")
 
     assert set(re.findall(r"^  ([a-z][a-z-]+)\)$", script, re.MULTILINE)) == ROLES
-    assert "Expected all-in-one, console, control-plane, data-plane, or setup" in script
+    assert "Expected airmux, console, control-plane, data-plane, or setup" in script
 
 
 def test_ci_builds_the_image_once_before_exercising_both_topologies() -> None:
