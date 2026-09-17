@@ -34,7 +34,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_ddl_v1
-from control_plane.models.bundle_input import bundle_input_trigger_ddl_v2, bundle_input_trigger_drop_ddl_v2
+from control_plane.models.bundle_input import bundle_input_trigger_ddl_v1, bundle_input_trigger_drop_ddl_v1
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
@@ -599,13 +599,13 @@ def upgrade() -> None:
         for statement in audit_trigger_ddl_v1(table, pk_columns):
             op.execute(statement)
     for table, scope, ignored_columns in BUNDLE_INPUTS:
-        for statement in bundle_input_trigger_ddl_v2(table, scope, ignored_columns):
+        for statement in bundle_input_trigger_ddl_v1(table, scope, ignored_columns):
             op.execute(statement)
 
 
 def downgrade() -> None:
     for table, _, _ in BUNDLE_INPUTS:
-        for statement in bundle_input_trigger_drop_ddl_v2(table):
+        for statement in bundle_input_trigger_drop_ddl_v1(table):
             op.execute(statement)
     for table, _ in AUDITED:
         for statement in audit_trigger_drop_ddl_v1(table):

@@ -15,7 +15,7 @@ from sqlmodel import SQLModel
 
 import control_plane
 from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
-from control_plane.models.bundle_input import bundle_input_tables, bundle_input_trigger_ddl_v2
+from control_plane.models.bundle_input import bundle_input_tables, bundle_input_trigger_ddl_v1
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_tables, touch_trigger_ddl_v1
 
@@ -79,7 +79,7 @@ def _current_trigger_ddl() -> list[str]:
         for statement in audit_trigger_ddl_v1(table.name, tuple(column.name for column in table.primary_key.columns))
     ]
     bundle_input = [
-        statement for table, spec in bundle_input_tables() for statement in bundle_input_trigger_ddl_v2(table.name, spec.scope, spec.ignored_columns)
+        statement for table, spec in bundle_input_tables() for statement in bundle_input_trigger_ddl_v1(table.name, spec.scope, spec.ignored_columns)
     ]
     return [*touch, *audit, *bundle_input]
 
