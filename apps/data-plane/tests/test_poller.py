@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 from conftest import ORG, make_config, make_key, make_remote_bundle
+from prometheus_client import generate_latest
 from pydantic import ValidationError
 from starlette.requests import Request
 
@@ -15,6 +16,7 @@ from data_plane.bundle import BundleHolder, RemoteBundleConfig
 from data_plane.bundle.holder import BundleSet
 from data_plane.bundle.remote import RemoteBundleSource
 from data_plane.cache import read_cached_bundles
+from data_plane.metrics import DataPlaneMetrics
 
 
 def _source(tmp_path):
@@ -143,12 +145,13 @@ async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http
     bundle = make_remote_bundle()
     respx.get("http://cp.test/api/v1/bundles/manifest").mock(return_value=manifest_response(bundle))
     respx.get(f"http://cp.test/api/v1/bundles/{bundle.bundle_id}").mock(return_value=httpx.Response(200, json={"data": {"schema_version": 1}}))
-    holder = BundleHolder()
+    metrics = DataPlaneMetrics()
+    holder = BundleHolder(metrics)
 
-    with pytest.raises(ValidationError) as error:
+    with pytest.raises(ValidationError):
         await _remote_source(tmp_path, holder, http_client).once()
 
-    assert holder.rejected_manifest == str(error.value)
+    assert "airmux_data_plane_bundle_manifest_rejected 1.0" in generate_latest(metrics.registry).decode()
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
 
@@ -157,12 +160,21 @@ async def test_readiness_keeps_serving_after_rejecting_a_new_manifest():
     holder = BundleHolder()
     holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
     request = Request({"type": "http"})
-    request.state.runtime = SimpleNamespace(holder=holder)
+    request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=True))
 
     assert (await readyz(request)).status_code == 200
-    holder.reject_manifest("manifest mismatch")
+    holder.reject_manifest()
 
     assert (await readyz(request)).status_code == 200
+
+
+async def test_readiness_fails_when_metering_cannot_accept_work():
+    holder = BundleHolder()
+    holder.swap(BundleSet.from_bundles((make_remote_bundle(),)), "cached")
+    request = Request({"type": "http"})
+    request.state.runtime = SimpleNamespace(holder=holder, outbox=SimpleNamespace(accepting=False))
+
+    assert (await readyz(request)).status_code == 503
 
 
 @respx.mock

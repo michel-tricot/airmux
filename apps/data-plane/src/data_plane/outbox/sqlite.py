@@ -154,6 +154,9 @@ class SqliteOutbox(QueuedOutbox):
             backlog = self._durable_backlog()
             self._metrics.set_metering_outbox(backlog.events, backlog.oldest_event_at)
 
+    async def refresh_metrics(self) -> None:
+        await self._storage_call(self._update_backlog_metrics)
+
     async def export_available(self) -> int:
         sent_total = 0
         for _ in range(MAX_BATCHES_PER_FLUSH):

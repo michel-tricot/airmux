@@ -10,6 +10,7 @@ import httpx
 import pytest
 import respx
 from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
+from prometheus_client import generate_latest
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
@@ -99,7 +100,13 @@ def _body_gen(response: object) -> AsyncGenerator[bytes]:
     return cast("AsyncGenerator[bytes]", response.body_iterator)
 
 
-async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox, http_client: httpx.AsyncClient) -> Response:
+async def _open_stream(
+    ctx: Ctx,
+    request: CanonicalRequest,
+    outbox: SqliteOutbox,
+    http_client: httpx.AsyncClient,
+    metrics: DataPlaneMetrics | None = None,
+) -> Response:
     with outbox.reserve() as reservation:
         session = StreamSession(
             adapter=make_adapter(),
@@ -109,7 +116,7 @@ async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox
             adjustments=(),
             reservation=reservation,
             http_client=http_client,
-            metrics=DataPlaneMetrics(),
+            metrics=metrics or DataPlaneMetrics(),
             egress_kind="openai_compatible",
             attempt_started_at=time.monotonic(),
         )
@@ -169,12 +176,17 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
 @respx.mock
 async def test_mid_stream_error_event_becomes_sse_error(metering, http_client):
     ctx, outbox = metering
+    metrics = DataPlaneMetrics()
     hi = {"id": "cmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": {"content": "héllo "}, "finish_reason": None}]}
     log = sse(hi) + sse({"error": {"code": "overloaded", "message": "try later"}})
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
-    chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
+    chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client, metrics))]
     assert any(b'"code": "overloaded"' in c for c in chunks)
     assert (await _event(outbox)).status == "upstream_error"
+    assert (
+        'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0'
+        in generate_latest(metrics.registry).decode()
+    )
 
 
 @respx.mock

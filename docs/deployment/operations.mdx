@@ -13,7 +13,7 @@ traffic. Configure process restarts from `/healthz` and traffic admission from `
 | Control plane | `/healthz` | `200 {"status":"ok"}` | Never returned for a dependency failure |
 | Control plane | `/readyz` | `200 {"status":"ready"}` | Postgres is unavailable |
 | Data plane | `/healthz` | `200 {"status":"ok"}` | Never returned for a dependency failure |
-| Data plane | `/readyz` | `200 {"status":"ready"}` | No accepted bundle snapshot is available |
+| Data plane | `/readyz` | `200 {"status":"ready"}` | No accepted bundle snapshot is available, or the metering writer cannot accept work |
 
 The all-in-one listener routes `/healthz` to the control plane and `/readyz` to the data plane. This makes the public
 liveness check independent of Postgres while readiness covers the inference path. A data plane that rejects a newer

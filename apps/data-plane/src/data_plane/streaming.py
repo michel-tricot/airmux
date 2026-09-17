@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
-from http import HTTPStatus
 from typing import TYPE_CHECKING
 
 import anyio
@@ -128,8 +127,6 @@ def _upstream_outcome(error: Exception) -> UpstreamOutcome:
         return "timeout"
     if isinstance(error, httpx.HTTPError):
         return "unreachable"
-    if isinstance(error, (UpstreamProtocolError, UpstreamStreamError)):
+    if isinstance(error, UpstreamProtocolError):
         return "protocol_error"
-    if isinstance(error, UpstreamResponseError) and error.status < HTTPStatus.INTERNAL_SERVER_ERROR:
-        return "rejected"
     return "provider_error"

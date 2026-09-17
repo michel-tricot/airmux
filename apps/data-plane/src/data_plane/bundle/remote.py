@@ -50,8 +50,8 @@ class RemoteBundleSource(BundleSource):
                 bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
                 self._adopt(bundles, source="polled", persist=True, expected=manifest.bundles)
                 changed = True
-        except (ValidationError, ValueError) as error:
-            self._holder.reject_manifest(str(error))
+        except (ValidationError, ValueError):
+            self._holder.reject_manifest()
             raise
         except (httpx.HTTPError, OSError):
             self._holder.record_poll("failed")

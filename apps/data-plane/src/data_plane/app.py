@@ -38,9 +38,12 @@ async def healthz(_request: Request) -> JSONResponse:
 
 
 async def readyz(request: Request) -> JSONResponse:
-    holder = runtime_of(request).holder
+    runtime = runtime_of(request)
+    holder = runtime.holder
     if not holder.current.snapshots:
         return JSONResponse({"status": "no bundle"}, status_code=503)
+    if not runtime.outbox.accepting:
+        return JSONResponse({"status": "metering unavailable"}, status_code=503)
     return JSONResponse({"status": "ready"})
 
 

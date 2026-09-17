@@ -69,12 +69,12 @@ Both cross the same canonical middle.
 | `POST /inf/v1/responses` | OpenAI Responses surface |
 | `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
-| `GET /readyz` | `200` when this worker holds a bundle snapshot, otherwise `503` |
+| `GET /readyz` | `200` when this worker holds a bundle snapshot and can admit metering work, otherwise `503` |
 | `GET /metrics` | Prometheus metrics on a standalone plane's internal listener |
 
-The health routes require no authentication. Readiness means only that a bundle has been admitted.
-It does not prove that the control plane, secret store, event exporter, or any upstream provider is
-currently reachable. Rejecting a newer manifest does not remove an accepted snapshot from service;
+The health routes require no authentication. Readiness means that a bundle has been admitted and the
+metering writer can accept work. It does not prove that the control plane, secret store, event exporter,
+or any upstream provider is currently reachable. Rejecting a newer manifest does not remove an accepted snapshot from service;
 the rejection is reported through metrics and structured logs instead. Restrict a directly exposed
 standalone plane's `/metrics` endpoint to the monitoring network.
 

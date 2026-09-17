@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from data_plane.egress.base import EgressAdapter, UpstreamRequest
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
+    from data_plane.metrics import UpstreamOutcome
     from data_plane.outbox import OutboxReservation
 
 
@@ -293,13 +294,11 @@ def _empty_response(ctx: Ctx) -> CanonicalResponse:
     return CanonicalResponse(id=str(ctx.request_id), model=ctx.model.model_id, content=[], finish_reason=None, usage=CanonicalUsage(estimated=True))
 
 
-def _upstream_outcome(error: Exception) -> Literal["rejected", "timeout", "unreachable", "protocol_error", "provider_error"]:
+def _upstream_outcome(error: UpstreamResponseError | httpx.HTTPError) -> UpstreamOutcome:
     if isinstance(error, httpx.TimeoutException):
         return "timeout"
     if isinstance(error, httpx.HTTPError):
         return "unreachable"
-    if isinstance(error, UpstreamProtocolError):
-        return "protocol_error"
-    if isinstance(error, UpstreamResponseError) and error.status < HTTPStatus.INTERNAL_SERVER_ERROR:
+    if error.status < HTTPStatus.INTERNAL_SERVER_ERROR:
         return "rejected"
     return "provider_error"

@@ -8,6 +8,8 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, gene
 from prometheus_client.exposition import CONTENT_TYPE_LATEST
 from starlette.responses import Response
 
+from data_plane.runtime import runtime_of
+
 if TYPE_CHECKING:
     from datetime import datetime
 
@@ -151,4 +153,5 @@ class DataPlaneMetrics:
 
 
 async def metrics_endpoint(request: Request) -> Response:
+    await runtime_of(request).outbox.refresh_metrics()
     return Response(generate_latest(request.app.state.metrics.registry), media_type=CONTENT_TYPE_LATEST)

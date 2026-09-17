@@ -104,12 +104,15 @@ class EventOutbox(ABC):
     def _fail_reservation(self, message: str) -> None:
         raise RuntimeError(message)
 
+    @property
+    def accepting(self) -> bool:
+        return True
+
     async def stats(self) -> Mapping[str, OutboxStat]:
         return {}
 
-    async def backlog(self) -> Mapping[str, OutboxStat]:
-        stats = await self.stats()
-        return {"pending": stats.get("pending", 0), "oldest_age_s": stats.get("oldest_age_s")}
+    async def refresh_metrics(self) -> None:
+        return None
 
     def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         return ()

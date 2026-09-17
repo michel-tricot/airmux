@@ -11,8 +11,11 @@ import httpx
 import pytest
 import respx
 from conftest import make_config, make_outbox
+from prometheus_client import generate_latest
 
 from contract import RoutedUsageEventV1, uuid7
+from data_plane.config import SqliteOutboxConfig
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, EventOutbox, OutboxFullError, SqliteOutbox, build_outbox
 from data_plane.outbox.queued import CAPACITY
 from data_plane.outbox.sqlite import BATCH_SIZE
@@ -142,6 +145,23 @@ async def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
     assert await a.claim_export(ttl=30, now=1041.0) is False
     await a.close()
     await b.close()
+
+
+async def test_metrics_refresh_reads_the_shared_durable_backlog(tmp_path, http_client):
+    first_metrics = DataPlaneMetrics()
+    second_metrics = DataPlaneMetrics()
+    config = make_config(tmp_path)
+    assert isinstance(config.events, SqliteOutboxConfig)
+    first = SqliteOutbox(config.events, http_client, first_metrics)
+    second = SqliteOutbox(config.events, http_client, second_metrics)
+    record(first, make_event(uuid7()))
+    await first.next_batch(1)
+
+    await second.refresh_metrics()
+
+    assert "airmux_data_plane_metering_outbox_pending 1.0" in generate_latest(second_metrics.registry).decode()
+    await first.close()
+    await second.close()
 
 
 async def test_build_outbox_selects_kind(tmp_path, http_client):

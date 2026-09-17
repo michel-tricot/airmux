@@ -71,6 +71,11 @@ class QueuedOutbox(EventOutbox):
             self._reserved += 1
             self._update_queue_metrics()
 
+    @property
+    def accepting(self) -> bool:
+        with self._lock:
+            return self._failure is None and self._accepting and self._reserved + self._filled < CAPACITY
+
     def _record_reserved(self, event: UsageEvent, /) -> None:
         with self._lock:
             if self._failure is not None:

@@ -85,20 +85,14 @@ class BundleSet:
 class BundleHolder:
     def __init__(self, metrics: DataPlaneMetrics | None = None) -> None:
         self._current = BundleSet.from_bundles(())
-        self._rejected_manifest: str | None = None
         self._metrics = metrics
 
     @property
     def current(self) -> BundleSet:
         return self._current
 
-    @property
-    def rejected_manifest(self) -> str | None:
-        return self._rejected_manifest
-
     def swap(self, current: BundleSet, source: str) -> None:
         self._current = current
-        self._rejected_manifest = None
         if self._metrics is not None:
             self._metrics.bundle_poll.labels("adopted").inc()
             self._metrics.bundle_snapshots.set(len(current.snapshots))
@@ -106,15 +100,13 @@ class BundleHolder:
             self._metrics.bundle_last_adopted.set(time.time())
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
 
-    def reject_manifest(self, error: str) -> None:
-        self._rejected_manifest = error
+    def reject_manifest(self) -> None:
         if self._metrics is not None:
             self._metrics.bundle_poll.labels("rejected").inc()
             self._metrics.bundle_manifest_rejected.set(1)
         log_event(logger, logging.ERROR, "bundle_manifest_rejected", outcome="rejected")
 
     def accept_manifest(self) -> None:
-        self._rejected_manifest = None
         if self._metrics is not None:
             self._metrics.bundle_manifest_rejected.set(0)
 
