@@ -9,6 +9,7 @@ import httpx
 import pytest
 import respx
 from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
+from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
 
@@ -125,6 +126,39 @@ async def test_cancellation_estimates_partial_tokens(metering, http_client):
     assert event.input_tokens > 0
     assert event.output_tokens > 0
     assert event.cost_usd > 0
+
+
+async def test_disconnect_before_first_body_releases_stream_resources(monkeypatch, metering, http_client):
+    ctx, outbox = metering
+
+    class FakeResponse:
+        is_error = False
+
+    class FakeStream:
+        exited = False
+
+        async def __aenter__(self):
+            return FakeResponse()
+
+        async def __aexit__(self, *_args):
+            self.exited = True
+
+    stream = FakeStream()
+    monkeypatch.setattr(http_client, "stream", lambda *_args, **_kwargs: stream)
+    response = await _open_stream(ctx, REQUEST, outbox, http_client)
+
+    async def receive():
+        return {"type": "http.disconnect"}
+
+    async def send(_message):
+        raise OSError
+
+    with pytest.raises(ClientDisconnect):
+        await response({"type": "http", "asgi": {"spec_version": "2.4"}}, receive, send)
+
+    assert stream.exited
+    assert (await outbox.stats())["reserved"] == 0
+    assert (await _event(outbox)).status == "cancelled"
 
 
 @respx.mock

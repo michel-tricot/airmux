@@ -657,8 +657,8 @@ storage without waiting for control-plane export. `SIGKILL`, machine failure, po
 failure can lose events accepted into memory but not yet persisted. A storage-thread failure is fatal
 to the worker because metered traffic cannot continue safely.
 
-The file outbox uses the same reservation queue and storage-thread handoff, then appends and flushes a
-batch while holding its cross-process file lock. `DevNullOutbox` completes reserved slots immediately
+The file outbox uses the same reservation queue and storage-thread handoff, then appends each batch in
+one `O_APPEND` write. `DevNullOutbox` completes reserved slots immediately
 and starts no worker. It is intended for standalone development, load tests, or deployments that meter elsewhere.
 
 ## Changing or extending the data plane

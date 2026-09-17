@@ -28,12 +28,13 @@ from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
     from starlette.requests import Request
+    from starlette.types import Receive, Scope, Send
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialEntry, KeyEntry, ModelEntry
+    from contract import CredentialEntry, KeyEntry, ModelEntry, UsageEvent
     from contract.policies import FallbackReason
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.credentials import CredentialResolver
@@ -109,6 +110,41 @@ def _transform(adapter: EgressAdapter, request: CanonicalRequest, model: ModelEn
         raise RequestRejectedError(400, "invalid_request", str(error)) from error
 
 
+class _StreamAccounting:
+    def __init__(self, reservation: OutboxReservation, cancelled_event: Callable[[], UsageEvent]) -> None:
+        self.reservation = reservation
+        self._cancelled_event = cancelled_event
+        self._recorded = False
+
+    def record(self, event: UsageEvent) -> None:
+        self.reservation.record(event)
+        self._recorded = True
+
+    def cancel(self) -> None:
+        if not self._recorded:
+            self.record(self._cancelled_event())
+
+
+class _StreamResponse(StreamingResponse):
+    def __init__(
+        self,
+        body: AsyncIterator[bytes],
+        handoff: contextlib.AsyncExitStack,
+        accounting: _StreamAccounting,
+    ) -> None:
+        super().__init__(body, media_type="text/event-stream")
+        self._handoff = handoff
+        self._accounting = accounting
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        with self._accounting.reservation:
+            async with self._handoff:
+                try:
+                    await super().__call__(scope, receive, send)
+                finally:
+                    self._accounting.cancel()
+
+
 @dataclass(frozen=True)
 class StreamSession:
     """Request state shared by opening and folding one provider stream."""
@@ -129,45 +165,46 @@ class StreamSession:
 
         renderer = self.ingress.new_stream()
         reservation = self.reservation.transfer()
-        return StreamingResponse(self._events(response, handoff, stream_state, renderer, reservation), media_type="text/event-stream")
+        accounting = _StreamAccounting(
+            reservation,
+            lambda: usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request),
+        )
+        return _StreamResponse(self._events(response, stream_state, renderer, accounting), handoff, accounting)
 
     async def _events(
         self,
         response: httpx.Response,
-        handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
         renderer: ResponseStream,
-        reservation: OutboxReservation,
+        accounting: _StreamAccounting,
     ) -> AsyncIterator[bytes]:
-        with reservation:
-            async with handoff:
-                try:
-                    for frame in renderer.start(self.ctx):
-                        yield frame
-                    async for payload in response.aiter_bytes():
-                        for event in self.adapter.frame(payload, stream_state):
-                            for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
-                                for frame in renderer.chunk(canonical_chunk):
-                                    yield frame
-                    self.adapter.validate_stream(stream_state)
-                    final = self.adapter.finalize(stream_state)
-                    for frame in renderer.closing(final, list(self.adjustments)):
-                        yield frame
-                    reservation.record(usage_event(self.ctx, final, status="ok", request=self.request))
-                except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
-                    for frame in renderer.error(self.adapter.map_error(error)):
-                        yield frame
-                    reservation.record(
-                        usage_event(
-                            self.ctx,
-                            self.adapter.finalize(stream_state),
-                            status=status_for_error(error),
-                            request=self.request,
-                        )
-                    )
-                except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-                    reservation.record(usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request))
-                    raise
+        try:
+            for frame in renderer.start(self.ctx):
+                yield frame
+            async for payload in response.aiter_bytes():
+                for event in self.adapter.frame(payload, stream_state):
+                    for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
+                        for frame in renderer.chunk(canonical_chunk):
+                            yield frame
+            self.adapter.validate_stream(stream_state)
+            final = self.adapter.finalize(stream_state)
+            for frame in renderer.closing(final, list(self.adjustments)):
+                yield frame
+            accounting.record(usage_event(self.ctx, final, status="ok", request=self.request))
+        except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
+            for frame in renderer.error(self.adapter.map_error(error)):
+                yield frame
+            accounting.record(
+                usage_event(
+                    self.ctx,
+                    self.adapter.finalize(stream_state),
+                    status=status_for_error(error),
+                    request=self.request,
+                )
+            )
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            accounting.record(usage_event(self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request))
+            raise
 
 
 @dataclass(frozen=True)
