@@ -71,11 +71,11 @@ def test_required_gate_rejects_every_unsuccessful_dependency(filename, name, dep
     assert (completed.returncode == 0) == expected
 
 
-def test_main_requires_only_stable_aggregate_checks():
+def test_main_requires_stable_checks_without_requiring_current_base():
     ruleset = json.loads((ROOT / ".github/policy/protect-main.json").read_text())
     rules = {rule["type"]: rule.get("parameters", {}) for rule in ruleset["rules"]}
     checks = rules["required_status_checks"]
-    assert checks["strict_required_status_checks_policy"] is True
+    assert checks["strict_required_status_checks_policy"] is False
     assert {(check["context"], check["integration_id"]) for check in checks["required_status_checks"]} == {
         ("required", 15368),
         ("dependency-security", 15368),

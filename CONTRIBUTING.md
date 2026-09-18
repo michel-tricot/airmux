@@ -112,8 +112,9 @@ CI must pass before merge. Review feedback should be resolved in code, tests, or
 ## Main branch protection
 
 The active [Protect Main ruleset](https://github.com/michel-tricot/airmux/rules/20767120) requires a pull request and
-allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches must be
-up to date with `main` before merging, and review conversations must be resolved.
+allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches may merge
+without being up to date with `main` when there are no merge conflicts, required checks pass, and review conversations
+are resolved.
 
 Two stable checks are required, each bound to the GitHub Actions App (integration ID `15368`):
 
@@ -129,8 +130,8 @@ gate. Compatibility, performance, provider, soak, and cold-build checks run in `
 
 Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
 force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required
-checks are unavailable or strict current-base checks cannot settle during concurrent merges. Automation and deploy
-keys have no bypass. Record why an administrator bypass was used in the pull request. The owner is currently the only
+checks are unavailable. Automation and deploy keys have no bypass. Record why an administrator bypass was used in the
+pull request. The owner is currently the only
 collaborator, so approvals are not required. When an independent collaborator with review permissions is added, set
 `required_approving_review_count` to `1` and `require_last_push_approval` to `true` in the ruleset payload and apply it.
 Keep stale-review dismissal enabled.
@@ -143,6 +144,5 @@ scripts/github-policy diff
 scripts/github-policy apply
 ```
 
-Use current-base status checks for this personally owned private repository. A merge queue is unavailable here.
 When a required workflow is broken, repair it through a pull request; protection intentionally keeps `main` blocked
 until the required checks pass. Test the gates locally with `uv run pytest tests/ci/test_merge_policy.py`.
