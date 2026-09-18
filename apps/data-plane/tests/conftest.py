@@ -74,9 +74,9 @@ MODEL = ModelEntry(
     cache_write_price_per_mtok="1.25",
     context_window=128000,
     max_output_tokens=4096,
-    input_modalities=["text", "image", "pdf"],
-    output_modalities=["text"],
-    capabilities=["streaming", "tools", "reasoning", "structured_output"],
+    input_modalities=("text", "image", "pdf"),
+    output_modalities=("text",),
+    capabilities=("streaming", "tools", "reasoning", "structured_output"),
 )
 
 
@@ -103,9 +103,9 @@ def make_bundle(keys=(), catalog=None, org=ORG):
         bundle_id=uuid4(),
         org_id=org,
         issued_at=NOW,
-        keys=list(keys),
+        keys=tuple(keys),
         policies=(),
-        catalog=catalog or Catalog(providers=[], models=[]),
+        catalog=catalog or Catalog(providers=(), models=()),
     )
 
 
@@ -210,7 +210,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     file is test_config.py's job.
     """
     caller_token, entry = make_key()
-    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    catalog = Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,))
     bundle = make_bundle(keys=[entry], catalog=catalog)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token")

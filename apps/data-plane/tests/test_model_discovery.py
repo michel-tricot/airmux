@@ -49,9 +49,9 @@ def test_openai_sdk_lists_and_retrieves_gateway_models(api_key, dp_app):
         assert model.model_extra["gateway"] == {
             "context_window": MODEL.context_window,
             "max_output_tokens": MODEL.max_output_tokens,
-            "input_modalities": MODEL.input_modalities,
-            "output_modalities": MODEL.output_modalities,
-            "capabilities": MODEL.capabilities,
+            "input_modalities": list(MODEL.input_modalities),
+            "output_modalities": list(MODEL.output_modalities),
+            "capabilities": list(MODEL.capabilities),
             "parameter_support": MODEL.parameter_support,
         }
 
@@ -83,7 +83,7 @@ def test_discovery_rejects_expired_keys(tmp_path, path):
     token, key = make_key()
     bundle = make_bundle(
         keys=[key.model_copy(update={"expires_at": NOW - timedelta(seconds=1)})],
-        catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL]),
+        catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,)),
     )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     mock_control_plane()
@@ -107,7 +107,7 @@ def test_discovery_returns_503_without_a_bundle(tmp_path, path):
 def test_gateway_model_ids_can_contain_slashes_and_do_not_expose_upstream_details(tmp_path):
     token, key = make_key()
     model = MODEL.model_copy(update={"model_id": "p1/model/version", "upstream_model": "private-deployment"})
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(model,), credentials=(PLATFORM_CREDENTIAL,)))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     mock_control_plane()
     with TestClient(create_app(make_config(tmp_path, "devnull"))) as client:
@@ -133,7 +133,7 @@ def discovery_bundle(action, *, match=None, target=None, workspace=WORKSPACE, cr
         priority=100,
         definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rules": [rule]}),
     )
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)))
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=tuple(credentials)))
     return token, bundle.model_copy(update={"policies": (policy,)})
 
 
@@ -247,9 +247,9 @@ def test_discovery_metadata_rejects_unknown_vocabulary(metadata):
             {
                 "context_window": MODEL.context_window,
                 "max_output_tokens": MODEL.max_output_tokens,
-                "input_modalities": MODEL.input_modalities,
-                "output_modalities": MODEL.output_modalities,
-                "capabilities": MODEL.capabilities,
+                "input_modalities": list(MODEL.input_modalities),
+                "output_modalities": list(MODEL.output_modalities),
+                "capabilities": list(MODEL.capabilities),
                 "parameter_support": MODEL.parameter_support,
                 **metadata,
             }
@@ -260,7 +260,7 @@ def test_discovery_metadata_rejects_unknown_vocabulary(metadata):
 def test_model_matching_policies_only_hide_the_selected_model(tmp_path):
     token, bundle = discovery_bundle({"kind": "deny", "message": "Model disabled"}, match={"kind": "request", "models": [MODEL.model_id]})
     other = MODEL.model_copy(update={"model_id": "another-model"})
-    bundle = bundle.model_copy(update={"catalog": bundle.catalog.model_copy(update={"models": [MODEL, other]})})
+    bundle = bundle.model_copy(update={"catalog": bundle.catalog.model_copy(update={"models": (MODEL, other)})})
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     mock_control_plane()
     with TestClient(create_app(make_config(tmp_path, "devnull"))) as client:
@@ -273,10 +273,10 @@ def test_discovery_uses_the_callers_org_and_the_current_bundle(tmp_path):
     other_org = uuid7()
     token, key = make_key("first")
     other_token, other_key = make_key("second", org=other_org, workspace=uuid7())
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,)))
     other_model = MODEL.model_copy(update={"model_id": "other-org-model"})
     other_bundle = make_bundle(
-        keys=[other_key], org=other_org, catalog=Catalog(providers=[PROVIDER], models=[other_model], credentials=[PLATFORM_CREDENTIAL])
+        keys=[other_key], org=other_org, catalog=Catalog(providers=(PROVIDER,), models=(other_model,), credentials=(PLATFORM_CREDENTIAL,))
     )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle, other_bundle]))
     mock_control_plane()
@@ -287,10 +287,10 @@ def test_discovery_uses_the_callers_org_and_the_current_bundle(tmp_path):
         assert [model["id"] for model in client.get("/inf/v1/models", headers=other_headers).json()["data"]] == [other_model.model_id]
         assert client.get("/inf/v1/models/other-org-model", headers=headers).status_code == 404
         runtime = cast("Runtime", client.app_state["runtime"])
-        changed = bundle.model_copy(update={"catalog": bundle.catalog.model_copy(update={"models": [MODEL, other_model]})})
+        changed = bundle.model_copy(update={"catalog": bundle.catalog.model_copy(update={"models": (MODEL, other_model)})})
         runtime.holder.swap(BundleSet.from_bundles((changed, other_bundle)), source="test")
         assert len(client.get("/inf/v1/models", headers=headers).json()["data"]) == 2
-        revoked = changed.model_copy(update={"keys": []})
+        revoked = changed.model_copy(update={"keys": ()})
         runtime.holder.swap(BundleSet.from_bundles((revoked, other_bundle)), source="test")
         assert client.get("/inf/v1/models", headers=headers).status_code == 401
         assert runtime.holder.current.snapshots[ORG].bundle.bundle_id == revoked.bundle_id

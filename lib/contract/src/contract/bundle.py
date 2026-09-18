@@ -1,118 +1,120 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Literal
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, WrapSerializer
 
-from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.model_types import MODALITIES, AdapterKind, Capability, Modality, ModelName, ParameterSupport, ProviderName, TokenLimit
 from contract.money import UsdRate
 from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
 
 
-class KeyEntry(BaseModel):
+def _freeze_mapping[K, V](mapping: Mapping[K, V]) -> Mapping[K, V]:
+    return MappingProxyType(dict(mapping))
+
+
+class _BundleModel(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", validate_default=True)
+
+
+class KeyEntry(_BundleModel):
     """An active inference key included in a policy bundle.
 
     The bundle contains a token hash for authorization and a key ID for usage attribution, never
     the caller's secret token.
     """
 
-    model_config = ConfigDict(frozen=True)
-
     key_id: str = Field(min_length=1, max_length=255)
     org_id: UUID
     workspace_id: UUID  # the workspace the key was created in, stamped onto usage events
     user_id: UUID
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
-    expires_at: datetime | None = None
+    expires_at: AwareDatetime | None = None
 
 
-class ProviderEntry(BaseModel):
+class ProviderEntry(_BundleModel):
     """An upstream LLM provider endpoint and its supported request parameters."""
 
-    model_config = ConfigDict(frozen=True)
-
-    provider_id: str
-    kind: str
+    provider_id: ProviderName
+    kind: AdapterKind
     base_url: HttpUrl
-    param_aliases: dict[str, str] = Field(default_factory=dict)  # canonical param -> this provider's spelling
-    accepted_params: list[str] | None = None  # params known accepted beyond the core; consulted when params_closed
+    param_aliases: Annotated[
+        Mapping[str, str], Field(max_length=256), AfterValidator(_freeze_mapping), WrapSerializer(lambda mapping, handler: handler(dict(mapping)))
+    ] = Field(default_factory=dict)  # canonical param -> this provider's spelling
+    accepted_params: tuple[str, ...] | None = Field(
+        default=None, max_length=256
+    )  # params known accepted beyond the core; consulted when params_closed
     params_closed: bool = False  # True for the few providers whose schema rejects unknown params (3 of 22 in taxonomy)
 
 
-class ModelEntry(BaseModel):
+class ModelEntry(_BundleModel):
     """A routable model: the caller-facing id plus how to reach and bill it."""
 
-    model_config = ConfigDict(frozen=True)
-
-    model_id: str  # what the caller asks for
-    provider_id: str
-    upstream_model: str  # what the provider is sent
+    model_id: ModelName  # what the caller asks for
+    provider_id: ProviderName
+    upstream_model: ModelName  # what the provider is sent
     input_price_per_mtok: UsdRate  # USD per million input tokens
     output_price_per_mtok: UsdRate  # USD per million output tokens
     cache_read_price_per_mtok: UsdRate  # USD per million cache-read input tokens
     cache_write_price_per_mtok: UsdRate  # USD per million cache-write input tokens
-    context_window: int
-    max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
-    input_modalities: list[Modality] = Field(min_length=1, max_length=len(MODALITIES))
-    output_modalities: list[Modality] = Field(min_length=1, max_length=len(MODALITIES))
-    capabilities: list[Capability]
-    parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
-    egress_kind: str | None = None
+    context_window: TokenLimit
+    max_output_tokens: TokenLimit | None = None  # completion cap; requests are clamped to it, distinct from context_window
+    input_modalities: tuple[Modality, ...] = Field(min_length=1, max_length=len(MODALITIES))
+    output_modalities: tuple[Modality, ...] = Field(min_length=1, max_length=len(MODALITIES))
+    capabilities: tuple[Capability, ...] = Field(max_length=4)
+    parameter_support: Annotated[
+        Mapping[str, ParameterSupport],
+        Field(max_length=128),
+        AfterValidator(_freeze_mapping),
+        WrapSerializer(lambda mapping, handler: handler(dict(mapping))),
+    ] = Field(default_factory=dict)
+    egress_kind: AdapterKind | None = None
 
 
-class CredentialEntry(BaseModel):
+class CredentialEntry(_BundleModel):
     """A provider credential reference, priority, and version included in a policy bundle.
 
     The secret value is not included. A version change tells data planes to refresh their cached value.
     """
-
-    model_config = ConfigDict(frozen=True)
 
     ref: SecretRef
     priority: int  # lower is tried first, ties break by the ref's name
     version: int
 
 
-class Catalog(BaseModel):
+class Catalog(_BundleModel):
     """Everything routable in one org: providers, the models that point at them, and the credentials
     they are reached with."""
 
-    model_config = ConfigDict(frozen=True)
-
-    providers: list[ProviderEntry]
-    models: list[ModelEntry]
-    credentials: list[CredentialEntry] = Field(default_factory=list)
+    providers: tuple[ProviderEntry, ...]
+    models: tuple[ModelEntry, ...]
+    credentials: tuple[CredentialEntry, ...] = ()
 
 
-class BundleV1(BaseModel):
+class BundleV1(_BundleModel):
     """A complete, versioned policy snapshot for one organization's model traffic."""
-
-    model_config = ConfigDict(frozen=True)
 
     schema_version: Literal[1] = 1
     bundle_id: UUID
     org_id: UUID
-    issued_at: datetime
-    keys: list[KeyEntry]
+    issued_at: AwareDatetime
+    keys: tuple[KeyEntry, ...]
     catalog: Catalog
     policies: tuple[PolicyEntry, ...]
 
 
-class BundleManifestEntry(BaseModel):
+class BundleManifestEntry(_BundleModel):
     """The immutable identity of one organization bundle available to a data plane."""
-
-    model_config = ConfigDict(frozen=True)
 
     org_id: UUID
     bundle_id: UUID
 
 
-class BundleManifest(BaseModel):
+class BundleManifest(_BundleModel):
     """The complete set of organization bundles one data plane may serve."""
 
-    model_config = ConfigDict(frozen=True)
-
-    bundles: list[BundleManifestEntry]
+    bundles: tuple[BundleManifestEntry, ...]

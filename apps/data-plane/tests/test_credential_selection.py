@@ -41,7 +41,7 @@ async def value_of(resolver, entry) -> str:
 
 
 def snap(*credentials):
-    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)), org=ORG)
+    bundle = make_bundle(catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=tuple(credentials)), org=ORG)
     return BundleSnapshot.from_bundle(bundle)
 
 
@@ -98,7 +98,14 @@ def test_candidates_come_back_in_try_order():
 def test_a_key_for_another_provider_is_not_a_candidate():
     other = PROVIDER.model_copy(update={"provider_id": "other"})
     credential = make_credential(service="other")
-    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER, other], models=[MODEL], credentials=[credential]), org=ORG)
+    bundle = make_bundle(
+        catalog=Catalog(
+            providers=(PROVIDER, other),
+            models=(MODEL,),
+            credentials=(credential,),
+        ),
+        org=ORG,
+    )
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     key = make_key("k1", org=ORG, workspace=WORKSPACE)[1]
 
@@ -185,7 +192,7 @@ def _byok_app(tmp_path, credentials):
     sharing an object the app never built.
     """
     caller_token, entry = make_key(org=ORG, workspace=WORKSPACE)
-    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
+    catalog = Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=tuple(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     store_config = FileStoreConfig(path=tmp_path / "secrets")
@@ -215,7 +222,7 @@ def test_one_data_plane_serves_two_org_bundles(tmp_path):
     first_token, first_key = make_key("first", org=ORG, workspace=WORKSPACE)
     second_token, second_key = make_key("second", org=other_org, workspace=other_workspace)
     platform = make_credential(org=None, name="platform")
-    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[platform])
+    catalog = Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(platform,))
     write_cached_bundles(
         tmp_path,
         CachedBundles(

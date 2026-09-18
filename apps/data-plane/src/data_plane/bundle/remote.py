@@ -97,7 +97,7 @@ class RemoteBundleSource(BundleSource):
         source: str,
         *,
         persist: bool,
-        expected: list[BundleManifestEntry] | None,
+        expected: tuple[BundleManifestEntry, ...] | None,
     ) -> None:
         if expected is not None:
             for entry, bundle in zip(expected, bundles, strict=True):

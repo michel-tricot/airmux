@@ -223,11 +223,11 @@ def test_selected_users_validate_workspace_eligibility_and_survive_member_remova
         assert retained[0]["id"] == policy_id
         assert retained[0]["definition"]["target"] == body["definition"]["target"]
         after = BundleV1.model_validate(wait_for_publication(client, org, headers, before.bundle_id))
-        assert after.keys == []
+        assert after.keys == ()
         assert after.policies == before.policies
         assert client.delete(f"/api/v1/organizations/{org}/users/{user_id}", headers=headers).status_code == 200
         removed = BundleV1.model_validate(wait_for_publication(client, org, headers))
-        assert removed.keys == []
+        assert removed.keys == ()
         assert removed.policies == after.policies
 
 

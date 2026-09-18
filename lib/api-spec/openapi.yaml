@@ -4264,6 +4264,7 @@ components:
             $ref: '#/components/schemas/BundleManifestEntry'
           type: array
           title: Bundles
+      additionalProperties: false
       type: object
       required:
       - bundles
@@ -4279,6 +4280,7 @@ components:
           type: string
           format: uuid
           title: Bundle Id
+      additionalProperties: false
       type: object
       required:
       - org_id
@@ -4316,6 +4318,7 @@ components:
             $ref: '#/components/schemas/PolicyEntry'
           type: array
           title: Policies
+      additionalProperties: false
       type: object
       required:
       - bundle_id
@@ -4343,6 +4346,8 @@ components:
             $ref: '#/components/schemas/CredentialEntry'
           type: array
           title: Credentials
+          default: []
+      additionalProperties: false
       type: object
       required:
       - providers
@@ -4552,6 +4557,7 @@ components:
         version:
           type: integer
           title: Version
+      additionalProperties: false
       type: object
       required:
       - ref
@@ -5634,6 +5640,7 @@ components:
             format: date-time
           - type: 'null'
           title: Expires At
+      additionalProperties: false
       type: object
       required:
       - key_id
@@ -5975,12 +5982,19 @@ components:
       properties:
         model_id:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Model Id
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         upstream_model:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Upstream Model
         input_price_per_mtok:
           type: string
@@ -6000,10 +6014,14 @@ components:
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
+          maximum: 100000000.0
+          minimum: 1.0
           title: Context Window
         max_output_tokens:
           anyOf:
           - type: integer
+            maximum: 100000000.0
+            minimum: 1.0
           - type: 'null'
           title: Max Output Tokens
         input_modalities:
@@ -6041,6 +6059,7 @@ components:
             - reasoning
             - structured_output
           type: array
+          maxItems: 4
           title: Capabilities
         parameter_support:
           additionalProperties:
@@ -6049,12 +6068,17 @@ components:
             - supported
             - unsupported
           type: object
+          maxProperties: 128
           title: Parameter Support
         egress_kind:
           anyOf:
           - type: string
+            maxLength: 63
+            minLength: 1
+            pattern: ^[a-z0-9][a-z0-9_]*$
           - type: 'null'
           title: Egress Kind
+      additionalProperties: false
       type: object
       required:
       - model_id
@@ -7210,9 +7234,15 @@ components:
       properties:
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         kind:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_]*$
           title: Kind
         base_url:
           type: string
@@ -7224,18 +7254,21 @@ components:
           additionalProperties:
             type: string
           type: object
+          maxProperties: 256
           title: Param Aliases
         accepted_params:
           anyOf:
           - items:
               type: string
             type: array
+            maxItems: 256
           - type: 'null'
           title: Accepted Params
         params_closed:
           type: boolean
           title: Params Closed
           default: false
+      additionalProperties: false
       type: object
       required:
       - provider_id

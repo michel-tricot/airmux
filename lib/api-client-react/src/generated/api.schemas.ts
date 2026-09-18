@@ -89,7 +89,17 @@ export type ProviderEntryParamAliases = {[key: string]: string};
  * An upstream LLM provider endpoint and its supported request parameters.
  */
 export interface ProviderEntry {
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_]*$
+     */
   kind: string;
   /**
      * @minLength 1
@@ -139,8 +149,21 @@ export type ModelEntryParameterSupport = {[key: string]: 'supported' | 'unsuppor
  * A routable model: the caller-facing id plus how to reach and bill it.
  */
 export interface ModelEntry {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   upstream_model: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
   input_price_per_mtok: string;
@@ -150,6 +173,10 @@ export interface ModelEntry {
   cache_read_price_per_mtok: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cache_write_price_per_mtok: string;
+  /**
+     * @minimum 1
+     * @maximum 100000000
+     */
   context_window: number;
   max_output_tokens?: number | null;
   /**
@@ -162,6 +189,7 @@ export interface ModelEntry {
      * @maxItems 5
      */
   output_modalities: ModelEntryOutputModalitiesItem[];
+  /** @maxItems 4 */
   capabilities: ModelEntryCapabilitiesItem[];
   parameter_support?: ModelEntryParameterSupport;
   egress_kind?: string | null;
