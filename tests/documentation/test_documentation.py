@@ -42,7 +42,7 @@ BUNDLED_PROJECTS = (
 
 
 def documentation_files() -> list[Path]:
-    return sorted([ROOT / "CONTRIBUTING.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
+    return sorted([ROOT / "CONTRIBUTING.md", ROOT / ".github/policy/README.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
 
 
 def navigation_pages(node: object) -> list[str]:
@@ -123,11 +123,11 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 
 
 def test_documentation_tracks_current_ci_entry_points() -> None:
-    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    policy = (ROOT / ".github/policy/README.md").read_text(encoding="utf-8")
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
 
-    assert "tests/ci/test_merge_policy.py" in contributing
-    assert "tests/documentation/test_merge_policy.py" not in contributing
+    assert "tests/ci/test_merge_policy.py" in policy
+    assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
     assert "Prepare release" in development
     assert "Publish release" in development
@@ -225,7 +225,10 @@ def test_bundled_projects_are_release_independent() -> None:
             assert sources[requirement.name] == {"workspace": True}, (path, requirement.name)
 
 
-@pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
+@pytest.mark.parametrize(
+    "path",
+    [ROOT / path for path in ("README.md", "CONTRIBUTING.md", "notes/design/README.md", "notes/design/CI.md", ".github/policy/README.md")],
+)
 def test_repository_documentation_links_resolve(path: Path) -> None:
     missing = [target for target in LOCAL_LINK.findall(path.read_text(encoding="utf-8")) if not (path.parent / target).resolve().exists()]
     assert missing == []
