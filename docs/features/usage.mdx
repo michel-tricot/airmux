@@ -41,8 +41,10 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-`/healthz` reports the number and age of queued events. `/readyz` returns `503` when the gateway has no usable bundle or
-rejected the latest manifest. A gateway is reported offline after 90 seconds without a heartbeat.
+`/healthz` is dependency-free process liveness. `/readyz` returns `503` when the gateway has no accepted bundle. Inspect
+`/metrics` on the data plane's internal listener for queue depth, durable backlog age, export failures, and rejected
+bundle manifests. A gateway is reported offline after 90 seconds without a heartbeat. See
+[production operations](/docs/deployment/operations#opentelemetry-metrics) for the metric reference and export guidance.
 
 ## Audit activity
 

@@ -20,8 +20,8 @@ from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalResponse
-    from data_plane.egress.base import CanonicalError, Ctx
+    from data_plane.canonical import CanonicalError, CanonicalResponse
+    from data_plane.egress.base import Ctx
 
 # This dialect's alternate spellings of canonical fields: parse folds each into its canonical
 # name, and the egress side re-spells the canonical value however the provider wants it.

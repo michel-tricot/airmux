@@ -29,8 +29,8 @@ from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalResponse
-    from data_plane.egress.base import CanonicalError, Ctx
+    from data_plane.canonical import CanonicalError, CanonicalResponse
+    from data_plane.egress.base import Ctx
 
 
 SUPPORTED = frozenset(

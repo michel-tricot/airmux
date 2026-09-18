@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
     from data_plane.bundle.holder import BundleHolder
     from data_plane.credentials import CredentialResolver
+    from data_plane.metrics import DataPlaneMetrics
     from data_plane.outbox import EventOutbox
 
 
@@ -18,6 +19,7 @@ class Runtime:
     outbox: EventOutbox
     credentials: CredentialResolver
     http_client: httpx.AsyncClient
+    metrics: DataPlaneMetrics
 
 
 def runtime_of(request: Request) -> Runtime:

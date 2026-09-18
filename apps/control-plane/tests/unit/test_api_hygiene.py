@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from control_plane.deps import get_session
 from control_plane.models.common.wire import Envelope, PageEnvelope
+from control_plane.throttling import ThrottleMiddleware
 
 if TYPE_CHECKING:
     from control_plane.throttling import ThrottleRoute
@@ -140,7 +141,10 @@ def test_every_endpoint_declares_one_throttle_group():
 
 def test_throttle_route_map_uses_mounted_api_paths():
     app = make_app()
-    routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
+    routes = cast(
+        "tuple[ThrottleRoute, ...]",
+        next(middleware.kwargs["routes"] for middleware in app.user_middleware if middleware.cls is ThrottleMiddleware),
+    )
     groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
     assert groups == ["cli"]
 

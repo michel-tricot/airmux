@@ -69,11 +69,14 @@ Both cross the same canonical middle.
 | `POST /inf/v1/responses` | OpenAI Responses surface |
 | `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
-| `GET /readyz` | `200` when this worker holds a bundle snapshot, otherwise `503` |
+| `GET /readyz` | `200` when this worker holds a bundle snapshot and can admit metering work, otherwise `503` |
+| `GET /metrics` | Prometheus metrics on a standalone plane's internal listener |
 
-The health routes require no authentication. Readiness means only that a bundle has been admitted.
-It does not prove that the control plane, secret store, event exporter, or any upstream provider is
-currently reachable.
+The health routes require no authentication. Readiness means that a bundle has been admitted and the
+metering writer can accept work. It does not prove that the control plane, secret store, event exporter,
+or any upstream provider is currently reachable. Rejecting a newer manifest does not remove an accepted snapshot from service;
+the rejection is reported through metrics and structured logs instead. Restrict a directly exposed
+standalone plane's `/metrics` endpoint to the monitoring network.
 
 ### Authentication
 
@@ -782,7 +785,7 @@ These are properties of the current implementation, not promises that another la
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
 - OpenAI egress does not replay canonical reasoning parts in prior messages
-- `readyz` reports bundle presence only
+- `readyz` reports accepted bundle presence and local worker availability only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk
 - SQLite durability and leasing coordinate processes on one compatible filesystem, not a distributed cluster
 

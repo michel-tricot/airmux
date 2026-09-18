@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from contract.policies import AllowedModels, AllowedProviders, CredentialAccess, DenyRequest, PriceLimit
 from data_plane.credentials import policy_candidates, preferred_candidates
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
     from contract.policies import Fallback
     from data_plane.bundle.holder import BundleSnapshot
-    from data_plane.canonical import CanonicalRequest
+    from data_plane.canonical import CanonicalRequest, GatewayDenyCode
     from data_plane.policies import CompiledRule
     from data_plane.profiles import CompiledProfile
 
@@ -29,14 +29,7 @@ class Allow:
 
 @dataclass(frozen=True)
 class Deny:
-    code: Literal[
-        "unknown_model",
-        "unsupported_input_modality",
-        "unsupported_feature",
-        "provider_not_configured",
-        "credential_unavailable",
-        "policy_denied",
-    ]
+    code: GatewayDenyCode
     status: int
     message: str = ""
 

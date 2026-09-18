@@ -55,6 +55,13 @@ class Settings(BaseModel):
 
     console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
     public_signup: bool = False
+    dev: bool = Field(default=False, validate_default=True)
+
+    @field_validator("dev", mode="before")
+    @classmethod
+    def dev_from_environment(cls, value: object) -> object:
+        configured = os.environ.get("AIRMUX_DEV")
+        return configured == "1" if configured is not None else value
 
     @field_validator("console_url")
     @classmethod

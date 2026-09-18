@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import json
+import time
 
 import httpx
 import pytest
 import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane, read_and_close_outbox
+from prometheus_client.parser import text_string_to_metric_families
 from starlette.testclient import TestClient
 
 import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.proxy import RequestRejectedError, _transform
 
@@ -75,7 +78,7 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
 
 
 @respx.mock
-def test_health_reports_the_pending_event_backlog(api_key, dp_app):
+def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()
     with TestClient(dp_app) as client:
@@ -84,20 +87,26 @@ def test_health_reports_the_pending_event_backlog(api_key, dp_app):
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
         )
-        health = client.get("/healthz")
+        deadline = time.monotonic() + 2
+        while True:
+            metrics = client.get("/metrics")
+            samples = {sample.name: sample.value for family in text_string_to_metric_families(metrics.text) for sample in family.samples}
+            if samples["airmux_data_plane_metering_outbox_pending"] == 1:
+                break
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
 
     assert response.status_code == 200
-    assert health.status_code == 200
-    events = health.json()["events"]
-    assert events.keys() == {"pending", "oldest_age_s"}
-    assert events["pending"] == 1
-    assert events["oldest_age_s"] >= 0
+    assert metrics.status_code == 200
+    assert samples["airmux_data_plane_metering_outbox_oldest_age_seconds"] >= 0
+    assert samples["airmux_data_plane_metering_writer_queue_capacity"] == 10_000
+    assert 'airmux_data_plane_metering_admission_total{outcome="accepted"} 1.0' in metrics.text
 
 
 @respx.mock
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
 def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
-    outbox = DevNullOutbox()
+    outbox = DevNullOutbox(DataPlaneMetrics())
 
     def reject_reservation():
         raise OutboxFullError

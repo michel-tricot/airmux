@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 import yaml
-from stack_harness import _poll
+from stack_harness import _poll, metric
 
 if TYPE_CHECKING:
     from stack_harness import Stack
@@ -72,16 +72,16 @@ def test_buffered_events_retry_after_a_lost_acknowledgement_without_duplicates(s
         stack.stop("cp")
         for _ in range(REQUESTS):
             assert stack.request().status_code == 200
-        assert httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == REQUESTS
+        assert metric(stack.dp_url + "/metrics", "airmux_data_plane_metering_outbox_pending") == REQUESTS
 
         stack.start_cp()
         assert proxy.committed.wait(timeout=15), "no event batch committed after the control plane restarted"
         events = stack.events()
         event_ids = {event["event_id"] for event in events}
         assert len(events) == len(event_ids) == REQUESTS
-        assert httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == REQUESTS
+        assert metric(stack.dp_url + "/metrics", "airmux_data_plane_metering_outbox_pending") == REQUESTS
         proxy.release.set()
-        assert _poll(lambda: httpx.get(stack.dp_url + "/healthz").json()["events"]["pending"] == 0, 15)
+        assert _poll(lambda: metric(stack.dp_url + "/metrics", "airmux_data_plane_metering_outbox_pending") == 0, 15)
         assert len(proxy.deliveries) == 2
         assert proxy.deliveries[0] == proxy.deliveries[1]
         assert set(proxy.deliveries[0]) == event_ids

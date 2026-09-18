@@ -11,11 +11,12 @@ from data_plane.bundle import BundleHolder
 from data_plane.bundle.holder import BundleSet
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.heartbeat import Heartbeat
+from data_plane.metrics import DataPlaneMetrics
 
 
 @respx.mock
 async def test_heartbeat_reports_a_bundle_only_when_the_manifest_contains_one(http_client):
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     bundle = make_bundle()
     holder.swap(BundleSet.from_bundles((bundle,)), source="test")
     instance_id = uuid7()

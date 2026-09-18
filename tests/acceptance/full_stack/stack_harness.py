@@ -27,6 +27,7 @@ import httpx
 import pytest
 import yaml
 from dotenv import dotenv_values
+from prometheus_client.parser import text_string_to_metric_families
 from testcontainers.core.container import DockerContainer
 from tests.acceptance.process_harness import uvicorn_port
 from tests.diagnostics import retain_logs
@@ -47,6 +48,11 @@ PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_write
 
 _pg: dict[str, DockerContainer | str] = {}
 PG_ADMIN_ENV = "AIRMUX_TEST_PG_URL"
+
+
+def metric(url: str, name: str) -> float:
+    families = text_string_to_metric_families(httpx.get(url, timeout=5.0).text)
+    return next(sample.value for family in families for sample in family.samples if sample.name == name)
 
 
 def pytest_configure(config: pytest.Config) -> None:

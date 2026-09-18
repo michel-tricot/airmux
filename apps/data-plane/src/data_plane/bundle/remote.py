@@ -37,6 +37,7 @@ class RemoteBundleSource(BundleSource):
         self._bundles_by_ref: dict[tuple[UUID, UUID], BundleV1] = {}
 
     async def once(self) -> None:
+        changed = False
         try:
             response = await self._http_client.get(
                 f"{self._config.control_plane.url}/api/v1/bundles/manifest",
@@ -48,10 +49,15 @@ class RemoteBundleSource(BundleSource):
             if _manifest_refs(manifest) != current_refs:
                 bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
                 self._adopt(bundles, source="polled", persist=True, expected=manifest.bundles)
-        except (ValidationError, ValueError) as error:
-            self._holder.reject_manifest(str(error))
+                changed = True
+        except (ValidationError, ValueError):
+            self._holder.reject_manifest()
             raise
-        self._holder.accept_manifest()
+        except (httpx.HTTPError, OSError):
+            self._holder.record_poll("failed")
+            raise
+        if not changed:
+            self._holder.record_poll("unchanged")
 
     async def run(self) -> None:
         await run_periodic(

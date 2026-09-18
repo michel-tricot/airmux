@@ -121,6 +121,7 @@ def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
     _ensure_bootstrap_key(config)
     load_settings(config)
     if dev:
+        os.environ["AIRMUX_DEV"] = "1"
         with database_errors():
             run_migrations()
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
