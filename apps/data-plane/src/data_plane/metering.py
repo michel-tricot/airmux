@@ -61,7 +61,7 @@ def estimate_tokens(text: str, model: ModelEntry) -> int:
     """Provider counts win where given; this fills the gap, notably partial accounting after a cancel."""
     if not text:
         return 0
-    return len(_encoding(model.upstream_model).encode(text))
+    return len(_encoding(model.upstream_model).encode_ordinary(text))
 
 
 def status_for_error(error: Exception) -> RoutedUsageStatus:

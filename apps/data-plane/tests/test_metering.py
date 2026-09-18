@@ -3,12 +3,13 @@ from __future__ import annotations
 import time
 from decimal import Decimal
 
+import pytest
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key
 
 from contract import uuid7
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, CanonicalTextPart, CanonicalToolCallPart, CanonicalToolDef, CanonicalUsage
 from data_plane.egress.base import Ctx
-from data_plane.metering import RequestStart, cost_breakdown, denied_event, usage_event
+from data_plane.metering import RequestStart, cost_breakdown, denied_event, estimate_tokens, usage_event
 
 
 def _model():
@@ -20,6 +21,14 @@ def _model():
             "cache_write_price_per_mtok": Decimal("2.5"),
         },
     )
+
+
+@pytest.mark.parametrize("upstream_model", ["gpt-4", "gpt-4o", "unknown-model"])
+@pytest.mark.parametrize(("text", "tokens"), [("", 0), ("hello world", 2), ("<|endoftext|>", 7), ("<|endofprompt|>", 7)])
+def test_estimation_counts_special_token_spellings_as_literal_text(upstream_model, text, tokens):
+    model = MODEL.model_copy(update={"upstream_model": upstream_model})
+
+    assert estimate_tokens(text, model) == tokens
 
 
 def test_each_usage_bucket_has_a_direct_model_price():
