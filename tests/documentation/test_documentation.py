@@ -15,6 +15,9 @@ import pytest
 import yaml
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
+from typer.testing import CliRunner
+
+from cli.main import app
 
 ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
@@ -159,6 +162,18 @@ def test_portable_installation_recipe_collects_outside_the_checkout(tmp_path: Pa
 
 def test_documentation_covers_safe_upgrades() -> None:
     assert (DOCS / "deployment" / "upgrades.mdx").exists()
+
+
+def test_documented_cli_command_groups_and_subcommands_exist() -> None:
+    reference = (DOCS / "reference" / "cli.mdx").read_text(encoding="utf-8")
+    groups = re.findall(r"^\|\s*`([^`]+)`\s*\|\s*(`[^|]+)\|$", reference, re.MULTILINE)
+    assert groups
+    runner = CliRunner()
+
+    for group, commands in groups:
+        for command in (group, *(f"{group} {name}" for name in re.findall(r"`([^`]+)`", commands))):
+            result = runner.invoke(app, [*command.split(), "--help"])
+            assert result.exit_code == 0, f"Documented command 'airmux {command}' failed:\n{result.output}"
 
 
 def test_readme_is_a_complete_oss_entry_point() -> None:
