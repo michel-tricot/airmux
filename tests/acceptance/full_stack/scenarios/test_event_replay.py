@@ -65,6 +65,7 @@ def test_buffered_events_retry_after_a_lost_acknowledgement_without_duplicates(s
         configuration["data_plane"]["events"]["control_plane"]["url"] = f"http://127.0.0.1:{proxy.server_port}"
         stack.config_path.write_text(yaml.safe_dump(configuration))
         stack.start_cp()
+        proxy.destination = stack.cp_url
         stack.collect_credentials()
         stack.start_dp()
         stack.wait_dp_ready()
