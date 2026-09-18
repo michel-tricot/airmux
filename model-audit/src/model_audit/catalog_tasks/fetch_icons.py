@@ -19,16 +19,12 @@ from __future__ import annotations
 import re
 import urllib.error
 from http import HTTPStatus
-from typing import TYPE_CHECKING
 
 import yaml
 
 from .http import fetch_text
-from .output import emit
+from .outcomes import IconsFetched, UnknownProvidersError
 from .paths import TAXONOMY
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 ROOT = TAXONOMY
 OUT = ROOT / "icons"
@@ -67,7 +63,7 @@ def monogram(slug: str) -> str:
     return MONOGRAM.format(letter=slug[0].upper())
 
 
-def main(arguments: Sequence[str] = ()) -> int:
+def run(providers: tuple[str, ...] = ()) -> IconsFetched:
     OUT.mkdir(exist_ok=True)
     entries = []
     for filename, key in (("providers.yml", "providers"), ("routers.yml", "routers")):
@@ -75,11 +71,10 @@ def main(arguments: Sequence[str] = ()) -> int:
         if path.exists():
             entries += [(e["id"], e.get("icon_mono"), e.get("icon_color")) for e in yaml.safe_load(path.read_text())[key]]
 
-    selected = set(arguments)
+    selected = set(providers)
     known = {entry[0] for entry in entries}
     if unknown := selected - known:
-        emit(f"not in provider catalog: {sorted(unknown)}")
-        return 2
+        raise UnknownProvidersError(unknown, "provider catalog")
     if selected:
         entries = [entry for entry in entries if entry[0] in selected]
 
@@ -103,11 +98,4 @@ def main(arguments: Sequence[str] = ()) -> int:
         (OUT / f"{slug}.svg").write_text(normalize(raw, slug))
         written.append(slug)
 
-    emit(f"  {len(written)} marks written to taxonomy/icons at lobehub {VERSION}")
-    if generated:
-        emit(f"  {len(generated)} generated as a monogram, no mark upstream: {', '.join(generated)}")
-    if missing:
-        emit(f"  entries missing an icon field: {', '.join(missing)}")
-    for slug, why in failed:
-        emit(f"  FAIL {slug}: {why}")
-    return 1 if failed else 0
+    return IconsFetched(tuple(written), tuple(generated), tuple(missing), tuple(failed), VERSION)

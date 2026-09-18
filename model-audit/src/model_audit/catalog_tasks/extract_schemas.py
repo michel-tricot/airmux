@@ -11,19 +11,19 @@ from __future__ import annotations
 
 import json
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import yaml
 
 from .canonical import write_schema
 from .http import fetch_text
-from .output import emit
+from .outcomes import ExtractedPart, ExtractedSchema, SchemaFetchFailed, SchemasExtracted, SkippedSchema
 from .paths import TAXONOMY
 from .sources import registry
 from .types import is_object, object_list, object_or_empty, string
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
 
     from .types import CatalogObject, CatalogValue
 
@@ -221,10 +221,11 @@ def active() -> set[str]:
     return ids
 
 
-def extract(document: CatalogObject, operation: CatalogObject, provider: str, ingress: str) -> str:
+def extract(document: CatalogObject, operation: CatalogObject, provider: str, ingress: str) -> ExtractedSchema:
     collect = make_collector(document)
-    acquired: list[str] = []
-    for kind in ("request", "response", "stream"):
+    acquired: list[ExtractedPart] = []
+    kinds: tuple[Literal["request", "response", "stream"], ...] = ("request", "response", "stream")
+    for kind in kinds:
         schema = body(operation, kind)
         if not is_object(schema) or not ({"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"} & set(schema)):
             continue
@@ -238,37 +239,35 @@ def extract(document: CatalogObject, operation: CatalogObject, provider: str, in
             modernize_recursion(output)
         path = OUT / f"{ingress}.{provider}.{kind}.json"
         write_schema(path, output)
-        acquired.append(f"{kind}:{path.stat().st_size // 1024}k")
-    return ", ".join(acquired) or "nothing extractable"
+        acquired.append(ExtractedPart(kind, path.stat().st_size))
+    return ExtractedSchema(provider, ingress, tuple(acquired))
 
 
-def main(arguments: Sequence[str] = ()) -> int:
+def run(providers: tuple[str, ...] = ()) -> SchemasExtracted:
     OUT.mkdir(parents=True, exist_ok=True)
     specs = dict(SPECS)
     for source in registry().values():
         for schema in source.schemas:
             specs[(source.provider_id, schema.surface)] = (str(schema.url), schema.path_pattern)
 
-    rows: list[tuple[str, str, str]] = []
+    schemas: list[ExtractedSchema | SkippedSchema | SchemaFetchFailed] = []
     live = active()
-    selected = set(arguments)
+    selected = set(providers)
     for (provider, ingress), (url, path_re) in specs.items():
         if selected and provider not in selected and f"{provider}:{ingress}" not in selected:
             continue
         if provider not in live:
-            rows.append((provider, ingress, "candidate, spec recorded but not extracted"))
+            schemas.append(SkippedSchema(provider, ingress, "candidate"))
             continue
         try:
             document = fetch(url)
         except Exception as error:  # noqa: BLE001 provider schema failures are reported per source so the remaining catalog can proceed
-            rows.append((provider, ingress, f"FETCH FAIL {error}"))
+            schemas.append(SchemaFetchFailed(provider, ingress, str(error)))
             continue
         _, operation = find_op(document, path_re)
         if not operation:
-            rows.append((provider, ingress, "path not found"))
+            schemas.append(SkippedSchema(provider, ingress, "path_not_found"))
             continue
-        rows.append((provider, ingress, extract(document, operation, provider, ingress)))
+        schemas.append(extract(document, operation, provider, ingress))
 
-    for provider, ingress, note in sorted(rows):
-        emit(f"  {provider:<14} {ingress:<10} {note}")
-    return 0
+    return SchemasExtracted(tuple(sorted(schemas, key=lambda schema: (schema.provider, schema.ingress))))
