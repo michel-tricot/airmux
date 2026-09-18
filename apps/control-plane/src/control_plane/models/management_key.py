@@ -137,7 +137,6 @@ class ManagementKeyOut(RecordOut[ManagementKey]):
     revoked_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     scope: Scope
     status: ManagementKeyStatus
 
@@ -157,7 +156,6 @@ class ManagementKeyCreatedOut(BaseModel):
     revoked_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     scope: Scope
     status: ManagementKeyStatus
     token: str

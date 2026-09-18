@@ -243,7 +243,6 @@ class UserOut(RecordOut[User]):
     managing_org_id: UUID | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     orgs: list[UUID]
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})

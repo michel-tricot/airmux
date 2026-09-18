@@ -16,7 +16,6 @@ const USER: Api.UserOut = {
   managing_org_id: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   orgs: [ORG.id],
 };
 const MANAGEMENT_KEY: Api.ManagementKeyOut = {
@@ -34,7 +33,6 @@ const MANAGEMENT_KEY: Api.ManagementKeyOut = {
   prefix: 'sk-cp-abc',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER: Api.ProviderOut = {
   id: 'provider-1',
@@ -47,7 +45,6 @@ const PROVIDER: Api.ProviderOut = {
   params_closed: false,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   id: 'provider-credential-1',
@@ -64,7 +61,6 @@ const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   fingerprint: '1234',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   scope: 'platform',
 };
 

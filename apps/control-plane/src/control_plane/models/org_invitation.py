@@ -261,7 +261,6 @@ class OrgInvitationOut(RecordOut[OrgInvitation]):
     revoked_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     status: InvitationStatus
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"status"})
