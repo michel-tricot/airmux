@@ -13,7 +13,6 @@ dependencies = [
   "pydantic>=2",
   "tiktoken",
   "pyyaml",
-  "prometheus-client",
 ]
 
 [build-system]

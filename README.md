@@ -172,9 +172,10 @@ indexes, and atomically adopt them. Inference therefore avoids management databa
 observes partially updated policy. Cold provider-secret resolution is the only database-capable exception, and secret
 values never enter a bundle.
 
-Each plane exposes dependency-free liveness at `/healthz`, role readiness at `/readyz`, and Prometheus text at `/metrics`
-on its own listener. The public all-in-one listener exposes the probes but not `/metrics`. Restrict `/metrics` to the
-monitoring network when a standalone control plane or data plane is directly reachable.
+Each plane records OpenTelemetry metrics and exposes Prometheus text at `/metrics` on its own listener, alongside
+dependency-free liveness at `/healthz` and role readiness at `/readyz`. The public all-in-one listener exposes the probes
+but not `/metrics`. Restrict `/metrics` to the monitoring network when a standalone control plane or data plane is
+directly reachable.
 
 Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment
 shapes.

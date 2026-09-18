@@ -19,10 +19,28 @@ The all-in-one listener routes `/healthz` to the control plane and `/readyz` to 
 liveness check independent of Postgres while readiness covers the inference path. A data plane that rejects a newer
 manifest keeps serving its last accepted snapshot and remains ready.
 
-## Prometheus metrics
+## OpenTelemetry metrics
+
+airmux records operational metrics through OpenTelemetry. Each process defaults its `service.name` resource attribute to
+`airmux-control-plane` or `airmux-data-plane`; `OTEL_SERVICE_NAME` overrides that default.
+
+To send metrics to an OpenTelemetry Collector or another OTLP-compatible backend, configure the standard environment
+variables on each process:
+
+```bash
+OTEL_METRICS_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
+```
+
+The exporter also honors the standard OTLP headers, certificate, timeout, compression, and periodic export interval
+variables. OTLP export is disabled unless `OTEL_METRICS_EXPORTER` includes `otlp`.
+
+### Prometheus scrape endpoint
 
 Each standalone control-plane and data-plane listener exposes unauthenticated Prometheus text at `/metrics`. The
-all-in-one public listener does not proxy this path. Scrape the internal listeners from a monitoring network instead:
+endpoint remains available when OTLP export is enabled, so deployments can migrate or feed both paths independently.
+The all-in-one public listener does not proxy this path. Scrape the internal listeners from a monitoring network instead:
 
 ```yaml
 scrape_configs:
@@ -85,7 +103,7 @@ Alert on sustained change rather than one failed request. The most useful starti
 - `bundle_manifest_rejected` remaining `1`, or increasing rejected and failed bundle polls
 - `metering_admission_total` increasing for `full` or `closed`
 - growing metering outbox pending count or oldest-event age
-- failed metering exports or shutdown drains
+- failed metering exports
 - credential backend failures
 - sustained increases in failed HTTP or upstream outcomes
 

@@ -44,7 +44,7 @@ curl http://localhost:8080/readyz
 `/healthz` is dependency-free process liveness. `/readyz` returns `503` when the gateway has no accepted bundle. Inspect
 `/metrics` on the data plane's internal listener for queue depth, durable backlog age, export failures, and rejected
 bundle manifests. A gateway is reported offline after 90 seconds without a heartbeat. See
-[production operations](/docs/deployment/operations#prometheus-metrics) for the metric reference and scrape guidance.
+[production operations](/docs/deployment/operations#opentelemetry-metrics) for the metric reference and export guidance.
 
 ## Audit activity
 

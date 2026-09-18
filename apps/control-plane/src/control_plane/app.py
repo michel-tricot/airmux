@@ -97,7 +97,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     await publisher
     finally:
         app.state.password_workers.close()
-        await engine.dispose()
+        try:
+            await engine.dispose()
+        finally:
+            await asyncio.to_thread(app.state.metrics.shutdown)
 
 
 async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:

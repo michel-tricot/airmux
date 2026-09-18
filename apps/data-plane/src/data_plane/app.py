@@ -102,7 +102,10 @@ def create_app(config: Config) -> ASGIApp:
                         for task in tasks:
                             task.cancel()
             finally:
-                await outbox.close()
+                try:
+                    await outbox.close()
+                finally:
+                    await asyncio.to_thread(metrics.shutdown)
 
     app = Starlette(
         routes=[

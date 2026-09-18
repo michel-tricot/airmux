@@ -10,7 +10,6 @@ import httpx
 import pytest
 import respx
 from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
-from prometheus_client import generate_latest
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
@@ -183,10 +182,7 @@ async def test_mid_stream_error_event_becomes_sse_error(metering, http_client):
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client, metrics))]
     assert any(b'"code": "overloaded"' in c for c in chunks)
     assert (await _event(outbox)).status == "upstream_error"
-    assert (
-        'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0'
-        in generate_latest(metrics.registry).decode()
-    )
+    assert 'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0' in metrics.render().decode()
 
 
 @respx.mock

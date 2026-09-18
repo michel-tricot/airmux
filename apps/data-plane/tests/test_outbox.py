@@ -11,7 +11,6 @@ import httpx
 import pytest
 import respx
 from conftest import make_config, make_outbox
-from prometheus_client import generate_latest
 
 from contract import RoutedUsageEventV1, uuid7
 from data_plane.config import SqliteOutboxConfig
@@ -159,7 +158,7 @@ async def test_metrics_refresh_reads_the_shared_durable_backlog(tmp_path, http_c
 
     await second.refresh_metrics()
 
-    assert "airmux_data_plane_metering_outbox_pending 1.0" in generate_latest(second_metrics.registry).decode()
+    assert "airmux_data_plane_metering_outbox_pending 1.0" in second_metrics.render().decode()
     await first.close()
     await second.close()
 
@@ -232,5 +231,5 @@ def test_default_outbox_capacity_is_ten_thousand():
 
 
 def test_metrics_do_not_expose_shutdown_only_state():
-    metrics = generate_latest(DataPlaneMetrics().registry).decode()
+    metrics = DataPlaneMetrics().render().decode()
     assert "airmux_data_plane_metering_shutdown_drains" not in metrics

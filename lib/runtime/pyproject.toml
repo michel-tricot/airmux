@@ -5,7 +5,11 @@ requires-python = ">=3.13"
 dependencies = [
   "airmux-contract",
   "anyio",
+  "opentelemetry-exporter-otlp-proto-http",
+  "opentelemetry-exporter-prometheus",
+  "opentelemetry-sdk",
   "pydantic>=2",
+  "prometheus-client",
   "pyyaml",
 ]
 

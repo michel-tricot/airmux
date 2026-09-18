@@ -6,7 +6,6 @@ import httpx
 import pytest
 import respx
 from conftest import ORG, make_config, make_key, make_remote_bundle
-from prometheus_client import generate_latest
 from pydantic import ValidationError
 from starlette.requests import Request
 
@@ -151,7 +150,7 @@ async def test_poll_rejects_a_bundle_that_fails_schema_validation(tmp_path, http
     with pytest.raises(ValidationError):
         await _remote_source(tmp_path, holder, http_client).once()
 
-    assert "airmux_data_plane_bundle_manifest_rejected 1.0" in generate_latest(metrics.registry).decode()
+    assert "airmux_data_plane_bundle_manifest_rejected 1.0" in metrics.render().decode()
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
 

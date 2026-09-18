@@ -43,7 +43,7 @@ class ObservabilityMiddleware:
         route = self._route(scope)
         status = 500
         scope.setdefault("state", {})["request_id"] = request_id
-        self.metrics.inflight.labels(route).inc()
+        self.metrics.observe_inflight(route, 1)
 
         async def send_headers(message: Message) -> None:
             nonlocal status
@@ -59,9 +59,8 @@ class ObservabilityMiddleware:
         finally:
             if route == "/api/v1/events":
                 outcome = "success" if status < HTTPStatus.BAD_REQUEST else "rejected" if status < HTTPStatus.INTERNAL_SERVER_ERROR else "failed"
-                self.metrics.event_ingest.labels(outcome).inc()
-                self.metrics.event_ingest_duration.labels(outcome).observe(time.monotonic() - started_at)
-            self.metrics.inflight.labels(route).dec()
+                self.metrics.observe_event_ingest(outcome, time.monotonic() - started_at)
+            self.metrics.observe_inflight(route, -1)
             self.metrics.observe_http(route, scope["method"], status, time.monotonic() - started_at)
 
     def _route(self, scope: Scope) -> str:

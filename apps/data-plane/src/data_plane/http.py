@@ -77,7 +77,7 @@ class ResponseHeadersMiddleware:
             "metrics_stream": stream,
         }
         if self.metrics is not None:
-            self.metrics.inflight.labels(route, str(stream).lower()).inc()
+            self.metrics.observe_inflight(route, stream, 1)
         status = 500
 
         async def send_headers(message: Message) -> None:
@@ -103,7 +103,7 @@ class ResponseHeadersMiddleware:
             if self.metrics is not None:
                 state = scope["state"]
                 actual_stream = bool(state["metrics_stream"])
-                self.metrics.inflight.labels(route, str(actual_stream).lower()).dec()
+                self.metrics.observe_inflight(route, actual_stream, -1)
                 self.metrics.observe_http(
                     (route, scope["method"], str(state["metrics_dialect"]), actual_stream),
                     status,
