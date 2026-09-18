@@ -81,8 +81,10 @@ def test_workflow_security_boundaries(path):
         permissions = job.get("permissions", workflow["permissions"])
         expected_permissions = {
             "prepare": {"contents": "read", "actions": "read"},
+            "docker": {"contents": "read", "packages": "write"},
             "release-branch": {"contents": "write"},
-            "publish": {"contents": "read", "id-token": "write"},
+            "publish": {"contents": "read", "id-token": "write", "packages": "write"},
+            "verify-container": {"contents": "read", "packages": "read"},
             "announce": {"contents": "write"},
         }.get(name, {"contents": "read"})
         assert permissions == expected_permissions

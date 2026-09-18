@@ -5,15 +5,21 @@ from pathlib import Path
 import yaml
 
 
-def test_default_deployment_is_one_application_and_postgres():
+def test_default_deployment_has_one_application_and_explicit_database_jobs():
     root = Path(__file__).resolve().parents[4]
     compose = yaml.safe_load((root / "docker-compose.yml").read_text())
     services = compose["services"]
     assert "name" not in compose
-    assert set(services) == {"airmux", "postgres"}
-    assert services["airmux"]["build"]["target"] == "all-in-one"
+    assert set(services) == {"airmux", "migrate", "taxonomy", "postgres"}
+    assert services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert services["airmux"]["command"] == "airmux"
+    assert "build" not in services["airmux"]
     assert "env_file" not in services["airmux"]
     assert services["airmux"]["environment"]["AIRMUX_PUBLIC_SIGNUP"] == "${AIRMUX_PUBLIC_SIGNUP:-false}"
+    assert services["airmux"]["depends_on"] == {"taxonomy": {"condition": "service_completed_successfully"}}
+    assert services["migrate"]["depends_on"] == {"postgres": {"condition": "service_healthy"}}
+    assert services["taxonomy"]["depends_on"] == {"migrate": {"condition": "service_completed_successfully"}}
+    assert all(services[name]["restart"] == "no" for name in ("migrate", "taxonomy"))
 
 
 def test_split_gateways_have_independent_state_and_no_provider_environment():
@@ -28,9 +34,12 @@ def test_split_gateways_have_independent_state_and_no_provider_environment():
     assert "env_file" not in first
     assert "env_file" not in second
     assert "env_file" not in services["control-plane"]
-    assert first["image"] == second["image"]
-    assert "build" in first
-    assert "build" not in second
+    image = "${AIRMUX_IMAGE:-airmux:local}"
+    assert "setup" not in services
+    application_services = ("control-plane", "data-plane-1", "data-plane-2", "console")
+    assert all(services[name]["image"] == image for name in application_services)
+    assert all("build" not in services[name] for name in application_services)
+    assert all(services[name]["extends"] == {"file": "docker-compose.yml", "service": name} for name in ("migrate", "taxonomy"))
     assert {name for name, service in services.items() if service.get("ports")} == {"console"}
     assert "provider-secrets:/state/secrets:ro" in first["volumes"]
     assert "provider-secrets:/state/secrets:ro" in second["volumes"]
@@ -49,15 +58,15 @@ def test_compose_layouts_do_not_share_database_volumes():
     assert split["services"]["postgres"]["volumes"] == ["split-pgdata:/var/lib/postgresql/data"]
 
 
-def test_compose_layouts_do_not_define_a_setup_service():
+def test_layouts_complete_database_jobs_before_serving():
     root = Path(__file__).resolve().parents[4]
     compact = yaml.safe_load((root / "docker-compose.yml").read_text())
     split = yaml.safe_load((root / "docker-compose.split.yml").read_text())
-    digitalocean = yaml.load(
-        (root / "deploy" / "digitalocean" / "compose.yml").read_text(),
-        Loader=yaml.BaseLoader,  # noqa: S506 BaseLoader only constructs strings, lists, and maps, including Compose tags
-    )
 
     assert "setup" not in compact["services"]
     assert "setup" not in split["services"]
-    assert "setup" not in digitalocean["services"]
+    compact_services = compact["services"]
+    assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
+    assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
+    assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
+    assert split["services"]["control-plane"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"

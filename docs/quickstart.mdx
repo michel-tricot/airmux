@@ -30,7 +30,8 @@ This path runs the console, control plane, gateway, and Postgres on one machine.
 
   <Step title="Start the stack">
     ```bash
-    docker compose up -d --build --wait
+    docker build -t airmux:local .
+    docker compose up -d --wait
     ```
 
     The public origin is `http://localhost:8080`. It serves the console at `/`, the management API at `/api/v1`, and inference at `/inf/v1`.

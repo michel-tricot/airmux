@@ -209,3 +209,9 @@ def test_runtime_subcommand_help_is_available(group):
     assert result.exit_code == 0, result.output
     assert "--config" in Text.from_ansi(result.output).plain
     assert "--port" in Text.from_ansi(result.output).plain
+
+
+def test_control_plane_serve_does_not_own_database_lifecycle():
+    result = runner.invoke(app, ["control-plane", "serve", "--help"])
+    assert result.exit_code == 0, result.output
+    assert "--taxonomy" not in Text.from_ansi(result.output).plain

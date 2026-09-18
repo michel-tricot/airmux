@@ -11,6 +11,7 @@ description: "Harden a public airmux deployment and protect its management, infe
 - Keep `AIRMUX_PUBLIC_SIGNUP=false` unless open registration is intentional
 - Use a strong URL-safe Postgres password set before database initialization
 - Restrict access to Postgres, the secret store, gateway state, and backups
+- Give the control plane write access to runtime credentials and provider secrets; mount both read-only in gateways
 - Keep control-plane synchronization traffic on a private or otherwise protected network
 - Disable response buffering on `/inf/` and set an appropriate streaming read timeout
 
@@ -25,7 +26,7 @@ description: "Harden a public airmux deployment and protect its management, infe
 
 ## State and logs
 
-The default file-backed secret store writes one owner-readable file per provider credential under `/state`. Bundle
+The default file-backed secret store writes one owner-readable file per provider credential under `/state/secrets`. Bundle
 caches contain token hashes and secret references, not plaintext tokens or provider values. Usage and audit records can
 still contain sensitive operational metadata such as model IDs, user IDs, credential IDs, cost, and timestamps.
 
@@ -34,7 +35,7 @@ responses. Limit access to application logs, database exports, volume snapshots,
 
 ## Browser boundary
 
-The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The all-in-one proxy
+The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The airmux proxy
 also sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`, and `X-Frame-Options: DENY`.
 Preserve equivalent behavior if you replace the checked-in proxy. See the [response headers](/docs/reference/inference#response-headers)
 for streaming cache directives and the authentication challenge.

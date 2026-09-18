@@ -13,9 +13,9 @@ from test_docker import ROOT, assert_completion, docker, eventually
 
 
 def test_gateway_container_serves_a_native_configuration_without_a_control_plane(tmp_path):
-    image = os.environ.get("DEPLOYMENT_GATEWAY_IMAGE")
+    image = os.environ.get("DEPLOYMENT_IMAGE")
     if image is None:
-        pytest.skip("set DEPLOYMENT_GATEWAY_IMAGE to the built data-plane target")
+        pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
     network = f"airmux-standalone-{uuid4().hex[:12]}"
     upstream = f"{network}-upstream"
     gateway = f"{network}-gateway"
@@ -61,6 +61,8 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             network,
             "--user",
             f"{os.getuid()}:{os.getgid()}",
+            "--entrypoint",
+            "airmux",
             "--mount",
             f"type=bind,source={tmp_path},target=/config,readonly",
             "-e",
@@ -68,6 +70,7 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             "-p",
             "127.0.0.1::8081",
             image,
+            "gateway",
             "serve",
             "--config",
             "/config/gateway/airmux.yml",

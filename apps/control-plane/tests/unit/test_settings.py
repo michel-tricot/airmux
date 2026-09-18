@@ -154,9 +154,9 @@ def test_supplied_bootstrap_token_is_validated_and_redacted():
         DataPlaneBootstrap(token="not-an-management-key")
 
 
-def test_shared_migration_config_uses_the_selected_database_url(monkeypatch):
-    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "migrate.yml"
-    monkeypatch.setenv("AIRMUX_CONFIG", str(migration_config))
+def test_docker_config_uses_the_selected_database_url(monkeypatch):
+    docker_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "airmux.yml"
+    monkeypatch.setenv("AIRMUX_CONFIG", str(docker_config))
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
 
     assert database_url() == "postgresql+asyncpg://someone:secret@direct.db.internal:5432/app"
