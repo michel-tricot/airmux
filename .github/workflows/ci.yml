@@ -204,7 +204,7 @@ jobs:
       - name: Run discovered installation suites
         if: matrix.shard == 0
         run: |
-          printf '%s\n' pytest httpx pyyaml | uv pip compile --constraint "$RUNNER_TEMP/constraints.txt" --output-file "$RUNNER_TEMP/documentation-requirements.txt" -
+          uv pip compile "$RUNNER_TEMP/constraints.txt" --quiet > /dev/null
           uv run --no-sync pytest tests/installation/portable tests/installation/integration -n auto --junitxml=gateway-results/installation.xml
       - name: Run the discovered gateway suite without Docker
         run: uv run --no-sync pytest tests/acceptance/gateway -n auto -m "not performance" --shard "${{ matrix.shard }}/4" --junitxml=gateway-results/gateway.xml
