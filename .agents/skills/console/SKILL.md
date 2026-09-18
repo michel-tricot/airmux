@@ -1,76 +1,101 @@
 ---
 name: console
-description: Front door for apps/console React/TypeScript work. Use when changing anything under apps/console — pages, components, session and org scoping, or data fetching through the generated client. Routes styling to console-styling, loading/effect patterns to react-patterns, cleanup passes to frontend-trim, and manual verification to console-ui-audit.
+description: Front door for apps/console React/TypeScript work, including routing, session and organization scope, management data, and playground inference. Routes styling to console-styling, query and lifecycle patterns to react-patterns, cleanup to frontend-trim, and manual verification to console-ui-audit.
 user-invocable: false
 ---
 
 # Console Standards
 
-The console is the admin UI for the control plane, at `apps/console`. It is a pure client of the
-control plane management API. It never talks to the data plane and never grows its own persistence.
-If a page needs data the API does not return, add the endpoint to the control plane and regenerate
-the client, do not work around it.
+The console at `apps/console` manages resources through the control plane and sends playground
+inference to the data plane. Resource state belongs to the management API. If a page needs resource
+data the API does not return, add the endpoint to the control plane and regenerate the client.
+Console-local paths below are relative to `apps/console`.
 
 ## Stack
 
 - Bun is the toolchain, driven from the repo root: `bun install`, `bun run dev`, `bun run build`. Never npm/npx/node
 - Vite + React + TypeScript, Tailwind v4 via the `@tailwindcss/vite` plugin (no tailwind.config file)
-- TanStack Query for all server state, wouter for routing
-- The Vite dev server proxies `/v1` to the control plane on `127.0.0.1:8000`, overridable with `CONTROL_PLANE_URL`.
-  The API must answer on the console's own origin: the session cookie is same-site
+- TanStack Query for management server state, wouter for routing
+- `vite.config.ts` proxies `/api` to `http://127.0.0.1:8000` (`CONTROL_PLANE_URL`) and `/inf` to
+  `http://127.0.0.1:8080` (`DATA_PLANE_URL`), preserving both prefixes
+- Browser calls use the console's own origin so management and playground cookies reach their APIs
 
-## The generated client
+## Management API
 
-`@workspace/api-client-react` is generated from `lib/api-spec/openapi.yaml` by orval. Never hand-write
-a fetch or a resource interface.
+`@workspace/api-client-react` is generated from the repo's `lib/api-spec/openapi.yaml` by orval.
+Management calls use its hooks and types, usually through the existing `src/features/*/hooks.ts`
+wrappers. Never hand-write a management fetch, duplicate a resource interface, or edit generated files.
 
-- Hooks and query-key helpers come from the package: `useListOrgs`, `getListOrgsQueryKey`, `useCreateOrg`
-- `customFetch` owns the wire: it strips the `{"data": ...}` envelope, attaches the CSRF header, raises `ApiError`
-- A new endpoint means exporting `lib/api-spec/openapi.yaml` from the control-plane routes and running `bun run codegen`, never a local shim
-- Query keys are the request path, so they are shared across orgs. Anything org-scoped puts the org in the key too
+- The repo's `lib/api-client-react/src/custom-fetch.ts` unwraps `{"data": ...}`, converts paginated
+  envelopes to `{ items, page }`, applies configured headers, and raises `ApiError`; callsites never unwrap envelopes
+- `src/lib/api.ts` configures `X-Requested-With` once via `setDefaultHeaders`; do not repeat it per management call
+- After changing an endpoint, run `./scripts/export-openapi.sh` and `bun run codegen` from the repo root
+- [react-patterns](../react-patterns/SKILL.md#query-conventions) owns query keys, pagination, and invalidation
+
+## Playground inference
+
+- `src/pages/app/workspace/Playground.tsx` uses the generated management mutations wrapped in
+  `src/features/playground/hooks.ts` to ensure or end a workspace's playground session
+- Before each completion, `useEnsurePlaygroundSessionMutation` sends `PUT` to
+  `/api/v1/organizations/{orgId}/workspaces/{workspaceRef}/playground-session`; the control plane sets or
+  reuses an HttpOnly playground cookie and returns session metadata
+- `src/lib/inference.ts` owns `prepareInferenceRequest` and `inferenceCompletion`, posting to
+  `/inf/v1/chat/completions` with the playground cookie and its own `X-Requested-With` header
+- Keep inference's direct fetch, response validation, streaming, cancellation, and bounded session-propagation
+  retries in that module; inference responses do not use management envelopes or `customFetch`
+- Catalog reads and playground-session mutations still use the generated management client
 
 ## Auth and org scope
 
-- Auth is the session cookie. There is no bearer token in the console and nothing auth-related in storage
-- `src/lib/api.ts` sets `X-Requested-With` on every request once, at import. Do not set it per call
-- Org-scoped calls under `/v1/org` pass `orgScope(orgId)` as the `request` option and carry the org in the query key
-- `src/lib/session.tsx` owns the session: `useSession()` gives `user`, `orgId`, `setOrgId`, `logout`. Switching orgs
-  drops every cached `/v1/org` query; logout clears the whole cache
+- `src/lib/session.tsx` owns the cookie-authenticated session through generated `useMe` and `useLogout`
+  calls to `/api/v1/auth/me` and `/api/v1/auth/logout`; keep credentials out of browser storage
+- `useSession()` exposes `user`, `isLoading`, `error`, `retry`, `isRetrying`, `orgId`, `setOrgId`, and `logout`
+- `orgId` is a selection preference stored as `airmux_org_id` in localStorage.
+  `AppSection` in `src/App.tsx` validates it against `useEnrollment()` data from `/api/v1/enroll`, clears a
+  stale selection, and redirects to `/orgs` when selection is needed
+- Org pages use `useRequiredOrgId()`; route parameters use `useRequiredParam()` from `src/lib/route.ts`.
+  Instance detail pages take their org from the route
+- Pass `orgId` and `workspaceRef` to the generated hooks or their feature wrappers; scoped resource paths
+  are `/api/v1/organizations/{orgId}/...` and `/api/v1/organizations/{orgId}/workspaces/{workspaceRef}/...`
+- Switching orgs updates the selection without clearing the query cache; generated keys isolate scoped data.
+  Logout clears the selection and the whole query cache when its mutation settles
+- `src/features/permissions/hooks.ts` owns `AuthorizationProvider`, `useAuthorization`, and
+  `useScopedAuthorization`; use the scope's permissions and feature policies to gate pages, controls, and queries
+
+## Routes
+
+`src/App.tsx` mounts route definitions with their access policies. Register pages in the matching definition:
+
+| Section | Browser path | Definition |
+|---------|--------------|------------|
+| Instance | `/instance/...` | `src/pages/instance-routes.tsx` |
+| Organization | `/org/...` | `src/pages/app/routes.tsx` |
+| Workspace | `/org/workspaces/:workspaceRef/...` | `src/pages/app/workspace/routes.tsx` |
+
+`/` redirects to `/org` when an org is selected, otherwise `/orgs`; `src/components/layout/AppLayout.tsx`
+can then select the last or first workspace. Instance routes require `user.instance_role` plus the
+route's permission policy. `/orgs` is the enrollment picker, `/cli` handles CLI approval, and `/invite`
+handles invitations, including signed-out access.
 
 ## First move
 
 Before editing, inspect nearby files and callsites. Reuse before creating:
 
-- Application primitives live in `src/components/ui/elements.tsx`: actions, fields, status, cards, dialogs, tables, tabs, alerts, avatars, and sheets
-- Reusable product compositions live in `src/components/shared/`: data tables, form dialogs, loading,
-  error and empty states, page shells, member panels, and key tables
-- The rest of `src/components/ui/` is the vendored shadcn foundation. Do not edit those files by hand; compose one when
-  `elements.tsx` has no equivalent instead of rebuilding its behavior with native elements or direct Radix imports
-- Formatters live in `src/lib/format.ts` (`formatDate`, `formatRelative`), class merging in `src/lib/utils.ts` (`cn`)
-- Pages live in `src/pages/` (instance admin) and `src/pages/app/` (org member), registered in the matching
-  `Switch` in `App.tsx`
-
-## Local contract
-
-- Two consoles share one app: instance routes under `/instance` behind `user.instance_role`, org-member routes under `/org`.
-  Put a page in the section whose permission it needs
-- Extend an existing UI component before creating a parallel implementation
-- Extract a stable UI concept at its second real caller, or immediately when accessibility-sensitive
-  behavior such as a dialog, select, or radio group needs one implementation
-- Keep a one-off presentation local only when no existing primitive fits and the behavior is genuinely page-specific
+- Inspect `src/components/ui/elements.tsx` for themed primitives, `src/components/shared/` for product
+  compositions, and the vendored `src/components/ui/` foundation before writing styled markup
+- Pages compose these components; follow [console-styling](../console-styling/SKILL.md) for reuse,
+  extension, extraction, and accessible behavior instead of rebuilding existing interactions
+- Use `formatDate` from `src/lib/format.ts` for timestamps and `cn` from `src/lib/utils.ts` for class merging
 - Do not rewrite adjacent code for preference only: component style, naming, import shape, formatting
-- All server data flows through the generated hooks. Mutations invalidate the list key they affect via its `get*QueryKey` helper
-- Render timestamps with `formatDate` or `formatRelative`, do not roll new formatters per page
-- Follow the repo style rules from CLAUDE.md: no comments unless asked, no emojis, no em dashes
 
 ## Route to other skills
 
-- Tailwind classes, theme tokens, shared primitives, extraction: `console-styling`
-- Loading states, polling, effects, show-once data: `react-patterns`
-- Simplification or cleanup pass over touched frontend files: `frontend-trim`
-- Verifying changes against a running control plane: `console-ui-audit`
+- Tailwind classes, theme tokens, shared primitives, extraction: [console-styling](../console-styling/SKILL.md)
+- Query conventions, loading states, polling, effects, show-once data: [react-patterns](../react-patterns/SKILL.md)
+- Simplification or cleanup pass over touched frontend files: [frontend-trim](../frontend-trim/SKILL.md)
+- Verifying running console behavior: [console-ui-audit](../console-ui-audit/SKILL.md)
 
 ## Validation
 
-- Every change: `bun run typecheck` from the repo root, and `bun run build` when the change touches the build
-- Visual changes: run the dev server against a running control plane and look at the affected page; a passing build is not proof the UI works
+- Console code changes: `bun run typecheck` from the repo root, and `bun run build` when the change touches the build
+- Visual or behavioral changes: follow the linked audit skill against running services, including the data plane for playground inference
