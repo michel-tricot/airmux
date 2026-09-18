@@ -104,7 +104,7 @@ identify a sort position, so traversal can continue if the item at the previous 
 curl 'https://llm.example.com/api/v1/organizations?limit=50' \
   -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
 
-curl 'https://llm.example.com/api/v1/organizations?limit=50&cursor=$NEXT_CURSOR' \
+curl "https://llm.example.com/api/v1/organizations?limit=50&cursor=$NEXT_CURSOR" \
   -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
 ```
 
