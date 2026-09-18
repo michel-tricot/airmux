@@ -224,10 +224,6 @@
                     ]
                   },
                   {
-                    "group": "Bundles",
-                    "pages": ["POST /api/v1/organizations/{org_id}/bundles/republish", "GET /api/v1/organizations/{org_id}/bundles"]
-                  },
-                  {
                     "group": "Usage Events",
                     "pages": ["GET /api/v1/organizations/{org_id}/events"]
                   },
@@ -326,7 +322,6 @@
                     "pages": [
                       "GET /api/v1/bundles/manifest",
                       "GET /api/v1/bundles/{bundle_id}",
-                      "GET /api/v1/bundle/latest",
                       "POST /api/v1/events",
                       "POST /api/v1/heartbeat"
                     ]

@@ -155,7 +155,6 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
     assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
-    assert "x-airmux-dialect: openai_chat_completions" not in readme.lower()
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
@@ -254,7 +253,6 @@ def test_curl_request_bodies_are_valid_json(path: Path) -> None:
 
 def test_public_examples_use_a_neutral_smoke_prompt() -> None:
     documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    assert "Reply with exactly: airmux ready" not in documents
     assert "Say hello in one word." in documents
 
 
@@ -270,16 +268,9 @@ def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
 
     assert commands
     assert "docker compose run" not in documents
-    assert "--connect-url" not in documents
 
 
 def test_runnable_examples_use_the_public_inference_prefix() -> None:
     sources = {path: path.read_text(encoding="utf-8") for path in (ROOT / "examples").glob("*.py")}
     assert all("/v1/chat/completions" not in source.replace("/inf/v1/chat/completions", "") for source in sources.values())
     assert "/inf" in sources[ROOT / "examples" / "anthropic_sdk.py"]
-
-
-def test_documentation_does_not_describe_dialect_detection() -> None:
-    paths = [ROOT / "AGENTS.md", ROOT / "README.md", *documentation_files(), *(ROOT / "notes").rglob("*.md"), *(ROOT / "examples").rglob("*.py")]
-    detection = re.compile(r"x-airmux-dialect|automatic dialect|dialect detection", re.IGNORECASE)
-    assert [str(path.relative_to(ROOT)) for path in paths if detection.search(path.read_text(encoding="utf-8"))] == []

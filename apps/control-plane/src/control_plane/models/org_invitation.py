@@ -120,6 +120,15 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
+    async def for_org(cls, org_id: UUID) -> list[Self]:
+        return await cls.find(
+            cls.org_id == org_id,
+            col(cls.accepted_at).is_(None),
+            col(cls.revoked_at).is_(None),
+            order_by=col(cls.email),
+        )
+
+    @classmethod
     async def pending_for_email(cls, email: str, now: datetime, scope: Scope) -> list[tuple[Self, str, str | None]]:
         query = (
             select(cls, Org.name, Workspace.name)

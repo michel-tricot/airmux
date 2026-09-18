@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,9 +16,11 @@ import pytest
 from starlette.testclient import TestClient
 
 import data_plane.app as app_module
+from contract import DeniedUsageEventV1, uuid7
 from data_plane.app import create_app
 from data_plane.bundle import BundleSource, LocalBundleConfig
-from data_plane.config import Config
+from data_plane.config import Config, FileOutboxConfig
+from data_plane.outbox import FileOutbox
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp
@@ -59,6 +62,53 @@ def test_unexpected_worker_failure_stops_the_app_and_cancels_its_siblings(tmp_pa
 
     assert source.stopped.is_set()
     assert terminated.is_set()
+
+
+def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
+    source = FailingSource(delay_s=60)
+    outbox = FileOutbox(FileOutboxConfig(path=tmp_path / "events.jsonl"))
+    failed = threading.Event()
+    terminated = threading.Event()
+
+    def fail(_events):
+        failed.set()
+        message = "event storage failed"
+        raise OSError(message)
+
+    monkeypatch.setattr(outbox, "_persist", fail)
+    monkeypatch.setattr(app_module, "build_bundle_source", lambda *_args: source)
+    monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
+    monkeypatch.setattr(app_module, "_terminate_process", terminated.set)
+    app = create_app(Config(bundle=LocalBundleConfig(kind="local", path=tmp_path / "bundle.yml")))
+
+    def run() -> None:
+        with TestClient(app):
+            with outbox.reserve() as reservation:
+                reservation.record(
+                    DeniedUsageEventV1(
+                        event_id=uuid7(),
+                        request_id=uuid7(),
+                        occurred_at=datetime.now(tz=UTC),
+                        org_id=uuid7(),
+                        workspace_id=uuid7(),
+                        key_id="test",
+                        model_id="test",
+                        provider_id="",
+                        bundle_id=uuid7(),
+                        input_tokens=0,
+                        output_tokens=0,
+                        max_output_tokens=None,
+                        cost_usd="0",
+                        latency_ms=0,
+                        status="denied",
+                        stream=False,
+                    )
+                )
+            assert failed.wait(1)
+            assert terminated.wait(1)
+
+    with pytest.raises(OSError, match="event storage failed"):
+        run()
 
 
 def failing_app() -> ASGIApp:

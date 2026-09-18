@@ -10,8 +10,8 @@ description: "Monitor readiness, preserve state, update safely, and diagnose con
 | `/healthz` | `200` with queued-event statistics | Process or control-plane proxy is unavailable |
 | `/readyz` | `200 {"status":"ready"}` | No bundle or latest manifest was rejected |
 
-The data-plane health payload includes pending outbox events and the age of the oldest queued event. Alert on a growing
-queue or oldest age, even while inference remains available.
+The data-plane health payload includes diagnostics for the configured event outbox. Alert when it reports rejected
+events or storage failures, or when its backlog or oldest event age grows.
 
 ## CLI diagnostics
 
@@ -19,7 +19,6 @@ queue or oldest age, even while inference remains available.
 airmux status
 airmux doctor
 airmux gateways list --all
-airmux bundles list
 airmux events tail
 ```
 
@@ -38,11 +37,10 @@ Restrict backup access because the default file secret store contains plaintext 
 
 ## Updates
 
-Compose completes its migration and taxonomy jobs before starting the control plane. The serving process creates its bootstrap
-credential when absent and refuses to start unless the database is at the expected schema revision. A split gateway can keep
-serving an accepted cached bundle while the control plane is unavailable.
-Because pre-1.0 releases do not promise
-cross-version compatibility between planes, deploy one image digest across all components. Follow
+Compose completes its migration and catalog jobs before starting the control plane. A direct control-plane restart does not
+run either job. The process refuses to start unless the database is at the expected schema revision. A split gateway can keep
+serving an accepted cached bundle while the control plane is unavailable. Because pre-1.0 releases do not promise cross-version
+compatibility between planes, deploy one image digest across all components. Follow
 [Upgrade and rollback](/docs/deployment/upgrades) to restore the database and state together if verification fails.
 
 ## Common failures
@@ -53,7 +51,7 @@ cross-version compatibility between planes, deploy one image digest across all c
 | `/readyz` says `bundle rejected` | Gateway logs for an invalid provider, model, credential, or policy reference |
 | `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
 | Usage missing from console | `/healthz` pending count and control-plane event-ingest reachability |
-| New key returns `invalid_token` | Wait for bundle adoption, then inspect `bundles list` and gateway logs |
+| New key returns `invalid_token` | Wait for adoption, then inspect gateway readiness and logs |
 | Streams pause or buffer | Reverse-proxy buffering and read timeout |
-| Migration job fails | Check database reachability, permissions, and the migration job logs |
+| Migration or catalog job fails | Run `docker compose logs migrate taxonomy` with the same Compose file and project options used to start the stack, then check database reachability and permissions |
 | Control plane reports a schema mismatch | Run `airmux control-plane migrate` before starting it |

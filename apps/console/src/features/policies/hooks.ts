@@ -8,7 +8,6 @@ import {
   useReorderPolicies,
   useUpdatePolicy,
 } from '@workspace/api-client-react';
-
 export function usePolicies(orgId: string, workspaceRef: string, enabled: boolean) {
   return useListPolicies(orgId, workspaceRef, { query: { enabled } });
 }

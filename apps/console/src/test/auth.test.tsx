@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import App from '@/App';
-import { ORG, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 function renderAt(path: string) {
   window.history.replaceState(null, '', path);
@@ -40,16 +40,14 @@ function withTwoOrgs() {
     ),
     http.get('/api/v1/organizations/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
-        return HttpResponse.json<{ data: Api.WorkspaceOut[] }>({
-          data: [
-            { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
-          ],
-        });
+        return enveloped<Api.WorkspaceOut>([
+          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+        ]);
       }
       if (params.orgId === ORG2.id) {
-        return HttpResponse.json<{ data: Api.WorkspaceOut[] }>({
-          data: [{ id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null }],
-        });
+        return enveloped<Api.WorkspaceOut>([
+          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+        ]);
       }
       return new HttpResponse(null, { status: 403 });
     }),

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import type { OrgInvitationOut } from '@workspace/api-client-react';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 const now = '2026-08-17T12:00:00Z';
 
@@ -73,7 +73,7 @@ describe('organization invitations', () => {
       http.get('/api/v1/auth/permissions', () =>
         HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: ['members.manage', 'members.read'] } }),
       ),
-      http.get('/api/v1/organizations/:orgId/invitations', () => HttpResponse.json<{ data: Api.OrgInvitationOut[] }>({ data: invitations })),
+      http.get('/api/v1/organizations/:orgId/invitations', () => enveloped(invitations)),
       http.post('/api/v1/organizations/:orgId/invitations', async ({ request }) => {
         const body = (await request.json()) as { email: string; org_role: string };
         invitations = [{ ...invitation(), email: body.email, org_role: body.org_role }];

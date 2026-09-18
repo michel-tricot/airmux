@@ -4,21 +4,24 @@ import logging
 import os
 import sqlite3
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import httpx
 from pydantic import TypeAdapter
 
 from contract import UsageEvent
-from data_plane.outbox.base import EventOutbox, OutboxStats
+from data_plane.outbox.queued import QueuedOutbox
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
     import asyncio
     from collections.abc import Sequence
+    from datetime import datetime
     from pathlib import Path
 
     from data_plane.config import SqliteOutboxConfig
+    from data_plane.outbox.base import OutboxStat
 
 logger = logging.getLogger("data_plane")
 USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
@@ -26,27 +29,26 @@ USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
 BATCH_SIZE = 1000
 MAX_BATCHES_PER_FLUSH = 20
 
-# A durable event queue backed by SQLite in WAL mode. Many data plane processes may share one cache
-# dir: SQLite serializes their writes, so every worker records into the same queue and a single
-# leaseholder exports it. Deletes are keyed on event_id, so even a redundant export can neither lose
-# nor double-drop an event, unlike a positional file buffer.
-
 _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS outbox(event_id TEXT PRIMARY KEY, body TEXT NOT NULL)",
     "CREATE TABLE IF NOT EXISTS flush_lease(id INTEGER PRIMARY KEY CHECK(id = 1), owner TEXT NOT NULL, expires REAL NOT NULL)",
 )
 
 
+@dataclass(frozen=True)
+class _DurableBacklog:
+    events: int
+    oldest_event_at: datetime | None
+
+
 def _connect(cache_dir: Path) -> sqlite3.Connection:
     cache_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(cache_dir / "events.db"), timeout=5.0)
-    conn.execute("PRAGMA busy_timeout=5000")  # a writer waits for the lock rather than raising under contention
-    conn.execute("PRAGMA synchronous=NORMAL")  # durable across an app crash, fast; only a power loss can drop the last commit
-    # The WAL switch and first schema create take a brief exclusive lock that busy_timeout does not cover, so
-    # several fresh workers starting at once contend; retry until the first one wins and the rest see WAL already set.
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA synchronous=NORMAL")
     for _ in range(100):
         try:
-            conn.execute("PRAGMA journal_mode=WAL")  # readers never block the writer; safe for multiple processes on one host
+            conn.execute("PRAGMA journal_mode=WAL")
             with conn:
                 for statement in _SCHEMA:
                     conn.execute(statement)
@@ -55,39 +57,41 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
             continue
         return conn
     conn.close()
-    msg = f"could not initialize the event outbox in {cache_dir}"
-    raise RuntimeError(msg)
+    message = f"could not initialize the event outbox in {cache_dir}"
+    raise RuntimeError(message)
 
 
-class SqliteOutbox(EventOutbox):
-    """Durable, multi-writer event queue with single-exporter leasing."""
-
-    def __init__(
-        self,
-        config: SqliteOutboxConfig,
-        http_client: httpx.AsyncClient,
-    ) -> None:
-        self._conn = _connect(config.cache_dir)
-        self._owner = str(os.getpid())
+class SqliteOutbox(QueuedOutbox):
+    def __init__(self, config: SqliteOutboxConfig, http_client: httpx.AsyncClient) -> None:
         self._config = config
         self._http_client = http_client
+        self._owner = str(os.getpid())
+        super().__init__("airmux-sqlite-outbox")
 
-    def record(self, event: UsageEvent, /) -> None:
+    def _open_storage(self) -> None:
+        self._conn = _connect(self._config.cache_dir)
+
+    def _persist(self, events: Sequence[UsageEvent], /) -> None:
         with self._conn:
-            self._conn.execute("INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)", (str(event.event_id), event.model_dump_json()))
+            self._conn.executemany(
+                "INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)",
+                ((str(event.event_id), event.model_dump_json()) for event in events),
+            )
 
-    def close(self) -> None:
+    def _close_storage(self) -> None:
         self._conn.close()
 
     def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
-        return (task_group.create_task(self._run_export(), name="event export"),)
+        return (*super().start(task_group), task_group.create_task(self._run_export(), name="event export"))
 
-    def next_batch(self, limit: int, /) -> list[UsageEvent]:
-        rows = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
-        return [USAGE_EVENT_ADAPTER.validate_json(body) for (body,) in rows]
+    def _next_batch(self, limit: int) -> list[UsageEvent]:
+        bodies = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
+        return [USAGE_EVENT_ADAPTER.validate_json(body) for (body,) in bodies]
 
-    def claim_export(self, ttl: float, now: float) -> bool:
-        """Win or renew the export lease, which another worker can take after expiry."""
+    async def next_batch(self, limit: int, /) -> list[UsageEvent]:
+        return await self._storage_call(lambda: self._next_batch(limit))
+
+    def _claim_export(self, ttl: float, now: float) -> bool:
         with self._conn:
             self._conn.execute(
                 "INSERT INTO flush_lease(id, owner, expires) VALUES (1, ?, ?) "
@@ -98,20 +102,30 @@ class SqliteOutbox(EventOutbox):
             (owner,) = self._conn.execute("SELECT owner FROM flush_lease WHERE id = 1").fetchone()
         return owner == self._owner
 
-    def acknowledge(self, event_ids: Sequence[str], /) -> None:
-        with self._conn:
-            self._conn.executemany("DELETE FROM outbox WHERE event_id = ?", [(event_id,) for event_id in event_ids])
+    async def claim_export(self, ttl: float, now: float) -> bool:
+        return await self._storage_call(lambda: self._claim_export(ttl, now))
 
-    def stats(self) -> OutboxStats:
-        pending = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0]
+    def _acknowledge(self, event_ids: Sequence[str]) -> None:
+        with self._conn:
+            self._conn.executemany("DELETE FROM outbox WHERE event_id = ?", ((event_id,) for event_id in event_ids))
+
+    async def acknowledge(self, event_ids: Sequence[str], /) -> None:
+        await self._storage_call(lambda: self._acknowledge(event_ids))
+
+    def _durable_backlog(self) -> _DurableBacklog:
+        (events,) = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()
         first = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT 1").fetchone()
         oldest = USAGE_EVENT_ADAPTER.validate_json(first[0]).occurred_at if first is not None else None
-        return OutboxStats(pending=pending, oldest_event_at=oldest)
+        return _DurableBacklog(events=events, oldest_event_at=oldest)
+
+    async def stats(self) -> dict[str, OutboxStat]:
+        durable = await self._storage_call(self._durable_backlog)
+        return {**self._queue_stats(durable.events, durable.oldest_event_at), "durable": durable.events}
 
     async def export_once(self) -> int:
-        if not self.claim_export(self._lease_ttl(), time.time()):
+        if not await self.claim_export(self._lease_ttl(), time.time()):
             return 0
-        events = self.next_batch(BATCH_SIZE)
+        events = await self.next_batch(BATCH_SIZE)
         if not events:
             return 0
         response = await self._http_client.post(
@@ -120,7 +134,7 @@ class SqliteOutbox(EventOutbox):
             json=[event.model_dump(mode="json") for event in events],
         )
         response.raise_for_status()
-        self.acknowledge([str(event.event_id) for event in events])
+        await self.acknowledge([str(event.event_id) for event in events])
         return len(events)
 
     async def export_available(self) -> int:
@@ -143,7 +157,8 @@ class SqliteOutbox(EventOutbox):
     async def _export_and_log(self) -> None:
         sent = await self.export_available()
         if sent:
-            logger.info("exported %d usage events to the control plane, %d remain", sent, self.stats().pending)
+            stats = await self.stats()
+            logger.info("exported %d usage events to the control plane, %d remain", sent, stats["durable"])
 
     def _lease_ttl(self) -> float:
         return max(self._config.flush_interval_s * 3, 5.0)

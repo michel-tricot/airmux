@@ -93,7 +93,6 @@ def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
             json={"label": "k", "permissions": [Permission.workspaces_read]},
             headers=headers,
         )
-        c.post(f"/api/v1/organizations/{org}/bundles/republish", headers=headers)
 
         deleted = c.delete(f"/api/v1/organizations/{org}", headers=root)
         assert deleted.status_code == 200, deleted.text

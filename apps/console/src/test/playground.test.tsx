@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, paged, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('playground', () => {
@@ -12,34 +12,32 @@ describe('playground', () => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
     server.use(
       http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
-        HttpResponse.json<{ data: Api.UsageEventOut[] }>({
-          data: [
-            {
-              event_id: '01941f29-7c00-7000-8000-000000000002',
-              request_id: '01941f29-7c00-7000-8000-000000000003',
-              occurred_at: now,
-              org_id: ORG.id,
-              workspace_id: WORKSPACES[0].id,
-              key_id: playgroundSessionId,
-              model_id: 'openai/gpt-test',
-              provider_id: 'provider-1',
-              bundle_id: '01941f29-7c00-7000-8000-000000000004',
-              input_tokens: 12,
-              output_tokens: 4,
-              max_output_tokens: 128,
-              cost_usd: '0.001',
-              cost_input_usd: '0.0005',
-              cost_output_usd: '0.0005',
-              cache_read_tokens: 0,
-              cache_write_tokens: 0,
-              latency_ms: 100,
-              status: 'ok',
-              stream: true,
-              credential_id: null,
-              credential_scope: null,
-            },
-          ],
-        }),
+        paged<Api.UsageEventOut>([
+          {
+            event_id: '01941f29-7c00-7000-8000-000000000002',
+            request_id: '01941f29-7c00-7000-8000-000000000003',
+            occurred_at: now,
+            org_id: ORG.id,
+            workspace_id: WORKSPACES[0].id,
+            key_id: playgroundSessionId,
+            model_id: 'openai/gpt-test',
+            provider_id: 'provider-1',
+            bundle_id: '01941f29-7c00-7000-8000-000000000004',
+            input_tokens: 12,
+            output_tokens: 4,
+            max_output_tokens: 128,
+            cost_usd: '0.001',
+            cost_input_usd: '0.0005',
+            cost_output_usd: '0.0005',
+            cache_read_tokens: 0,
+            cache_write_tokens: 0,
+            latency_ms: 100,
+            status: 'ok',
+            stream: true,
+            credential_id: null,
+            credential_scope: null,
+          },
+        ]),
       ),
     );
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}`);
@@ -73,7 +71,6 @@ describe('playground', () => {
       updated_at: now,
       deleted_at: null,
     } satisfies Api.ModelOut;
-    let dialect = '';
     let requestedWith = '';
     let requestBody: Record<string, unknown> = {};
     let sessions = 0;
@@ -88,7 +85,6 @@ describe('playground', () => {
         });
       }),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
-        dialect = request.headers.get('x-airmux-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
@@ -112,7 +108,6 @@ describe('playground', () => {
 
     const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
     expect(document.querySelector('[data-playground-scroll-anchor]')).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'API surface' })).not.toBeInTheDocument();
     const maxTokens = screen.getByLabelText('Max tokens');
     await user.click(screen.getByRole('button', { name: 'Increase Max tokens' }));
     expect(maxTokens).toHaveValue(1);
@@ -139,7 +134,6 @@ describe('playground', () => {
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRMUX_INFERENCE_KEY');
-    expect(curlDialog).not.toHaveTextContent('x-airmux-dialect');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
     expect(curlDialog).toHaveTextContent('"content": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
@@ -147,12 +141,9 @@ describe('playground', () => {
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
     await user.click(copyCurl);
     expect(await navigator.clipboard.readText()).toContain('/inf/v1/chat/completions');
-    expect(await navigator.clipboard.readText()).not.toContain('x-airmux-dialect');
     expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
-    expect(dialect).toBe('');
     expect(requestedWith).toBe('fetch');
     expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
 

@@ -66,13 +66,6 @@ class BundleManifestEntry(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
 
 
-class BundleOut(BaseModel):
-    id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-
-
 class ClaimOut(BaseModel):
     claimed: Annotated[bool, Field(title="Claimed")]
     public_signup: Annotated[bool, Field(title="Public Signup")]
@@ -172,6 +165,10 @@ class CredentialAccess(BaseModel):
         list[Literal["platform", "org", "workspace"]],
         Field(max_length=3, min_length=1, title="Scopes"),
     ]
+
+
+class CursorToken(RootModel[str]):
+    root: Annotated[str, Field(max_length=512, min_length=1, pattern="^[A-Za-z0-9_-]+$")]
 
 
 class DataPlaneInstanceOut(BaseModel):
@@ -346,10 +343,6 @@ class DenyRequest(BaseModel):
     message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
 
 
-class EnvelopeBundleOut(BaseModel):
-    data: BundleOut
-
-
 class EnvelopeClaimOut(BaseModel):
     data: ClaimOut
 
@@ -376,14 +369,6 @@ class EnvelopeDeletedOutUUID(BaseModel):
 
 class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
-
-
-class EnvelopeListActivityOut(BaseModel):
-    data: Annotated[list[ActivityOut], Field(title="Data")]
-
-
-class EnvelopeListBundleOut(BaseModel):
-    data: Annotated[list[BundleOut], Field(title="Data")]
 
 
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
@@ -936,6 +921,10 @@ class OrgUpdate(BaseModel):
     name: Annotated[Name2 | None, Field(description="Replacement organization name", title="Name")] = None
 
 
+class PageInfo(BaseModel):
+    next_cursor: Annotated[str | None, Field(title="Next Cursor")]
+
+
 class PasswordChangeIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -990,7 +979,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1026,7 +1014,6 @@ class Permission(
             "policies.manage",
             "playground.execute",
             "bundles.read",
-            "bundles.publish",
             "usage.read",
             "usage.ingest",
             "data-planes.read",
@@ -1646,11 +1633,6 @@ class TaxonomyOut(BaseModel):
     models: Annotated[list[ModelOut], Field(title="Models")]
 
 
-class TaxonomyPublicationOut(BaseModel):
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    version: Annotated[int, Field(title="Version")]
-
-
 class TaxonomySpec(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1923,16 +1905,8 @@ class EnvelopeListOrgInvitationOut(BaseModel):
     data: Annotated[list[OrgInvitationOut], Field(title="Data")]
 
 
-class EnvelopeListOrgOut(BaseModel):
-    data: Annotated[list[OrgOut], Field(title="Data")]
-
-
 class EnvelopeListProviderCredentialOut(BaseModel):
     data: Annotated[list[ProviderCredentialOut], Field(title="Data")]
-
-
-class EnvelopeListUsageEventOut(BaseModel):
-    data: Annotated[list[UsageEventOut], Field(title="Data")]
 
 
 class EnvelopeListUserOut(BaseModel):
@@ -2057,6 +2031,21 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
+class PageEnvelopeActivityOut(BaseModel):
+    data: Annotated[list[ActivityOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
+class PageEnvelopeOrgOut(BaseModel):
+    data: Annotated[list[OrgOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
+class PageEnvelopeUsageEventOut(BaseModel):
+    data: Annotated[list[UsageEventOut], Field(max_length=200, title="Data")]
+    page: PageInfo
+
+
 class RuleDefinitionInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2089,7 +2078,6 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: Annotated[bool, Field(title="Dry Run")]
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
-    published: Annotated[list[TaxonomyPublicationOut], Field(title="Published")]
 
 
 class WorkspaceMembershipIn(BaseModel):

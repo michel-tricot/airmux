@@ -462,9 +462,10 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     """List the organizations you belong to."""
     from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    with access_client(control_plane_url) as c:
-        resp = c.get("/api/v1/enroll")
-        ensure_ok(resp)
-        standing = payload(resp, EnrollOut)
-        rows = [{**org.model_dump(mode="json"), "kind": "personal" if org.id == standing.personal_org_id else "member"} for org in standing.orgs]
-        print_rows("orgs", rows, MINE_COLS, fmt)
+    with access_client(control_plane_url) as client:
+        standing = payload(ensure_ok(client.get("/api/v1/enroll")), EnrollOut)
+    rows = [
+        {**organization.model_dump(mode="json"), "kind": "personal" if organization.id == standing.personal_org_id else "member"}
+        for organization in standing.orgs
+    ]
+    print_rows("orgs", rows, MINE_COLS, fmt)

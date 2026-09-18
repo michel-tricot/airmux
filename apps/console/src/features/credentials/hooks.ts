@@ -33,9 +33,7 @@ export function useAddInstanceCredentialMutation() {
 }
 
 export function useProviderCredentials(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListWorkspaceProviderCredentials(orgId, workspaceRef, {
-    query: { enabled },
-  });
+  return useListWorkspaceProviderCredentials(orgId, workspaceRef, { query: { enabled } });
 }
 
 export function useProviders(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {

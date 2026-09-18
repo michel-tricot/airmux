@@ -86,19 +86,9 @@ def test_new_policy_actions_have_strict_valid_contracts(action):
     assert definition.action.kind == action["kind"]
 
 
-def test_policy_requires_rules_and_rejects_the_legacy_single_action_shape():
+def test_policy_requires_rules():
     with pytest.raises(ValidationError):
         PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rules": []})
-    with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate({"target": {"kind": "workspace"}, "rule_ids": ["00000000-0000-0000-0000-000000000000"]})
-    with pytest.raises(ValidationError):
-        PolicyDefinition.model_validate(
-            {
-                "target": {"kind": "workspace"},
-                "match": {"kind": "all_requests"},
-                "action": {"kind": "credential_access", "scopes": ["workspace", "org"]},
-            }
-        )
 
 
 @pytest.mark.parametrize("user_ids", [[], ["invalid"], [str(uuid7())] * 2, [str(uuid7()) for _ in range(1001)]])

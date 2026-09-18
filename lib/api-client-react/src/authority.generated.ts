@@ -138,19 +138,19 @@ export const operationAuthority = {
       },
     ],
   },
-  listOrgs: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["organizations.read"],
-      },
-    ],
-  },
   createOrg: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["organizations.create"],
+      },
+    ],
+  },
+  listOrgs: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
       },
     ],
   },
@@ -514,22 +514,6 @@ export const operationAuthority = {
       },
     ],
   },
-  republishBundle: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.publish"],
-      },
-    ],
-  },
-  listBundles: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
   listOrgEvents: {
     checks: [
       {
@@ -566,14 +550,6 @@ export const operationAuthority = {
     checks: [
       {
         scope: "selected_bundle_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
-  bundleLatest: {
-    checks: [
-      {
-        scope: "bundle_scope",
         anyOf: ["bundles.read"],
       },
     ],

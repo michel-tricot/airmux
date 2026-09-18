@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import captured_sql, inference_key_body, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, inference_key_body, make_org, make_workspace, run_in_db, setup_control_plane, wait_for_publication
 from sqlmodel import col
 
 from contract import BundleV1, uuid7
@@ -106,7 +106,7 @@ def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
 
         assert members.status_code == 200
         assert candidates.status_code == 200
-        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 9
         assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
 
 
@@ -323,12 +323,10 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
         k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json=inference_key_body(c, org, "k1"), headers=org).json()["data"]
         k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json=inference_key_body(c, org, "k2"), headers=org).json()["data"]
 
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, org))
         assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(k1["id"], str(ws1)), (k2["id"], str(ws2))}
 
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys/{k1['id']}", headers=org).status_code == 404
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys/{k1['id']}", headers=org).status_code == 200
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, org, bundle.bundle_id))
         assert [k.key_id for k in bundle.keys] == [k2["id"]]

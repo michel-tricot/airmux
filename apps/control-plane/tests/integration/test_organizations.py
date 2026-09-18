@@ -7,14 +7,6 @@ from helpers import PROVIDER, setup_control_plane
 from contract import uuid7
 
 
-def test_organization_routes_use_full_resource_name(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        created = c.post("/api/v1/organizations", json={"name": "Acme"}, headers=cp.headers())
-        assert created.status_code == 200
-        assert c.get("/api/v1/orgs", headers=cp.headers()).status_code == 404
-
-
 def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()

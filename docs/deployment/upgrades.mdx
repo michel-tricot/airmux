@@ -31,12 +31,14 @@ Set `AIRMUX_IMAGE` to the target `ghcr.io/michel-tricot/airmux` digest before re
 
 Follow the [Docker Compose](/docs/deployment/docker) replacement procedure. Preserve the public origin, database, and state mounts.
 
-Replace an airmux container as one unit. Compose completes the migration and taxonomy jobs, then the gateway becomes ready.
+Run the documented `docker compose up -d --wait` command. Compose completes the migration and catalog jobs before it replaces
+the serving stack.
 
 For a split deployment:
 
 1. Remove every gateway from public traffic and stop it after active streams finish
-2. Run the migration and taxonomy jobs, then replace the control plane, gateways, and console with the same image digest
+2. Set `AIRMUX_IMAGE` to the new digest and run `docker compose -p airmux-split -f docker-compose.split.yml up -d --wait`;
+   Compose runs the migration and catalog jobs before replacing the services
 3. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
 
 ## Verify the release
@@ -48,7 +50,6 @@ curl --fail https://llm.example.com/healthz
 curl --fail https://llm.example.com/readyz
 airmux doctor --control-plane-url https://llm.example.com --gateway-url https://llm.example.com
 airmux gateways list
-airmux bundles list
 ```
 
 Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the

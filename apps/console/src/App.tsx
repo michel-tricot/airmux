@@ -83,7 +83,7 @@ function AppSection() {
     return <ErrorState message="Could not load your organizations. Try again." onRetry={() => enrollment.refetch()} />;
   }
 
-  if (!orgId || !enrollment.data.orgs.some((o) => o.id === orgId)) return <Redirect to="/orgs" />;
+  if (!orgId || !enrollment.data.orgs.some((org) => org.id === orgId)) return <Redirect to="/orgs" />;
 
   return (
     <AuthorizationProvider scope={{ level: 'org', orgId }}>

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import json
+import sqlite3
+import time
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -10,7 +13,8 @@ import respx
 from conftest import make_config, make_outbox
 
 from contract import RoutedUsageEventV1, uuid7
-from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
+from data_plane.outbox import DevNullOutbox, EventOutbox, OutboxFullError, SqliteOutbox, build_outbox
+from data_plane.outbox.queued import CAPACITY
 from data_plane.outbox.sqlite import BATCH_SIZE
 
 
@@ -38,20 +42,68 @@ def make_event(request_id) -> RoutedUsageEventV1:
     )
 
 
-def test_record_roundtrips_in_order(tmp_path, http_client):
+def record(outbox: EventOutbox, event: RoutedUsageEventV1) -> None:
+    with outbox.reserve() as reservation:
+        reservation.record(event)
+
+
+async def test_reserved_events_roundtrip_in_order(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     events = [make_event(uuid7()), make_event(uuid7())]
     for event in events:
-        outbox.record(event)
-    assert outbox.next_batch(10) == events
+        record(outbox, event)
+    assert await outbox.next_batch(10) == events
+    await outbox.close()
 
 
-def test_record_is_idempotent_on_event_id(tmp_path, http_client):
+async def test_reserved_events_are_idempotent_on_event_id(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    outbox.record(event)
-    outbox.record(event)
-    assert outbox.next_batch(10) == [event]
+    record(outbox, event)
+    record(outbox, event)
+    assert await outbox.next_batch(10) == [event]
+    await outbox.close()
+
+
+async def test_reservations_are_bounded_by_capacity(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    with contextlib.ExitStack() as reservations:
+        for _ in range(CAPACITY):
+            reservations.enter_context(outbox.reserve())
+        with pytest.raises(OutboxFullError):
+            outbox.reserve()
+
+    with outbox.reserve():
+        pass
+    await outbox.close()
+
+
+async def test_transferred_slot_outlives_its_parent_reservation(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    with outbox.reserve() as reservation:
+        transferred = reservation.transfer()
+
+    assert (await outbox.stats())["reserved"] == 1
+
+    with transferred:
+        transferred.record(make_event(uuid7()))
+    await outbox.close()
+
+
+async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    lock = sqlite3.connect(tmp_path / "events.db")
+    lock.execute("BEGIN IMMEDIATE")
+    with outbox.reserve() as reservation:
+        started = time.monotonic()
+        reservation.record(make_event(uuid7()))
+        elapsed = time.monotonic() - started
+
+    assert elapsed < 0.1
+    lock.rollback()
+    lock.close()
+    assert len(await outbox.next_batch(10)) == 1
+    await outbox.close()
 
 
 @respx.mock
@@ -59,10 +111,10 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
-    outbox.record(make_event(first))
-    outbox.record(make_event(second))
+    record(outbox, make_event(first))
+    record(outbox, make_event(second))
     assert await outbox.export_once() == 2
-    assert outbox.next_batch(10) == []
+    assert await outbox.next_batch(10) == []
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
@@ -73,28 +125,42 @@ async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(503))
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    outbox.record(event)
+    record(outbox, event)
     with pytest.raises(httpx.HTTPStatusError):
         await outbox.export_once()
-    assert outbox.next_batch(10) == [event]
+    assert await outbox.next_batch(10) == [event]
 
 
-def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
+async def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
     a = make_outbox(tmp_path, http_client)
     b = make_outbox(tmp_path, http_client)
     a._owner = "worker-a"  # stand in for two processes on one shared cache dir
     b._owner = "worker-b"
-    assert a.claim_export(ttl=30, now=1000.0) is True
-    assert b.claim_export(ttl=30, now=1000.0) is False  # a still holds a live lease
-    assert b.claim_export(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
-    assert a.claim_export(ttl=30, now=1041.0) is False
+    assert await a.claim_export(ttl=30, now=1000.0) is True
+    assert await b.claim_export(ttl=30, now=1000.0) is False  # a still holds a live lease
+    assert await b.claim_export(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
+    assert await a.claim_export(ttl=30, now=1041.0) is False
+    await a.close()
+    await b.close()
 
 
-def test_build_outbox_selects_kind(tmp_path, http_client):
+async def test_build_outbox_selects_kind(tmp_path, http_client):
     config = make_config(tmp_path)
-    assert isinstance(build_outbox(config.events, http_client), SqliteOutbox)
+    sqlite = build_outbox(config.events, http_client)
+    assert isinstance(sqlite, SqliteOutbox)
     devnull = make_config(tmp_path, outbox_kind="devnull")
-    assert isinstance(build_outbox(devnull.events, http_client), DevNullOutbox)
+    sink = build_outbox(devnull.events, http_client)
+    assert isinstance(sink, DevNullOutbox)
+    await sqlite.close()
+    await sink.close()
+
+
+async def test_devnull_has_no_queue_capacity_or_stats():
+    outbox = DevNullOutbox()
+    with outbox.reserve():
+        assert await outbox.stats() == {}
+
+    await outbox.close()
 
 
 @respx.mock
@@ -102,19 +168,44 @@ async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
     route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": BATCH_SIZE, "ingested": BATCH_SIZE}))
     outbox = make_outbox(tmp_path, http_client)
     for _ in range(BATCH_SIZE + 1):
-        outbox.record(make_event(uuid7()))
+        record(outbox, make_event(uuid7()))
 
     assert await outbox.export_available() == BATCH_SIZE + 1
-    assert outbox.next_batch(1) == []
+    assert await outbox.next_batch(1) == []
     assert route.call_count == 2
 
 
-def test_outbox_stats_report_backlog_and_oldest_event(tmp_path, http_client):
+async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
-    outbox.record(event)
+    with outbox.reserve():
+        record(outbox, event)
+        stats = await outbox.stats()
 
-    stats = outbox.stats()
+        assert stats["reserved"] == 1
+        filled, durable = stats["filled"], stats["durable"]
+        assert isinstance(filled, int)
+        assert isinstance(durable, int)
+        assert filled + durable == 1
+        assert stats["pending"] == 2
+        assert stats["capacity"] == CAPACITY
+        oldest_age_s = stats["oldest_age_s"]
+        assert oldest_age_s is not None
+        assert oldest_age_s >= 0
+    await outbox.close()
 
-    assert stats.pending == 1
-    assert stats.oldest_event_at == event.occurred_at
+
+async def test_close_drains_filled_events_before_closing_storage(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    event = make_event(uuid7())
+    record(outbox, event)
+
+    await outbox.close()
+
+    reopened = make_outbox(tmp_path, http_client)
+    assert await reopened.next_batch(10) == [event]
+    await reopened.close()
+
+
+def test_default_outbox_capacity_is_ten_thousand():
+    assert CAPACITY == 10_000

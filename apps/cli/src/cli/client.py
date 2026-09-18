@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from pydantic import BaseModel
@@ -14,6 +15,23 @@ if TYPE_CHECKING:
     import httpx
 
 QueryParams = Mapping[str, str | int | float | bool | None]
+LimitOption = Annotated[int, typer.Option("--limit", min=1, max=200, help="Results to request per page")]
+AllPagesOption = Annotated[bool, typer.Option("--all", help="Fetch every page")]
+
+
+class _PageInfo(BaseModel):
+    next_cursor: str | None
+
+
+class _PageWire(BaseModel):
+    data: list[object]
+    page: _PageInfo
+
+
+@dataclass(frozen=True)
+class Page[PayloadT: BaseModel]:
+    items: list[PayloadT]
+    next_cursor: str | None
 
 
 LOCAL_CONTROL_PLANE_URL = "http://127.0.0.1:8000"
@@ -92,7 +110,7 @@ def ensure_ok(resp: httpx.Response) -> httpx.Response:
 
 
 def payload[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> PayloadT:
-    """The data field of an enveloped response; every control plane response is {"data": ...}, unwrapped here and in payload_rows only."""
+    """The data field of an enveloped response; every control plane response is {"data": ...}."""
     return payload_type.model_validate(resp.json()["data"])
 
 
@@ -100,14 +118,31 @@ def payload_rows[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[P
     return [payload_type.model_validate(item) for item in resp.json()["data"]]
 
 
-def access_get[PayloadT: BaseModel](
+def payload_page[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> Page[PayloadT]:
+    page = _PageWire.model_validate(resp.json())
+    return Page(items=[payload_type.model_validate(item) for item in page.data], next_cursor=page.page.next_cursor)
+
+
+def access_get[PayloadT: BaseModel](  # noqa: PLR0913, PLR0917 pagination controls belong at the typed request seam
     path: str,
     control_plane_url: str,
     payload_type: type[PayloadT],
     params: QueryParams | None = None,
+    limit: int | None = None,
+    all_pages: bool = False,
 ) -> list[PayloadT]:
     with access_client(control_plane_url) as c:
-        return payload_rows(ensure_ok(c.get(path, params=params)), payload_type)
+        query = dict(params or {})
+        if limit is None:
+            return payload_rows(ensure_ok(c.get(path, params=query)), payload_type)
+        query["limit"] = limit
+        items: list[PayloadT] = []
+        while True:
+            page = payload_page(ensure_ok(c.get(path, params=query)), payload_type)
+            items.extend(page.items)
+            if not all_pages or page.next_cursor is None:
+                return items
+            query = {**query, "cursor": page.next_cursor}
 
 
 def resolve_workspace(workspace: str) -> str:

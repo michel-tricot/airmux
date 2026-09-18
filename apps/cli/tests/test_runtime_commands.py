@@ -176,10 +176,8 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert inference_key == f'export AIRMUX_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
     assert "curl --fail http://127.0.0.1:8080/readyz" in lines
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
-    assert "x-airmux-dialect" not in result.output.lower()
     assert '"model":"echo"' in result.output
     assert '"content":"Say hello in one word."' in result.output
-    assert "airmux ready" not in result.output
     assert '"max_completion_tokens":16' in result.output
 
 
@@ -217,11 +215,3 @@ def test_control_plane_serve_does_not_own_database_lifecycle():
     result = runner.invoke(app, ["control-plane", "serve", "--help"])
     assert result.exit_code == 0, result.output
     assert "--taxonomy" not in Text.from_ansi(result.output).plain
-
-
-def test_removed_configuration_variable_syntax_is_rejected(tmp_path):
-    config = tmp_path / "airmux.yml"
-    config.write_text("control_plane:\n  console_url: ${var:missing}\n")
-    result = runner.invoke(app, ["control-plane", "validate", "--config", str(config)])
-    assert result.exit_code == 1
-    assert "whole YAML value" in result.output

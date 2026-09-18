@@ -5,7 +5,6 @@ import contextlib
 import logging
 import os
 import signal
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import httpx
@@ -33,9 +32,7 @@ logger = logging.getLogger("data_plane")
 
 
 async def healthz(request: Request) -> JSONResponse:
-    stats = runtime_of(request).outbox.stats()
-    oldest_age_s = max(0.0, (datetime.now(tz=UTC) - stats.oldest_event_at).total_seconds()) if stats.oldest_event_at is not None else None
-    return JSONResponse({"status": "ok", "events": {"pending": stats.pending, "oldest_age_s": oldest_age_s}})
+    return JSONResponse({"status": "ok", "events": await runtime_of(request).outbox.backlog()})
 
 
 async def readyz(request: Request) -> JSONResponse:
@@ -104,7 +101,7 @@ def create_app(config: Config) -> ASGIApp:
                         for task in tasks:
                             task.cancel()
             finally:
-                outbox.close()
+                await outbox.close()
 
     app = Starlette(
         routes=[

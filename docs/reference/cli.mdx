@@ -58,9 +58,10 @@ private bootstrap key and file secret store between the planes. The same install
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
 
-`serve` runs in the foreground. Control-plane startup creates a missing file-backed bootstrap key, verifies the database is
-at the expected migration revision, and does not mutate the schema or catalog. Run `migrate` and `taxonomy` explicitly before
-serving. It does not create human accounts. `--dev` reloads Python code. `gateway serve --dev` cannot be combined with multiple
+`serve` runs in the foreground. Control-plane startup creates a missing internal gateway credential, verifies the database is
+at the expected migration revision, and does not change the schema or model catalog. Run `migrate` and `taxonomy` explicitly
+before serving. The taxonomy command loads providers and models from a file; see [Models and providers](/docs/reference/models-and-providers).
+Startup does not create human accounts. `--dev` reloads Python code. `gateway serve --dev` cannot be combined with multiple
 `--workers`. Local taxonomy and bundle reloads work without `--dev`.
 
 `control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `catalog apply` instead uses
@@ -99,9 +100,14 @@ Resolution order is explicit option, `--dev` where supported, environment, activ
 Commands returning resource data accept `-f/--format table|json|text`. Table is the interactive default, JSON is
 intended for automation, and text is tab-separated.
 
+Paginated list commands request 50 results by default. Use `--limit 1..200` to choose the page size and `--all` to follow
+cursors until every page has been fetched. Without `--all`, output contains only the first page. Configuration and status
+commands always return their complete set and do not expose pagination flags. `events tail` walks every page back to the
+newest event it has already shown, so a burst larger than one page is not skipped.
+
 ```bash
-airmux models list -f json
-airmux events list -f text
+airmux orgs list --limit 25 -f json
+airmux events list --all -f text
 airmux commands -f table
 ```
 
@@ -115,7 +121,7 @@ Top-level help groups commands by task:
 | Connection | `login`, `profiles`, `status`, `doctor` |
 | Goodies | `completion` |
 | Services | `gateway`, `control-plane` |
-| Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, bundles, and events |
+| Manage resources | Organizations, workspaces, keys, catalog, gateways, policies, and events |
 
 Each command group's help keeps its subcommands in one flat list.
 
@@ -151,7 +157,6 @@ Each command group's help keeps its subcommands in one flat list.
 | `models`               | `list`                                   |
 | `rules`                | `create`, `list`, `update`, `delete`     |
 | `policies`             | `create`, `list`, `update`, `delete`     |
-| `bundles`              | `list`, `republish`                      |
 | `gateways`             | `list`                                   |
 | `events`               | `list`, `tail`                           |
 | `catalog`              | `apply`                                  |

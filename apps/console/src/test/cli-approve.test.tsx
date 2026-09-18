@@ -45,7 +45,7 @@ describe('CLI device sign-in approval', () => {
     expect(await screen.findByRole('heading', { name: 'Authorize CLI login' })).toBeInTheDocument();
     expect(await screen.findByText(REQUEST.client_name)).toBeInTheDocument();
     expect(screen.getByText(REQUEST.requester)).toBeInTheDocument();
-    expect(screen.getByLabelText('Access scope')).toHaveTextContent(`Organization: ${ORG.name}`);
+    expect(await screen.findByLabelText('Access scope')).toHaveTextContent(`Organization: ${ORG.name}`);
     expect(screen.getByRole('button', { name: 'Authorize' })).toBeEnabled();
   });
 

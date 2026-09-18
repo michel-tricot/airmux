@@ -11,10 +11,10 @@ docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
-Every service and one-shot job references `AIRMUX_IMAGE`, so pin that variable to one published digest for coordinated
-deployments. The migration job updates Postgres, the taxonomy job applies the shipped catalog, and only then does the control
-plane start. The control plane creates the shared bootstrap credential and verifies the schema before becoming healthy. Both
-gateways start after that health check succeeds. The console proxy distributes `/inf/` requests between them.
+Every service and short-lived startup job references `AIRMUX_IMAGE`, so pin that variable to one published digest for
+coordinated deployments. The split stack follows the same [database and catalog startup sequence](/docs/deployment/docker#startup-and-database-changes)
+as the default stack. Both gateways start after the control plane becomes healthy. The console proxy distributes `/inf/`
+requests between them.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 

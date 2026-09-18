@@ -57,6 +57,9 @@ export default function Organizations() {
           loadingLabel="Loading organizations..."
           empty="No organizations found."
           emptyIcon={Building2}
+          hasNextPage={orgsQuery.hasNextPage}
+          isFetchingNextPage={orgsQuery.isFetchingNextPage}
+          onLoadMore={() => void orgsQuery.fetchNextPage()}
           columns={[
             {
               key: 'name',

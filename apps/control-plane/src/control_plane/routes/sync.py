@@ -13,7 +13,7 @@ from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1,
 from contract import UsageEvent as UsageEventContract
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
-from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
+from control_plane.deps import ActorDep, CredentialScopeDep, SessionDep, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
@@ -63,16 +63,6 @@ async def selected_bundle_scope(bundle: BundleDep) -> Scope:
 @router.get("/bundles/{bundle_id}", dependencies=[require("operational", selected_bundle_scope, Permission.bundles_read)])
 async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
     """Return one immutable bundle visible to the authenticated data plane credential."""
-    return Envelope(data=_bundle(bundle))
-
-
-@router.get("/bundle/latest", dependencies=[require("operational", bundle_scope, Permission.bundles_read)])
-async def bundle_latest(scope: BundleScopeDep) -> Envelope[BundleV1]:
-    """Return the newest policy bundle available at the requested organization scope."""
-    conditions = (Bundle.org_id == scope.org_id,) if scope.org_id is not None else ()
-    bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
-    if bundle is None:
-        raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this scope")
     return Envelope(data=_bundle(bundle))
 
 

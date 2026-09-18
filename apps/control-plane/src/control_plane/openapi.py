@@ -81,7 +81,6 @@ API_TAGS = [
         "x-displayName": "Provider Credentials",
         "description": "Manage provider API keys available across an organization",
     },
-    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect policy bundles"},
     {
         "name": "Organization Usage Events",
         "x-displayName": "Usage Events",
@@ -162,7 +161,6 @@ TAG_GROUPS = [
             "Organization Workspaces",
             "Organization Management Keys",
             "Organization Provider Credentials",
-            "Organization Bundles",
             "Organization Usage Events",
             "Organization Activity",
             "Organization Model Catalog",
@@ -218,11 +216,9 @@ OPERATION_SUMMARIES = {
     "remove_member": "Remove Workspace Member",
     "ensure_playground_session": "Prepare Playground Session",
     "end_playground_session": "End Playground Session",
-    "republish_bundle": "Republish Policy Bundle",
     "list_activity": "List Organization Activity",
     "bundle_manifest": "Get Authorized Bundle Manifest",
     "get_bundle": "Get Bundle",
-    "bundle_latest": "Get Latest Bundle",
     "ingest_events": "Ingest Usage Events",
     "heartbeat": "Record Data Plane Heartbeat",
     "get_instance_taxonomy": "Get Instance Model Catalog",
@@ -243,11 +239,8 @@ PARAMETER_DESCRIPTIONS = {
     "code": "Device authorization code shown by the CLI",
     "include_offline": "Include data planes whose most recent heartbeat is outside the online window",
     "service_account": "Filter by principal type: true for service accounts and false for human users",
+    "cursor": "Opaque continuation token from the previous page",
     "limit": "Maximum number of results to return",
-    "before": "Return events before this timestamp; use with before_event_id",
-    "before_event_id": "Event ID that disambiguates the before timestamp",
-    "after": "Return events after this timestamp; use with after_event_id",
-    "after_event_id": "Event ID that disambiguates the after timestamp",
 }
 
 

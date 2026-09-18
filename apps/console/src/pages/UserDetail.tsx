@@ -60,8 +60,9 @@ export default function UserDetail() {
   if (userQuery.isError) return <ErrorState error={userQuery.error} resource="user" onRetry={() => userQuery.refetch()} />;
   if (!user) return <ErrorState message="User not found" />;
 
-  const memberships = orgs?.filter((o) => user.orgs.includes(o.id));
-  const available = orgs?.filter((o) => !user.orgs.includes(o.id));
+  const memberOrgIds = new Set(user.orgs);
+  const memberships = orgs?.filter((org) => memberOrgIds.has(org.id));
+  const available = orgs?.filter((org) => !memberOrgIds.has(org.id));
   return (
     <PageShell>
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">

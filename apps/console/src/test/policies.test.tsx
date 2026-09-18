@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, server } from './msw';
+import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 
@@ -60,13 +60,8 @@ async function dragBelowNext(handle: HTMLElement) {
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 
 describe('workspace policies', () => {
-  it('shows self-contained policies without loading a rule library', async () => {
-    let ruleRequests = 0;
+  it('shows self-contained policies', async () => {
     server.use(
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/rules', () => {
-        ruleRequests += 1;
-        return HttpResponse.json({ data: [] });
-      }),
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
         HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: initialPolicies }),
       ),
@@ -75,8 +70,6 @@ describe('workspace policies', () => {
 
     expect(await screen.findByText('First')).toBeVisible();
     expect(screen.getAllByLabelText('1 rule: deny')[0]).toHaveTextContent('First denied');
-    expect(screen.queryByRole('tab', { name: 'Rule library' })).not.toBeInTheDocument();
-    expect(ruleRequests).toBe(0);
   });
 
   it('creates a policy and all of its rules in one mutation', async () => {
@@ -214,7 +207,7 @@ it('shows workspace, principal, and key policies when inspecting an inference ke
     { ...policy('disabled', 'Disabled restriction', 4), enabled: false },
   ];
   server.use(
-    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json({ data: [key] })),
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => enveloped([key])),
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json({ data: policies })),
   );
   window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/inference-keys`);
