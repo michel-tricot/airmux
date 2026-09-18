@@ -72,31 +72,43 @@ upstream HTTP servers, then validates their JSON Lines usage events against the 
 uv run pytest tests/acceptance/gateway -n auto
 ```
 
-PR CI runs the levels in order against the rebuilt, installed public wheel and uploads JUnit results, sanitized
-configuration, provider requests, responses, gateway logs, and usage events. Each scenario is independent.
+On ready-for-review pull requests, CI runs the gateway suite across four shards against the rebuilt, installed public
+wheel and uploads JUnit results and failure diagnostics. Draft pull requests build the candidate but defer these
+acceptance checks until they are marked ready. Each scenario is independent.
 For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/gateway/README.md).
 
 CI builds the candidate distributions once on Linux and validates their metadata. It rebuilds the wheel from the source
-distribution, then reuses that candidate for installation and gateway checks. Portable smoke jobs install it outside
-the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack, and gateway acceptance
-checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
+distribution, then reuses that candidate for installation and gateway checks. Nightly portable smoke jobs install their
+own candidate outside the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack,
+and gateway acceptance checks remain Linux-only. See [CI design and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
 for current job selection, cancellation behavior, and measured timings.
 
-To run the portable checks locally without installing the workspace:
+To run the portable checks locally without installing the workspace, build the distribution and use a fresh temporary
+directory for the tool, test runner, and copied suite. The runner needs only `pytest`, `httpx`, and `pyyaml`:
 
 ```bash
+(
+set -e
+./scripts/build-python-distribution.sh
+smoke_dir="$(mktemp -d)"
+export UV_TOOL_DIR="$smoke_dir/tools"
+export UV_TOOL_BIN_DIR="$smoke_dir/bin"
 uv tool install --python 3.13 dist/airmux-*.whl
-uv venv --python 3.13 /tmp/airmux-smoke-runner
-uv pip install --python /tmp/airmux-smoke-runner/bin/python pytest httpx pyyaml
-mkdir -p /tmp/airmux-installation-tests/tests/{installation,acceptance}
-cp -R tests/installation/portable /tmp/airmux-installation-tests/tests/installation/
-cp tests/installation/installation_support.py /tmp/airmux-installation-tests/tests/installation/
-cp tests/acceptance/process_harness.py /tmp/airmux-installation-tests/tests/acceptance/
-cd /tmp
-AIRMUX_INSTALL_BIN="$(command -v airmux)" AIRMUX_INSTALL_PYTHON=3.13 \
-  /tmp/airmux-smoke-runner/bin/python -I -m pytest \
-  -o pythonpath=/tmp/airmux-installation-tests /tmp/airmux-installation-tests/tests/installation/portable
+uv venv --python 3.13 "$smoke_dir/runner"
+uv pip install --python "$smoke_dir/runner/bin/python" pytest httpx pyyaml
+mkdir -p "$smoke_dir/tests/installation/portable" "$smoke_dir/tests/acceptance"
+cp tests/installation/portable/*.py "$smoke_dir/tests/installation/portable/"
+cp tests/installation/installation_support.py "$smoke_dir/tests/installation/"
+cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
+cd "$smoke_dir"
+AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
+  "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
+)
 ```
+
+Keep the copied `tests/...` layout so the suite can import its support modules. `-o pythonpath=.` adds only the temporary
+test root; `-I` ignores the checkout's Python environment settings. The suite verifies that gateway modules load from
+the installed tool environment and sends buffered and streaming requests through the installed gateway.
 
 ## Executable documentation checks
 
@@ -124,8 +136,8 @@ the full-stack harness finds `airmux` on `PATH`. Container checks use `DEPLOYMEN
 
 ## Workflow checks
 
-PR CI has an independent five-minute workflow check. It runs actionlint 1.7.12 with ShellCheck for embedded shell,
-verifies inputs against each pinned action's upstream metadata, and checks formatting for every workflow. Install
+The CI `quality` job runs on both draft and ready pull requests. It runs actionlint 1.7.12 with ShellCheck for embedded
+shell, verifies inputs against each pinned action's upstream metadata, and checks formatting for every workflow. Install
 actionlint and ShellCheck locally, then run:
 
 ```bash
@@ -141,9 +153,10 @@ that invalid expressions, malformed YAML, and shell mistakes fail. Dependabot ma
 
 Every workflow defaults to `contents: read`, checkouts discard Git credentials, and only the publishing job gets
 `id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
-in the release environment, outside PR CI. The CI and Docker correctness gates check the change-policy decision and
-expected job results before reporting success. Dependency security passes only when both audits pass. Timing evidence
-belongs in `notes/design/CI.md`, not this setup guide.
+in the release environment, outside PR CI. On ready pull requests, the `required` gate requires every correctness job,
+including Docker deployments, to succeed. Drafts skip this aggregate and the integration and acceptance jobs.
+Dependency security runs at both stages and requires both audits to pass. Timing evidence belongs in
+`notes/design/CI.md`.
 
 ## Python checks
 

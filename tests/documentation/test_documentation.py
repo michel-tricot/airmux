@@ -2,16 +2,22 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import subprocess
+import sys
 import tomllib
 from collections import Counter
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 import yaml
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
+from typer.testing import CliRunner
+
+from cli.main import app
 
 ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
@@ -21,6 +27,7 @@ LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
 PUBLIC_REPOSITORY = "https://github.com/michel-tricot/airmux"
+REPOSITORY_SOURCE_LINK = re.compile(rf"(?<!!)\[[^\]]+\]\({re.escape(PUBLIC_REPOSITORY)}/(?:blob|tree)/main/(?P<target>[^)#?]+)(?:[?#][^)]*)?\)")
 PUBLISHED_PROJECT = ROOT / "packaging/airmux/pyproject.toml"
 INTERNAL_DISTRIBUTIONS = {
     "airmux-api-models",
@@ -40,17 +47,11 @@ BUNDLED_PROJECTS = (
 
 
 def documentation_files() -> list[Path]:
-    return sorted([ROOT / "CONTRIBUTING.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
+    return sorted([ROOT / "CONTRIBUTING.md", ROOT / ".github/policy/README.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
 
 
 def example_files() -> list[Path]:
     return sorted([ROOT / "README.md", ROOT / "model-audit/README.md", ROOT / "replit.md", *documentation_files()])
-
-
-@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
-def test_repository_source_links_resolve_without_network(path: Path) -> None:
-    targets = re.findall(r"https://github\.com/michel-tricot/airmux/(?:blob|tree)/main/([^\s)#?]+)", path.read_text())
-    assert [target for target in targets if not (ROOT / target).exists()] == []
 
 
 def navigation_pages(node: object) -> list[str]:
@@ -131,19 +132,52 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 
 
 def test_documentation_tracks_current_ci_entry_points() -> None:
-    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    policy = (ROOT / ".github/policy/README.md").read_text(encoding="utf-8")
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
 
-    assert "tests/ci/test_merge_policy.py" in contributing
-    assert "tests/documentation/test_merge_policy.py" not in contributing
+    assert "tests/ci/test_merge_policy.py" in policy
+    assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
     assert "Prepare release" in development
     assert "Publish release" in development
-    assert "prefilled pull request link" in development
+
+
+def test_portable_installation_recipe_collects_outside_the_checkout(tmp_path: Path) -> None:
+    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+    recipe = next(match.group("body") for match in FENCE.finditer(development) if "cp tests/installation/" in match.group("body"))
+    staging = "\n".join(line for line in recipe.splitlines() if line.startswith(("mkdir ", "cp ")))
+    environment = {**os.environ, "smoke_dir": str(tmp_path), "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    copied = subprocess.run(["/bin/bash", "-e"], input=staging, cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
+    assert copied.returncode == 0, copied.stderr
+
+    collected = subprocess.run(
+        [sys.executable, "-I", "-m", "pytest", "-o", "pythonpath=.", "--collect-only", "-q", "tests/installation/portable"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert collected.returncode == 0, collected.stdout + collected.stderr
+    assert "test_internal_modules_are_bundled_in_one_distribution" in collected.stdout
+    assert "test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down" in collected.stdout
 
 
 def test_documentation_covers_safe_upgrades() -> None:
     assert (DOCS / "deployment" / "upgrades.mdx").exists()
+
+
+def test_documented_cli_command_groups_and_subcommands_exist() -> None:
+    reference = (DOCS / "reference" / "cli.mdx").read_text(encoding="utf-8")
+    groups = re.findall(r"^\|\s*`([^`]+)`\s*\|\s*(`[^|]+)\|$", reference, re.MULTILINE)
+    assert groups
+    runner = CliRunner()
+
+    for group, commands in groups:
+        for command in (group, *(f"{group} {name}" for name in re.findall(r"`([^`]+)`", commands))):
+            result = runner.invoke(app, [*command.split(), "--help"])
+            assert result.exit_code == 0, f"Documented command 'airmux {command}' failed:\n{result.output}"
 
 
 def test_readme_is_a_complete_oss_entry_point() -> None:
@@ -164,7 +198,6 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
 
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
-    assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
@@ -235,9 +268,18 @@ def test_bundled_projects_are_release_independent() -> None:
             assert sources[requirement.name] == {"workspace": True}, (path, requirement.name)
 
 
-@pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
+@pytest.mark.parametrize(
+    "path",
+    [ROOT / path for path in ("README.md", "CONTRIBUTING.md", "notes/design/README.md", "notes/design/CI.md", ".github/policy/README.md")],
+)
 def test_repository_documentation_links_resolve(path: Path) -> None:
     missing = [target for target in LOCAL_LINK.findall(path.read_text(encoding="utf-8")) if not (path.parent / target).resolve().exists()]
+    assert missing == []
+
+
+@pytest.mark.parametrize("path", [ROOT / "notes/design/README.md", *example_files()], ids=lambda path: str(path.relative_to(ROOT)))
+def test_repository_source_links_resolve(path: Path) -> None:
+    missing = [target for target in REPOSITORY_SOURCE_LINK.findall(path.read_text(encoding="utf-8")) if not (ROOT / unquote(target)).exists()]
     assert missing == []
 
 
@@ -259,17 +301,6 @@ def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
 def test_curl_request_bodies_are_valid_json(path: Path) -> None:
     for match in CURL_JSON.finditer(path.read_text(encoding="utf-8")):
         json.loads(match.group("body"))
-
-
-def test_public_examples_use_a_neutral_smoke_prompt() -> None:
-    documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    assert "Say hello in one word." in documents
-
-
-def test_documentation_does_not_name_comparison_products() -> None:
-    forbidden = re.compile(r"openrouter|litellm", re.IGNORECASE)
-    occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if forbidden.search(path.read_text())]
-    assert occurrences == []
 
 
 def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:

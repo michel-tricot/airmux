@@ -1,130 +1,111 @@
-# airmux
+# airmux on Replit
 
-An LLM gateway prototype with a strict control plane / data plane split, plus the console (Bun workspace) that serves both the org and instance admin views.
+airmux is an LLM gateway with a FastAPI control plane, a Starlette data plane, a React/Vite console,
+and the `airmux` CLI. The control plane manages organizations, workspaces, keys, providers, models,
+and policy bundles. The data plane serves Chat Completions, Responses, and Messages under `/inf/v1`;
+the management API lives under `/api/v1`.
 
-## What it does
+Use the [development guide](docs/development.mdx) for local setup outside Replit, service commands,
+checks, and the repository map. See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md)
+for contribution and architecture rules, and the [configuration reference](docs/reference/configuration.mdx)
+for runtime settings. This file covers the Replit-specific workflow.
 
-- **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles policy bundles
-- **Data plane** (bare Starlette): serves `POST /v1/chat/completions` and `POST /v1/messages` (Anthropic API) with zero I/O on the hot path
-- **Console** (`apps/console`): React/Vite admin and org console
-- **CLI** (`apps/cli`): `airmux` commands for running the planes and managing the gateway
+## Runtime and repository
 
-## Stack
+- Python 3.13 or newer with uv, as required by [pyproject.toml](pyproject.toml)
+- Replit modules: Python 3.13, Node 24, Bun 1.3, and PostgreSQL 16, configured in [.replit](.replit)
+- Python applications in `apps/cli`, `apps/control-plane`, and `apps/data-plane`; the console in `apps/console`
+- Shared Python libraries in `lib/contract` and `lib/runtime`, generated Python API models in `lib/api-models`
+- Management OpenAPI in `lib/api-spec/openapi.yaml`, generated React client in `lib/api-client-react`
+- Mintlify documentation in `docs/`, with navigation in [docs.json](docs.json)
 
-- Python 3.12, managed with `uv` (workspace with multiple packages)
-- Node 24 / Bun for the React console
-- PostgreSQL (required — used by the control plane)
-- FastAPI (control plane), Starlette (data plane)
+Use Bun as the JavaScript package manager and workspace runner. Run commands from the repository root.
 
-## Running locally (outside Replit)
+## Replit scope
 
-See README.md for the full getting-started guide. The short version:
+Replit manages the console artifact (`@workspace/gateway-console`). Limit Replit changes to the console
+and Replit-specific configuration. Do not scaffold a replacement backend or modify the Python backend,
+schemas, or migrations as part of console work. The console uses the generated client for the real control plane.
 
-```bash
-uv sync --all-packages
-docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-# add OPENAI_API_KEY to .env
-uv run airmux control-plane migrate
-uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
-uv run airmux control-plane serve --dev              # control plane on :8000
-# sign up at the console: the first account claims the instance
-uv run airmux gateway serve --dev           # data plane on :8080
-```
+The Python services run through uv. The separate **backend: control plane** workflow supports console
+development; the **Project** workflow starts only the console. Inference features also require a running
+data plane, as described below.
 
-## Required secrets / env vars
+## Console workflow
 
-See `.env.example`. Key variables:
-
-| Variable | Purpose |
-|---|---|
-| `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `AIRMUX_MANAGEMENT_KEY` | Bearer for control-plane APIs |
-| `AIRMUX_DATAPLANE_TOKEN` | Data plane → control plane bearer |
-| `AIRMUX_INFERENCE_KEY` | Caller inference key |
-
-Development control-plane startup applies migrations, ensures the configured shared pool key exists, and authorizes the key.
-Taxonomy application remains explicit.
-
-## Project layout
-
-```
-apps/
-  cli/           # public airmux CLI
-  control-plane/ # FastAPI admin + compile API
-  data-plane/    # Starlette inference gateway
-packages/
-  contract/      # shared bundle/event schemas and tokens
-apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app
-lib/             # Bun workspace libs
-  api-spec/         # openapi.yaml — API contract (codegen via orval)
-  api-client-react/ # generated react-query client
-docs/            # MkDocs site
-examples/        # ready-made curl / Python scripts
-notes/           # design docs and prototype spec
-scripts/         # shell helpers + Bun workspace scripts package
-```
-
-## New admin console (Bun workspace)
-
-Tenancy model: management keys can be bound to the instance, an organization, or a workspace; roles grant standing authority and each key narrows it with explicit permissions.
-
-Replit only manages the console (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. The console already talks to the real backend: `lib/api-spec/openapi.yaml` is exported from the control plane routes, and the clients are generated from it.
+Install the locked dependencies:
 
 ```bash
-bun install
-bun run build        # typecheck + build all workspace packages
-bun run typecheck
+uv sync --all-packages --frozen
+bun install --frozen-lockfile
 ```
 
-## Replit development workflow
-
-When working in Replit, changes are limited to Replit-specific configuration
-and the console in `apps/console`. Do not modify, rewrite, migrate, scaffold,
-or add schema changes to the Python backend or its migrations.
-The registered Replit artifact is the console and its managed workflow runs:
+The [console artifact](apps/console/.replit-artifact/artifact.toml) starts
+`bun run --filter @workspace/gateway-console dev` with `PORT=20383` and `BASE_PATH=/`.
+The **Project** workflow runs this artifact, and `.replit` maps local port 20383 to external port 80.
+The equivalent manual command is:
 
 ```bash
-bun run --filter @workspace/gateway-console dev
+PORT=20383 bun run dev
 ```
 
-The root equivalent is `bun run dev`. The console expects the control plane
-on `http://127.0.0.1:8000` by default and proxies `/v1` requests there.
+The [Vite configuration](apps/console/vite.config.ts) forwards requests without removing their prefixes:
 
-When the backend is needed for local console development, Replit's managed
-PostgreSQL provides the runtime-managed `DATABASE_URL` connection string.
-`airmux.yml` reads that variable directly; without it the config falls back to
-the local `docker-compose.dev.yml` database. Run the bootstrap from the
-repository root:
+| Request prefix | Target variable | Default outside Replit | Replit setting |
+| --- | --- | --- | --- |
+| `/api` | `CONTROL_PLANE_URL` | `http://127.0.0.1:8000` | `.replit` sets `http://127.0.0.1:8101` |
+| `/inf` | `DATA_PLANE_URL` | `http://127.0.0.1:8080` | Uses the default unless overridden |
+
+These proxies belong to the Vite development server. The artifact's static production build needs
+deployment routing for the Python APIs; see the [deployment guide](docs/deployment/index.mdx).
+
+## Backend support workflow
+
+Replit supplies the managed PostgreSQL connection through `DATABASE_URL`. The
+[backend helper](scripts/replit-backend.sh) requires it and normalizes its PostgreSQL scheme and
+`sslmode` parameter for asyncpg. It does not use the local database fallback in [airmux.yml](airmux.yml).
+
+The checkout configuration reads the bootstrap management key from `.airmux/dataplane.key` for both planes.
+Control-plane startup creates that file when it is missing. The helper loads fixtures before starting the
+server, so it requires the key file to exist already; it is not a complete first-run bootstrap for a fresh
+checkout. See [service initialization](docs/development.mdx#install-and-initialize) for key creation and
+keep the key with its matching development database.
+
+For an initialized checkout, run the **backend: control plane** workflow or:
 
 ```bash
 ./scripts/replit-backend.sh
 ```
 
-That script runs the required sequence:
+The helper applies migrations, applies `taxonomy/taxonomy.yml`, loads fixtures if no users exist, and
+starts `control-plane serve --dev --host 127.0.0.1 --port 8101`. Taxonomy application is explicit;
+development server startup applies migrations and authorizes the configured bootstrap key.
 
-1. `uv run airmux control-plane migrate`, resetting only the disposable Replit development database when migration fails
-2. `uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml`
-3. `uv run airmux control-plane fixtures`
-4. `uv run airmux control-plane serve --dev` (the helper binds it to Replit's loopback backend port)
+On migration failure, the helper resets the disposable development database's `public` schema with
+`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`, then retries migration and continues with taxonomy,
+fixtures, and startup. This destroys that schema's data. Use the helper only with the disposable Replit
+development database. “Reset the db” means resetting the schema, migrating, and installing fixtures in that order.
 
-If there is any migration incompatibility, the script must start the Replit
-development database from scratch: drop and recreate it, then run the full
-sequence again (`migrate`, `taxonomy`, `fixtures`, and `serve`). This reset is
-intentionally destructive and is only for the Replit development database. The
-backend support workflow is separate from the console artifact; Replit code
-changes remain console-only.
+Set `AIRMUX_CONSOLE_URL` to the public Replit preview origin when using browser authentication flows
+that generate console links. Provider keys such as `OPENAI_API_KEY` are needed for real inference;
+they are separate from the bootstrap management key and caller inference keys. See
+[.env.example](.env.example) and the [authentication guide](docs/concepts/authentication.mdx).
 
-## Development commands
+For inference features, start the data plane in another terminal using the checkout configuration
+and the Replit control-plane port:
 
 ```bash
-uv run pytest                    # unit tests
-uv run pytest tests/acceptance/full_stack/scenarios   # black-box acceptance tests
-uv run ruff format --check .     # formatting
-uv run ruff check .              # lint
-uv run ty check .                # type checking
+AIRMUX_DATAPLANE_CONTROL_PLANE_URL=http://127.0.0.1:8101 \
+  uv run airmux gateway serve --config airmux.yml --dev
 ```
 
-## User preferences
+The data plane listens on port 8080 by default. Callers send an inference key to
+`/inf/v1/chat/completions`, `/inf/v1/responses`, or `/inf/v1/messages`; see the
+[inference reference](docs/reference/inference.mdx).
 
-- Use Bun (not pnpm) as the JS package manager and workspace runner for this project.
-- "Reset the db" always means: drop the schema (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), run migrations, then install fixtures — in that order.
+## Validation
+
+Use the [console checks](docs/development.mdx#console-checks) and
+[Python checks](docs/development.mdx#python-checks) for the files changed.
+The **console-test** workflow runs the console package's `bun run test` command.
+`bun run build` at the repository root runs workspace type checking and builds the console.

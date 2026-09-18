@@ -163,8 +163,9 @@ Each command group's help keeps its subcommands in one flat list.
 
 Run `airmux <group> <command> --help` for the exact options installed on your machine.
 
-Policy rules are defined inline in each policy's `definition.rules` list. See the
-[policy workflow](/docs/guides/policy-workflow) for complete definitions.
+Define policy rules inline in the JSON configuration's `definition.rules` array, with one `match` and one `action` per rule.
+Pass the file to `airmux policies create CONFIGURATION` or `airmux policies update POLICY_ID CONFIGURATION`.
+See [Create a workspace policy](/docs/guides/policy-workflow) for a complete example.
 
 ## Automation pattern
 

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 import pytest
 from starlette.testclient import TestClient
 
@@ -118,7 +118,7 @@ def failing_app() -> ASGIApp:
     def build_source(
         config: BundleConfig,
         holder: BundleHolder,
-        http_client: httpx.AsyncClient,
+        http_client: httpx2.AsyncClient,
     ) -> BundleSource:
         return source
 
@@ -162,8 +162,8 @@ def test_unexpected_worker_failure_terminates_a_uvicorn_process():
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline and process.poll() is None:
             try:
-                served = httpx.get(f"http://127.0.0.1:{port}/healthz", timeout=0.2).status_code == 200
-            except httpx.HTTPError:
+                served = httpx2.get(f"http://127.0.0.1:{port}/healthz", timeout=0.2).status_code == 200
+            except httpx2.HTTPError:
                 time.sleep(0.02)
                 continue
             if served:

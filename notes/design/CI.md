@@ -6,8 +6,9 @@ executable definition; this record explains why they have their current shape an
 
 ## Goals and invariants
 
-- Every pull request and every commit on `main` runs the complete correctness graph
-- Correctness jobs have no path filters, semantic change map, or conditional skip
+- Every ready-for-review pull request, commit on `main`, and manual correctness run executes the complete correctness graph
+- Draft pull requests run quality, Python unit, frontend, packaging, and security checks for early feedback
+- Correctness jobs have no path filters or semantic change map; only draft status defers integration and acceptance jobs and their aggregate
 - Branch protection depends only on the stable `required` and `dependency-security` aggregate checks
 - The Python distribution is built once per correctness run and every black-box job tests that exact candidate
 - The wheel is rebuilt from the source distribution so the source distribution is the packaging source of truth
@@ -70,8 +71,14 @@ latency class. `tests/ci/test_merge_policy.py` intentionally asserts that these 
 
 ## Pull-request and main correctness graph
 
-`ci.yml` uses the same graph for pull requests and `main`. The jobs that do not consume the distribution start
-immediately. Black-box jobs wait only for `package`, so frontend duration does not delay browser acceptance.
+`ci.yml` runs the full graph below for ready-for-review pull requests, pushes to `main`, and manual dispatches. Pull
+request events are `opened`, `synchronize`, `reopened`, and `ready_for_review`; marking a draft ready therefore starts a
+full run without requiring another commit. Drafts run only `quality`, `python-unit`, `frontend`, and `package` in this
+workflow. They skip `python-integration`, the black-box jobs, and `required`; passing draft checks is not a full
+correctness result.
+
+The jobs that do not consume the distribution start immediately. Black-box jobs wait only for `package`, so frontend
+duration does not delay browser acceptance.
 
 ```mermaid
 flowchart LR
@@ -96,7 +103,7 @@ flowchart LR
 | Job | Contract |
 | --- | --- |
 | `quality` | Workflow validation, formatting, lint, typing, import boundaries, generated artifacts, audits, and CI/documentation tests |
-| `python-unit` | Contract, control-plane unit, data-plane, CLI, and model-audit suites with no Docker access |
+| `python-unit` | Contract, runtime, control-plane unit, data-plane, CLI, and model-audit suites with no Docker access |
 | `python-integration` | Postgres-backed control-plane integration tests |
 | `frontend` | Console and generated-client lint, typing, coverage, and console build |
 | `package` | One source distribution, a wheel rebuilt from it, metadata validation, and SHA-256 evidence |
@@ -104,7 +111,7 @@ flowchart LR
 | `full-stack` | Installed-candidate control-plane and data-plane scenarios |
 | `browser` | Real Chromium behavior against the installed candidate |
 | `docker` | Compact and split Compose deployments built from the candidate |
-| `required` | `always()` aggregate that rejects every result other than success |
+| `required` | Aggregate that runs even after upstream failures on full runs and rejects every result other than success; skipped on drafts |
 
 The aggregate job uses runner-provided `jq` against `toJSON(needs)`. Its name is deliberately stable. Branch protection
 does not list matrix-expanded or implementation job names, so the graph can evolve without weakening the merge gate or
@@ -167,21 +174,28 @@ duplicate per-job caches merely to hide that annotation.
 
 ## Security workflow and repository policy
 
-`security.yml` exports the locked Python dependency graph to `pip-audit`, runs `bun audit`, and uses GitHub dependency
-review when Advanced Security is available. Private repositories without that feature retain both ecosystem audits as
-the free-tier fallback. `dependency-security` accepts a skipped dependency-review job on events where it cannot run,
-but it always requires both ecosystem audits to succeed.
+`security.yml` exports the locked Python dependency graph to `pip-audit` and runs `bun audit` on both draft and ready
+pull requests, `main` pushes, schedules, and manual dispatches. On pull requests, the dependency-review job checks
+whether the GitHub API reports Advanced Security enabled and runs the dependency review action only when that check
+succeeds. Otherwise it reports the ecosystem audits as the fallback. `dependency-security` accepts a skipped
+dependency-review job on non-pull-request events, but always requires both ecosystem audits to succeed.
 
 Repository-owned policy is recorded under `.github/policy/`:
 
-- `protect-main.json` requires a current base, linear history, resolved conversations, squash merging, `required`, and `dependency-security`
+- `protect-main.json` requires a pull request, linear history, resolved conversations, squash merging, `required`, and `dependency-security`,
+  without requiring a current base
 - `actions.json` restricts actions and requires full-SHA pins
 - `security.json` records CodeQL default setup, secret scanning, and push protection
 - Release tag files make `v*` creation deliberate and existing tags immutable
 - `release-environment.json` constrains secret-bearing and publishing jobs
 
-`scripts/github-policy diff` is read-only and compares those files with live GitHub settings. `scripts/github-policy
-apply` is the explicit mutation path. Workflow YAML cannot enforce repository settings by itself.
+Required status checks use GitHub's [loose mode](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+A conflict-free branch with passing required checks can merge without updating it after another pull request lands.
+This avoids repeated branch updates and CI runs, but those checks may predate the latest changes to `main`: no textual
+conflicts does not guarantee integration compatibility. CI still runs on every push to `main`.
+
+The [maintainer policy guide](../../.github/policy/README.md) covers drift inspection, deliberate policy application,
+review requirements, and administrator exceptions. Workflow YAML cannot enforce repository settings by itself.
 
 ## Nightly ownership
 
@@ -230,6 +244,7 @@ Preserve these rules while editing:
 
 - Add suites by directory or marker discovery, not hand-maintained test-file matrices
 - Keep `required` and `dependency-security` stable and update their complete `needs` sets
+- Preserve the draft/full-run distinction and trigger full checks when a pull request becomes ready for review
 - Feed every installed-artifact test from `package`
 - Never rebuild inside a consumer or release job
 - Keep diagnostics in `always()` steps without allowing them to mask the primary result

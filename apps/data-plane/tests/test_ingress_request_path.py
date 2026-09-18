@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import httpx2
 import openai
 import pytest
 import respx
@@ -316,7 +317,7 @@ def test_anthropic_cross_provider_http_errors_speak_this_dialect(api_key, dp_app
 
 @respx.mock
 def test_anthropic_cross_provider_transport_errors_speak_this_dialect(api_key, dp_app):
-    respx.post(UPSTREAM).mock(side_effect=httpx.ReadTimeout("timed out"))
+    respx.post(UPSTREAM).mock(side_effect=httpx2.ReadTimeout("timed out"))
     mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})

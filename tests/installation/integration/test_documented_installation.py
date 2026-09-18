@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import subprocess
 import tomllib
 from pathlib import Path
@@ -22,20 +21,18 @@ def test_documented_portable_recipe_runs_outside_checkout(installation, tmp_path
     locked = tomllib.loads((ROOT / "uv.lock").read_text())
     constraints = tmp_path / "constraints.txt"
     constraints.write_text("\n".join(f"{package['name']}=={package['version']}" for package in locked["package"] if "registry" in package["source"]))
-    recipe = code_block("docs/development.mdx", "airmux-smoke-runner")
-    install, recipe = recipe.split("\n", 1)
-    assert install == "uv tool install --python 3.13 dist/airmux-*.whl"
-    recipe = recipe.replace("/tmp/airmux-smoke-runner", shlex.quote(str(tmp_path / "runner")))  # noqa: S108 replace the documented path with an isolated test directory
-    recipe = recipe.replace("/tmp/airmux-installation-tests", shlex.quote(str(tmp_path / "suite")))  # noqa: S108 replace the documented path with an isolated test directory
-    recipe = recipe.replace("cd /tmp\n", f"cd {shlex.quote(str(tmp_path))}\n")
+    recipe = code_block("docs/development.mdx", "cp tests/installation/")
+    _, recipe = recipe.split("uv tool install --python 3.13 dist/airmux-*.whl\n", 1)
     result = subprocess.run(  # noqa: S603 execute the trusted recipe using the already installed candidate and cached dependencies
-        ["/bin/bash", "-eu", "-o", "pipefail", "-c", recipe],
+        ["/bin/bash", "-eu", "-o", "pipefail", "-c", "(\n" + recipe],
         cwd=ROOT,
         env={
             **os.environ,
             "PATH": f"{Path(executable).parent}{os.pathsep}{environment['PATH']}",
             "UV_OFFLINE": "1",
             "UV_CONSTRAINT": str(constraints),
+            "UV_TOOL_BIN_DIR": str(Path(executable).parent),
+            "smoke_dir": str(tmp_path),
         },
         capture_output=True,
         text=True,
