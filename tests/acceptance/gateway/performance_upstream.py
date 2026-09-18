@@ -40,10 +40,10 @@ async def ready(request: Request) -> Response:
 
 
 @app.command()
-def serve(port: Annotated[int, typer.Option(min=1, max=65535)], delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0) -> None:
+def serve(port: Annotated[int, typer.Option(min=0, max=65535)], delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0) -> None:
     upstream = Starlette(routes=[Route("/chat/completions", complete, methods=["POST"]), Route("/readyz", ready)])
     upstream.state.delay_ms = delay_ms
-    uvicorn.run(upstream, host="127.0.0.1", port=port, log_level="warning", access_log=False, timeout_keep_alive=3600)
+    uvicorn.run(upstream, host="127.0.0.1", port=port, log_level="info", access_log=False, timeout_keep_alive=3600)
 
 
 if __name__ == "__main__":

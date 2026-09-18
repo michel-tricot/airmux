@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 Runtime = Literal["gateway", "control-plane"]
 ConfigOption = Annotated[Path | None, typer.Option("--config", "-c", help="Configuration file; defaults to AIRMUX_CONFIG or the runtime default")]
 DirectoryOption = Annotated[Path, typer.Option("--directory", "-d", help="Configuration directory; existing files are never overwritten")]
-PortOption = Annotated[int, typer.Option("--port", min=1, max=65535, help="Port to listen on")]
+PortOption = Annotated[int, typer.Option("--port", min=0, max=65535, help="Port to listen on; 0 lets the operating system choose")]
 HostOption = Annotated[str, typer.Option("--host", help="Address to listen on")]
 
 
