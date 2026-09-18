@@ -12,6 +12,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from airmux_runtime.observability import log_event
 from airmux_runtime.secrets import SecretNotFoundError, SecretStoreUnavailableError
 from contract import CredentialEntry
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
     from airmux_runtime.secrets import Secret, SecretReader
     from contract import BundleV1
+    from data_plane.metrics import DataPlaneMetrics
 
 logger = logging.getLogger("data_plane")
 
@@ -69,10 +71,17 @@ class CredentialResolver:
     it is a fact about infrastructure, and a store that is down must not look like a missing key.
     """
 
-    def __init__(self, store: SecretReader, ttl_s: float = CACHE_TTL_S, negative_ttl_s: float = NEGATIVE_TTL_S) -> None:
+    def __init__(
+        self,
+        store: SecretReader,
+        metrics: DataPlaneMetrics,
+        ttl_s: float = CACHE_TTL_S,
+        negative_ttl_s: float = NEGATIVE_TTL_S,
+    ) -> None:
         self.store = store
         self.ttl_s = ttl_s
         self.negative_ttl_s = negative_ttl_s
+        self.metrics = metrics
         self._values: dict[tuple[UUID, int], tuple[float, Secret | None]] = {}
         self._locks: dict[tuple[UUID, int], asyncio.Lock] = {}
         self._cooldowns: dict[tuple[UUID, int], float] = {}
@@ -109,24 +118,30 @@ class CredentialResolver:
         self._prune(now)
         cached = self._values.get(key)
         if cached is not None and cached[0] > now:
+            self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
             return cached[1]
         lock = self._locks.setdefault(key, asyncio.Lock())
         async with lock:
             cached = self._values.get(key)
             if cached is not None and cached[0] > time.monotonic():
+                self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
                 return cached[1]
             return await self._load(key, entry)
 
     async def _load(self, key: tuple[UUID, int], entry: CredentialEntry) -> Secret | None:
+        started_at = time.monotonic()
         try:
             secret = await self.store.get(entry.ref)
         except SecretNotFoundError:
-            logger.warning("credential %s (%s) is in the bundle but has no value in the store", entry.ref.name, entry.ref.secret_id)
+            self.metrics.observe_credential_load("miss", "missing", started_at)
+            log_event(logger, logging.WARNING, "credential_missing", outcome="missing")
             self._values[key] = (time.monotonic() + self.negative_ttl_s, None)
             return None
         except SecretStoreUnavailableError:
+            self.metrics.observe_credential_load("backend_unavailable", "backend_unavailable", started_at)
             self._locks.pop(key, None)
             raise
+        self.metrics.observe_credential_load("miss", "success", started_at)
         self._values[key] = (time.monotonic() + self.ttl_s, secret)
         return secret
 

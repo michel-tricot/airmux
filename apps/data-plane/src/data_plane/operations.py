@@ -18,8 +18,6 @@ def serve(config: Path, *, host: str, port: int, dev: bool, workers: int) -> Non
     os.environ["AIRMUX_CONFIG"] = str(config)
     if dev:
         os.environ["AIRMUX_DEV"] = "1"
-    else:
-        os.environ.pop("AIRMUX_DEV", None)
     uvicorn.run("data_plane.app:load_app", host=host, port=port, reload=dev, workers=None if dev else workers, factory=True)
 
 

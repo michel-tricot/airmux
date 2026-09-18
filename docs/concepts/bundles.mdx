@@ -40,7 +40,7 @@ A request uses one immutable snapshot from authentication through routing, so it
 - A gateway with a valid cached bundle keeps serving if the control plane is unavailable
 - Usage events queue in the gateway's SQLite outbox and drain when connectivity returns
 - A new gateway with no cached bundle returns `503 bundle_unavailable`
-- A gateway that rejects the latest manifest keeps its current bundle but reports `503` from `/readyz`
+- A gateway that rejects the latest manifest keeps its current bundle and remains ready; the rejection is reported through metrics and logs
 - Secret-store availability remains a runtime dependency for uncached provider credentials
 
-Use `airmux doctor`, `airmux gateways list`, `/healthz`, `/readyz`, and gateway logs to investigate convergence.
+Use `airmux doctor`, `airmux gateways list`, `/healthz`, `/readyz`, gateway metrics, and logs to investigate convergence.

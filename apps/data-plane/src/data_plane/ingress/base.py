@@ -8,8 +8,8 @@ if TYPE_CHECKING:
 
     from starlette.responses import Response
 
-    from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
-    from data_plane.egress.base import CanonicalError, Ctx
+    from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalError, CanonicalRequest, CanonicalResponse
+    from data_plane.egress.base import Ctx
 
     class ResponseStream(Protocol):
         """How one dialect spells the canonical stream on the way out."""

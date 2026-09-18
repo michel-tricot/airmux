@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import httpx
 
 from control_plane.app import create_app
@@ -39,5 +41,25 @@ async def test_stable_domain_errors_have_central_http_mappings():
                 response = await client.get(f"/domain-errors/{name}")
                 assert response.status_code == status_code
                 assert response.json() == {"detail": detail}
+    finally:
+        app.state.password_workers.close()
+
+
+async def test_unexpected_errors_keep_the_server_request_id():
+    app = create_app(Settings(database=DatabaseConfig(url="postgresql+asyncpg://unused:unused@127.0.0.1:1/unused")))
+
+    @app.get("/unexpected-error")
+    async def raise_unexpected_error() -> None:
+        message = "private internal detail"
+        raise RuntimeError(message)
+
+    try:
+        transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/unexpected-error", headers={"x-request-id": "caller-controlled"})
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Internal Server Error"}
+        assert response.headers["x-request-id"] != "caller-controlled"
+        assert UUID(response.headers["x-request-id"]).version == 7
     finally:
         app.state.password_workers.close()

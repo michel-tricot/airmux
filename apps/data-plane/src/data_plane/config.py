@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from airmux_runtime.config import ConfigContext, ConfigPath, load_config_section
 from airmux_runtime.secrets import EnvStoreConfig, SecretsConfig
@@ -43,10 +43,16 @@ class Config(BaseModel):
     bundle: BundleConfig
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; must name the store the control plane writes
     events: OutboxConfig = Field(default_factory=DevNullOutboxConfig)
-    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
+    dev: bool = Field(default=False, validate_default=True)
+
+    @field_validator("dev", mode="before")
+    @classmethod
+    def dev_from_environment(cls, value: object) -> object:
+        configured = os.environ.get("AIRMUX_DEV")
+        return configured == "1" if configured is not None else value
 
 
 def load_config(config_path: str | Path | None = None) -> Config:
     path = Path(config_path or os.environ.get("AIRMUX_CONFIG", "airmux.yml")).resolve()
     section = load_config_section("data_plane", path)
-    return Config.model_validate({**section, "dev": os.environ.get("AIRMUX_DEV") == "1"}, context=ConfigContext(base_dir=path.parent))
+    return Config.model_validate(section, context=ConfigContext(base_dir=path.parent))

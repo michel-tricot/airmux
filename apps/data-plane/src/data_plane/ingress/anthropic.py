@@ -12,8 +12,8 @@ from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalResponse
-    from data_plane.egress.base import CanonicalError, Ctx
+    from data_plane.canonical import CanonicalError, CanonicalResponse
+    from data_plane.egress.base import Ctx
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
 # so top_k and metadata reach providers whose profile accepts them.

@@ -22,6 +22,7 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.credentials import CredentialResolver
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.policy import Allow, Deny, evaluate
 
 OTHER_WORKSPACE = uuid7()
@@ -108,7 +109,7 @@ async def test_the_resolver_fetches_and_caches():
     store = MemoryStoreConfig().build()
     entry = make_credential()
     await store.put(entry.ref, Secret("sk-value"))
-    resolver = CredentialResolver(store)
+    resolver = CredentialResolver(store, DataPlaneMetrics())
     assert await value_of(resolver, entry) == "sk-value"
     await store.delete(entry.ref)
     assert await value_of(resolver, entry) == "sk-value"
@@ -120,7 +121,7 @@ async def test_a_rotation_busts_the_cache_without_an_invalidation_message():
     store = MemoryStoreConfig().build()
     entry = make_credential()
     await store.put(entry.ref, Secret("first"))
-    resolver = CredentialResolver(store)
+    resolver = CredentialResolver(store, DataPlaneMetrics())
     assert await value_of(resolver, entry) == "first"
     await store.put(entry.ref, Secret("second"))
     rotated = make_credential(version=2, secret_id=entry.ref.secret_id)
@@ -130,7 +131,7 @@ async def test_a_rotation_busts_the_cache_without_an_invalidation_message():
 async def test_a_credential_with_no_value_resolves_to_nothing():
     """The row and the value live in two systems, so a bundle can name a credential the store never
     received. That is a fact about the credential, so it is cached briefly."""
-    resolver = CredentialResolver(MemoryStoreConfig().build())
+    resolver = CredentialResolver(MemoryStoreConfig().build(), DataPlaneMetrics())
     assert await resolver.fetch(make_credential()) is None
 
 
@@ -149,7 +150,7 @@ async def test_an_unavailable_store_raises_and_is_not_cached():
             raise SecretStoreUnavailableError(ref, "down")
 
     store = Broken()
-    resolver = CredentialResolver(store)
+    resolver = CredentialResolver(store, DataPlaneMetrics())
     entry = make_credential()
     for _ in range(2):
         with pytest.raises(SecretStoreUnavailableError):
@@ -161,7 +162,7 @@ async def test_forget_drops_a_value_upstream_rejected():
     store = MemoryStoreConfig().build()
     entry = make_credential()
     await store.put(entry.ref, Secret("stale"))
-    resolver = CredentialResolver(store)
+    resolver = CredentialResolver(store, DataPlaneMetrics())
     await resolver.fetch(entry)
     await store.put(entry.ref, Secret("fresh"))
     resolver.forget(entry)

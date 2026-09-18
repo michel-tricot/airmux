@@ -20,6 +20,7 @@ from contract import DeniedUsageEventV1, uuid7
 from data_plane.app import create_app
 from data_plane.bundle import BundleSource, LocalBundleConfig
 from data_plane.config import Config, FileOutboxConfig
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import FileOutbox
 
 if TYPE_CHECKING:
@@ -66,7 +67,7 @@ def test_unexpected_worker_failure_stops_the_app_and_cancels_its_siblings(tmp_pa
 
 def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
     source = FailingSource(delay_s=60)
-    outbox = FileOutbox(FileOutboxConfig(path=tmp_path / "events.jsonl"))
+    outbox = FileOutbox(FileOutboxConfig(path=tmp_path / "events.jsonl"), DataPlaneMetrics())
     failed = threading.Event()
     terminated = threading.Event()
 

@@ -23,13 +23,16 @@ bun install --frozen-lockfile
 uv run pre-commit install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
-uv run airmux control-plane bootstrap-keygen
-uv run airmux control-plane migrate
+```
+
+Apply the development catalog before starting the control plane:
+
+```bash
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-Run `bootstrap-keygen` once. It creates `.airmux/dataplane.key`; keep it with the matching local database. This leaves
-the instance unclaimed so the normal onboarding flow remains available.
+`control-plane serve --dev` applies database migrations before starting. It also creates `.airmux/dataplane.key` when absent.
+Keep the key with the matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
 
 ## Start the services
 
@@ -201,7 +204,7 @@ uv tool install --reinstall dist/airmux-*.whl
 
 The installation includes both runtimes. Invoke `airmux` directly from any directory.
 
-## Publish the Python distribution
+## Publish a release
 
 The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
 runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
@@ -212,9 +215,9 @@ only the public distribution version and creates a release branch. Open the pref
 summary, then create, review, and merge that pull request normally. GitHub runs the required CI and security checks.
 
 After the merged commit passes the `required` and `dependency-security` jobs on `main`, run **Publish release** from the
-Actions page on `main`. It requires no inputs. The workflow reads the public version, downloads the SHA-named candidate
-produced by `ci.yml`, verifies it, and creates the protected tag after installation and live-provider checks pass. It
-never rebuilds release files. Publication, PyPI verification, and the final gateway request share that validated artifact.
+Actions page on `main`. It requires no inputs. The workflow reads the public version, downloads the SHA-named Python and
+container candidates produced by `ci.yml`, verifies them, and creates the protected tag after installation and
+live-provider checks pass. It never rebuilds release files.
 
 The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
 `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `RELEASE_GITHUB_TOKEN` as environment secrets in `release`; missing credentials
@@ -238,16 +241,16 @@ approved source for scheduled and manually dispatched provider checks, which hav
 There are no required reviewers while the owner is the only administrator, so scheduled checks need no approval.
 Arbitrary branches and non-release tags cannot access these environment credentials.
 
-After upload, the workflow downloads both artifacts for the exact version from PyPI, compares the registry digests
+After upload, the workflow downloads both Python artifacts for the exact version from PyPI, compares the registry digests
 and downloaded bytes against the tested candidate, and installs the downloaded wheel into a fresh tool environment
 without a cache. It checks CLI help and the exact version outside the checkout, then sends a real request through
-the installed local gateway to a stub upstream and verifies usage accounting. Only after this succeeds does it
-create and publish GitHub release notes identifying the version and source commit. This workflow does not deploy
-to production.
+the installed local gateway to a stub upstream and verifies usage accounting. It also pulls the published GHCR image by
+digest and verifies its version. Only after both registry checks succeed does it create and publish GitHub release notes
+identifying the version and source commit. This workflow does not deploy to production.
 
-If upload succeeds but PyPI verification fails, the package is already public on PyPI, but the GitHub announcement
+If either upload succeeds but registry verification fails, the artifact is already public, but the GitHub announcement
 remains unpublished. Use **Re-run failed jobs** on the original Actions run within the 30-day candidate artifact
-retention period. This preserves the exact tested bytes and skips the successful build and live-provider gates.
+retention period. This preserves the exact tested artifacts and skips the successful build and live-provider gates.
 Do not rebuild and overwrite an uploaded version. For a defective package or expired candidate artifact, fix the
 source and choose a new version and tag.
 
@@ -267,13 +270,16 @@ for local execution, request bounds, and model maintenance.
 The deployment suite uses a local test provider and a disposable project:
 
 ```bash
+docker build -t airmux:local .
+
 AIRMUX_PORT=18080 AIRMUX_PUBLIC_URL=http://localhost:18080 \
-  docker compose -p airmux-test up -d --build --wait
+  docker compose -p airmux-test up -d --wait
 
 AIRMUX_PORT=18080 AIRMUX_PUBLIC_URL=http://localhost:18080 \
   DEPLOYMENT_PROJECT=airmux-test \
   DEPLOYMENT_FILE=docker-compose.yml \
   DEPLOYMENT_URL=http://localhost:18080 \
+  DEPLOYMENT_IMAGE=airmux:local \
   uv run pytest tests/deployment
 ```
 

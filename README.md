@@ -130,7 +130,8 @@ Add a provider key such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to `.env`, th
 
 ```bash
 uv tool install airmux
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
@@ -171,6 +172,11 @@ The control plane compiles complete, versioned organization bundles. Data-plane 
 indexes, and atomically adopt them. Inference therefore avoids management database reads and an in-flight request never
 observes partially updated policy. Cold provider-secret resolution is the only database-capable exception, and secret
 values never enter a bundle.
+
+Each plane records OpenTelemetry metrics and exposes Prometheus text at `/metrics` on its own listener, alongside
+dependency-free liveness at `/healthz` and role readiness at `/readyz`. The public all-in-one listener exposes the probes
+but not `/metrics`. Restrict `/metrics` to the monitoring network when a standalone control plane or data plane is
+directly reachable.
 
 Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment
 shapes.

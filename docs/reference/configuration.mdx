@@ -5,23 +5,17 @@ description: 'Reference Docker variables, runtime YAML sections, references, bun
 
 airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
 `./.airmux/airmux.yml`, falling back to a shared `./airmux.yml` when the standalone file is absent. Control-plane
-commands use `./airmux.yml`. The all-in-one image uses `deploy/docker/airmux.yml`.
+commands use `./airmux.yml`. The airmux image uses `deploy/docker/airmux.yml`.
 
 ## Docker Compose variables
 
-| Variable                        | Default                         | Purpose                                     |
-| ------------------------------- | ------------------------------- | ------------------------------------------- |
-| `AIRMUX_PORT`                | `8080`                          | Published host port                         |
-| `AIRMUX_PUBLIC_URL`          | `http://localhost:8080`         | Compose value mapped to the console origin  |
-| `AIRMUX_PUBLIC_SIGNUP`       | `false`                         | Allow account creation after instance claim |
-| `POSTGRES_PASSWORD`             | `airmux`                     | Initial local Postgres password             |
-| `AIRMUX_IMAGE`               | `airmux:local`               | All-in-one image override                   |
-| `AIRMUX_CONTROL_PLANE_IMAGE` | `airmux-control-plane:local` | Split control-plane image override          |
-| `AIRMUX_DATA_PLANE_IMAGE`    | `airmux-data-plane:local`    | Split gateway image override                |
-| `AIRMUX_CONSOLE_IMAGE`       | `airmux-console:local`       | Split console image override                |
-
-Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
-migration while the application keeps the pooled URL.
+| Variable                  | Default                 | Purpose                                      |
+| ------------------------- | ----------------------- | -------------------------------------------- |
+| `AIRMUX_PORT`             | `8080`                  | Published host port                          |
+| `AIRMUX_PUBLIC_URL`       | `http://localhost:8080` | Compose value mapped to the console origin   |
+| `AIRMUX_PUBLIC_SIGNUP`    | `false`                 | Allow account creation after instance claim  |
+| `POSTGRES_PASSWORD`       | `airmux`                | Initial local Postgres password              |
+| `AIRMUX_IMAGE`            | `airmux:local`          | Image used by every role in either topology  |
 
 ## YAML structure
 

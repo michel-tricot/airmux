@@ -20,6 +20,7 @@ from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
 from data_plane.config import Config, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
+from data_plane.metrics import DataPlaneMetrics
 
 if TYPE_CHECKING:
     from data_plane.runtime import Runtime
@@ -97,7 +98,7 @@ def test_the_bundle_id_follows_the_file_content(tmp_path):
 async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     path = _write(tmp_path)
     config = LocalBundleConfig(kind="local", path=path)
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = LocalBundleSource(config, holder)
     await source.once()
     assert holder.current.snapshots

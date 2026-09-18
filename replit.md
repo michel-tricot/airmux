@@ -23,11 +23,11 @@ See README.md for the full getting-started guide. The short version:
 ```bash
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-uv run airmux control-plane bootstrap-keygen # shared data-plane pool key
 # add OPENAI_API_KEY to .env
-uv run airmux control-plane serve --dev     # control plane on :8000
+uv run airmux control-plane migrate
+uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
+uv run airmux control-plane serve --dev              # control plane on :8000
 # sign up at the console: the first account claims the instance
-uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml # load and publish the catalog
 uv run airmux gateway serve --dev           # data plane on :8080
 ```
 
@@ -42,7 +42,8 @@ See `.env.example`. Key variables:
 | `AIRMUX_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRMUX_INFERENCE_KEY` | Caller inference key |
 
-`uv run airmux control-plane bootstrap-keygen` writes the shared pool key. Control-plane startup authorizes it.
+Development control-plane startup applies migrations, ensures the configured shared pool key exists, and authorizes the key.
+Taxonomy application remains explicit.
 
 ## Project layout
 
@@ -101,15 +102,14 @@ repository root:
 
 That script runs the required sequence:
 
-1. `uv run airmux control-plane bootstrap-keygen` (when `.airmux/dataplane.key` does not exist)
-2. `uv run airmux control-plane migrate`
-3. `uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml`
-4. `uv run airmux control-plane fixtures`
-5. `uv run airmux control-plane serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
+1. `uv run airmux control-plane migrate`, resetting only the disposable Replit development database when migration fails
+2. `uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml`
+3. `uv run airmux control-plane fixtures`
+4. `uv run airmux control-plane serve --dev` (the helper binds it to Replit's loopback backend port)
 
 If there is any migration incompatibility, the script must start the Replit
 development database from scratch: drop and recreate it, then run the full
-sequence again (`migrate`, `taxonomy`, and `fixtures`). This reset is
+sequence again (`migrate`, `taxonomy`, `fixtures`, and `serve`). This reset is
 intentionally destructive and is only for the Replit development database. The
 backend support workflow is separate from the console artifact; Replit code
 changes remain console-only.

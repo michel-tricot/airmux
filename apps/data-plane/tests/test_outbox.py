@@ -13,6 +13,8 @@ import respx
 from conftest import make_config, make_outbox
 
 from contract import RoutedUsageEventV1, uuid7
+from data_plane.config import SqliteOutboxConfig
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, EventOutbox, OutboxFullError, SqliteOutbox, build_outbox
 from data_plane.outbox.queued import CAPACITY
 from data_plane.outbox.sqlite import BATCH_SIZE
@@ -144,19 +146,36 @@ async def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
     await b.close()
 
 
+async def test_metrics_refresh_reads_the_shared_durable_backlog(tmp_path, http_client):
+    first_metrics = DataPlaneMetrics()
+    second_metrics = DataPlaneMetrics()
+    config = make_config(tmp_path)
+    assert isinstance(config.events, SqliteOutboxConfig)
+    first = SqliteOutbox(config.events, http_client, first_metrics)
+    second = SqliteOutbox(config.events, http_client, second_metrics)
+    record(first, make_event(uuid7()))
+    await first.next_batch(1)
+
+    await second.refresh_metrics()
+
+    assert "airmux_data_plane_metering_outbox_pending 1.0" in second_metrics.render().decode()
+    await first.close()
+    await second.close()
+
+
 async def test_build_outbox_selects_kind(tmp_path, http_client):
     config = make_config(tmp_path)
-    sqlite = build_outbox(config.events, http_client)
+    sqlite = build_outbox(config.events, http_client, DataPlaneMetrics())
     assert isinstance(sqlite, SqliteOutbox)
     devnull = make_config(tmp_path, outbox_kind="devnull")
-    sink = build_outbox(devnull.events, http_client)
+    sink = build_outbox(devnull.events, http_client, DataPlaneMetrics())
     assert isinstance(sink, DevNullOutbox)
     await sqlite.close()
     await sink.close()
 
 
 async def test_devnull_has_no_queue_capacity_or_stats():
-    outbox = DevNullOutbox()
+    outbox = DevNullOutbox(DataPlaneMetrics())
     with outbox.reserve():
         assert await outbox.stats() == {}
 
@@ -209,3 +228,8 @@ async def test_close_drains_filled_events_before_closing_storage(tmp_path, http_
 
 def test_default_outbox_capacity_is_ten_thousand():
     assert CAPACITY == 10_000
+
+
+def test_metrics_do_not_expose_shutdown_only_state():
+    metrics = DataPlaneMetrics().render().decode()
+    assert "airmux_data_plane_metering_shutdown_drains" not in metrics

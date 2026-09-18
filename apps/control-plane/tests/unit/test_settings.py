@@ -145,6 +145,20 @@ def test_public_signup_defaults_closed_and_can_be_opened_in_config(tmp_path, mon
     assert load_settings().public_signup is True
 
 
+def test_dev_uses_environment_then_config_then_default(tmp_path, monkeypatch):
+    config = tmp_path / "airmux.yml"
+    monkeypatch.setenv("AIRMUX_DEV", "1")
+    config.write_text("control_plane:\n  dev: false\n", encoding="utf-8")
+    assert load_settings(config).dev is True
+
+    monkeypatch.delenv("AIRMUX_DEV")
+    config.write_text("control_plane:\n  dev: true\n", encoding="utf-8")
+    assert load_settings(config).dev is True
+
+    config.write_text("control_plane: {}\n", encoding="utf-8")
+    assert load_settings(config).dev is False
+
+
 def test_supplied_bootstrap_token_is_validated_and_redacted():
     token = "sk-cp-one-shared-pool-secret-that-is-long-enough"
     bootstrap = DataPlaneBootstrap(token=token)
@@ -154,9 +168,9 @@ def test_supplied_bootstrap_token_is_validated_and_redacted():
         DataPlaneBootstrap(token="not-an-management-key")
 
 
-def test_shared_migration_config_uses_the_selected_database_url(monkeypatch):
-    migration_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "migrate.yml"
-    monkeypatch.setenv("AIRMUX_CONFIG", str(migration_config))
+def test_docker_config_uses_the_selected_database_url(monkeypatch):
+    docker_config = Path(__file__).resolve().parents[4] / "deploy" / "docker" / "airmux.yml"
+    monkeypatch.setenv("AIRMUX_CONFIG", str(docker_config))
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
 
     assert database_url() == "postgresql+asyncpg://someone:secret@direct.db.internal:5432/app"

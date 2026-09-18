@@ -14,6 +14,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from data_plane.http import ResponseHeadersMiddleware
+from data_plane.metrics import DataPlaneMetrics
 
 INFERENCE_ROUTES = (
     ("POST", "/inf/v1/chat/completions"),
@@ -34,7 +35,7 @@ def test_response_headers_preserve_binary_content_and_known_retry_timing():
     async def limited(request):
         return Response(b"\x00\xff", status_code=429, media_type="application/octet-stream", headers={"Retry-After": "7", "Cache-Control": "public"})
 
-    app = ResponseHeadersMiddleware(Starlette(routes=[Route("/", limited)]))
+    app = ResponseHeadersMiddleware(Starlette(routes=[Route("/", limited)]), DataPlaneMetrics())
     with TestClient(app) as client:
         response = client.get("/")
     assert response.status_code == 429
@@ -63,7 +64,7 @@ def test_all_inference_authentication_errors_have_common_headers(dp_app, method,
 
 
 @respx.mock
-@pytest.mark.parametrize("path", ["/healthz", "/readyz"])
+@pytest.mark.parametrize("path", ["/healthz", "/readyz", "/metrics"])
 def test_operational_routes_remain_public_and_disable_caching(dp_app, path):
     mock_control_plane()
     with TestClient(dp_app) as client:
@@ -71,6 +72,18 @@ def test_operational_routes_remain_public_and_disable_caching(dp_app, path):
     assert response.status_code == 200
     assert_private_headers(response)
     assert "www-authenticate" not in response.headers
+
+
+@respx.mock
+def test_metrics_are_prometheus_compatible_and_bounded(dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        client.get("/inf/v1/models")
+        metrics = client.get("/metrics").text
+
+    assert 'airmux_data_plane_http_requests_total{dialect="openai_chat_completions",method="GET",outcome="rejected",route="/inf/v1/models"' in metrics
+    assert "airmux_data_plane_bundle_snapshots 1.0" in metrics
+    assert not any(forbidden in metrics for forbidden in ("org_id=", "workspace_id=", "model=", "provider=", "bundle_id="))
 
 
 @respx.mock

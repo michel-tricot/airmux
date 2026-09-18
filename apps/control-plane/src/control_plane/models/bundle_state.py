@@ -69,6 +69,21 @@ class BundleState(Record, table=True):
         return (await current_session().execute(query)).scalar_one_or_none()
 
     @classmethod
+    async def pending_count(cls) -> int:
+        from control_plane.models.org import Org  # noqa: PLC0415 bundle state depends on the completed model graph
+
+        global_generation = await cls.global_generation()
+        desired_org = func.coalesce(cls.desired_generation, 0)
+        stale = (
+            col(cls.current_bundle_id).is_(None)
+            | col(cls.org_id).is_(None)
+            | (func.coalesce(cls.published_global_generation, -1) != global_generation)
+            | (func.coalesce(cls.published_org_generation, -1) != desired_org)
+        )
+        query = select(func.count()).select_from(Org).outerjoin(cls, col(cls.org_id) == col(Org.id)).where(stale)
+        return int((await current_session().execute(query)).scalar_one())
+
+    @classmethod
     async def try_lock(cls, org_id: UUID) -> bool:
         statement = text("SELECT pg_try_advisory_xact_lock(hashtextextended(CAST(:org_id AS text), 0))")
         return bool((await current_session().execute(statement, {"org_id": str(org_id)})).scalar_one())

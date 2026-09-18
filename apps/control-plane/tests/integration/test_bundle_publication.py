@@ -9,6 +9,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, captured_sql, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
+from prometheus_client.parser import text_string_to_metric_families
 from sqlalchemy import text
 
 from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
@@ -43,6 +44,14 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert model.cache_read_price_per_mtok == Decimal("0.1")
         assert model.cache_write_price_per_mtok == Decimal("1.25")
         assert model.parameter_support == {"temperature": "unsupported"}
+        samples = [sample for family in text_string_to_metric_families(c.get("/metrics").text) for sample in family.samples]
+        successes = next(
+            sample.value
+            for sample in samples
+            if sample.name == "airmux_control_plane_bundle_publications_total" and sample.labels == {"outcome": "success"}
+        )
+        assert successes >= 1
+        assert next(sample.value for sample in samples if sample.name == "airmux_control_plane_bundle_publication_pending") == 0
 
 
 def test_revocation_lands_in_next_bundle(tmp_path):

@@ -8,7 +8,7 @@ or database schema. Use the same release for every component unless its release 
 rolling-compatible path.
 
 <Warning>
-  Control-plane and all-in-one containers run the forward database migration during startup. The CLI has no
+  The Compose migration job applies the forward database migration before starting the new release. The CLI has no
   operator-facing downgrade command. Do not run an older release against a database migrated by a newer release.
 </Warning>
 
@@ -25,21 +25,21 @@ Before replacing any process:
 Include each gateway's identity, accepted bundle, and SQLite usage outbox in the state snapshot. Restoring only the
 database or only `/state` can leave credential metadata, secret values, bundles, and pending usage out of sync.
 
+Set `AIRMUX_IMAGE` to the target `ghcr.io/michel-tricot/airmux` digest before replacing either topology.
+
 ## Upgrade the full platform
 
-Follow the deployment-specific replacement procedure for [Docker Compose](/docs/deployment/docker),
-[Fly.io](/docs/deployment/fly), [Render](/docs/deployment/render), or
-[DigitalOcean](/docs/deployment/digitalocean). Preserve the public origin, database, and state mounts.
+Follow the [Docker Compose](/docs/deployment/docker) replacement procedure. Preserve the public origin, database, and state mounts.
 
-Replace an all-in-one container as one unit. On startup, it migrates the database, applies the shipped catalog, and then
-starts the control plane, gateway, and console.
+Run the documented `docker compose up -d --wait` command. Compose completes the migration and catalog jobs before it replaces
+the serving stack.
 
 For a split deployment:
 
 1. Remove every gateway from public traffic and stop it after active streams finish
-2. Replace the control plane and wait for its health check
-3. Replace each gateway with the same release
-4. Wait for each gateway's `/readyz` response before restoring traffic
+2. Set `AIRMUX_IMAGE` to the new digest and run `docker compose -p airmux-split -f docker-compose.split.yml up -d --wait`;
+   Compose runs the migration and catalog jobs before replacing the services
+3. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
 
 ## Verify the release
 
@@ -53,7 +53,8 @@ airmux gateways list
 ```
 
 Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the
-requests appear in `airmux events list` and that `/healthz` does not report a growing pending-event queue.
+requests appear in `airmux events list`, then verify that `airmux_data_plane_metering_outbox_pending` and
+`airmux_data_plane_metering_outbox_oldest_age_seconds` return to their normal ranges on the internal metrics listener.
 
 ## Roll back
 

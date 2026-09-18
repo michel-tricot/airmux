@@ -30,7 +30,7 @@ For source checkouts and unreleased builds, see [Development](/docs/development)
 | Group           | Commands                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------ |
 | `gateway`       | `init`, `validate`, `serve`, `schema`                                                                  |
-| `control-plane` | `init`, `validate`, `serve`, `migrate`, `bootstrap-keygen`, `owner`, `taxonomy`, `fixtures`, `openapi` |
+| `control-plane` | `init`, `validate`, `serve`, `migrate`, `owner`, `taxonomy`, `fixtures`, `openapi` |
 
 Configuration resolution is `--config/-c`, then `AIRMUX_CONFIG`, then per-runtime defaults; the
 [configuration reference](/docs/reference/configuration) names them.
@@ -58,9 +58,12 @@ private bootstrap key and file secret store between the planes. The same install
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
 
-`serve` runs in the foreground. It does not create accounts or import a taxonomy. Control-plane migrations are explicit;
-`control-plane serve --dev` applies them before starting the development reloader. `gateway serve --dev` reloads Python code
-and cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
+`serve` runs in the foreground. Control-plane startup creates a missing internal gateway credential, verifies the database is
+at the expected migration revision, and does not change the model catalog. In production, run `migrate` and `taxonomy`
+explicitly before serving. `control-plane serve --dev` applies migrations before starting its development reloader, but still
+leaves taxonomy application explicit. The taxonomy command loads providers and models from a file; see
+[Models and providers](/docs/reference/models-and-providers). Startup does not create human accounts. `gateway serve --dev`
+cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
 
 `control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `catalog apply` instead uses
 the authenticated management API. `control-plane owner` is local recovery through database access; it promotes an existing

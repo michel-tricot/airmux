@@ -242,6 +242,8 @@ jobs:
     timeout-minutes: 30
     env:
       AIRMUX_PYTHON_BUILD: python-candidate
+      AIRMUX_IMAGE: airmux:local
+      DEPLOYMENT_IMAGE: airmux:local
       DEPLOYMENT_PROJECT: airmux-nightly
       DEPLOYMENT_FILE: docker-compose.yml
       DEPLOYMENT_URL: http://localhost:8080
@@ -256,11 +258,9 @@ jobs:
           artifact-ids: ${{ needs.package.outputs.artifact-id }}
           path: candidate
       - run: cd candidate && sha256sum --check SHA256SUMS
-      - run: docker compose -p "$DEPLOYMENT_PROJECT" build --no-cache
+      - run: docker build --no-cache --build-arg AIRMUX_PYTHON_BUILD="$AIRMUX_PYTHON_BUILD" --tag "$AIRMUX_IMAGE" .
       - run: docker compose -p "$DEPLOYMENT_PROJECT" up -d --wait --wait-timeout 180
       - run: uv run --no-sync pytest tests/deployment --junitxml=cold-docker-results/docker.xml
-        env:
-          DEPLOYMENT_COMPACT_IMAGE: airmux:local
       - name: Summarize cold-build results
         if: always()
         continue-on-error: true

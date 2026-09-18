@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from pydantic import ValidationError
 
+from control_plane.metrics import ControlPlaneMetrics
 from control_plane.throttling import Allowed, Denied, LocalThrottleBackend, RateLimit, ThrottleConfig, ThrottleMiddleware
 
 
@@ -47,7 +48,7 @@ async def test_ip_throttling_precedes_routes_and_separates_operational_traffic()
         (re.compile(r"/api/v1/anything(?:-else)?"), frozenset({"GET"}), "api"),
         (re.compile(r"/api/v1/bundles/manifest"), frozenset({"GET"}), "operational"),
     )
-    app.add_middleware(ThrottleMiddleware, backend=LocalThrottleBackend(), config=config, routes=routes)
+    app.add_middleware(ThrottleMiddleware, backend=LocalThrottleBackend(), config=config, routes=routes, metrics=ControlPlaneMetrics())
 
     @app.get("/{path:path}")
     async def endpoint(path: str):
@@ -69,7 +70,7 @@ async def test_middleware_accepts_an_independent_backend():
 
     app = FastAPI()
     routes = ((re.compile(r"/api/v1/auth/me"), frozenset({"GET"}), "api"),)
-    app.add_middleware(ThrottleMiddleware, backend=UnavailableBackend(), config=ThrottleConfig(), routes=routes)
+    app.add_middleware(ThrottleMiddleware, backend=UnavailableBackend(), config=ThrottleConfig(), routes=routes, metrics=ControlPlaneMetrics())
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/v1/auth/me")
     assert response.status_code == 503
