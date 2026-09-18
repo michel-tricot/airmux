@@ -21,7 +21,17 @@ def _config(tmp_path):
 def test_migrate_reports_what_it_did(tmp_path):
     """Silent success reads as failure: migrate names the database, the revisions applied, and the already-current case."""
     cfg = tmp_path / "airmux.yml"
-    cfg.write_text(yaml.safe_dump({"control_plane": {"database": {"url": ensure_database(db_name_for(tmp_path))}}}), encoding="utf-8")
+    cfg.write_text(
+        yaml.safe_dump(
+            {
+                "control_plane": {
+                    "database": {"url": ensure_database(db_name_for(tmp_path))},
+                    "bootstrap": {"token": "${file:missing-bootstrap-key}"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     first = runner.invoke(cli_app, ["migrate", "--config", str(cfg)])
     assert first.exit_code == 0, first.output
     assert "empty ->" in first.output

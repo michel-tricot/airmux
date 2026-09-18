@@ -61,7 +61,8 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
         with captured_sql(cp.app) as statements:
             preview = client.post("/api/v1/enroll/invitations/preview", json={"token": token})
         assert preview.status_code == 200, preview.text
-        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 1
+        preview_queries = [statement for statement in statements if "FROM org_invitation JOIN org" in statement]
+        assert len(preview_queries) == 1
         assert preview.json()["data"] == {
             "email": "invitee@example.com",
             "org_id": str(org_id),

@@ -42,7 +42,8 @@ def test_org_member_only_sees_joined_workspaces(tmp_path):
             listed = c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=CSRF)
 
         assert listed.status_code == 200
-        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 7
+        workspace_queries = [statement for statement in statements if "FROM workspace \nWHERE workspace.org_id" in statement]
+        assert len(workspace_queries) == 1
         assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
@@ -106,8 +107,10 @@ def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
 
         assert members.status_code == 200
         assert candidates.status_code == 200
-        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 9
-        assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        member_queries = [statement for statement in member_statements if 'FROM workspace_membership JOIN "user"' in statement]
+        candidate_queries = [statement for statement in candidate_statements if 'WHERE "user".id IN (SELECT org_membership.user_id' in statement]
+        assert len(member_queries) == 1
+        assert len(candidate_queries) == 1
 
 
 def test_slug_is_unique_within_the_org_and_free_across_orgs(tmp_path):

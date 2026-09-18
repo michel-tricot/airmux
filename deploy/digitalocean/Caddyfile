@@ -1,5 +1,0 @@
-{$AIRMUX_DOMAIN} {
-	reverse_proxy airmux:8080 {
-		flush_interval -1
-	}
-}

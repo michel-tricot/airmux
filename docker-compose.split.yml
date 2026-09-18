@@ -1,6 +1,8 @@
 x-gateway: &gateway
-  image: ${AIRMUX_DATA_PLANE_IMAGE:-airmux-data-plane:local}
-  init: true
+  image: ${AIRMUX_IMAGE:-airmux:local}
+  command: data-plane
+  environment:
+    AIRMUX_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
   depends_on:
     control-plane:
       condition: service_healthy
@@ -23,13 +25,19 @@ services:
     volumes:
       - split-pgdata:/var/lib/postgresql/data
 
+  migrate:
+    extends:
+      file: docker-compose.yml
+      service: migrate
+
+  taxonomy:
+    extends:
+      file: docker-compose.yml
+      service: taxonomy
+
   control-plane:
-    image: ${AIRMUX_CONTROL_PLANE_IMAGE:-airmux-control-plane:local}
-    build:
-      context: .
-      target: control-plane
-      args:
-        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
+    image: ${AIRMUX_IMAGE:-airmux:local}
+    command: control-plane
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
@@ -38,24 +46,20 @@ services:
     volumes:
       - runtime-credentials:/state/runtime
       - provider-secrets:/state/secrets
-    init: true
     depends_on:
-      postgres:
-        condition: service_healthy
+      taxonomy:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
       interval: 5s
       timeout: 3s
       retries: 30
+    stop_grace_period: 40s
     restart: unless-stopped
 
   data-plane-1:
     <<: *gateway
-    build:
-      context: .
-      target: data-plane
-      args:
-        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
+    image: ${AIRMUX_IMAGE:-airmux:local}
     volumes:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro
@@ -63,28 +67,30 @@ services:
 
   data-plane-2:
     <<: *gateway
+    image: ${AIRMUX_IMAGE:-airmux:local}
     volumes:
       - runtime-credentials:/state/runtime:ro
       - provider-secrets:/state/secrets:ro
       - gateway-2:/state/data-plane
 
   console:
-    image: ${AIRMUX_CONSOLE_IMAGE:-airmux-console:local}
-    build:
-      context: .
-      target: console
+    image: ${AIRMUX_IMAGE:-airmux:local}
+    command: console
     environment:
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
+      CONTROL_PLANE_UPSTREAM: control-plane:8000
+      DATA_PLANE_UPSTREAM: data-plane:8081
     ports:
       - "${AIRMUX_PORT:-8080}:8080"
     depends_on:
       control-plane:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
       interval: 5s
       timeout: 3s
       retries: 20
+    stop_grace_period: 40s
     restart: unless-stopped
 
 volumes:

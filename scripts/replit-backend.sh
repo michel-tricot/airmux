@@ -67,10 +67,6 @@ reset_database() {
 require_database_url
 normalize_database_url
 
-if [[ ! -f .airmux/dataplane.key ]]; then
-  uv run airmux control-plane bootstrap-keygen
-fi
-
 if ! uv run airmux control-plane migrate; then
   reset_database
   uv run airmux control-plane migrate

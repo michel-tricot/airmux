@@ -252,7 +252,7 @@ def test_taxonomy_command_records_one_global_revision_for_every_org(tmp_path):
 
 
 def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
-    """The docker startup chain seeds before any admin exists; the writes are attributed to root."""
+    """The Docker taxonomy job runs before any admin exists, so its writes are attributed to root."""
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
@@ -265,6 +265,9 @@ def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
 def test_taxonomy_command_applies_without_orgs(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
+    config = yaml.safe_load((tmp_path / "airmux.yml").read_text(encoding="utf-8"))
+    config["control_plane"]["bootstrap"] = {"token": "${file:missing-bootstrap-key}"}
+    (tmp_path / "airmux.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output

@@ -6,11 +6,15 @@ description: "Run the console, control plane, and multiple data planes independe
 The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, and two gateways on one Docker host.
 
 ```bash
-docker compose -p airmux-split -f docker-compose.split.yml up -d --build --wait
+docker build -t airmux:local .
+docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
-The console proxy distributes `/inf/` requests between both gateways.
+Every service and short-lived startup job references `AIRMUX_IMAGE`, so pin that variable to one published digest for
+coordinated deployments. The split stack follows the same [database and catalog startup sequence](/docs/deployment/docker#startup-and-database-changes)
+as the default stack. Both gateways start after the control plane becomes healthy. The console proxy distributes `/inf/`
+requests between them.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
@@ -37,10 +41,13 @@ The checked-in split file demonstrates service boundaries, not a multi-host prod
 
 Set `AIRMUX_DATAPLANE_CONTROL_PLANE_URL` to the private control-plane address. Protect this path and its data-plane management key.
 
-Keep one control-plane replica with the checked-in startup process. Multiple control-plane replicas require coordinated
-migration and catalog initialization plus shared credential storage.
+Keep one control-plane replica. Multiple control-plane replicas remain unsupported until initialization, asynchronous
+bundle publication, and replica behavior are proven.
 
-## Migrate from all-in-one
+Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
+cache, and usage outbox volume.
+
+## Move from airmux to split
 
 The default and split Compose files use different named volumes. Migration requires a database dump plus a stopped copy
 of `/state/runtime`, `/state/secrets`, and one gateway's `/state/data-plane`. Restore each into the corresponding split

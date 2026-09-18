@@ -39,9 +39,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: docker-compose
-    directories:
-      - /
-      - /deploy/digitalocean
+    directory: /
     schedule:
       interval: weekly
   - package-ecosystem: github-actions

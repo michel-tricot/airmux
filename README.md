@@ -130,7 +130,8 @@ Add a provider key such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to `.env`, th
 
 ```bash
 uv tool install airmux
-docker compose up -d --build --wait
+docker build -t airmux:local .
+docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
