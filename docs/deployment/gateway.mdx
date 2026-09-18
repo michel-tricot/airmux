@@ -117,21 +117,39 @@ Keep plaintext key files private and out of version control.
 
 ## Run the same configuration in a container
 
-After initialization above, run from the directory containing `.airmux/` and the referenced taxonomy:
+You need Git and a running Docker engine. Initialization creates configuration, not a Dockerfile or source checkout.
+After initialization above, stop the native gateway if it is running so port 8080 is available. From the directory
+containing `.airmux/`, save the configuration location and clone the image source into a separate temporary directory:
 
 ```bash
-docker build -t airmux:local .
+AIRMUX_CONFIG_DIR="$PWD"
+AIRMUX_SOURCE_DIR="$(mktemp -d)/airmux"
+git clone https://github.com/michel-tricot/airmux.git "$AIRMUX_SOURCE_DIR"
+docker build -t airmux:local "$AIRMUX_SOURCE_DIR"
+```
+
+The build context is the source checkout at `$AIRMUX_SOURCE_DIR`. The generated configuration stays in
+`$AIRMUX_CONFIG_DIR/.airmux` and is mounted at runtime. To build a particular revision, check it out with
+`git -C "$AIRMUX_SOURCE_DIR" checkout <revision>` before the build.
+
+In the same shell, start the container with the provider key exported during initialization:
+
+```bash
 docker run --rm --user "$(id -u):$(id -g)" \
   --entrypoint airmux \
-  --mount "type=bind,source=$PWD,target=/config,readonly" \
+  --mount "type=bind,source=$AIRMUX_CONFIG_DIR,target=/config,readonly" \
   -e OPENAI_API_KEY -p 8080:8081 \
   airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
 ```
 
 The same image also runs full-platform roles, so standalone administrative commands explicitly override its role entry
 point with `airmux`. Matching the host user allows it to read the private generated key. The read-only mount preserves
-the relative taxonomy reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No
-control plane or database is needed for this configuration.
+the relative taxonomy reference without changing the key's private permissions. If you used `--taxonomy` with a file
+outside the configuration directory, mount it at the path resolved by `/config/.airmux/bundle.yml` as well. No control plane
+or database is needed for this configuration.
+
+In another terminal, return to the configuration directory and run the [request commands above](#make-a-request).
+The container exposes the same readiness endpoint and public inference path at `http://127.0.0.1:8080/inf/v1/chat/completions`.
 
 ## Collect usage events locally
 
