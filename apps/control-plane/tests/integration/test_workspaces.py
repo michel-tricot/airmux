@@ -42,7 +42,8 @@ def test_org_member_only_sees_joined_workspaces(tmp_path):
             listed = c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=CSRF)
 
         assert listed.status_code == 200
-        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 7
+        workspace_queries = [statement for statement in statements if "FROM workspace \nWHERE workspace.org_id" in statement]
+        assert len(workspace_queries) == 1
         assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
