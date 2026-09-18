@@ -21,6 +21,7 @@ import trustme
 import typer
 import yaml
 from gateway_harness import Gateway, eventually
+from performance_resources import ProcessRole, ResourceUsage, process_tree_times
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from upstream import TEXT, UPSTREAM_KEY
 
@@ -48,6 +49,7 @@ WORKLOADS: tuple[tuple[Scenario, int, ProviderProtocol], ...] = (
     ("upstream", 32, "http2"),
     ("buffered_devnull", 1, "http2"),
     ("buffered_devnull", 32, "http2"),
+    ("buffered_devnull", 128, "http2"),
     ("stream", 32, "http2"),
     ("policies", 1, "http1"),
 )
@@ -69,18 +71,32 @@ class Settings(NamedTuple):
     client_read_delay_ms: float = 0
     request_timeout_s: float = 10
     scenario: Scenario | None = None
+    workers: int = 1
+    max_connections: int | None = None
+    concurrency: int | None = None
+    provider_protocol: ProviderProtocol | None = None
+    observe_resources: bool = False
 
 
 def workloads(settings: Settings) -> tuple[tuple[Scenario, int, ProviderProtocol], ...]:
-    return tuple(workload for workload in WORKLOADS if settings.scenario is None or workload[0] == settings.scenario)
+    return tuple(
+        workload
+        for workload in WORKLOADS
+        if (settings.scenario is None or workload[0] == settings.scenario)
+        and (settings.concurrency is None or workload[1] == settings.concurrency)
+        and (settings.provider_protocol is None or workload[2] == settings.provider_protocol)
+    )
 
 
 class PerformanceGateway(Gateway):
     event_store: EventStore = "sqlite"
+    max_connections: int | None = None
 
     def write_files(self) -> None:
         super().write_files()
         configuration = yaml.safe_load(self.config_path.read_text())
+        if self.max_connections is not None:
+            configuration["data_plane"]["http"] = {"max_connections": self.max_connections, "max_keepalive_connections": 20}
         configuration["data_plane"]["events"] = (
             {
                 "kind": "sqlite",
@@ -112,6 +128,7 @@ class Measurement(BaseModel):
     elapsed_s: PositiveFloat
     latency_ms: list[PositiveFloat] = Field(min_length=1)
     first_content_ms: list[PositiveFloat] = Field(min_length=1)
+    resources: ResourceUsage | None = None
 
     @model_validator(mode="after")
     def valid_timings(self) -> Self:
@@ -341,6 +358,7 @@ class FastProvider:
         self.response_bytes = settings.response_bytes
         self.stream_chunks = settings.stream_chunks
         self.stream_chunk_delay_ms = settings.stream_chunk_delay_ms
+        self.observe_connections = settings.observe_resources
         self.url = ""
         self.log_path = directory / f"upstream-{protocol}.log"
         self.log = self.log_path.open("a", encoding="utf-8")
@@ -377,6 +395,7 @@ class FastProvider:
                 str(self.stream_chunks),
                 "--stream-chunk-delay-ms",
                 str(self.stream_chunk_delay_ms),
+                *(["--observe-connections"] if self.observe_connections else []),
                 *(["--certfile", str(self.cert_path), "--keyfile", str(self.key_path)] if self.protocol == "http2" else []),
             ],
             stdout=self.log,
@@ -399,6 +418,12 @@ class FastProvider:
             return response.status_code == 200 and response.http_version == expected
 
         eventually(ready)
+
+    def connections(self, *, reset: bool = False) -> int:
+        with httpx2.Client(http2=self.protocol == "http2", verify=self.ssl_context(), trust_env=False) as client:
+            response = client.request("DELETE" if reset else "GET", self.url + "/connections")
+            response.raise_for_status()
+            return int(response.text)
 
     def close(self) -> None:
         if self.process is not None and self.process.poll() is None:
@@ -497,6 +522,34 @@ async def measure(target: LoadTarget, concurrency: int, settings: Settings) -> t
         return [sample for samples in samples_by_worker for sample in samples], time.perf_counter() - started
 
 
+def measure_window(
+    target: LoadTarget, concurrency: int, settings: Settings, gateway: PerformanceGateway, provider: FastProvider
+) -> tuple[list[Sample], float, ResourceUsage | None]:
+    if not settings.observe_resources:
+        samples, elapsed_s = asyncio.run(measure(target, concurrency, settings))
+        return samples, elapsed_s, None
+    assert gateway.process is not None
+    assert provider.process is not None
+    roots: dict[ProcessRole, int] = {"gateway": gateway.process.pid, "provider": provider.process.pid, "client": os.getpid()}
+    provider.connections(reset=True)
+    before_cpu = process_tree_times(roots)
+    cpu_started_at = time.perf_counter()
+    samples, elapsed_s = asyncio.run(measure(target, concurrency, settings))
+    cpu_elapsed_s = time.perf_counter() - cpu_started_at
+    after_cpu = process_tree_times(roots)
+    consumed = {role: {pid: seconds - before_cpu[role].get(pid, 0) for pid, seconds in processes.items()} for role, processes in after_cpu.items()}
+    return (
+        samples,
+        elapsed_s,
+        ResourceUsage(
+            elapsed_s=cpu_elapsed_s,
+            cpu_seconds={role: sum(processes.values()) for role, processes in consumed.items()},
+            gateway_cpu_seconds_by_pid=consumed["gateway"],
+            provider_connections=provider.connections(),
+        ),
+    )
+
+
 def sized_text(size: int, default: str) -> str:
     return default if size == len(default.encode()) else "x" * size
 
@@ -516,6 +569,7 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
     expected_text = sized_text(settings.response_bytes, TEXT)
     gateway.executable = str(executable.resolve())
     gateway.reload_interval_s = 3600
+    gateway.max_connections = settings.max_connections
     gateway.environment["SSL_CERT_FILE"] = str(providers["http2"].ca_path)
     gateway.environment["STUB_HTTP1_API_KEY"] = UPSTREAM_KEY
     gateway.environment["STUB_HTTP2_API_KEY"] = UPSTREAM_KEY
@@ -545,21 +599,20 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 for protocol in providers
             ],
         }
-        gateway.start()
+        gateway.start(settings.workers)
         for scenario, concurrency, provider_protocol in workloads(settings):
             provider = providers[provider_protocol]
             event_store: EventStore = "devnull" if scenario == "buffered_devnull" else "sqlite"
             if gateway.event_store != event_store:
                 gateway.stop()
                 gateway.event_store = event_store
-                gateway.start()
+                gateway.start(settings.workers)
             if scenario == "policies":
                 gateway.stop()
                 for priority in range(POLICY_COUNT):
                     gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 100}], priority=priority)
-                gateway.start()
-            direct = scenario == "upstream"
-            body = request_body(scenario, provider_protocol, direct=direct, request_bytes=settings.request_bytes)
+                gateway.start(settings.workers)
+            body = request_body(scenario, provider_protocol, direct=scenario == "upstream", request_bytes=settings.request_bytes)
 
             def window(
                 proxied: bool,
@@ -569,19 +622,19 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 provider: FastProvider,
             ) -> Measurement:
                 url = gateway.url + "/inf/v1/chat/completions" if proxied else provider.url + "/chat/completions"
-                samples, elapsed_s = asyncio.run(
-                    measure(
-                        LoadTarget(
-                            url=url,
-                            headers=gateway.headers("openai_chat_completions") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
-                            body=body if proxied else request_body(scenario, provider.protocol, direct=True, request_bytes=settings.request_bytes),
-                            http2=not proxied and provider.protocol == "http2",
-                            verify=provider.ssl_context(),
-                            expected_text=expected_text,
-                        ),
-                        concurrency,
-                        settings,
-                    )
+                samples, elapsed_s, resources = measure_window(
+                    LoadTarget(
+                        url=url,
+                        headers=gateway.headers("openai_chat_completions") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
+                        body=body if proxied else request_body(scenario, provider.protocol, direct=True, request_bytes=settings.request_bytes),
+                        http2=not proxied and provider.protocol == "http2",
+                        verify=provider.ssl_context(),
+                        expected_text=expected_text,
+                    ),
+                    concurrency,
+                    settings,
+                    gateway,
+                    provider,
                 )
                 return Measurement(
                     revision=revision,
@@ -592,10 +645,11 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                     elapsed_s=elapsed_s,
                     latency_ms=[sample.latency_ms for sample in samples],
                     first_content_ms=[sample.first_content_ms for sample in samples],
+                    resources=resources,
                 )
 
             before = window(False, scenario, concurrency, body, provider)
-            if direct:
+            if scenario == "upstream":
                 measurements.append(before)
                 continue
             proxied = window(True, scenario, concurrency, body, provider)
@@ -619,22 +673,12 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
 def run_round(  # noqa: PLR0913 one benchmark round pairs the measured workload with its revision's fixture harness
     directory: Path, executable: Path, revision: Revision, round_number: int, settings: Settings, *, harness_directory: Path
 ) -> RevisionMeasurements:
-    worker = """import runpy, sys
+    worker = """import json, runpy, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
+sys.path.insert(1, str(Path(sys.argv[2]).parent))
 performance = runpy.run_path(sys.argv[2])
-settings = performance["Settings"](
-    float(sys.argv[7]),
-    int(sys.argv[8]),
-    float(sys.argv[9]),
-    int(sys.argv[10]),
-    int(sys.argv[11]),
-    int(sys.argv[12]),
-    float(sys.argv[13]),
-    float(sys.argv[14]),
-    float(sys.argv[15]),
-    None if sys.argv[16] == "all" else sys.argv[16],
-)
+settings = performance["Settings"](**json.loads(sys.argv[7]))
 measurements = performance["run_revision"](Path(sys.argv[3]), Path(sys.argv[4]), sys.argv[5], int(sys.argv[6]), settings)
 print(measurements.model_dump_json())
 """
@@ -649,16 +693,7 @@ print(measurements.model_dump_json())
             str(executable.resolve()),
             revision,
             str(round_number),
-            str(settings.duration_s),
-            str(settings.warmup),
-            str(settings.upstream_delay_ms),
-            str(settings.request_bytes),
-            str(settings.response_bytes),
-            str(settings.stream_chunks),
-            str(settings.stream_chunk_delay_ms),
-            str(settings.client_read_delay_ms),
-            str(settings.request_timeout_s),
-            settings.scenario or "all",
+            json.dumps(settings._asdict()),
         ],
         check=True,
         stdout=subprocess.PIPE,
@@ -724,7 +759,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
     changes = comparisons(measurements)
     overhead_changes = overhead_comparisons(overhead_measurements)
     report = {
-        "schema_version": 4,
+        "schema_version": 5,
         "overhead_methodology": OVERHEAD_METHOD,
         "overhead_measurements": [{**measurement.model_dump(), "derived": measurement.metrics()} for measurement in overhead_measurements],
         "overhead_comparisons": [change.model_dump() for change in overhead_changes],

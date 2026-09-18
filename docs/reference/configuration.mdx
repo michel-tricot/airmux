@@ -74,6 +74,29 @@ configuration file. A local bundle resolves its taxonomy and key references agai
 
 Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle reload defaults to 2 seconds.
 
+## Outbound HTTP connections
+
+The data plane creates one outbound HTTP client per worker. Configure its connection limits under `data_plane.http`:
+
+```yaml
+data_plane:
+  http:
+    max_connections: 100
+    max_keepalive_connections: 20
+```
+
+These are the defaults. Both values must be integers from 1 through 65,535, and the keepalive limit must not exceed
+the total limit. Whole-value environment or file references can supply integer strings. Booleans, fractional values,
+null, and unbounded limits are rejected during configuration validation.
+
+Limits cover all destinations used by the worker's shared client, including providers, remote bundle fetching,
+heartbeats, and usage export. Four workers with `max_connections: 256` can therefore allocate up to 1,024 outbound
+connections across their independent pools. HTTP/2 can multiplex many requests over one connection; the connection
+limit is not a request-concurrency limit.
+
+Connect, read, write, and pool timeouts remain 5, 120, 30, and 5 seconds respectively. Idle keepalive expiry remains
+5 seconds. Changing these settings requires restarting the gateway.
+
 ## Event outboxes
 
 | Kind      | Use                                                                            |

@@ -104,3 +104,23 @@ def test_invalid_stream_mode_returns_a_json_error(dialect, api_key, dp_app):
     assert response.status_code == 400
     assert response.headers["content-type"] == "application/json"
     assert "invalid_request" in response.json()["error"].values()
+
+
+@pytest.mark.parametrize("dialect", REGISTRY)
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        (b"{", "the request body must be valid JSON"),
+        (b'{"content":"\xff"}', "the request body must be valid JSON"),
+        (b"{} trailing", "the request body must be valid JSON"),
+        *[(body, "the request body must be a JSON object") for body in (b"[]", b"null", b"true", b"1", b'"text"')],
+    ],
+)
+@respx.mock
+def test_json_boundary_preserves_rejection_details(dialect, body, message, api_key, dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(REGISTRY[dialect].path, headers={"Authorization": f"Bearer {api_key}"}, content=body)
+    assert response.status_code == 400
+    assert response.json()["error"]["message"] == message
+    assert "invalid_request" in response.json()["error"].values()

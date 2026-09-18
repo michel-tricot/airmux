@@ -181,7 +181,7 @@ async def test_mid_stream_error_event_becomes_sse_error(metering, http_client):
     log = sse(hi) + sse({"error": {"code": "overloaded", "message": "try later"}})
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client, metrics))]
-    assert any(b'"code": "overloaded"' in c for c in chunks)
+    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "overloaded" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
     assert 'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0' in metrics.render().decode()
 
@@ -192,7 +192,7 @@ async def test_stream_ending_before_the_provider_terminal_becomes_sse_error(mete
     incomplete = TEXT_LOG.removesuffix(b"data: [DONE]\n\n")
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=incomplete))
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
-    assert any(b'"code": "invalid_upstream_response"' in chunk for chunk in chunks)
+    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
 
 
@@ -201,7 +201,7 @@ async def test_malformed_stream_event_becomes_sse_error(metering, http_client):
     ctx, outbox = metering
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=b"data: not-json\n\n"))
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
-    assert any(b'"code": "invalid_upstream_response"' in chunk for chunk in chunks)
+    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
 
 

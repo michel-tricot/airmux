@@ -149,6 +149,8 @@ jobs:
           artifact-id: ${{ needs.package.outputs.artifact-id }}
       - name: Validate performance harness coverage
         run: uv run --no-sync pytest -m performance tests/acceptance/gateway --junitxml=performance-results/tests.xml
+      - name: Measure JSON codec costs
+        run: uv run --no-sync python tests/acceptance/gateway/performance_codecs.py --output performance-results/codecs.json
       - name: Compare repeated performance samples
         run: |
           uv run --no-sync python tests/acceptance/gateway/performance.py --rounds 5 \
@@ -163,6 +165,35 @@ jobs:
         with:
           name: performance-${{ needs.resolve.outputs.sha }}
           path: performance-results
+          retention-days: 90
+
+  performance-scaling:
+    needs: [resolve, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOCKER_HOST: unix:///tmp/airmux-no-docker.sock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup-python
+      - uses: ./.github/actions/install-candidate
+        with:
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
+      - name: Measure gateway worker and connection pool scaling
+        run: |
+          uv run --no-sync python tests/acceptance/gateway/performance_scaling.py \
+            --candidate-bin "$AIRMUX_GATEWAY_BIN" --candidate-revision "${{ needs.resolve.outputs.sha }}" \
+            --output scaling-results
+          cat scaling-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        continue-on-error: true
+        with:
+          name: scaling-${{ needs.resolve.outputs.sha }}
+          path: scaling-results
           retention-days: 90
 
   live-providers:

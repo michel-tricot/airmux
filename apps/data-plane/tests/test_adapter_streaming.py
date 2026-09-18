@@ -309,10 +309,11 @@ def test_a_nonterminal_event_without_a_completed_response_is_rejected(kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_a_malformed_stream_event_is_rejected(kind):
+@pytest.mark.parametrize("payload", [b"not-json", b'{"text":"\xff"}', b"[]", b"null", b"42", b"{} trailing"])
+def test_a_malformed_stream_event_is_rejected(kind, payload):
     adapter = _adapter(kind)
     state = adapter.new_stream_state(CTX)
-    (event,) = list(adapter.frame(b"data: not-json\n\n", state))
+    (event,) = list(adapter.frame(b"data: " + payload + b"\n\n", state))
     with pytest.raises(ValueError, match="invalid upstream stream event"):
         adapter.transform_stream_event(event, state)
 

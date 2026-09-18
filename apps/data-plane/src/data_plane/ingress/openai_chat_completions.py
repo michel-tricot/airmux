@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import time
 from typing import TYPE_CHECKING, Any
 
-from starlette.responses import JSONResponse, Response
+from pydantic_core import to_json
+from starlette.responses import Response
 
 from data_plane.canonical import (
     CanonicalAdjustment,
@@ -85,7 +85,7 @@ class OpenAIResponseStream:
         return [self._chunk(fmt.DeltaOut(), finish_reason=final.finish_reason), usage_chunk.sse(), DONE]
 
     def error(self, err: CanonicalError) -> list[bytes]:
-        return [b"data: " + json.dumps(_error_body(err.status, err.code, err.message)).encode() + b"\n\n", DONE]
+        return [b"data: " + to_json(_error_body(err.status, err.code, err.message)) + b"\n\n", DONE]
 
 
 def _tool_call_delta(delta: CanonicalToolCallDelta) -> fmt.ToolCallDeltaOut:
@@ -156,10 +156,10 @@ class OpenAIChatCompletionsIngress(IngressAdapter):
         completion = fmt.ChatCompletionOut(
             id=final.id, created=int(time.time()), model=final.model, choices=[choice], usage=fmt.usage_out(final.usage), gateway=final.gateway
         )
-        return Response(completion.model_dump_json(exclude_none=True), media_type="application/json")
+        return Response(to_json(completion, by_alias=False, exclude_none=True), media_type="application/json")
 
     def render_error(self, err: CanonicalError) -> Response:
-        return JSONResponse(_error_body(err.status, err.code, err.message), status_code=err.status)
+        return Response(to_json(_error_body(err.status, err.code, err.message)), status_code=err.status, media_type="application/json")
 
     def new_stream(self) -> OpenAIResponseStream:
         return OpenAIResponseStream()

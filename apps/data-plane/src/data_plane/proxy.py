@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass
@@ -12,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import httpx2
 from pydantic import ValidationError
+from pydantic_core import from_json
 from starlette.responses import Response
 
 from airmux_runtime.observability import log_event
@@ -84,8 +84,8 @@ async def complete(request: Request, context: InferenceContext, ingress: Ingress
 
 async def _body(request: Request) -> dict[str, Any]:
     try:
-        body = json.loads(await request.body())
-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        body = from_json(await request.body())
+    except ValueError as error:
         raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "the request body must be valid JSON") from error
     if not isinstance(body, dict):
         raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "the request body must be a JSON object")

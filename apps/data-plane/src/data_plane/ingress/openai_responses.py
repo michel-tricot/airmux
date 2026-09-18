@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from starlette.responses import JSONResponse, Response
+from pydantic_core import to_json
+from starlette.responses import Response
 
 from data_plane.canonical import (
     CanonicalAdjustment,
@@ -164,7 +164,7 @@ class ResponsesStream:
     def _event(self, kind: str, payload: dict[str, Any]) -> bytes:
         body = {"type": kind, **payload, "sequence_number": self.sequence}
         self.sequence += 1
-        return b"event: " + kind.encode() + b"\n" + sse(json.dumps(body, separators=(",", ":")).encode())
+        return b"event: " + kind.encode() + b"\n" + sse(to_json(body))
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
         self.id, self.model, self.created_at = str(ctx.request_id), ctx.model.model_id, int(time.time())
@@ -287,10 +287,10 @@ class OpenAIResponsesIngress(IngressAdapter):
         metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=int(time.time()))
         body = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
         body["gateway"] = final.gateway.model_dump(mode="json")
-        return JSONResponse(body)
+        return Response(to_json(body), media_type="application/json")
 
     def render_error(self, err: CanonicalError) -> Response:
-        return JSONResponse(_error(err.status, err.code, err.message), status_code=err.status)
+        return Response(to_json(_error(err.status, err.code, err.message)), status_code=err.status, media_type="application/json")
 
     def new_stream(self) -> ResponsesStream:
         return ResponsesStream()

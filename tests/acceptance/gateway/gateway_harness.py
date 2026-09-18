@@ -107,6 +107,7 @@ class Gateway:
         self.bundle_path = directory / "bundle.yml"
         self.events_path = directory / "usage/events.jsonl"
         self.reload_interval_s = 0.05
+        self.dev = False
         self.executable = os.environ.get("AIRMUX_GATEWAY_BIN", str(Path(sys.executable).parent / "airmux"))
         self.environment = {**os.environ, "STUB_API_KEY": UPSTREAM_KEY, "BACKUP_API_KEY": UPSTREAM_KEY, "DOCKER_HOST": "unix:///no-docker.sock"}
         self.providers: list[Upstream] = []
@@ -202,7 +203,18 @@ class Gateway:
 
     def launch(self, workers: int = 1) -> None:
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment
-            [self.executable, "gateway", "serve", "--config", str(self.config_path), "--port", str(self.port or 0), "--workers", str(workers)],
+            [
+                self.executable,
+                "gateway",
+                "serve",
+                "--config",
+                str(self.config_path),
+                "--port",
+                str(self.port or 0),
+                "--workers",
+                str(workers),
+                *(["--dev"] if self.dev else []),
+            ],
             cwd=self.directory.parent,
             env=self.environment,
             stdout=self.log,

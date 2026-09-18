@@ -94,14 +94,13 @@ so changes to the workload apply equally to both versions.
 
 `performance.py` measures HTTP/1.1 buffered latency and throughput with SQLite and dev-null event collection at
 concurrency 1, 8 and 32. The dev-null workload also runs at concurrency 128, above the gateway's 100-connection
-provider pool, to expose assignment contention. HTTP/2 dev-null workloads run at concurrency 1 and 32, with
+provider pool, to expose assignment contention. HTTP/2 dev-null workloads run at concurrency 1, 32 and 128, with
 concurrency 32 streaming coverage. Direct HTTP/1.1 controls run at concurrency 1, 32 and 128; direct HTTP/2 controls
 run at concurrency 1 and 32. Streaming records time to the first non-empty text delta, and the policy workload records
 latency with 100 applicable policies. These are representative OpenAI Chat Completions workloads; the correctness
 suite covers the full dialect and provider-family matrix. Use `--request-bytes`, `--response-bytes`, `--stream-chunks`,
 `--stream-chunk-delay-ms`, `--client-read-delay-ms`, `--upstream-delay-ms`, `--request-timeout-s` and `--scenario` for
-focused payload, pacing, backpressure and provider-delay studies without expanding the nightly matrix. Worker scaling
-and real providers need separate workloads before drawing conclusions about those paths.
+focused payload, pacing, backpressure and provider-delay studies without expanding the nightly matrix. The separate scaling experiment below measures worker and pool limits. Real providers need their own workloads.
 
 Each workload warms persistent connections before a two-second closed-loop load window. Five rounds alternate
 base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first
@@ -188,7 +187,53 @@ job runs it against the independently installed candidate wheel. Repeating the b
 installed versions with the same controls and exact metering counts.
 
 Run benchmarks alone, without pytest parallelization or other local load. Full-stack scenarios protect durable export
-correctness; remote polling/export performance and worker scaling need separate benchmark workloads.
+correctness; remote polling/export performance needs separate benchmark workloads.
+
+## Codec and capacity experiments
+
+Use the installed Pydantic Core implementation to compare request decoding, provider body encoding, and stream-event
+parsing against the previous stdlib operations. Encoding includes Pydantic model dumping and provider alias mapping:
+
+```bash
+uv run python tests/acceptance/gateway/performance_codecs.py --output /tmp/codecs.json
+```
+
+Run the paired benchmark above three times with distinct output directories: once with `--scenario buffered_devnull`,
+once with `--scenario buffered_devnull --request-bytes 262144`, and once with
+`--scenario stream --response-bytes 8192 --stream-chunks 256`. The streaming fixture emits 256 content events plus
+finish, usage, and terminal events. `--request-bytes` sizes the prompt text; JSON framing adds bytes to the HTTP body.
+Use the same interpreter, locked dependency versions, and machine for both installed revisions. Inspect absolute
+changes in overhead and requests per second alongside codec timings. Microbenchmarks do not establish gateway speedups.
+
+Run the candidate's worker and pool matrix separately:
+
+```bash
+uv run python tests/acceptance/gateway/performance_scaling.py \
+  --candidate-bin /path/to/candidate/bin/airmux \
+  --candidate-revision CANDIDATE_SHA \
+  --output /tmp/gateway-scaling
+```
+
+Nightly CI runs codecs with the paired benchmark and runs scaling in a separate job, retaining artifacts for 90 days.
+The output directory must be new. Three rounds reverse execution order on alternate rounds. Each round covers
+workers 1/2/4, total connections 100/256 per worker, concurrency 32/128, and provider HTTP/1.1/HTTP/2, for 24 cases.
+Keepalive stays at 20 per worker; timeouts and expiry stay at their defaults. All cases use buffered dev-null collection
+with authentication, policy, translation, usage logging, and metrics active. The ordinary base/candidate benchmark
+uses each binary's default configuration; the scaling experiment explicitly supplies the new pool settings.
+
+`measurements.json` retains each case's settings, raw direct/proxied timings, process CPU deltas, and connection counts.
+`summary.md` reports medians for throughput, p50/p95/p99 latency, direct-controlled overhead, and CPU usage in cores.
+CPU uses `/proc` on Linux or `ps` on macOS and covers warmup plus load. Gateway CPU includes its workers and reports
+individual PIDs in the raw data; the client count excludes children. Provider connections are distinct inference
+client addresses observed during that window, including connection churn, rather than a peak-open-socket count.
+Address tracking is enabled only for the scaling experiment and captures no request payloads.
+
+Caller traffic stays HTTP/1.1. HTTP/2 direct controls multiplex over one connection; several gateway workers can each
+open a provider connection. Account for this topology when interpreting scaling. If throughput improves with workers
+while one worker consumes one core, inspect CPU/event-loop work. If increasing the pool helps at fixed worker count,
+inspect connection assignment and queueing. Check provider and load-generator CPU before attributing a plateau to the
+gateway. Do not infer a pool bottleneck from configured limits alone. The matrix reports measurements without changing
+production defaults or imposing timing gates on CI.
 
 ## CI failure display
 

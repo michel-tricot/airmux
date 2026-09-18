@@ -15,7 +15,7 @@ from starlette.routing import Route
 from airmux_runtime.observability import configure_logger, log_event
 from data_plane.budgets import build_budget_backend
 from data_plane.bundle import BundleHolder, build_bundle_source
-from data_plane.config import Config, load_config
+from data_plane.config import Config, HttpConfig, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
@@ -49,10 +49,10 @@ async def readyz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ready"})
 
 
-def _build_http_client() -> httpx2.AsyncClient:
+def _build_http_client(config: HttpConfig) -> httpx2.AsyncClient:
     return httpx2.AsyncClient(
         http2=True,
-        limits=httpx2.Limits(max_connections=100, max_keepalive_connections=20),
+        limits=httpx2.Limits(max_connections=config.max_connections, max_keepalive_connections=config.max_keepalive_connections),
         timeout=httpx2.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
     )
 
@@ -82,7 +82,7 @@ def create_app(config: Config) -> ASGIApp:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         configure_logger(logger, dev=config.dev)
-        async with config.secrets.build() as secret_store, _build_http_client() as http_client:
+        async with config.secrets.build() as secret_store, _build_http_client(config.http) as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
             try:
                 holder = BundleHolder(metrics)

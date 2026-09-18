@@ -41,6 +41,8 @@ def stream_events(text: str, chunks: int) -> list[bytes]:
 async def complete(request: Request) -> Response:
     if request.scope["http_version"] != request.app.state.http_version:
         return Response("Unexpected benchmark HTTP version", status_code=505)
+    if request.app.state.observe_connections:
+        request.app.state.connections.add(request.scope["client"])
     body = json.loads(await request.body())
     stream = bool(body.get("stream"))
     expected = {
@@ -71,6 +73,12 @@ async def ready(request: Request) -> Response:
     return Response("ready")
 
 
+async def connections(request: Request) -> Response:
+    if request.method == "DELETE":
+        request.app.state.connections.clear()
+    return Response(str(len(request.app.state.connections)))
+
+
 async def serve_http2(upstream: ASGIFramework, config: Config) -> None:
     await hypercorn_serve(upstream, config, mode="asgi")
 
@@ -86,8 +94,17 @@ def serve(  # noqa: PLR0913, PLR0917 CLI flags define the benchmark workload
     stream_chunk_delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0,
     certfile: Annotated[str | None, typer.Option()] = None,
     keyfile: Annotated[str | None, typer.Option()] = None,
+    observe_connections: Annotated[bool, typer.Option()] = False,
 ) -> None:
-    upstream = Starlette(routes=[Route("/chat/completions", complete, methods=["POST"]), Route("/readyz", ready)])
+    upstream = Starlette(
+        routes=[
+            Route("/chat/completions", complete, methods=["POST"]),
+            Route("/readyz", ready),
+            Route("/connections", connections, methods=["GET", "DELETE"]),
+        ]
+    )
+    upstream.state.observe_connections = observe_connections
+    upstream.state.connections = set()
     upstream.state.delay_ms = delay_ms
     upstream.state.http_version = "2" if http_version == "http2" else "1.1"
     upstream.state.request_text = sized_text(request_bytes, "hi")

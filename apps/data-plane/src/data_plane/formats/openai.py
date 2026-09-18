@@ -11,6 +11,7 @@ import json
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalAssistantMessage,
@@ -633,7 +634,7 @@ class ChatCompletionChunkOut(BaseModel):
     gateway: CanonicalGatewayInfo | None = None
 
     def sse(self) -> bytes:
-        return b"data: " + self.model_dump_json(exclude_none=True).encode() + b"\n\n"
+        return b"data: " + to_json(self, by_alias=False, exclude_none=True) + b"\n\n"
 
 
 def usage_out(usage: CanonicalUsage) -> UsageOut:

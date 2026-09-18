@@ -86,6 +86,30 @@ def test_defaults_apply_to_a_standalone_data_plane(clean_env):
     assert isinstance(config.events, DevNullOutboxConfig)
     assert isinstance(config.budget, NoBudgetConfig)
     assert config.bundle.reload_interval_s == 2.0
+    assert config.http.max_connections == 100
+    assert config.http.max_keepalive_connections == 20
+
+
+def test_http_limits_accept_environment_references(clean_env, monkeypatch):
+    monkeypatch.setenv("PROVIDER_CONNECTIONS", "256")
+    (clean_env / "airmux.yml").write_text(
+        "data_plane:\n  bundle: {kind: local, path: bundle.yml}\n"
+        "  http:\n    max_connections: ${env:PROVIDER_CONNECTIONS}\n    max_keepalive_connections: 64\n"
+    )
+    config = load_config()
+    assert (config.http.max_connections, config.http.max_keepalive_connections) == (256, 64)
+
+
+@pytest.mark.parametrize("field", ["max_connections", "max_keepalive_connections"])
+@pytest.mark.parametrize("value", [0, -1, 65536, None, True, 1.5, 100.0, "unlimited", "1.5"])
+def test_http_limits_reject_invalid_configuration(field, value):
+    with pytest.raises(ValidationError, match=field):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {field: value}})
+
+
+def test_http_keepalive_limit_cannot_exceed_total_connections():
+    with pytest.raises(ValidationError, match="keepalive"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {"max_connections": 10, "max_keepalive_connections": 20}})
 
 
 def test_dev_uses_environment_then_config_then_default(clean_env, monkeypatch):
