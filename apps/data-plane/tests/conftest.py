@@ -37,13 +37,16 @@ from data_plane.egress.base import Ctx
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
 
-respx.mocks.DEFAULT_MOCKER = "httpcore2"
-
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from starlette.testclient import TestClient
     from starlette.types import ASGIApp
+
+
+@pytest.fixture(autouse=True)
+def use_httpcore2_respx(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(respx.mocks, "DEFAULT_MOCKER", "httpcore2")
 
 
 class GatewayTransport(httpx.BaseTransport):
