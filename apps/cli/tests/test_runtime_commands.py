@@ -89,7 +89,7 @@ def test_explicit_missing_configuration_is_an_actionable_error(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize("group", ["gateway", "control-plane"])
-@pytest.mark.parametrize("port", ["0", "65536"])
+@pytest.mark.parametrize("port", ["-1", "65536"])
 def test_serve_rejects_invalid_ports_before_starting(group, port):
     result = runner.invoke(app, [group, "serve", "--port", port])
     assert result.exit_code == 2

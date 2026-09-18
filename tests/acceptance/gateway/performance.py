@@ -5,7 +5,6 @@ import json
 import math
 import os
 import platform
-import socket
 import sqlite3
 import statistics
 import subprocess
@@ -20,6 +19,7 @@ import typer
 import yaml
 from gateway_harness import Gateway, eventually
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
+from tests.acceptance.process_harness import uvicorn_port
 from upstream import TEXT, UPSTREAM_KEY
 
 if TYPE_CHECKING:
@@ -290,17 +290,16 @@ class RevisionMeasurements(BaseModel):
 
 class FastProvider:
     def __init__(self, directory: Path, delay_ms: float) -> None:
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            self.port = listener.getsockname()[1]
+        self.port: int | None = None
         self.delay_ms = delay_ms
-        self.url = f"http://127.0.0.1:{self.port}"
-        self.log = (directory / "upstream.log").open("a", encoding="utf-8")
+        self.url = ""
+        self.log_path = directory / "upstream.log"
+        self.log = self.log_path.open("a", encoding="utf-8")
         self.process: subprocess.Popen[bytes] | None = None
 
     def start(self) -> None:
         self.process = subprocess.Popen(  # noqa: S603 the benchmark starts its trusted local upstream script
-            [sys.executable, str(Path(__file__).with_name("performance_upstream.py")), "--port", str(self.port), "--delay-ms", str(self.delay_ms)],
+            [sys.executable, str(Path(__file__).with_name("performance_upstream.py")), "--port", "0", "--delay-ms", str(self.delay_ms)],
             stdout=self.log,
             stderr=subprocess.STDOUT,
         )
@@ -308,6 +307,11 @@ class FastProvider:
         def ready() -> bool:
             assert self.process is not None
             assert self.process.poll() is None, "benchmark upstream exited before readiness"
+            if self.port is None:
+                self.port = uvicorn_port(self.log_path)
+                if self.port is None:
+                    return False
+                self.url = f"http://127.0.0.1:{self.port}"
             return httpx.get(self.url + "/readyz", timeout=1).status_code == 200
 
         eventually(ready)
@@ -398,28 +402,28 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
     provider = FastProvider(directory, settings.upstream_delay_ms)
     gateway.executable = str(executable.resolve())
     gateway.reload_interval_s = 3600
-    gateway.taxonomy = {
-        "providers": [{"provider_id": "stub", "kind": "openai_compatible", "base_url": provider.url}],
-        "models": [
-            {
-                "model_id": "model-a",
-                "provider_id": "stub",
-                "upstream_model": "upstream-model-a",
-                "input_price_per_mtok": "2",
-                "output_price_per_mtok": "5",
-                "context_window": 128000,
-                "max_output_tokens": 4096,
-                "input_modalities": ["text"],
-                "output_modalities": ["text"],
-                "capabilities": ["streaming"],
-            }
-        ],
-    }
     measurements: list[Measurement] = []
     overhead_measurements: list[OverheadMeasurement] = []
     event_count = 0
     try:
         provider.start()
+        gateway.taxonomy = {
+            "providers": [{"provider_id": "stub", "kind": "openai_compatible", "base_url": provider.url}],
+            "models": [
+                {
+                    "model_id": "model-a",
+                    "provider_id": "stub",
+                    "upstream_model": "upstream-model-a",
+                    "input_price_per_mtok": "2",
+                    "output_price_per_mtok": "5",
+                    "context_window": 128000,
+                    "max_output_tokens": 4096,
+                    "input_modalities": ["text"],
+                    "output_modalities": ["text"],
+                    "capabilities": ["streaming"],
+                }
+            ],
+        }
         gateway.start()
         for scenario, concurrency in WORKLOADS:
             event_store: EventStore = "devnull" if scenario == "buffered_devnull" else "sqlite"
