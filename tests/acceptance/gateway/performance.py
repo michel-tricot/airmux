@@ -21,7 +21,7 @@ import trustme
 import typer
 import yaml
 from gateway_harness import Gateway, eventually
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveFloat, PositiveInt, model_validator
 from upstream import TEXT, UPSTREAM_KEY
 
 if TYPE_CHECKING:
@@ -62,6 +62,17 @@ class Settings(NamedTuple):
     duration_s: float
     warmup: int
     upstream_delay_ms: float
+    request_bytes: int = 2
+    response_bytes: int = len(TEXT.encode())
+    stream_chunks: int = 1
+    stream_chunk_delay_ms: float = 0
+    client_read_delay_ms: float = 0
+    request_timeout_s: float = 10
+    scenario: Scenario | None = None
+
+
+def workloads(settings: Settings) -> tuple[tuple[Scenario, int, ProviderProtocol], ...]:
+    return tuple(workload for workload in WORKLOADS if settings.scenario is None or workload[0] == settings.scenario)
 
 
 class PerformanceGateway(Gateway):
@@ -315,17 +326,21 @@ def overhead_comparisons(measurements: list[OverheadMeasurement]) -> list[Overhe
 class RevisionMeasurements(BaseModel):
     measurements: list[Measurement]
     overhead: list[OverheadMeasurement]
-    metering_events: PositiveInt
+    metering_events: NonNegativeInt
 
 
 PROVIDER_LISTENER = re.compile(r"(?:Uvicorn running on|Running on) https?://127\.0\.0\.1:(\d+)")
 
 
 class FastProvider:
-    def __init__(self, directory: Path, delay_ms: float, protocol: ProviderProtocol) -> None:
+    def __init__(self, directory: Path, protocol: ProviderProtocol, settings: Settings) -> None:
         self.port: int | None = None
-        self.delay_ms = delay_ms
+        self.delay_ms = settings.upstream_delay_ms
         self.protocol = protocol
+        self.request_bytes = settings.request_bytes
+        self.response_bytes = settings.response_bytes
+        self.stream_chunks = settings.stream_chunks
+        self.stream_chunk_delay_ms = settings.stream_chunk_delay_ms
         self.url = ""
         self.log_path = directory / f"upstream-{protocol}.log"
         self.log = self.log_path.open("a", encoding="utf-8")
@@ -354,6 +369,14 @@ class FastProvider:
                 str(self.delay_ms),
                 "--http-version",
                 self.protocol,
+                "--request-bytes",
+                str(self.request_bytes),
+                "--response-bytes",
+                str(self.response_bytes),
+                "--stream-chunks",
+                str(self.stream_chunks),
+                "--stream-chunk-delay-ms",
+                str(self.stream_chunk_delay_ms),
                 *(["--certfile", str(self.cert_path), "--keyfile", str(self.key_path)] if self.protocol == "http2" else []),
             ],
             stdout=self.log,
@@ -399,9 +422,17 @@ class LoadTarget(NamedTuple):
     body: dict[str, object]
     http2: bool
     verify: ssl.SSLContext
+    expected_text: str = TEXT
 
 
-async def request(client: httpx2.AsyncClient, url: str, headers: dict[str, str], body: dict[str, object]) -> Sample:
+async def request(  # noqa: PLR0913, PLR0917 benchmark request inputs mirror the HTTP exchange
+    client: httpx2.AsyncClient,
+    url: str,
+    headers: dict[str, str],
+    body: dict[str, object],
+    expected_text: str = TEXT,
+    client_read_delay_ms: float = 0,
+) -> Sample:
     started = time.perf_counter()
     first_content = 0.0
     async with client.stream("POST", url, headers=headers, json=body) as response:
@@ -420,12 +451,14 @@ async def request(client: httpx2.AsyncClient, url: str, headers: dict[str, str],
                             if not texts:
                                 first_content = time.perf_counter()
                             texts.append(text)
-            assert "".join(texts) == TEXT, "benchmark stream did not return the expected text"
+                if line and client_read_delay_ms:
+                    await asyncio.sleep(client_read_delay_ms / 1000)
+            assert "".join(texts) == expected_text, "benchmark stream did not return the expected text"
             assert terminal, "benchmark stream did not return the expected terminal"
         else:
             response_body = json.loads(await response.aread())
             first_content = time.perf_counter()
-            assert response_body["choices"][0]["message"]["content"] == TEXT, "benchmark response did not return the expected text"
+            assert response_body["choices"][0]["message"]["content"] == expected_text, "benchmark response did not return the expected text"
     finished = time.perf_counter()
     return Sample((finished - started) * 1000, (first_content - started) * 1000)
 
@@ -437,7 +470,7 @@ async def measure(target: LoadTarget, concurrency: int, settings: Settings) -> t
                 httpx2.AsyncClient(
                     http2=target.http2,
                     verify=target.verify,
-                    timeout=10,
+                    timeout=settings.request_timeout_s,
                     trust_env=False,
                     limits=httpx2.Limits(max_connections=1, max_keepalive_connections=1),
                 )
@@ -448,7 +481,7 @@ async def measure(target: LoadTarget, concurrency: int, settings: Settings) -> t
 
         async def warm(client: httpx2.AsyncClient) -> None:
             for _ in range(settings.warmup):
-                await request(client, target.url, target.headers, target.body)
+                await request(client, target.url, target.headers, target.body, target.expected_text, settings.client_read_delay_ms)
 
         await asyncio.gather(*(warm(client) for client in workers))
         started = time.perf_counter()
@@ -457,17 +490,21 @@ async def measure(target: LoadTarget, concurrency: int, settings: Settings) -> t
         async def worker(client: httpx2.AsyncClient) -> list[Sample]:
             samples: list[Sample] = []
             while time.perf_counter() < deadline:
-                samples.append(await request(client, target.url, target.headers, target.body))
+                samples.append(await request(client, target.url, target.headers, target.body, target.expected_text, settings.client_read_delay_ms))
             return samples
 
         samples_by_worker = await asyncio.gather(*(worker(client) for client in workers))
         return [sample for samples in samples_by_worker for sample in samples], time.perf_counter() - started
 
 
-def request_body(scenario: Scenario, provider_protocol: ProviderProtocol, *, direct: bool) -> dict[str, object]:
+def sized_text(size: int, default: str) -> str:
+    return default if size == len(default.encode()) else "x" * size
+
+
+def request_body(scenario: Scenario, provider_protocol: ProviderProtocol, *, direct: bool, request_bytes: int = 2) -> dict[str, object]:
     return {
         "model": "upstream-model-a" if direct else f"model-a-{provider_protocol}",
-        "messages": [{"role": "user", "content": "hi"}],
+        "messages": [{"role": "user", "content": sized_text(request_bytes, "hi")}],
         "max_tokens": 50,
         **({"stream": True, "stream_options": {"include_usage": True}} if scenario == "stream" else {}),
     }
@@ -475,7 +512,8 @@ def request_body(scenario: Scenario, provider_protocol: ProviderProtocol, *, dir
 
 def run_revision(directory: Path, executable: Path, revision: Revision, round_number: int, settings: Settings) -> RevisionMeasurements:
     gateway = PerformanceGateway(directory, f"performance-{revision}-{round_number}")
-    providers = {protocol: FastProvider(directory, settings.upstream_delay_ms, protocol) for protocol in ("http1", "http2")}
+    providers = {protocol: FastProvider(directory, protocol, settings) for protocol in ("http1", "http2")}
+    expected_text = sized_text(settings.response_bytes, TEXT)
     gateway.executable = str(executable.resolve())
     gateway.reload_interval_s = 3600
     gateway.environment["SSL_CERT_FILE"] = str(providers["http2"].ca_path)
@@ -508,7 +546,7 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
             ],
         }
         gateway.start()
-        for scenario, concurrency, provider_protocol in WORKLOADS:
+        for scenario, concurrency, provider_protocol in workloads(settings):
             provider = providers[provider_protocol]
             event_store: EventStore = "devnull" if scenario == "buffered_devnull" else "sqlite"
             if gateway.event_store != event_store:
@@ -521,7 +559,7 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                     gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 100}], priority=priority)
                 gateway.start()
             direct = scenario == "upstream"
-            body = request_body(scenario, provider_protocol, direct=direct)
+            body = request_body(scenario, provider_protocol, direct=direct, request_bytes=settings.request_bytes)
 
             def window(
                 proxied: bool,
@@ -536,9 +574,10 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                         LoadTarget(
                             url=url,
                             headers=gateway.headers("openai_chat_completions") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
-                            body=body if proxied else request_body(scenario, provider.protocol, direct=True),
+                            body=body if proxied else request_body(scenario, provider.protocol, direct=True, request_bytes=settings.request_bytes),
                             http2=not proxied and provider.protocol == "http2",
                             verify=provider.ssl_context(),
+                            expected_text=expected_text,
                         ),
                         concurrency,
                         settings,
@@ -584,7 +623,18 @@ def run_round(  # noqa: PLR0913 one benchmark round pairs the measured workload 
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 performance = runpy.run_path(sys.argv[2])
-settings = performance["Settings"](float(sys.argv[7]), int(sys.argv[8]), float(sys.argv[9]))
+settings = performance["Settings"](
+    float(sys.argv[7]),
+    int(sys.argv[8]),
+    float(sys.argv[9]),
+    int(sys.argv[10]),
+    int(sys.argv[11]),
+    int(sys.argv[12]),
+    float(sys.argv[13]),
+    float(sys.argv[14]),
+    float(sys.argv[15]),
+    None if sys.argv[16] == "all" else sys.argv[16],
+)
 measurements = performance["run_revision"](Path(sys.argv[3]), Path(sys.argv[4]), sys.argv[5], int(sys.argv[6]), settings)
 print(measurements.model_dump_json())
 """
@@ -602,6 +652,13 @@ print(measurements.model_dump_json())
             str(settings.duration_s),
             str(settings.warmup),
             str(settings.upstream_delay_ms),
+            str(settings.request_bytes),
+            str(settings.response_bytes),
+            str(settings.stream_chunks),
+            str(settings.stream_chunk_delay_ms),
+            str(settings.client_read_delay_ms),
+            str(settings.request_timeout_s),
+            settings.scenario or "all",
         ],
         check=True,
         stdout=subprocess.PIPE,
@@ -623,8 +680,27 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
     duration_s: Annotated[float, typer.Option(min=0.1)] = 2,
     warmup: Annotated[int, typer.Option(min=1)] = 20,
     upstream_delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0,
+    request_bytes: Annotated[int, typer.Option(min=1, max=1_048_576)] = 2,
+    response_bytes: Annotated[int, typer.Option(min=1, max=1_048_576)] = len(TEXT.encode()),
+    stream_chunks: Annotated[int, typer.Option(min=1, max=4096)] = 1,
+    stream_chunk_delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0,
+    client_read_delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0,
+    request_timeout_s: Annotated[float, typer.Option(min=1, max=120)] = 10,
+    scenario: Annotated[Scenario | None, typer.Option()] = None,
 ) -> None:
     output.mkdir(parents=True, exist_ok=True)
+    settings = Settings(
+        duration_s,
+        warmup,
+        upstream_delay_ms,
+        request_bytes,
+        response_bytes,
+        stream_chunks,
+        stream_chunk_delay_ms,
+        client_read_delay_ms,
+        request_timeout_s,
+        scenario,
+    )
     measurements: list[Measurement] = []
     overhead_measurements: list[OverheadMeasurement] = []
     event_counts: list[dict[str, str | int]] = []
@@ -639,7 +715,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
                 base_bin if revision == "base" else candidate_bin,
                 revision,
                 round_number,
-                Settings(duration_s, warmup, upstream_delay_ms),
+                settings,
                 harness_directory=base_harness if revision == "base" else Path(__file__).parent,
             )
             measurements.extend(result.measurements)
@@ -648,12 +724,18 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
     changes = comparisons(measurements)
     overhead_changes = overhead_comparisons(overhead_measurements)
     report = {
-        "schema_version": 3,
+        "schema_version": 4,
         "overhead_methodology": OVERHEAD_METHOD,
         "overhead_measurements": [{**measurement.model_dump(), "derived": measurement.metrics()} for measurement in overhead_measurements],
         "overhead_comparisons": [change.model_dump() for change in overhead_changes],
         "metering_event_counts": event_counts,
         "upstream_delay_ms": upstream_delay_ms,
+        "request_bytes": request_bytes,
+        "response_bytes": response_bytes,
+        "stream_chunks": stream_chunks,
+        "stream_chunk_delay_ms": stream_chunk_delay_ms,
+        "client_read_delay_ms": client_read_delay_ms,
+        "scenario": scenario,
         "connection_settings": {
             "caller_http_version": "1.1",
             "provider_http_versions": {"http1": "1.1", "http2": "2"},
@@ -662,7 +744,7 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
             "max_connections_per_direct_client": 1,
             "keepalive_connections_per_direct_client": 1,
             "keepalive_expiry_s": 5,
-            "timeout_s": 10,
+            "timeout_s": request_timeout_s,
         },
         "upstream_settings": {"server_keepalive_timeout_s": 3600, "http2_keepalive_max_requests": 1_000_000},
         "gateway_settings": {
@@ -690,10 +772,10 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
                 "concurrency": concurrency,
                 "provider_protocol": provider_protocol,
                 "event_store": "devnull" if scenario == "buffered_devnull" else "sqlite",
-                "direct_request": request_body(scenario, provider_protocol, direct=True),
-                "proxied_request": request_body(scenario, provider_protocol, direct=False),
+                "direct_request": request_body(scenario, provider_protocol, direct=True, request_bytes=request_bytes),
+                "proxied_request": request_body(scenario, provider_protocol, direct=False, request_bytes=request_bytes),
             }
-            for scenario, concurrency, provider_protocol in WORKLOADS
+            for scenario, concurrency, provider_protocol in workloads(settings)
         ],
         "measurements": [measurement.model_dump() for measurement in measurements],
         "comparisons": [change.model_dump() for change in changes],

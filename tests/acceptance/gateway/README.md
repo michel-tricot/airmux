@@ -98,8 +98,10 @@ provider pool, to expose assignment contention. HTTP/2 dev-null workloads run at
 concurrency 32 streaming coverage. Direct HTTP/1.1 controls run at concurrency 1, 32 and 128; direct HTTP/2 controls
 run at concurrency 1 and 32. Streaming records time to the first non-empty text delta, and the policy workload records
 latency with 100 applicable policies. These are representative OpenAI Chat Completions workloads; the correctness
-suite covers the full dialect and provider-family matrix. Longer prompts, sustained token streams, worker scaling and
-real providers need separate workloads before drawing conclusions about those paths.
+suite covers the full dialect and provider-family matrix. Use `--request-bytes`, `--response-bytes`, `--stream-chunks`,
+`--stream-chunk-delay-ms`, `--client-read-delay-ms`, `--upstream-delay-ms`, `--request-timeout-s` and `--scenario` for
+focused payload, pacing, backpressure and provider-delay studies without expanding the nightly matrix. Worker scaling
+and real providers need separate workloads before drawing conclusions about those paths.
 
 Each workload warms persistent connections before a two-second closed-loop load window. Five rounds alternate
 base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first

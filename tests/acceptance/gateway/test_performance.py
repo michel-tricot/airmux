@@ -347,7 +347,7 @@ def test_performance_round_uses_the_supplied_revision_harness(gateway: Gateway, 
 
 
 async def test_performance_upstream_preserves_idle_connections_between_controls(tmp_path: Path):
-    provider = performance.FastProvider(tmp_path, 0, "http1")
+    provider = performance.FastProvider(tmp_path, "http1", Settings(1, 1, 0))
     try:
         provider.start()
         async with httpx2.AsyncClient(trust_env=False, limits=httpx2.Limits(keepalive_expiry=None)) as client:
@@ -361,7 +361,7 @@ async def test_performance_upstream_preserves_idle_connections_between_controls(
 
 
 async def test_performance_upstream_negotiates_http2_without_rotating_at_1000_requests(tmp_path: Path):
-    provider = performance.FastProvider(tmp_path, 0, "http2")
+    provider = performance.FastProvider(tmp_path, "http2", Settings(1, 1, 0))
     try:
         provider.start()
         async with httpx2.AsyncClient(http2=True, verify=provider.ssl_context(), trust_env=False) as client:
@@ -372,6 +372,30 @@ async def test_performance_upstream_negotiates_http2_without_rotating_at_1000_re
         provider.close()
 
 
+async def test_performance_upstream_supports_sized_payloads_and_chunked_streams(tmp_path: Path):
+    provider = performance.FastProvider(tmp_path, "http1", Settings(1, 1, 0, request_bytes=4096, response_bytes=8192, stream_chunks=8))
+    try:
+        provider.start()
+        body = performance.request_body("stream", "http1", direct=True, request_bytes=4096)
+        async with httpx2.AsyncClient(trust_env=False) as client:
+            sample = await request(
+                client, provider.url + "/chat/completions", {"Authorization": f"Bearer {performance.UPSTREAM_KEY}"}, body, "x" * 8192
+            )
+        assert sample.first_content_ms < sample.latency_ms
+    finally:
+        provider.close()
+
+
 def test_workloads_cover_pool_saturation_and_http2():
     assert ("buffered_devnull", 128, "http1") in performance.WORKLOADS
     assert any(provider_protocol == "http2" and scenario != "upstream" for scenario, _concurrency, provider_protocol in performance.WORKLOADS)
+
+
+def test_workload_filter_selects_one_scenario():
+    settings = Settings(1, 1, 0, scenario="stream")
+    assert performance.workloads(settings) == (("stream", 1, "http1"), ("stream", 32, "http2"))
+
+
+def test_devnull_only_result_accepts_zero_durable_events():
+    result = performance.RevisionMeasurements(measurements=[], overhead=[], metering_events=0)
+    assert result.metering_events == 0
