@@ -118,7 +118,7 @@
                 "pages": [
                   {
                     "group": "Organizations",
-                    "pages": ["GET /api/v1/organizations", "POST /api/v1/organizations"]
+                    "pages": ["GET /api/v1/organizations", "POST /api/v1/organizations", "GET /api/v1/instance/organizations/summary"]
                   },
                   {
                     "group": "Users",

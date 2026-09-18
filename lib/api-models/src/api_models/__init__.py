@@ -898,6 +898,17 @@ class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
     root: Annotated[Literal["owner", "admin", "member", "data_plane"], Field(title="OrgRole")]
 
 
+class OrgSummaryOut(BaseModel):
+    total: Annotated[
+        int,
+        Field(
+            description="Number of organizations currently on the instance, including personal organizations",
+            ge=0,
+            title="Total",
+        ),
+    ]
+
+
 class Name2(RootModel[str]):
     root: Annotated[
         str,
@@ -1851,6 +1862,10 @@ class EnvelopeOrgInvitationRevokedOut(BaseModel):
 
 class EnvelopeOrgOut(BaseModel):
     data: OrgOut
+
+
+class EnvelopeOrgSummaryOut(BaseModel):
+    data: OrgSummaryOut
 
 
 class EnvelopePasswordChangedOut(BaseModel):

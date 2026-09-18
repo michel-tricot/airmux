@@ -1,10 +1,35 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from fastapi.testclient import TestClient
 from helpers import PROVIDER, setup_control_plane
 
 from contract import uuid7
+
+
+def test_org_summary_counts_the_instance_beyond_one_page_and_tracks_deletion(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as client:
+        summary = "/api/v1/instance/organizations/summary"
+        assert client.get(summary, headers=root).json() == {"data": {"total": 0}}
+        organizations = [
+            client.post("/api/v1/organizations", json={"name": f"Organization {index}"}, headers=root).json()["data"] for index in range(51)
+        ]
+        first = client.get("/api/v1/organizations", headers=root).json()
+        assert len(first["data"]) == 50
+        assert first["page"]["next_cursor"] is not None
+        assert client.get(summary, headers=root).json() == {"data": {"total": 51}}
+        second = client.get("/api/v1/organizations", params={"cursor": first["page"]["next_cursor"]}, headers=root).json()
+        assert len(second["data"]) == 1
+        assert client.get(summary, headers=root).json() == {"data": {"total": 51}}
+        assert client.delete(f"/api/v1/organizations/{organizations[0]['id']}", headers=root).status_code == 200
+        assert client.get(summary, headers=root).json() == {"data": {"total": 50}}
+        assert client.get(summary).status_code == 401
+        assert client.get(summary, headers=cp.headers(permissions=["principals.read"])).status_code == 403
+        assert client.get(summary, headers=cp.headers(org_id=UUID(organizations[1]["id"]), permissions=["organizations.read"])).status_code == 403
 
 
 def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):

@@ -892,6 +892,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
+  /api/v1/instance/organizations/summary:
+    get:
+      tags:
+      - Instance Organizations
+      summary: Get Org Summary
+      description: 'Count all organizations on the instance, independent of collection pagination.
+
+
+        Required permission: `organizations.read`.'
+      operationId: get_org_summary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgSummaryOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
   /api/v1/instance/data-planes:
     get:
       tags:
@@ -5053,6 +5087,14 @@ components:
       required:
       - data
       title: Envelope[OrgServiceAccountCreatedOut]
+    Envelope_OrgSummaryOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgSummaryOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgSummaryOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -6593,6 +6635,17 @@ components:
       - name
       - management_key
       title: OrgServiceAccountIn
+    OrgSummaryOut:
+      properties:
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+          description: Number of organizations currently on the instance, including personal organizations
+      type: object
+      required:
+      - total
+      title: OrgSummaryOut
     OrgUpdate:
       properties:
         name:

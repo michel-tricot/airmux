@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
 import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatDate } from '@/lib/format';
-import { useOrgs } from '@/features/orgs/hooks';
+import { useOrgSummary } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { useInstanceManagementKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
@@ -17,12 +17,12 @@ import { userAccess } from '@/features/users/policy';
 
 export default function Dashboard() {
   const authorization = useAuthorization('instance');
-  const canListOrgs = authorization.can(orgAccess.list);
+  const canReadOrgSummary = authorization.can(orgAccess.summary);
   const canListUsers = authorization.can(userAccess.list);
   const canReadKeys = authorization.can(managementKeyAccess.instance.read);
   const canReadDataPlanes = authorization.can(telemetryAccess.dataPlanes);
   const canReadActivity = authorization.can(telemetryAccess.instanceActivity);
-  const orgsQuery = useOrgs({ enabled: canListOrgs });
+  const orgsQuery = useOrgSummary({ enabled: canReadOrgSummary });
   const usersQuery = useUsers({ enabled: canListUsers });
   const dataPlanesQuery = useDataPlanes({ enabled: canReadDataPlanes });
   const keysQuery = useInstanceManagementKeys(undefined, { enabled: canReadKeys });
@@ -34,7 +34,7 @@ export default function Dashboard() {
   const describeRecord = (entry: { table_name: string; record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const statCards = [
-    ...(canListOrgs ? [{ label: 'Organizations', value: orgsQuery.data?.length, query: orgsQuery, icon: Building2 }] : []),
+    ...(canReadOrgSummary ? [{ label: 'Organizations', value: orgsQuery.data?.total, query: orgsQuery, icon: Building2 }] : []),
     ...(canListUsers ? [{ label: 'Users', value: usersQuery.data?.length, query: usersQuery, icon: Users }] : []),
     ...(canReadKeys
       ? [{ label: 'Management Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key }]
