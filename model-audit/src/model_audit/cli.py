@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
+import traceback
+from functools import partial
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import typer
 import yaml
 from dotenv import load_dotenv
 
+from model_audit import catalog_output
 from model_audit.agent_guides import guide, guides
 from model_audit.cases import coverage, load_cases, load_features
 from model_audit.catalog import load_catalog
@@ -18,7 +23,20 @@ from model_audit.catalog_ops import (
     preflight_source,
     provider_sources,
 )
-from model_audit.catalog_runner import CatalogTask, run_catalog_task
+from model_audit.catalog_tasks import (
+    bootstrap,
+    build_report,
+    discover_parameters,
+    doc_schemas,
+    enrich,
+    extract_schemas,
+    fetch_icons,
+    fetch_models,
+    field_matrix,
+    make_seed,
+    validate,
+)
+from model_audit.catalog_tasks.outcomes import CatalogOutcome, MissingProviderSourceError, UnknownProvidersError
 from model_audit.diagnostics import execution_display, feature_display, gap_kind, parity_display, stability_display, validation_failed
 from model_audit.drivers import supported_endpoints
 from model_audit.evidence import accept, load_ledger, reduce
@@ -32,6 +50,9 @@ from model_audit.run_service import RunContext, execute_checkpointed
 from model_audit.surfaces import discover as discover_surfaces
 from model_audit.taxonomy import write as write_taxonomy
 from model_audit.taxonomy_diff import compare_taxonomies, summarize_taxonomy_diff
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "model-audit"
@@ -97,18 +118,28 @@ def _surface_selection(surfaces: list[str] | None) -> tuple[str, ...]:
     return selected
 
 
-def _run_task(task: CatalogTask, *arguments: str) -> None:
-    result = run_catalog_task(task, *arguments)
-    if result.stdout:
-        typer.echo(result.stdout.rstrip())
-    if result.returncode:
-        typer.echo((result.stderr or result.stdout or f"{task} failed").strip(), err=True)
-        raise typer.Exit(result.returncode)
+def _error_detail(error: Exception) -> str:
+    if isinstance(error, (UnknownProvidersError, MissingProviderSourceError)):
+        return str(error)
+    return "".join(traceback.format_exception(error)).strip()
 
 
-def _catalog_detail(stdout: str, stderr: str) -> str:
-    lines = [line.strip() for line in (stdout or stderr).splitlines() if line.strip()]
-    return "; ".join(lines[-3:]) or "completed"
+def _run_task(operation: Callable[[], CatalogOutcome]) -> None:
+    try:
+        outcome = operation()
+    except Exception as error:
+        typer.echo(_error_detail(error), err=True)
+        raise typer.Exit(2 if isinstance(error, UnknownProvidersError) else 1) from error
+    output = "\n".join(catalog_output.lines(outcome))
+    if output:
+        typer.echo(output.rstrip())
+    if catalog_output.failed(outcome):
+        typer.echo(output.strip(), err=True)
+        raise typer.Exit(1)
+
+
+def _catalog_detail(output: tuple[str, ...]) -> str:
+    return "; ".join([line.strip() for line in output if line.strip()][-3:]) or "completed"
 
 
 def _provider_entries() -> dict[str, dict[str, object]]:
@@ -126,30 +157,43 @@ def _sync_components(values: list[str] | None) -> tuple[SyncComponent, ...]:
     return tuple(component for component in allowed if component in requested)
 
 
-def _sync_steps(provider: str, components: tuple[SyncComponent, ...]) -> tuple[tuple[str, CatalogTask, tuple[str, ...]], ...]:
+def _sync_steps(provider: str, components: tuple[SyncComponent, ...]) -> tuple[tuple[SyncComponent, Callable[[], CatalogOutcome]], ...]:
     selected = set(components)
-    steps: list[tuple[str, CatalogTask, tuple[str, ...]]] = []
-    if "schemas" in selected:
-        steps.extend(
+    return (
+        (
             (
-                ("schemas", CatalogTask.extract_schemas, (provider,)),
-                ("schemas", CatalogTask.doc_schemas, (provider,)),
-                ("schemas", CatalogTask.bootstrap, ("--yaml",)),
+                ("schemas", partial(extract_schemas.run, (provider,))),
+                ("schemas", partial(doc_schemas.run, (provider,))),
+                ("schemas", bootstrap.run),
             )
+            if "schemas" in selected
+            else ()
         )
-    if selected & {"models", "pricing"}:
-        steps.append(("models", CatalogTask.fetch_models, (provider,)))
-        steps.append(("pricing", CatalogTask.enrich, (provider,)))
-    if "parameters" in selected or selected & {"models", "schemas"}:
-        steps.append(("parameters", CatalogTask.discover_parameters, (provider,)))
-    if "icons" in selected:
-        steps.append(("icons", CatalogTask.fetch_icons, (provider,)))
-    return tuple(steps)
+        + (
+            (("models", partial(fetch_models.run, (provider,))), ("pricing", partial(enrich.run, (provider,))))
+            if selected & {"models", "pricing"}
+            else ()
+        )
+        + ((("parameters", partial(discover_parameters.run, (provider,))),) if "parameters" in selected or selected & {"models", "schemas"} else ())
+        + ((("icons", partial(fetch_icons.run, (provider,))),) if "icons" in selected else ())
+    )
+
+
+def _sync_step(provider: str, component: str, operation: Callable[[], CatalogOutcome]) -> tuple[dict[str, object], bool]:
+    try:
+        outcome = operation()
+    except Exception as error:  # noqa: BLE001 sync reports one provider failure and continues with the remaining providers
+        detail = _catalog_detail(tuple(_error_detail(error).splitlines()))
+        failed = True
+    else:
+        detail = _catalog_detail(catalog_output.lines(outcome))
+        failed = catalog_output.failed(outcome)
+    return {"provider": provider, "component": component, "status": "failed" if failed else "completed", "detail": detail}, failed
 
 
 def _finish_sync(provider: str) -> tuple[list[dict[str, object]], bool]:
     providers, models, changed = write_taxonomy(ROOT)
-    validation = run_catalog_task(CatalogTask.validate)
+    validation, failed = _sync_step(provider, "validation", validate.run)
     return (
         [
             {
@@ -158,26 +202,19 @@ def _finish_sync(provider: str) -> tuple[list[dict[str, object]], bool]:
                 "status": "completed",
                 "detail": f"{providers} providers, {models} models; {'written' if changed else 'current'}",
             },
-            {
-                "provider": provider,
-                "component": "validation",
-                "status": "completed" if validation.returncode == 0 else "failed",
-                "detail": _catalog_detail(validation.stdout, validation.stderr),
-            },
+            validation,
         ],
-        validation.returncode != 0,
+        failed,
     )
 
 
 def _sync_provider(provider: str, components: tuple[SyncComponent, ...], *, finalize: bool = True) -> tuple[list[dict[str, object]], bool]:
     rows: list[dict[str, object]] = []
     failed = False
-    for component, task, arguments in _sync_steps(provider, components):
-        result = run_catalog_task(task, *arguments)
-        status = "completed" if result.returncode == 0 else "failed"
-        rows.append({"provider": provider, "component": component, "status": status, "detail": _catalog_detail(result.stdout, result.stderr)})
-        if result.returncode:
-            failed = True
+    for component, operation in _sync_steps(provider, components):
+        result, failed = _sync_step(provider, component, operation)
+        rows.append(result)
+        if failed:
             break
     if not failed and finalize:
         final_rows, failed = _finish_sync(provider)
@@ -342,7 +379,7 @@ def providers_onboard(
         provider = add_provider(ROOT, definition, replace=replace)
     except (RuntimeError, ValueError) as error:
         raise typer.BadParameter(str(error)) from error
-    seed = run_catalog_task(CatalogTask.make_seed)
+    seed, seed_failed = _sync_step(provider.id, "seed", make_seed.run)
     rows: list[dict[str, object]] = [
         {
             "provider": provider.id,
@@ -351,10 +388,10 @@ def providers_onboard(
             "detail": f"source verified with {model_count} models",
         }
     ]
-    if seed.returncode:
-        rows.append({"provider": provider.id, "component": "seed", "status": "failed", "detail": _catalog_detail(seed.stdout, seed.stderr)})
+    if seed_failed:
+        rows.append(seed)
         _print_sync(rows, output_format)
-        raise typer.Exit(seed.returncode)
+        raise typer.Exit(1)
     synced, failed = _sync_provider(provider.id, ("models", "pricing", "schemas", "parameters", "icons"))
     rows.extend(synced)
     _print_sync(rows, output_format)
@@ -382,9 +419,9 @@ def providers_sync(
         source = sources.get(provider_id)
         if source is not None and source.definition is not None:
             add_provider(ROOT, source.definition, replace=True)
-        seed = run_catalog_task(CatalogTask.make_seed)
-        if seed.returncode:
-            rows.append({"provider": provider_id, "component": "seed", "status": "failed", "detail": _catalog_detail(seed.stdout, seed.stderr)})
+        seed, seed_failed = _sync_step(provider_id, "seed", make_seed.run)
+        if seed_failed:
+            rows.append(seed)
             failed = True
             continue
         synced, provider_failed = _sync_provider(provider_id, components, finalize=provider is not None)
@@ -453,7 +490,7 @@ def models_add(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         path = add_model(ROOT, provider, definition, replace=replace)
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
-    _run_task(CatalogTask.discover_parameters)
+    _run_task(discover_parameters.run)
     write_taxonomy(ROOT)
     typer.echo(f"added {provider}/{model} to {path}")
 
@@ -754,6 +791,56 @@ def taxonomy_build(check: Annotated[bool, typer.Option("--check")] = False) -> N
     typer.echo(f"taxonomy {state}: {providers} providers, {models} models")
 
 
+def _export_canonical_schemas() -> None:
+    executable = Path(sys.executable).with_name("airmux")
+    typer.echo("\n=== airmux gateway schema")
+    try:
+        result = subprocess.run(  # noqa: S603 fixed data-plane schema command
+            [str(executable), "gateway", "schema", "--out", str(ROOT / "taxonomy" / "schemas" / "completion")],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as error:
+        typer.echo(_error_detail(error), err=True)
+        raise typer.Exit(1) from error
+    for line in (result.stdout or result.stderr).strip().splitlines()[-6:]:
+        typer.echo(f"  {line}")
+    if result.returncode:
+        typer.echo(f"  (exited {result.returncode})")
+        raise typer.Exit(1)
+
+
+def _rebuild_catalog() -> None:
+    typer.echo("restoring catalog files from seed")
+    _run_task(bootstrap.run)
+    typer.echo("\n=== make_seed")
+    _run_task(make_seed.run)
+    _export_canonical_schemas()
+    typer.echo("\n=== extract_schemas")
+    _run_task(extract_schemas.run)
+    typer.echo("\n=== doc_schemas")
+    _run_task(doc_schemas.run)
+    typer.echo("\nwriting acquired schema references")
+    _run_task(partial(bootstrap.run, include_candidates=False))
+    for name, operation in (
+        ("fetch_icons", fetch_icons.run),
+        ("fetch_models", fetch_models.run),
+        ("enrich", enrich.run),
+        ("discover_parameters", discover_parameters.run),
+    ):
+        typer.echo(f"\n=== {name}")
+        _run_task(operation)
+    for ingress in ("oai", "anthropic"):
+        typer.echo(f"\n=== field_matrix {ingress}")
+        _run_task(partial(field_matrix.run, ingress))
+    typer.echo("\n=== build_report")
+    _run_task(build_report.run)
+    write_taxonomy(ROOT)
+    typer.echo("\n\n=== validate")
+    _run_task(validate.run)
+
+
 @taxonomy_app.command("rebuild")
 def taxonomy_rebuild(
     preserve_as: Annotated[
@@ -784,7 +871,7 @@ def taxonomy_rebuild(
         message = "taxonomy does not exist, so there is nothing to preserve"
         raise typer.BadParameter(message)
     try:
-        _run_task(CatalogTask.bootstrap)
+        _rebuild_catalog()
     finally:
         if readme is not None and taxonomy.exists():
             (taxonomy / "README.md").write_text(readme, encoding="utf-8")
@@ -797,7 +884,7 @@ def taxonomy_validate() -> None:
         gaps = (*result.missing, *result.missing_endpoint_coverage, *(f"request:{field}" for field in result.unmapped_request_fields))
         typer.echo(f"missing case coverage: {', '.join(gaps)}", err=True)
         raise typer.Exit(1)
-    _run_task(CatalogTask.validate)
+    _run_task(validate.run)
     providers, models, changed = write_taxonomy(ROOT, check=True)
     if changed:
         typer.echo("taxonomy is stale; run taxonomy build", err=True)
