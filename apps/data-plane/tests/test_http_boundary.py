@@ -14,6 +14,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from data_plane.http import ResponseHeadersMiddleware
+from data_plane.metrics import DataPlaneMetrics
 
 INFERENCE_ROUTES = (
     ("POST", "/inf/v1/chat/completions"),
@@ -34,7 +35,7 @@ def test_response_headers_preserve_binary_content_and_known_retry_timing():
     async def limited(request):
         return Response(b"\x00\xff", status_code=429, media_type="application/octet-stream", headers={"Retry-After": "7", "Cache-Control": "public"})
 
-    app = ResponseHeadersMiddleware(Starlette(routes=[Route("/", limited)]))
+    app = ResponseHeadersMiddleware(Starlette(routes=[Route("/", limited)]), DataPlaneMetrics())
     with TestClient(app) as client:
         response = client.get("/")
     assert response.status_code == 429

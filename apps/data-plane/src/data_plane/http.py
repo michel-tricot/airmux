@@ -58,7 +58,7 @@ class InferenceRoute(Route):
 
 
 class ResponseHeadersMiddleware:
-    def __init__(self, app: ASGIApp, metrics: DataPlaneMetrics | None = None) -> None:
+    def __init__(self, app: ASGIApp, metrics: DataPlaneMetrics) -> None:
         self.app = app
         self.metrics = metrics
 
@@ -76,8 +76,7 @@ class ResponseHeadersMiddleware:
             "metrics_dialect": "none",
             "metrics_stream": stream,
         }
-        if self.metrics is not None:
-            self.metrics.observe_inflight(route, stream, 1)
+        self.metrics.observe_inflight(route, stream, 1)
         status = 500
 
         async def send_headers(message: Message) -> None:
@@ -100,15 +99,14 @@ class ResponseHeadersMiddleware:
             with request_context(start.request_id):
                 await self.app(scope, receive, send_headers)
         finally:
-            if self.metrics is not None:
-                state = scope["state"]
-                actual_stream = bool(state["metrics_stream"])
-                self.metrics.observe_inflight(route, actual_stream, -1)
-                self.metrics.observe_http(
-                    (route, scope["method"], str(state["metrics_dialect"]), actual_stream),
-                    status,
-                    time.monotonic() - start.started_at,
-                )
+            state = scope["state"]
+            actual_stream = bool(state["metrics_stream"])
+            self.metrics.observe_inflight(route, actual_stream, -1)
+            self.metrics.observe_http(
+                (route, scope["method"], str(state["metrics_dialect"]), actual_stream),
+                status,
+                time.monotonic() - start.started_at,
+            )
 
     def _route(self, scope: Scope) -> str:
         for route in getattr(self.app, "routes", ()):
