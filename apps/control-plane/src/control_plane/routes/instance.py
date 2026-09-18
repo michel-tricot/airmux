@@ -7,13 +7,20 @@ from sqlmodel import col
 
 from control_plane.authz import Permission
 from control_plane.deps import instance_scope, require
-from control_plane.models import AuditLog, DataPlaneInstance
+from control_plane.models import AuditLog, DataPlaneInstance, Org
 from control_plane.models.audit import ActivityOut
 from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.common.wire import Envelope, PageEnvelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
+from control_plane.models.org import OrgSummaryOut
 
 router = APIRouter(prefix="/instance")
+
+
+@router.get("/organizations/summary", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_read)])
+async def get_org_summary() -> Envelope[OrgSummaryOut]:
+    """Count all organizations on the instance, independent of collection pagination."""
+    return Envelope[OrgSummaryOut](data=await Org.summary())
 
 
 @router.get("/data-planes", tags=["Data Plane Instances"], dependencies=[require("api", instance_scope, Permission.data_planes_read)])

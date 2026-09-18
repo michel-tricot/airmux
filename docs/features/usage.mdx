@@ -33,6 +33,22 @@ airmux events tail --interval 2 --keep 30
 The console shows workspace usage and instance or organization activity where the current principal has permission. The
 management API supports opaque cursor pagination.
 
+The workspace overview counts **attempt events**. One caller request has one `request_id`, and credential or model
+fallback can produce several attempt events with that ID. Failed, cancelled, and denied events count too, including
+denials before an upstream call.
+
+Attempt counts, input and output tokens, spend, and the top five models all use the same window: up to the latest 200
+events recorded for the workspace, ordered by descending event ID. Recent Activity shows the first eight events from
+that window. Per-model attempt counts use the model recorded on each event. These are event-window totals, with no
+fixed time interval; a request's other attempts can fall outside the window or arrive later. The overview refreshes
+every three seconds and does not load older pages to calculate its metrics.
+
+The instance overview's organization total counts every organization currently stored on the instance, including
+personal organizations. Deleted organizations no longer count. The total comes from
+`GET /api/v1/instance/organizations/summary`, independently of collection pagination or previously loaded console pages.
+It requires instance-scoped `organizations.read` permission and returns `{"data":{"total":51}}` for an instance with
+51 organizations.
+
 ## Gateway health
 
 ```bash

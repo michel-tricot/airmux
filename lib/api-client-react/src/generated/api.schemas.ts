@@ -1206,6 +1206,14 @@ export interface OrgServiceAccountIn {
   management_key: ManagementKeyIn;
 }
 
+export interface OrgSummaryOut {
+  /**
+     * Number of organizations currently on the instance, including personal organizations
+     * @minimum 0
+     */
+  total: number;
+}
+
 export interface OrgUpdate {
   /** Replacement organization name */
   name?: string | null;
