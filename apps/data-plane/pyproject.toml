@@ -10,7 +10,7 @@ dependencies = [
   "starlette",
   "uvicorn[standard]",
   "httpx[http2]",
-  "pydantic>=2",
+  "pydantic>=2.13.5",
   "tiktoken",
   "pyyaml",
 ]
