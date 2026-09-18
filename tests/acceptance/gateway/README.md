@@ -167,7 +167,7 @@ before comparing absolute numbers from different machines. This does not create 
 To compare any two installed gateways locally, choose a fresh output directory:
 
 ```bash
-uv run python tests/acceptance/gateway/performance.py \
+PYTHONPATH=. uv run python tests/acceptance/gateway/performance.py \
   --base-bin /path/to/base/bin/airmux \
   --base-harness /path/to/base/checkout/tests/acceptance/gateway \
   --candidate-bin /path/to/candidate/bin/airmux \
@@ -195,7 +195,7 @@ Use the installed Pydantic Core implementation to compare request decoding, prov
 parsing against the previous stdlib operations. Encoding includes Pydantic model dumping and provider alias mapping:
 
 ```bash
-uv run python tests/acceptance/gateway/performance_codecs.py --output /tmp/codecs.json
+PYTHONPATH=. uv run python tests/acceptance/gateway/performance_codecs.py --output /tmp/codecs.json
 ```
 
 Run the paired benchmark above three times with distinct output directories: once with `--scenario buffered_devnull`,
@@ -208,7 +208,7 @@ changes in overhead and requests per second alongside codec timings. Microbenchm
 Run the candidate's worker and pool matrix separately:
 
 ```bash
-uv run python tests/acceptance/gateway/performance_scaling.py \
+PYTHONPATH=. uv run python tests/acceptance/gateway/performance_scaling.py \
   --candidate-bin /path/to/candidate/bin/airmux \
   --candidate-revision CANDIDATE_SHA \
   --output /tmp/gateway-scaling
