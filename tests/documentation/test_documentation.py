@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import subprocess
+import sys
 import tomllib
 from collections import Counter
 from pathlib import Path
@@ -130,6 +132,28 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "Prepare release" in development
     assert "Publish release" in development
     assert "prefilled pull request link" in development
+
+
+def test_portable_installation_recipe_collects_outside_the_checkout(tmp_path: Path) -> None:
+    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+    recipe = next(match.group("body") for match in FENCE.finditer(development) if "cp tests/installation/" in match.group("body"))
+    staging = "\n".join(line for line in recipe.splitlines() if line.startswith(("mkdir ", "cp ")))
+    environment = {**os.environ, "smoke_dir": str(tmp_path), "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    copied = subprocess.run(["/bin/bash", "-e"], input=staging, cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
+    assert copied.returncode == 0, copied.stderr
+
+    collected = subprocess.run(
+        [sys.executable, "-I", "-m", "pytest", "-o", "pythonpath=.", "--collect-only", "-q", "tests/installation/portable"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert collected.returncode == 0, collected.stdout + collected.stderr
+    assert "test_internal_modules_are_bundled_in_one_distribution" in collected.stdout
+    assert "test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down" in collected.stdout
 
 
 def test_documentation_covers_safe_upgrades() -> None:
