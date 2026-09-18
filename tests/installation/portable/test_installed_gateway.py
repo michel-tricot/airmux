@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import signal
-import socket
 import subprocess
 import threading
 import time
@@ -11,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 import yaml
+from tests.acceptance.process_harness import uvicorn_port
 from tests.installation.installation_support import run_cli
 
 
@@ -82,19 +82,21 @@ def test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down
     }
     (directory / "taxonomy.yml").write_text(yaml.safe_dump(taxonomy), encoding="utf-8")
     executable, environment = installation
-    with socket.socket() as listener:
-        listener.bind(("127.0.0.1", 0))
-        port = listener.getsockname()[1]
     log_path = tmp_path / "gateway.log"
     with log_path.open("w") as log:
         process = subprocess.Popen(  # noqa: S603 executable is the candidate installed wheel
-            [executable, "gateway", "serve", "--port", str(port)],
+            [executable, "gateway", "serve", "--port", "0"],
             cwd=tmp_path,
             env={**environment, "STUB_API_KEY": "installation-test-key"},
             stdout=log,
             stderr=subprocess.STDOUT,
         )
         try:
+            deadline = time.monotonic() + 30
+            while (port := uvicorn_port(log_path)) is None and time.monotonic() < deadline:
+                assert process.poll() is None, log_path.read_text()
+                time.sleep(0.1)
+            assert port is not None, log_path.read_text()
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
                 deadline = time.monotonic() + 30
                 while time.monotonic() < deadline:

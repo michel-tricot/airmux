@@ -4,7 +4,6 @@ import contextlib
 import json
 import os
 import signal
-import socket
 import subprocess
 import sys
 import time
@@ -17,6 +16,7 @@ import httpx
 import pytest
 import yaml
 from pydantic import TypeAdapter
+from tests.acceptance.process_harness import uvicorn_port
 from upstream import UPSTREAM_KEY, Family, Upstream
 
 from contract import UsageEvent, uuid7
@@ -119,10 +119,8 @@ class Gateway:
         }
         self.process: subprocess.Popen[bytes] | None = None
         self.log = (directory / "gateway.log").open("a", encoding="utf-8")
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            self.port = listener.getsockname()[1]
-        self.url = f"http://127.0.0.1:{self.port}"
+        self.port: int | None = None
+        self.url = ""
 
     def add_provider(self, family: Family = "openai_compatible", name: str = "stub", models: tuple[str, ...] = ("model-a", "model-b")) -> Upstream:
         provider = Upstream(family, self.directory / f"upstream-{name}.json")
@@ -195,11 +193,16 @@ class Gateway:
     def ready(self) -> bool:
         assert self.process is not None
         assert self.process.poll() is None, (self.directory / "gateway.log").read_text()
+        if self.port is None:
+            self.port = uvicorn_port(self.directory / "gateway.log")
+            if self.port is None:
+                return False
+            self.url = f"http://127.0.0.1:{self.port}"
         return httpx.get(f"{self.url}/readyz", timeout=1).status_code == 200
 
     def launch(self, workers: int = 1) -> None:
         self.process = subprocess.Popen(  # noqa: S603 executable is the installed gateway supplied by the test environment
-            [self.executable, "gateway", "serve", "--config", str(self.config_path), "--port", str(self.port), "--workers", str(workers)],
+            [self.executable, "gateway", "serve", "--config", str(self.config_path), "--port", str(self.port or 0), "--workers", str(workers)],
             cwd=self.directory.parent,
             env=self.environment,
             stdout=self.log,

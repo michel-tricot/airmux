@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import signal
-import socket
 import subprocess
 import sys
 import threading
@@ -15,6 +14,7 @@ from uuid import UUID
 
 import httpx
 import yaml
+from tests.acceptance.process_harness import uvicorn_port
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -133,12 +133,19 @@ def test_installed_gateway_with_external_taxonomy(tmp_path):
     process = None
     try:
         config_path, key = initialize_gateway(executable, taxonomy_path, directory, tmp_path, environment)
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            port = listener.getsockname()[1]
-        with (tmp_path / "gateway.log").open("w") as log:
+        log_path = tmp_path / "gateway.log"
+        with log_path.open("w") as log:
+            process = subprocess.Popen(  # noqa: S603 trusted gateway
+                [executable, "gateway", "serve", "--config", str(config_path), "--port", "0"],
+                cwd=tmp_path,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+            eventually(lambda: uvicorn_port(log_path) is not None)
+            port = uvicorn_port(log_path)
+            assert port is not None
             command = [executable, "gateway", "serve", "--config", str(config_path), "--port", str(port)]
-            process = subprocess.Popen(command, cwd=tmp_path, env=environment, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted gateway
             with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=5) as client:
                 eventually(lambda: client.get("/readyz").status_code == 200)
                 headers = {"Authorization": f"Bearer {key}"}
