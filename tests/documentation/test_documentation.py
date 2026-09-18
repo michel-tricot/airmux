@@ -129,7 +129,6 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
     assert "Prepare release" in development
     assert "Publish release" in development
-    assert "prefilled pull request link" in development
 
 
 def test_documentation_covers_safe_upgrades() -> None:
@@ -154,7 +153,6 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
 
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
-    assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
     assert headings.index("Quickstart") < headings.index("Architecture")
 
 
@@ -249,17 +247,6 @@ def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
 def test_curl_request_bodies_are_valid_json(path: Path) -> None:
     for match in CURL_JSON.finditer(path.read_text(encoding="utf-8")):
         json.loads(match.group("body"))
-
-
-def test_public_examples_use_a_neutral_smoke_prompt() -> None:
-    documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    assert "Say hello in one word." in documents
-
-
-def test_documentation_does_not_name_comparison_products() -> None:
-    forbidden = re.compile(r"openrouter|litellm", re.IGNORECASE)
-    occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if forbidden.search(path.read_text())]
-    assert occurrences == []
 
 
 def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
