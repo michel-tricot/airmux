@@ -92,28 +92,35 @@ For a PR, the base is its target commit and the candidate is the merge commit te
 with the preceding commit; a manual run compares with `main`. Both gateways run the candidate checkout's benchmark,
 so changes to the workload apply equally to both versions.
 
-`performance.py` measures buffered latency and throughput with SQLite and dev-null event collection at concurrency
-1, 8 and 32, streaming time to the first non-empty text delta, and latency with 100 applicable policies.
-Direct upstream calls at concurrency 1 and 32 reveal changes in
-the load generator or stub. These are representative OpenAI Chat Completions workloads; the correctness suite covers
-the full protocol matrix. Longer prompts, sustained token streams, worker scaling and real providers need separate
-workloads before drawing conclusions about those paths.
+`performance.py` measures HTTP/1.1 buffered latency and throughput with SQLite and dev-null event collection at
+concurrency 1, 8 and 32. The dev-null workload also runs at concurrency 128, above the gateway's 100-connection
+provider pool, to expose assignment contention. HTTP/2 dev-null workloads run at concurrency 1 and 32, with
+concurrency 32 streaming coverage. Direct HTTP/1.1 controls run at concurrency 1, 32 and 128; direct HTTP/2 controls
+run at concurrency 1 and 32. Streaming records time to the first non-empty text delta, and the policy workload records
+latency with 100 applicable policies. These are representative OpenAI Chat Completions workloads; the correctness
+suite covers the full dialect and provider-family matrix. Longer prompts, sustained token streams, worker scaling and
+real providers need separate workloads before drawing conclusions about those paths.
 
 Each workload warms persistent connections before a two-second closed-loop load window. Five rounds alternate
 base/candidate execution order. The report compares the median of each round's p50/p95/p99 latency, streaming first
 content latency and completed requests per second. Request failures, incorrect text, incomplete streams and lost usage
 events fail the job. Both versions use one gateway worker. SQLite request-path reservation and enqueueing are included,
 while its storage thread drains concurrently; paired dev-null workloads isolate that metering persistence cost. Periodic
-export and bundle polling are excluded with one-hour intervals. The lightweight provider runs
-in its own async process, reuses the handwritten native response fixtures, supports persistent connections and captures
-no request history during load.
+export and bundle polling are excluded with one-hour intervals. Lightweight HTTP/1.1 and HTTP/2 providers run in
+their own async processes, reuse the handwritten native response fixtures, support persistent connections and capture
+no request history during load. The HTTP/2 provider uses a per-run trusted certificate and TLS ALPN, and the provider
+rejects requests that arrive over a protocol other than the workload's declared protocol. Its one-hour idle timeout
+and one-million-request keepalive limit keep a connection stable across every bracketed window. The HTTPX2 load
+generator is shared by both revisions, so control-side pool behavior cannot bias the gateway comparison.
 
 Each proxied workload also has its own direct-before and direct-after windows, including streaming and the policy
-workload. All three use the same request fields, fixed provider response, concurrency, HTTP/1.1 settings and one
-persistent connection per worker. Only the model name differs at ingress; direct requests use the translated upstream
-name. Streaming controls request usage just as the gateway does. The provider rejects mismatched payloads and retains idle HTTP connections for one hour, avoiding server-side expiry
-races while the bracketed control windows run. Client keepalive expiry stays at five seconds. The 100
-policies apply to the proxy and leave this request's token limit unchanged.
+workload. All three use the same request fields, fixed provider response, concurrency and provider protocol. Only the
+model name differs at ingress; direct requests use the translated upstream name. HTTP/1.1 direct controls use one
+persistent connection per worker. HTTP/2 direct controls multiplex all workers over one connection, matching the
+gateway's shared-client topology. Caller-to-gateway traffic remains HTTP/1.1. Streaming controls request usage just as
+the gateway does. The providers retain idle connections for one hour, avoiding server-side expiry races while the
+bracketed control windows run. Client keepalive expiry stays at five seconds. The 100 policies apply to the proxy and
+leave this request's token limit unchanged.
 
 For round r, the incremental HTTP proxy latency estimate is:
 
@@ -151,8 +158,9 @@ Once runner noise and normal variation are known, we can choose blocking thresho
 
 Every run shows its comparison in the Actions summary and uploads `measurements.json` and `summary.md` as the
 `gateway-performance` artifact for 90 days. JSON contains raw per-request timings, both commit identities, runner
-metadata, workload/connection settings, all direct controls, derived round estimates, exact verified metering event
-counts and comparisons. The methodology is included in both files, explicitly including durable SQLite event collection. Main-branch runs provide a bounded history; compare PR/base ratios
+metadata, workload/protocol/connection settings, the gateway's explicit provider pool limits and timeouts, all direct
+controls, derived round estimates, exact verified metering event counts and comparisons. The methodology is included
+in both files, explicitly including durable SQLite event collection. Main-branch runs provide a bounded history; compare PR/base ratios
 before comparing absolute numbers from different machines. This does not create a permanent metrics store or chart.
 
 To compare any two installed gateways locally, choose a fresh output directory:

@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Literal
 from uuid import UUID, uuid4
 
 import httpx
+import httpx2
 import pytest
 import respx
+import respx.mocks
 
 from airmux_runtime.secrets import Secret
 from contract import (
@@ -34,6 +36,8 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
+
+respx.mocks.DEFAULT_MOCKER = "httpcore2"
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -123,7 +127,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
     )
 
 
-def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+def make_outbox(tmp_path, http_client: httpx2.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         SqliteOutboxConfig(
             control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token"),
@@ -233,6 +237,6 @@ def dp_app(booted: BootedApp) -> ASGIApp:
 
 
 @pytest.fixture
-async def http_client() -> AsyncIterator[httpx.AsyncClient]:
-    async with httpx.AsyncClient() as client:
+async def http_client() -> AsyncIterator[httpx2.AsyncClient]:
+    async with httpx2.AsyncClient() as client:
         yield client
