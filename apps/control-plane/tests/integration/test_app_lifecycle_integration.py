@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from uuid import UUID
 
 import pytest
@@ -29,11 +30,16 @@ def test_only_dev_serve_migrates_the_database(tmp_path, monkeypatch, dev, expect
     url = ensure_database(db_name_for(tmp_path))
     config = tmp_path / "airmux.yml"
     config.write_text(yaml.safe_dump({"control_plane": {"database": {"url": url}}}), encoding="utf-8")
-    monkeypatch.setattr("control_plane.operations.uvicorn.run", lambda *args, **kwargs: None)
+    environment = {name: os.environ.get(name) for name in ("AIRMUX_CONFIG", "AIRMUX_DEV")}
+    with monkeypatch.context() as runtime:
+        runtime.setenv("AIRMUX_CONFIG", str(config))
+        runtime.setenv("AIRMUX_DEV", "1" if dev else "0")
+        runtime.setattr("control_plane.operations.uvicorn.run", lambda *args, **kwargs: None)
 
-    serve(config, host="127.0.0.1", port=8000, dev=dev)
+        serve(config, host="127.0.0.1", port=8000, dev=dev)
 
-    assert current_revision(url) == expected_revision
+        assert current_revision(url) == expected_revision
+    assert {name: os.environ.get(name) for name in environment} == environment
 
 
 def test_liveness_readiness_metrics_and_request_correlation(tmp_path):
