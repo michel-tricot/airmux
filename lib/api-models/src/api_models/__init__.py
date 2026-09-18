@@ -62,6 +62,9 @@ class BundleManifestEntry(BaseModel):
     The immutable identity of one organization bundle available to a data plane.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     org_id: Annotated[UUID, Field(title="Org Id")]
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
 
@@ -541,6 +544,9 @@ class KeyEntry(BaseModel):
     the caller's secret token.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
@@ -587,20 +593,47 @@ class MeOut(BaseModel):
     orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
+class MaxOutputTokens1(RootModel[int]):
+    root: Annotated[int, Field(ge=1, le=100000000, title="Max Output Tokens")]
+
+
+class EgressKind(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_]*$",
+            title="Egress Kind",
+        ),
+    ]
+
+
 class ModelEntry(BaseModel):
     """
     A routable model: the caller-facing id plus how to reach and bill it.
     """
 
-    model_id: Annotated[str, Field(title="Model Id")]
-    provider_id: Annotated[str, Field(title="Provider Id")]
-    upstream_model: Annotated[str, Field(title="Upstream Model")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    model_id: Annotated[str, Field(max_length=255, min_length=1, title="Model Id")]
+    provider_id: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
+    upstream_model: Annotated[str, Field(max_length=255, min_length=1, title="Upstream Model")]
     input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
     output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
     cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
     cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
-    context_window: Annotated[int, Field(title="Context Window")]
-    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
+    context_window: Annotated[int, Field(ge=1, le=100000000, title="Context Window")]
+    max_output_tokens: Annotated[MaxOutputTokens1 | None, Field(title="Max Output Tokens")] = None
     input_modalities: Annotated[
         list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(max_length=5, min_length=1, title="Input Modalities"),
@@ -611,16 +644,16 @@ class ModelEntry(BaseModel):
     ]
     capabilities: Annotated[
         list[Literal["streaming", "tools", "reasoning", "structured_output"]],
-        Field(title="Capabilities"),
+        Field(max_length=4, title="Capabilities"),
     ]
     parameter_support: Annotated[
         dict[str, Literal["supported", "unsupported"]] | None,
-        Field(title="Parameter Support"),
+        Field(max_length=128, title="Parameter Support"),
     ] = None
-    egress_kind: Annotated[str | None, Field(title="Egress Kind")] = None
+    egress_kind: Annotated[EgressKind | None, Field(title="Egress Kind")] = None
 
 
-class EgressKind(RootModel[str]):
+class EgressKind1(RootModel[str]):
     root: Annotated[
         str,
         Field(
@@ -633,7 +666,7 @@ class EgressKind(RootModel[str]):
     ]
 
 
-class MaxOutputTokens1(RootModel[int]):
+class MaxOutputTokens2(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -677,7 +710,7 @@ class ModelIn(BaseModel):
         ),
     ] = ""
     egress_kind: Annotated[
-        EgressKind | None,
+        EgressKind1 | None,
         Field(description="Per-model egress adapter override", title="Egress Kind"),
     ] = None
     input_price_per_mtok: Annotated[
@@ -722,7 +755,7 @@ class ModelIn(BaseModel):
         ),
     ] = 128000
     max_output_tokens: Annotated[
-        MaxOutputTokens1 | None,
+        MaxOutputTokens2 | None,
         Field(
             description="Max completion tokens; requests are clamped to it",
             title="Max Output Tokens",
@@ -1207,20 +1240,38 @@ class ProviderCredentialValueIn(BaseModel):
     ]
 
 
+class AcceptedParams(RootModel[list[str]]):
+    root: Annotated[list[str], Field(max_length=256, title="Accepted Params")]
+
+
 class ProviderEntry(BaseModel):
     """
     An upstream LLM provider endpoint and its supported request parameters.
     """
 
-    provider_id: Annotated[str, Field(title="Provider Id")]
-    kind: Annotated[str, Field(title="Kind")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    provider_id: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
+    kind: Annotated[
+        str,
+        Field(max_length=63, min_length=1, pattern="^[a-z0-9][a-z0-9_]*$", title="Kind"),
+    ]
     base_url: Annotated[AnyUrl, Field(title="Base Url")]
-    param_aliases: Annotated[dict[str, str] | None, Field(title="Param Aliases")] = None
-    accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")] = None
+    param_aliases: Annotated[dict[str, str] | None, Field(max_length=256, title="Param Aliases")] = None
+    accepted_params: Annotated[AcceptedParams | None, Field(title="Accepted Params")] = None
     params_closed: Annotated[bool | None, Field(title="Params Closed")] = False
 
 
-class AcceptedParams(RootModel[list[str]]):
+class AcceptedParams1(RootModel[list[str]]):
     root: Annotated[
         list[str],
         Field(
@@ -1283,7 +1334,7 @@ class ProviderIn(BaseModel):
         ),
     ] = None
     accepted_params: Annotated[
-        AcceptedParams | None,
+        AcceptedParams1 | None,
         Field(
             description="Params known accepted beyond the core; consulted when params_closed",
             title="Accepted Params",
@@ -1348,7 +1399,7 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
-class MaxOutputTokens2(RootModel[int]):
+class MaxOutputTokens3(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -1442,7 +1493,7 @@ class RoutedUsageEventV1(BaseModel):
         ),
     ] = "0"
     max_output_tokens: Annotated[
-        MaxOutputTokens2 | None,
+        MaxOutputTokens3 | None,
         Field(
             description="Effective upstream output-token limit",
             title="Max Output Tokens",
@@ -1791,6 +1842,9 @@ class BundleManifest(BaseModel):
     The complete set of organization bundles one data plane may serve.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
 
 
@@ -1801,6 +1855,9 @@ class CredentialEntry(BaseModel):
     The secret value is not included. A version change tells data planes to refresh their cached value.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     ref: SecretRef
     priority: Annotated[int, Field(title="Priority")]
     version: Annotated[int, Field(title="Version")]
@@ -2110,9 +2167,12 @@ class Catalog(BaseModel):
     they are reached with.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     providers: Annotated[list[ProviderEntry], Field(title="Providers")]
     models: Annotated[list[ModelEntry], Field(title="Models")]
-    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials")] = None
+    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials", validate_default=True)] = []
 
 
 class EnvelopeMembershipOut(BaseModel):
@@ -2281,6 +2341,9 @@ class BundleV1(BaseModel):
     A complete, versioned policy snapshot for one organization's model traffic.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]

@@ -55,10 +55,10 @@ def _model_out(model: ModelEntry, snapshot: BundleSnapshot) -> ModelOut:
         gateway=ModelInfoOut(
             context_window=model.context_window,
             max_output_tokens=model.max_output_tokens,
-            input_modalities=model.input_modalities,
-            output_modalities=model.output_modalities,
-            capabilities=model.capabilities,
-            parameter_support=model.parameter_support,
+            input_modalities=list(model.input_modalities),
+            output_modalities=list(model.output_modalities),
+            capabilities=list(model.capabilities),
+            parameter_support=dict(model.parameter_support),
         ),
     )
 
