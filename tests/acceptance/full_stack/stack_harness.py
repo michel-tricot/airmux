@@ -488,7 +488,18 @@ class Stack:
     # observation ----------------------------------------------------------
 
     def wait_dp_ready(self) -> None:
-        assert _poll(lambda: self._up(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane never served a bundle"
+        assert _poll(self.model_ready, READY_TIMEOUT), "data plane never served the configured model"
+
+    def model_ready(self) -> bool:
+        try:
+            response = httpx.get(
+                f"{self.dp_url}/inf/v1/models",
+                headers={"Authorization": f"Bearer {self.caller_api_key}"},
+                timeout=2.0,
+            )
+        except httpx.HTTPError:
+            return False
+        return response.status_code == 200 and any(model["id"] == MODEL for model in response.json().get("data", []))
 
     def request(self, content: str = "hi") -> httpx.Response:
         return httpx.post(
