@@ -156,13 +156,15 @@ Each command group's help keeps its subcommands in one flat list.
 | `provider-credentials` | `add`, `list`, `rotate`, `disable`, `rm` |
 | `providers`            | `list`                                   |
 | `models`               | `list`                                   |
-| `rules`                | `create`, `list`, `update`, `delete`     |
 | `policies`             | `create`, `list`, `update`, `delete`     |
 | `gateways`             | `list`                                   |
 | `events`               | `list`, `tail`                           |
 | `catalog`              | `apply`                                  |
 
 Run `airmux <group> <command> --help` for the exact options installed on your machine.
+
+Policy rules are defined inline in each policy's `definition.rules` list. See the
+[policy workflow](/docs/guides/policy-workflow) for complete definitions.
 
 ## Automation pattern
 

@@ -117,10 +117,16 @@ Keep plaintext key files private and out of version control.
 
 ## Run the same configuration in a container
 
-After initialization above, run from the directory containing `.airmux/` and the referenced taxonomy:
+Build the image from a separate source checkout. From the directory containing the initialized `.airmux/`:
 
 ```bash
-docker build -t airmux:local .
+git clone https://github.com/michel-tricot/airmux.git airmux-source
+docker build -t airmux:local airmux-source
+```
+
+Keep the current directory for the configuration mount, then start the container:
+
+```bash
 docker run --rm --user "$(id -u):$(id -g)" \
   --entrypoint airmux \
   --mount "type=bind,source=$PWD,target=/config,readonly" \
@@ -130,7 +136,7 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 The same image also runs full-platform roles, so standalone administrative commands explicitly override its role entry
 point with `airmux`. Matching the host user allows it to read the private generated key. The read-only mount preserves
-the relative taxonomy reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No
+the relative taxonomy reference. Mount any taxonomy stored outside the configuration directory at the corresponding path as well. No
 control plane or database is needed for this configuration.
 
 ## Collect usage events locally

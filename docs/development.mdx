@@ -79,7 +79,7 @@ For focused runs and contribution conventions, see the [gateway suite README](ht
 CI builds the candidate distributions once on Linux and validates their metadata. It rebuilds the wheel from the source
 distribution, then reuses that candidate for installation and gateway checks. Portable smoke jobs install it outside
 the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack, and gateway acceptance
-checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/CI.md)
+checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
 for current job selection, cancellation behavior, and measured timings.
 
 To run the portable checks locally without installing the workspace:
@@ -88,12 +88,39 @@ To run the portable checks locally without installing the workspace:
 uv tool install --python 3.13 dist/airmux-*.whl
 uv venv --python 3.13 /tmp/airmux-smoke-runner
 uv pip install --python /tmp/airmux-smoke-runner/bin/python pytest httpx pyyaml
-mkdir -p /tmp/airmux-installation-tests
-cp tests/installation/{conftest,test_cli,test_gateway}.py /tmp/airmux-installation-tests/
+mkdir -p /tmp/airmux-installation-tests/tests/{installation,acceptance}
+cp -R tests/installation/portable /tmp/airmux-installation-tests/tests/installation/
+cp tests/installation/installation_support.py /tmp/airmux-installation-tests/tests/installation/
+cp tests/acceptance/process_harness.py /tmp/airmux-installation-tests/tests/acceptance/
 cd /tmp
 AIRMUX_INSTALL_BIN="$(command -v airmux)" AIRMUX_INSTALL_PYTHON=3.13 \
-  /tmp/airmux-smoke-runner/bin/python -I -m pytest /tmp/airmux-installation-tests
+  /tmp/airmux-smoke-runner/bin/python -I -m pytest \
+  -o pythonpath=/tmp/airmux-installation-tests /tmp/airmux-installation-tests/tests/installation/portable
 ```
+
+## Executable documentation checks
+
+These focused tests read the examples directly from their documents. They run in the existing CI suites and use local
+fixtures or the installed candidate wheel, with no paid provider requests:
+
+| Examples | Tests |
+| --- | --- |
+| CLI inventory, provider source discovery, repository paths, and supported Replit commands | `tests/documentation` |
+| Portable installation recipe and installed CLI inventory | `tests/installation/integration/test_documented_installation.py` |
+| README and gateway initialization, startup, and curl requests | `tests/acceptance/gateway/test_documented_gateway.py` |
+| Pagination with a cursor from a real preceding page | `tests/acceptance/full_stack/scenarios/test_documented_pagination.py` |
+| Standalone container configuration mount and inference | `tests/deployment/test_gateway_container.py` |
+
+The installation recipe test pins its minimal runner dependencies to `uv.lock` and runs offline. CI primes the dependency
+metadata before the tests; for a local run, prepare the same cache after `uv sync --all-packages --frozen`:
+
+```bash
+uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file /tmp/airmux-doc-constraints.txt
+printf '%s\n' pytest httpx pyyaml | uv pip compile --constraint /tmp/airmux-doc-constraints.txt -
+```
+
+Installation checks require `AIRMUX_INSTALL_BIN` to name the installed candidate executable. Gateway acceptance uses `AIRMUX_GATEWAY_BIN` when set;
+the full-stack harness finds `airmux` on `PATH`. Container checks use `DEPLOYMENT_IMAGE` from the deployment suite.
 
 ## Workflow checks
 
@@ -116,7 +143,7 @@ Every workflow defaults to `contents: read`, checkouts discard Git credentials, 
 `id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
 in the release environment, outside PR CI. The CI and Docker correctness gates check the change-policy decision and
 expected job results before reporting success. Dependency security passes only when both audits pass. Timing evidence
-belongs in `notes/CI.md`, not this setup guide.
+belongs in `notes/design/CI.md`, not this setup guide.
 
 ## Python checks
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ import httpx
 import pytest
 import yaml
 from test_docker import ROOT, assert_completion, docker, eventually
+from tests.documentation.examples import code_block
 
 
 def test_gateway_container_serves_a_native_configuration_without_a_control_plane(tmp_path):
@@ -29,11 +31,12 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
         )
     )
     subprocess.run(  # noqa: S603 the test environment supplies the installed project CLI
-        [str(Path(sys.executable).parent / "airmux"), "gateway", "init", "--taxonomy", str(taxonomy), "--directory", str(tmp_path / "gateway")],
+        [str(Path(sys.executable).parent / "airmux"), "gateway", "init", "--taxonomy", str(taxonomy)],
+        cwd=tmp_path,
         check=True,
         capture_output=True,
     )
-    key = (tmp_path / "gateway/inference.key").read_text().strip()
+    key = (tmp_path / ".airmux/inference.key").read_text().strip()
     docker("network", "create", network)
     try:
         docker(
@@ -52,32 +55,17 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             image,
             "/upstream.py",
         )
-        docker(
-            "run",
-            "-d",
-            "--name",
-            gateway,
-            "--network",
-            network,
-            "--user",
-            f"{os.getuid()}:{os.getgid()}",
-            "--entrypoint",
-            "airmux",
-            "--mount",
-            f"type=bind,source={tmp_path},target=/config,readonly",
-            "-e",
-            "DEPLOYMENT_API_KEY=deployment-test-key",
-            "-p",
-            "127.0.0.1::8081",
-            image,
-            "gateway",
-            "serve",
-            "--config",
-            "/config/gateway/airmux.yml",
-            "--host",
-            "0.0.0.0",  # noqa: S104 listen on the container interface behind a loopback-only published port
-            "--port",
-            "8081",
+        command = code_block("docs/deployment/gateway.mdx", "docker run")
+        command = command.replace("docker run --rm", f"docker run --rm -d --name {gateway} --network {network}")
+        command = command.replace("airmux:local", shlex.quote(image)).replace("-p 8080:8081", "-p 127.0.0.1::8081")
+        command = command.replace("-e OPENAI_API_KEY", "-e DEPLOYMENT_API_KEY=deployment-test-key")
+        subprocess.run(  # noqa: S603 execute the documented container recipe against the local test image and upstream
+            ["/bin/bash", "-eu", "-c", command],
+            cwd=tmp_path,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         address = docker("port", gateway, "8081/tcp")
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:

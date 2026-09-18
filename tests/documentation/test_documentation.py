@@ -43,6 +43,16 @@ def documentation_files() -> list[Path]:
     return sorted([ROOT / "CONTRIBUTING.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
 
 
+def example_files() -> list[Path]:
+    return sorted([ROOT / "README.md", ROOT / "model-audit/README.md", ROOT / "replit.md", *documentation_files()])
+
+
+@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
+def test_repository_source_links_resolve_without_network(path: Path) -> None:
+    targets = re.findall(r"https://github\.com/michel-tricot/airmux/(?:blob|tree)/main/([^\s)#?]+)", path.read_text())
+    assert [target for target in targets if not (ROOT / target).exists()] == []
+
+
 def navigation_pages(node: object) -> list[str]:
     if isinstance(node, str):
         return [node]
@@ -231,7 +241,7 @@ def test_repository_documentation_links_resolve(path: Path) -> None:
     assert missing == []
 
 
-@pytest.mark.parametrize("path", documentation_files(), ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
 def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
     for match in FENCE.finditer(path.read_text(encoding="utf-8")):
         language = match.group("language")
@@ -245,7 +255,7 @@ def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
             assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("path", documentation_files(), ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
 def test_curl_request_bodies_are_valid_json(path: Path) -> None:
     for match in CURL_JSON.finditer(path.read_text(encoding="utf-8")):
         json.loads(match.group("body"))
