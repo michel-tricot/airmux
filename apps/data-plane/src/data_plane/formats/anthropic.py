@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalAssistantMessage,
@@ -693,7 +694,7 @@ class Event(BaseModel):
     type: str
 
     def sse(self) -> bytes:
-        return b"event: " + self.type.encode() + b"\ndata: " + self.model_dump_json().encode() + b"\n\n"
+        return b"event: " + self.type.encode() + b"\ndata: " + to_json(self, by_alias=False) + b"\n\n"
 
 
 class StartUsage(BaseModel):

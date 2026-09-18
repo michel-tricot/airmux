@@ -6,11 +6,11 @@ accumulates a stream for finalize."""
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
+from pydantic_core import from_json
 
 from data_plane.canonical import (
     CanonicalAssistantPart,
@@ -164,8 +164,8 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
 
     def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[CanonicalChunk]:
         try:
-            data = json.loads(ev.data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            data = from_json(ev.data)
+        except ValueError as error:
             raise UpstreamProtocolError.stream_event() from error
         if not isinstance(data, dict):
             raise UpstreamProtocolError.stream_event()

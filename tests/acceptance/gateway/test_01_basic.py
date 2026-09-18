@@ -28,6 +28,26 @@ def test_ready_gateway_completes_and_records_usage(gateway: Gateway):
     assert (event.status, event.model_id, event.provider_id, event.key_id, event.stream) == ("ok", "model-a", "stub", "local-0", False)
 
 
+@pytest.mark.parametrize("dev", [False, True])
+def test_access_logging_is_dev_only_and_observability_remains_available(gateway: Gateway, dev: bool):
+    gateway.dev = dev
+    gateway.add_provider()
+    gateway.start()
+    response = gateway.request()
+    assert response.status_code == 200
+    (event,) = gateway.events(1)
+    assert str(event.request_id) == response.headers["x-request-id"]
+    metrics = httpx.get(f"{gateway.url}/metrics")
+    assert 'route="/inf/v1/chat/completions"' in metrics.text
+    gateway.stop()
+    log = (gateway.directory / "gateway.log").read_text()
+    assert ('"POST /inf/v1/chat/completions HTTP/1.1" 200' in log) is dev
+    assert "usage_recorded" in log
+    if not dev:
+        assert response.headers["x-request-id"] in log
+    assert "Application startup complete" in log
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("key", [None, "sk-inf-wrong"])
 def test_authentication_rejects_requests_before_spending_provider_credentials(gateway: Gateway, dialect: Dialect, key: str | None):

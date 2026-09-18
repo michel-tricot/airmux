@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from airmux_runtime.config import ConfigContext, ConfigPath, load_config_section
 from airmux_runtime.secrets import EnvStoreConfig, SecretsConfig
@@ -54,6 +54,25 @@ class NoBudgetConfig(BaseModel):
 BudgetConfig = Annotated[ControlPlaneBudgetConfig | NoBudgetConfig, Field(discriminator="kind")]
 
 
+class HttpConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_connections: int = Field(default=100, strict=True, ge=1, le=65535)
+    max_keepalive_connections: int = Field(default=20, strict=True, ge=1, le=65535)
+
+    @field_validator("max_connections", "max_keepalive_connections", mode="before")
+    @classmethod
+    def integer_reference(cls, value: object) -> object:
+        return int(value) if isinstance(value, str) and value.isascii() and value.isdecimal() else value
+
+    @model_validator(mode="after")
+    def bounded_keepalive(self) -> Self:
+        if self.max_keepalive_connections > self.max_connections:
+            message = "max_keepalive_connections must not exceed max_connections"
+            raise ValueError(message)
+        return self
+
+
 class Config(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -61,6 +80,7 @@ class Config(BaseModel):
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; must name the store the control plane writes
     events: OutboxConfig = Field(default_factory=DevNullOutboxConfig)
     budget: BudgetConfig = Field(default_factory=NoBudgetConfig)
+    http: HttpConfig = Field(default_factory=HttpConfig)
     dev: bool = Field(default=False, validate_default=True)
 
     @field_validator("dev", mode="before")
