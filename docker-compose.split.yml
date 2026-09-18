@@ -25,6 +25,16 @@ services:
     volumes:
       - split-pgdata:/var/lib/postgresql/data
 
+  migrate:
+    extends:
+      file: docker-compose.yml
+      service: migrate
+
+  taxonomy:
+    extends:
+      file: docker-compose.yml
+      service: taxonomy
+
   control-plane:
     image: ${AIRMUX_IMAGE:-airmux:local}
     command: control-plane
@@ -37,8 +47,8 @@ services:
       - runtime-credentials:/state/runtime
       - provider-secrets:/state/secrets
     depends_on:
-      postgres:
-        condition: service_healthy
+      taxonomy:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
       interval: 5s

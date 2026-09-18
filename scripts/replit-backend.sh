@@ -72,6 +72,8 @@ if ! uv run airmux control-plane migrate; then
   uv run airmux control-plane migrate
 fi
 
+uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
+
 # Fixtures are intentionally fresh-database-only. Keep the workflow restartable
 # after the first successful seed without hiding real fixture errors.
 libpq_url="$(libpq_database_url)"
@@ -87,4 +89,4 @@ fi
 # Loopback-only on purpose: the console's Vite proxy reaches the backend at
 # 127.0.0.1:8101, and keeping the port invisible to Replit's port detector
 # guarantees the preview can never route to the API instead of the console.
-exec uv run airmux control-plane serve --dev --taxonomy taxonomy/taxonomy.yml --host 127.0.0.1 --port 8101
+exec uv run airmux control-plane serve --dev --host 127.0.0.1 --port 8101

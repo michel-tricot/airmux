@@ -23,20 +23,32 @@ def test_compose_topologies_project_the_same_image_into_roles() -> None:
     compact = yaml.safe_load(compact_text)
     split = yaml.safe_load(split_text)
 
-    assert "build" not in compact["services"]["airmux"]
-    assert compact["services"]["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
-    assert compact["services"]["airmux"]["command"] == "airmux"
+    compact_services = compact["services"]
+    assert "build" not in compact_services["airmux"]
+    assert compact_services["airmux"]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+    assert compact_services["airmux"]["command"] == "airmux"
+    for name in ("migrate", "taxonomy"):
+        assert compact_services[name]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
+        assert compact_services[name]["entrypoint"] == ["/usr/bin/tini", "--", "airmux"]
+        assert compact_services[name]["restart"] == "no"
+    assert compact_services["migrate"]["command"][:2] == ["control-plane", "migrate"]
+    assert compact_services["taxonomy"]["command"][:2] == ["control-plane", "taxonomy"]
+    assert compact_services["migrate"]["depends_on"]["postgres"]["condition"] == "service_healthy"
+    assert compact_services["taxonomy"]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
+    assert compact_services["airmux"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
 
     services = split["services"]
     assert "setup" not in services
     for name in ("control-plane", "data-plane-1", "data-plane-2", "console"):
         assert services[name]["image"] == "${AIRMUX_IMAGE:-airmux:local}"
         assert "build" not in services[name]
+    for name in ("migrate", "taxonomy"):
+        assert services[name]["extends"] == {"file": "docker-compose.yml", "service": name}
     assert services["control-plane"]["command"] == "control-plane"
     assert services["data-plane-1"]["command"] == "data-plane"
     assert services["data-plane-2"]["command"] == "data-plane"
     assert services["console"]["command"] == "console"
-    assert services["control-plane"]["depends_on"]["postgres"]["condition"] == "service_healthy"
+    assert services["control-plane"]["depends_on"]["taxonomy"]["condition"] == "service_completed_successfully"
     for name in ("data-plane-1", "data-plane-2"):
         assert services[name]["depends_on"]["control-plane"]["condition"] == "service_healthy"
 

@@ -61,7 +61,7 @@ async def _require_migrated_schema(engine: AsyncEngine) -> None:
     head = head_revision()
     if current != head:
         state = f"at revision {current}" if current else "empty"
-        msg = f"database schema is {state} but the code expects {head}: run `airmux control-plane migrate` (serve --dev migrates automatically)"
+        msg = f"database schema is {state} but the code expects {head}: run `airmux control-plane migrate`"
         raise RuntimeError(msg)
 
 

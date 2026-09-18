@@ -3,7 +3,8 @@ title: "Docker Compose"
 description: "Run the airmux image and Postgres with persistent named volumes."
 ---
 
-The default `docker-compose.yml` runs two containers: airmux and Postgres.
+The default `docker-compose.yml` runs one long-lived airmux container and Postgres. Two one-shot containers migrate the
+database and apply the shipped taxonomy before airmux starts.
 
 Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
@@ -66,8 +67,8 @@ docker build -t airmux:local .
 docker compose up -d --wait
 ```
 
-The image defaults to the `airmux` role, which starts the control plane, gateway, and console. The control plane creates
-its configured bootstrap key only when absent, applies forward migrations and the shipped taxonomy, then accepts traffic.
-Application processes run as UID `10001`.
+The migration and taxonomy jobs use the same image as the serving container and must complete successfully before it starts.
+The image defaults to the `airmux` role, which starts the control plane, gateway, and console. The control plane verifies
+the migrated schema and creates its configured bootstrap key only when absent. Application processes run as UID `10001`.
 Docker initializes fresh named volumes from the image's private state directories. Bind mounts and custom configured
 paths must be writable by the selected container user; overriding the container user does not change the startup path.

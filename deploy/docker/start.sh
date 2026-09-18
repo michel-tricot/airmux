@@ -6,7 +6,7 @@ export AIRMUX_CONSOLE_URL
 
 start_control_plane() {
   umask 077
-  exec airmux control-plane serve --host "$1" --port 8000 --config "$AIRMUX_CONFIG" --taxonomy /app/taxonomy/taxonomy.yml
+  exec airmux control-plane serve --host "$1" --port 8000 --config "$AIRMUX_CONFIG"
 }
 
 start_data_plane() {

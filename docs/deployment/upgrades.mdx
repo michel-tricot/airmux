@@ -8,8 +8,8 @@ or database schema. Use the same release for every component unless its release 
 rolling-compatible path.
 
 <Warning>
-  Control-plane startup runs the forward database migration. The CLI has no operator-facing downgrade command. Do not run an
-  older release against a database migrated by a newer release.
+  The Compose migration job applies the forward database migration before starting the new release. The CLI has no
+  operator-facing downgrade command. Do not run an older release against a database migrated by a newer release.
 </Warning>
 
 ## Prepare a recovery point
@@ -31,12 +31,12 @@ Set `AIRMUX_IMAGE` to the target `ghcr.io/michel-tricot/airmux` digest before re
 
 Follow the [Docker Compose](/docs/deployment/docker) replacement procedure. Preserve the public origin, database, and state mounts.
 
-Replace an airmux container as one unit. The control plane initializes, then the gateway becomes ready.
+Replace an airmux container as one unit. Compose completes the migration and taxonomy jobs, then the gateway becomes ready.
 
 For a split deployment:
 
 1. Remove every gateway from public traffic and stop it after active streams finish
-2. Replace the control plane, gateways, and console with the same image digest
+2. Run the migration and taxonomy jobs, then replace the control plane, gateways, and console with the same image digest
 3. Wait for the control plane health check and each gateway's `/readyz` response before restoring traffic
 
 ## Verify the release

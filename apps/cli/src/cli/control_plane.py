@@ -48,14 +48,13 @@ def serve(
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
     port: PortOption = 8000,
-    taxonomy: Annotated[Path | None, typer.Option("--taxonomy", help="Taxonomy to apply before serving")] = None,
     dev: Annotated[bool, typer.Option("--dev", help="Reload Python code during development")] = False,
 ) -> None:
     """Run the management API in the foreground."""
     from control_plane.operations import serve as serve_control_plane  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
-    serve_control_plane(path, host=host, port=port, taxonomy=taxonomy, dev=dev)
+    serve_control_plane(path, host=host, port=port, dev=dev)
 
 
 @control_plane_app.command()

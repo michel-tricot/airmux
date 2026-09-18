@@ -213,6 +213,12 @@ def test_runtime_subcommand_help_is_available(group):
     assert "--port" in Text.from_ansi(result.output).plain
 
 
+def test_control_plane_serve_does_not_own_database_lifecycle():
+    result = runner.invoke(app, ["control-plane", "serve", "--help"])
+    assert result.exit_code == 0, result.output
+    assert "--taxonomy" not in Text.from_ansi(result.output).plain
+
+
 def test_removed_configuration_variable_syntax_is_rejected(tmp_path):
     config = tmp_path / "airmux.yml"
     config.write_text("control_plane:\n  console_url: ${var:missing}\n")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import re
 from contextlib import contextmanager
@@ -20,7 +19,7 @@ from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.compiler import publish_changes
-from control_plane.config import Settings, load_settings
+from control_plane.config import Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
 from control_plane.keys import new_management_key
@@ -126,20 +125,16 @@ def initialize(directory: Path, console_url: str) -> None:
     )
 
 
-def serve(config: Path, *, host: str, port: int, taxonomy: Path | None, dev: bool) -> None:
+def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
     os.environ["AIRMUX_CONFIG"] = str(config)
     _ensure_bootstrap_key(config)
     load_settings(config)
-    with database_errors():
-        run_migrations()
-    if taxonomy is not None:
-        asyncio.run(apply_catalog(config, taxonomy))
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
 
 
 def migrate(config: Path) -> MigrationResult:
     with configuration_environment(config):
-        url = load_settings(config).database.url
+        url = database_url()
         with database_errors():
             before = current_revision(url)
             run_migrations()
@@ -189,8 +184,8 @@ async def seed_fixtures(config: Path) -> FixtureResult:
 
 async def apply_catalog(config: Path, path: Path) -> TaxonomyResult:
     taxonomy = parse_taxonomy(path)
-    with database_errors():
-        async with standalone_transaction(load_settings(config).database.url):
+    with configuration_environment(config), database_errors():
+        async with standalone_transaction(database_url()):
             await set_actor("root")
             providers, models = await apply_taxonomy(taxonomy)
             return TaxonomyResult(providers, models, await _publish())

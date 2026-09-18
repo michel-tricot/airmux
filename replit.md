@@ -24,7 +24,9 @@ See README.md for the full getting-started guide. The short version:
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
 # add OPENAI_API_KEY to .env
-uv run airmux control-plane serve --dev --taxonomy taxonomy/taxonomy.yml # initialize and serve the control plane on :8000
+uv run airmux control-plane migrate
+uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
+uv run airmux control-plane serve --dev              # control plane on :8000
 # sign up at the console: the first account claims the instance
 uv run airmux gateway serve --dev           # data plane on :8080
 ```
@@ -40,7 +42,8 @@ See `.env.example`. Key variables:
 | `AIRMUX_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRMUX_INFERENCE_KEY` | Caller inference key |
 
-Control-plane startup ensures the configured shared pool key exists, migrates Postgres, applies the selected taxonomy, and authorizes the key.
+Control-plane startup ensures the configured shared pool key exists, verifies the schema revision, and authorizes the key.
+Migration and taxonomy application are explicit commands.
 
 ## Project layout
 
@@ -100,12 +103,13 @@ repository root:
 That script runs the required sequence:
 
 1. `uv run airmux control-plane migrate`, resetting only the disposable Replit development database when migration fails
-2. `uv run airmux control-plane fixtures`
-3. `uv run airmux control-plane serve --dev --taxonomy taxonomy/taxonomy.yml` (the helper adds `--host 0.0.0.0` for Replit)
+2. `uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml`
+3. `uv run airmux control-plane fixtures`
+4. `uv run airmux control-plane serve --dev` (the helper binds it to Replit's loopback backend port)
 
 If there is any migration incompatibility, the script must start the Replit
 development database from scratch: drop and recreate it, then run the full
-sequence again (`migrate`, `fixtures`, and `serve`). This reset is
+sequence again (`migrate`, `taxonomy`, `fixtures`, and `serve`). This reset is
 intentionally destructive and is only for the Replit development database. The
 backend support workflow is separate from the console artifact; Replit code
 changes remain console-only.

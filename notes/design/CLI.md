@@ -37,9 +37,10 @@ distribution version, and the installed behavior suite exercises the same artifa
 
 The container is also one release artifact. It contains the public distribution, console assets, Nginx, and deployment
 scripts, and selects `control-plane`, `data-plane`, `console`, or `airmux` at startup. Role selection is not application
-configuration. The control plane creates its bootstrap credential, migrates Postgres, and applies the selected taxonomy
-before serving. Administrative CLI and standalone gateway commands explicitly override the
-container entry point instead of adding a second command dispatcher to the role script.
+configuration. The serving process creates its bootstrap credential and verifies the schema revision. Deployment
+orchestration invokes the explicit migration and taxonomy commands from the same image before serving. Administrative CLI
+and standalone gateway commands explicitly override the container entry point instead of adding a second command dispatcher
+to the role script.
 
 Main CI builds that image once from the validated Python candidate, exercises every topology against it, and publishes the
 validated main-branch image under its source commit. The release workflow promotes that digest under the public version;
@@ -66,9 +67,10 @@ against that bundle. Moving the working directory cannot select a different key 
 remain in their selected secret store. Validation checks the configuration and local bundle admission without pretending
 to prove upstream connectivity. A connected gateway validates its configuration locally and admits fetched bundles at runtime.
 
-`serve` runs in the foreground. Migration, taxonomy import, fixtures, and owner recovery are explicit commands. The development
-control-plane reloader also applies migrations. Containers invoke the same operations through the CLI; their scripts retain
-only deployment preparation and process supervision. Containers update through image replacement, not package self-updates.
+`serve` runs in the foreground. Migration, taxonomy import, fixtures, and owner recovery are explicit commands. The control
+plane verifies the schema revision before serving in both development and production. Containers invoke the same operations
+through the CLI; their role script retains only process supervision. Containers update through image replacement, not package
+self-updates.
 
 ## Verification
 

@@ -38,8 +38,9 @@ Restrict backup access because the default file secret store contains plaintext 
 
 ## Updates
 
-The control plane creates its bootstrap credential when absent, migrates Postgres, and applies the shipped taxonomy before
-it accepts traffic. A split gateway can keep serving an accepted cached bundle while the control plane is unavailable.
+Compose completes its migration and taxonomy jobs before starting the control plane. The serving process creates its bootstrap
+credential when absent and refuses to start unless the database is at the expected schema revision. A split gateway can keep
+serving an accepted cached bundle while the control plane is unavailable.
 Because pre-1.0 releases do not promise
 cross-version compatibility between planes, deploy one image digest across all components. Follow
 [Upgrade and rollback](/docs/deployment/upgrades) to restore the database and state together if verification fails.
@@ -54,4 +55,5 @@ cross-version compatibility between planes, deploy one image digest across all c
 | Usage missing from console | `/healthz` pending count and control-plane event-ingest reachability |
 | New key returns `invalid_token` | Wait for bundle adoption, then inspect `bundles list` and gateway logs |
 | Streams pause or buffer | Reverse-proxy buffering and read timeout |
-| Control plane refuses startup during migration | Check database reachability and migration errors in its logs |
+| Migration job fails | Check database reachability, permissions, and the migration job logs |
+| Control plane reports a schema mismatch | Run `airmux control-plane migrate` before starting it |
