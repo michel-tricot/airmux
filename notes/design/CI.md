@@ -174,11 +174,17 @@ but it always requires both ecosystem audits to succeed.
 
 Repository-owned policy is recorded under `.github/policy/`:
 
-- `protect-main.json` requires a current base, linear history, resolved conversations, squash merging, `required`, and `dependency-security`
+- `protect-main.json` requires a pull request, linear history, resolved conversations, squash merging, `required`, and `dependency-security`,
+  without requiring a current base
 - `actions.json` restricts actions and requires full-SHA pins
 - `security.json` records CodeQL default setup, secret scanning, and push protection
 - Release tag files make `v*` creation deliberate and existing tags immutable
 - `release-environment.json` constrains secret-bearing and publishing jobs
+
+Required status checks use GitHub's [loose mode](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+A conflict-free branch with passing required checks can merge without updating it after another pull request lands.
+This avoids repeated branch updates and CI runs, but those checks may predate the latest changes to `main`: no textual
+conflicts does not guarantee integration compatibility. CI still runs on every push to `main`.
 
 `scripts/github-policy diff` is read-only and compares those files with live GitHub settings. `scripts/github-policy
 apply` is the explicit mutation path. Workflow YAML cannot enforce repository settings by itself.
