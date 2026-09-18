@@ -9,7 +9,7 @@ dependencies = [
   "airmux-runtime",
   "starlette",
   "uvicorn[standard]",
-  "httpx[http2]",
+  "httpx2[http2]>=2.13",
   "pydantic>=2",
   "tiktoken",
   "pyyaml",

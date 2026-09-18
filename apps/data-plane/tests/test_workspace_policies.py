@@ -5,6 +5,7 @@ import json
 from decimal import Decimal
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import (
@@ -436,10 +437,10 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
             return httpx.Response(200, json=TEXT_NONSTREAM)
         if failure == "read_error":
             message = "connection reset"
-            raise httpx.ReadError(message, request=incoming)
+            raise httpx2.ReadError(message, request=incoming)
         if failure == "timeout":
             message = "timed out"
-            raise httpx.ReadTimeout(message, request=incoming)
+            raise httpx2.ReadTimeout(message, request=incoming)
         if failure == "midstream":
             return httpx.Response(200, content=TEXT_LOG.removesuffix(b"data: [DONE]\n\n"))
         if failure == "deadline":
