@@ -5445,12 +5445,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -5462,7 +5456,6 @@ components:
       - prefix
       - created_at
       - updated_at
-      - deleted_at
       title: InferenceKeyOut
     InferenceKeyOwnerOut:
       properties:
@@ -5727,12 +5720,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -5759,7 +5746,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       - token
@@ -5851,12 +5837,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -5880,7 +5860,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       title: ManagementKeyOut
@@ -6290,12 +6269,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6315,7 +6288,6 @@ components:
       - parameter_support
       - created_at
       - updated_at
-      - deleted_at
       title: ModelOut
     MyPermissionsOut:
       properties:
@@ -6457,12 +6429,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         status:
           type: string
           enum:
@@ -6486,7 +6452,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - status
       title: OrgInvitationOut
     OrgInvitationRevokedOut:
@@ -6580,12 +6545,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6594,7 +6553,6 @@ components:
       - personal_for
       - created_at
       - updated_at
-      - deleted_at
       title: OrgOut
     OrgRole:
       type: string
@@ -6966,12 +6924,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6983,7 +6935,6 @@ components:
       - definition
       - created_at
       - updated_at
-      - deleted_at
       title: PolicyOut
     PolicyUpdate:
       properties:
@@ -7139,12 +7090,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           type: string
           enum:
@@ -7168,7 +7113,6 @@ components:
       - fingerprint
       - created_at
       - updated_at
-      - deleted_at
       - scope
       title: ProviderCredentialOut
     ProviderCredentialUpdate:
@@ -7343,12 +7287,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7361,7 +7299,6 @@ components:
       - params_closed
       - created_at
       - updated_at
-      - deleted_at
       title: ProviderOut
     RequestLimits:
       properties:
@@ -8091,12 +8028,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         orgs:
           items:
             type: string
@@ -8113,7 +8044,6 @@ components:
       - managing_org_id
       - created_at
       - updated_at
-      - deleted_at
       - orgs
       title: UserOut
     ValidationError:
@@ -8253,12 +8183,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -8267,7 +8191,6 @@ components:
       - slug
       - created_at
       - updated_at
-      - deleted_at
       title: WorkspaceOut
     WorkspaceRole:
       type: string

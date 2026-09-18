@@ -42,7 +42,6 @@ it.each(['Never', '30 days'])('creates a workspace management key with expiry %s
         revoked_at: null,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
-        deleted_at: null,
         status: 'active',
         scope: { level: 'workspace', org_id: ORG.id, workspace_id: workspace.id },
       };

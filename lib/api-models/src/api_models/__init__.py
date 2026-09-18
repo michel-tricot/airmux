@@ -472,7 +472,6 @@ class InferenceKeyOut(BaseModel):
     prefix: Annotated[str, Field(title="Prefix")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class InferenceKeyOwnerOut(BaseModel):
@@ -792,7 +791,6 @@ class ModelOut(BaseModel):
     parameter_support: Annotated[dict[str, Literal["supported", "unsupported"]], Field(title="Parameter Support")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class OrgCreate(BaseModel):
@@ -878,7 +876,6 @@ class OrgInvitationOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     status: Annotated[Literal["pending", "expired", "accepted", "revoked"], Field(title="Status")]
 
 
@@ -895,7 +892,6 @@ class OrgOut(BaseModel):
     personal_for: Annotated[UUID | None, Field(title="Personal For")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
@@ -1146,7 +1142,6 @@ class ProviderCredentialOut(BaseModel):
     fingerprint: Annotated[str, Field(title="Fingerprint")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
 
 
@@ -1303,7 +1298,6 @@ class ProviderOut(BaseModel):
     params_closed: Annotated[bool, Field(title="Params Closed")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class RequestLimits(BaseModel):
@@ -1700,7 +1694,6 @@ class UserOut(BaseModel):
     managing_org_id: Annotated[UUID | None, Field(title="Managing Org Id")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
@@ -1750,7 +1743,6 @@ class WorkspaceOut(BaseModel):
     slug: Annotated[str, Field(title="Slug")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
@@ -2149,7 +2141,6 @@ class ManagementKeyCreatedOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Scope
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
     token: Annotated[str, Field(title="Token")]
@@ -2168,7 +2159,6 @@ class ManagementKeyOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Scope
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
 
@@ -2238,7 +2228,6 @@ class PolicyOut(BaseModel):
     definition: PolicyDefinitionOutput
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class PolicyUpdate(BaseModel):

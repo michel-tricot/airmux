@@ -609,7 +609,6 @@ export interface OrgOut {
   personal_for: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface InvitationPreviewOut {
@@ -694,7 +693,6 @@ export interface InferenceKeyOut {
   prefix: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface InferenceKeyOwnerOut {
@@ -827,7 +825,6 @@ export interface ManagementKeyCreatedOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: Scope;
   status: ManagementKeyCreatedOutStatus;
   token: string;
@@ -871,7 +868,6 @@ export interface ManagementKeyOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: Scope;
   status: ManagementKeyOutStatus;
 }
@@ -1078,7 +1074,6 @@ export interface ModelOut {
   parameter_support: ModelOutParameterSupport;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface MyPermissionsOut {
@@ -1143,7 +1138,6 @@ export interface OrgInvitationOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   status: OrgInvitationOutStatus;
 }
 
@@ -1185,7 +1179,6 @@ export interface UserOut {
   managing_org_id: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   orgs: string[];
 }
 
@@ -1317,7 +1310,6 @@ export interface PolicyOut {
   definition: PolicyDefinitionOutput;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface PolicyUpdate {
@@ -1397,7 +1389,6 @@ export interface ProviderCredentialOut {
   fingerprint: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: ProviderCredentialOutScope;
 }
 
@@ -1475,7 +1466,6 @@ export interface ProviderOut {
   params_closed: boolean;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 /**
@@ -1761,7 +1751,6 @@ export interface WorkspaceOut {
   slug: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface WorkspaceUpdate {

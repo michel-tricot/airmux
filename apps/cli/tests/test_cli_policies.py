@@ -39,7 +39,6 @@ def test_policy_create_and_update_preserve_typed_configuration(tmp_path, monkeyp
         "definition": definition,
         "created_at": "2026-09-08T00:00:00Z",
         "updated_at": "2026-09-08T00:00:00Z",
-        "deleted_at": None,
     }
     path = tmp_path / "policy.json"
     path.write_text(json.dumps({"name": "Production", "definition": definition}), encoding="utf-8")

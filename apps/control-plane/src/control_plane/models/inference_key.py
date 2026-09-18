@@ -81,7 +81,6 @@ class InferenceKeyOut(RecordOut[InferenceKey]):
     prefix: str
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
 
 
 class InferenceKeyCreatedOut(BaseModel):

@@ -12,12 +12,11 @@ export const ORG: Api.OrgOut = {
   personal_for: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 
 export const WORKSPACES: Api.WorkspaceOut[] = [
-  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now, deleted_at: null },
-  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now, deleted_at: null },
+  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now },
+  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now },
 ];
 
 export function paged<T>(data: T[]) {

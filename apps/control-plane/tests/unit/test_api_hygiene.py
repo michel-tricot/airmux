@@ -253,6 +253,11 @@ def test_response_schemas_are_envelopes():
     assert offenders == []
 
 
+def test_only_delete_action_results_expose_deleted_at():
+    schemas = make_app().openapi()["components"]["schemas"]
+    assert {name for name, schema in schemas.items() if "deleted_at" in schema.get("properties", {})} == {"DeletedOut_UUID_", "DeletedOut_str_"}
+
+
 def test_paginated_operations_share_one_query_contract():
     app = make_app()
     spec = app.openapi()

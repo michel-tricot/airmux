@@ -15,11 +15,12 @@ def test_pre_release_schema_has_one_baseline_migration():
 
 
 def test_tombstoned_models_carry_the_columns_in_metadata():
-    """Every Tombstonable table has the three lifecycle columns in its metadata."""
+    """Every Tombstonable table has creation and update timestamps in its metadata."""
     tables = tombstoned_tables()
     assert tables
     for table in tables:
         assert set(table.c.keys()) >= TOMBSTONE_COLUMNS, table.name
+        assert "deleted_at" not in table.c, table.name
 
 
 def test_tombstonable_models_inherit_the_lifecycle_fields():
@@ -28,6 +29,7 @@ def test_tombstonable_models_inherit_the_lifecycle_fields():
     assert models
     for cls in models:
         assert set(cls.model_fields) >= TOMBSTONE_COLUMNS, cls.__name__
+        assert "deleted_at" not in cls.model_fields, cls.__name__
 
 
 def test_bundle_input_registry_names_real_ignored_columns():

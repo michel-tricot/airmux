@@ -18,7 +18,6 @@ function installUser(instanceRole: Api.InstanceRole | null = null) {
     orgs: [],
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
   server.use(
     http.get('/api/v1/auth/me', () =>
