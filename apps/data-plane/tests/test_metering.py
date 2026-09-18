@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from decimal import Decimal
 
+import pytest
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key
 
 from contract import uuid7
@@ -41,7 +42,8 @@ def test_smallest_rate_one_token_cost_is_exact():
     assert cost_breakdown(CanonicalUsage(input_tokens=1), model) == (Decimal("0.000000000001"), Decimal(0))
 
 
-def test_estimated_usage_has_request_attribution():
+@pytest.mark.parametrize("estimated", [False, True])
+def test_usage_has_request_attribution_and_token_source(estimated):
     bundle_id = uuid7()
     credential_id = uuid7()
     ctx = Ctx(
@@ -67,7 +69,7 @@ def test_estimated_usage_has_request_attribution():
         model=MODEL.model_id,
         content=[CanonicalTextPart(text="one two")],
         finish_reason=None,
-        usage=CanonicalUsage(estimated=True),
+        usage=CanonicalUsage(estimated=estimated),
     )
 
     event = usage_event(ctx, response, "cancelled", request)
@@ -77,8 +79,9 @@ def test_estimated_usage_has_request_attribution():
     assert event.credential_id == credential_id
     assert event.credential_scope == "workspace"
     assert event.status == "cancelled"
-    assert event.input_tokens > 0
-    assert event.output_tokens > 0
+    assert event.token_usage_source == ("estimated" if estimated else "provider")
+    assert (event.input_tokens > 0) == estimated
+    assert (event.output_tokens > 0) == estimated
     assert event.max_output_tokens == 37
     assert event.cost_usd == event.cost_input_usd + event.cost_output_usd
 
@@ -114,6 +117,7 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content():
 
     assert event.input_tokens == 37
     assert event.output_tokens > 0
+    assert event.token_usage_source == "estimated"
 
 
 def test_denial_uses_the_request_identity_and_elapsed_latency():
@@ -126,3 +130,4 @@ def test_denial_uses_the_request_identity_and_elapsed_latency():
 
     assert event.request_id == request_id
     assert event.latency_ms >= 1000
+    assert event.token_usage_source == "not_applicable"

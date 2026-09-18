@@ -174,6 +174,11 @@ def upgrade() -> None:
     )
     op.create_table(
         "usage_event",
+        sa.CheckConstraint(
+            "(status = 'denied' AND token_usage_source = 'not_applicable') OR "
+            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
+            name="usage_event_token_usage_source_valid",
+        ),
         sa.Column("event_id", sa.Uuid(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
@@ -185,6 +190,7 @@ def upgrade() -> None:
         sa.Column("bundle_id", sa.Uuid(), nullable=False),
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("token_usage_source", sa.String(), nullable=False),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),

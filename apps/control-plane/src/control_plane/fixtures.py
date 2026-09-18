@@ -249,6 +249,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
             input_tokens=rng.randint(300, 6000),
             output_tokens=rng.randint(80, 1500),
+            token_usage_source="estimated" if index % 3 == 0 else "provider",
             cost_usd=cost_input_usd + cost_output_usd,
             cost_input_usd=cost_input_usd,
             cost_output_usd=cost_output_usd,

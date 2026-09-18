@@ -17,6 +17,7 @@ from contract.events import (
     HeartbeatV1,
     RoutedUsageEventV1,
     RoutedUsageStatus,
+    TokenUsageSource,
     UsageEvent,
     UsageStatus,
 )
@@ -47,6 +48,7 @@ __all__ = [
     "RoutedUsageStatus",
     "SecretPurpose",
     "SecretRef",
+    "TokenUsageSource",
     "UsageEvent",
     "UsageStatus",
     "UsdAmount",

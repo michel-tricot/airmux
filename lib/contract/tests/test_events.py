@@ -24,6 +24,7 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "bundle_id": uuid7(),
         "input_tokens": 1,
         "output_tokens": 1,
+        "token_usage_source": "provider",
         "max_output_tokens": 128,
         "cost_usd": "0",
         "latency_ms": 1,
@@ -69,7 +70,35 @@ def test_denied_usage_event_cost_must_be_zero() -> None:
                 credential_scope=None,
                 input_tokens=0,
                 output_tokens=0,
+                token_usage_source="not_applicable",
                 cost_usd="0.1",
                 cost_input_usd="0.1",
             )
+        )
+
+
+@pytest.mark.parametrize("source", ["provider", "estimated"])
+def test_token_usage_source_survives_event_serialization(source):
+    event = USAGE_EVENT_ADAPTER.validate_python(usage_event(token_usage_source=source))
+    assert USAGE_EVENT_ADAPTER.validate_json(event.model_dump_json()).token_usage_source == source
+
+
+@pytest.mark.parametrize("source", [None, "unknown", "not_applicable"])
+def test_routed_usage_rejects_invalid_token_sources(source):
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(token_usage_source=source))
+
+
+def test_token_usage_source_is_required():
+    event = usage_event()
+    del event["token_usage_source"]
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(event)
+
+
+@pytest.mark.parametrize("source", ["provider", "estimated"])
+def test_denied_usage_rejects_routed_token_sources(source):
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(
+            usage_event(status="denied", provider_id="", credential_id=None, credential_scope=None, token_usage_source=source)
         )

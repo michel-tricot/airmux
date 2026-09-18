@@ -16,7 +16,7 @@ import pytest
 from starlette.testclient import TestClient
 
 import data_plane.app as app_module
-from contract import DeniedUsageEventV1, uuid7
+from contract import DeniedUsageEventV1, TokenUsageSource, uuid7
 from data_plane.app import create_app
 from data_plane.bundle import BundleSource, LocalBundleConfig
 from data_plane.config import Config, FileOutboxConfig
@@ -97,6 +97,7 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
                         provider_id="",
                         bundle_id=uuid7(),
                         input_tokens=0,
+                        token_usage_source=TokenUsageSource.NOT_APPLICABLE,
                         output_tokens=0,
                         max_output_tokens=None,
                         cost_usd="0",

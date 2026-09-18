@@ -10,6 +10,7 @@ import { TerminalSquare, KeyRound, Users, Database, Activity, Coins, ArrowDownTo
 import { formatDate } from '@/lib/format';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { TokenUsageSource } from '@/components/shared/token-usage-source';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -73,6 +74,9 @@ export default function WorkspaceOverview() {
   const requests = events?.length;
   const inputTokens = events?.reduce((sum, event) => sum + event.input_tokens, 0);
   const outputTokens = events?.reduce((sum, event) => sum + event.output_tokens, 0);
+  const tokensHint = events?.some((event) => event.token_usage_source === 'estimated')
+    ? `latest ${EVENTS_WINDOW} requests, includes estimated counts`
+    : `latest ${EVENTS_WINDOW} requests`;
   const costUsd = events ? sumUsdAmounts(events.map((event) => event.cost_usd)) : undefined;
   const recent = events?.slice(0, 8);
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
@@ -86,6 +90,7 @@ export default function WorkspaceOverview() {
             model,
             requests: modelEvents.length,
             tokens: modelEvents.reduce((sum, event) => sum + event.input_tokens + event.output_tokens, 0),
+            tokensEstimated: modelEvents.some((event) => event.token_usage_source === 'estimated'),
             cost: sumUsdAmounts(modelEvents.map((event) => event.cost_usd)),
           };
         })
@@ -137,15 +142,20 @@ export default function WorkspaceOverview() {
             icon={ArrowDownToLine}
             label="Input Tokens"
             value={inputTokens === undefined ? '-' : formatTokens(inputTokens)}
-            hint={`latest ${EVENTS_WINDOW} requests`}
+            hint={tokensHint}
           />
           <MetricCard
             icon={ArrowUpFromLine}
             label="Output Tokens"
             value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
-            hint={`latest ${EVENTS_WINDOW} requests`}
+            hint={tokensHint}
           />
-          <MetricCard icon={Coins} label="Spend" value={costUsd === undefined ? '-' : formatUsd(costUsd)} hint={`latest ${EVENTS_WINDOW} requests`} />
+          <MetricCard
+            icon={Coins}
+            label="Est. cost"
+            value={costUsd === undefined ? '-' : formatUsd(costUsd)}
+            hint={`latest ${EVENTS_WINDOW} requests, at catalog prices`}
+          />
         </div>
       )}
 
@@ -185,11 +195,11 @@ export default function WorkspaceOverview() {
                     header: 'Tokens',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
-                    cell: (row) => formatTokens(row.tokens),
+                    cell: (row) => `${formatTokens(row.tokens)}${row.tokensEstimated ? ' (estimated)' : ''}`,
                   },
                   {
                     key: 'cost',
-                    header: 'Cost',
+                    header: 'Est. cost',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
                     cell: (row) => formatUsd(row.cost),
@@ -239,6 +249,11 @@ export default function WorkspaceOverview() {
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
                     cell: (e) => formatTokens(e.input_tokens + e.output_tokens),
+                  },
+                  {
+                    key: 'token_source',
+                    header: 'Token source',
+                    cell: (e) => <TokenUsageSource source={e.token_usage_source} />,
                   },
                   {
                     key: 'when',

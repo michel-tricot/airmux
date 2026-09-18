@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
@@ -18,6 +19,12 @@ about the credential rather than about the provider, and the control plane rolls
 the credential's status. Everything else upstream stays undifferentiated.
 """
 MAX_EVENT_INTEGER = 2_147_483_647
+
+
+class TokenUsageSource(StrEnum):
+    PROVIDER = "provider"
+    ESTIMATED = "estimated"
+    NOT_APPLICABLE = "not_applicable"
 
 
 class _UsageEventV1(BaseModel):
@@ -75,6 +82,7 @@ class _UsageEventV1(BaseModel):
 
 
 class DeniedUsageEventV1(_UsageEventV1):
+    token_usage_source: Literal[TokenUsageSource.NOT_APPLICABLE] = Field(description="No upstream token usage for a request denied before routing")
     provider_id: Literal[""] = Field("", description="No provider was selected before denial")
     status: Literal["denied"] = Field("denied", description="The request was denied before routing")
     credential_id: None = Field(None, description="No provider credential was selected before denial")
@@ -82,6 +90,10 @@ class DeniedUsageEventV1(_UsageEventV1):
 
 
 class RoutedUsageEventV1(_UsageEventV1):
+    token_usage_source: Literal[TokenUsageSource.PROVIDER, TokenUsageSource.ESTIMATED] = Field(
+        description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. "
+        "Independent of catalog-priced cost estimates"
+    )
     provider_id: str = Field(min_length=1, max_length=63, description="Provider that served the request")
     status: RoutedUsageStatus = Field(description="How the routed request ended")
     credential_id: UUID = Field(description="Provider credential used for the request")
