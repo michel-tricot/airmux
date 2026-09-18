@@ -7,6 +7,7 @@ import subprocess
 import tomllib
 from collections import Counter
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 import yaml
@@ -21,6 +22,7 @@ LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
 PUBLIC_REPOSITORY = "https://github.com/michel-tricot/airmux"
+REPOSITORY_SOURCE_LINK = re.compile(rf"(?<!!)\[[^\]]+\]\({re.escape(PUBLIC_REPOSITORY)}/(?:blob|tree)/main/(?P<target>[^)#?]+)(?:[?#][^)]*)?\)")
 PUBLISHED_PROJECT = ROOT / "packaging/airmux/pyproject.toml"
 INTERNAL_DISTRIBUTIONS = {
     "airmux-api-models",
@@ -228,6 +230,14 @@ def test_bundled_projects_are_release_independent() -> None:
 @pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
 def test_repository_documentation_links_resolve(path: Path) -> None:
     missing = [target for target in LOCAL_LINK.findall(path.read_text(encoding="utf-8")) if not (path.parent / target).resolve().exists()]
+    assert missing == []
+
+
+@pytest.mark.parametrize(
+    "path", [ROOT / "README.md", ROOT / "notes/design/README.md", *documentation_files()], ids=lambda path: str(path.relative_to(ROOT))
+)
+def test_repository_source_links_resolve(path: Path) -> None:
+    missing = [target for target in REPOSITORY_SOURCE_LINK.findall(path.read_text(encoding="utf-8")) if not (ROOT / unquote(target)).exists()]
     assert missing == []
 
 
