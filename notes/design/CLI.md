@@ -67,10 +67,10 @@ against that bundle. Moving the working directory cannot select a different key 
 remain in their selected secret store. Validation checks the configuration and local bundle admission without pretending
 to prove upstream connectivity. A connected gateway validates its configuration locally and admits fetched bundles at runtime.
 
-`serve` runs in the foreground. Migration, taxonomy import, fixtures, and owner recovery are explicit commands. The control
-plane verifies the schema revision before serving in both development and production. Containers invoke the same operations
-through the CLI; their role script retains only process supervision. Containers update through image replacement, not package
-self-updates.
+`serve` runs in the foreground. Taxonomy import, fixtures, and owner recovery are explicit commands. Development control-plane
+serving applies migrations before starting the reloader; production serving only verifies the schema revision. Containers
+invoke the same operations through the CLI; their role script retains only process supervision. Containers update through
+image replacement, not package self-updates.
 
 ## Verification
 

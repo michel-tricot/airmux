@@ -55,8 +55,9 @@ shipped with the selected image. To diagnose a failure:
 docker compose logs migrate taxonomy
 ```
 
-Restarting the airmux container by itself does not run either job. The control plane never changes the database schema or
-catalog while starting; it refuses to serve when the schema is out of date and tells you to run the migration command.
+Restarting the airmux container by itself does not run either job. The container does not use development mode, so the control
+plane never changes the database schema or catalog while starting; it refuses to serve when the schema is out of date and
+tells you to run the migration command.
 
 ## State
 

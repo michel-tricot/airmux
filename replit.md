@@ -42,8 +42,8 @@ See `.env.example`. Key variables:
 | `AIRMUX_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRMUX_INFERENCE_KEY` | Caller inference key |
 
-Control-plane startup ensures the configured shared pool key exists, verifies the schema revision, and authorizes the key.
-Migration and taxonomy application are explicit commands.
+Development control-plane startup applies migrations, ensures the configured shared pool key exists, and authorizes the key.
+Taxonomy application remains explicit.
 
 ## Project layout
 

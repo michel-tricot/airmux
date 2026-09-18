@@ -25,15 +25,14 @@ cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
 ```
 
-Initialize the database and catalog explicitly, then start the control plane:
+Apply the development catalog before starting the control plane:
 
 ```bash
-uv run airmux control-plane migrate
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-Control-plane startup creates `.airmux/dataplane.key` when absent and verifies the schema revision. Keep the key with the
-matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
+`control-plane serve --dev` applies database migrations before starting. It also creates `.airmux/dataplane.key` when absent.
+Keep the key with the matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
 
 ## Start the services
 

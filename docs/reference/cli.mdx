@@ -59,10 +59,11 @@ The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:808
 The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
 
 `serve` runs in the foreground. Control-plane startup creates a missing internal gateway credential, verifies the database is
-at the expected migration revision, and does not change the schema or model catalog. Run `migrate` and `taxonomy` explicitly
-before serving. The taxonomy command loads providers and models from a file; see [Models and providers](/docs/reference/models-and-providers).
-Startup does not create human accounts. `--dev` reloads Python code. `gateway serve --dev` cannot be combined with multiple
-`--workers`. Local taxonomy and bundle reloads work without `--dev`.
+at the expected migration revision, and does not change the model catalog. In production, run `migrate` and `taxonomy`
+explicitly before serving. `control-plane serve --dev` applies migrations before starting its development reloader, but still
+leaves taxonomy application explicit. The taxonomy command loads providers and models from a file; see
+[Models and providers](/docs/reference/models-and-providers). Startup does not create human accounts. `gateway serve --dev`
+cannot be combined with multiple `--workers`. Local taxonomy and bundle reloads work without `--dev`.
 
 `control-plane taxonomy --file` reads its path relative to the configuration file. Top-level `catalog apply` instead uses
 the authenticated management API. `control-plane owner` is local recovery through database access; it promotes an existing
