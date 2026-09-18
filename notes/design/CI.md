@@ -35,12 +35,13 @@ flowchart TB
     main --> nightly[nightly.yml]
     main_ci --> main_candidate[Candidate sdist, wheel, and SHA256SUMS]
 
-    tag[Protected version tag] --> release[release.yml]
+    main --> release[release.yml]
     main_ci -->|exact successful SHA| release
     main_security -->|exact successful SHA| release
     main_candidate -->|same bytes| release
     release --> prepublish[Installation and live-provider checks]
-    prepublish --> pypi[PyPI trusted publishing]
+    prepublish --> tag[Protected version tag]
+    tag --> pypi[PyPI trusted publishing]
     pypi --> registry_check[Hash comparison, isolated install, real gateway request]
     registry_check --> github_release[GitHub release]
 
@@ -51,7 +52,7 @@ flowchart TB
     nightly --> cold_docker[Cold Docker build]
 ```
 
-There are exactly four workflow files:
+There are exactly five workflow files:
 
 - [ci.yml](../../.github/workflows/ci.yml) runs for pull requests, `main` pushes, and manual dispatches; it owns
   correctness, packaging, installed-candidate acceptance, and evidence, with `required` as its stable result
@@ -59,8 +60,10 @@ There are exactly four workflow files:
   manual dispatches; it owns dependency audits and review, with `dependency-security` as its stable result
 - [nightly.yml](../../.github/workflows/nightly.yml) runs daily or for a manually selected full `main` SHA; it owns
   compatibility, performance, live-provider, soak, and cold-build checks
-- [release.yml](../../.github/workflows/release.yml) runs manually for a protected tag from `main`; it verifies,
-  publishes, verifies the registry, and then announces the release
+- [prepare-release.yml](../../.github/workflows/prepare-release.yml) runs manually from `main`; it creates the public
+  version change on a release branch for review
+- [release.yml](../../.github/workflows/release.yml) runs manually from `main`; it verifies the candidate, creates the
+  protected tag, publishes, verifies the registry, and then announces the release
 
 Adding another workflow is an architectural change. Prefer adding a job to the workflow that already owns the trust and
 latency class. `tests/ci/test_merge_policy.py` intentionally asserts that these are the only workflow files.
@@ -196,16 +199,18 @@ treating one as a gateway regression. Nightly jobs never execute pull-request re
 
 ## Release chain of custody
 
-Release is manually dispatched from `main` with an existing protected tag. `prepare` validates the tag shape, resolves
-it to an immutable commit, proves that commit belongs to `main`, and checks that the package version matches the tag.
-It then queries GitHub by workflow identity and exact SHA for successful `required` and `dependency-security` jobs from
+Release preparation is manually dispatched from `main`. It increments the public package version on a dedicated
+release branch so the one-file version change passes through the ordinary pull-request gate. After that pull request
+merges, release is manually dispatched from `main`. `prepare` binds the public version and tag to the exact `main` SHA,
+then queries GitHub by workflow identity and exact SHA for successful `required` and `dependency-security` jobs from
 trusted `main` push runs.
 
 The workflow downloads the candidate from that exact CI run and verifies its digests. It does not rebuild. Installation
-and live-provider jobs test those bytes without shared caches. Publishing uses PyPI trusted publishing with OIDC and
-the narrow `id-token: write` permission. After upload, the workflow downloads the registry artifacts, compares their
-hashes with the candidate, installs the verified wheel into an empty tool environment, and sends a real gateway
-request. The GitHub release is created only after all of those checks succeed.
+and live-provider jobs test those bytes without shared caches. The workflow then creates the protected version tag at
+the verified SHA. Publishing uses PyPI trusted publishing with OIDC and the narrow `id-token: write` permission. After
+upload, the workflow downloads the registry artifacts, compares their hashes with the candidate, installs the verified
+wheel into an empty tool environment, and sends a real gateway request. The GitHub release is created only after all of
+those checks succeed.
 
 This ordering prevents a green source checkout from masking a broken distribution, a registry mutation, or a package
 that cannot serve a request after installation.
@@ -257,3 +262,23 @@ missing-test incidents weekly. The targets are:
 - Zero missing-test incidents
 
 Record exceptions in this document after enough runs exist to make the percentiles meaningful.
+
+### 2026-09-18 baseline
+
+The first post-redesign baseline contains 29 successful, first-attempt pull-request runs with a successful `required`
+job, from [run 35063316122](https://github.com/michel-tricot/airmux/actions/runs/35063316122) through
+[run 35376970238](https://github.com/michel-tricot/airmux/actions/runs/35376970238). Draft-only runs, failed or cancelled
+runs, and rerun attempts are excluded. Required-check duration runs from workflow creation through completion of
+`required`; queue time runs from workflow creation through the first non-skipped job start; runner use is the sum of
+non-skipped job durations. Percentiles use linear interpolation.
+
+| Metric | Observed | Target |
+| --- | ---: | ---: |
+| Required-check p50 | 4m 20s | Under 4m |
+| Required-check p95 | 5m 24.6s | Under 6m |
+| Queue p95 | 40.6s | Under 1m |
+| Runner-use p50 | 32m 26s | Not set |
+| Runner-use p95 | 34m 5.4s | Not set |
+
+The p95 and queue targets pass. The p50 target misses by 20 seconds; this baseline records the exception before any
+further path filtering or CI redesign.
