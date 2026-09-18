@@ -34,14 +34,6 @@ uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 `control-plane serve --dev` applies database migrations before starting. It also creates `.airmux/dataplane.key` when absent.
 Keep the key with the matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
 
-## Optional editor integration
-
-PyCharm and its MCP server are optional. The contributor setup, build, tests, and CI do not require them.
-To connect Codex to your IDE, use the endpoint from your own PyCharm installation and follow the
-[Codex MCP configuration guide](https://developers.openai.com/codex/mcp/).
-Keep personal endpoints in `~/.codex/config.toml`, or in the repository's Git-ignored `.codex/config.toml`
-for project-specific setup. Do not commit personal endpoint configuration.
-
 ## Start the services
 
 Run each process in a separate terminal:
