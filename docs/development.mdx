@@ -79,7 +79,7 @@ For focused runs and contribution conventions, see the [gateway suite README](ht
 CI builds the candidate distributions once on Linux and validates their metadata. It rebuilds the wheel from the source
 distribution, then reuses that candidate for installation and gateway checks. Portable smoke jobs install it outside
 the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack, and gateway acceptance
-checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/CI.md)
+checks remain Linux-only. See [CI change policy and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
 for current job selection, cancellation behavior, and measured timings.
 
 To run the portable checks locally without installing the workspace:
@@ -116,7 +116,7 @@ Every workflow defaults to `contents: read`, checkouts discard Git credentials, 
 `id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
 in the release environment, outside PR CI. The CI and Docker correctness gates check the change-policy decision and
 expected job results before reporting success. Dependency security passes only when both audits pass. Timing evidence
-belongs in `notes/CI.md`, not this setup guide.
+belongs in `notes/design/CI.md`, not this setup guide.
 
 ## Python checks
 
