@@ -83,18 +83,32 @@ own candidate outside the source checkout with Python 3.13 and 3.14 on Linux and
 and gateway acceptance checks remain Linux-only. See [CI design and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
 for current job selection, cancellation behavior, and measured timings.
 
-To run the portable checks locally without installing the workspace:
+To run the portable checks locally without installing the workspace, build the distribution and use a fresh temporary
+directory for the tool, test runner, and copied suite. The runner needs only `pytest`, `httpx`, and `pyyaml`:
 
 ```bash
+(
+set -e
+./scripts/build-python-distribution.sh
+smoke_dir="$(mktemp -d)"
+export UV_TOOL_DIR="$smoke_dir/tools"
+export UV_TOOL_BIN_DIR="$smoke_dir/bin"
 uv tool install --python 3.13 dist/airmux-*.whl
-uv venv --python 3.13 /tmp/airmux-smoke-runner
-uv pip install --python /tmp/airmux-smoke-runner/bin/python pytest httpx pyyaml
-mkdir -p /tmp/airmux-installation-tests
-cp tests/installation/{conftest,test_cli,test_gateway}.py /tmp/airmux-installation-tests/
-cd /tmp
-AIRMUX_INSTALL_BIN="$(command -v airmux)" AIRMUX_INSTALL_PYTHON=3.13 \
-  /tmp/airmux-smoke-runner/bin/python -I -m pytest /tmp/airmux-installation-tests
+uv venv --python 3.13 "$smoke_dir/runner"
+uv pip install --python "$smoke_dir/runner/bin/python" pytest httpx pyyaml
+mkdir -p "$smoke_dir/tests/installation/portable" "$smoke_dir/tests/acceptance"
+cp tests/installation/portable/*.py "$smoke_dir/tests/installation/portable/"
+cp tests/installation/installation_support.py "$smoke_dir/tests/installation/"
+cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
+cd "$smoke_dir"
+AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
+  "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
+)
 ```
+
+Keep the copied `tests/...` layout so the suite can import its support modules. `-o pythonpath=.` adds only the temporary
+test root; `-I` ignores the checkout's Python environment settings. The suite verifies that gateway modules load from
+the installed tool environment and sends buffered and streaming requests through the installed gateway.
 
 ## Workflow checks
 
