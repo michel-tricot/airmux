@@ -182,8 +182,8 @@ describe('workspace policies', () => {
       definition: {
         target: { kind: 'workspace' },
         rules: [
-          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '50', period: 'month', sharing: 'shared' } },
-          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '10', period: 'day', sharing: 'per_key' } },
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '50', period: 'month', scope: 'shared' } },
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '10', period: 'day', scope: 'per_key' } },
         ],
       },
     };
@@ -192,46 +192,52 @@ describe('workspace policies', () => {
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/:policyId/status', ({ request }) => {
         const query = new URL(request.url).searchParams;
         const shared = query.get('rule_index') === '0';
-        const keyId = query.get('key_id') ?? (query.has('after_key') ? 'key-b' : 'key-a');
-        const budget: Api.SharedBudgetStatus | Api.PerKeyBudgetStatus = shared
+        const bucketId = query.get('bucket_id') ?? (query.has('after_bucket') ? 'key-b' : 'key-a');
+        const budget: Api.BudgetRuleStatus = shared
           ? {
-              sharing: 'shared',
               rule_index: 0,
+              scope: 'shared',
               amount_usd: '50',
               period: 'month',
               window_start: now,
               window_end: '2026-02-01T00:00:00Z',
-              spent_usd: '70',
-              remaining_usd: '0',
-              exhausted: true,
+              buckets: [
+                {
+                  bucket: { kind: 'shared' },
+                  spent_usd: '70',
+                  remaining_usd: '0',
+                  exhausted: true,
+                },
+              ],
+              next_bucket: null,
             }
           : {
-              sharing: 'per_key',
               rule_index: 1,
+              scope: 'per_key',
               amount_usd: '10',
               period: 'day',
               window_start: now,
               window_end: '2026-01-02T00:00:00Z',
-              keys: [{ key_id: keyId, spent_usd: '2', remaining_usd: '8', exhausted: false }],
-              next_key: keyId === 'key-a' ? 'key-a' : null,
+              buckets: [{ bucket: { kind: 'key', key_id: bucketId }, spent_usd: '2', remaining_usd: '8', exhausted: false }],
+              next_bucket: bucketId === 'key-a' ? { kind: 'key', key_id: 'key-a' } : null,
             };
         return HttpResponse.json<{ data: Api.PolicyBudgetStatus }>({ data: { policy: budgetPolicy, computed_at: now, budgets: [budget] } });
       }),
     );
     renderPolicies();
     await user.click(await screen.findByRole('button', { name: 'View spending' }));
-    expect(await screen.findByText('Observed spend: $70')).toBeVisible();
+    expect(await screen.findByText('$70')).toBeVisible();
     expect(screen.getByText('Exhausted')).toBeVisible();
     await user.click(screen.getByRole('combobox', { name: 'Budget rule' }));
-    await user.click(screen.getByRole('option', { name: 'Rule 2: $10 / day per key' }));
-    expect(await screen.findByText('key-a')).toBeVisible();
+    await user.click(screen.getByRole('option', { name: 'Rule 2: $10 / day (per key)' }));
+    expect(await screen.findByText('Key key-a')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Next page' }));
-    expect(await screen.findByText('key-b')).toBeVisible();
-    expect(screen.queryByText('key-a')).not.toBeInTheDocument();
-    await user.type(screen.getByLabelText('Inference key ID'), 'specific-key');
+    expect(await screen.findByText('Key key-b')).toBeVisible();
+    expect(screen.queryByText('Key key-a')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Bucket ID'), 'specific-key');
     await user.click(screen.getByRole('button', { name: 'Filter' }));
-    expect(await screen.findByText('specific-key')).toBeVisible();
-    expect(screen.queryByText('key-b')).not.toBeInTheDocument();
+    expect(await screen.findByText('Key specific-key')).toBeVisible();
+    expect(screen.queryByText('Key key-b')).not.toBeInTheDocument();
   });
 });
 

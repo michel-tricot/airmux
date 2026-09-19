@@ -77,8 +77,8 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
     *,
     workspace: WorkspaceOption = "",
     rule_index: Annotated[int | None, typer.Option(min=0, max=99, help="Budget rule position, starting at zero")] = None,
-    key_id: Annotated[str | None, typer.Option(help="Show spending for one inference key")] = None,
-    after_key: Annotated[str | None, typer.Option(help="Continue after this inference key ID")] = None,
+    bucket_id: Annotated[str | None, typer.Option(help="Show spending for one budget bucket")] = None,
+    after_bucket: Annotated[str | None, typer.Option(help="Continue after this budget bucket ID")] = None,
     limit: Annotated[int, typer.Option(min=1, max=1000)] = 100,
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
@@ -90,7 +90,7 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
                 org_path(f"/workspaces/{resolve_workspace(workspace)}/policies/{policy_id}/status"),
                 params={
                     name: value
-                    for name, value in {"rule_index": rule_index, "key_id": key_id, "after_key": after_key, "limit": limit}.items()
+                    for name, value in {"rule_index": rule_index, "bucket_id": bucket_id, "after_bucket": after_bucket, "limit": limit}.items()
                     if value is not None
                 },
             )
@@ -103,14 +103,12 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
         [
             Col("rule_index", "Rule"),
             Col("period", "Period"),
-            Col("sharing", "Sharing"),
+            Col("scope", "Scope"),
             Col("amount_usd", "Limit USD"),
-            Col("spent_usd", "Spent USD"),
-            Col("remaining_usd", "Remaining USD"),
-            Col("keys", "Key spending"),
+            Col("buckets", "Bucket spending"),
             Col("window_end", "Resets"),
             Col("computed_at", "Calculated"),
-            Col("next_key", "Next key"),
+            Col("next_bucket", "Next bucket"),
         ],
         fmt,
     )

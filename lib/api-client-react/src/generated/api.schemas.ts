@@ -57,12 +57,13 @@ export const BudgetPeriod = {
   month: 'month',
 } as const;
 
-export type BudgetSharing = typeof BudgetSharing[keyof typeof BudgetSharing];
+export type BudgetScope = typeof BudgetScope[keyof typeof BudgetScope];
 
 
-export const BudgetSharing = {
+export const BudgetScope = {
   shared: 'shared',
   per_key: 'per_key',
+  per_user: 'per_user',
 } as const;
 
 export interface Budget {
@@ -70,7 +71,151 @@ export interface Budget {
   /** @pattern ^\d+(?:\.\d+)?$ */
   amount_usd: string;
   period: BudgetPeriod;
-  sharing: BudgetSharing;
+  scope: BudgetScope;
+}
+
+export const SharedBudgetBucketValue = {
+  kind: 'shared',
+} as const;
+export type SharedBudgetBucket = typeof SharedBudgetBucketValue;
+
+export interface KeyBudgetBucket {
+  kind: 'key';
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+}
+
+export interface UserBudgetBucket {
+  kind: 'user';
+  user_id: string;
+}
+
+export interface BudgetBucketStatus {
+  bucket: SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  spent_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  remaining_usd: string;
+  exhausted: boolean;
+}
+
+export type BudgetRuleStatusScope = typeof BudgetRuleStatusScope[keyof typeof BudgetRuleStatusScope];
+
+
+export const BudgetRuleStatusScope = {
+  shared: 'shared',
+  per_key: 'per_key',
+  per_user: 'per_user',
+} as const;
+
+export type BudgetRuleStatusPeriod = typeof BudgetRuleStatusPeriod[keyof typeof BudgetRuleStatusPeriod];
+
+
+export const BudgetRuleStatusPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface BudgetRuleStatus {
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  scope: BudgetRuleStatusScope;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetRuleStatusPeriod;
+  window_start: string;
+  window_end: string;
+  buckets: BudgetBucketStatus[];
+  next_bucket: SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket | null;
+}
+
+export type BudgetStateScope = typeof BudgetStateScope[keyof typeof BudgetStateScope];
+
+
+export const BudgetStateScope = {
+  shared: 'shared',
+  per_key: 'per_key',
+  per_user: 'per_user',
+} as const;
+
+export type BudgetStatePeriod = typeof BudgetStatePeriod[keyof typeof BudgetStatePeriod];
+
+
+export const BudgetStatePeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export const WorkspaceTargetValue = {
+  kind: 'workspace',
+} as const;
+export type WorkspaceTarget = typeof WorkspaceTargetValue;
+
+export interface SelectedUsers {
+  kind: 'selected_users';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  user_ids: string[];
+}
+
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
+export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
+
+
+export const RequestMatchOutputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatchOutput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models: string[];
+  stream: boolean | null;
+  /** @maxItems 3 */
+  capabilities: RequestMatchOutputCapabilitiesItem[];
+}
+
+export interface BudgetState {
+  policy_id: string;
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  workspace_id: string;
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
+  match: AllRequests | RequestMatchOutput;
+  scope: BudgetStateScope;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetStatePeriod;
+  window_start: string;
+  window_end: string;
+  exhausted_buckets: (SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket)[];
 }
 
 /**
@@ -232,53 +377,6 @@ export interface Catalog {
   providers: ProviderEntry[];
   models: ModelEntry[];
   credentials?: CredentialEntry[];
-}
-
-export const WorkspaceTargetValue = {
-  kind: 'workspace',
-} as const;
-export type WorkspaceTarget = typeof WorkspaceTargetValue;
-
-export interface SelectedUsers {
-  kind: 'selected_users';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     */
-  user_ids: string[];
-}
-
-export interface SelectedKeys {
-  kind: 'selected_keys';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  key_ids: string[];
-}
-
-export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
-
-
-export const RequestMatchOutputCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
-
-export interface RequestMatchOutput {
-  kind: 'request';
-  /**
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  models: string[];
-  stream: boolean | null;
-  /** @maxItems 3 */
-  capabilities: RequestMatchOutputCapabilitiesItem[];
 }
 
 export interface DenyRequest {
@@ -782,19 +880,6 @@ export interface InvitationTokenIn {
   token: string;
 }
 
-export interface KeyBudgetStatus {
-  /**
-     * @minLength 1
-     * @maxLength 255
-     */
-  key_id: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  spent_usd: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  remaining_usd: string;
-  exhausted: boolean;
-}
-
 export interface LoginIn {
   /**
      * Account email address
@@ -1233,67 +1318,9 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
-export type SharedBudgetStatePeriod = typeof SharedBudgetStatePeriod[keyof typeof SharedBudgetStatePeriod];
-
-
-export const SharedBudgetStatePeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export interface SharedBudgetState {
-  policy_id: string;
-  /**
-     * @minimum 0
-     * @exclusiveMaximum 100
-     */
-  rule_index: number;
-  workspace_id: string;
-  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
-  match: AllRequests | RequestMatchOutput;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  amount_usd: string;
-  period: SharedBudgetStatePeriod;
-  window_start: string;
-  window_end: string;
-  sharing: 'shared';
-  exhausted: boolean;
-}
-
-export type PerKeyBudgetStatePeriod = typeof PerKeyBudgetStatePeriod[keyof typeof PerKeyBudgetStatePeriod];
-
-
-export const PerKeyBudgetStatePeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export interface PerKeyBudgetState {
-  policy_id: string;
-  /**
-     * @minimum 0
-     * @exclusiveMaximum 100
-     */
-  rule_index: number;
-  workspace_id: string;
-  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
-  match: AllRequests | RequestMatchOutput;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  amount_usd: string;
-  period: PerKeyBudgetStatePeriod;
-  window_start: string;
-  window_end: string;
-  sharing: 'per_key';
-  /**
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  exhausted_key_ids: string[];
-}
-
 export interface OrgPolicyState {
   org_id: string;
-  budgets: (SharedBudgetState | PerKeyBudgetState)[];
+  budgets: BudgetState[];
 }
 
 export interface UserOut {
@@ -1355,30 +1382,6 @@ export interface PasswordChangedOut {
   status: 'changed';
 }
 
-export type PerKeyBudgetStatusPeriod = typeof PerKeyBudgetStatusPeriod[keyof typeof PerKeyBudgetStatusPeriod];
-
-
-export const PerKeyBudgetStatusPeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export interface PerKeyBudgetStatus {
-  /**
-     * @minimum 0
-     * @exclusiveMaximum 100
-     */
-  rule_index: number;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  amount_usd: string;
-  period: PerKeyBudgetStatusPeriod;
-  window_start: string;
-  window_end: string;
-  sharing: 'per_key';
-  keys: KeyBudgetStatus[];
-  next_key: string | null;
-}
-
 export const PlaygroundSessionEndedOutValue = {
   status: 'ended',
 } as const;
@@ -1403,37 +1406,10 @@ export interface PolicyOut {
   deleted_at: string | null;
 }
 
-export type SharedBudgetStatusPeriod = typeof SharedBudgetStatusPeriod[keyof typeof SharedBudgetStatusPeriod];
-
-
-export const SharedBudgetStatusPeriod = {
-  day: 'day',
-  month: 'month',
-} as const;
-
-export interface SharedBudgetStatus {
-  /**
-     * @minimum 0
-     * @exclusiveMaximum 100
-     */
-  rule_index: number;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  amount_usd: string;
-  period: SharedBudgetStatusPeriod;
-  window_start: string;
-  window_end: string;
-  sharing: 'shared';
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  spent_usd: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  remaining_usd: string;
-  exhausted: boolean;
-}
-
 export interface PolicyBudgetStatus {
   policy: PolicyOut;
   computed_at: string;
-  budgets: (SharedBudgetStatus | PerKeyBudgetStatus)[];
+  budgets: BudgetRuleStatus[];
 }
 
 export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
@@ -2094,13 +2070,13 @@ export type PolicyStatusParams = {
  */
 rule_index?: number | null;
 /**
- * Management key ID
+ * Bucket id
  */
-key_id?: string | null;
+bucket_id?: string | null;
 /**
- * After key
+ * After bucket
  */
-after_key?: string | null;
+after_bucket?: string | null;
 /**
  * Maximum number of results to return
  * @minimum 1

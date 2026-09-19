@@ -7,10 +7,33 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from contract.money import UsdAmount
-from contract.policies import BudgetPeriod, PolicyIdentifier, PolicyMatch, PolicyTarget
+from contract.policies import BudgetPeriod, BudgetScope, PolicyIdentifier, PolicyMatch, PolicyTarget
 
 
-class _BudgetState(BaseModel):
+class SharedBudgetBucket(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_serialization_defaults_required=True)
+
+    kind: Literal["shared"] = "shared"
+
+
+class KeyBudgetBucket(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_serialization_defaults_required=True)
+
+    kind: Literal["key"] = "key"
+    key_id: PolicyIdentifier
+
+
+class UserBudgetBucket(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_serialization_defaults_required=True)
+
+    kind: Literal["user"] = "user"
+    user_id: UUID
+
+
+BudgetBucket = Annotated[SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket, Field(discriminator="kind")]
+
+
+class BudgetState(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", json_schema_serialization_defaults_required=True)
 
     policy_id: UUID
@@ -18,30 +41,26 @@ class _BudgetState(BaseModel):
     workspace_id: UUID
     target: PolicyTarget
     match: PolicyMatch
+    scope: BudgetScope
     amount_usd: UsdAmount = Field(gt=0)
     period: BudgetPeriod
     window_start: AwareDatetime
     window_end: AwareDatetime
+    exhausted_buckets: tuple[BudgetBucket, ...]
 
     @model_validator(mode="after")
-    def valid_window(self) -> Self:
+    def valid_state(self) -> Self:
         if (self.window_start, self.window_end) != budget_window(self.period, self.window_start):
             message = "Budget state must describe a complete UTC calendar window"
             raise ValueError(message)
+        if len(set(self.exhausted_buckets)) != len(self.exhausted_buckets):
+            message = "Budget state exhausted buckets must be unique"
+            raise ValueError(message)
+        expected_kind = {"shared": "shared", "per_key": "key", "per_user": "user"}[self.scope]
+        if any(bucket.kind != expected_kind for bucket in self.exhausted_buckets):
+            message = f"{self.scope} budgets may only contain {expected_kind} exhausted buckets"
+            raise ValueError(message)
         return self
-
-
-class SharedBudgetState(_BudgetState):
-    sharing: Literal["shared"] = "shared"
-    exhausted: bool
-
-
-class PerKeyBudgetState(_BudgetState):
-    sharing: Literal["per_key"] = "per_key"
-    exhausted_key_ids: frozenset[PolicyIdentifier]
-
-
-BudgetState = Annotated[SharedBudgetState | PerKeyBudgetState, Field(discriminator="sharing")]
 
 
 class PolicyStateRequest(BaseModel):

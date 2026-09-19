@@ -78,7 +78,7 @@ def test_budget_status_preserves_exact_spending_and_pagination(tmp_path, monkeyp
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-policies")
     monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
-    action = {"kind": "budget", "amount_usd": "0.000000000123", "period": "month", "sharing": "per_key"}
+    action = {"kind": "budget", "amount_usd": "0.000000000123", "period": "month", "scope": "per_key"}
     status = {
         "policy": {
             "id": policy_id,
@@ -98,26 +98,33 @@ def test_budget_status_preserves_exact_spending_and_pagination(tmp_path, monkeyp
                 "rule_index": 0,
                 "amount_usd": action["amount_usd"],
                 "period": "month",
-                "sharing": "per_key",
+                "scope": "per_key",
                 "window_start": "2026-09-01T00:00:00Z",
                 "window_end": "2026-10-01T00:00:00Z",
-                "keys": [{"key_id": "key-b", "spent_usd": "0.000000000124", "remaining_usd": "0", "exhausted": True}],
-                "next_key": "key-b",
+                "buckets": [
+                    {
+                        "bucket": {"kind": "key", "key_id": "key-b"},
+                        "spent_usd": "0.000000000124",
+                        "remaining_usd": "0",
+                        "exhausted": True,
+                    }
+                ],
+                "next_bucket": {"kind": "key", "key_id": "key-b"},
             }
         ],
     }
 
     def respond(incoming):
-        assert dict(incoming.url.params) == {"rule_index": "0", "after_key": "key-a", "limit": "1"}
+        assert dict(incoming.url.params) == {"rule_index": "0", "after_bucket": "key-a", "limit": "1"}
         return httpx.Response(200, json={"data": status})
 
     respx.get(f"http://cp.test/api/v1/organizations/{org_id}/workspaces/{workspace_id}/policies/{policy_id}/status").mock(side_effect=respond)
     result = runner.invoke(
         app,
-        ["policies", "status", policy_id, "-w", workspace_id, "--rule-index", "0", "--after-key", "key-a", "--limit", "1", "-f", "json"],
+        ["policies", "status", policy_id, "-w", workspace_id, "--rule-index", "0", "--after-bucket", "key-a", "--limit", "1", "-f", "json"],
     )
     assert result.exit_code == 0, result.output
     budget = json.loads(result.stdout)[0]
     assert budget["amount_usd"] == action["amount_usd"]
-    assert budget["keys"] == status["budgets"][0]["keys"]
-    assert budget["next_key"] == "key-b"
+    assert budget["buckets"] == status["budgets"][0]["buckets"]
+    assert budget["next_bucket"] == {"kind": "key", "key_id": "key-b"}

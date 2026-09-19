@@ -247,19 +247,20 @@ For example, one policy can impose both a daily and monthly shared budget:
     "rules": [
       {
         "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "sharing": "shared" }
+        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "scope": "shared" }
       },
       {
         "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "sharing": "shared" }
+        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "scope": "shared" }
       }
     ]
   }
 }
 ```
 
-`amount_usd` is a positive fixed-point decimal string. `sharing: "shared"` combines all matching usage;
-`sharing: "per_key"` gives each matching inference key its own allowance. Existing user/key targets and
+`amount_usd` is a positive fixed-point decimal string. `scope: "shared"` combines all matching usage;
+`scope: "per_key"` gives each matching inference key its own allowance. `scope: "per_user"` gives each
+matching user its own allowance. Existing user/key targets and
 request filters apply. A selected-user target with shared spending combines usage across all selected users' keys.
 
 Budgets include matching usage from the whole period, even before the policy existed or while it was disabled.
@@ -288,13 +289,13 @@ that every data plane has exported its latest usage.
 
 ```bash
 airmux policies status POLICY_ID -w production -f json
-airmux policies status POLICY_ID -w production --rule-index 0 --key-id KEY_ID
+airmux policies status POLICY_ID -w production --rule-index 0 --bucket-id BUCKET_ID
 ```
 
 The management endpoint is `GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status`.
-It requires both `policies.read` and `usage.read`. Optional `rule_index`, `key_id`, `after_key`, and `limit` parameters
-select a rule or page through per-key spending. Rule indices refer to the canonical rule array returned with the status.
-Keys with no recorded matching usage are absent from the list; querying a particular unused key returns zero spending.
+It requires both `policies.read` and `usage.read`. Optional `rule_index`, `bucket_id`, `after_bucket`, and `limit` parameters
+select a rule or page through bucket spending. Rule indices refer to the canonical rule array returned with the status.
+Buckets with no recorded matching usage are absent from the list; querying a particular unused bucket returns zero spending.
 
 Data planes use `POST /api/v1/policy-state/sync` with `{"org_ids": ["organization-uuid"]}` and the operational
 `policy-state.sync` permission. Data-plane roles include this permission. The response uses the standard envelope

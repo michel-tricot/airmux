@@ -13,6 +13,7 @@ PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
 BudgetPeriod = Literal["day", "month"]
+BudgetScope = Literal["shared", "per_key", "per_user"]
 MAX_WORKSPACE_RULES = 100
 
 
@@ -124,7 +125,7 @@ class Budget(_PolicyModel):
     kind: Literal["budget"]
     amount_usd: UsdAmount = Field(gt=0)
     period: BudgetPeriod
-    sharing: Literal["shared", "per_key"]
+    scope: BudgetScope
 
 
 class Fallback(_PolicyModel):

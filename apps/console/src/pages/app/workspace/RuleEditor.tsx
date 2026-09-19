@@ -206,18 +206,19 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
           />
           <FormField
             control={form.control}
-            name="budgetSharing"
+            name="budgetScope"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Budget sharing</FormLabel>
+                <FormLabel>Budget scope</FormLabel>
                 <FormControl>
                   <Dropdown
-                    aria-label="Budget sharing"
+                    aria-label="Budget scope"
                     value={field.value}
                     onValueChange={field.onChange}
                     options={[
                       { value: 'shared', label: 'Shared across matching usage' },
                       { value: 'per_key', label: 'Separate allowance per inference key' },
+                      { value: 'per_user', label: 'Separate allowance per user' },
                     ]}
                   />
                 </FormControl>

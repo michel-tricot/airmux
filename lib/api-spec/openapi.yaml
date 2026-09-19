@@ -2809,7 +2809,7 @@ paths:
           - type: 'null'
           title: Rule Index
         description: Rule index
-      - name: key_id
+      - name: bucket_id
         in: query
         required: false
         schema:
@@ -2818,9 +2818,9 @@ paths:
             minLength: 1
             maxLength: 255
           - type: 'null'
-          title: Key Id
-        description: Management key ID
-      - name: after_key
+          title: Bucket Id
+        description: Bucket id
+      - name: after_bucket
         in: query
         required: false
         schema:
@@ -2829,8 +2829,8 @@ paths:
             minLength: 1
             maxLength: 255
           - type: 'null'
-          title: After Key
-        description: After key
+          title: After Bucket
+        description: After bucket
       - name: limit
         in: query
         required: false
@@ -4410,20 +4410,206 @@ components:
           - day
           - month
           title: Period
-        sharing:
+        scope:
           type: string
           enum:
           - shared
           - per_key
-          title: Sharing
+          - per_user
+          title: Scope
       additionalProperties: false
       type: object
       required:
       - kind
       - amount_usd
       - period
-      - sharing
+      - scope
       title: Budget
+    BudgetBucketStatus:
+      properties:
+        bucket:
+          oneOf:
+          - $ref: '#/components/schemas/SharedBudgetBucket'
+          - $ref: '#/components/schemas/KeyBudgetBucket'
+          - $ref: '#/components/schemas/UserBudgetBucket'
+          title: Bucket
+          discriminator:
+            propertyName: kind
+            mapping:
+              key: '#/components/schemas/KeyBudgetBucket'
+              shared: '#/components/schemas/SharedBudgetBucket'
+              user: '#/components/schemas/UserBudgetBucket'
+        spent_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Spent Usd
+        remaining_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Remaining Usd
+        exhausted:
+          type: boolean
+          title: Exhausted
+      type: object
+      required:
+      - bucket
+      - spent_usd
+      - remaining_usd
+      - exhausted
+      title: BudgetBucketStatus
+    BudgetRuleStatus:
+      properties:
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        scope:
+          type: string
+          enum:
+          - shared
+          - per_key
+          - per_user
+          title: Scope
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        buckets:
+          items:
+            $ref: '#/components/schemas/BudgetBucketStatus'
+          type: array
+          title: Buckets
+        next_bucket:
+          anyOf:
+          - oneOf:
+            - $ref: '#/components/schemas/SharedBudgetBucket'
+            - $ref: '#/components/schemas/KeyBudgetBucket'
+            - $ref: '#/components/schemas/UserBudgetBucket'
+            discriminator:
+              propertyName: kind
+              mapping:
+                key: '#/components/schemas/KeyBudgetBucket'
+                shared: '#/components/schemas/SharedBudgetBucket'
+                user: '#/components/schemas/UserBudgetBucket'
+          - type: 'null'
+          title: Next Bucket
+      type: object
+      required:
+      - rule_index
+      - scope
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - buckets
+      - next_bucket
+      title: BudgetRuleStatus
+    BudgetState:
+      properties:
+        policy_id:
+          type: string
+          format: uuid
+          title: Policy Id
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        target:
+          oneOf:
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
+          - $ref: '#/components/schemas/SelectedKeys'
+          title: Target
+          discriminator:
+            propertyName: kind
+            mapping:
+              selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        scope:
+          type: string
+          enum:
+          - shared
+          - per_key
+          - per_user
+          title: Scope
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        exhausted_buckets:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SharedBudgetBucket'
+            - $ref: '#/components/schemas/KeyBudgetBucket'
+            - $ref: '#/components/schemas/UserBudgetBucket'
+            discriminator:
+              propertyName: kind
+              mapping:
+                key: '#/components/schemas/KeyBudgetBucket'
+                shared: '#/components/schemas/SharedBudgetBucket'
+                user: '#/components/schemas/UserBudgetBucket'
+          type: array
+          title: Exhausted Buckets
+      additionalProperties: false
+      type: object
+      required:
+      - policy_id
+      - rule_index
+      - workspace_id
+      - target
+      - match
+      - scope
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - exhausted_buckets
+      title: BudgetState
     BundleManifest:
       properties:
         bundles:
@@ -5814,31 +6000,24 @@ components:
       required:
       - token
       title: InvitationTokenIn
-    KeyBudgetStatus:
+    KeyBudgetBucket:
       properties:
+        kind:
+          type: string
+          const: key
+          title: Kind
+          default: key
         key_id:
           type: string
           maxLength: 255
           minLength: 1
           title: Key Id
-        spent_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Spent Usd
-        remaining_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Remaining Usd
-        exhausted:
-          type: boolean
-          title: Exhausted
+      additionalProperties: false
       type: object
       required:
+      - kind
       - key_id
-      - spent_usd
-      - remaining_usd
-      - exhausted
-      title: KeyBudgetStatus
+      title: KeyBudgetBucket
     KeyEntry:
       properties:
         key_id:
@@ -6837,14 +7016,7 @@ components:
           title: Org Id
         budgets:
           items:
-            oneOf:
-            - $ref: '#/components/schemas/SharedBudgetState'
-            - $ref: '#/components/schemas/PerKeyBudgetState'
-            discriminator:
-              propertyName: sharing
-              mapping:
-                per_key: '#/components/schemas/PerKeyBudgetState'
-                shared: '#/components/schemas/SharedBudgetState'
+            $ref: '#/components/schemas/BudgetState'
           type: array
           title: Budgets
       additionalProperties: false
@@ -6996,142 +7168,6 @@ components:
       - user_id
       - status
       title: PasswordChangedOut
-    PerKeyBudgetState:
-      properties:
-        policy_id:
-          type: string
-          format: uuid
-          title: Policy Id
-        rule_index:
-          type: integer
-          exclusiveMaximum: 100.0
-          minimum: 0.0
-          title: Rule Index
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        target:
-          oneOf:
-          - $ref: '#/components/schemas/WorkspaceTarget'
-          - $ref: '#/components/schemas/SelectedUsers'
-          - $ref: '#/components/schemas/SelectedKeys'
-          title: Target
-          discriminator:
-            propertyName: kind
-            mapping:
-              selected_keys: '#/components/schemas/SelectedKeys'
-              selected_users: '#/components/schemas/SelectedUsers'
-              workspace: '#/components/schemas/WorkspaceTarget'
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch-Output'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch-Output'
-        amount_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Amount Usd
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        window_start:
-          type: string
-          format: date-time
-          title: Window Start
-        window_end:
-          type: string
-          format: date-time
-          title: Window End
-        sharing:
-          type: string
-          const: per_key
-          title: Sharing
-          default: per_key
-        exhausted_key_ids:
-          items:
-            type: string
-            maxLength: 255
-            minLength: 1
-          type: array
-          uniqueItems: true
-          title: Exhausted Key Ids
-      additionalProperties: false
-      type: object
-      required:
-      - policy_id
-      - rule_index
-      - workspace_id
-      - target
-      - match
-      - amount_usd
-      - period
-      - window_start
-      - window_end
-      - sharing
-      - exhausted_key_ids
-      title: PerKeyBudgetState
-    PerKeyBudgetStatus:
-      properties:
-        rule_index:
-          type: integer
-          exclusiveMaximum: 100.0
-          minimum: 0.0
-          title: Rule Index
-        amount_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Amount Usd
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        window_start:
-          type: string
-          format: date-time
-          title: Window Start
-        window_end:
-          type: string
-          format: date-time
-          title: Window End
-        sharing:
-          type: string
-          const: per_key
-          title: Sharing
-          default: per_key
-        keys:
-          items:
-            $ref: '#/components/schemas/KeyBudgetStatus'
-          type: array
-          title: Keys
-        next_key:
-          anyOf:
-          - type: string
-            maxLength: 255
-            minLength: 1
-          - type: 'null'
-          title: Next Key
-      type: object
-      required:
-      - rule_index
-      - amount_usd
-      - period
-      - window_start
-      - window_end
-      - sharing
-      - keys
-      - next_key
-      title: PerKeyBudgetStatus
     Permission:
       type: string
       enum:
@@ -7207,14 +7243,7 @@ components:
           title: Computed At
         budgets:
           items:
-            oneOf:
-            - $ref: '#/components/schemas/SharedBudgetStatus'
-            - $ref: '#/components/schemas/PerKeyBudgetStatus'
-            discriminator:
-              propertyName: sharing
-              mapping:
-                per_key: '#/components/schemas/PerKeyBudgetStatus'
-                shared: '#/components/schemas/SharedBudgetStatus'
+            $ref: '#/components/schemas/BudgetRuleStatus'
           type: array
           title: Budgets
       type: object
@@ -8305,137 +8334,18 @@ components:
       required:
       - name
       title: ServiceAccountIn
-    SharedBudgetState:
+    SharedBudgetBucket:
       properties:
-        policy_id:
-          type: string
-          format: uuid
-          title: Policy Id
-        rule_index:
-          type: integer
-          exclusiveMaximum: 100.0
-          minimum: 0.0
-          title: Rule Index
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        target:
-          oneOf:
-          - $ref: '#/components/schemas/WorkspaceTarget'
-          - $ref: '#/components/schemas/SelectedUsers'
-          - $ref: '#/components/schemas/SelectedKeys'
-          title: Target
-          discriminator:
-            propertyName: kind
-            mapping:
-              selected_keys: '#/components/schemas/SelectedKeys'
-              selected_users: '#/components/schemas/SelectedUsers'
-              workspace: '#/components/schemas/WorkspaceTarget'
-        match:
-          oneOf:
-          - $ref: '#/components/schemas/AllRequests'
-          - $ref: '#/components/schemas/RequestMatch-Output'
-          title: Match
-          discriminator:
-            propertyName: kind
-            mapping:
-              all_requests: '#/components/schemas/AllRequests'
-              request: '#/components/schemas/RequestMatch-Output'
-        amount_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Amount Usd
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        window_start:
-          type: string
-          format: date-time
-          title: Window Start
-        window_end:
-          type: string
-          format: date-time
-          title: Window End
-        sharing:
+        kind:
           type: string
           const: shared
-          title: Sharing
+          title: Kind
           default: shared
-        exhausted:
-          type: boolean
-          title: Exhausted
       additionalProperties: false
       type: object
       required:
-      - policy_id
-      - rule_index
-      - workspace_id
-      - target
-      - match
-      - amount_usd
-      - period
-      - window_start
-      - window_end
-      - sharing
-      - exhausted
-      title: SharedBudgetState
-    SharedBudgetStatus:
-      properties:
-        rule_index:
-          type: integer
-          exclusiveMaximum: 100.0
-          minimum: 0.0
-          title: Rule Index
-        amount_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Amount Usd
-        period:
-          type: string
-          enum:
-          - day
-          - month
-          title: Period
-        window_start:
-          type: string
-          format: date-time
-          title: Window Start
-        window_end:
-          type: string
-          format: date-time
-          title: Window End
-        sharing:
-          type: string
-          const: shared
-          title: Sharing
-          default: shared
-        spent_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Spent Usd
-        remaining_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Remaining Usd
-        exhausted:
-          type: boolean
-          title: Exhausted
-      type: object
-      required:
-      - rule_index
-      - amount_usd
-      - period
-      - window_start
-      - window_end
-      - sharing
-      - spent_usd
-      - remaining_usd
-      - exhausted
-      title: SharedBudgetStatus
+      - kind
+      title: SharedBudgetBucket
     SignupIn:
       properties:
         email:
@@ -8689,6 +8599,23 @@ components:
       - credential_id
       - credential_scope
       title: UsageEventOut
+    UserBudgetBucket:
+      properties:
+        kind:
+          type: string
+          const: user
+          title: Kind
+          default: user
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - user_id
+      title: UserBudgetBucket
     UserOut:
       properties:
         id:

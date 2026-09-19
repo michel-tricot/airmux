@@ -10,7 +10,7 @@ export const ruleFormSchema = z
     kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback', 'budget']),
     budgetAmount: z.string(),
     budgetPeriod: z.enum(['day', 'month']),
-    budgetSharing: z.enum(['shared', 'per_key']),
+    budgetScope: z.enum(['shared', 'per_key', 'per_user']),
     names: z.array(z.string()),
     message: z.string(),
     maxInputPrice: z.string(),
@@ -56,7 +56,7 @@ export const ruleDefaults: RuleForm = {
   kind: 'credential_access',
   budgetAmount: '',
   budgetPeriod: 'month',
-  budgetSharing: 'shared',
+  budgetScope: 'shared',
   names: [],
   message: '',
   maxInputPrice: '',
@@ -71,7 +71,7 @@ export const ruleDefaults: RuleForm = {
 function action(values: RuleForm): RuleDefinitionInput['action'] {
   switch (values.kind) {
     case 'budget':
-      return { kind: 'budget', amount_usd: values.budgetAmount, period: values.budgetPeriod, sharing: values.budgetSharing };
+      return { kind: 'budget', amount_usd: values.budgetAmount, period: values.budgetPeriod, scope: values.budgetScope };
     case 'models':
       return { kind: 'models', names: values.names };
     case 'providers':
@@ -114,7 +114,7 @@ export function ruleForm(rule: RuleDefinitionInput | RuleDefinitionOutput): Rule
     matchCapabilities: match.kind === 'request' ? (match.capabilities ?? []) : [],
     kind: action.kind,
     names: action.kind === 'models' || action.kind === 'providers' ? action.names : action.kind === 'fallback' ? action.models : [],
-    ...(action.kind === 'budget' ? { budgetAmount: action.amount_usd, budgetPeriod: action.period, budgetSharing: action.sharing } : {}),
+    ...(action.kind === 'budget' ? { budgetAmount: action.amount_usd, budgetPeriod: action.period, budgetScope: action.scope } : {}),
     ...(action.kind === 'deny' ? { message: action.message } : {}),
     ...(action.kind === 'price_limit'
       ? { maxInputPrice: String(action.max_input_price_per_mtok), maxOutputPrice: String(action.max_output_price_per_mtok) }

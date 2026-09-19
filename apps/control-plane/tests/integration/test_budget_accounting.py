@@ -13,8 +13,8 @@ from control_plane.authz import Permission
 from .test_events import _event
 
 
-def budget_rule(amount="100", period="month", sharing="shared", match=None):
-    return {"match": match or {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "sharing": sharing}}
+def budget_rule(amount="100", period="month", scope="shared", match=None):
+    return {"match": match or {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "scope": scope}}
 
 
 def test_new_recreated_and_overlapping_budgets_count_history(tmp_path):
@@ -35,18 +35,19 @@ def test_new_recreated_and_overlapping_budgets_count_history(tmp_path):
             assert response.status_code == 200, response.text
             budgets = response.json()["data"]["budgets"]
             assert len(budgets) == 2
-            assert {Decimal(budget["spent_usd"]) for budget in budgets} == {Decimal(70)}
-            assert {Decimal(budget["remaining_usd"]) for budget in budgets} == {Decimal(0), Decimal(30)}
+            bucket_status = [bucket for budget in budgets for bucket in budget["buckets"]]
+            assert {Decimal(bucket["spent_usd"]) for bucket in bucket_status} == {Decimal(70)}
+            assert {Decimal(bucket["remaining_usd"]) for bucket in bucket_status} == {Decimal(0), Decimal(30)}
             state = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]})
             assert state.status_code == 200, state.text
-            assert {budget["exhausted"] for budget in state.json()["data"]["organizations"][0]["budgets"]} == {False, True}
+            assert {bool(budget["exhausted_buckets"]) for budget in state.json()["data"]["organizations"][0]["budgets"]} == {False, True}
             client.patch(f"{path}/{policy['id']}", headers=headers, json={"enabled": False}).raise_for_status()
             disabled = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
             assert disabled["organizations"][0]["budgets"] == []
             updated = {"target": {"kind": "workspace"}, "rules": [budget_rule("80", "day"), budget_rule("90")]}
             client.patch(f"{path}/{policy['id']}", headers=headers, json={"enabled": True, "definition": updated}).raise_for_status()
             revised = client.get(f"{path}/{policy['id']}/status", headers=headers).json()["data"]["budgets"]
-            assert all(Decimal(budget["spent_usd"]) == 70 and not budget["exhausted"] for budget in revised)
+            assert all(Decimal(bucket["spent_usd"]) == 70 and not bucket["exhausted"] for budget in revised for bucket in budget["buckets"])
             assert client.delete(f"{path}/{policy['id']}", headers=headers).status_code == 200
         empty = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
         assert empty["organizations"][0]["budgets"] == []
@@ -104,7 +105,7 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
                 "name": "User spending",
                 "definition": {
                     "target": {"kind": "selected_users", "user_ids": [key_body["user_id"]]},
-                    "rules": [budget_rule("50", sharing="per_key", match=match)],
+                    "rules": [budget_rule("50", scope="per_key", match=match)],
                 },
             },
         )
@@ -112,11 +113,32 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
         policy = created.json()["data"]
         path = f"{base}/policies/{policy['id']}/status"
         first = client.get(path, headers=headers, params={"limit": 1}).json()["data"]["budgets"][0]
-        second = client.get(path, headers=headers, params={"limit": 1, "after_key": first["next_key"]}).json()["data"]["budgets"][0]
-        assert {Decimal(key["spent_usd"]) for page in (first, second) for key in page["keys"]} == {Decimal(70), Decimal(20)}
-        assert second["next_key"] is None
+        second = client.get(path, headers=headers, params={"limit": 1, "after_bucket": first["next_bucket"]["key_id"]}).json()["data"]["budgets"][0]
+        assert {Decimal(bucket["spent_usd"]) for page in (first, second) for bucket in page["buckets"]} == {Decimal(70), Decimal(20)}
+        assert second["next_bucket"] is None
         sync = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
-        assert sync["organizations"][0]["budgets"][0]["exhausted_key_ids"] == [keys[0]]
+        assert sync["organizations"][0]["budgets"][0]["exhausted_buckets"] == [{"kind": "key", "key_id": keys[0]}]
+        user_policy = client.post(
+            f"{base}/policies",
+            headers=headers,
+            json={
+                "name": "User spending",
+                "definition": {
+                    "target": {"kind": "selected_users", "user_ids": [key_body["user_id"]]},
+                    "rules": [budget_rule("50", scope="per_user", match=match)],
+                },
+            },
+        ).json()["data"]
+        user_status = client.get(f"{base}/policies/{user_policy['id']}/status", headers=headers).json()["data"]["budgets"][0]
+        assert len(user_status["buckets"]) == 1
+        user_bucket = user_status["buckets"][0]
+        assert user_bucket["bucket"] == {"kind": "user", "user_id": key_body["user_id"]}
+        assert Decimal(user_bucket["spent_usd"]) == Decimal(90)
+        assert Decimal(user_bucket["remaining_usd"]) == Decimal(0)
+        assert user_bucket["exhausted"] is True
+        user_sync = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
+        user_budget = next(budget for budget in user_sync["organizations"][0]["budgets"] if budget["policy_id"] == user_policy["id"])
+        assert user_budget["exhausted_buckets"] == [{"kind": "user", "user_id": key_body["user_id"]}]
         assert client.get(path, headers=cp.headers(org, permissions=[Permission.policies_read])).status_code == 403
         assert client.get(path, headers=cp.headers(org, permissions=[Permission.usage_read])).status_code == 403
         assert client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(other_org)]}).status_code == 403
@@ -129,4 +151,4 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
         for key in keys:
             client.delete(f"{base}/inference-keys/{key}", headers=headers).raise_for_status()
         after_delete = client.get(path, headers=headers).json()["data"]["budgets"][0]
-        assert sum(Decimal(key["spent_usd"]) for key in after_delete["keys"]) == Decimal(90)
+        assert sum(Decimal(bucket["spent_usd"]) for bucket in after_delete["buckets"]) == Decimal(90)

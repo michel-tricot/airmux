@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self, cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -10,10 +10,10 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
 from contract import CredentialScope, UsageStatus, UsdAmount
-from contract.budgets import budget_window
+from contract.budgets import BudgetBucket, KeyBudgetBucket, SharedBudgetBucket, UserBudgetBucket, budget_window
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
-from contract.policies import AllRequests, Budget, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
+from contract.policies import AllRequests, Budget, BudgetScope, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
 from control_plane.db import current_session
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
@@ -29,8 +29,8 @@ if TYPE_CHECKING:
 
 class BudgetUsagePage(BaseModel):
     rule_index: int | None = Field(default=None, ge=0, lt=100)
-    key_id: str | None = Field(default=None, min_length=1, max_length=255)
-    after_key: str | None = Field(default=None, min_length=1, max_length=255)
+    bucket_id: str | None = Field(default=None, min_length=1, max_length=255)
+    after_bucket: str | None = Field(default=None, min_length=1, max_length=255)
     limit: int = Field(default=100, ge=1, le=1000)
 
 
@@ -88,21 +88,38 @@ class UsageEvent(Record, table=True):
     @classmethod
     async def budget_spend(
         cls, policy: Policy, rule: RuleDefinition, now: datetime, page: BudgetUsagePage | None = None
-    ) -> list[tuple[str | None, UsdAmount]]:
+    ) -> list[tuple[BudgetBucket, UsdAmount]]:
         action = rule.action
         if not isinstance(action, Budget):
             message = "Spending requires a budget rule"
             raise TypeError(message)
         start, end = budget_window(action.period, now)
         spend = func.coalesce(func.sum(cls.cost_usd), ZERO_USD)
-        statement = select(col(cls.key_id), spend) if action.sharing == "per_key" else select(spend)
+        bucket_column = cls._bucket_column(action.scope)
+        statement = select(spend) if bucket_column is None else select(bucket_column, spend)
         statement = statement.where(*cls._budget_filters(policy, rule, start, end))
-        if action.sharing == "per_key":
-            statement = cls._per_key_statement(statement, spend, action, page)
+        if bucket_column is not None:
+            statement = cls._bucket_statement(statement, spend, action, bucket_column, page)
         result = await current_session().execute(statement)
-        if action.sharing == "shared":
-            return [(None, result.scalar_one())]
-        return [(key_id, amount) for key_id, amount in result.all()]
+        if bucket_column is None:
+            return [(SharedBudgetBucket(), result.scalar_one())]
+        return [(cls.budget_bucket(action.scope, bucket_id), amount) for bucket_id, amount in result.all()]
+
+    @classmethod
+    def _bucket_column(cls, scope: BudgetScope) -> ColumnElement[object] | None:
+        return {
+            "shared": None,
+            "per_key": cast("ColumnElement[object]", col(cls.key_id)),
+            "per_user": cast("ColumnElement[object]", col(cls.user_id)),
+        }[scope]
+
+    @staticmethod
+    def budget_bucket(scope: BudgetScope, bucket_id: object | None = None) -> BudgetBucket:
+        if scope == "shared":
+            return SharedBudgetBucket()
+        if scope == "per_key":
+            return KeyBudgetBucket(key_id=str(bucket_id))
+        return UserBudgetBucket(user_id=UUID(str(bucket_id)))
 
     @classmethod
     def _budget_filters(cls, policy: Policy, rule: RuleDefinition, start: datetime, end: datetime) -> tuple[ColumnElement[bool], ...]:
@@ -135,15 +152,21 @@ class UsageEvent(Record, table=True):
         )
 
     @classmethod
-    def _per_key_statement(cls, statement: Select, spend: ColumnElement[UsdAmount], action: Budget, page: BudgetUsagePage | None) -> Select:
-        statement = statement.group_by(col(cls.key_id)).order_by(col(cls.key_id))
+    def _bucket_statement(
+        cls, statement: Select, spend: ColumnElement[UsdAmount], action: Budget, bucket_column: ColumnElement[object], page: BudgetUsagePage | None
+    ) -> Select:
+        statement = statement.group_by(bucket_column).order_by(bucket_column)
         if page is None:
             return statement.having(spend >= action.amount_usd)
-        if page.key_id is not None:
-            statement = statement.where(col(cls.key_id) == page.key_id)
-        if page.after_key is not None:
-            statement = statement.where(col(cls.key_id) > page.after_key)
+        if page.bucket_id is not None:
+            statement = statement.where(bucket_column == cls._bucket_value(action.scope, page.bucket_id))
+        if page.after_bucket is not None:
+            statement = statement.where(bucket_column > cls._bucket_value(action.scope, page.after_bucket))
         return statement.limit(page.limit + 1)
+
+    @staticmethod
+    def _bucket_value(scope: BudgetScope, bucket_id: str) -> str | UUID:
+        return UUID(bucket_id) if scope == "per_user" else bucket_id
 
 
 class UsageEventOut(RecordOut[UsageEvent]):

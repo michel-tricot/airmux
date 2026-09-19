@@ -9,10 +9,10 @@ describe('budget rules', () => {
       kind: 'budget' as const,
       budgetAmount: '100.000000000001',
       budgetPeriod: 'month' as const,
-      budgetSharing: 'shared' as const,
+      budgetScope: 'shared' as const,
     };
     const rule = rulePayload(ruleFormSchema.parse(values));
-    expect(rule.action).toEqual({ kind: 'budget', amount_usd: '100.000000000001', period: 'month', sharing: 'shared' });
+    expect(rule.action).toEqual({ kind: 'budget', amount_usd: '100.000000000001', period: 'month', scope: 'shared' });
     expect(ruleForm(rule).budgetAmount).toBe(values.budgetAmount);
     const daily = rulePayload({ ...values, budgetPeriod: 'day' });
     const policy = policyPayload(policyFormSchema.parse({ ...policyDefaults, name: 'Spend', rules: [rule, daily] }));

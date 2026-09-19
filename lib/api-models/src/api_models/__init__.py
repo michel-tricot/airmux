@@ -64,7 +64,7 @@ class Budget(BaseModel):
     kind: Annotated[Literal["budget"], Field(title="Kind")]
     amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
-    sharing: Annotated[Literal["shared", "per_key"], Field(title="Sharing")]
+    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
 
 
 class BundleManifestEntry(BaseModel):
@@ -567,11 +567,12 @@ class InvitationTokenIn(BaseModel):
     ]
 
 
-class KeyBudgetStatus(BaseModel):
+class KeyBudgetBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["key"], Field(title="Kind")]
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
-    spent_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Spent Usd")]
-    remaining_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Remaining Usd")]
-    exhausted: Annotated[bool, Field(title="Exhausted")]
 
 
 class KeyEntry(BaseModel):
@@ -992,25 +993,6 @@ class PasswordChangeIn(BaseModel):
 class PasswordChangedOut(BaseModel):
     user_id: Annotated[UUID, Field(title="User Id")]
     status: Annotated[Literal["changed"], Field(title="Status")]
-
-
-class ExhaustedKeyId(RootModel[str]):
-    root: Annotated[str, Field(max_length=255, min_length=1)]
-
-
-class NextKey(RootModel[str]):
-    root: Annotated[str, Field(max_length=255, min_length=1, title="Next Key")]
-
-
-class PerKeyBudgetStatus(BaseModel):
-    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
-    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
-    window_end: Annotated[AwareDatetime, Field(title="Window End")]
-    sharing: Annotated[Literal["per_key"], Field(title="Sharing")]
-    keys: Annotated[list[KeyBudgetStatus], Field(title="Keys")]
-    next_key: Annotated[NextKey | None, Field(title="Next Key")]
 
 
 class Permission(
@@ -1663,16 +1645,11 @@ class ServiceAccountIn(BaseModel):
     ] = None
 
 
-class SharedBudgetStatus(BaseModel):
-    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
-    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
-    window_end: Annotated[AwareDatetime, Field(title="Window End")]
-    sharing: Annotated[Literal["shared"], Field(title="Sharing")]
-    spent_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Spent Usd")]
-    remaining_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Remaining Usd")]
-    exhausted: Annotated[bool, Field(title="Exhausted")]
+class SharedBudgetBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["shared"], Field(title="Kind")]
 
 
 class InvitationToken(RootModel[str]):
@@ -1808,6 +1785,14 @@ class UsageEventOut(BaseModel):
     credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")]
 
 
+class UserBudgetBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["user"], Field(title="Kind")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+
+
 class UserOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     email: Annotated[str, Field(title="Email")]
@@ -1898,6 +1883,57 @@ class WorkspaceUpdate(BaseModel):
         extra="forbid",
     )
     name: Annotated[Name4 | None, Field(description="Replacement workspace name", title="Name")] = None
+
+
+class BudgetBucketStatus(BaseModel):
+    bucket: Annotated[
+        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket,
+        Field(discriminator="kind", title="Bucket"),
+    ]
+    spent_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Spent Usd")]
+    remaining_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Remaining Usd")]
+    exhausted: Annotated[bool, Field(title="Exhausted")]
+
+
+class BudgetRuleStatus(BaseModel):
+    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
+    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
+    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
+    window_end: Annotated[AwareDatetime, Field(title="Window End")]
+    buckets: Annotated[list[BudgetBucketStatus], Field(title="Buckets")]
+    next_bucket: Annotated[
+        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket | None,
+        Field(title="Next Bucket"),
+    ]
+
+
+class ExhaustedBuckets(RootModel[SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket]):
+    root: Annotated[
+        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket,
+        Field(discriminator="kind"),
+    ]
+
+
+class BudgetState(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    policy_id: Annotated[UUID, Field(title="Policy Id")]
+    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    target: Annotated[
+        WorkspaceTarget | SelectedUsers | SelectedKeys,
+        Field(discriminator="kind", title="Target"),
+    ]
+    match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
+    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
+    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
+    window_end: Annotated[AwareDatetime, Field(title="Window End")]
+    exhausted_buckets: Annotated[list[ExhaustedBuckets], Field(title="Exhausted Buckets")]
 
 
 class BundleManifest(BaseModel):
@@ -2129,6 +2165,14 @@ class OrgMembershipIn(BaseModel):
     role: Annotated[OrgRole, Field(description="Organization role to grant")]
 
 
+class OrgPolicyState(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    budgets: Annotated[list[BudgetState], Field(title="Budgets")]
+
+
 class OrgServiceAccountIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2163,28 +2207,12 @@ class PageEnvelopeUsageEventOut(BaseModel):
     page: PageInfo
 
 
-class PerKeyBudgetState(BaseModel):
+class PolicyState(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    policy_id: Annotated[UUID, Field(title="Policy Id")]
-    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    target: Annotated[
-        WorkspaceTarget | SelectedUsers | SelectedKeys,
-        Field(discriminator="kind", title="Target"),
-    ]
-    match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
-    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
-    window_end: Annotated[AwareDatetime, Field(title="Window End")]
-    sharing: Annotated[Literal["per_key"], Field(title="Sharing")]
-    exhausted_key_ids: Annotated[list[ExhaustedKeyId], Field(title="Exhausted Key Ids")]
-
-
-class Budgets1(RootModel[SharedBudgetStatus | PerKeyBudgetStatus]):
-    root: Annotated[SharedBudgetStatus | PerKeyBudgetStatus, Field(discriminator="sharing")]
+    computed_at: Annotated[AwareDatetime, Field(title="Computed At")]
+    organizations: Annotated[list[OrgPolicyState], Field(title="Organizations")]
 
 
 class RuleDefinitionInput(BaseModel):
@@ -2213,26 +2241,6 @@ class Scope(BaseModel):
     level: ScopeLevel
     org_id: Annotated[UUID | None, Field(title="Org Id")] = None
     workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
-
-
-class SharedBudgetState(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    policy_id: Annotated[UUID, Field(title="Policy Id")]
-    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
-    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    target: Annotated[
-        WorkspaceTarget | SelectedUsers | SelectedKeys,
-        Field(discriminator="kind", title="Target"),
-    ]
-    match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
-    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
-    period: Annotated[Literal["day", "month"], Field(title="Period")]
-    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
-    window_end: Annotated[AwareDatetime, Field(title="Window End")]
-    sharing: Annotated[Literal["shared"], Field(title="Sharing")]
-    exhausted: Annotated[bool, Field(title="Exhausted")]
 
 
 class TaxonomyApplyOut(BaseModel):
@@ -2279,6 +2287,10 @@ class EnvelopeMyPermissionsOut(BaseModel):
 
 class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
+
+
+class EnvelopePolicyState(BaseModel):
+    data: PolicyState
 
 
 class EnvelopeTaxonomyApplyOut(BaseModel):
@@ -2332,18 +2344,6 @@ class ManagementKeyOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Scope
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
-
-
-class Budgets(RootModel[SharedBudgetState | PerKeyBudgetState]):
-    root: Annotated[SharedBudgetState | PerKeyBudgetState, Field(discriminator="sharing")]
-
-
-class OrgPolicyState(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    org_id: Annotated[UUID, Field(title="Org Id")]
-    budgets: Annotated[list[Budgets], Field(title="Budgets")]
 
 
 class OrgServiceAccountCreatedOut(BaseModel):
@@ -2414,14 +2414,6 @@ class PolicyOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
-class PolicyState(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    computed_at: Annotated[AwareDatetime, Field(title="Computed At")]
-    organizations: Annotated[list[OrgPolicyState], Field(title="Organizations")]
-
-
 class PolicyUpdate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2487,10 +2479,6 @@ class EnvelopePolicyOut(BaseModel):
     data: PolicyOut
 
 
-class EnvelopePolicyState(BaseModel):
-    data: PolicyState
-
-
 class EnvelopeListManagementKeyOut(BaseModel):
     data: Annotated[list[ManagementKeyOut], Field(title="Data")]
 
@@ -2502,7 +2490,7 @@ class EnvelopeListPolicyOut(BaseModel):
 class PolicyBudgetStatus(BaseModel):
     policy: PolicyOut
     computed_at: Annotated[AwareDatetime, Field(title="Computed At")]
-    budgets: Annotated[list[Budgets1], Field(title="Budgets")]
+    budgets: Annotated[list[BudgetRuleStatus], Field(title="Budgets")]
 
 
 class PolicyCreate(BaseModel):

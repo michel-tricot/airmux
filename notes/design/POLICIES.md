@@ -57,7 +57,7 @@ The same matched restrictions apply to every backup, so changing the route canno
 | `strict_parameters` | None | Rejects a route when reconciliation would drop a supplied parameter |
 | `price_limit` | input and output USD per million token ceilings | Rejects catalog models whose rates exceed either ceiling |
 | `request_limits` | maximum requested output tokens | Rejects requests above the configured output bound |
-| `budget` | `amount_usd`, `period`, `sharing` | Rejects requests after observed estimated spending reaches the allowance |
+| `budget` | `amount_usd`, `period`, `scope` | Rejects requests after observed estimated spending reaches the allowance |
 | `credential_access` | allowed credential scopes | Filters credentials to workspace, organization, or platform scopes before tier selection |
 | `fallback` | `models`, `on`, `max_attempts`, `timeout_ms` | Supplies an ordered, bounded backup plan |
 
@@ -166,7 +166,7 @@ editing a dispatcher. Add UI support, regenerate clients, and test both normal e
 ## Historical cost budgets
 
 `budget` actions contain a positive exact `amount_usd`, a UTC calendar `period` (`day` or `month`),
-and `sharing` (`shared` or `per_key`). Multiple budget rules per policy are supported. Every matching
+and `scope` (`shared`, `per_key`, or `per_user`). Multiple budget rules per policy are supported. Every matching
 budget must permit an attempt, including credential retries and fallbacks; active attempts finish normally.
 
 Usage facts own spending. Budget accounting sums `usage_event.cost_usd` within the completion-time window,
@@ -180,8 +180,8 @@ routed model and active policies. These facts survive key deletion, fallback, an
 for the longest supported active window, including when no policy exists. Missing old request facts are not backfilled.
 
 The first implementation uses indexed SQL aggregates through `UsageEvent.budget_spend`, with no counter table,
-reservation authority, distributed cache, or per-request network operation. Per-key operational results use
-SQL grouping and HAVING to return exhausted keys; management results use keyset pagination. If scans become
+reservation authority, distributed cache, or per-request network operation. Operational results use
+scope-specific SQL grouping and HAVING to return exhausted buckets; management results use keyset pagination. If scans become
 expensive, fact-based rollups can preserve these semantics without tying spend to policy identity.
 
 Budget state is pulled independently from bundles through the control plane's Data Plane API. The response

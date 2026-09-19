@@ -5,6 +5,18 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states
 import { Badge, Button, Dropdown, Input, Label, Modal } from '@/components/ui/elements';
 import { formatDate } from '@/lib/format';
 
+function bucketId(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string } | { kind: 'user'; user_id: string }): string {
+  if (bucket.kind === 'key') return bucket.key_id;
+  if (bucket.kind === 'user') return bucket.user_id;
+  return bucket.kind;
+}
+
+function bucketLabel(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string } | { kind: 'user'; user_id: string }): string {
+  if (bucket.kind === 'key') return `Key ${bucket.key_id}`;
+  if (bucket.kind === 'user') return `User ${bucket.user_id}`;
+  return 'All matching usage';
+}
+
 export function PolicyBudgetDialog({
   orgId,
   workspaceRef,
@@ -17,10 +29,10 @@ export function PolicyBudgetDialog({
   onClose: () => void;
 }) {
   const [ruleIndex, setRuleIndex] = useState(policy.definition.rules.findIndex((rule) => rule.action.kind === 'budget'));
-  const [afterKey, setAfterKey] = useState<string | undefined>();
-  const [keyId, setKeyId] = useState<string | undefined>();
-  const [keyInput, setKeyInput] = useState('');
-  const status = usePolicyStatus(orgId, workspaceRef, policy.id, { rule_index: ruleIndex, after_key: afterKey, key_id: keyId });
+  const [afterBucket, setAfterBucket] = useState<string | undefined>();
+  const [bucketIdFilter, setBucketIdFilter] = useState<string | undefined>();
+  const [bucketInput, setBucketInput] = useState('');
+  const status = usePolicyStatus(orgId, workspaceRef, policy.id, { rule_index: ruleIndex, after_bucket: afterBucket, bucket_id: bucketIdFilter });
   const currentPolicy = status.data?.policy ?? policy;
   return (
     <Modal
@@ -38,36 +50,36 @@ export function PolicyBudgetDialog({
           value={String(ruleIndex)}
           onValueChange={(value) => {
             setRuleIndex(Number(value));
-            setAfterKey(undefined);
+            setAfterBucket(undefined);
           }}
           options={currentPolicy.definition.rules.flatMap((rule, index) =>
             rule.action.kind === 'budget'
               ? [
                   {
                     value: String(index),
-                    label: `Rule ${index + 1}: $${rule.action.amount_usd} / ${rule.action.period}${rule.action.sharing === 'per_key' ? ' per key' : ' shared'}`,
+                    label: `Rule ${index + 1}: $${rule.action.amount_usd} / ${rule.action.period} (${rule.action.scope.replace('_', ' ')})`,
                   },
                 ]
               : [],
           )}
         />
         {currentPolicy.definition.rules[ruleIndex]?.action.kind === 'budget' &&
-          currentPolicy.definition.rules[ruleIndex]?.action.sharing === 'per_key' && (
+          currentPolicy.definition.rules[ruleIndex]?.action.scope !== 'shared' && (
             <form
               className="flex items-end gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                setKeyId(keyInput.trim() || undefined);
-                setAfterKey(undefined);
+                setBucketIdFilter(bucketInput.trim() || undefined);
+                setAfterBucket(undefined);
               }}
             >
               <div className="flex-1 space-y-2">
-                <Label htmlFor="budget-key">Inference key ID</Label>
+                <Label htmlFor="budget-bucket">Bucket ID</Label>
                 <Input
-                  id="budget-key"
-                  value={keyInput}
-                  onChange={(event) => setKeyInput(event.target.value)}
-                  placeholder="All keys with recorded usage"
+                  id="budget-bucket"
+                  value={bucketInput}
+                  onChange={(event) => setBucketInput(event.target.value)}
+                  placeholder="All matching buckets"
                 />
               </div>
               <Button type="submit" variant="outline">
@@ -91,46 +103,36 @@ export function PolicyBudgetDialog({
                   <p className="text-sm text-muted-foreground">
                     ${budget.amount_usd} allowance · Resets {formatDate(budget.window_end)}
                   </p>
-                  {budget.sharing === 'shared' ? (
-                    <div className="space-y-2">
-                      <p>Observed spend: ${budget.spent_usd}</p>
-                      <p>Remaining: ${budget.remaining_usd}</p>
-                      <Badge variant={budget.exhausted ? 'destructive' : 'success'}>{budget.exhausted ? 'Exhausted' : 'Available'}</Badge>
-                    </div>
-                  ) : (
-                    <>
-                      <DataTable
-                        rows={budget.keys}
-                        rowKey={(key) => key.key_id}
-                        resource="key spending"
-                        empty="No matching usage in this period."
-                        columns={[
-                          { key: 'key', header: 'Key', cell: (key) => <span className="font-mono text-xs">{key.key_id}</span> },
-                          { key: 'spent', header: 'Spent', cell: (key) => `$${key.spent_usd}` },
-                          { key: 'remaining', header: 'Remaining', cell: (key) => `$${key.remaining_usd}` },
-                          {
-                            key: 'status',
-                            header: 'Status',
-                            cell: (key) => (
-                              <Badge variant={key.exhausted ? 'destructive' : 'success'}>{key.exhausted ? 'Exhausted' : 'Available'}</Badge>
-                            ),
-                          },
-                        ]}
-                      />
-                      <div className="flex gap-2">
-                        {afterKey && (
-                          <Button variant="outline" onClick={() => setAfterKey(undefined)}>
-                            First page
-                          </Button>
-                        )}
-                        {budget.next_key && (
-                          <Button variant="outline" onClick={() => setAfterKey(budget.next_key ?? undefined)}>
-                            Next page
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  )}
+                  <DataTable
+                    rows={budget.buckets}
+                    rowKey={(entry) => bucketId(entry.bucket)}
+                    resource="budget spending"
+                    empty="No matching usage in this period."
+                    columns={[
+                      { key: 'bucket', header: 'Bucket', cell: (entry) => <span className="font-mono text-xs">{bucketLabel(entry.bucket)}</span> },
+                      { key: 'spent', header: 'Spent', cell: (entry) => `$${entry.spent_usd}` },
+                      { key: 'remaining', header: 'Remaining', cell: (entry) => `$${entry.remaining_usd}` },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (entry) => (
+                          <Badge variant={entry.exhausted ? 'destructive' : 'success'}>{entry.exhausted ? 'Exhausted' : 'Available'}</Badge>
+                        ),
+                      },
+                    ]}
+                  />
+                  <div className="flex gap-2">
+                    {afterBucket && (
+                      <Button variant="outline" onClick={() => setAfterBucket(undefined)}>
+                        First page
+                      </Button>
+                    )}
+                    {budget.next_bucket && (
+                      <Button variant="outline" onClick={() => setAfterBucket(bucketId(budget.next_bucket!))}>
+                        Next page
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">Calculated {formatDate(status.data.computed_at)}. Recent usage may still be arriving.</p>

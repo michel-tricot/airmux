@@ -72,7 +72,7 @@ def test_two_deployments_enforce_historical_budgets_without_bundle_refresh(stack
         definition = {
             "target": {"kind": "workspace"},
             "rules": [
-                {"match": {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "sharing": "shared"}}
+                {"match": {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "scope": "shared"}}
                 for amount, period in ((str(allowance), "month"), ("100", "day"))
             ],
         }

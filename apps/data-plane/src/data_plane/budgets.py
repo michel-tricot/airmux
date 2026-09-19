@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import httpx
 from pydantic import ValidationError
 
-from contract.budgets import BudgetState, PolicyState, PolicyStateRequest
-from contract.policies import Budget, RequestMatch, SelectedKeys, SelectedUsers
+from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest, SharedBudgetBucket, UserBudgetBucket
+from contract.policies import Budget, BudgetScope, RequestMatch, SelectedKeys, SelectedUsers
 from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 from data_plane.policies import matching_rules
@@ -18,7 +18,7 @@ from data_plane.requirements import requested_capabilities
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from datetime import datetime
     from uuid import UUID
 
@@ -37,6 +37,8 @@ class _CompiledBudget:
     user_ids: frozenset[UUID] | None
     models: frozenset[str]
     capabilities: frozenset[RequestCapability]
+    bucket_for: Callable[[KeyEntry], BudgetBucket]
+    exhausted_buckets: frozenset[BudgetBucket]
 
     def matches(self, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[RequestCapability]) -> bool:
         match = self.state.match
@@ -56,7 +58,28 @@ def _compile(state: BudgetState) -> _CompiledBudget:
         user_ids=frozenset(state.target.user_ids) if isinstance(state.target, SelectedUsers) else None,
         models=frozenset(state.match.models) if isinstance(state.match, RequestMatch) else frozenset(),
         capabilities=frozenset(state.match.capabilities) if isinstance(state.match, RequestMatch) else frozenset(),
+        bucket_for=_BUCKET_FOR_SCOPE[state.scope],
+        exhausted_buckets=frozenset(state.exhausted_buckets),
     )
+
+
+def _shared_bucket(_key: KeyEntry) -> BudgetBucket:
+    return SharedBudgetBucket()
+
+
+def _key_bucket(key: KeyEntry) -> BudgetBucket:
+    return KeyBudgetBucket(key_id=key.key_id)
+
+
+def _user_bucket(key: KeyEntry) -> BudgetBucket:
+    return UserBudgetBucket(user_id=key.user_id)
+
+
+_BUCKET_FOR_SCOPE: dict[BudgetScope, Callable[[KeyEntry], BudgetBucket]] = {
+    "shared": _shared_bucket,
+    "per_key": _key_bucket,
+    "per_user": _user_bucket,
+}
 
 
 class BudgetStateHolder:
@@ -93,8 +116,7 @@ class BudgetStateHolder:
             state = budget.state
             if not state.window_start <= now < state.window_end or not budget.matches(request, key, capabilities):
                 continue
-            exhausted = state.exhausted if state.sharing == "shared" else key.key_id in state.exhausted_key_ids
-            if exhausted:
+            if budget.bucket_for(key) in budget.exhausted_buckets:
                 raise RequestRejectedError(
                     429,
                     GatewayErrorCode.budget_exhausted,
