@@ -628,6 +628,8 @@ export interface DeniedUsageEventV1 {
      * @nullable
      */
   credential_scope?: null;
+  /** No upstream token usage for a request denied before routing */
+  token_usage_source: 'not_applicable';
 }
 
 export interface OrgOut {
@@ -1531,6 +1533,17 @@ export const RoutedUsageEventV1CredentialScope = {
   workspace: 'workspace',
 } as const;
 
+/**
+ * provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates
+ */
+export type RoutedUsageEventV1TokenUsageSource = typeof RoutedUsageEventV1TokenUsageSource[keyof typeof RoutedUsageEventV1TokenUsageSource];
+
+
+export const RoutedUsageEventV1TokenUsageSource = {
+  provider: 'provider',
+  estimated: 'estimated',
+} as const;
+
 export interface RoutedUsageEventV1 {
   /** Usage event schema version */
   schema_version?: 1;
@@ -1619,6 +1632,8 @@ export interface RoutedUsageEventV1 {
   credential_id: string;
   /** Scope of the provider credential used for the request */
   credential_scope: RoutedUsageEventV1CredentialScope;
+  /** provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates */
+  token_usage_source: RoutedUsageEventV1TokenUsageSource;
 }
 
 export interface ServiceAccountIn {
@@ -1684,6 +1699,15 @@ export interface TaxonomySpec {
   models?: ModelIn[];
 }
 
+export type TokenUsageSource = typeof TokenUsageSource[keyof typeof TokenUsageSource];
+
+
+export const TokenUsageSource = {
+  provider: 'provider',
+  estimated: 'estimated',
+  not_applicable: 'not_applicable',
+} as const;
+
 export type UsageEventOutStatus = typeof UsageEventOutStatus[keyof typeof UsageEventOutStatus];
 
 
@@ -1718,6 +1742,8 @@ export interface UsageEventOut {
   bundle_id: string;
   input_tokens: number;
   output_tokens: number;
+  /** Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates */
+  token_usage_source: TokenUsageSource;
   max_output_tokens: number | null;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;

@@ -72,6 +72,7 @@ def _usage_event(metered, status, occurred_at):
         "provider_id": "openai",
         "bundle_id": str(uuid7()),
         "input_tokens": 1,
+        "token_usage_source": "provider",
         "output_tokens": 1,
         "max_output_tokens": 128,
         "cost_usd": "0.0",

@@ -17,6 +17,7 @@ const attempt: Api.UsageEventOut = {
   bundle_id: 'bundle-1',
   input_tokens: 2,
   output_tokens: 3,
+  token_usage_source: 'provider',
   max_output_tokens: null,
   cost_usd: '0.1',
   cost_input_usd: '0.04',
@@ -52,13 +53,13 @@ it('labels a multi-attempt request and per-model totals as attempts within the e
   expect(within(modelTable).getByRole('row', { name: 'fallback-model 1 5 $0.1000' })).toBeInTheDocument();
   const attempts = screen.getByText('Attempts', { selector: 'div' }).parentElement!;
   expect(within(attempts).getByText('3')).toBeInTheDocument();
-  expect(screen.getAllByText('latest 200 attempt events')).toHaveLength(4);
+  expect(screen.getAllByText(/latest 200 attempt events/)).toHaveLength(4);
   expect(screen.getByText(/Fallback attempts share one caller request ID/)).toBeInTheDocument();
   expect(screen.getByText(/The window may include only some attempts from a request/)).toBeInTheDocument();
   expect(screen.queryByText('Requests')).not.toBeInTheDocument();
   expect(within(screen.getByText('Input Tokens').parentElement!).getByText('6')).toBeInTheDocument();
   expect(within(screen.getByText('Output Tokens').parentElement!).getByText('9')).toBeInTheDocument();
-  expect(within(screen.getByText('Spend').parentElement!).getByText('$0.3000')).toBeInTheDocument();
+  expect(within(screen.getByText('Est. cost', { selector: 'div' }).parentElement!).getByText('$0.3000')).toBeInTheDocument();
 });
 
 it('limits totals to 200 attempt events even when a request crosses the window boundary', async () => {

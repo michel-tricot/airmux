@@ -336,6 +336,13 @@ class DeniedUsageEventV1(BaseModel):
             title="Credential Scope",
         ),
     ] = None
+    token_usage_source: Annotated[
+        Literal["not_applicable"],
+        Field(
+            description="No upstream token usage for a request denied before routing",
+            title="Token Usage Source",
+        ),
+    ]
 
 
 class DenyRequest(BaseModel):
@@ -1552,6 +1559,13 @@ class RoutedUsageEventV1(BaseModel):
             title="Credential Scope",
         ),
     ]
+    token_usage_source: Annotated[
+        Literal["provider", "estimated"],
+        Field(
+            description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates",
+            title="Token Usage Source",
+        ),
+    ]
 
 
 class ScopeLevel(RootModel[Literal["instance", "org", "workspace"]]):
@@ -1711,6 +1725,13 @@ class TaxonomySpec(BaseModel):
     ] = None
 
 
+class TokenUsageSource(RootModel[Literal["provider", "estimated", "not_applicable"]]):
+    root: Annotated[
+        Literal["provider", "estimated", "not_applicable"],
+        Field(title="TokenUsageSource"),
+    ]
+
+
 class UsageEventOut(BaseModel):
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
@@ -1723,6 +1744,12 @@ class UsageEventOut(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    token_usage_source: Annotated[
+        TokenUsageSource,
+        Field(
+            description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates"
+        ),
+    ]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]

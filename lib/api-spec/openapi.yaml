@@ -4818,6 +4818,11 @@ components:
           type: 'null'
           title: Credential Scope
           description: No provider credential scope was selected before denial
+        token_usage_source:
+          type: string
+          const: not_applicable
+          title: Token Usage Source
+          description: No upstream token usage for a request denied before routing
       additionalProperties: false
       type: object
       required:
@@ -4835,6 +4840,7 @@ components:
       - max_output_tokens
       - latency_ms
       - stream
+      - token_usage_source
       title: DeniedUsageEventV1
     DenyRequest:
       properties:
@@ -7618,6 +7624,14 @@ components:
           - workspace
           title: Credential Scope
           description: Scope of the provider credential used for the request
+        token_usage_source:
+          type: string
+          enum:
+          - provider
+          - estimated
+          title: Token Usage Source
+          description: 'provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining
+            partial provider counts. Independent of catalog-priced cost estimates'
       additionalProperties: false
       type: object
       required:
@@ -7639,6 +7653,7 @@ components:
       - stream
       - credential_id
       - credential_scope
+      - token_usage_source
       title: RoutedUsageEventV1
     RuleDefinition-Input:
       properties:
@@ -7959,6 +7974,13 @@ components:
       additionalProperties: false
       type: object
       title: TaxonomySpec
+    TokenUsageSource:
+      type: string
+      enum:
+      - provider
+      - estimated
+      - not_applicable
+      title: TokenUsageSource
     UsageEventOut:
       properties:
         event_id:
@@ -8000,6 +8022,10 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        token_usage_source:
+          $ref: '#/components/schemas/TokenUsageSource'
+          description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
+            for denials; independent of cost estimates'
         max_output_tokens:
           anyOf:
           - type: integer
@@ -8068,6 +8094,7 @@ components:
       - bundle_id
       - input_tokens
       - output_tokens
+      - token_usage_source
       - max_output_tokens
       - cost_usd
       - cost_input_usd
