@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from tests.acceptance.gateway.gateway_sharding import Shard, shard_for
+from acceptance.gateway.gateway_sharding import Shard, shard_for
 
 
 def test_collected_node_ids_land_in_exactly_one_shard():

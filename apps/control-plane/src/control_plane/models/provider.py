@@ -38,7 +38,6 @@ class ProviderOut(RecordOut[Provider]):
     params_closed: bool
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
 
 
 class ProviderIn(ProviderSpec, RequestModel):

@@ -17,10 +17,9 @@ import contextlib
 import json
 import os
 import urllib.error
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -28,7 +27,7 @@ from model_audit.catalog_ops import incomplete_model_modalities, retain_document
 
 from .canonical import write_catalog
 from .model_kind import text_only
-from .output import emit
+from .outcomes import FetchedModels, ModelAcquisition, ModelFetchFailed, ModelsFetched, SkippedModels, UnknownProvidersError
 from .parameter_support import apply_discovery_evidence, discovery_evidence
 from .paths import TAXONOMY
 from .sources import registry
@@ -36,20 +35,11 @@ from .sources.base import GenericModelSource
 from .types import object_list, object_or_empty, required_string, strings
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from .sources.base import ModelSource
     from .types import CatalogObject
 
 ROOT = TAXONOMY
 OUT = ROOT / "models"
-
-
-@dataclass(frozen=True)
-class FetchResult:
-    provider: str
-    status: Literal["ok", "skip", "fail"]
-    detail: str
 
 
 def configured_source(provider: str, configuration: CatalogObject, sources: dict[str, ModelSource]) -> ModelSource:
@@ -66,17 +56,17 @@ def configured_source(provider: str, configuration: CatalogObject, sources: dict
 
 def acquire(  # noqa: PLR0911 acquisition guard clauses return one explicit provider status
     provider: str, configuration: CatalogObject, source: ModelSource, stamp: str
-) -> FetchResult:
+) -> ModelAcquisition:
     url = required_string(configuration.get("models_url"), f"{provider} models URL")
     if "{" in url:
-        return FetchResult(provider, "skip", f"account-scoped endpoint, resolve {url}")
+        return SkippedModels(provider, f"account-scoped endpoint, resolve {url}")
 
     key = None
     if not source.open_access:
         env_var = required_string(configuration.get("env_var"), f"{provider} credential environment variable")
         key = os.environ.get(env_var)
         if not key:
-            return FetchResult(provider, "skip", f"no {env_var} in environment")
+            return SkippedModels(provider, f"no {env_var} in environment")
 
     try:
         payload = source.fetch(key)
@@ -86,16 +76,16 @@ def acquire(  # noqa: PLR0911 acquisition guard clauses return one explicit prov
         detail = ""
         with contextlib.suppress(UnicodeDecodeError, json.JSONDecodeError, AttributeError):
             detail = ": " + (json.loads(error.read().decode()).get("error") or {}).get("message", "")[:110]
-        return FetchResult(provider, "fail", f"HTTP {error.code}{detail}")
+        return ModelFetchFailed(provider, f"HTTP {error.code}{detail}")
     except Exception as error:  # noqa: BLE001 provider failures are reported independently so one vendor cannot stop the catalog
-        return FetchResult(provider, "fail", f"{type(error).__name__}: {str(error)[:110]}")
+        return ModelFetchFailed(provider, f"{type(error).__name__}: {str(error)[:110]}")
 
     if raw_models and not models:
-        return FetchResult(provider, "fail", f"{len(raw_models)} returned, none kept; check the module's filter")
+        return ModelFetchFailed(provider, f"{len(raw_models)} returned, none kept; check the module's filter")
     if not models:
-        return FetchResult(provider, "fail", "empty or unrecognized payload")
+        return ModelFetchFailed(provider, "empty or unrecognized payload")
     if incomplete := incomplete_model_modalities(provider, models):
-        return FetchResult(provider, "fail", f"models without required modalities: {', '.join(incomplete)}")
+        return ModelFetchFailed(provider, f"models without required modalities: {', '.join(incomplete)}")
 
     target = OUT / f"{provider}.json"
     previous_models = object_list(object_or_empty(json.loads(target.read_text(), parse_float=Decimal)).get("models")) if target.exists() else []
@@ -114,25 +104,20 @@ def acquire(  # noqa: PLR0911 acquisition guard clauses return one explicit prov
             "models": models,
         },
     )
-    return FetchResult(provider, "ok", f"{len(models):>4} models, {declared:>4} declared, {new_models:>3} new")
+    return FetchedModels(provider, len(models), declared, new_models)
 
 
-def main(arguments: Sequence[str] = ()) -> int:
-    providers = {provider["id"]: provider for provider in yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]}
-    selected = set(arguments) or set(providers)
-    unknown = selected - set(providers)
+def run(providers: tuple[str, ...] = ()) -> ModelsFetched:
+    entries = {provider["id"]: provider for provider in yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]}
+    selected = set(providers) or set(entries)
+    unknown = selected - set(entries)
     if unknown:
-        emit(f"not in providers.yml: {sorted(unknown)}")
-        return 2
+        raise UnknownProvidersError(unknown, "providers.yml")
 
     OUT.mkdir(exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y-%m-%d")
     sources = registry()
-    results = [
-        acquire(provider, providers[provider], configured_source(provider, providers[provider], sources), stamp) for provider in sorted(selected)
-    ]
-    for result in results:
-        emit(f"  {result.status:<7} {result.provider:<13} {result.detail}")
-    counts = {status: sum(result.status == status for result in results) for status in ("ok", "skip", "fail")}
-    emit(f"\n{counts['ok']} written, {counts['skip']} skipped, {counts['fail']} failed")
-    return 1 if counts["fail"] or (arguments and counts["skip"]) else 0
+    results = tuple(
+        acquire(provider, entries[provider], configured_source(provider, entries[provider], sources), stamp) for provider in sorted(selected)
+    )
+    return ModelsFetched(results, required=bool(providers))

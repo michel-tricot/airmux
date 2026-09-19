@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import make_config, make_outbox
@@ -132,7 +133,7 @@ async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     record(outbox, event)
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(httpx2.HTTPStatusError):
         await outbox.export_once()
     assert await outbox.next_batch(10) == [event]
 

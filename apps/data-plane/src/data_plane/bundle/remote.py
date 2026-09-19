@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 from pydantic import ValidationError
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1
@@ -29,7 +29,7 @@ class RemoteBundleSource(BundleSource):
         self,
         config: RemoteBundleConfig,
         holder: BundleHolder,
-        http_client: httpx.AsyncClient,
+        http_client: httpx2.AsyncClient,
     ) -> None:
         self._config = config
         self._holder = holder
@@ -53,7 +53,7 @@ class RemoteBundleSource(BundleSource):
         except (ValidationError, ValueError):
             self._holder.reject_manifest()
             raise
-        except (httpx.HTTPError, OSError):
+        except (httpx2.HTTPError, OSError):
             self._holder.record_poll("failed")
             raise
         if not changed:
@@ -63,7 +63,7 @@ class RemoteBundleSource(BundleSource):
         await run_periodic(
             self.once,
             self._config.poll_interval_s,
-            (httpx.HTTPError, ValidationError, OSError, ValueError),
+            (httpx2.HTTPError, ValidationError, OSError, ValueError),
             "bundle poll",
         )
 
@@ -97,7 +97,7 @@ class RemoteBundleSource(BundleSource):
         source: str,
         *,
         persist: bool,
-        expected: list[BundleManifestEntry] | None,
+        expected: tuple[BundleManifestEntry, ...] | None,
     ) -> None:
         if expected is not None:
             for entry, bundle in zip(expected, bundles, strict=True):

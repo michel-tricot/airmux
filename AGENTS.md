@@ -70,10 +70,11 @@ registry, the registry is wrong; fix the registry.
   one millisecond; Bundle passes its id explicitly so the stored id matches the bundle_id in its JSON payload.
 - Models list Record first, then capability mixins: Identified, OrgOwned, Tombstonable, future ones. Mixins are plain SQLModel classes
   and never subclass Record; they live in models/common.
-- Tombstonable provides created_at, updated_at, and deleted_at. The database owns the values through touch triggers installed
+- Tombstonable provides created_at and updated_at. The database owns the values through touch triggers installed
   by the migrations; the ORM never maintains them. updated_at is never null: it equals created_at on creation
-  and refreshes on every update. deleted_at stays null for now: deletes are hard until trigger-based soft delete lands
-  (blueprint in notes/IDEAS.md). Never declare those fields on a model; a model without them is one that is
+  and refreshes on every update. Deletes are hard; do not reserve a deleted_at column or resource field for deferred
+  soft deletion (blueprint in notes/IDEAS.md). DeletedOut reports the hard-delete action timestamp. Never declare
+  created_at or updated_at on a model; a model without them is one that is
   deliberately not tombstonable.
 - Trigger DDL functions are versioned (touch_trigger_ddl_v1) and frozen once a migration imports them. To change trigger SQL,
   add the next version, point test_schema's trigger install at it, and write a migration swapping the triggers.

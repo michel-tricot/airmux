@@ -12,6 +12,5 @@ export function taxonomyProvider(id: string, name: string, icon = ''): Api.Provi
     params_closed: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
 }

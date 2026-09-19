@@ -1,12 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useListOrgsInfinite,
+  useGetOrgSummary,
   useGetOrg,
   useCreateOrg,
   useUpdateOrg,
   useDeleteOrg,
   useCreatePersonalOrg,
   getListOrgsInfiniteQueryKey,
+  getGetOrgSummaryQueryKey,
   getGetOrgQueryKey,
   getEnrollmentQueryKey,
   getMeQueryKey,
@@ -19,6 +21,10 @@ export function useOrgs({ enabled = true }: EnabledQueryOptions = {}) {
   return useListOrgsInfinite(undefined, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
+export function useOrgSummary({ enabled = true }: EnabledQueryOptions = {}) {
+  return useGetOrgSummary({ query: { enabled } });
+}
+
 export function useOrg(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useGetOrg(orgId, { query: { enabled } });
 }
@@ -27,7 +33,11 @@ export function useCreateOrgMutation() {
   const queryClient = useQueryClient();
   return useCreateOrg({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgsInfiniteQueryKey() }),
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListOrgsInfiniteQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetOrgSummaryQueryKey() }),
+        ]),
       meta: { errorMessage: 'We couldn’t create the organization. Please try again.' },
     },
   });
@@ -56,6 +66,7 @@ export function useDeleteOrgMutation() {
       onSuccess: () =>
         Promise.all([
           queryClient.invalidateQueries({ queryKey: getListOrgsInfiniteQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetOrgSummaryQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
         ]),
@@ -70,6 +81,8 @@ export function useCreatePersonalOrgMutation() {
     mutation: {
       onSuccess: () =>
         Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListOrgsInfiniteQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetOrgSummaryQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
           queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
         ]),

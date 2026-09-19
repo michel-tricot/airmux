@@ -12,12 +12,11 @@ export const ORG: Api.OrgOut = {
   personal_for: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 
 export const WORKSPACES: Api.WorkspaceOut[] = [
-  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now, deleted_at: null },
-  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now, deleted_at: null },
+  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now },
+  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now },
 ];
 
 export function paged<T>(data: T[]) {
@@ -58,6 +57,7 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
   http.get('/api/v1/auth/permissions', () => HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: Object.values(Permission) } })),
   http.get('/api/v1/instance/management-keys', () => enveloped<Api.ManagementKeyOut>([])),
+  http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json<{ data: Api.OrgSummaryOut }>({ data: { total: 1 } })),
   http.get('/api/v1/organizations/:orgId/management-keys', () => enveloped<Api.ManagementKeyOut>([])),
   http.get('/api/v1/organizations/:orgId/activity', () => paged<Api.ActivityOut>([])),
   http.get('/api/v1/organizations/:orgId/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [], models: [] } })),

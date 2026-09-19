@@ -186,7 +186,6 @@ def test_catalog_tables_lead_with_stable_names(monkeypatch):
                     params_closed=False,
                     created_at=now,
                     updated_at=now,
-                    deleted_at=None,
                 )
             ],
             models=[
@@ -208,7 +207,6 @@ def test_catalog_tables_lead_with_stable_names(monkeypatch):
                     parameter_support={},
                     created_at=now,
                     updated_at=now,
-                    deleted_at=None,
                 )
             ],
         ),

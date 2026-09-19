@@ -77,7 +77,6 @@ describe('playground', () => {
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     let requestedWith = '';
     let requestBody: Record<string, unknown> = {};
@@ -187,7 +186,6 @@ describe('playground', () => {
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     server.use(
       http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
@@ -241,7 +239,6 @@ describe('playground', () => {
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
       {
         egress_kind: null,
@@ -261,7 +258,6 @@ describe('playground', () => {
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
     ];
     server.use(
@@ -303,7 +299,6 @@ describe('playground', () => {
       parameter_support: { temperature: 'unsupported' },
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     let requestBody: Record<string, unknown> = {};
     server.use(

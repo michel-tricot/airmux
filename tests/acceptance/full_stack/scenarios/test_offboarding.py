@@ -29,6 +29,18 @@ def test_workspace_offboarding_revokes_the_existing_data_plane_credential(stack:
         _payload(admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}))
         user_id = _payload(admin.get("/api/v1/auth/me"))["user_id"]
         workspace = _payload(admin.get(f"/api/v1/organizations/{stack.org_id}/workspaces"))[0]
-        _payload(admin.delete(f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}/members/{user_id}"))
+        assert "deleted_at" not in workspace
+        assert workspace["created_at"] == workspace["updated_at"]
+        workspace_path = f"/api/v1/organizations/{stack.org_id}/workspaces/{workspace['id']}"
+        _payload(admin.patch(workspace_path, json={"name": "Renamed"}))
+        renamed = _payload(admin.get(workspace_path))
+        assert renamed["name"] == "Renamed"
+        assert "deleted_at" not in renamed
+        assert renamed["created_at"] == workspace["created_at"]
+        assert renamed["updated_at"] > workspace["updated_at"]
+        deleted = _payload(admin.delete(f"{workspace_path}/members/{user_id}"))
+        assert deleted["id"] == f"{user_id}/{workspace['id']}"
+        assert deleted["deleted_at"] is not None
+        assert admin.delete(f"{workspace_path}/members/{user_id}").status_code == 404
 
     assert _poll(lambda: completion().status_code == 401, 30), "the replacement bundle did not revoke the offboarded credential"

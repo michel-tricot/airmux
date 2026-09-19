@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel
 
 from control_plane.models.common.column_types import UTCDateTime
 
-TOMBSTONE_COLUMNS = frozenset({"created_at", "updated_at", "deleted_at"})
+TOMBSTONE_COLUMNS = frozenset({"created_at", "updated_at"})
 
 
 def utcnow() -> datetime:
@@ -19,14 +19,13 @@ class Tombstonable(SQLModel):
     """Lifecycle timestamps for every tombstonable table; models inherit these fields and never declare them.
 
     The database owns these values through the touch triggers below: updated_at is never
-    null, equals created_at on creation, and refreshes on every update. deleted_at stays null
-    for now: deletes are hard until trigger-based soft delete lands, see notes/IDEAS.md.
+    null, equals created_at on creation, and refreshes on every update. Deletes are hard;
+    soft delete is deferred in notes/IDEAS.md without reserving a column or public field.
     The field defaults are placeholders that satisfy NOT NULL until the insert trigger overwrites them.
     """
 
     created_at: datetime = Field(default_factory=utcnow, sa_type=UTCDateTime, sa_column_kwargs={"server_default": func.now()})
     updated_at: datetime = Field(default_factory=utcnow, sa_type=UTCDateTime, sa_column_kwargs={"server_default": func.now()})
-    deleted_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
 
     api_readonly: ClassVar[frozenset[str]] = TOMBSTONE_COLUMNS
 

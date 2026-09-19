@@ -97,6 +97,7 @@ import type {
   OrgOut,
   OrgServiceAccountCreatedOut,
   OrgServiceAccountIn,
+  OrgSummaryOut,
   OrgUpdate,
   PageActivityOut,
   PageOrgOut,
@@ -2157,6 +2158,110 @@ export function useClaim<TData = Awaited<ReturnType<typeof claim>>, TError = Err
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getClaimQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOrgSummaryUrl = () => {
+
+
+
+
+  return `/api/v1/instance/organizations/summary`
+}
+
+/**
+ * Count all organizations on the instance, independent of collection pagination.
+ *
+ * Required permission: `organizations.read`.
+ * @summary Get Org Summary
+ */
+export const getOrgSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<OrgSummaryOut> => {
+
+  return customFetch<OrgSummaryOut>(getGetOrgSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrgSummaryQueryKey = () => {
+    return [
+    `/api/v1/instance/organizations/summary`
+    ] as const;
+    }
+
+
+export const getGetOrgSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getOrgSummary>>, TError = ErrorType<void | HTTPValidationError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrgSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrgSummary>>> = ({ signal }) => getOrgSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOrgSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getOrgSummary>>>
+export type GetOrgSummaryQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetOrgSummary<TData = Awaited<ReturnType<typeof getOrgSummary>>, TError = ErrorType<void | HTTPValidationError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgSummary<TData = Awaited<ReturnType<typeof getOrgSummary>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgSummary>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgSummary>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgSummary<TData = Awaited<ReturnType<typeof getOrgSummary>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Org Summary
+ */
+
+export function useGetOrgSummary<TData = Awaited<ReturnType<typeof getOrgSummary>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgSummary>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOrgSummaryQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

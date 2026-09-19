@@ -42,7 +42,6 @@ function managementKey(id: string, revokedAt: string | null = null): Api.Managem
     revoked_at: revokedAt,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
     scope: { level: 'org', org_id: ORG.id, workspace_id: null },
     status: revokedAt ? 'revoked' : 'active',
   };
@@ -61,7 +60,6 @@ function inferenceKey(id: string, revoked: boolean): Api.InferenceKeyOut {
     prefix: 'llm_abc',
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
 }
 

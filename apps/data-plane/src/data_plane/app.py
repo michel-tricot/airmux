@@ -7,7 +7,7 @@ import os
 import signal
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -47,11 +47,11 @@ async def readyz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ready"})
 
 
-def _build_http_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(
+def _build_http_client() -> httpx2.AsyncClient:
+    return httpx2.AsyncClient(
         http2=True,
-        limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
-        timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
+        limits=httpx2.Limits(max_connections=100, max_keepalive_connections=20),
+        timeout=httpx2.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
     )
 
 

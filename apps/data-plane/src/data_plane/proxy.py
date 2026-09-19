@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-import httpx
+import httpx2
 from pydantic import ValidationError
 from starlette.responses import Response
 
@@ -218,16 +218,21 @@ class RequestExecution:
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
             reason: FallbackReason | None = (
                 "rate_limited"
-                if error.status == httpx.codes.TOO_MANY_REQUESTS
+                if error.status == httpx2.codes.TOO_MANY_REQUESTS
                 else "upstream_unavailable"
-                if error.status >= httpx.codes.INTERNAL_SERVER_ERROR
+                if error.status >= httpx2.codes.INTERNAL_SERVER_ERROR
                 else None
             )
-            return AttemptFailure(rendered, reason, error.status in {httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN, httpx.codes.TOO_MANY_REQUESTS})
-        except httpx.HTTPError as error:
+            rejects_credential = error.status in {
+                httpx2.codes.UNAUTHORIZED,
+                httpx2.codes.FORBIDDEN,
+                httpx2.codes.TOO_MANY_REQUESTS,
+            }
+            return AttemptFailure(rendered, reason, rejects_credential)
+        except httpx2.HTTPError as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
-            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx.TimeoutException) else "upstream_unavailable", False)
+            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_unavailable", False)
         except UpstreamProtocolError as error:
             self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_at)
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
@@ -256,7 +261,7 @@ class RequestExecution:
         )
 
 
-def _check_upstream(response: httpx.Response) -> None:
+def _check_upstream(response: httpx2.Response) -> None:
     if response.is_error:
         raise UpstreamResponseError(response.status_code, response.content)
 

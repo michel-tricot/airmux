@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 from pydantic import TypeAdapter
 
 from contract import UsageEvent
@@ -63,7 +63,7 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 
 
 class SqliteOutbox(QueuedOutbox):
-    def __init__(self, config: SqliteOutboxConfig, http_client: httpx.AsyncClient, metrics: DataPlaneMetrics) -> None:
+    def __init__(self, config: SqliteOutboxConfig, http_client: httpx2.AsyncClient, metrics: DataPlaneMetrics) -> None:
         self._config = config
         self._http_client = http_client
         self._owner = str(os.getpid())
@@ -141,7 +141,7 @@ class SqliteOutbox(QueuedOutbox):
             )
             response.raise_for_status()
             await self.acknowledge([str(event.event_id) for event in events])
-        except (httpx.HTTPError, OSError, sqlite3.Error):
+        except (httpx2.HTTPError, OSError, sqlite3.Error):
             self._metrics.observe_metering_export("failed", started_at)
             raise
         self._metrics.observe_metering_export("success", started_at)
@@ -167,7 +167,7 @@ class SqliteOutbox(QueuedOutbox):
         await run_periodic(
             self._export_and_log,
             self._config.flush_interval_s,
-            (httpx.HTTPError, OSError, sqlite3.Error),
+            (httpx2.HTTPError, OSError, sqlite3.Error),
             "event export",
         )
 

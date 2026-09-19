@@ -89,7 +89,17 @@ export type ProviderEntryParamAliases = {[key: string]: string};
  * An upstream LLM provider endpoint and its supported request parameters.
  */
 export interface ProviderEntry {
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_]*$
+     */
   kind: string;
   /**
      * @minLength 1
@@ -139,8 +149,21 @@ export type ModelEntryParameterSupport = {[key: string]: 'supported' | 'unsuppor
  * A routable model: the caller-facing id plus how to reach and bill it.
  */
 export interface ModelEntry {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   upstream_model: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
   input_price_per_mtok: string;
@@ -150,6 +173,10 @@ export interface ModelEntry {
   cache_read_price_per_mtok: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cache_write_price_per_mtok: string;
+  /**
+     * @minimum 1
+     * @maximum 100000000
+     */
   context_window: number;
   max_output_tokens?: number | null;
   /**
@@ -162,6 +189,7 @@ export interface ModelEntry {
      * @maxItems 5
      */
   output_modalities: ModelEntryOutputModalitiesItem[];
+  /** @maxItems 4 */
   capabilities: ModelEntryCapabilitiesItem[];
   parameter_support?: ModelEntryParameterSupport;
   egress_kind?: string | null;
@@ -611,7 +639,6 @@ export interface OrgOut {
   personal_for: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface InvitationPreviewOut {
@@ -696,7 +723,6 @@ export interface InferenceKeyOut {
   prefix: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface InferenceKeyOwnerOut {
@@ -829,7 +855,6 @@ export interface ManagementKeyCreatedOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: Scope;
   status: ManagementKeyCreatedOutStatus;
   token: string;
@@ -873,7 +898,6 @@ export interface ManagementKeyOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: Scope;
   status: ManagementKeyOutStatus;
 }
@@ -1080,7 +1104,6 @@ export interface ModelOut {
   parameter_support: ModelOutParameterSupport;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface MyPermissionsOut {
@@ -1145,7 +1168,6 @@ export interface OrgInvitationOut {
   revoked_at: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   status: OrgInvitationOutStatus;
 }
 
@@ -1187,7 +1209,6 @@ export interface UserOut {
   managing_org_id: string | null;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   orgs: string[];
 }
 
@@ -1206,6 +1227,14 @@ export interface OrgServiceAccountIn {
   name: string;
   /** Initial organization-scoped management key to create for the service account */
   management_key: ManagementKeyIn;
+}
+
+export interface OrgSummaryOut {
+  /**
+     * Number of organizations currently on the instance, including personal organizations
+     * @minimum 0
+     */
+  total: number;
 }
 
 export interface OrgUpdate {
@@ -1319,7 +1348,6 @@ export interface PolicyOut {
   definition: PolicyDefinitionOutput;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface PolicyUpdate {
@@ -1399,7 +1427,6 @@ export interface ProviderCredentialOut {
   fingerprint: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
   scope: ProviderCredentialOutScope;
 }
 
@@ -1477,7 +1504,6 @@ export interface ProviderOut {
   params_closed: boolean;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 /**
@@ -1787,7 +1813,6 @@ export interface WorkspaceOut {
   slug: string;
   created_at: string;
   updated_at: string;
-  deleted_at: string | null;
 }
 
 export interface WorkspaceUpdate {

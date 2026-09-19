@@ -4,11 +4,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
-from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from pydantic import BaseModel, field_validator
+from sqlalchemy import UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.bundle import Bundle
 from control_plane.models.common import Identified, Tombstonable
@@ -47,6 +48,11 @@ class Org(Record, Identified, Tombstonable, table=True):
 
     api_readonly: ClassVar[frozenset[str]] = frozenset({"personal_for"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"slug"})
+
+    @classmethod
+    async def summary(cls) -> OrgSummaryOut:
+        total = (await current_session().execute(select(func.count()).select_from(cls))).scalar_one()
+        return OrgSummaryOut(total=total)
 
     @classmethod
     async def by_ref(cls, ref: str) -> Self | None:
@@ -131,6 +137,10 @@ class OrgUpdate(RecordUpdate[Org]):
     name: str | None = Field(default=None, description="Replacement organization name", min_length=1, max_length=200)
 
 
+class OrgSummaryOut(BaseModel):
+    total: int = Field(ge=0, description="Number of organizations currently on the instance, including personal organizations")
+
+
 class OrgOut(RecordOut[Org]):
     id: UUID
     name: str
@@ -138,4 +148,3 @@ class OrgOut(RecordOut[Org]):
     personal_for: UUID | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None

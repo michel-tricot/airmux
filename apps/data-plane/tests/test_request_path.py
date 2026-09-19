@@ -4,6 +4,7 @@ import json
 import time
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane, read_and_close_outbox
@@ -248,7 +249,7 @@ def test_policy_denial_is_metered(api_key, dp_app, tmp_path, http_client):
 
 @respx.mock
 def test_upstream_timeout_is_metered_as_timeout(api_key, dp_app, tmp_path, http_client):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=httpx.ReadTimeout("timed out"))
+    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=httpx2.ReadTimeout("timed out"))
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(

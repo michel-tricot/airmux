@@ -16,7 +16,6 @@ const USER: Api.UserOut = {
   managing_org_id: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   orgs: [ORG.id],
 };
 const MANAGEMENT_KEY: Api.ManagementKeyOut = {
@@ -34,7 +33,6 @@ const MANAGEMENT_KEY: Api.ManagementKeyOut = {
   prefix: 'sk-cp-abc',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER: Api.ProviderOut = {
   id: 'provider-1',
@@ -47,7 +45,6 @@ const PROVIDER: Api.ProviderOut = {
   params_closed: false,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   id: 'provider-credential-1',
@@ -64,7 +61,6 @@ const PROVIDER_CREDENTIAL: Api.ProviderCredentialOut = {
   fingerprint: '1234',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
   scope: 'platform',
 };
 
@@ -229,6 +225,43 @@ describe('instance administration routes', () => {
     expect(alert).toHaveTextContent('Could not reach the control plane');
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
+  });
+
+  it.each([0, 1, 2])('shows the organization total after loading %s collection pages and creating an organization', async (pages) => {
+    let total = 125;
+    const organizations = Array.from({ length: 100 }, (_, index) => ({ ...ORG, id: `org-${index}`, name: `Organization ${index}` }));
+    server.use(
+      http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json({ data: { total } })),
+      http.get('/api/v1/organizations', ({ request }) => {
+        const offset = new URL(request.url).searchParams.has('cursor') ? 50 : 0;
+        return HttpResponse.json({ data: organizations.slice(offset, offset + 50), page: { next_cursor: 'more' } });
+      }),
+      http.post('/api/v1/organizations', () => {
+        total += 1;
+        return HttpResponse.json({ data: { ...ORG, id: 'new-org', name: 'New organization' } });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt(pages ? '/instance/organizations' : '/instance');
+    if (pages) await screen.findByRole('link', { name: 'Organization 0' });
+    if (pages === 2) {
+      await user.click(screen.getByRole('button', { name: /load more/i }));
+      await screen.findByRole('link', { name: 'Organization 99' });
+    }
+    const navigation = await screen.findByRole('navigation', { name: 'Instance navigation' });
+    await user.click(within(navigation).getByRole('link', { name: 'Overview' }));
+    const heading = await screen.findByRole('heading', { name: 'Organizations' });
+    await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('125')).toBeInTheDocument());
+
+    await user.click(within(navigation).getByRole('link', { name: 'Organizations' }));
+    await user.click(await screen.findByRole('button', { name: 'New Organization' }));
+    const dialog = screen.getByRole('dialog', { name: 'Create Organization' });
+    await user.type(within(dialog).getByRole('textbox'), 'New organization');
+    await user.click(within(dialog).getByRole('button', { name: 'Create Organization' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(within(navigation).getByRole('link', { name: 'Overview' }));
+    const updatedHeading = await screen.findByRole('heading', { name: 'Organizations' });
+    await waitFor(() => expect(within(updatedHeading.parentElement?.parentElement as HTMLElement).getByText('126')).toBeInTheDocument());
   });
 
   it('counts only active management keys on the dashboard', async () => {

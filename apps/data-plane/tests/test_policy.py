@@ -22,7 +22,7 @@ from data_plane.policy import Allow, Deny, evaluate
 ORG_A = uuid7()
 
 CREDENTIAL = make_credential(org=ORG_A)
-BUNDLE = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=[CREDENTIAL]), org=ORG_A)
+BUNDLE = make_bundle(catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(CREDENTIAL,)), org=ORG_A)
 
 KEY = make_key("k1", org=ORG_A)[1]
 
@@ -54,7 +54,7 @@ def test_unknown_model_denied_404():
 
 
 def test_model_without_provider_is_rejected_at_bundle_admission():
-    bundle = make_bundle(catalog=Catalog(providers=[], models=[MODEL]), org=ORG_A)
+    bundle = make_bundle(catalog=Catalog(providers=(), models=(MODEL,)), org=ORG_A)
     with pytest.raises(ValueError, match="unknown provider"):
         snap(bundle)
 
@@ -82,8 +82,8 @@ def test_request_capabilities_are_derived_from_every_canonical_feature():
 
 
 def test_request_is_denied_before_egress_when_the_model_lacks_a_required_capability():
-    model = MODEL.model_copy(update={"capabilities": ["streaming"]})
-    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[CREDENTIAL]), org=ORG_A)
+    model = MODEL.model_copy(update={"capabilities": ("streaming",)})
+    bundle = make_bundle(catalog=Catalog(providers=(PROVIDER,), models=(model,), credentials=(CREDENTIAL,)), org=ORG_A)
     request = CanonicalRequest(
         model=model.model_id,
         messages=[{"role": "user", "content": "hi"}],
@@ -94,8 +94,8 @@ def test_request_is_denied_before_egress_when_the_model_lacks_a_required_capabil
 
 
 def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality():
-    model = MODEL.model_copy(update={"input_modalities": ["text"]})
-    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[CREDENTIAL]), org=ORG_A)
+    model = MODEL.model_copy(update={"input_modalities": ("text",)})
+    bundle = make_bundle(catalog=Catalog(providers=(PROVIDER,), models=(model,), credentials=(CREDENTIAL,)), org=ORG_A)
     request = CanonicalRequest(
         model=model.model_id,
         messages=[CanonicalUserMessage(content=[CanonicalImagePart(url="https://example.com/image.png")])],

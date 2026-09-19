@@ -29,7 +29,6 @@ function invitation(id = 'invite-1'): OrgInvitationOut {
     revoked_at: null,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
     status: 'pending',
   };
 }
