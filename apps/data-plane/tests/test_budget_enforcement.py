@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -17,9 +18,10 @@ from contract.budgets import (
     budget_window,
 )
 from contract.policies import AllRequests, PolicyDefinition, PolicyEntry, RequestMatch, RuleDefinition, SelectedUsers, WorkspaceTarget
-from data_plane.budgets import BudgetStateHolder, BudgetStatePoller
+from data_plane.budgets import BudgetStateHolder, BudgetStatePoller, NoBudgetBackend, build_budget_backend
 from data_plane.bundle.holder import BundleHolder, BundleSet, BundleSnapshot
 from data_plane.canonical import CanonicalRequest
+from data_plane.config import ControlPlaneBudgetConfig, NoBudgetConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.errors import RequestRejectedError
 from data_plane.metrics import DataPlaneMetrics
@@ -141,10 +143,34 @@ def test_standalone_gateway_rejects_budget_bundle_without_replacing_previous_sta
         ),
     )
     try:
-        with pytest.raises(ValueError, match="remote bundles and event export"):
+        with pytest.raises(ValueError, match="configured budget backend"):
             holder.swap(BundleSet.from_bundles((bundle.model_copy(update={"policies": (policy,)}),)), "test")
         assert holder.current is original
     finally:
+        metrics.shutdown()
+
+
+def test_no_budget_backend_is_explicit_and_does_not_start_tasks():
+    metrics = DataPlaneMetrics()
+    client = httpx.AsyncClient()
+    try:
+        backend = build_budget_backend(NoBudgetConfig(), BundleHolder(metrics), BudgetStateHolder(), client, metrics)
+        assert isinstance(backend, NoBudgetBackend)
+        assert backend.supports_budgets is False
+    finally:
+        asyncio.run(client.aclose())
+        metrics.shutdown()
+
+
+def test_control_plane_budget_backend_uses_its_own_configuration():
+    metrics = DataPlaneMetrics()
+    client = httpx.AsyncClient()
+    config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
+    try:
+        backend = build_budget_backend(config, BundleHolder(metrics), BudgetStateHolder(), client, metrics)
+        assert backend.supports_budgets is True
+    finally:
+        asyncio.run(client.aclose())
         metrics.shutdown()
 
 

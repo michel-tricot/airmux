@@ -12,12 +12,14 @@ from pydantic import ValidationError
 from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
 from contract.policies import Budget, BudgetAggregation, RequestMatch, SelectedKeys, SelectedUsers
 from data_plane.canonical import GatewayErrorCode
+from data_plane.config import BudgetConfig, ControlPlaneBudgetConfig
 from data_plane.errors import RequestRejectedError
 from data_plane.policies import matching_rules
 from data_plane.requirements import requested_capabilities
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Callable, Mapping
     from datetime import datetime
     from uuid import UUID
@@ -136,7 +138,12 @@ class BudgetStateHolder:
 
 class BudgetStatePoller:
     def __init__(
-        self, control_plane: ControlPlaneLink, bundles: BundleHolder, budgets: BudgetStateHolder, client: httpx.AsyncClient, metrics: DataPlaneMetrics
+        self,
+        control_plane: ControlPlaneLink,
+        bundles: BundleHolder,
+        budgets: BudgetStateHolder,
+        client: httpx.AsyncClient,
+        metrics: DataPlaneMetrics,
     ) -> None:
         self._metrics = metrics
         self._control_plane = control_plane
@@ -162,5 +169,55 @@ class BudgetStatePoller:
         self._budgets.adopt(state)
         self._metrics.observe_budget_state(state.computed_at.timestamp())
 
-    async def run(self) -> None:
-        await run_periodic(self.once, 5.0, (httpx.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
+    async def run(self, poll_interval_s: float = 5.0) -> None:
+        await run_periodic(self.once, poll_interval_s, (httpx.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
+
+
+class NoBudgetBackend:
+    supports_budgets = False
+
+    def start(self, _task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
+        return ()
+
+
+class ControlPlaneBudgetBackend:
+    supports_budgets = True
+
+    def __init__(
+        self,
+        config: ControlPlaneBudgetConfig,
+        bundles: BundleHolder,
+        budgets: BudgetStateHolder,
+        client: httpx.AsyncClient,
+        metrics: DataPlaneMetrics,
+    ) -> None:
+        self._config = config
+        self._bundles = bundles
+        self._budgets = budgets
+        self._client = client
+        self._metrics = metrics
+
+    def start(self, task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
+        poller = BudgetStatePoller(
+            self._config.control_plane,
+            self._bundles,
+            self._budgets,
+            self._client,
+            self._metrics,
+        )
+        return (task_group.create_task(poller.run(self._config.poll_interval_s), name="budget state poll"),)
+
+
+BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
+
+
+def build_budget_backend(
+    config: BudgetConfig,
+    bundles: BundleHolder,
+    budgets: BudgetStateHolder,
+    client: httpx.AsyncClient,
+    metrics: DataPlaneMetrics,
+) -> BudgetBackend:
+    if isinstance(config, ControlPlaneBudgetConfig):
+        return ControlPlaneBudgetBackend(config, bundles, budgets, client, metrics)
+    return NoBudgetBackend()

@@ -1,53 +1,21 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, Self, cast
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Index, Numeric, String, func
+from sqlalchemy import Column, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
 from contract import CredentialScope, UsageStatus, UsdAmount
-from contract.budgets import BudgetBucket, KeyBudgetBucket, SharedBudgetBucket, budget_window
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
-from contract.policies import AllRequests, Budget, BudgetAggregation, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
-from control_plane.db import current_session
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from sqlalchemy.sql.elements import ColumnElement
-    from sqlalchemy.sql.selectable import Select
-
-    from control_plane.models.policy import Policy
-
-
-class BudgetUsagePage(BaseModel):
-    rule_index: int | None = Field(default=None, ge=0, lt=100)
-    bucket_id: str | None = Field(default=None, min_length=1, max_length=255)
-    after_bucket: str | None = Field(default=None, min_length=1, max_length=255)
-    limit: int = Field(default=100, ge=1, le=1000)
-
-
-def _shared_bucket(_bucket_id: object | None) -> BudgetBucket:
-    return SharedBudgetBucket()
-
-
-def _key_bucket(bucket_id: object | None) -> BudgetBucket:
-    return KeyBudgetBucket(key_id=str(bucket_id))
-
-
-_BUDGET_BUCKET_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[object | None], BudgetBucket]] = {
-    "shared": _shared_bucket,
-    "per_key": _key_bucket,
-}
 
 
 class UsageEvent(Record, table=True):
@@ -94,90 +62,7 @@ class UsageEvent(Record, table=True):
         statement = select(cls).where(cls.org_id == org_id)
         if workspace_id is not None:
             statement = statement.where(cls.workspace_id == workspace_id)
-        return await keyset_page(
-            statement,
-            page,
-            col(cls.event_id),
-            UUID,
-        )
-
-    @classmethod
-    async def budget_spend(
-        cls, policy: Policy, rule: RuleDefinition, now: datetime, page: BudgetUsagePage | None = None
-    ) -> list[tuple[BudgetBucket, UsdAmount]]:
-        action = rule.action
-        if not isinstance(action, Budget):
-            message = "Spending requires a budget rule"
-            raise TypeError(message)
-        start, end = budget_window(action.period, now)
-        spend = func.coalesce(func.sum(cls.cost_usd), ZERO_USD)
-        bucket_column = cls._bucket_column(action.aggregation)
-        statement = select(spend) if bucket_column is None else select(bucket_column, spend)
-        statement = statement.where(*cls._budget_filters(policy, rule, start, end))
-        if bucket_column is not None:
-            statement = cls._bucket_statement(statement, spend, action, bucket_column, page)
-        result = await current_session().execute(statement)
-        if bucket_column is None:
-            return [(SharedBudgetBucket(), result.scalar_one())]
-        return [(cls.budget_bucket(action.aggregation, bucket_id), amount) for bucket_id, amount in result.all()]
-
-    @classmethod
-    def _bucket_column(cls, aggregation: BudgetAggregation) -> ColumnElement[object] | None:
-        return {
-            "shared": None,
-            "per_key": cast("ColumnElement[object]", col(cls.key_id)),
-        }[aggregation]
-
-    @staticmethod
-    def budget_bucket(aggregation: BudgetAggregation, bucket_id: object | None = None) -> BudgetBucket:
-        return _BUDGET_BUCKET_FOR_AGGREGATION[aggregation](bucket_id)
-
-    @classmethod
-    def _budget_filters(cls, policy: Policy, rule: RuleDefinition, start: datetime, end: datetime) -> tuple[ColumnElement[bool], ...]:
-        return (
-            col(cls.org_id) == policy.org_id,
-            col(cls.workspace_id) == policy.workspace_id,
-            col(cls.occurred_at) >= start,
-            col(cls.occurred_at) < end,
-            *cls._target_filters(policy),
-            *cls._match_filters(rule.match),
-        )
-
-    @classmethod
-    def _target_filters(cls, policy: Policy) -> tuple[ColumnElement[bool], ...]:
-        target = policy.definition.target
-        if isinstance(target, SelectedKeys):
-            return (col(cls.key_id).in_(target.key_ids),)
-        if isinstance(target, SelectedUsers):
-            return (col(cls.user_id).in_(target.user_ids),)
-        return ()
-
-    @classmethod
-    def _match_filters(cls, match: AllRequests | RequestMatch) -> tuple[ColumnElement[bool], ...]:
-        if not isinstance(match, RequestMatch):
-            return ()
-        return (
-            *((col(cls.requested_model_id).in_(match.models),) if match.models else ()),
-            *((col(cls.stream) == match.stream,) if match.stream is not None else ()),
-            *((col(cls.requested_capabilities).op("@>")(list(match.capabilities)),) if match.capabilities else ()),
-        )
-
-    @classmethod
-    def _bucket_statement(
-        cls, statement: Select, spend: ColumnElement[UsdAmount], action: Budget, bucket_column: ColumnElement[object], page: BudgetUsagePage | None
-    ) -> Select:
-        statement = statement.group_by(bucket_column).order_by(bucket_column)
-        if page is None:
-            return statement.having(spend >= action.amount_usd)
-        if page.bucket_id is not None:
-            statement = statement.where(bucket_column == cls._bucket_value(page.bucket_id))
-        if page.after_bucket is not None:
-            statement = statement.where(bucket_column > cls._bucket_value(page.after_bucket))
-        return statement.limit(page.limit + 1)
-
-    @staticmethod
-    def _bucket_value(bucket_id: str) -> str:
-        return bucket_id
+        return await keyset_page(statement, page, col(cls.event_id), UUID)
 
 
 class UsageEventOut(RecordOut[UsageEvent]):

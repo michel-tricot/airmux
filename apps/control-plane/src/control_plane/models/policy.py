@@ -33,10 +33,6 @@ from control_plane.models.user import User
 if TYPE_CHECKING:
     from sqlalchemy.engine import Dialect
 
-    from contract.budgets import BudgetState
-    from control_plane.models.budget import PolicyBudgetStatus
-    from control_plane.models.usage_event import BudgetUsagePage
-
 
 class PolicyDefinitionType(TypeDecorator[PolicyDefinition]):
     impl = JSON
@@ -70,22 +66,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     definition: PolicyDefinition = Field(sa_type=PolicyDefinitionType, nullable=False)
 
     api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id"})
-
-    @classmethod
-    async def budget_states(cls, org_id: UUID, now: datetime) -> tuple[BudgetState, ...]:
-        from control_plane.models.budget import budget_states  # noqa: PLC0415 import cycle through Policy
-
-        return await budget_states(org_id, now)
-
-    async def enforcement_state(self, now: datetime) -> tuple[BudgetState, ...]:
-        from control_plane.models.budget import enforcement_state  # noqa: PLC0415 import cycle through Policy
-
-        return await enforcement_state(self, now)
-
-    async def budget_status(self, now: datetime, page: BudgetUsagePage) -> PolicyBudgetStatus:
-        from control_plane.models.budget import budget_status  # noqa: PLC0415 import cycle through Policy
-
-        return await budget_status(self, now, page)
 
     @classmethod
     async def in_workspace(cls, org_id: UUID, workspace_id: UUID, policy_id: UUID) -> Self:

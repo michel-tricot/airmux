@@ -13,9 +13,9 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger, log_event
-from data_plane.budgets import BudgetStatePoller
-from data_plane.bundle import BundleHolder, RemoteBundleConfig, build_bundle_source
-from data_plane.config import Config, SqliteOutboxConfig, load_config
+from data_plane.budgets import build_budget_backend
+from data_plane.bundle import BundleHolder, build_bundle_source
+from data_plane.config import Config, ControlPlaneBudgetConfig, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from starlette.requests import Request
     from starlette.types import ASGIApp
 
-    from data_plane.control_plane_link import ControlPlaneLink
 
 logger = logging.getLogger("data_plane")
 
@@ -77,14 +76,6 @@ def _terminate_process_on_failure(task: asyncio.Task[None], /) -> None:
     _terminate_process()
 
 
-def _budget_control_plane(config: Config) -> ControlPlaneLink | None:
-    if not isinstance(config.bundle, RemoteBundleConfig) or not isinstance(config.events, SqliteOutboxConfig):
-        return None
-    if config.bundle.control_plane.url.rstrip("/") != config.events.control_plane.url.rstrip("/"):
-        return None
-    return config.bundle.control_plane
-
-
 def create_app(config: Config) -> ASGIApp:
     metrics = DataPlaneMetrics()
 
@@ -94,8 +85,7 @@ def create_app(config: Config) -> ASGIApp:
         async with config.secrets.build() as secret_store, _build_http_client() as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
             try:
-                budget_control_plane = _budget_control_plane(config)
-                holder = BundleHolder(metrics, supports_budgets=budget_control_plane is not None)
+                holder = BundleHolder(metrics, supports_budgets=isinstance(config.budget, ControlPlaneBudgetConfig))
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 runtime = Runtime(
                     holder=holder,
@@ -105,10 +95,8 @@ def create_app(config: Config) -> ASGIApp:
                     metrics=metrics,
                 )
                 async with asyncio.TaskGroup() as task_group:
-                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
-                    if budget_control_plane is not None:
-                        poller = BudgetStatePoller(budget_control_plane, holder, runtime.budgets, http_client, metrics)
-                        tasks = (*tasks, task_group.create_task(poller.run(), name="budget state poll"))
+                    budget_backend = build_budget_backend(config.budget, holder, runtime.budgets, http_client, metrics)
+                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group), *budget_backend.start(task_group))
                     for task in tasks:
                         task.add_done_callback(_terminate_process_on_failure)
                     try:

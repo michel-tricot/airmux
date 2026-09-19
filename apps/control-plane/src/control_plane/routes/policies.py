@@ -8,10 +8,9 @@ from fastapi import APIRouter, Query
 
 from control_plane.authz import Permission
 from control_plane.deps import WorkspaceDep, require, require_all, workspace_scope
-from control_plane.models.budget import PolicyBudgetStatus  # noqa: TC001 FastAPI resolves response annotation at runtime
+from control_plane.models.budget import BudgetUsagePage, PolicyBudgetStatus, budget_status
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.policy import Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
-from control_plane.models.usage_event import BudgetUsagePage  # noqa: TC001 FastAPI resolves query annotations at runtime
 
 router = APIRouter(prefix="/organizations/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
 
@@ -66,4 +65,4 @@ async def delete_policy(workspace: WorkspaceDep, policy_id: UUID) -> Envelope[De
 @router.get("/{policy_id}/status", dependencies=[require_all("api", workspace_scope, Permission.policies_read, Permission.usage_read)])
 async def policy_status(workspace: WorkspaceDep, policy_id: UUID, page: Annotated[BudgetUsagePage, Query()]) -> Envelope[PolicyBudgetStatus]:
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
-    return Envelope(data=await policy.budget_status(datetime.now(UTC), page))
+    return Envelope(data=await budget_status(policy, datetime.now(UTC), page))

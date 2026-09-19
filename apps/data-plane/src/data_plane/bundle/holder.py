@@ -91,7 +91,7 @@ class BundleSet:
 
 
 class BundleHolder:
-    def __init__(self, metrics: DataPlaneMetrics, *, supports_budgets: bool = True) -> None:
+    def __init__(self, metrics: DataPlaneMetrics, *, supports_budgets: bool = False) -> None:
         self._supports_budgets = supports_budgets
         self._current = BundleSet.from_bundles(())
         self._metrics = metrics
@@ -102,7 +102,7 @@ class BundleHolder:
 
     def swap(self, current: BundleSet, source: str) -> None:
         if not self._supports_budgets and _contains_budgets(current):
-            message = "Budgets require remote bundles and event export to the same control plane"
+            message = "Budgets require a configured budget backend"
             raise ValueError(message)
         self._current = current
         self._metrics.observe_bundle_adopted(len(current.snapshots))
