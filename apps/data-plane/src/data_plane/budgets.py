@@ -26,15 +26,17 @@ if TYPE_CHECKING:
 
     from contract import KeyEntry
     from contract.model_types import RequestCapability
-    from data_plane.bundle.holder import BundleHolder, BundleSnapshot
+    from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
     from data_plane.control_plane_link import ControlPlaneLink
     from data_plane.metrics import DataPlaneMetrics
+    from data_plane.policies import CompiledRule
 
 
 @dataclass(frozen=True)
 class _CompiledBudget:
     state: BudgetState
+    rule_key: tuple[UUID, int]
     key_ids: frozenset[str] | None
     user_ids: frozenset[UUID] | None
     models: frozenset[str]
@@ -56,6 +58,7 @@ class _CompiledBudget:
 def _compile(state: BudgetState) -> _CompiledBudget:
     return _CompiledBudget(
         state=state,
+        rule_key=(state.policy_id, state.rule_index),
         key_ids=frozenset(state.target.key_ids) if isinstance(state.target, SelectedKeys) else None,
         user_ids=frozenset(state.target.user_ids) if isinstance(state.target, SelectedUsers) else None,
         models=frozenset(state.match.models) if isinstance(state.match, RequestMatch) else frozenset(),
@@ -96,7 +99,14 @@ _BUCKET_ID_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[BudgetBucket], str
 class BudgetStateHolder:
     def __init__(self) -> None:
         self._organizations: Mapping[UUID, Mapping[UUID, tuple[_CompiledBudget, ...]]] = MappingProxyType({})
+        self._tracked_orgs: set[UUID] = set()
         self.computed_at: datetime | None = None
+
+    def request_state(self, org_id: UUID) -> None:
+        self._tracked_orgs.add(org_id)
+
+    def requested_orgs(self) -> tuple[UUID, ...]:
+        return tuple(self._tracked_orgs)
 
     def adopt(self, state: PolicyState) -> None:
         organizations = {
@@ -110,20 +120,30 @@ class BudgetStateHolder:
             )
             for org in state.organizations
         }
-        self._organizations = MappingProxyType(organizations)
+        current = dict(self._organizations)
+        current.update(organizations)
+        self._organizations = MappingProxyType(current)
         self.computed_at = state.computed_at
 
     def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, now: datetime) -> None:
+        matching = tuple(rule for rule in matching_rules(request, key, snapshot.budget_index) if isinstance(rule.definition.action, Budget))
+        if not matching:
+            return
         workspaces = self._organizations.get(key.org_id)
         if workspaces is None:
-            if any(isinstance(rule.definition.action, Budget) for rule in matching_rules(request, key, snapshot.budget_index)):
-                raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
-            return
+            self.request_state(key.org_id)
+            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
         budgets = workspaces.get(key.workspace_id, ())
-        if not budgets:
-            return
+        budget_by_rule = {budget.rule_key: budget for budget in budgets}
+        if any(
+            (budget := budget_by_rule.get((rule.policy.id, rule.rule_index))) is None or not _state_matches_rule(budget, rule)
+            for rule in matching
+        ):
+            self.request_state(key.org_id)
+            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
         capabilities = requested_capabilities(request)
-        for budget in budgets:
+        for rule in matching:
+            budget = budget_by_rule[(rule.policy.id, rule.rule_index)]
             state = budget.state
             if not state.window_start <= now < state.window_end or not budget.matches(request, key, capabilities):
                 continue
@@ -136,23 +156,33 @@ class BudgetStateHolder:
                 )
 
 
+def _state_matches_rule(budget: _CompiledBudget, rule: CompiledRule) -> bool:
+    action = cast("Budget", rule.definition.action)
+    state = budget.state
+    return (
+        state.target == rule.policy.definition.target
+        and state.match == rule.definition.match
+        and state.aggregation == action.aggregation
+        and state.amount_usd == action.amount_usd
+        and state.period == action.period
+    )
+
+
 class BudgetStatePoller:
     def __init__(
         self,
         control_plane: ControlPlaneLink,
-        bundles: BundleHolder,
         budgets: BudgetStateHolder,
         client: httpx.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._metrics = metrics
         self._control_plane = control_plane
-        self._bundles = bundles
         self._budgets = budgets
         self._client = client
 
     async def once(self) -> None:
-        org_ids = tuple(self._bundles.current.snapshots)
+        org_ids = self._budgets.requested_orgs()
         if not org_ids:
             return
         response = await self._client.post(
@@ -186,13 +216,11 @@ class ControlPlaneBudgetBackend:
     def __init__(
         self,
         config: ControlPlaneBudgetConfig,
-        bundles: BundleHolder,
         budgets: BudgetStateHolder,
         client: httpx.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._config = config
-        self._bundles = bundles
         self._budgets = budgets
         self._client = client
         self._metrics = metrics
@@ -200,7 +228,6 @@ class ControlPlaneBudgetBackend:
     def start(self, task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         poller = BudgetStatePoller(
             self._config.control_plane,
-            self._bundles,
             self._budgets,
             self._client,
             self._metrics,
@@ -213,11 +240,10 @@ BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
 
 def build_budget_backend(
     config: BudgetConfig,
-    bundles: BundleHolder,
     budgets: BudgetStateHolder,
     client: httpx.AsyncClient,
     metrics: DataPlaneMetrics,
 ) -> BudgetBackend:
     if isinstance(config, ControlPlaneBudgetConfig):
-        return ControlPlaneBudgetBackend(config, bundles, budgets, client, metrics)
+        return ControlPlaneBudgetBackend(config, budgets, client, metrics)
     return NoBudgetBackend()

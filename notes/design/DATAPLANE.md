@@ -822,11 +822,13 @@ The control-plane budget backend fetches current budget rules and exhaustion sta
 and event export. A `none` budget backend disables state polling; it is the standalone default and rejects bundles
 that contain budget rules.
 `BudgetStateHolder` compiles request filters and exhausted-key sets off the request path and replaces a
-complete snapshot at once. Request admission performs memory lookups before each upstream attempt.
+per-organization snapshot at once. It tracks organizations when policy evaluation encounters a matching budget;
+the backend refreshes those organizations without consulting the bundle lifecycle. Request admission performs
+memory lookups before each upstream attempt.
 `evaluate()` remains pure; no database driver or control-plane import enters the data plane.
 
 Before the first organization snapshot, matching budget rules in the bundle produce
-`503 policy_state_unavailable`; other requests continue. Once initialized, the complete budget snapshot is
+`503 policy_state_unavailable`; other requests continue. Once initialized, each accepted organization snapshot is
 authoritative for budget checks even if the routing bundle is older or newer. Failed or incomplete refreshes
 leave the last complete snapshot. An expired window no longer blocks, provisionally allowing the next window.
 Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already in flight finish.

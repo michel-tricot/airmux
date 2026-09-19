@@ -95,7 +95,7 @@ def create_app(config: Config) -> ASGIApp:
                     metrics=metrics,
                 )
                 async with asyncio.TaskGroup() as task_group:
-                    budget_backend = build_budget_backend(config.budget, holder, runtime.budgets, http_client, metrics)
+                    budget_backend = build_budget_backend(config.budget, runtime.budgets, http_client, metrics)
                     tasks = (*bundle_source.start(task_group), *outbox.start(task_group), *budget_backend.start(task_group))
                     for task in tasks:
                         task.add_done_callback(_terminate_process_on_failure)

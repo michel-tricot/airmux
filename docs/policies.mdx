@@ -279,8 +279,8 @@ requests matching a budget in the loaded bundle return `503 policy_state_unavail
 keep the last state; expired UTC windows stop blocking until new state arrives. Bundle and budget polling are
 independent. Budget rules and their calculated exhaustion state travel together in the budget snapshot.
 
-Budgets require remote bundles and SQLite event export to the same control plane. Keep usage history for the
-full current month even when no budget is configured. Original user, requested-model, and capability facts must
+Budget state uses the configured budget backend independently of bundle loading and event export. Keep usage history
+for the full current month even when no budget is configured. Original user, requested-model, and capability facts must
 have been recorded to support historical filters; missing historical facts are not reconstructed.
 
 In the console, add an **Estimated cost budget** rule and use **View spending** on its policy. The view shows

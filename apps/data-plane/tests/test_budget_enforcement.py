@@ -17,7 +17,7 @@ from contract.budgets import (
     SharedBudgetBucket,
     budget_window,
 )
-from contract.policies import AllRequests, PolicyDefinition, PolicyEntry, RequestMatch, RuleDefinition, SelectedUsers, WorkspaceTarget
+from contract.policies import AllRequests, Budget, PolicyDefinition, PolicyEntry, RequestMatch, RuleDefinition, SelectedUsers, WorkspaceTarget
 from data_plane.budgets import BudgetStateHolder, BudgetStatePoller, NoBudgetBackend, build_budget_backend
 from data_plane.bundle.holder import BundleHolder, BundleSet, BundleSnapshot
 from data_plane.canonical import CanonicalRequest
@@ -35,7 +35,7 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
     holder = BudgetStateHolder()
     state = BudgetState(
         policy_id=uuid7(),
-        rule_index=1,
+        rule_index=0,
         workspace_id=WORKSPACE,
         target=WorkspaceTarget(kind="workspace"),
         match=AllRequests(kind="all_requests"),
@@ -46,16 +46,31 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
         aggregation="shared",
         exhausted_buckets=(SharedBudgetBucket(),),
     )
+    policy = PolicyEntry(
+        id=state.policy_id,
+        workspace_id=WORKSPACE,
+        name="Budget",
+        priority=100,
+        definition=PolicyDefinition(
+            target=state.target,
+            rules=(
+                RuleDefinition(
+                    match=state.match,
+                    action=Budget(kind="budget", amount_usd=state.amount_usd, period=state.period, aggregation=state.aggregation),
+                ),
+            ),
+        ),
+    )
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),)))
     for _ in range(2):
-        snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]))
+        snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}))
         with pytest.raises(RequestRejectedError) as denied:
             holder.check(request, key, snapshot, now)
         assert denied.value.code == "budget_exhausted"
         assert denied.value.status == 429
         holder.check(request, key, snapshot, end + timedelta(seconds=1))
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=()),)))
-    holder.check(request, key, snapshot, now)
+    holder.check(request, key, BundleSnapshot.from_bundle(make_bundle(keys=[key])), now)
 
 
 def test_per_key_filters_use_original_request_and_all_matching_budgets():
@@ -81,6 +96,22 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
         aggregation="per_key",
         exhausted_buckets=(KeyBudgetBucket(key_id=key.key_id),),
     )
+    policy = PolicyEntry(
+        id=budget.policy_id,
+        workspace_id=WORKSPACE,
+        name="Budget",
+        priority=100,
+        definition=PolicyDefinition(
+            target=budget.target,
+            rules=(
+                RuleDefinition(
+                    match=budget.match,
+                    action=Budget(kind="budget", amount_usd=budget.amount_usd, period=budget.period, aggregation=budget.aggregation),
+                ),
+            ),
+        ),
+    )
+    snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key, other_key]).model_copy(update={"policies": (policy,)}))
     holder = BudgetStateHolder()
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(budget,)),)))
     with pytest.raises(RequestRejectedError, match="budget_exhausted"):
@@ -154,7 +185,7 @@ def test_no_budget_backend_is_explicit_and_does_not_start_tasks():
     metrics = DataPlaneMetrics()
     client = httpx.AsyncClient()
     try:
-        backend = build_budget_backend(NoBudgetConfig(), BundleHolder(metrics), BudgetStateHolder(), client, metrics)
+        backend = build_budget_backend(NoBudgetConfig(), BudgetStateHolder(), client, metrics)
         assert isinstance(backend, NoBudgetBackend)
         assert backend.supports_budgets is False
     finally:
@@ -167,7 +198,7 @@ def test_control_plane_budget_backend_uses_its_own_configuration():
     client = httpx.AsyncClient()
     config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
     try:
-        backend = build_budget_backend(config, BundleHolder(metrics), BudgetStateHolder(), client, metrics)
+        backend = build_budget_backend(config, BudgetStateHolder(), client, metrics)
         assert backend.supports_budgets is True
     finally:
         asyncio.run(client.aclose())
@@ -200,12 +231,28 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
         return response
 
     metrics = DataPlaneMetrics()
-    bundles = BundleHolder(metrics)
-    bundles.swap(BundleSet.from_bundles((make_bundle(keys=[key]),)), "test")
+    bundles = BundleHolder(metrics, supports_budgets=True)
+    policy = PolicyEntry(
+        id=state.policy_id,
+        workspace_id=WORKSPACE,
+        name="Budget",
+        priority=100,
+        definition=PolicyDefinition(
+            target=state.target,
+            rules=(
+                RuleDefinition(
+                    match=state.match,
+                    action=Budget(kind="budget", amount_usd=state.amount_usd, period=state.period, aggregation=state.aggregation),
+                ),
+            ),
+        ),
+    )
+    bundles.swap(BundleSet.from_bundles((make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}),)), "test")
     holder = BudgetStateHolder()
     try:
         async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-            poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), bundles, holder, client, metrics)
+            holder.request_state(ORG)
+            poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), holder, client, metrics)
             await poller.once()
             for failed_response in (httpx.Response(503), httpx.Response(200, json={"data": {"computed_at": now.isoformat(), "organizations": []}})):
                 response = failed_response
