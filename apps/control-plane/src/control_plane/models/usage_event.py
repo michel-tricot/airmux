@@ -13,7 +13,7 @@ from contract import CredentialScope, UsageStatus, UsdAmount
 from contract.budgets import budget_window
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
-from contract.policies import Budget, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
+from contract.policies import AllRequests, Budget, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
 from control_plane.db import current_session
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
@@ -21,6 +21,9 @@ from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
 
 if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import ColumnElement
+    from sqlalchemy.sql.selectable import Select
+
     from control_plane.models.policy import Policy
 
 
@@ -93,35 +96,54 @@ class UsageEvent(Record, table=True):
         start, end = budget_window(action.period, now)
         spend = func.coalesce(func.sum(cls.cost_usd), ZERO_USD)
         statement = select(col(cls.key_id), spend) if action.sharing == "per_key" else select(spend)
-        statement = statement.where(
-            cls.org_id == policy.org_id, cls.workspace_id == policy.workspace_id, cls.occurred_at >= start, cls.occurred_at < end
-        )
-        target = policy.definition.target
-        if isinstance(target, SelectedKeys):
-            statement = statement.where(col(cls.key_id).in_(target.key_ids))
-        elif isinstance(target, SelectedUsers):
-            statement = statement.where(col(cls.user_id).in_(target.user_ids))
-        match = rule.match
-        if isinstance(match, RequestMatch) and match.models:
-            statement = statement.where(col(cls.requested_model_id).in_(match.models))
-        if isinstance(match, RequestMatch) and match.stream is not None:
-            statement = statement.where(cls.stream == match.stream)
-        if isinstance(match, RequestMatch) and match.capabilities:
-            statement = statement.where(col(cls.requested_capabilities).op("@>")(list(match.capabilities)))
+        statement = statement.where(*cls._budget_filters(policy, rule, start, end))
         if action.sharing == "per_key":
-            statement = statement.group_by(col(cls.key_id)).order_by(col(cls.key_id))
-            if page is None:
-                statement = statement.having(spend >= action.amount_usd)
-            else:
-                if page.key_id is not None:
-                    statement = statement.where(cls.key_id == page.key_id)
-                if page.after_key is not None:
-                    statement = statement.where(cls.key_id > page.after_key)
-                statement = statement.limit(page.limit + 1)
+            statement = cls._per_key_statement(statement, spend, action, page)
         result = await current_session().execute(statement)
         if action.sharing == "shared":
             return [(None, result.scalar_one())]
         return [(key_id, amount) for key_id, amount in result.all()]
+
+    @classmethod
+    def _budget_filters(cls, policy: Policy, rule: RuleDefinition, start: datetime, end: datetime) -> tuple[ColumnElement[bool], ...]:
+        return (
+            col(cls.org_id) == policy.org_id,
+            col(cls.workspace_id) == policy.workspace_id,
+            col(cls.occurred_at) >= start,
+            col(cls.occurred_at) < end,
+            *cls._target_filters(policy),
+            *cls._match_filters(rule.match),
+        )
+
+    @classmethod
+    def _target_filters(cls, policy: Policy) -> tuple[ColumnElement[bool], ...]:
+        target = policy.definition.target
+        if isinstance(target, SelectedKeys):
+            return (col(cls.key_id).in_(target.key_ids),)
+        if isinstance(target, SelectedUsers):
+            return (col(cls.user_id).in_(target.user_ids),)
+        return ()
+
+    @classmethod
+    def _match_filters(cls, match: AllRequests | RequestMatch) -> tuple[ColumnElement[bool], ...]:
+        if not isinstance(match, RequestMatch):
+            return ()
+        return (
+            *((col(cls.requested_model_id).in_(match.models),) if match.models else ()),
+            *((col(cls.stream) == match.stream,) if match.stream is not None else ()),
+            *((col(cls.requested_capabilities).op("@>")(list(match.capabilities)),) if match.capabilities else ()),
+        )
+
+    @classmethod
+    def _per_key_statement(cls, statement: Select, spend: ColumnElement[UsdAmount], action: Budget, page: BudgetUsagePage | None) -> Select:
+        statement = statement.group_by(col(cls.key_id)).order_by(col(cls.key_id))
+        if page is None:
+            return statement.having(spend >= action.amount_usd)
+        if page.key_id is not None:
+            statement = statement.where(col(cls.key_id) == page.key_id)
+        if page.after_key is not None:
+            statement = statement.where(col(cls.key_id) > page.after_key)
+        return statement.limit(page.limit + 1)
 
 
 class UsageEventOut(RecordOut[UsageEvent]):

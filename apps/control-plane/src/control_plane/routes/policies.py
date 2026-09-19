@@ -8,8 +8,9 @@ from fastapi import APIRouter, Query
 
 from control_plane.authz import Permission
 from control_plane.deps import WorkspaceDep, require, require_all, workspace_scope
+from control_plane.models.budget import PolicyBudgetStatus  # noqa: TC001 FastAPI resolves response annotation at runtime
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.policy import Policy, PolicyBudgetStatus, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
+from control_plane.models.policy import Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 from control_plane.models.usage_event import BudgetUsagePage  # noqa: TC001 FastAPI resolves query annotations at runtime
 
 router = APIRouter(prefix="/organizations/{org_id}/workspaces/{workspace_ref}/policies", tags=["Workspace Policies"])
