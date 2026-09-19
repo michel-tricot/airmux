@@ -6,6 +6,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal, Self
 
 from airmux_runtime.observability import log_event
+from contract.policies import Budget
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
 from data_plane.egress import REGISTRY
@@ -39,6 +40,7 @@ class BundleSnapshot:
     profile_index: Mapping[str, CompiledProfile]
     provider_param_aliases: frozenset[str]
     policy_index: PolicyIndex
+    budget_index: PolicyIndex
 
     @classmethod
     def from_bundle(cls, bundle: BundleV1) -> Self:
@@ -49,6 +51,7 @@ class BundleSnapshot:
         _admit_providers(provider_index)
         _admit_models(model_index, provider_index)
         _admit_credentials(bundle, provider_index)
+        policy_index = compile_policies(bundle.policies)
         return cls(
             bundle=bundle,
             model_index=MappingProxyType(model_index),
@@ -56,7 +59,13 @@ class BundleSnapshot:
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(profile_index),
             provider_param_aliases=frozenset(spelling for profile in profile_index.values() for spelling in profile.respelled),
-            policy_index=compile_policies(bundle.policies),
+            policy_index=policy_index,
+            budget_index=MappingProxyType(
+                {
+                    workspace_id: tuple(rule for rule in rules if isinstance(rule.definition.action, Budget))
+                    for workspace_id, rules in policy_index.items()
+                }
+            ),
         )
 
 
@@ -82,7 +91,8 @@ class BundleSet:
 
 
 class BundleHolder:
-    def __init__(self, metrics: DataPlaneMetrics) -> None:
+    def __init__(self, metrics: DataPlaneMetrics, *, supports_budgets: bool = True) -> None:
+        self._supports_budgets = supports_budgets
         self._current = BundleSet.from_bundles(())
         self._metrics = metrics
 
@@ -91,6 +101,14 @@ class BundleHolder:
         return self._current
 
     def swap(self, current: BundleSet, source: str) -> None:
+        if not self._supports_budgets and any(
+            isinstance(rule.action, Budget)
+            for snapshot in current.snapshots.values()
+            for policy in snapshot.bundle.policies
+            for rule in policy.definition.rules
+        ):
+            message = "Budgets require remote bundles and event export to the same control plane"
+            raise ValueError(message)
         self._current = current
         self._metrics.observe_bundle_adopted(len(current.snapshots))
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))

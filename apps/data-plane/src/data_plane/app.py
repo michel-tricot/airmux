@@ -13,8 +13,9 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger, log_event
-from data_plane.bundle import BundleHolder, build_bundle_source
-from data_plane.config import Config, load_config
+from data_plane.budgets import BudgetStatePoller
+from data_plane.bundle import BundleHolder, RemoteBundleConfig, build_bundle_source
+from data_plane.config import Config, SqliteOutboxConfig, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
@@ -83,7 +84,12 @@ def create_app(config: Config) -> ASGIApp:
         async with config.secrets.build() as secret_store, _build_http_client() as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
             try:
-                holder = BundleHolder(metrics)
+                supports_budgets = (
+                    isinstance(config.bundle, RemoteBundleConfig)
+                    and isinstance(config.events, SqliteOutboxConfig)
+                    and config.bundle.control_plane.url.rstrip("/") == config.events.control_plane.url.rstrip("/")
+                )
+                holder = BundleHolder(metrics, supports_budgets=supports_budgets)
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 runtime = Runtime(
                     holder=holder,
@@ -94,6 +100,9 @@ def create_app(config: Config) -> ASGIApp:
                 )
                 async with asyncio.TaskGroup() as task_group:
                     tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+                    if supports_budgets and isinstance(config.bundle, RemoteBundleConfig):
+                        poller = BudgetStatePoller(config.bundle.control_plane, holder, runtime.budgets, http_client, metrics)
+                        tasks = (*tasks, task_group.create_task(poller.run(), name="budget state poll"))
                     for task in tasks:
                         task.add_done_callback(_terminate_process_on_failure)
                     try:

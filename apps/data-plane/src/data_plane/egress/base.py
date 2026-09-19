@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from airmux_runtime.secrets import Secret
     from contract import CredentialScope, ModelEntry, ProviderEntry
+    from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
 
@@ -131,6 +132,9 @@ class Ctx:
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: frozenset[RequestCapability]
     credential_id: UUID
     credential_scope: CredentialScope
     bundle_id: UUID

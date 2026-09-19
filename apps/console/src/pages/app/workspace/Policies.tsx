@@ -13,6 +13,7 @@ import { useRequiredParam } from '@/lib/route';
 import { useRequiredOrgId } from '@/lib/session';
 import { PolicyEditor } from './PolicyEditor';
 import { PolicyTable } from './PolicyTable';
+import { PolicyBudgetDialog } from './PolicyBudgetDialog';
 
 export default function WorkspacePolicies() {
   const orgId = useRequiredOrgId();
@@ -30,6 +31,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
   const catalog = useProviders(orgId, workspaceRef, { enabled: canManage });
   const policyMutations = usePolicyMutations(orgId, workspaceRef);
   const [editingPolicy, setEditingPolicy] = useState<PolicyOut | null>(null);
+  const [budgetPolicy, setBudgetPolicy] = useState<PolicyOut | null>(null);
   const [policyOpen, setPolicyOpen] = useState(false);
   const editorReady = keys.data !== undefined && users.data !== undefined && catalog.data !== undefined;
 
@@ -61,6 +63,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         isError={policies.isError}
         error={policies.error}
         onRetry={() => void policies.refetch()}
+        onBudgetStatus={authorization.can(policyAccess.status) ? setBudgetPolicy : undefined}
         canManage={canManage}
         editorReady={editorReady}
         isReordering={policyMutations.reorder.isPending}
@@ -69,6 +72,7 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         onDelete={(policy) => policyMutations.remove.mutateAsync({ orgId, workspaceRef, policyId: policy.id })}
         deletePending={policyMutations.remove.isPending}
       />
+      {budgetPolicy && <PolicyBudgetDialog orgId={orgId} workspaceRef={workspaceRef} policy={budgetPolicy} onClose={() => setBudgetPolicy(null)} />}
       {canManage && keys.data && users.data && catalog.data && (
         <PolicyEditor
           key={editingPolicy ? `${editingPolicy.id}:${editingPolicy.updated_at}` : 'new-policy'}

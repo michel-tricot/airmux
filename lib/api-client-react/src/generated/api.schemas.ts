@@ -49,6 +49,30 @@ export interface AllowedProviders {
   names: string[];
 }
 
+export type BudgetPeriod = typeof BudgetPeriod[keyof typeof BudgetPeriod];
+
+
+export const BudgetPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetSharing = typeof BudgetSharing[keyof typeof BudgetSharing];
+
+
+export const BudgetSharing = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface Budget {
+  kind: 'budget';
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetPeriod;
+  sharing: BudgetSharing;
+}
+
 /**
  * The immutable identity of one organization bundle available to a data plane.
  */
@@ -340,7 +364,7 @@ export interface Fallback {
 
 export interface RuleDefinitionOutput {
   match: AllRequests | RequestMatchOutput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget;
 }
 
 export interface PolicyDefinitionOutput {
@@ -510,6 +534,15 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const DeniedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 export interface DeniedUsageEventV1 {
   /** Usage event schema version */
   schema_version?: 1;
@@ -529,6 +562,16 @@ export interface DeniedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: DeniedUsageEventV1RequestedCapabilitiesItem[];
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -739,6 +782,19 @@ export interface InvitationTokenIn {
   token: string;
 }
 
+export interface KeyBudgetStatus {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  spent_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  remaining_usd: string;
+  exhausted: boolean;
+}
+
 export interface LoginIn {
   /**
      * Account email address
@@ -788,6 +844,7 @@ export const Permission = {
   policiesread: 'policies.read',
   policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
+  'policy-statesync': 'policy-state.sync',
   bundlesread: 'bundles.read',
   usageread: 'usage.read',
   usageingest: 'usage.ingest',
@@ -1176,6 +1233,69 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
+export type SharedBudgetStatePeriod = typeof SharedBudgetStatePeriod[keyof typeof SharedBudgetStatePeriod];
+
+
+export const SharedBudgetStatePeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface SharedBudgetState {
+  policy_id: string;
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  workspace_id: string;
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
+  match: AllRequests | RequestMatchOutput;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: SharedBudgetStatePeriod;
+  window_start: string;
+  window_end: string;
+  sharing: 'shared';
+  exhausted: boolean;
+}
+
+export type PerKeyBudgetStatePeriod = typeof PerKeyBudgetStatePeriod[keyof typeof PerKeyBudgetStatePeriod];
+
+
+export const PerKeyBudgetStatePeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface PerKeyBudgetState {
+  policy_id: string;
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  workspace_id: string;
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
+  match: AllRequests | RequestMatchOutput;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: PerKeyBudgetStatePeriod;
+  window_start: string;
+  window_end: string;
+  sharing: 'per_key';
+  /**
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  exhausted_key_ids: string[];
+}
+
+export interface OrgPolicyState {
+  org_id: string;
+  budgets: (SharedBudgetState | PerKeyBudgetState)[];
+}
+
 export interface UserOut {
   id: string;
   email: string;
@@ -1235,6 +1355,30 @@ export interface PasswordChangedOut {
   status: 'changed';
 }
 
+export type PerKeyBudgetStatusPeriod = typeof PerKeyBudgetStatusPeriod[keyof typeof PerKeyBudgetStatusPeriod];
+
+
+export const PerKeyBudgetStatusPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface PerKeyBudgetStatus {
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: PerKeyBudgetStatusPeriod;
+  window_start: string;
+  window_end: string;
+  sharing: 'per_key';
+  keys: KeyBudgetStatus[];
+  next_key: string | null;
+}
+
 export const PlaygroundSessionEndedOutValue = {
   status: 'ended',
 } as const;
@@ -1244,6 +1388,52 @@ export interface PlaygroundSessionReadyOut {
   id: string;
   expires_at: string;
   status: 'ready';
+}
+
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export type SharedBudgetStatusPeriod = typeof SharedBudgetStatusPeriod[keyof typeof SharedBudgetStatusPeriod];
+
+
+export const SharedBudgetStatusPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface SharedBudgetStatus {
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: SharedBudgetStatusPeriod;
+  window_start: string;
+  window_end: string;
+  sharing: 'shared';
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  spent_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  remaining_usd: string;
+  exhausted: boolean;
+}
+
+export interface PolicyBudgetStatus {
+  policy: PolicyOut;
+  computed_at: string;
+  budgets: (SharedBudgetStatus | PerKeyBudgetStatus)[];
 }
 
 export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
@@ -1270,7 +1460,7 @@ export interface RequestMatchInput {
 
 export interface RuleDefinitionInput {
   match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget;
 }
 
 export interface PolicyDefinitionInput {
@@ -1307,17 +1497,18 @@ export interface PolicyOrder {
   policy_ids: string[];
 }
 
-export interface PolicyOut {
-  id: string;
-  org_id: string;
-  workspace_id: string;
-  name: string;
-  enabled: boolean;
-  priority: number;
-  definition: PolicyDefinitionOutput;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+export interface PolicyState {
+  computed_at: string;
+  organizations: OrgPolicyState[];
+}
+
+export interface PolicyStateRequest {
+  /**
+     * Organizations whose current budget state is requested
+     * @minItems 1
+     * @maxItems 1000
+     */
+  org_ids: string[];
 }
 
 export interface PolicyUpdate {
@@ -1478,6 +1669,15 @@ export interface ProviderOut {
   deleted_at: string | null;
 }
 
+export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const RoutedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 /**
  * How the routed request ended
  */
@@ -1524,6 +1724,16 @@ export interface RoutedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: RoutedUsageEventV1RequestedCapabilitiesItem[];
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -1658,6 +1868,15 @@ export interface TaxonomySpec {
   models?: ModelIn[];
 }
 
+export type UsageEventOutRequestedCapabilitiesItem = typeof UsageEventOutRequestedCapabilitiesItem[keyof typeof UsageEventOutRequestedCapabilitiesItem];
+
+
+export const UsageEventOutRequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 export type UsageEventOutStatus = typeof UsageEventOutStatus[keyof typeof UsageEventOutStatus];
 
 
@@ -1687,6 +1906,9 @@ export interface UsageEventOut {
   org_id: string;
   workspace_id: string;
   key_id: string;
+  user_id: string;
+  requested_model_id: string;
+  requested_capabilities: UsageEventOutRequestedCapabilitiesItem[];
   model_id: string;
   provider_id: string;
   bundle_id: string;
@@ -1862,6 +2084,27 @@ cursor?: CursorToken | null;
  * Maximum number of results to return
  * @minimum 1
  * @maximum 200
+ */
+limit?: number;
+};
+
+export type PolicyStatusParams = {
+/**
+ * Rule index
+ */
+rule_index?: number | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * After key
+ */
+after_key?: string | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 1000
  */
 limit?: number;
 };

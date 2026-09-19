@@ -40,7 +40,10 @@ type InferenceEndpoint = Callable[[Request, InferenceContext, IngressAdapter], A
 
 
 def render_rejection(ingress: IngressAdapter, error: RequestRejectedError) -> Response:
-    return ingress.render_error(CanonicalError(status=error.status, code=error.code, message=error.message))
+    response = ingress.render_error(CanonicalError(status=error.status, code=error.code, message=error.message))
+    if error.retry_after is not None:
+        response.headers["retry-after"] = str(error.retry_after)
+    return response
 
 
 class InferenceRoute(Route):

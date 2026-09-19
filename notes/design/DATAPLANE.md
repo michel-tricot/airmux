@@ -809,3 +809,24 @@ Before merging a data-plane change, verify:
 - Component configs contain their own required dependencies
 - Discovery needs no registry edit and rejects discriminator collisions
 - Tests assert behavior, and a real running request proves the change
+
+## Budget state
+
+`BudgetStatePoller` fetches current budget rules and exhaustion state through `/api/v1/policy-state/sync`
+every five seconds using the existing operational connection. It runs independently from bundle polling.
+`BudgetStateHolder` compiles request filters and exhausted-key sets off the request path and replaces a
+complete snapshot at once. Request admission performs memory lookups before each upstream attempt.
+`evaluate()` remains pure; no database driver or control-plane import enters the data plane.
+
+Before the first organization snapshot, matching budget rules in the bundle produce
+`503 policy_state_unavailable`; other requests continue. Once initialized, the complete budget snapshot is
+authoritative for budget checks even if the routing bundle is older or newer. Failed or incomplete refreshes
+leave the last complete snapshot. An expired window no longer blocks, provisionally allowing the next window.
+Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already in flight finish.
+
+No local spending delta is maintained. Overspend includes usage awaiting export, the next state poll, and
+in-flight attempts. There is no strict overspend bound during outages. Budget configuration requires remote
+bundles and SQLite usage export to the same control plane. All deployments contribute to the same history.
+
+The metric `airmux_data_plane_budget_state_computed_timestamp_seconds` exposes the calculation timestamp of
+the last accepted budget snapshot. It describes state age, not completeness of exporter delivery.

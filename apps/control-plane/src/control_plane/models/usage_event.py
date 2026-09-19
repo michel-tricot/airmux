@@ -1,19 +1,34 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Index, Numeric, String
+from sqlalchemy import Column, Index, Numeric, String, func
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
 from contract import CredentialScope, UsageStatus, UsdAmount
+from contract.budgets import budget_window
+from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
+from contract.policies import Budget, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
+from control_plane.db import current_session
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordOut
+
+if TYPE_CHECKING:
+    from control_plane.models.policy import Policy
+
+
+class BudgetUsagePage(BaseModel):
+    rule_index: int | None = Field(default=None, ge=0, lt=100)
+    key_id: str | None = Field(default=None, min_length=1, max_length=255)
+    after_key: str | None = Field(default=None, min_length=1, max_length=255)
+    limit: int = Field(default=100, ge=1, le=1000)
 
 
 class UsageEvent(Record, table=True):
@@ -30,6 +45,9 @@ class UsageEvent(Record, table=True):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability] = Field(sa_column=Column(ARRAY(String), nullable=False))
     model_id: str
     provider_id: str
     bundle_id: UUID
@@ -64,6 +82,47 @@ class UsageEvent(Record, table=True):
             UUID,
         )
 
+    @classmethod
+    async def budget_spend(
+        cls, policy: Policy, rule: RuleDefinition, now: datetime, page: BudgetUsagePage | None = None
+    ) -> list[tuple[str | None, UsdAmount]]:
+        action = rule.action
+        if not isinstance(action, Budget):
+            message = "Spending requires a budget rule"
+            raise TypeError(message)
+        start, end = budget_window(action.period, now)
+        spend = func.coalesce(func.sum(cls.cost_usd), ZERO_USD)
+        statement = select(col(cls.key_id), spend) if action.sharing == "per_key" else select(spend)
+        statement = statement.where(
+            cls.org_id == policy.org_id, cls.workspace_id == policy.workspace_id, cls.occurred_at >= start, cls.occurred_at < end
+        )
+        target = policy.definition.target
+        if isinstance(target, SelectedKeys):
+            statement = statement.where(col(cls.key_id).in_(target.key_ids))
+        elif isinstance(target, SelectedUsers):
+            statement = statement.where(col(cls.user_id).in_(target.user_ids))
+        match = rule.match
+        if isinstance(match, RequestMatch) and match.models:
+            statement = statement.where(col(cls.requested_model_id).in_(match.models))
+        if isinstance(match, RequestMatch) and match.stream is not None:
+            statement = statement.where(cls.stream == match.stream)
+        if isinstance(match, RequestMatch) and match.capabilities:
+            statement = statement.where(col(cls.requested_capabilities).op("@>")(list(match.capabilities)))
+        if action.sharing == "per_key":
+            statement = statement.group_by(col(cls.key_id)).order_by(col(cls.key_id))
+            if page is None:
+                statement = statement.having(spend >= action.amount_usd)
+            else:
+                if page.key_id is not None:
+                    statement = statement.where(cls.key_id == page.key_id)
+                if page.after_key is not None:
+                    statement = statement.where(cls.key_id > page.after_key)
+                statement = statement.limit(page.limit + 1)
+        result = await current_session().execute(statement)
+        if action.sharing == "shared":
+            return [(None, result.scalar_one())]
+        return [(key_id, amount) for key_id, amount in result.all()]
+
 
 class UsageEventOut(RecordOut[UsageEvent]):
     event_id: UUID
@@ -72,6 +131,9 @@ class UsageEventOut(RecordOut[UsageEvent]):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability]
     model_id: str
     provider_id: str
     bundle_id: UUID

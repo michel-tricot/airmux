@@ -30,6 +30,7 @@ class DataPlaneMetrics:
     content_type = MetricsTelemetry.content_type
 
     def __init__(self) -> None:
+        self._budget_state_computed_at = 0.0
         self._bundle_snapshots = 0
         self._bundle_manifest_rejected = 0
         self._bundle_last_adopted = 0.0
@@ -58,6 +59,11 @@ class DataPlaneMetrics:
         self._metering_exports = meter.create_counter("airmux_data_plane_metering_exports", description="Metering export outcomes")
         self._metering_export_duration = meter.create_histogram(
             "airmux_data_plane_metering_export_duration_seconds", description="Metering export duration"
+        )
+        gauge(
+            "airmux_data_plane_budget_state_computed_timestamp_seconds",
+            "Calculation timestamp of the last accepted budget state",
+            lambda: self._budget_state_computed_at,
         )
         gauge("airmux_data_plane_bundle_snapshots", "Accepted bundle snapshots", lambda: self._bundle_snapshots)
         gauge(
@@ -124,6 +130,9 @@ class DataPlaneMetrics:
     def observe_credential_load(self, result: CredentialCacheResult, outcome: CredentialLoadOutcome, started_at: float) -> None:
         self.observe_credential_cache(result)
         self._credential_load_duration.record(time.monotonic() - started_at, {"outcome": outcome})
+
+    def observe_budget_state(self, computed_at: float) -> None:
+        self._budget_state_computed_at = computed_at
 
     def observe_bundle_adopted(self, snapshots: int) -> None:
         self.observe_bundle_poll("adopted")

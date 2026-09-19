@@ -15,8 +15,9 @@ first matching policy with one supplies the ordered backup list.
 The control plane validates request matches and catalog names when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
 matches when admitting a bundle, indexes them by workspace, and keeps the previous bundle if
-admission fails. In-flight requests use their original snapshot. Changes take effect after the
-gateway adopts the published bundle, not synchronously with the management response.
+admission fails. In-flight requests use their original routing snapshot. Routing restrictions take
+effect after the gateway adopts the published bundle. Budget restrictions use their independently
+polled state described below. Neither takes effect synchronously with the management response.
 
 `@bundle_input` marks models whose changes require bundle republication. Its scope identifies
 affected bundles, not the enforcement scope of a policy. `Policy.save()` owns the
@@ -56,6 +57,7 @@ The same matched restrictions apply to every backup, so changing the route canno
 | `strict_parameters` | None | Rejects a route when reconciliation would drop a supplied parameter |
 | `price_limit` | input and output USD per million token ceilings | Rejects catalog models whose rates exceed either ceiling |
 | `request_limits` | maximum requested output tokens | Rejects requests above the configured output bound |
+| `budget` | `amount_usd`, `period`, `sharing` | Rejects requests after observed estimated spending reaches the allowance |
 | `credential_access` | allowed credential scopes | Filters credentials to workspace, organization, or platform scopes before tier selection |
 | `fallback` | `models`, `on`, `max_attempts`, `timeout_ms` | Supplies an ordered, bounded backup plan |
 
@@ -160,4 +162,34 @@ These are development measurements, not service guarantees. Longer lists need th
 To extend the system, add a strict action variant to `PolicyAction`, then add its evaluator module
 under `data_plane.policy_actions`. Evaluator modules register themselves and are discovered without
 editing a dispatcher. Add UI support, regenerate clients, and test both normal enforcement and interaction with fallback.
-Reservation-backed spend limits are tracked in [#211](https://github.com/michel-tricot/airmux/issues/211).
+
+## Historical cost budgets
+
+`budget` actions contain a positive exact `amount_usd`, a UTC calendar `period` (`day` or `month`),
+and `sharing` (`shared` or `per_key`). Multiple budget rules per policy are supported. Every matching
+budget must permit an attempt, including credential retries and fallbacks; active attempts finish normally.
+
+Usage facts own spending. Budget accounting sums `usage_event.cost_usd` within the completion-time window,
+organization, workspace, target, and original request filter. It never filters by policy or bundle identity.
+Creating a budget counts earlier matching usage; deleting, recreating, moving, disabling, or editing one cannot
+reset the history. Recorded prices are not recalculated. Event IDs deduplicate repeated delivery;
+separate provider attempts each contribute cost.
+
+Events retain the original `user_id`, `requested_model_id`, and `requested_capabilities` independently of the
+routed model and active policies. These facts survive key deletion, fallback, and reconciliation. Keep history
+for the longest supported active window, including when no policy exists. Missing old request facts are not backfilled.
+
+The first implementation uses indexed SQL aggregates through `UsageEvent.budget_spend`, with no counter table,
+reservation authority, distributed cache, or per-request network operation. Per-key operational results use
+SQL grouping and HAVING to return exhausted keys; management results use keyset pagination. If scans become
+expensive, fact-based rollups can preserve these semantics without tying spend to policy identity.
+
+Budget state is pulled independently from bundles through the control plane's Data Plane API. The response
+carries each rule's target, match, allowance, window, and exhaustion state together. Policy ID and canonical
+rule index describe the source configuration for inspection; neither is an accounting identity. The data plane
+compiles these snapshots by organization and workspace and atomically replaces its in-memory state. A bundle
+change does not invalidate an initialized budget snapshot, and state may reflect newer policy configuration
+than the routing bundle.
+
+The management status endpoint returns the evaluated policy definition and one result per budget rule.
+It requires both policy and usage read permission. Disabled policies still have observable historical spend.

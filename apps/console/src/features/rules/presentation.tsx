@@ -43,6 +43,8 @@ type RuleDefinition = RuleDefinitionInput | RuleDefinitionOutput;
 function actionSummary(definition: RuleDefinition): string {
   const { action } = definition;
   switch (action.kind) {
+    case 'budget':
+      return `$${action.amount_usd} / ${action.period}${action.sharing === 'per_key' ? ' per key' : ' shared'}`;
     case 'models':
       return `Models: ${action.names.join(', ')}`;
     case 'providers':

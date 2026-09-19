@@ -2766,6 +2766,106 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status:
+    get:
+      tags:
+      - Workspace Policies
+      summary: Policy Status
+      operationId: policy_status
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: policy_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Policy Id
+        description: Policy id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: rule_index
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 0
+            exclusiveMaximum: 100
+          - type: 'null'
+          title: Rule Index
+        description: Rule index
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 255
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: after_key
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 255
+          - type: 'null'
+          title: After Key
+        description: After key
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PolicyBudgetStatus_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.read
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
+      description: 'Required permissions: `policies.read` and `usage.read`.'
   /api/v1/instance/provider-credentials:
     get:
       tags:
@@ -3915,6 +4015,43 @@ paths:
       - scope: credential_scope
         anyOf:
         - data-planes.heartbeat
+  /api/v1/policy-state/sync:
+    post:
+      tags:
+      - Data Plane API
+      summary: Sync Policy State
+      operationId: sync_policy_state
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyStateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PolicyState_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: credential_scope
+        anyOf:
+        - policy-state.sync
+      description: 'Required permission: `policy-state.sync`.'
   /api/v1/instance/taxonomy:
     get:
       tags:
@@ -4257,6 +4394,36 @@ components:
       - kind
       - names
       title: AllowedProviders
+    Budget:
+      properties:
+        kind:
+          type: string
+          const: budget
+          title: Kind
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        sharing:
+          type: string
+          enum:
+          - shared
+          - per_key
+          title: Sharing
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - amount_usd
+      - period
+      - sharing
+      title: Budget
     BundleManifest:
       properties:
         bundles:
@@ -4686,6 +4853,28 @@ components:
           minLength: 1
           title: Key Id
           description: Inference key ID used for the request
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Principal that owned the inference key when the request was made
+        requested_model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Requested Model Id
+          description: Original caller-requested model before routing and fallback
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          uniqueItems: true
+          title: Requested Capabilities
+          description: Original request capabilities before reconciliation
         model_id:
           type: string
           maxLength: 255
@@ -4787,6 +4976,9 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - bundle_id
       - input_tokens
@@ -5077,6 +5269,14 @@ components:
       required:
       - data
       title: Envelope[PlaygroundSessionReadyOut]
+    Envelope_PolicyBudgetStatus_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PolicyBudgetStatus'
+      type: object
+      required:
+      - data
+      title: Envelope[PolicyBudgetStatus]
     Envelope_PolicyOut_:
       properties:
         data:
@@ -5085,6 +5285,14 @@ components:
       required:
       - data
       title: Envelope[PolicyOut]
+    Envelope_PolicyState_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PolicyState'
+      type: object
+      required:
+      - data
+      title: Envelope[PolicyState]
     Envelope_ProviderCredentialOut_:
       properties:
         data:
@@ -5606,6 +5814,31 @@ components:
       required:
       - token
       title: InvitationTokenIn
+    KeyBudgetStatus:
+      properties:
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+        spent_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Spent Usd
+        remaining_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Remaining Usd
+        exhausted:
+          type: boolean
+          title: Exhausted
+      type: object
+      required:
+      - key_id
+      - spent_usd
+      - remaining_usd
+      - exhausted
+      title: KeyBudgetStatus
     KeyEntry:
       properties:
         key_id:
@@ -6596,6 +6829,30 @@ components:
       - updated_at
       - deleted_at
       title: OrgOut
+    OrgPolicyState:
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        budgets:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SharedBudgetState'
+            - $ref: '#/components/schemas/PerKeyBudgetState'
+            discriminator:
+              propertyName: sharing
+              mapping:
+                per_key: '#/components/schemas/PerKeyBudgetState'
+                shared: '#/components/schemas/SharedBudgetState'
+          type: array
+          title: Budgets
+      additionalProperties: false
+      type: object
+      required:
+      - org_id
+      - budgets
+      title: OrgPolicyState
     OrgRole:
       type: string
       enum:
@@ -6739,6 +6996,142 @@ components:
       - user_id
       - status
       title: PasswordChangedOut
+    PerKeyBudgetState:
+      properties:
+        policy_id:
+          type: string
+          format: uuid
+          title: Policy Id
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        target:
+          oneOf:
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
+          - $ref: '#/components/schemas/SelectedKeys'
+          title: Target
+          discriminator:
+            propertyName: kind
+            mapping:
+              selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        sharing:
+          type: string
+          const: per_key
+          title: Sharing
+          default: per_key
+        exhausted_key_ids:
+          items:
+            type: string
+            maxLength: 255
+            minLength: 1
+          type: array
+          uniqueItems: true
+          title: Exhausted Key Ids
+      additionalProperties: false
+      type: object
+      required:
+      - policy_id
+      - rule_index
+      - workspace_id
+      - target
+      - match
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - sharing
+      - exhausted_key_ids
+      title: PerKeyBudgetState
+    PerKeyBudgetStatus:
+      properties:
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        sharing:
+          type: string
+          const: per_key
+          title: Sharing
+          default: per_key
+        keys:
+          items:
+            $ref: '#/components/schemas/KeyBudgetStatus'
+          type: array
+          title: Keys
+        next_key:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Next Key
+      type: object
+      required:
+      - rule_index
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - sharing
+      - keys
+      - next_key
+      title: PerKeyBudgetStatus
     Permission:
       type: string
       enum:
@@ -6763,6 +7156,7 @@ components:
       - policies.read
       - policies.manage
       - playground.execute
+      - policy-state.sync
       - bundles.read
       - usage.read
       - usage.ingest
@@ -6803,6 +7197,32 @@ components:
       - expires_at
       - status
       title: PlaygroundSessionReadyOut
+    PolicyBudgetStatus:
+      properties:
+        policy:
+          $ref: '#/components/schemas/PolicyOut'
+        computed_at:
+          type: string
+          format: date-time
+          title: Computed At
+        budgets:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SharedBudgetStatus'
+            - $ref: '#/components/schemas/PerKeyBudgetStatus'
+            discriminator:
+              propertyName: sharing
+              mapping:
+                per_key: '#/components/schemas/PerKeyBudgetStatus'
+                shared: '#/components/schemas/SharedBudgetStatus'
+          type: array
+          title: Budgets
+      type: object
+      required:
+      - policy
+      - computed_at
+      - budgets
+      title: PolicyBudgetStatus
     PolicyCreate:
       properties:
         name:
@@ -6985,6 +7405,39 @@ components:
       - updated_at
       - deleted_at
       title: PolicyOut
+    PolicyState:
+      properties:
+        computed_at:
+          type: string
+          format: date-time
+          title: Computed At
+        organizations:
+          items:
+            $ref: '#/components/schemas/OrgPolicyState'
+          type: array
+          title: Organizations
+      additionalProperties: false
+      type: object
+      required:
+      - computed_at
+      - organizations
+      title: PolicyState
+    PolicyStateRequest:
+      properties:
+        org_ids:
+          items:
+            type: string
+            format: uuid
+          type: array
+          maxItems: 1000
+          minItems: 1
+          title: Org Ids
+          description: Organizations whose current budget state is requested
+      additionalProperties: false
+      type: object
+      required:
+      - org_ids
+      title: PolicyStateRequest
     PolicyUpdate:
       properties:
         name:
@@ -7493,6 +7946,28 @@ components:
           minLength: 1
           title: Key Id
           description: Inference key ID used for the request
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Principal that owned the inference key when the request was made
+        requested_model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Requested Model Id
+          description: Original caller-requested model before routing and fallback
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          uniqueItems: true
+          title: Requested Capabilities
+          description: Original request capabilities before reconciliation
         model_id:
           type: string
           maxLength: 255
@@ -7604,6 +8079,9 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - provider_id
       - bundle_id
@@ -7639,10 +8117,12 @@ components:
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
+              budget: '#/components/schemas/Budget'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -7679,10 +8159,12 @@ components:
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
+          - $ref: '#/components/schemas/Budget'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
+              budget: '#/components/schemas/Budget'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
@@ -7823,6 +8305,137 @@ components:
       required:
       - name
       title: ServiceAccountIn
+    SharedBudgetState:
+      properties:
+        policy_id:
+          type: string
+          format: uuid
+          title: Policy Id
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        target:
+          oneOf:
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
+          - $ref: '#/components/schemas/SelectedKeys'
+          title: Target
+          discriminator:
+            propertyName: kind
+            mapping:
+              selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        sharing:
+          type: string
+          const: shared
+          title: Sharing
+          default: shared
+        exhausted:
+          type: boolean
+          title: Exhausted
+      additionalProperties: false
+      type: object
+      required:
+      - policy_id
+      - rule_index
+      - workspace_id
+      - target
+      - match
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - sharing
+      - exhausted
+      title: SharedBudgetState
+    SharedBudgetStatus:
+      properties:
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        sharing:
+          type: string
+          const: shared
+          title: Sharing
+          default: shared
+        spent_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Spent Usd
+        remaining_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Remaining Usd
+        exhausted:
+          type: boolean
+          title: Exhausted
+      type: object
+      required:
+      - rule_index
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - sharing
+      - spent_usd
+      - remaining_usd
+      - exhausted
+      title: SharedBudgetStatus
     SignupIn:
       properties:
         email:
@@ -7961,6 +8574,22 @@ components:
         key_id:
           type: string
           title: Key Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        requested_model_id:
+          type: string
+          title: Requested Model Id
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          title: Requested Capabilities
         model_id:
           type: string
           title: Model Id
@@ -8040,6 +8669,9 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - provider_id
       - bundle_id

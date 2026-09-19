@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, Self, override
+from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, override
 from uuid import UUID
 
-from pydantic import field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint, Index, TypeDecorator, text
 from sqlmodel import Field, col, select
 
+from contract.budgets import BudgetState, PerKeyBudgetState, SharedBudgetState, budget_window
+from contract.money import ZERO_USD, UsdAmount
 from contract.policies import (
     MAX_WORKSPACE_RULES,
     AllowedModels,
     AllowedProviders,
+    Budget,
+    BudgetPeriod,
     Fallback,
     PolicyDefinition,
     PolicyEntry,
+    PolicyIdentifier,
     RequestMatch,
     SelectedKeys,
     SelectedUsers,
@@ -28,6 +33,7 @@ from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpda
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.model import Model
 from control_plane.models.provider import Provider
+from control_plane.models.usage_event import BudgetUsagePage, UsageEvent
 from control_plane.models.user import User
 
 if TYPE_CHECKING:
@@ -66,6 +72,98 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     definition: PolicyDefinition = Field(sa_type=PolicyDefinitionType, nullable=False)
 
     api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id"})
+
+    @classmethod
+    async def budget_states(cls, org_id: UUID, now: datetime) -> tuple[BudgetState, ...]:
+        policies = await cls.find(cls.org_id == org_id, col(cls.enabled).is_(True))
+        return tuple([state for policy in policies for state in await policy.enforcement_state(now)])
+
+    async def enforcement_state(self, now: datetime) -> tuple[BudgetState, ...]:
+        states: list[BudgetState] = []
+        for index, rule in enumerate(self.definition.rules):
+            if not isinstance(action := rule.action, Budget):
+                continue
+            start, end = budget_window(action.period, now)
+            spend = await UsageEvent.budget_spend(self, rule, now)
+            if action.sharing == "shared":
+                states.append(
+                    SharedBudgetState(
+                        policy_id=self.id,
+                        rule_index=index,
+                        workspace_id=self.workspace_id,
+                        target=self.definition.target,
+                        match=rule.match,
+                        amount_usd=action.amount_usd,
+                        period=action.period,
+                        window_start=start,
+                        window_end=end,
+                        exhausted=spend[0][1] >= action.amount_usd,
+                    )
+                )
+            else:
+                states.append(
+                    PerKeyBudgetState(
+                        policy_id=self.id,
+                        rule_index=index,
+                        workspace_id=self.workspace_id,
+                        target=self.definition.target,
+                        match=rule.match,
+                        amount_usd=action.amount_usd,
+                        period=action.period,
+                        window_start=start,
+                        window_end=end,
+                        exhausted_key_ids=frozenset(key_id for key_id, _ in spend if key_id is not None),
+                    )
+                )
+        return tuple(states)
+
+    async def budget_status(self, now: datetime, page: BudgetUsagePage) -> PolicyBudgetStatus:
+        budgets: list[SharedBudgetStatus | PerKeyBudgetStatus] = []
+        for index, rule in enumerate(self.definition.rules):
+            if page.rule_index is not None and index != page.rule_index:
+                continue
+            if not isinstance(action := rule.action, Budget):
+                continue
+            start, end = budget_window(action.period, now)
+            spend = await UsageEvent.budget_spend(self, rule, now, page)
+            if action.sharing == "shared":
+                amount = spend[0][1]
+                budgets.append(
+                    SharedBudgetStatus(
+                        rule_index=index,
+                        amount_usd=action.amount_usd,
+                        period=action.period,
+                        window_start=start,
+                        window_end=end,
+                        spent_usd=amount,
+                        remaining_usd=max(ZERO_USD, action.amount_usd - amount),
+                        exhausted=amount >= action.amount_usd,
+                    )
+                )
+            else:
+                if not spend and page.key_id is not None and page.after_key is None:
+                    spend = [(page.key_id, ZERO_USD)]
+                budgets.append(
+                    PerKeyBudgetStatus(
+                        rule_index=index,
+                        amount_usd=action.amount_usd,
+                        period=action.period,
+                        window_start=start,
+                        window_end=end,
+                        keys=tuple(
+                            KeyBudgetStatus(
+                                key_id=key_id,
+                                spent_usd=amount,
+                                remaining_usd=max(ZERO_USD, action.amount_usd - amount),
+                                exhausted=amount >= action.amount_usd,
+                            )
+                            for key_id, amount in spend[: page.limit]
+                            if key_id is not None
+                        ),
+                        next_key=spend[page.limit - 1][0] if len(spend) > page.limit else None,
+                    )
+                )
+        return PolicyBudgetStatus(policy=PolicyOut.model_validate(self), computed_at=now, budgets=tuple(budgets))
 
     @classmethod
     async def in_workspace(cls, org_id: UUID, workspace_id: UUID, policy_id: UUID) -> Self:
@@ -210,3 +308,39 @@ class PolicyOut(RecordOut[Policy]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
+
+
+class _BudgetStatus(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+    rule_index: int = Field(ge=0, lt=100)
+    amount_usd: UsdAmount = Field(gt=0)
+    period: BudgetPeriod
+    window_start: datetime
+    window_end: datetime
+
+
+class SharedBudgetStatus(_BudgetStatus):
+    sharing: Literal["shared"] = "shared"
+    spent_usd: UsdAmount
+    remaining_usd: UsdAmount
+    exhausted: bool
+
+
+class KeyBudgetStatus(BaseModel):
+    key_id: PolicyIdentifier
+    spent_usd: UsdAmount
+    remaining_usd: UsdAmount
+    exhausted: bool
+
+
+class PerKeyBudgetStatus(_BudgetStatus):
+    sharing: Literal["per_key"] = "per_key"
+    keys: tuple[KeyBudgetStatus, ...]
+    next_key: PolicyIdentifier | None
+
+
+class PolicyBudgetStatus(BaseModel):
+    policy: PolicyOut
+    computed_at: datetime
+    budgets: tuple[Annotated[SharedBudgetStatus | PerKeyBudgetStatus, Field(discriminator="sharing")], ...]

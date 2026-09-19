@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
+
+from data_plane.budgets import BudgetStateHolder
 
 if TYPE_CHECKING:
     import httpx
@@ -20,6 +22,7 @@ class Runtime:
     credentials: CredentialResolver
     http_client: httpx.AsyncClient
     metrics: DataPlaneMetrics
+    budgets: BudgetStateHolder = field(default_factory=BudgetStateHolder)
 
 
 def runtime_of(request: Request) -> Runtime:

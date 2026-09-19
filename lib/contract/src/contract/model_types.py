@@ -6,3 +6,5 @@ ParameterSupport = Literal["supported", "unsupported"]
 Modality = Literal["text", "image", "audio", "video", "pdf"]
 MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
 Capability = Literal["streaming", "tools", "reasoning", "structured_output"]
+
+RequestCapability = Literal["tools", "reasoning", "structured_output"]

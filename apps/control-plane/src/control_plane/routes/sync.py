@@ -11,12 +11,14 @@ from sqlmodel import col
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, UsageStatus
 from contract import UsageEvent as UsageEventContract
+from contract.budgets import OrgPolicyState, PolicyState, PolicyStateRequest
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, CredentialScopeDep, SessionDep, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
+from control_plane.models.policy import Policy
 from control_plane.models.usage_event import EventsIngestedOut
 
 if TYPE_CHECKING:
@@ -111,3 +113,11 @@ async def heartbeat(scope: CredentialScopeDep, body: HeartbeatV1, session: Sessi
     if (await session.execute(stmt)).scalar_one_or_none() is None:
         raise HTTPException(status_code=409, detail="instance_id already belongs to another data-plane scope")
     return Envelope(data=HeartbeatOut(instance_id=body.instance_id))
+
+
+@router.post("/policy-state/sync", dependencies=[require("operational", credential_scope, Permission.policy_state_sync)])
+async def sync_policy_state(actor: ActorDep, body: PolicyStateRequest) -> Envelope[PolicyState]:
+    await ensure_allowed_for_scopes(actor, Permission.policy_state_sync, (Scope.org(org_id) for org_id in body.org_ids))
+    now = datetime.now(UTC)
+    organizations = tuple([OrgPolicyState(org_id=org_id, budgets=await Policy.budget_states(org_id, now)) for org_id in body.org_ids])
+    return Envelope(data=PolicyState(computed_at=now, organizations=organizations))

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from contract.model_types import RequestCapability
 from contract.money import ZERO_USD, UsdAmount
 
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
@@ -35,6 +36,9 @@ class _UsageEventV1(BaseModel):
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
     key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
+    user_id: UUID = Field(description="Principal that owned the inference key when the request was made")
+    requested_model_id: str = Field(min_length=1, max_length=255, description="Original caller-requested model before routing and fallback")
+    requested_capabilities: frozenset[RequestCapability] = Field(description="Original request capabilities before reconciliation")
     model_id: str = Field(description="Caller-facing model ID", min_length=1, max_length=255)
     provider_id: str = Field(description="Provider that served the request, or empty for an early denial", max_length=63)
     bundle_id: UUID = Field(description="Policy bundle used for the request")
