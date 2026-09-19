@@ -4,12 +4,12 @@ import math
 from dataclasses import dataclass
 from itertools import groupby
 from types import MappingProxyType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import httpx
 from pydantic import ValidationError
 
-from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest, SharedBudgetBucket, UserBudgetBucket
+from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest, UserBudgetBucket
 from contract.policies import Budget, BudgetScope, RequestMatch, SelectedKeys, SelectedUsers
 from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
@@ -37,8 +37,8 @@ class _CompiledBudget:
     user_ids: frozenset[UUID] | None
     models: frozenset[str]
     capabilities: frozenset[RequestCapability]
-    bucket_for: Callable[[KeyEntry], BudgetBucket]
-    exhausted_buckets: frozenset[BudgetBucket]
+    bucket_for: Callable[[KeyEntry], str | UUID | None]
+    exhausted_buckets: frozenset[str | UUID | None]
 
     def matches(self, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[RequestCapability]) -> bool:
         match = self.state.match
@@ -59,26 +59,45 @@ def _compile(state: BudgetState) -> _CompiledBudget:
         models=frozenset(state.match.models) if isinstance(state.match, RequestMatch) else frozenset(),
         capabilities=frozenset(state.match.capabilities) if isinstance(state.match, RequestMatch) else frozenset(),
         bucket_for=_BUCKET_FOR_SCOPE[state.scope],
-        exhausted_buckets=frozenset(state.exhausted_buckets),
+        exhausted_buckets=frozenset(_BUCKET_ID_FOR_SCOPE[state.scope](bucket) for bucket in state.exhausted_buckets),
     )
 
 
-def _shared_bucket(_key: KeyEntry) -> BudgetBucket:
-    return SharedBudgetBucket()
+def _shared_bucket(_key: KeyEntry) -> None:
+    return None
 
 
-def _key_bucket(key: KeyEntry) -> BudgetBucket:
-    return KeyBudgetBucket(key_id=key.key_id)
+def _key_bucket(key: KeyEntry) -> str:
+    return key.key_id
 
 
-def _user_bucket(key: KeyEntry) -> BudgetBucket:
-    return UserBudgetBucket(user_id=key.user_id)
+def _user_bucket(key: KeyEntry) -> UUID:
+    return key.user_id
 
 
-_BUCKET_FOR_SCOPE: dict[BudgetScope, Callable[[KeyEntry], BudgetBucket]] = {
+_BUCKET_FOR_SCOPE: dict[BudgetScope, Callable[[KeyEntry], str | UUID | None]] = {
     "shared": _shared_bucket,
     "per_key": _key_bucket,
     "per_user": _user_bucket,
+}
+
+
+def _shared_bucket_id(_bucket: BudgetBucket) -> None:
+    return None
+
+
+def _key_bucket_id(bucket: BudgetBucket) -> str:
+    return cast("KeyBudgetBucket", bucket).key_id
+
+
+def _user_bucket_id(bucket: BudgetBucket) -> UUID:
+    return cast("UserBudgetBucket", bucket).user_id
+
+
+_BUCKET_ID_FOR_SCOPE: dict[BudgetScope, Callable[[BudgetBucket], str | UUID | None]] = {
+    "shared": _shared_bucket_id,
+    "per_key": _key_bucket_id,
+    "per_user": _user_bucket_id,
 }
 
 
