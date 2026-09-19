@@ -819,8 +819,8 @@ Before merging a data-plane change, verify:
 
 The control-plane budget backend fetches current budget rules and exhaustion state through
 `/api/v1/policy-state/sync` on its own polling interval and connection. It runs independently from bundle polling
-and event export. A `none` budget backend disables state polling; it is the standalone default and rejects bundles
-that contain budget rules.
+and event export. A `none` budget backend disables state polling; it is the standalone default and returns
+`503 policy_state_unavailable` when a matching budget rule is evaluated.
 `BudgetStateHolder` compiles request filters and exhausted-key sets off the request path and replaces a
 per-organization snapshot at once. It tracks organizations when policy evaluation encounters a matching budget;
 the backend refreshes those organizations without consulting the bundle lifecycle. Request admission performs

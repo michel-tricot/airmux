@@ -204,26 +204,28 @@ class BudgetStatePoller:
 
 
 class NoBudgetBackend:
-    supports_budgets = False
+    def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, _now: datetime) -> None:
+        if any(isinstance(rule.definition.action, Budget) for rule in matching_rules(request, key, snapshot.budget_index)):
+            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget backend is not configured")
 
     def start(self, _task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         return ()
 
 
 class ControlPlaneBudgetBackend:
-    supports_budgets = True
-
     def __init__(
         self,
         config: ControlPlaneBudgetConfig,
-        budgets: BudgetStateHolder,
         client: httpx.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._config = config
-        self._budgets = budgets
+        self._budgets = BudgetStateHolder()
         self._client = client
         self._metrics = metrics
+
+    def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, now: datetime) -> None:
+        self._budgets.check(request, key, snapshot, now)
 
     def start(self, task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         poller = BudgetStatePoller(
@@ -240,10 +242,9 @@ BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
 
 def build_budget_backend(
     config: BudgetConfig,
-    budgets: BudgetStateHolder,
     client: httpx.AsyncClient,
     metrics: DataPlaneMetrics,
 ) -> BudgetBackend:
     if isinstance(config, ControlPlaneBudgetConfig):
-        return ControlPlaneBudgetBackend(config, budgets, client, metrics)
+        return ControlPlaneBudgetBackend(config, client, metrics)
     return NoBudgetBackend()

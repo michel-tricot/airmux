@@ -15,7 +15,7 @@ from starlette.routing import Route
 from airmux_runtime.observability import configure_logger, log_event
 from data_plane.budgets import build_budget_backend
 from data_plane.bundle import BundleHolder, build_bundle_source
-from data_plane.config import Config, ControlPlaneBudgetConfig, load_config
+from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
@@ -85,17 +85,18 @@ def create_app(config: Config) -> ASGIApp:
         async with config.secrets.build() as secret_store, _build_http_client() as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
             try:
-                holder = BundleHolder(metrics, supports_budgets=isinstance(config.budget, ControlPlaneBudgetConfig))
+                holder = BundleHolder(metrics)
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
+                budget_backend = build_budget_backend(config.budget, http_client, metrics)
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,
                     credentials=CredentialResolver(secret_store, metrics),
                     http_client=http_client,
                     metrics=metrics,
+                    budgets=budget_backend,
                 )
                 async with asyncio.TaskGroup() as task_group:
-                    budget_backend = build_budget_backend(config.budget, runtime.budgets, http_client, metrics)
                     tasks = (*bundle_source.start(task_group), *outbox.start(task_group), *budget_backend.start(task_group))
                     for task in tasks:
                         task.add_done_callback(_terminate_process_on_failure)

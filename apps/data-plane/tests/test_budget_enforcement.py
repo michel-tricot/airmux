@@ -18,7 +18,7 @@ from contract.budgets import (
     budget_window,
 )
 from contract.policies import AllRequests, Budget, PolicyDefinition, PolicyEntry, RequestMatch, RuleDefinition, SelectedUsers, WorkspaceTarget
-from data_plane.budgets import BudgetStateHolder, BudgetStatePoller, NoBudgetBackend, build_budget_backend
+from data_plane.budgets import BudgetStateHolder, BudgetStatePoller, ControlPlaneBudgetBackend, NoBudgetBackend, build_budget_backend
 from data_plane.bundle.holder import BundleHolder, BundleSet, BundleSnapshot
 from data_plane.canonical import CanonicalRequest
 from data_plane.config import ControlPlaneBudgetConfig, NoBudgetConfig
@@ -150,10 +150,11 @@ def test_uninitialized_budget_state_only_blocks_matching_requests():
     holder.check(request.model_copy(update={"stream": False}), key, snapshot, datetime.now(UTC))
 
 
-def test_standalone_gateway_rejects_budget_bundle_without_replacing_previous_state():
+def test_standalone_gateway_loads_budget_bundle_but_rejects_matching_requests_without_backend():
     metrics = DataPlaneMetrics()
-    holder = BundleHolder(metrics, supports_budgets=False)
-    bundle = make_bundle()
+    holder = BundleHolder(metrics)
+    _, key = make_key()
+    bundle = make_bundle(keys=[key])
     original = BundleSet.from_bundles((bundle,))
     holder.swap(original, "test")
     policy = PolicyEntry(
@@ -174,9 +175,11 @@ def test_standalone_gateway_rejects_budget_bundle_without_replacing_previous_sta
         ),
     )
     try:
-        with pytest.raises(ValueError, match="configured budget backend"):
-            holder.swap(BundleSet.from_bundles((bundle.model_copy(update={"policies": (policy,)}),)), "test")
-        assert holder.current is original
+        holder.swap(BundleSet.from_bundles((bundle.model_copy(update={"policies": (policy,)}),)), "test")
+        request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
+        with pytest.raises(RequestRejectedError, match="policy_state_unavailable"):
+            NoBudgetBackend().check(request, key, holder.current.snapshots[ORG], datetime.now(UTC))
+        assert holder.current is not original
     finally:
         metrics.shutdown()
 
@@ -185,9 +188,8 @@ def test_no_budget_backend_is_explicit_and_does_not_start_tasks():
     metrics = DataPlaneMetrics()
     client = httpx.AsyncClient()
     try:
-        backend = build_budget_backend(NoBudgetConfig(), BudgetStateHolder(), client, metrics)
+        backend = build_budget_backend(NoBudgetConfig(), client, metrics)
         assert isinstance(backend, NoBudgetBackend)
-        assert backend.supports_budgets is False
     finally:
         asyncio.run(client.aclose())
         metrics.shutdown()
@@ -198,8 +200,8 @@ def test_control_plane_budget_backend_uses_its_own_configuration():
     client = httpx.AsyncClient()
     config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
     try:
-        backend = build_budget_backend(config, BudgetStateHolder(), client, metrics)
-        assert backend.supports_budgets is True
+        backend = build_budget_backend(config, client, metrics)
+        assert isinstance(backend, ControlPlaneBudgetBackend)
     finally:
         asyncio.run(client.aclose())
         metrics.shutdown()
@@ -231,7 +233,7 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
         return response
 
     metrics = DataPlaneMetrics()
-    bundles = BundleHolder(metrics, supports_budgets=True)
+    bundles = BundleHolder(metrics)
     policy = PolicyEntry(
         id=state.policy_id,
         workspace_id=WORKSPACE,

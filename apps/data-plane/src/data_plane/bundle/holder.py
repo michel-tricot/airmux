@@ -91,8 +91,7 @@ class BundleSet:
 
 
 class BundleHolder:
-    def __init__(self, metrics: DataPlaneMetrics, *, supports_budgets: bool = False) -> None:
-        self._supports_budgets = supports_budgets
+    def __init__(self, metrics: DataPlaneMetrics) -> None:
         self._current = BundleSet.from_bundles(())
         self._metrics = metrics
 
@@ -101,9 +100,6 @@ class BundleHolder:
         return self._current
 
     def swap(self, current: BundleSet, source: str) -> None:
-        if not self._supports_budgets and _contains_budgets(current):
-            message = "Budgets require a configured budget backend"
-            raise ValueError(message)
         self._current = current
         self._metrics.observe_bundle_adopted(len(current.snapshots))
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
@@ -123,16 +119,6 @@ def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) 
         message = f"duplicate {label} id"
         raise ValueError(message)
     return index
-
-
-def _contains_budgets(bundle_set: BundleSet) -> bool:
-    return any(
-        isinstance(rule.action, Budget)
-        for snapshot in bundle_set.snapshots.values()
-        for policy in snapshot.bundle.policies
-        for rule in policy.definition.rules
-    )
-
 
 def _admit_keys(bundle: BundleV1) -> None:
     for key in bundle.keys:
