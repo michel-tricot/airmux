@@ -101,12 +101,7 @@ class BundleHolder:
         return self._current
 
     def swap(self, current: BundleSet, source: str) -> None:
-        if not self._supports_budgets and any(
-            isinstance(rule.action, Budget)
-            for snapshot in current.snapshots.values()
-            for policy in snapshot.bundle.policies
-            for rule in policy.definition.rules
-        ):
+        if not self._supports_budgets and _contains_budgets(current):
             message = "Budgets require remote bundles and event export to the same control plane"
             raise ValueError(message)
         self._current = current
@@ -128,6 +123,15 @@ def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) 
         message = f"duplicate {label} id"
         raise ValueError(message)
     return index
+
+
+def _contains_budgets(bundle_set: BundleSet) -> bool:
+    return any(
+        isinstance(rule.action, Budget)
+        for snapshot in bundle_set.snapshots.values()
+        for policy in snapshot.bundle.policies
+        for rule in policy.definition.rules
+    )
 
 
 def _admit_keys(bundle: BundleV1) -> None:
