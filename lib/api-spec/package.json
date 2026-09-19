@@ -7,6 +7,6 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
-    "orval": "^8.23.0"
+    "orval": "^8.33.0"
   }
 }
