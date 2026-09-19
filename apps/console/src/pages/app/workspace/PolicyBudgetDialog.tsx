@@ -5,15 +5,13 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states
 import { Badge, Button, Dropdown, Input, Label, Modal } from '@/components/ui/elements';
 import { formatDate } from '@/lib/format';
 
-function bucketId(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string } | { kind: 'user'; user_id: string }): string {
+function bucketId(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string }): string {
   if (bucket.kind === 'key') return bucket.key_id;
-  if (bucket.kind === 'user') return bucket.user_id;
   return bucket.kind;
 }
 
-function bucketLabel(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string } | { kind: 'user'; user_id: string }): string {
+function bucketLabel(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string }): string {
   if (bucket.kind === 'key') return `Key ${bucket.key_id}`;
-  if (bucket.kind === 'user') return `User ${bucket.user_id}`;
   return 'All matching usage';
 }
 
@@ -57,14 +55,14 @@ export function PolicyBudgetDialog({
               ? [
                   {
                     value: String(index),
-                    label: `Rule ${index + 1}: $${rule.action.amount_usd} / ${rule.action.period} (${rule.action.scope.replace('_', ' ')})`,
+                    label: `Rule ${index + 1}: $${rule.action.amount_usd} / ${rule.action.period} (${rule.action.aggregation.replace('_', ' ')})`,
                   },
                 ]
               : [],
           )}
         />
         {currentPolicy.definition.rules[ruleIndex]?.action.kind === 'budget' &&
-          currentPolicy.definition.rules[ruleIndex]?.action.scope !== 'shared' && (
+          currentPolicy.definition.rules[ruleIndex]?.action.aggregation !== 'shared' && (
             <form
               className="flex items-end gap-2"
               onSubmit={(event) => {

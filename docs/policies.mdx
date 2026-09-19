@@ -247,21 +247,21 @@ For example, one policy can impose both a daily and monthly shared budget:
     "rules": [
       {
         "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "scope": "shared" }
+        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "aggregation": "shared" }
       },
       {
         "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "scope": "shared" }
+        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "aggregation": "shared" }
       }
     ]
   }
 }
 ```
 
-`amount_usd` is a positive fixed-point decimal string. `scope: "shared"` combines all matching usage;
-`scope: "per_key"` gives each matching inference key its own allowance. `scope: "per_user"` gives each
-matching user its own allowance. Existing user/key targets and
-request filters apply. A selected-user target with shared spending combines usage across all selected users' keys.
+`amount_usd` is a positive fixed-point decimal string. The policy `target` determines which workspace, users,
+or inference keys the rule applies to. `aggregation: "shared"` combines all matching usage within that target;
+`aggregation: "per_key"` gives each matching inference key its own allowance. Request filters still apply.
+A selected-user target with shared aggregation combines usage across all selected users' keys.
 
 Budgets include matching usage from the whole period, even before the policy existed or while it was disabled.
 Deleting, recreating, moving, or changing a rule does not erase usage. Changing a filter selects different history.

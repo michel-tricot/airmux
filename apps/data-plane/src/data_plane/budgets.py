@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, cast
 import httpx
 from pydantic import ValidationError
 
-from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest, UserBudgetBucket
-from contract.policies import Budget, BudgetScope, RequestMatch, SelectedKeys, SelectedUsers
+from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
+from contract.policies import Budget, BudgetAggregation, RequestMatch, SelectedKeys, SelectedUsers
 from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 from data_plane.policies import matching_rules
@@ -58,8 +58,8 @@ def _compile(state: BudgetState) -> _CompiledBudget:
         user_ids=frozenset(state.target.user_ids) if isinstance(state.target, SelectedUsers) else None,
         models=frozenset(state.match.models) if isinstance(state.match, RequestMatch) else frozenset(),
         capabilities=frozenset(state.match.capabilities) if isinstance(state.match, RequestMatch) else frozenset(),
-        bucket_for=_BUCKET_FOR_SCOPE[state.scope],
-        exhausted_buckets=frozenset(_BUCKET_ID_FOR_SCOPE[state.scope](bucket) for bucket in state.exhausted_buckets),
+        bucket_for=_BUCKET_FOR_AGGREGATION[state.aggregation],
+        exhausted_buckets=frozenset(_BUCKET_ID_FOR_AGGREGATION[state.aggregation](bucket) for bucket in state.exhausted_buckets),
     )
 
 
@@ -71,14 +71,9 @@ def _key_bucket(key: KeyEntry) -> str:
     return key.key_id
 
 
-def _user_bucket(key: KeyEntry) -> UUID:
-    return key.user_id
-
-
-_BUCKET_FOR_SCOPE: dict[BudgetScope, Callable[[KeyEntry], str | UUID | None]] = {
+_BUCKET_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[KeyEntry], str | UUID | None]] = {
     "shared": _shared_bucket,
     "per_key": _key_bucket,
-    "per_user": _user_bucket,
 }
 
 
@@ -90,14 +85,9 @@ def _key_bucket_id(bucket: BudgetBucket) -> str:
     return cast("KeyBudgetBucket", bucket).key_id
 
 
-def _user_bucket_id(bucket: BudgetBucket) -> UUID:
-    return cast("UserBudgetBucket", bucket).user_id
-
-
-_BUCKET_ID_FOR_SCOPE: dict[BudgetScope, Callable[[BudgetBucket], str | UUID | None]] = {
+_BUCKET_ID_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[BudgetBucket], str | UUID | None]] = {
     "shared": _shared_bucket_id,
     "per_key": _key_bucket_id,
-    "per_user": _user_bucket_id,
 }
 
 

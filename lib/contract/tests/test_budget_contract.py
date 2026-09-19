@@ -16,7 +16,7 @@ def test_multiple_budget_rules_share_a_policy():
         {
             "target": {"kind": "workspace"},
             "rules": [
-                {"match": {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "scope": "shared"}}
+                {"match": {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "aggregation": "shared"}}
                 for amount, period in (("20", "day"), ("300", "month"))
             ],
         }
@@ -24,7 +24,9 @@ def test_multiple_budget_rules_share_a_policy():
     assert {rule.action.period for rule in definition.rules if isinstance(rule.action, Budget)} == {"day", "month"}
 
 
-@pytest.mark.parametrize("override", [{"amount_usd": "0"}, {"amount_usd": "-1"}, {"amount_usd": 1.1}, {"period": "week"}, {"scope": "per_team"}])
+@pytest.mark.parametrize(
+    "override", [{"amount_usd": "0"}, {"amount_usd": "-1"}, {"amount_usd": 1.1}, {"period": "week"}, {"aggregation": "per_team"}]
+)
 def test_budget_rejects_invalid_configuration(override):
     with pytest.raises(ValidationError):
         RuleDefinition.model_validate(
@@ -34,7 +36,7 @@ def test_budget_rejects_invalid_configuration(override):
                     "kind": "budget",
                     "amount_usd": "100",
                     "period": "month",
-                    "scope": "shared",
+                    "aggregation": "shared",
                     **override,
                 },
             }
@@ -83,7 +85,7 @@ def test_budget_state_rejects_partial_windows_and_invalid_identities(override):
                 "period": "month",
                 "window_start": "2026-09-01T00:00:00Z",
                 "window_end": "2026-10-01T00:00:00Z",
-                "scope": "per_key",
+                "aggregation": "per_key",
                 "exhausted_buckets": [],
                 **override,
             }
@@ -105,7 +107,7 @@ def test_policy_state_rejects_duplicate_organizations_and_rules():
             "period": "month",
             "window_start": "2026-09-01T00:00:00Z",
             "window_end": "2026-10-01T00:00:00Z",
-            "scope": "per_key",
+            "aggregation": "per_key",
             "exhausted_buckets": [],
         }
     )

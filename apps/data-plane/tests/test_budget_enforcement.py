@@ -14,7 +14,6 @@ from contract.budgets import (
     PolicyState,
     PolicyStateRequest,
     SharedBudgetBucket,
-    UserBudgetBucket,
     budget_window,
 )
 from contract.policies import AllRequests, PolicyDefinition, PolicyEntry, RequestMatch, RuleDefinition, SelectedUsers, WorkspaceTarget
@@ -42,7 +41,7 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
         period="month",
         window_start=start,
         window_end=end,
-        scope="shared",
+        aggregation="shared",
         exhausted_buckets=(SharedBudgetBucket(),),
     )
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),)))
@@ -77,7 +76,7 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
         period="day",
         window_start=start,
         window_end=end,
-        scope="per_key",
+        aggregation="per_key",
         exhausted_buckets=(KeyBudgetBucket(key_id=key.key_id),),
     )
     holder = BudgetStateHolder()
@@ -88,31 +87,6 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
     holder.check(request.model_copy(update={"model": "fallback"}), key, snapshot, now)
     holder.check(request.model_copy(update={"stream": False}), key, snapshot, now)
     holder.check(request.model_copy(update={"response_format": None}), key, snapshot, now)
-
-
-def test_per_user_bucket_uses_the_authenticated_user_identity():
-    now = datetime.now(UTC)
-    start, end = budget_window("day", now)
-    _, key = make_key("user-budget")
-    request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
-    state = BudgetState(
-        policy_id=uuid7(),
-        rule_index=0,
-        workspace_id=WORKSPACE,
-        target=WorkspaceTarget(kind="workspace"),
-        match=AllRequests(kind="all_requests"),
-        scope="per_user",
-        amount_usd="10",
-        period="day",
-        window_start=start,
-        window_end=end,
-        exhausted_buckets=(UserBudgetBucket(user_id=key.user_id),),
-    )
-    holder = BudgetStateHolder()
-    holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),)))
-    snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]))
-    with pytest.raises(RequestRejectedError, match="budget_exhausted"):
-        holder.check(request, key, snapshot, now)
 
 
 def test_uninitialized_budget_state_only_blocks_matching_requests():
@@ -129,7 +103,7 @@ def test_uninitialized_budget_state_only_blocks_matching_requests():
                 RuleDefinition.model_validate(
                     {
                         "match": {"kind": "request", "stream": True},
-                        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "scope": "shared"},
+                        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "aggregation": "shared"},
                     }
                 ),
             ),
@@ -160,7 +134,7 @@ def test_standalone_gateway_rejects_budget_bundle_without_replacing_previous_sta
                 "rules": [
                     {
                         "match": {"kind": "all_requests"},
-                        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "scope": "shared"},
+                        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "aggregation": "shared"},
                     }
                 ],
             }
@@ -189,7 +163,7 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
         period="day",
         window_start=start,
         window_end=end,
-        scope="shared",
+        aggregation="shared",
         exhausted_buckets=(SharedBudgetBucket(),),
     )
     payload = PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),))

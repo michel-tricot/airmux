@@ -4410,20 +4410,19 @@ components:
           - day
           - month
           title: Period
-        scope:
+        aggregation:
           type: string
           enum:
           - shared
           - per_key
-          - per_user
-          title: Scope
+          title: Aggregation
       additionalProperties: false
       type: object
       required:
       - kind
       - amount_usd
       - period
-      - scope
+      - aggregation
       title: Budget
     BudgetBucketStatus:
       properties:
@@ -4431,14 +4430,12 @@ components:
           oneOf:
           - $ref: '#/components/schemas/SharedBudgetBucket'
           - $ref: '#/components/schemas/KeyBudgetBucket'
-          - $ref: '#/components/schemas/UserBudgetBucket'
           title: Bucket
           discriminator:
             propertyName: kind
             mapping:
               key: '#/components/schemas/KeyBudgetBucket'
               shared: '#/components/schemas/SharedBudgetBucket'
-              user: '#/components/schemas/UserBudgetBucket'
         spent_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -4464,13 +4461,12 @@ components:
           exclusiveMaximum: 100.0
           minimum: 0.0
           title: Rule Index
-        scope:
+        aggregation:
           type: string
           enum:
           - shared
           - per_key
-          - per_user
-          title: Scope
+          title: Aggregation
         amount_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -4499,19 +4495,17 @@ components:
           - oneOf:
             - $ref: '#/components/schemas/SharedBudgetBucket'
             - $ref: '#/components/schemas/KeyBudgetBucket'
-            - $ref: '#/components/schemas/UserBudgetBucket'
             discriminator:
               propertyName: kind
               mapping:
                 key: '#/components/schemas/KeyBudgetBucket'
                 shared: '#/components/schemas/SharedBudgetBucket'
-                user: '#/components/schemas/UserBudgetBucket'
           - type: 'null'
           title: Next Bucket
       type: object
       required:
       - rule_index
-      - scope
+      - aggregation
       - amount_usd
       - period
       - window_start
@@ -4556,13 +4550,12 @@ components:
             mapping:
               all_requests: '#/components/schemas/AllRequests'
               request: '#/components/schemas/RequestMatch-Output'
-        scope:
+        aggregation:
           type: string
           enum:
           - shared
           - per_key
-          - per_user
-          title: Scope
+          title: Aggregation
         amount_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -4586,13 +4579,11 @@ components:
             oneOf:
             - $ref: '#/components/schemas/SharedBudgetBucket'
             - $ref: '#/components/schemas/KeyBudgetBucket'
-            - $ref: '#/components/schemas/UserBudgetBucket'
             discriminator:
               propertyName: kind
               mapping:
                 key: '#/components/schemas/KeyBudgetBucket'
                 shared: '#/components/schemas/SharedBudgetBucket'
-                user: '#/components/schemas/UserBudgetBucket'
           type: array
           title: Exhausted Buckets
       additionalProperties: false
@@ -4603,7 +4594,7 @@ components:
       - workspace_id
       - target
       - match
-      - scope
+      - aggregation
       - amount_usd
       - period
       - window_start
@@ -8599,23 +8590,6 @@ components:
       - credential_id
       - credential_scope
       title: UsageEventOut
-    UserBudgetBucket:
-      properties:
-        kind:
-          type: string
-          const: user
-          title: Kind
-          default: user
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      - user_id
-      title: UserBudgetBucket
     UserOut:
       properties:
         id:

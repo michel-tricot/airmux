@@ -78,7 +78,7 @@ def test_budget_status_preserves_exact_spending_and_pagination(tmp_path, monkeyp
     monkeypatch.setenv("AIRMUX_MANAGEMENT_KEY", "sk-test-policies")
     monkeypatch.setenv("AIRMUX_ORG_ID", org_id)
     monkeypatch.setenv("AIRMUX_CONTROL_PLANE_URL", "http://cp.test")
-    action = {"kind": "budget", "amount_usd": "0.000000000123", "period": "month", "scope": "per_key"}
+    action = {"kind": "budget", "amount_usd": "0.000000000123", "period": "month", "aggregation": "per_key"}
     status = {
         "policy": {
             "id": policy_id,
@@ -98,7 +98,7 @@ def test_budget_status_preserves_exact_spending_and_pagination(tmp_path, monkeyp
                 "rule_index": 0,
                 "amount_usd": action["amount_usd"],
                 "period": "month",
-                "scope": "per_key",
+                "aggregation": "per_key",
                 "window_start": "2026-09-01T00:00:00Z",
                 "window_end": "2026-10-01T00:00:00Z",
                 "buckets": [

@@ -57,13 +57,12 @@ export const BudgetPeriod = {
   month: 'month',
 } as const;
 
-export type BudgetScope = typeof BudgetScope[keyof typeof BudgetScope];
+export type BudgetAggregation = typeof BudgetAggregation[keyof typeof BudgetAggregation];
 
 
-export const BudgetScope = {
+export const BudgetAggregation = {
   shared: 'shared',
   per_key: 'per_key',
-  per_user: 'per_user',
 } as const;
 
 export interface Budget {
@@ -71,7 +70,7 @@ export interface Budget {
   /** @pattern ^\d+(?:\.\d+)?$ */
   amount_usd: string;
   period: BudgetPeriod;
-  scope: BudgetScope;
+  aggregation: BudgetAggregation;
 }
 
 export const SharedBudgetBucketValue = {
@@ -88,13 +87,8 @@ export interface KeyBudgetBucket {
   key_id: string;
 }
 
-export interface UserBudgetBucket {
-  kind: 'user';
-  user_id: string;
-}
-
 export interface BudgetBucketStatus {
-  bucket: SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket;
+  bucket: SharedBudgetBucket | KeyBudgetBucket;
   /** @pattern ^\d+(?:\.\d+)?$ */
   spent_usd: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
@@ -102,13 +96,12 @@ export interface BudgetBucketStatus {
   exhausted: boolean;
 }
 
-export type BudgetRuleStatusScope = typeof BudgetRuleStatusScope[keyof typeof BudgetRuleStatusScope];
+export type BudgetRuleStatusAggregation = typeof BudgetRuleStatusAggregation[keyof typeof BudgetRuleStatusAggregation];
 
 
-export const BudgetRuleStatusScope = {
+export const BudgetRuleStatusAggregation = {
   shared: 'shared',
   per_key: 'per_key',
-  per_user: 'per_user',
 } as const;
 
 export type BudgetRuleStatusPeriod = typeof BudgetRuleStatusPeriod[keyof typeof BudgetRuleStatusPeriod];
@@ -125,23 +118,22 @@ export interface BudgetRuleStatus {
      * @exclusiveMaximum 100
      */
   rule_index: number;
-  scope: BudgetRuleStatusScope;
+  aggregation: BudgetRuleStatusAggregation;
   /** @pattern ^\d+(?:\.\d+)?$ */
   amount_usd: string;
   period: BudgetRuleStatusPeriod;
   window_start: string;
   window_end: string;
   buckets: BudgetBucketStatus[];
-  next_bucket: SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket | null;
+  next_bucket: SharedBudgetBucket | KeyBudgetBucket | null;
 }
 
-export type BudgetStateScope = typeof BudgetStateScope[keyof typeof BudgetStateScope];
+export type BudgetStateAggregation = typeof BudgetStateAggregation[keyof typeof BudgetStateAggregation];
 
 
-export const BudgetStateScope = {
+export const BudgetStateAggregation = {
   shared: 'shared',
   per_key: 'per_key',
-  per_user: 'per_user',
 } as const;
 
 export type BudgetStatePeriod = typeof BudgetStatePeriod[keyof typeof BudgetStatePeriod];
@@ -209,13 +201,13 @@ export interface BudgetState {
   workspace_id: string;
   target: WorkspaceTarget | SelectedUsers | SelectedKeys;
   match: AllRequests | RequestMatchOutput;
-  scope: BudgetStateScope;
+  aggregation: BudgetStateAggregation;
   /** @pattern ^\d+(?:\.\d+)?$ */
   amount_usd: string;
   period: BudgetStatePeriod;
   window_start: string;
   window_end: string;
-  exhausted_buckets: (SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket)[];
+  exhausted_buckets: (SharedBudgetBucket | KeyBudgetBucket)[];
 }
 
 /**

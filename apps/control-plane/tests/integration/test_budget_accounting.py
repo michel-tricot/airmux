@@ -13,8 +13,11 @@ from control_plane.authz import Permission
 from .test_events import _event
 
 
-def budget_rule(amount="100", period="month", scope="shared", match=None):
-    return {"match": match or {"kind": "all_requests"}, "action": {"kind": "budget", "amount_usd": amount, "period": period, "scope": scope}}
+def budget_rule(amount="100", period="month", aggregation="shared", match=None):
+    return {
+        "match": match or {"kind": "all_requests"},
+        "action": {"kind": "budget", "amount_usd": amount, "period": period, "aggregation": aggregation},
+    }
 
 
 def test_new_recreated_and_overlapping_budgets_count_history(tmp_path):
@@ -105,7 +108,7 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
                 "name": "User spending",
                 "definition": {
                     "target": {"kind": "selected_users", "user_ids": [key_body["user_id"]]},
-                    "rules": [budget_rule("50", scope="per_key", match=match)],
+                    "rules": [budget_rule("50", aggregation="per_key", match=match)],
                 },
             },
         )
@@ -118,27 +121,6 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
         assert second["next_bucket"] is None
         sync = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
         assert sync["organizations"][0]["budgets"][0]["exhausted_buckets"] == [{"kind": "key", "key_id": keys[0]}]
-        user_policy = client.post(
-            f"{base}/policies",
-            headers=headers,
-            json={
-                "name": "User spending",
-                "definition": {
-                    "target": {"kind": "selected_users", "user_ids": [key_body["user_id"]]},
-                    "rules": [budget_rule("50", scope="per_user", match=match)],
-                },
-            },
-        ).json()["data"]
-        user_status = client.get(f"{base}/policies/{user_policy['id']}/status", headers=headers).json()["data"]["budgets"][0]
-        assert len(user_status["buckets"]) == 1
-        user_bucket = user_status["buckets"][0]
-        assert user_bucket["bucket"] == {"kind": "user", "user_id": key_body["user_id"]}
-        assert Decimal(user_bucket["spent_usd"]) == Decimal(90)
-        assert Decimal(user_bucket["remaining_usd"]) == Decimal(0)
-        assert user_bucket["exhausted"] is True
-        user_sync = client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(org)]}).json()["data"]
-        user_budget = next(budget for budget in user_sync["organizations"][0]["budgets"] if budget["policy_id"] == user_policy["id"])
-        assert user_budget["exhausted_buckets"] == [{"kind": "user", "user_id": key_body["user_id"]}]
         assert client.get(path, headers=cp.headers(org, permissions=[Permission.policies_read])).status_code == 403
         assert client.get(path, headers=cp.headers(org, permissions=[Permission.usage_read])).status_code == 403
         assert client.post("/api/v1/policy-state/sync", headers=headers, json={"org_ids": [str(other_org)]}).status_code == 403

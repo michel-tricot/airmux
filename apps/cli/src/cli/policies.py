@@ -103,7 +103,7 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
         [
             Col("rule_index", "Rule"),
             Col("period", "Period"),
-            Col("scope", "Scope"),
+            Col("aggregation", "Aggregation"),
             Col("amount_usd", "Limit USD"),
             Col("buckets", "Bucket spending"),
             Col("window_end", "Resets"),

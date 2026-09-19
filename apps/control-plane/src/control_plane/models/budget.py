@@ -8,7 +8,7 @@ from sqlmodel import col
 
 from contract.budgets import BudgetBucket, BudgetState, budget_window
 from contract.money import ZERO_USD, UsdAmount
-from contract.policies import Budget, BudgetPeriod, BudgetScope
+from contract.policies import Budget, BudgetAggregation, BudgetPeriod
 from control_plane.models.policy import Policy, PolicyOut
 from control_plane.models.usage_event import BudgetUsagePage, UsageEvent
 
@@ -38,7 +38,7 @@ async def enforcement_state(policy: Policy, now: datetime) -> tuple[BudgetState,
                 workspace_id=policy.workspace_id,
                 target=policy.definition.target,
                 match=rule.match,
-                scope=action.scope,
+                aggregation=action.aggregation,
                 amount_usd=action.amount_usd,
                 period=action.period,
                 window_start=start,
@@ -59,11 +59,11 @@ async def budget_status(policy: Policy, now: datetime, page: BudgetUsagePage) ->
         start, end = budget_window(action.period, now)
         spend = await UsageEvent.budget_spend(policy, rule, now, page)
         if not spend and page.bucket_id is not None and page.after_bucket is None:
-            spend = [(UsageEvent.budget_bucket(action.scope, page.bucket_id), ZERO_USD)]
+            spend = [(UsageEvent.budget_bucket(action.aggregation, page.bucket_id), ZERO_USD)]
         budgets.append(
             BudgetRuleStatus(
                 rule_index=index,
-                scope=action.scope,
+                aggregation=action.aggregation,
                 amount_usd=action.amount_usd,
                 period=action.period,
                 window_start=start,
@@ -94,7 +94,7 @@ class BudgetRuleStatus(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     rule_index: int = Field(ge=0, lt=100)
-    scope: BudgetScope
+    aggregation: BudgetAggregation
     amount_usd: UsdAmount = Field(gt=0)
     period: BudgetPeriod
     window_start: datetime

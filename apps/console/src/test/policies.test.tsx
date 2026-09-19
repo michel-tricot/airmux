@@ -182,8 +182,8 @@ describe('workspace policies', () => {
       definition: {
         target: { kind: 'workspace' },
         rules: [
-          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '50', period: 'month', scope: 'shared' } },
-          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '10', period: 'day', scope: 'per_key' } },
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '50', period: 'month', aggregation: 'shared' } },
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '10', period: 'day', aggregation: 'per_key' } },
         ],
       },
     };
@@ -196,7 +196,7 @@ describe('workspace policies', () => {
         const budget: Api.BudgetRuleStatus = shared
           ? {
               rule_index: 0,
-              scope: 'shared',
+              aggregation: 'shared',
               amount_usd: '50',
               period: 'month',
               window_start: now,
@@ -213,7 +213,7 @@ describe('workspace policies', () => {
             }
           : {
               rule_index: 1,
-              scope: 'per_key',
+              aggregation: 'per_key',
               amount_usd: '10',
               period: 'day',
               window_start: now,

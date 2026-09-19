@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from contract.money import UsdAmount
-from contract.policies import BudgetPeriod, BudgetScope, PolicyIdentifier, PolicyMatch, PolicyTarget
+from contract.policies import BudgetAggregation, BudgetPeriod, PolicyIdentifier, PolicyMatch, PolicyTarget
 
 
 class SharedBudgetBucket(BaseModel):
@@ -23,14 +23,7 @@ class KeyBudgetBucket(BaseModel):
     key_id: PolicyIdentifier
 
 
-class UserBudgetBucket(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_serialization_defaults_required=True)
-
-    kind: Literal["user"] = "user"
-    user_id: UUID
-
-
-BudgetBucket = Annotated[SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket, Field(discriminator="kind")]
+BudgetBucket = Annotated[SharedBudgetBucket | KeyBudgetBucket, Field(discriminator="kind")]
 
 
 class BudgetState(BaseModel):
@@ -41,7 +34,7 @@ class BudgetState(BaseModel):
     workspace_id: UUID
     target: PolicyTarget
     match: PolicyMatch
-    scope: BudgetScope
+    aggregation: BudgetAggregation
     amount_usd: UsdAmount = Field(gt=0)
     period: BudgetPeriod
     window_start: AwareDatetime
@@ -56,9 +49,9 @@ class BudgetState(BaseModel):
         if len(set(self.exhausted_buckets)) != len(self.exhausted_buckets):
             message = "Budget state exhausted buckets must be unique"
             raise ValueError(message)
-        expected_kind = {"shared": "shared", "per_key": "key", "per_user": "user"}[self.scope]
+        expected_kind = {"shared": "shared", "per_key": "key"}[self.aggregation]
         if any(bucket.kind != expected_kind for bucket in self.exhausted_buckets):
-            message = f"{self.scope} budgets may only contain {expected_kind} exhausted buckets"
+            message = f"{self.aggregation} budgets may only contain {expected_kind} exhausted buckets"
             raise ValueError(message)
         return self
 

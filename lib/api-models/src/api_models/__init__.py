@@ -64,7 +64,7 @@ class Budget(BaseModel):
     kind: Annotated[Literal["budget"], Field(title="Kind")]
     amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
-    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
 
 
 class BundleManifestEntry(BaseModel):
@@ -1785,14 +1785,6 @@ class UsageEventOut(BaseModel):
     credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")]
 
 
-class UserBudgetBucket(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Annotated[Literal["user"], Field(title="Kind")]
-    user_id: Annotated[UUID, Field(title="User Id")]
-
-
 class UserOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     email: Annotated[str, Field(title="Email")]
@@ -1887,7 +1879,7 @@ class WorkspaceUpdate(BaseModel):
 
 class BudgetBucketStatus(BaseModel):
     bucket: Annotated[
-        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket,
+        SharedBudgetBucket | KeyBudgetBucket,
         Field(discriminator="kind", title="Bucket"),
     ]
     spent_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Spent Usd")]
@@ -1897,23 +1889,17 @@ class BudgetBucketStatus(BaseModel):
 
 class BudgetRuleStatus(BaseModel):
     rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
-    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
     amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
     window_start: Annotated[AwareDatetime, Field(title="Window Start")]
     window_end: Annotated[AwareDatetime, Field(title="Window End")]
     buckets: Annotated[list[BudgetBucketStatus], Field(title="Buckets")]
-    next_bucket: Annotated[
-        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket | None,
-        Field(title="Next Bucket"),
-    ]
+    next_bucket: Annotated[SharedBudgetBucket | KeyBudgetBucket | None, Field(title="Next Bucket")]
 
 
-class ExhaustedBuckets(RootModel[SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket]):
-    root: Annotated[
-        SharedBudgetBucket | KeyBudgetBucket | UserBudgetBucket,
-        Field(discriminator="kind"),
-    ]
+class ExhaustedBuckets(RootModel[SharedBudgetBucket | KeyBudgetBucket]):
+    root: Annotated[SharedBudgetBucket | KeyBudgetBucket, Field(discriminator="kind")]
 
 
 class BudgetState(BaseModel):
@@ -1928,7 +1914,7 @@ class BudgetState(BaseModel):
         Field(discriminator="kind", title="Target"),
     ]
     match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
-    scope: Annotated[Literal["shared", "per_key", "per_user"], Field(title="Scope")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
     amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
     period: Annotated[Literal["day", "month"], Field(title="Period")]
     window_start: Annotated[AwareDatetime, Field(title="Window Start")]
