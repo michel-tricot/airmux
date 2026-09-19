@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, override
+from typing import TYPE_CHECKING, Annotated, ClassVar, Literal, Self, TypedDict, override
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -20,7 +20,10 @@ from contract.policies import (
     PolicyDefinition,
     PolicyEntry,
     PolicyIdentifier,
+    PolicyMatch,
+    PolicyTarget,
     RequestMatch,
+    RuleDefinition,
     SelectedKeys,
     SelectedUsers,
 )
@@ -38,6 +41,18 @@ from control_plane.models.user import User
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Dialect
+
+
+class _BudgetStateFields(TypedDict):
+    policy_id: UUID
+    rule_index: int
+    workspace_id: UUID
+    target: PolicyTarget
+    match: PolicyMatch
+    amount_usd: UsdAmount
+    period: BudgetPeriod
+    window_start: datetime
+    window_end: datetime
 
 
 class PolicyDefinitionType(TypeDecorator[PolicyDefinition]):
@@ -76,94 +91,108 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
     @classmethod
     async def budget_states(cls, org_id: UUID, now: datetime) -> tuple[BudgetState, ...]:
         policies = await cls.find(cls.org_id == org_id, col(cls.enabled).is_(True))
-        return tuple([state for policy in policies for state in await policy.enforcement_state(now)])
+        states: list[BudgetState] = []
+        for policy in policies:
+            states.extend(await policy.enforcement_state(now))
+        return tuple(states)
 
     async def enforcement_state(self, now: datetime) -> tuple[BudgetState, ...]:
         states: list[BudgetState] = []
         for index, rule in enumerate(self.definition.rules):
-            if not isinstance(action := rule.action, Budget):
-                continue
-            start, end = budget_window(action.period, now)
-            spend = await UsageEvent.budget_spend(self, rule, now)
-            if action.sharing == "shared":
-                states.append(
-                    SharedBudgetState(
-                        policy_id=self.id,
-                        rule_index=index,
-                        workspace_id=self.workspace_id,
-                        target=self.definition.target,
-                        match=rule.match,
-                        amount_usd=action.amount_usd,
-                        period=action.period,
-                        window_start=start,
-                        window_end=end,
-                        exhausted=spend[0][1] >= action.amount_usd,
-                    )
-                )
-            else:
-                states.append(
-                    PerKeyBudgetState(
-                        policy_id=self.id,
-                        rule_index=index,
-                        workspace_id=self.workspace_id,
-                        target=self.definition.target,
-                        match=rule.match,
-                        amount_usd=action.amount_usd,
-                        period=action.period,
-                        window_start=start,
-                        window_end=end,
-                        exhausted_key_ids=frozenset(key_id for key_id, _ in spend if key_id is not None),
-                    )
-                )
+            state = await self._enforcement_state_for_rule(index, rule, now)
+            if state is not None:
+                states.append(state)
         return tuple(states)
+
+    async def _enforcement_state_for_rule(self, index: int, rule: RuleDefinition, now: datetime) -> BudgetState | None:
+        action = rule.action
+        if not isinstance(action, Budget):
+            return None
+        start, end = budget_window(action.period, now)
+        spend = await UsageEvent.budget_spend(self, rule, now)
+        common: _BudgetStateFields = {
+            "policy_id": self.id,
+            "rule_index": index,
+            "workspace_id": self.workspace_id,
+            "target": self.definition.target,
+            "match": rule.match,
+            "amount_usd": action.amount_usd,
+            "period": action.period,
+            "window_start": start,
+            "window_end": end,
+        }
+        if action.sharing == "shared":
+            return SharedBudgetState(**common, exhausted=spend[0][1] >= action.amount_usd)
+        return PerKeyBudgetState(**common, exhausted_key_ids=frozenset(key_id for key_id, _ in spend if key_id is not None))
 
     async def budget_status(self, now: datetime, page: BudgetUsagePage) -> PolicyBudgetStatus:
         budgets: list[SharedBudgetStatus | PerKeyBudgetStatus] = []
         for index, rule in enumerate(self.definition.rules):
-            if page.rule_index is not None and index != page.rule_index:
+            if not self._includes_rule(index, page):
                 continue
-            if not isinstance(action := rule.action, Budget):
-                continue
-            start, end = budget_window(action.period, now)
-            spend = await UsageEvent.budget_spend(self, rule, now, page)
-            if action.sharing == "shared":
-                amount = spend[0][1]
-                budgets.append(
-                    SharedBudgetStatus(
-                        rule_index=index,
-                        amount_usd=action.amount_usd,
-                        period=action.period,
-                        window_start=start,
-                        window_end=end,
-                        spent_usd=amount,
-                        remaining_usd=max(ZERO_USD, action.amount_usd - amount),
-                        exhausted=amount >= action.amount_usd,
-                    )
-                )
-            else:
-                if not spend and page.key_id is not None and page.after_key is None:
-                    spend = [(page.key_id, ZERO_USD)]
-                budgets.append(
-                    PerKeyBudgetStatus(
-                        rule_index=index,
-                        amount_usd=action.amount_usd,
-                        period=action.period,
-                        window_start=start,
-                        window_end=end,
-                        keys=tuple(
-                            KeyBudgetStatus(
-                                key_id=key_id,
-                                spent_usd=amount,
-                                remaining_usd=max(ZERO_USD, action.amount_usd - amount),
-                                exhausted=amount >= action.amount_usd,
-                            )
-                            for key_id, amount in spend[: page.limit]
-                            if key_id is not None
-                        ),
-                        next_key=spend[page.limit - 1][0] if len(spend) > page.limit else None,
-                    )
-                )
+            budget = await self._budget_status_for_rule(index, rule, now, page)
+            if budget is not None:
+                budgets.append(budget)
         return PolicyBudgetStatus(policy=PolicyOut.model_validate(self), computed_at=now, budgets=tuple(budgets))
+
+    @staticmethod
+    def _includes_rule(index: int, page: BudgetUsagePage) -> bool:
+        return page.rule_index is None or index == page.rule_index
+
+    async def _budget_status_for_rule(
+        self, index: int, rule: RuleDefinition, now: datetime, page: BudgetUsagePage
+    ) -> SharedBudgetStatus | PerKeyBudgetStatus | None:
+        action = rule.action
+        if not isinstance(action, Budget):
+            return None
+        start, end = budget_window(action.period, now)
+        spend = await UsageEvent.budget_spend(self, rule, now, page)
+        if action.sharing == "shared":
+            return self._shared_budget_status(index, action, start, end, spend[0][1])
+        return self._per_key_budget_status(index, action, (start, end), spend, page)
+
+    @staticmethod
+    def _shared_budget_status(index: int, action: Budget, start: datetime, end: datetime, spent: UsdAmount) -> SharedBudgetStatus:
+        return SharedBudgetStatus(
+            rule_index=index,
+            amount_usd=action.amount_usd,
+            period=action.period,
+            window_start=start,
+            window_end=end,
+            spent_usd=spent,
+            remaining_usd=max(ZERO_USD, action.amount_usd - spent),
+            exhausted=spent >= action.amount_usd,
+        )
+
+    @staticmethod
+    def _per_key_budget_status(
+        index: int,
+        action: Budget,
+        window: tuple[datetime, datetime],
+        spend: list[tuple[str | None, UsdAmount]],
+        page: BudgetUsagePage,
+    ) -> PerKeyBudgetStatus:
+        start, end = window
+        if not spend and page.key_id is not None and page.after_key is None:
+            spend = [(page.key_id, ZERO_USD)]
+        return PerKeyBudgetStatus(
+            rule_index=index,
+            amount_usd=action.amount_usd,
+            period=action.period,
+            window_start=start,
+            window_end=end,
+            keys=tuple(
+                KeyBudgetStatus(
+                    key_id=key_id,
+                    spent_usd=amount,
+                    remaining_usd=max(ZERO_USD, action.amount_usd - amount),
+                    exhausted=amount >= action.amount_usd,
+                )
+                for key_id, amount in spend[: page.limit]
+                if key_id is not None
+            ),
+            next_key=spend[page.limit - 1][0] if len(spend) > page.limit else None,
+        )
 
     @classmethod
     async def in_workspace(cls, org_id: UUID, workspace_id: UUID, policy_id: UUID) -> Self:
@@ -209,25 +238,39 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
             return await super().save()
 
     async def _validate_configuration(self) -> None:
-        if self.enabled:
-            active_policies = select(Policy).where(
-                col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
-            )
-            policies = (await current_session().execute(active_policies)).scalars()
-            if sum(len(policy.definition.rules) for policy in policies) + len(self.definition.rules) > MAX_WORKSPACE_RULES:
-                msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
-                raise InvalidPolicyError(msg)
+        await self._validate_workspace_capacity()
+        await self._validate_target()
+        self._validate_rule_invariants()
+        await self._validate_catalog_references()
+
+    async def _validate_workspace_capacity(self) -> None:
+        if not self.enabled:
+            return
+        active_policies = select(Policy).where(
+            col(Policy.workspace_id) == self.workspace_id, col(Policy.enabled).is_(True), col(Policy.id) != self.id
+        )
+        policies = (await current_session().execute(active_policies)).scalars()
+        total_rules = sum(len(policy.definition.rules) for policy in policies) + len(self.definition.rules)
+        if total_rules > MAX_WORKSPACE_RULES:
+            msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"
+            raise InvalidPolicyError(msg)
+
+    async def _validate_target(self) -> None:
         target = self.definition.target
         if isinstance(target, SelectedKeys):
             keys = await InferenceKey.find(InferenceKey.workspace_id == self.workspace_id)
-            if set(target.key_ids) - {str(key.id) for key in keys}:
-                msg = "Selected inference keys must belong to this workspace"
-                raise InvalidPolicyError(msg)
+            if set(target.key_ids).issubset({str(key.id) for key in keys}):
+                return
+            msg = "Selected inference keys must belong to this workspace"
+            raise InvalidPolicyError(msg)
         if isinstance(target, SelectedUsers):
             users = await User.policy_candidates(self.org_id, self.workspace_id)
-            if set(target.user_ids) - {user.id for user in users}:
-                msg = "Selected users must belong to this organization and be eligible for this workspace"
-                raise InvalidPolicyError(msg)
+            if set(target.user_ids).issubset({user.id for user in users}):
+                return
+            msg = "Selected users must belong to this organization and be eligible for this workspace"
+            raise InvalidPolicyError(msg)
+
+    def _validate_rule_invariants(self) -> None:
         rules = self.definition.rules
         if len(set(rules)) != len(rules):
             msg = "Policy rules must be unique"
@@ -235,26 +278,34 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         if sum(isinstance(rule.action, Fallback) for rule in rules) > 1:
             msg = "A policy may contain at most one fallback rule"
             raise InvalidPolicyError(msg)
-        model_names = {
+
+    async def _validate_catalog_references(self) -> None:
+        model_names = self._model_names()
+        if model_names:
+            models = await Model.find(col(Model.name).in_(model_names))
+            if model_names != {model.name for model in models}:
+                msg = "Policy models must exist in the catalog"
+                raise InvalidPolicyError(msg)
+        provider_names = self._provider_names()
+        if provider_names:
+            providers = await Provider.find(col(Provider.name).in_(provider_names))
+            if provider_names != {provider.name for provider in providers}:
+                msg = "Policy providers must exist in the catalog"
+                raise InvalidPolicyError(msg)
+
+    def _model_names(self) -> set[str]:
+        return {
             name
-            for rule in rules
+            for rule in self.definition.rules
             for name in (
                 *(rule.match.models if isinstance(rule.match, RequestMatch) else ()),
                 *(rule.action.names if isinstance(rule.action, AllowedModels) else ()),
                 *(rule.action.models if isinstance(rule.action, Fallback) else ()),
             )
         }
-        if model_names:
-            models = await Model.find(col(Model.name).in_(model_names))
-            if model_names != {model.name for model in models}:
-                msg = "Policy models must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        provider_names = {name for rule in rules if isinstance(rule.action, AllowedProviders) for name in rule.action.names}
-        if provider_names:
-            providers = await Provider.find(col(Provider.name).in_(provider_names))
-            if provider_names != {provider.name for provider in providers}:
-                msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
+
+    def _provider_names(self) -> set[str]:
+        return {name for rule in self.definition.rules if isinstance(rule.action, AllowedProviders) for name in rule.action.names}
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)
