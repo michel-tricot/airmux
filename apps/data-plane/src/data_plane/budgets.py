@@ -1,104 +1,76 @@
 from __future__ import annotations
 
 import math
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import groupby
 from types import MappingProxyType
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, override
 
 import httpx
 from pydantic import ValidationError
 
-from contract.budgets import BudgetBucket, BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
-from contract.policies import Budget, BudgetAggregation, RequestMatch, SelectedKeys, SelectedUsers
+from contract.budgets import BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
+from contract.policies import Budget
 from data_plane.canonical import GatewayErrorCode
 from data_plane.config import BudgetConfig, ControlPlaneBudgetConfig
 from data_plane.errors import RequestRejectedError
-from data_plane.policies import matching_rules
-from data_plane.requirements import requested_capabilities
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
     import asyncio
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
     from datetime import datetime
     from uuid import UUID
 
     from contract import KeyEntry
-    from contract.model_types import RequestCapability
-    from data_plane.bundle.holder import BundleSnapshot
-    from data_plane.canonical import CanonicalRequest
     from data_plane.control_plane_link import ControlPlaneLink
     from data_plane.metrics import DataPlaneMetrics
     from data_plane.policies import CompiledRule
 
 
 @dataclass(frozen=True)
-class _CompiledBudget:
+class _CompiledBudget(ABC):
     state: BudgetState
-    rule_key: tuple[UUID, int]
-    key_ids: frozenset[str] | None
-    user_ids: frozenset[UUID] | None
-    models: frozenset[str]
-    capabilities: frozenset[RequestCapability]
-    bucket_for: Callable[[KeyEntry], str | UUID | None]
-    exhausted_buckets: frozenset[str | UUID | None]
 
-    def matches(self, request: CanonicalRequest, key: KeyEntry, capabilities: frozenset[RequestCapability]) -> bool:
-        match = self.state.match
-        return (
-            (self.key_ids is None or key.key_id in self.key_ids)
-            and (self.user_ids is None or key.user_id in self.user_ids)
-            and (not self.models or request.model in self.models)
-            and (not isinstance(match, RequestMatch) or match.stream is None or request.stream is match.stream)
-            and self.capabilities <= capabilities
-        )
+    @property
+    def rule_key(self) -> tuple[UUID, int]:
+        return self.state.policy_id, self.state.rule_index
+
+    @abstractmethod
+    def exhausted_for(self, key: KeyEntry) -> bool: ...
+
+
+@dataclass(frozen=True)
+class _SharedBudget(_CompiledBudget):
+    exhausted: bool
+
+    @override
+    def exhausted_for(self, key: KeyEntry) -> bool:
+        return self.exhausted
+
+
+@dataclass(frozen=True)
+class _PerKeyBudget(_CompiledBudget):
+    exhausted_key_ids: frozenset[str]
+
+    @override
+    def exhausted_for(self, key: KeyEntry) -> bool:
+        return key.key_id in self.exhausted_key_ids
 
 
 def _compile(state: BudgetState) -> _CompiledBudget:
-    return _CompiledBudget(
+    if state.aggregation == "shared":
+        return _SharedBudget(state=state, exhausted=bool(state.exhausted_buckets))
+    return _PerKeyBudget(
         state=state,
-        rule_key=(state.policy_id, state.rule_index),
-        key_ids=frozenset(state.target.key_ids) if isinstance(state.target, SelectedKeys) else None,
-        user_ids=frozenset(state.target.user_ids) if isinstance(state.target, SelectedUsers) else None,
-        models=frozenset(state.match.models) if isinstance(state.match, RequestMatch) else frozenset(),
-        capabilities=frozenset(state.match.capabilities) if isinstance(state.match, RequestMatch) else frozenset(),
-        bucket_for=_BUCKET_FOR_AGGREGATION[state.aggregation],
-        exhausted_buckets=frozenset(_BUCKET_ID_FOR_AGGREGATION[state.aggregation](bucket) for bucket in state.exhausted_buckets),
+        exhausted_key_ids=frozenset(bucket.key_id for bucket in state.exhausted_buckets if isinstance(bucket, KeyBudgetBucket)),
     )
-
-
-def _shared_bucket(_key: KeyEntry) -> None:
-    return None
-
-
-def _key_bucket(key: KeyEntry) -> str:
-    return key.key_id
-
-
-_BUCKET_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[KeyEntry], str | UUID | None]] = {
-    "shared": _shared_bucket,
-    "per_key": _key_bucket,
-}
-
-
-def _shared_bucket_id(_bucket: BudgetBucket) -> None:
-    return None
-
-
-def _key_bucket_id(bucket: BudgetBucket) -> str:
-    return cast("KeyBudgetBucket", bucket).key_id
-
-
-_BUCKET_ID_FOR_AGGREGATION: dict[BudgetAggregation, Callable[[BudgetBucket], str | UUID | None]] = {
-    "shared": _shared_bucket_id,
-    "per_key": _key_bucket_id,
-}
 
 
 class BudgetStateHolder:
     def __init__(self) -> None:
-        self._organizations: Mapping[UUID, Mapping[UUID, tuple[_CompiledBudget, ...]]] = MappingProxyType({})
+        self._organizations: Mapping[UUID, Mapping[UUID, Mapping[tuple[UUID, int], _CompiledBudget]]] = MappingProxyType({})
         self._tracked_orgs: set[UUID] = set()
         self.computed_at: datetime | None = None
 
@@ -112,7 +84,7 @@ class BudgetStateHolder:
         organizations = {
             org.org_id: MappingProxyType(
                 {
-                    workspace_id: tuple(_compile(budget) for budget in budgets)
+                    workspace_id: MappingProxyType({budget.rule_key: budget for budget in map(_compile, budgets)})
                     for workspace_id, budgets in groupby(
                         sorted(org.budgets, key=lambda budget: budget.workspace_id), lambda budget: budget.workspace_id
                     )
@@ -125,29 +97,26 @@ class BudgetStateHolder:
         self._organizations = MappingProxyType(current)
         self.computed_at = state.computed_at
 
-    def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, now: datetime) -> None:
-        matching = tuple(rule for rule in matching_rules(request, key, snapshot.budget_index) if isinstance(rule.definition.action, Budget))
-        if not matching:
+    def check(self, rules: tuple[CompiledRule, ...], key: KeyEntry, now: datetime) -> None:
+        if not rules:
             return
         workspaces = self._organizations.get(key.org_id)
         if workspaces is None:
             self.request_state(key.org_id)
             raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
-        budgets = workspaces.get(key.workspace_id, ())
-        budget_by_rule = {budget.rule_key: budget for budget in budgets}
-        if any(
-            (budget := budget_by_rule.get((rule.policy.id, rule.rule_index))) is None or not _state_matches_rule(budget, rule)
-            for rule in matching
-        ):
-            self.request_state(key.org_id)
-            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
-        capabilities = requested_capabilities(request)
-        for rule in matching:
-            budget = budget_by_rule[(rule.policy.id, rule.rule_index)]
+        budget_by_rule = workspaces.get(key.workspace_id, {})
+        budgets: list[_CompiledBudget] = []
+        for rule in rules:
+            budget = budget_by_rule.get((rule.policy.id, rule.rule_index))
+            if budget is None or not _state_matches_rule(budget, rule):
+                self.request_state(key.org_id)
+                raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
+            budgets.append(budget)
+        for budget in budgets:
             state = budget.state
-            if not state.window_start <= now < state.window_end or not budget.matches(request, key, capabilities):
+            if not state.window_start <= now < state.window_end:
                 continue
-            if budget.bucket_for(key) in budget.exhausted_buckets:
+            if budget.exhausted_for(key):
                 raise RequestRejectedError(
                     429,
                     GatewayErrorCode.budget_exhausted,
@@ -157,7 +126,9 @@ class BudgetStateHolder:
 
 
 def _state_matches_rule(budget: _CompiledBudget, rule: CompiledRule) -> bool:
-    action = cast("Budget", rule.definition.action)
+    action = rule.definition.action
+    if not isinstance(action, Budget):
+        return False
     state = budget.state
     return (
         state.target == rule.policy.definition.target
@@ -204,8 +175,8 @@ class BudgetStatePoller:
 
 
 class NoBudgetBackend:
-    def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, _now: datetime) -> None:
-        if any(isinstance(rule.definition.action, Budget) for rule in matching_rules(request, key, snapshot.budget_index)):
+    def check(self, rules: tuple[CompiledRule, ...], _key: KeyEntry, _now: datetime) -> None:
+        if rules:
             raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget backend is not configured")
 
     def start(self, _task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
@@ -224,8 +195,8 @@ class ControlPlaneBudgetBackend:
         self._client = client
         self._metrics = metrics
 
-    def check(self, request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, now: datetime) -> None:
-        self._budgets.check(request, key, snapshot, now)
+    def check(self, rules: tuple[CompiledRule, ...], key: KeyEntry, now: datetime) -> None:
+        self._budgets.check(rules, key, now)
 
     def start(self, task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         poller = BudgetStatePoller(

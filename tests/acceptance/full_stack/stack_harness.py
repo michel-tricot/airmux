@@ -387,6 +387,7 @@ class Stack:
         self,
         *,
         poll_interval_s: int = 1,
+        budget_poll_interval_s: int = 1,
         flush_interval_s: int = 1,
         outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
         secrets_kind: Literal["file", "insecure_database"] = "file",
@@ -422,6 +423,11 @@ class Stack:
                     "heartbeat_interval_s": 2,
                 },
                 "events": outbox_config,
+                "budget": {
+                    "kind": "control_plane",
+                    "control_plane": dict(control_plane_link),
+                    "poll_interval_s": budget_poll_interval_s,
+                },
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
@@ -560,7 +566,11 @@ class Stack:
 
     def _replace_control_plane_url(self, previous_url: str) -> None:
         configuration = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
-        for section in (configuration["data_plane"]["bundle"], configuration["data_plane"]["events"]):
+        for section in (
+            configuration["data_plane"]["bundle"],
+            configuration["data_plane"]["events"],
+            configuration["data_plane"]["budget"],
+        ):
             control_plane = section.get("control_plane")
             if control_plane and control_plane["url"] == previous_url:
                 control_plane["url"] = self.cp_url

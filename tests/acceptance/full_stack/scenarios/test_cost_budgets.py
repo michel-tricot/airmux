@@ -11,11 +11,13 @@ from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _bin, _payload, _p
 from tests.acceptance.process_harness import uvicorn_port
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from stack_harness import Stack
 
 
 def _start_two_deployments(stack: Stack) -> tuple[str, str]:
-    stack.write_config(poll_interval_s=3600)
+    stack.write_config()
     stack.start_cp()
     stack.collect_credentials()
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10) as admin:
@@ -52,8 +54,22 @@ def _start_two_deployments(stack: Stack) -> tuple[str, str]:
     return stack.dp_url, second_url
 
 
+def _wait_for_budget(urls: tuple[str, str], committed: float, authentication: dict[str, str], body: Mapping[str, object]) -> None:
+    assert _poll(
+        lambda: all(metric(f"{url}/metrics", "airmux_data_plane_bundle_last_adopted_timestamp_seconds") > committed for url in urls),
+        20,
+    )
+    for url in urls:
+        response = httpx.post(f"{url}/inf/v1/chat/completions", headers=authentication, json=body)
+        assert response.status_code in {429, 503}, response.text
+    assert _poll(
+        lambda: all(metric(f"{url}/metrics", "airmux_data_plane_budget_state_computed_timestamp_seconds") > committed for url in urls),
+        20,
+    )
+
+
 @pytest.mark.parametrize("stream", [False, True])
-def test_two_deployments_enforce_historical_budgets_without_bundle_refresh(stack: Stack, stream: bool):
+def test_two_deployments_enforce_historical_budgets_during_control_plane_outage(stack: Stack, stream: bool):
     urls = _start_two_deployments(stack)
     authentication = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": MODEL, "messages": [{"role": "user", "content": "historical spending"}], "stream": stream}
@@ -77,14 +93,9 @@ def test_two_deployments_enforce_historical_budgets_without_bundle_refresh(stack
             ],
         }
         for _ in range(2):
-            policy = _payload(admin.post(path, json={"name": "Historical limits", "definition": definition}))
             committed = time.time()
-            assert _poll(
-                lambda committed=committed: all(
-                    metric(f"{url}/metrics", "airmux_data_plane_budget_state_computed_timestamp_seconds") > committed for url in urls
-                ),
-                20,
-            )
+            policy = _payload(admin.post(path, json={"name": "Historical limits", "definition": definition}))
+            _wait_for_budget(urls, committed, authentication, body)
             for url in urls:
                 response = httpx.post(f"{url}/inf/v1/chat/completions", headers=authentication, json=body)
                 assert response.status_code == 429, response.text
@@ -92,16 +103,11 @@ def test_two_deployments_enforce_historical_budgets_without_bundle_refresh(stack
                 assert int(response.headers["retry-after"]) > 0
             assert stack.upstream_requests == upstream_before
             status = _payload(admin.get(f"{path}/{policy['id']}/status"))
-            assert all(Decimal(budget["spent_usd"]) == sum(costs) for budget in status["budgets"])
+            assert all(Decimal(bucket["spent_usd"]) == sum(costs) for budget in status["budgets"] for bucket in budget["buckets"])
             _payload(admin.delete(f"{path}/{policy['id']}"))
-        _payload(admin.post(path, json={"name": "Outage limit", "definition": definition}))
         committed = time.time()
-        assert _poll(
-            lambda committed=committed: all(
-                metric(f"{url}/metrics", "airmux_data_plane_budget_state_computed_timestamp_seconds") > committed for url in urls
-            ),
-            20,
-        )
+        _payload(admin.post(path, json={"name": "Outage limit", "definition": definition}))
+        _wait_for_budget(urls, committed, authentication, body)
     stack.stop("cp")
     for url in urls:
         started = time.monotonic()

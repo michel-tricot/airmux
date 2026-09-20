@@ -6,7 +6,6 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal, Self
 
 from airmux_runtime.observability import log_event
-from contract.policies import Budget
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
 from data_plane.egress import REGISTRY
@@ -40,7 +39,6 @@ class BundleSnapshot:
     profile_index: Mapping[str, CompiledProfile]
     provider_param_aliases: frozenset[str]
     policy_index: PolicyIndex
-    budget_index: PolicyIndex
 
     @classmethod
     def from_bundle(cls, bundle: BundleV1) -> Self:
@@ -51,7 +49,6 @@ class BundleSnapshot:
         _admit_providers(provider_index)
         _admit_models(model_index, provider_index)
         _admit_credentials(bundle, provider_index)
-        policy_index = compile_policies(bundle.policies)
         return cls(
             bundle=bundle,
             model_index=MappingProxyType(model_index),
@@ -59,13 +56,7 @@ class BundleSnapshot:
             credential_index=MappingProxyType(index_credentials(bundle)),
             profile_index=MappingProxyType(profile_index),
             provider_param_aliases=frozenset(spelling for profile in profile_index.values() for spelling in profile.respelled),
-            policy_index=policy_index,
-            budget_index=MappingProxyType(
-                {
-                    workspace_id: tuple(rule for rule in rules if isinstance(rule.definition.action, Budget))
-                    for workspace_id, rules in policy_index.items()
-                }
-            ),
+            policy_index=compile_policies(bundle.policies),
         )
 
 
@@ -119,6 +110,7 @@ def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) 
         message = f"duplicate {label} id"
         raise ValueError(message)
     return index
+
 
 def _admit_keys(bundle: BundleV1) -> None:
     for key in bundle.keys:

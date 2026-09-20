@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { usePolicyStatus, type PolicyOut } from '@workspace/api-client-react';
+import { usePolicyStatus, type KeyBudgetBucket, type PolicyOut, type SharedBudgetBucket } from '@workspace/api-client-react';
 import { DataTable } from '@/components/shared/data-table';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
 import { Badge, Button, Dropdown, Input, Label, Modal } from '@/components/ui/elements';
 import { formatDate } from '@/lib/format';
 
-function bucketId(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string }): string {
+type BudgetBucket = SharedBudgetBucket | KeyBudgetBucket;
+
+function bucketId(bucket: BudgetBucket): string {
   if (bucket.kind === 'key') return bucket.key_id;
   return bucket.kind;
 }
 
-function bucketLabel(bucket: { kind: 'shared' } | { kind: 'key'; key_id: string }): string {
+function bucketLabel(bucket: BudgetBucket): string {
   if (bucket.kind === 'key') return `Key ${bucket.key_id}`;
   return 'All matching usage';
 }
@@ -49,6 +51,8 @@ export function PolicyBudgetDialog({
           onValueChange={(value) => {
             setRuleIndex(Number(value));
             setAfterBucket(undefined);
+            setBucketIdFilter(undefined);
+            setBucketInput('');
           }}
           options={currentPolicy.definition.rules.flatMap((rule, index) =>
             rule.action.kind === 'budget'
@@ -96,43 +100,46 @@ export function PolicyBudgetDialog({
                 <p className="text-sm text-muted-foreground">This policy is disabled. Usage continues to accumulate.</p>
               )}
               {status.data.budgets.length === 0 && <EmptyState>No budget rules found.</EmptyState>}
-              {status.data.budgets.map((budget) => (
-                <div key={budget.rule_index} className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    ${budget.amount_usd} allowance · Resets {formatDate(budget.window_end)}
-                  </p>
-                  <DataTable
-                    rows={budget.buckets}
-                    rowKey={(entry) => bucketId(entry.bucket)}
-                    resource="budget spending"
-                    empty="No matching usage in this period."
-                    columns={[
-                      { key: 'bucket', header: 'Bucket', cell: (entry) => <span className="font-mono text-xs">{bucketLabel(entry.bucket)}</span> },
-                      { key: 'spent', header: 'Spent', cell: (entry) => `$${entry.spent_usd}` },
-                      { key: 'remaining', header: 'Remaining', cell: (entry) => `$${entry.remaining_usd}` },
-                      {
-                        key: 'status',
-                        header: 'Status',
-                        cell: (entry) => (
-                          <Badge variant={entry.exhausted ? 'destructive' : 'success'}>{entry.exhausted ? 'Exhausted' : 'Available'}</Badge>
-                        ),
-                      },
-                    ]}
-                  />
-                  <div className="flex gap-2">
-                    {afterBucket && (
-                      <Button variant="outline" onClick={() => setAfterBucket(undefined)}>
-                        First page
-                      </Button>
-                    )}
-                    {budget.next_bucket && (
-                      <Button variant="outline" onClick={() => setAfterBucket(bucketId(budget.next_bucket!))}>
-                        Next page
-                      </Button>
-                    )}
+              {status.data.budgets.map((budget) => {
+                const nextBucket = budget.next_bucket;
+                return (
+                  <div key={budget.rule_index} className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      ${budget.amount_usd} allowance · Resets {formatDate(budget.window_end)}
+                    </p>
+                    <DataTable
+                      rows={budget.buckets}
+                      rowKey={(entry) => bucketId(entry.bucket)}
+                      resource="budget spending"
+                      empty="No matching usage in this period."
+                      columns={[
+                        { key: 'bucket', header: 'Bucket', cell: (entry) => <span className="font-mono text-xs">{bucketLabel(entry.bucket)}</span> },
+                        { key: 'spent', header: 'Spent', cell: (entry) => `$${entry.spent_usd}` },
+                        { key: 'remaining', header: 'Remaining', cell: (entry) => `$${entry.remaining_usd}` },
+                        {
+                          key: 'status',
+                          header: 'Status',
+                          cell: (entry) => (
+                            <Badge variant={entry.exhausted ? 'destructive' : 'success'}>{entry.exhausted ? 'Exhausted' : 'Available'}</Badge>
+                          ),
+                        },
+                      ]}
+                    />
+                    <div className="flex gap-2">
+                      {afterBucket && (
+                        <Button variant="outline" onClick={() => setAfterBucket(undefined)}>
+                          First page
+                        </Button>
+                      )}
+                      {nextBucket && (
+                        <Button variant="outline" onClick={() => setAfterBucket(bucketId(nextBucket))}>
+                          Next page
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <p className="text-xs text-muted-foreground">Calculated {formatDate(status.data.computed_at)}. Recent usage may still be arriving.</p>
             </>
           )

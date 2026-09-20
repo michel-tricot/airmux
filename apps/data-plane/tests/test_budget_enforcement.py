@@ -7,7 +7,7 @@ import httpx
 import pytest
 from conftest import ORG, WORKSPACE, make_bundle, make_key
 
-from contract import uuid7
+from contract import KeyEntry, uuid7
 from contract.budgets import (
     BudgetState,
     KeyBudgetBucket,
@@ -25,6 +25,11 @@ from data_plane.config import ControlPlaneBudgetConfig, NoBudgetConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.errors import RequestRejectedError
 from data_plane.metrics import DataPlaneMetrics
+from data_plane.policies import CompiledRule, matching_rules
+
+
+def _budget_rules(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot) -> tuple[CompiledRule, ...]:
+    return tuple(rule for rule in matching_rules(request, key, snapshot.policy_index) if isinstance(rule.definition.action, Budget))
 
 
 def test_budget_state_is_independent_of_bundle_identity_and_expires():
@@ -65,12 +70,13 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
     for _ in range(2):
         snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}))
         with pytest.raises(RequestRejectedError) as denied:
-            holder.check(request, key, snapshot, now)
+            holder.check(_budget_rules(request, key, snapshot), key, now)
         assert denied.value.code == "budget_exhausted"
         assert denied.value.status == 429
-        holder.check(request, key, snapshot, end + timedelta(seconds=1))
+        holder.check(_budget_rules(request, key, snapshot), key, end + timedelta(seconds=1))
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=()),)))
-    holder.check(request, key, BundleSnapshot.from_bundle(make_bundle(keys=[key])), now)
+    snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]))
+    holder.check(_budget_rules(request, key, snapshot), key, now)
 
 
 def test_per_key_filters_use_original_request_and_all_matching_budgets():
@@ -115,11 +121,14 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
     holder = BudgetStateHolder()
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(budget,)),)))
     with pytest.raises(RequestRejectedError, match="budget_exhausted"):
-        holder.check(request, key, snapshot, now)
-    holder.check(request, other_key, snapshot, now)
-    holder.check(request.model_copy(update={"model": "fallback"}), key, snapshot, now)
-    holder.check(request.model_copy(update={"stream": False}), key, snapshot, now)
-    holder.check(request.model_copy(update={"response_format": None}), key, snapshot, now)
+        holder.check(_budget_rules(request, key, snapshot), key, now)
+    holder.check(_budget_rules(request, other_key, snapshot), other_key, now)
+    for unmatched in (
+        request.model_copy(update={"model": "fallback"}),
+        request.model_copy(update={"stream": False}),
+        request.model_copy(update={"response_format": None}),
+    ):
+        holder.check(_budget_rules(unmatched, key, snapshot), key, now)
 
 
 def test_uninitialized_budget_state_only_blocks_matching_requests():
@@ -146,8 +155,9 @@ def test_uninitialized_budget_state_only_blocks_matching_requests():
     holder = BudgetStateHolder()
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}], stream=True)
     with pytest.raises(RequestRejectedError, match="policy_state_unavailable"):
-        holder.check(request, key, snapshot, datetime.now(UTC))
-    holder.check(request.model_copy(update={"stream": False}), key, snapshot, datetime.now(UTC))
+        holder.check(_budget_rules(request, key, snapshot), key, datetime.now(UTC))
+    unmatched = request.model_copy(update={"stream": False})
+    holder.check(_budget_rules(unmatched, key, snapshot), key, datetime.now(UTC))
 
 
 def test_standalone_gateway_loads_budget_bundle_but_rejects_matching_requests_without_backend():
@@ -177,8 +187,9 @@ def test_standalone_gateway_loads_budget_bundle_but_rejects_matching_requests_wi
     try:
         holder.swap(BundleSet.from_bundles((bundle.model_copy(update={"policies": (policy,)}),)), "test")
         request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
+        snapshot = holder.current.snapshots[ORG]
         with pytest.raises(RequestRejectedError, match="policy_state_unavailable"):
-            NoBudgetBackend().check(request, key, holder.current.snapshots[ORG], datetime.now(UTC))
+            NoBudgetBackend().check(_budget_rules(request, key, snapshot), key, datetime.now(UTC))
         assert holder.current is not original
     finally:
         metrics.shutdown()
@@ -260,10 +271,10 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
                 response = failed_response
                 with pytest.raises((httpx.HTTPStatusError, ValueError)):
                     await poller.once()
+                request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
+                snapshot = bundles.current.snapshots[ORG]
                 with pytest.raises(RequestRejectedError, match="budget_exhausted"):
-                    holder.check(
-                        CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}]), key, bundles.current.snapshots[ORG], now
-                    )
+                    holder.check(_budget_rules(request, key, snapshot), key, now)
             assert holder.computed_at == now
     finally:
         metrics.shutdown()

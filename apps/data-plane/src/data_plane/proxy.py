@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
     from data_plane.outbox import OutboxReservation
+    from data_plane.policies import CompiledRule
 
 
 logger = logging.getLogger("data_plane")
@@ -153,7 +154,8 @@ class RequestExecution:
             for entry in self.runtime.credentials.available(decision.candidates):
                 if attempts >= plan.max_attempts:
                     break
-                self._check_budgets()
+                if plan.budget_rules:
+                    self._check_budgets(plan.budget_rules)
                 credential = await _resolve_credential(entry, self.runtime.credentials)
                 if credential is None:
                     continue
@@ -173,9 +175,9 @@ class RequestExecution:
             return failure.response
         raise RequestRejectedError(502, GatewayErrorCode.credential_missing)
 
-    def _check_budgets(self) -> None:
+    def _check_budgets(self, rules: tuple[CompiledRule, ...]) -> None:
         try:
-            self.runtime.budgets.check(self.request, self.key, self.snapshot, datetime.now(UTC))
+            self.runtime.budgets.check(rules, self.key, datetime.now(UTC))
         except RequestRejectedError:
             with self.runtime.outbox.reserve() as reservation:
                 reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))

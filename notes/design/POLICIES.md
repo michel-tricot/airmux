@@ -180,7 +180,7 @@ Events retain the original `user_id`, `requested_model_id`, and `requested_capab
 routed model and active policies. These facts survive key deletion, fallback, and reconciliation. Keep history
 for the longest supported active window, including when no policy exists. Missing old request facts are not backfilled.
 
-The first implementation uses indexed SQL aggregates through `UsageEvent.budget_spend`, with no counter table,
+The first implementation uses indexed SQL aggregates over usage events, with no counter table,
 reservation authority, distributed cache, or per-request network operation. Operational results use
 aggregation-specific SQL grouping and HAVING to return exhausted buckets; management results use keyset pagination. If scans become
 expensive, fact-based rollups can preserve these semantics without tying spend to policy identity.
@@ -188,9 +188,9 @@ expensive, fact-based rollups can preserve these semantics without tying spend t
 Budget state is pulled independently from bundles through the control plane's Data Plane API. The response
 carries each rule's target, match, allowance, window, and exhaustion state together. Policy ID and canonical
 rule index describe the source configuration for inspection; neither is an accounting identity. The data plane
-compiles these snapshots by organization and workspace and atomically replaces its in-memory state. A bundle
-change does not invalidate an initialized budget snapshot, and state may reflect newer policy configuration
-than the routing bundle.
+indexes these snapshots by organization, workspace, and source rule and atomically replaces its in-memory state.
+At evaluation, the budget definition in state must match the rule in the active bundle. A mismatch fails closed
+until the independently polled bundle and budget state agree.
 
 The management status endpoint returns the evaluated policy definition and one result per budget rule.
 It requires both policy and usage read permission. Disabled policies still have observable historical spend.

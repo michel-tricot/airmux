@@ -821,16 +821,17 @@ The control-plane budget backend fetches current budget rules and exhaustion sta
 `/api/v1/policy-state/sync` on its own polling interval and connection. It runs independently from bundle polling
 and event export. A `none` budget backend disables state polling; it is the standalone default and returns
 `503 policy_state_unavailable` when a matching budget rule is evaluated.
-`BudgetStateHolder` compiles request filters and exhausted-key sets off the request path and replaces a
+`BudgetStateHolder` compiles exhausted-bucket lookups off the request path and replaces a
 per-organization snapshot at once. It tracks organizations when policy evaluation encounters a matching budget;
-the backend refreshes those organizations without consulting the bundle lifecycle. Request admission performs
-memory lookups before each upstream attempt.
+the backend refreshes those organizations without consulting the bundle lifecycle. The existing policy index
+matches requests, then budget admission performs indexed memory lookups before each upstream attempt.
 `evaluate()` remains pure; no database driver or control-plane import enters the data plane.
 
 Before the first organization snapshot, matching budget rules in the bundle produce
 `503 policy_state_unavailable`; other requests continue. Once initialized, each accepted organization snapshot is
-authoritative for budget checks even if the routing bundle is older or newer. Failed or incomplete refreshes
-leave the last complete snapshot. An expired window no longer blocks, provisionally allowing the next window.
+used only when its definition matches the rule in the active bundle; otherwise the request fails closed until both
+independent snapshots agree. Failed or incomplete refreshes leave the last complete snapshot. An expired window no
+longer blocks, provisionally allowing the next window.
 Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already in flight finish.
 
 No local spending delta is maintained. Overspend includes usage awaiting export, the next state poll, and
