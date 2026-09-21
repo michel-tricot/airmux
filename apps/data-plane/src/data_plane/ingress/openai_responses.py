@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic_core import to_json
-from starlette.responses import Response
 
 from data_plane.canonical import (
     CanonicalAdjustment,
@@ -27,8 +26,11 @@ from data_plane.canonical import (
 from data_plane.errors import UnsupportedFeatureError
 from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
+    from starlette.responses import Response
+
     from data_plane.canonical import CanonicalError, CanonicalResponse
     from data_plane.egress.base import Ctx
 
@@ -287,10 +289,10 @@ class OpenAIResponsesIngress(IngressAdapter):
         metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=int(time.time()))
         body = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
         body["gateway"] = final.gateway.model_dump(mode="json")
-        return Response(to_json(body), media_type="application/json")
+        return JSONResponse(body)
 
     def render_error(self, err: CanonicalError) -> Response:
-        return Response(to_json(_error(err.status, err.code, err.message)), status_code=err.status, media_type="application/json")
+        return JSONResponse(_error(err.status, err.code, err.message), status_code=err.status)
 
     def new_stream(self) -> ResponsesStream:
         return ResponsesStream()
