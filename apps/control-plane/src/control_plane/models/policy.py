@@ -10,12 +10,9 @@ from sqlmodel import Field, col, select
 
 from contract.policies import (
     MAX_WORKSPACE_RULES,
-    AllowedModels,
-    AllowedProviders,
     Fallback,
     PolicyDefinition,
     PolicyEntry,
-    RequestMatch,
     SelectedKeys,
     SelectedUsers,
 )
@@ -26,8 +23,6 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate, RequestModel
 from control_plane.models.inference_key import InferenceKey
-from control_plane.models.model import Model
-from control_plane.models.provider import Provider
 from control_plane.models.user import User
 
 if TYPE_CHECKING:
@@ -114,7 +109,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         await self._validate_workspace_capacity()
         await self._validate_target()
         self._validate_rule_invariants()
-        await self._validate_catalog_references()
 
     async def _validate_workspace_capacity(self) -> None:
         if not self.enabled:
@@ -151,34 +145,6 @@ class Policy(Record, Identified, OrgOwned, Tombstonable, table=True):
         if sum(isinstance(rule.action, Fallback) for rule in rules) > 1:
             msg = "A policy may contain at most one fallback rule"
             raise InvalidPolicyError(msg)
-
-    async def _validate_catalog_references(self) -> None:
-        model_names = self._model_names()
-        if model_names:
-            models = await Model.find(col(Model.name).in_(model_names))
-            if model_names != {model.name for model in models}:
-                msg = "Policy models must exist in the catalog"
-                raise InvalidPolicyError(msg)
-        provider_names = self._provider_names()
-        if provider_names:
-            providers = await Provider.find(col(Provider.name).in_(provider_names))
-            if provider_names != {provider.name for provider in providers}:
-                msg = "Policy providers must exist in the catalog"
-                raise InvalidPolicyError(msg)
-
-    def _model_names(self) -> set[str]:
-        return {
-            name
-            for rule in self.definition.rules
-            for name in (
-                *(rule.match.models if isinstance(rule.match, RequestMatch) else ()),
-                *(rule.action.names if isinstance(rule.action, AllowedModels) else ()),
-                *(rule.action.models if isinstance(rule.action, Fallback) else ()),
-            )
-        }
-
-    def _provider_names(self) -> set[str]:
-        return {name for rule in self.definition.rules if isinstance(rule.action, AllowedProviders) for name in rule.action.names}
 
     def entry(self) -> PolicyEntry:
         return PolicyEntry(id=self.id, workspace_id=self.workspace_id, name=self.name, priority=self.priority, definition=self.definition)

@@ -175,9 +175,8 @@ class BudgetStatePoller:
 
 
 class NoBudgetBackend:
-    def check(self, rules: tuple[CompiledRule, ...], _key: KeyEntry, _now: datetime) -> None:
-        if rules:
-            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget backend is not configured")
+    def check(self, _rules: tuple[CompiledRule, ...], _key: KeyEntry, _now: datetime) -> None:
+        pass
 
     def start(self, _task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         return ()

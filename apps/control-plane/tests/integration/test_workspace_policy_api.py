@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
 
 from contract import BundleV1
+from contract.policies import PolicyDefinition
 from control_plane.authz import Permission
 
 RULE_DEFINITIONS = (
@@ -145,7 +146,7 @@ def test_policy_rejects_multiple_fallback_rules(tmp_path):
         assert client.patch(f"{base}/policies/{policy['id']}", headers=headers, json={"definition": valid_definition}).status_code == 200
 
 
-def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_writes(tmp_path):
+def test_policy_rejects_cross_workspace_keys_and_unprivileged_writes(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         org = make_org(client, cp.headers(), "policies")
@@ -160,17 +161,39 @@ def test_policy_rejects_cross_workspace_keys_unknown_catalog_and_unprivileged_wr
         base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
         path = f"{base}/policies"
         definition = policy_definition()
-        definitions = [
-            {**definition, "target": {"kind": "selected_keys", "key_ids": [caller["id"]]}},
-            policy_definition([{"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}}]),
-            policy_definition([{"match": {"kind": "all_requests"}, "action": {"kind": "providers", "names": ["unknown"]}}]),
-        ]
-        for definition in definitions:
-            response = client.post(path, headers=headers, json={"name": "Invalid", "definition": definition})
-            assert response.status_code == 422, response.text
+        cross_workspace = {**definition, "target": {"kind": "selected_keys", "key_ids": [caller["id"]]}}
+        response = client.post(path, headers=headers, json={"name": "Invalid", "definition": cross_workspace})
+        assert response.status_code == 422, response.text
         reader = cp.headers(org, permissions=[Permission.policies_read])
         assert client.get(path, headers=reader).status_code == 200
         assert client.post(path, headers=reader, json={"name": "Forbidden", "definition": definition}).status_code == 403
+
+
+@pytest.mark.parametrize(
+    "rules",
+    [
+        [
+            {
+                "match": {"kind": "request", "models": ["future-model"]},
+                "action": {"kind": "budget", "amount_usd": "10", "period": "month", "aggregation": "shared"},
+            }
+        ],
+        [{"match": {"kind": "all_requests"}, "action": {"kind": "providers", "names": ["future-provider"]}}],
+    ],
+)
+def test_policy_accepts_symbolic_catalog_references(tmp_path, rules):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org = make_org(client, cp.headers(), "symbolic-policy")
+        headers = cp.headers(org)
+        workspace = make_workspace(client, headers, "production")
+        path = f"/api/v1/organizations/{org}/workspaces/{workspace}/policies"
+        definition = policy_definition(rules)
+
+        created = client.post(path, headers=headers, json={"name": "Future catalog", "definition": definition})
+
+        assert created.status_code == 200, created.text
+        assert created.json()["data"]["definition"] == PolicyDefinition.model_validate(definition).model_dump(mode="json")
 
 
 def test_selected_users_validate_workspace_eligibility_and_survive_member_removal(tmp_path):

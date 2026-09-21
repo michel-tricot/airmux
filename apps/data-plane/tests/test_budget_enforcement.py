@@ -160,42 +160,7 @@ def test_uninitialized_budget_state_only_blocks_matching_requests():
     holder.check(_budget_rules(unmatched, key, snapshot), key, datetime.now(UTC))
 
 
-def test_standalone_gateway_loads_budget_bundle_but_rejects_matching_requests_without_backend():
-    metrics = DataPlaneMetrics()
-    holder = BundleHolder(metrics)
-    _, key = make_key()
-    bundle = make_bundle(keys=[key])
-    original = BundleSet.from_bundles((bundle,))
-    holder.swap(original, "test")
-    policy = PolicyEntry(
-        id=uuid7(),
-        workspace_id=WORKSPACE,
-        name="Budget",
-        priority=100,
-        definition=PolicyDefinition.model_validate(
-            {
-                "target": {"kind": "workspace"},
-                "rules": [
-                    {
-                        "match": {"kind": "all_requests"},
-                        "action": {"kind": "budget", "period": "month", "amount_usd": "10", "aggregation": "shared"},
-                    }
-                ],
-            }
-        ),
-    )
-    try:
-        holder.swap(BundleSet.from_bundles((bundle.model_copy(update={"policies": (policy,)}),)), "test")
-        request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
-        snapshot = holder.current.snapshots[ORG]
-        with pytest.raises(RequestRejectedError, match="policy_state_unavailable"):
-            NoBudgetBackend().check(_budget_rules(request, key, snapshot), key, datetime.now(UTC))
-        assert holder.current is not original
-    finally:
-        metrics.shutdown()
-
-
-def test_no_budget_backend_is_explicit_and_does_not_start_tasks():
+def test_no_budget_config_builds_no_budget_backend():
     metrics = DataPlaneMetrics()
     client = httpx.AsyncClient()
     try:
