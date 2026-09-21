@@ -8,11 +8,12 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import make_config, make_outbox
 
-from contract import RoutedUsageEventV1, uuid7
+from contract import RoutedUsageEventV1, TokenUsageSource, uuid7
 from data_plane.config import SqliteOutboxConfig
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, EventOutbox, OutboxFullError, SqliteOutbox, build_outbox
@@ -36,6 +37,7 @@ def make_event(request_id) -> RoutedUsageEventV1:
         bundle_id=uuid4(),
         input_tokens=10,
         output_tokens=5,
+        token_usage_source=TokenUsageSource.PROVIDER,
         max_output_tokens=128,
         cost_usd="0.000004",
         cost_input_usd="0.000004",
@@ -54,7 +56,9 @@ def record(outbox: EventOutbox, event: RoutedUsageEventV1) -> None:
 
 async def test_reserved_events_roundtrip_in_order(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
-    events = [make_event(uuid7()), make_event(uuid7())]
+    events = [
+        make_event(uuid7()).model_copy(update={"token_usage_source": source}) for source in (TokenUsageSource.PROVIDER, TokenUsageSource.ESTIMATED)
+    ]
     for event in events:
         record(outbox, event)
     assert await outbox.next_batch(10) == events
@@ -117,11 +121,12 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     record(outbox, make_event(first))
-    record(outbox, make_event(second))
+    record(outbox, make_event(second).model_copy(update={"token_usage_source": TokenUsageSource.ESTIMATED}))
     assert await outbox.export_once() == 2
     assert await outbox.next_batch(10) == []
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
+    assert [e["token_usage_source"] for e in sent] == ["provider", "estimated"]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
 
 
@@ -131,7 +136,7 @@ async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     record(outbox, event)
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(httpx2.HTTPStatusError):
         await outbox.export_once()
     assert await outbox.next_batch(10) == [event]
 

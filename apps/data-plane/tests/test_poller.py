@@ -30,7 +30,7 @@ def _remote_source(tmp_path, holder, http_client) -> RemoteBundleSource:
 
 def manifest_response(*bundles: BundleV1) -> httpx.Response:
     entries = [BundleManifestEntry(org_id=bundle.org_id, bundle_id=bundle.bundle_id) for bundle in bundles]
-    return httpx.Response(200, content=f'{{"data": {BundleManifest(bundles=entries).model_dump_json()}}}')
+    return httpx.Response(200, content=f'{{"data": {BundleManifest(bundles=tuple(entries)).model_dump_json()}}}')
 
 
 def bundle_response(bundle: BundleV1) -> httpx.Response:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ class CompiledProfile:
 def compile_profile(provider: ProviderEntry) -> CompiledProfile:
     return CompiledProfile(
         provider_id=provider.provider_id,
-        respelled={spelling: canonical for canonical, spelling in provider.param_aliases.items()},
+        respelled=MappingProxyType({spelling: canonical for canonical, spelling in provider.param_aliases.items()}),
         accepted=frozenset(provider.accepted_params or ()),
         params_closed=provider.params_closed,
     )

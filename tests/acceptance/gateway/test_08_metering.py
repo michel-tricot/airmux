@@ -285,6 +285,7 @@ def test_missing_usage_is_priced_from_estimated_tokens(gateway: Gateway, family:
     (event,) = gateway.events(1)
     assert event.status == "ok"
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == (3, 2, 0, 0)
+    assert event.token_usage_source == "estimated"
     assert_cost(event, "0.000006", "0.00001")
 
 
@@ -298,6 +299,7 @@ def test_denied_requests_have_no_metered_cost(gateway: Gateway, dialect: Dialect
     assert provider.requests == []
     (event,) = gateway.events(1)
     assert event.status == "denied"
+    assert event.token_usage_source == "not_applicable"
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == (0, 0, 0, 0)
     assert_cost(event, "0", "0")
 
@@ -350,11 +352,13 @@ def test_disconnect_prices_only_observed_or_estimated_usage(gateway: Gateway, fa
             pytest.fail("stream ended before delivering content")
     (event,) = gateway.events(1)
     assert event.status == "cancelled"
+    assert event.token_usage_source == "estimated"
     assert_metering(event, case.expected)
     release.set()
     assert gateway.request(model="model-b").status_code == 200
     _, second = gateway.events(2)
     assert second.status == "ok"
+    assert second.token_usage_source == "provider"
     assert second.request_id != event.request_id
     assert_metering(second, DEFAULT_EXPECTATIONS[family])
 

@@ -7,6 +7,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
@@ -103,7 +104,7 @@ async def _open_stream(
     ctx: Ctx,
     request: CanonicalRequest,
     outbox: SqliteOutbox,
-    http_client: httpx.AsyncClient,
+    http_client: httpx2.AsyncClient,
     metrics: DataPlaneMetrics | None = None,
 ) -> Response:
     with outbox.reserve() as reservation:
@@ -212,7 +213,7 @@ async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatc
 
         async def aread(self):
             msg = "connection reset while reading error body"
-            raise httpx.ReadError(msg)
+            raise httpx2.ReadError(msg)
 
     class FakeStreamCM:
         def __init__(self):
@@ -231,6 +232,6 @@ async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatc
             return cm
 
     monkeypatch.setattr(http_client, "stream", FakeClient().stream)
-    with pytest.raises(httpx.ReadError, match="connection reset"):
+    with pytest.raises(httpx2.ReadError, match="connection reset"):
         await _open_stream(ctx, REQUEST, outbox, http_client)
     assert cm.exited

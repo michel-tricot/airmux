@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 from data_plane.budgets import BudgetBackend, NoBudgetBackend
 
 if TYPE_CHECKING:
-    import httpx
+    import httpx2
     from starlette.requests import Request
 
     from data_plane.bundle.holder import BundleHolder
@@ -20,7 +20,7 @@ class Runtime:
     holder: BundleHolder
     outbox: EventOutbox
     credentials: CredentialResolver
-    http_client: httpx.AsyncClient
+    http_client: httpx2.AsyncClient
     metrics: DataPlaneMetrics
     budgets: BudgetBackend = field(default_factory=NoBudgetBackend)
 

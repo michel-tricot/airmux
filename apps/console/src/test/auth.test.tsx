@@ -19,7 +19,6 @@ const ORG2: Api.OrgOut = {
   personal_for: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 
 function withTwoOrgs() {
@@ -41,12 +40,12 @@ function withTwoOrgs() {
     http.get('/api/v1/organizations/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
         return enveloped<Api.WorkspaceOut>([
-          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now },
         ]);
       }
       if (params.orgId === ORG2.id) {
         return enveloped<Api.WorkspaceOut>([
-          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now },
         ]);
       }
       return new HttpResponse(null, { status: 403 });
@@ -60,9 +59,8 @@ function withTwoOrgs() {
           slug: 'acme-production',
           created_at: now,
           updated_at: now,
-          deleted_at: null,
         },
-        'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+        'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now },
         'acme-production': {
           id: 'ws-acme',
           org_id: ORG.id,
@@ -70,7 +68,6 @@ function withTwoOrgs() {
           slug: 'acme-production',
           created_at: now,
           updated_at: now,
-          deleted_at: null,
         },
         'beta-staging': {
           id: 'ws-beta',
@@ -79,7 +76,6 @@ function withTwoOrgs() {
           slug: 'beta-staging',
           created_at: now,
           updated_at: now,
-          deleted_at: null,
         },
       } as const;
       const workspace = rows[params.workspaceRef as keyof typeof rows];

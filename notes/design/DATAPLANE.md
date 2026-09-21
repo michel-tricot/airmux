@@ -402,6 +402,12 @@ discover `.env` files or mutate the process environment.
 Provider credential values are never in the bundle. The bundle is org-sensitive because it contains
 live inference-key hashes, but reading it does not reveal the original keys.
 
+Bundle validation rejects unknown fields and applies the shared catalog identifier and token-limit
+constraints. Issue times and key expiries must include a timezone, so authentication can compare
+expiries with its UTC clock. In memory, bundle collections are tuples and parameter maps are copied
+into read-only mappings, including compiled provider aliases. Frozen models alone would still allow
+requests to mutate nested lists or dictionaries. JSON continues to use arrays and objects.
+
 ### Remote source
 
 Remote startup is designed to serve through a control-plane outage:

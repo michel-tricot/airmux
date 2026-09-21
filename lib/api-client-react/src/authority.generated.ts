@@ -74,6 +74,14 @@ export const operationAuthority = {
       },
     ],
   },
+  getOrgSummary: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
+      },
+    ],
+  },
   listDataPlanes: {
     checks: [
       {

@@ -72,6 +72,9 @@ class BundleManifestEntry(BaseModel):
     The immutable identity of one organization bundle available to a data plane.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     org_id: Annotated[UUID, Field(title="Org Id")]
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
 
@@ -366,6 +369,13 @@ class DeniedUsageEventV1(BaseModel):
             title="Credential Scope",
         ),
     ] = None
+    token_usage_source: Annotated[
+        Literal["not_applicable"],
+        Field(
+            description="No upstream token usage for a request denied before routing",
+            title="Token Usage Source",
+        ),
+    ]
 
 
 class DenyRequest(BaseModel):
@@ -505,7 +515,6 @@ class InferenceKeyOut(BaseModel):
     prefix: Annotated[str, Field(title="Prefix")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class InferenceKeyOwnerOut(BaseModel):
@@ -583,6 +592,9 @@ class KeyEntry(BaseModel):
     the caller's secret token.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
@@ -629,20 +641,47 @@ class MeOut(BaseModel):
     orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
+class MaxOutputTokens1(RootModel[int]):
+    root: Annotated[int, Field(ge=1, le=100000000, title="Max Output Tokens")]
+
+
+class EgressKind(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_]*$",
+            title="Egress Kind",
+        ),
+    ]
+
+
 class ModelEntry(BaseModel):
     """
     A routable model: the caller-facing id plus how to reach and bill it.
     """
 
-    model_id: Annotated[str, Field(title="Model Id")]
-    provider_id: Annotated[str, Field(title="Provider Id")]
-    upstream_model: Annotated[str, Field(title="Upstream Model")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    model_id: Annotated[str, Field(max_length=255, min_length=1, title="Model Id")]
+    provider_id: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
+    upstream_model: Annotated[str, Field(max_length=255, min_length=1, title="Upstream Model")]
     input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
     output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
     cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
     cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
-    context_window: Annotated[int, Field(title="Context Window")]
-    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
+    context_window: Annotated[int, Field(ge=1, le=100000000, title="Context Window")]
+    max_output_tokens: Annotated[MaxOutputTokens1 | None, Field(title="Max Output Tokens")] = None
     input_modalities: Annotated[
         list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(max_length=5, min_length=1, title="Input Modalities"),
@@ -653,16 +692,16 @@ class ModelEntry(BaseModel):
     ]
     capabilities: Annotated[
         list[Literal["streaming", "tools", "reasoning", "structured_output"]],
-        Field(title="Capabilities"),
+        Field(max_length=4, title="Capabilities"),
     ]
     parameter_support: Annotated[
         dict[str, Literal["supported", "unsupported"]] | None,
-        Field(title="Parameter Support"),
+        Field(max_length=128, title="Parameter Support"),
     ] = None
-    egress_kind: Annotated[str | None, Field(title="Egress Kind")] = None
+    egress_kind: Annotated[EgressKind | None, Field(title="Egress Kind")] = None
 
 
-class EgressKind(RootModel[str]):
+class EgressKind1(RootModel[str]):
     root: Annotated[
         str,
         Field(
@@ -675,7 +714,7 @@ class EgressKind(RootModel[str]):
     ]
 
 
-class MaxOutputTokens1(RootModel[int]):
+class MaxOutputTokens2(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -719,7 +758,7 @@ class ModelIn(BaseModel):
         ),
     ] = ""
     egress_kind: Annotated[
-        EgressKind | None,
+        EgressKind1 | None,
         Field(description="Per-model egress adapter override", title="Egress Kind"),
     ] = None
     input_price_per_mtok: Annotated[
@@ -764,7 +803,7 @@ class ModelIn(BaseModel):
         ),
     ] = 128000
     max_output_tokens: Annotated[
-        MaxOutputTokens1 | None,
+        MaxOutputTokens2 | None,
         Field(
             description="Max completion tokens; requests are clamped to it",
             title="Max Output Tokens",
@@ -833,7 +872,6 @@ class ModelOut(BaseModel):
     parameter_support: Annotated[dict[str, Literal["supported", "unsupported"]], Field(title="Parameter Support")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class OrgCreate(BaseModel):
@@ -919,7 +957,6 @@ class OrgInvitationOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     status: Annotated[Literal["pending", "expired", "accepted", "revoked"], Field(title="Status")]
 
 
@@ -936,11 +973,21 @@ class OrgOut(BaseModel):
     personal_for: Annotated[UUID | None, Field(title="Personal For")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class OrgRole(RootModel[Literal["owner", "admin", "member", "data_plane"]]):
     root: Annotated[Literal["owner", "admin", "member", "data_plane"], Field(title="OrgRole")]
+
+
+class OrgSummaryOut(BaseModel):
+    total: Annotated[
+        int,
+        Field(
+            description="Number of organizations currently on the instance, including personal organizations",
+            ge=0,
+            title="Total",
+        ),
+    ]
 
 
 class Name2(RootModel[str]):
@@ -1204,7 +1251,6 @@ class ProviderCredentialOut(BaseModel):
     fingerprint: Annotated[str, Field(title="Fingerprint")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
 
 
@@ -1259,20 +1305,38 @@ class ProviderCredentialValueIn(BaseModel):
     ]
 
 
+class AcceptedParams(RootModel[list[str]]):
+    root: Annotated[list[str], Field(max_length=256, title="Accepted Params")]
+
+
 class ProviderEntry(BaseModel):
     """
     An upstream LLM provider endpoint and its supported request parameters.
     """
 
-    provider_id: Annotated[str, Field(title="Provider Id")]
-    kind: Annotated[str, Field(title="Kind")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    provider_id: Annotated[
+        str,
+        Field(
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
+    kind: Annotated[
+        str,
+        Field(max_length=63, min_length=1, pattern="^[a-z0-9][a-z0-9_]*$", title="Kind"),
+    ]
     base_url: Annotated[AnyUrl, Field(title="Base Url")]
-    param_aliases: Annotated[dict[str, str] | None, Field(title="Param Aliases")] = None
-    accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")] = None
+    param_aliases: Annotated[dict[str, str] | None, Field(max_length=256, title="Param Aliases")] = None
+    accepted_params: Annotated[AcceptedParams | None, Field(title="Accepted Params")] = None
     params_closed: Annotated[bool | None, Field(title="Params Closed")] = False
 
 
-class AcceptedParams(RootModel[list[str]]):
+class AcceptedParams1(RootModel[list[str]]):
     root: Annotated[
         list[str],
         Field(
@@ -1335,7 +1399,7 @@ class ProviderIn(BaseModel):
         ),
     ] = None
     accepted_params: Annotated[
-        AcceptedParams | None,
+        AcceptedParams1 | None,
         Field(
             description="Params known accepted beyond the core; consulted when params_closed",
             title="Accepted Params",
@@ -1361,7 +1425,6 @@ class ProviderOut(BaseModel):
     params_closed: Annotated[bool, Field(title="Params Closed")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class RequestLimits(BaseModel):
@@ -1401,7 +1464,7 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
-class MaxOutputTokens2(RootModel[int]):
+class MaxOutputTokens3(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -1518,7 +1581,7 @@ class RoutedUsageEventV1(BaseModel):
         ),
     ] = "0"
     max_output_tokens: Annotated[
-        MaxOutputTokens2 | None,
+        MaxOutputTokens3 | None,
         Field(
             description="Effective upstream output-token limit",
             title="Max Output Tokens",
@@ -1575,6 +1638,13 @@ class RoutedUsageEventV1(BaseModel):
         Field(
             description="Scope of the provider credential used for the request",
             title="Credential Scope",
+        ),
+    ]
+    token_usage_source: Annotated[
+        Literal["provider", "estimated"],
+        Field(
+            description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates",
+            title="Token Usage Source",
         ),
     ]
 
@@ -1743,6 +1813,13 @@ class TaxonomySpec(BaseModel):
     ] = None
 
 
+class TokenUsageSource(RootModel[Literal["provider", "estimated", "not_applicable"]]):
+    root: Annotated[
+        Literal["provider", "estimated", "not_applicable"],
+        Field(title="TokenUsageSource"),
+    ]
+
+
 class UsageEventOut(BaseModel):
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
@@ -1761,6 +1838,12 @@ class UsageEventOut(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    token_usage_source: Annotated[
+        TokenUsageSource,
+        Field(
+            description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates"
+        ),
+    ]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
@@ -1794,7 +1877,6 @@ class UserOut(BaseModel):
     managing_org_id: Annotated[UUID | None, Field(title="Managing Org Id")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
@@ -1844,7 +1926,6 @@ class WorkspaceOut(BaseModel):
     slug: Annotated[str, Field(title="Slug")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
@@ -1927,6 +2008,9 @@ class BundleManifest(BaseModel):
     The complete set of organization bundles one data plane may serve.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
 
 
@@ -1937,6 +2021,9 @@ class CredentialEntry(BaseModel):
     The secret value is not included. A version change tells data planes to refresh their cached value.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     ref: SecretRef
     priority: Annotated[int, Field(title="Priority")]
     version: Annotated[int, Field(title="Version")]
@@ -1998,6 +2085,10 @@ class EnvelopeOrgInvitationRevokedOut(BaseModel):
 
 class EnvelopeOrgOut(BaseModel):
     data: OrgOut
+
+
+class EnvelopeOrgSummaryOut(BaseModel):
+    data: OrgSummaryOut
 
 
 class EnvelopePasswordChangedOut(BaseModel):
@@ -2258,9 +2349,12 @@ class Catalog(BaseModel):
     they are reached with.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     providers: Annotated[list[ProviderEntry], Field(title="Providers")]
     models: Annotated[list[ModelEntry], Field(title="Models")]
-    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials")] = None
+    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials", validate_default=True)] = []
 
 
 class EnvelopeMembershipOut(BaseModel):
@@ -2308,7 +2402,6 @@ class ManagementKeyCreatedOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Scope
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
     token: Annotated[str, Field(title="Token")]
@@ -2327,7 +2420,6 @@ class ManagementKeyOut(BaseModel):
     revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
     scope: Scope
     status: Annotated[Literal["active", "expired", "revoked"], Field(title="Status")]
 
@@ -2397,7 +2489,6 @@ class PolicyOut(BaseModel):
     definition: PolicyDefinitionOutput
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
-    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class PolicyUpdate(BaseModel):
@@ -2436,6 +2527,9 @@ class BundleV1(BaseModel):
     A complete, versioned policy snapshot for one organization's model traffic.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]

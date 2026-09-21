@@ -19,7 +19,6 @@ const key: Api.ManagementKeyOut = {
   revoked_at: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
-  deleted_at: null,
   scope: { level: 'org', org_id: ORG.id, workspace_id: null },
   status: 'active',
 };

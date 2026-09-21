@@ -19,7 +19,6 @@ const providers = [
     params_closed: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   },
   {
     id: 'provider-openai',
@@ -32,7 +31,6 @@ const providers = [
     params_closed: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   },
 ];
 const models = [
@@ -54,7 +52,6 @@ const models = [
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   } satisfies Api.ModelOut,
   {
     egress_kind: null,
@@ -74,7 +71,6 @@ const models = [
     capabilities: ['streaming', 'tools', 'structured_output', 'reasoning'],
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   } satisfies Api.ModelOut,
 ];
 

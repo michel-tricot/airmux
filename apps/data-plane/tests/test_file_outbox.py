@@ -11,7 +11,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from airmux_runtime.config import ConfigContext
-from contract import RoutedUsageEventV1, UsageEvent, uuid7
+from contract import RoutedUsageEventV1, TokenUsageSource, UsageEvent, uuid7
 from data_plane.config import Config, FileOutboxConfig
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import EventOutbox, FileOutbox, build_outbox
@@ -35,6 +35,7 @@ def event_of(index: int) -> RoutedUsageEventV1:
         provider_id="stub",
         bundle_id=uuid7(),
         input_tokens=11,
+        token_usage_source=TokenUsageSource.PROVIDER,
         output_tokens=3,
         max_output_tokens=128,
         cost_usd="0.000037",

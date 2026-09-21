@@ -29,6 +29,7 @@ def _record_usage(tmp_path, org_id, workspace_id):
             provider_id="openai",
             bundle_id=uuid7(),
             input_tokens=1,
+            token_usage_source="provider",
             output_tokens=1,
             cost_usd=Decimal(0),
             latency_ms=1,

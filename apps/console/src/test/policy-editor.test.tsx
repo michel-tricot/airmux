@@ -16,7 +16,6 @@ const inferenceKey: InferenceKeyOut = {
   prefix: 'llm_prod',
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 
 function policy(action: PolicyOut['definition']['rules'][number]['action']): PolicyOut {
@@ -30,7 +29,6 @@ function policy(action: PolicyOut['definition']['rules'][number]['action']): Pol
     definition: { target: { kind: 'workspace' }, rules: [{ match: { kind: 'all_requests' }, action }] },
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
 }
 

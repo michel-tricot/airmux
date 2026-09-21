@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import cast
@@ -171,6 +173,43 @@ def test_every_active_provider_has_an_auto_discovered_typed_source():
 
     assert active <= set(sources)
     assert all(sources[provider].definition is not None for provider in active)
+
+
+def test_readme_provider_source_is_discovered_and_maps_models(tmp_path):
+    package_root = Path(__file__).parents[1]
+    readme = (package_root / "README.md").read_text(encoding="utf-8")
+    section = readme.split("## Provider sources\n", 1)[1].split("\n## ", 1)[0]
+    example = section.split("```python\n", 1)[1].split("\n```", 1)[0]
+    package = shutil.copytree(package_root / "src" / "model_audit", tmp_path / "model_audit")
+    (package / "catalog_tasks" / "sources" / "example.py").write_text(example, encoding="utf-8")
+    script = """
+from model_audit.catalog_ops import provider_sources
+
+source = provider_sources()["example"]
+assert type(source).__module__ == "model_audit.catalog_tasks.sources.example"
+assert source.provider_id == source.definition.id == "example"
+assert source.url == source.definition.models_url == "https://api.example.ai/v1/models"
+assert source.schemas[0].url == source.definition.openapi == "https://api.example.ai/openapi.json"
+assert source.schemas[0].surface == source.definition.primary_surface == "oai"
+assert source.schemas[0].path_pattern == r"chat/completions$"
+items = source.items({"data": [{"id": "example-chat", "context_length": 32768, "max_output_tokens": 4096, "ignored": "extra"}]})
+assert len(items) == 1
+assert source.normalize(items[0]) == {
+    "id": "example-chat",
+    "context_length": 32768,
+    "max_output_tokens": 4096,
+    "input_modalities": None,
+    "output_modalities": None,
+    "supports_tools": None,
+    "supports_structured_output": None,
+    "pricing": None,
+}
+"""
+    result = subprocess.run(  # noqa: S603 fixed interpreter executes the repository-owned example in a temporary package
+        [sys.executable, "-c", script], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_every_active_model_has_schema_discovery_evidence():

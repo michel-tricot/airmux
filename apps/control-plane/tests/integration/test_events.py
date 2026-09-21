@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
 
+from api_models import UsageEventOut
 from contract import uuid7
 
 
@@ -25,6 +27,7 @@ def _event(org: UUID) -> dict:
         "bundle_id": str(uuid4()),
         "input_tokens": 10,
         "output_tokens": 5,
+        "token_usage_source": "provider",
         "max_output_tokens": 128,
         "cost_usd": "0.000004",
         "cost_input_usd": "0.000004",
@@ -126,6 +129,7 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
                     **event,
                     "provider_id": "",
                     "status": "denied",
+                    "token_usage_source": "not_applicable",
                     "credential_id": None,
                     "credential_scope": None,
                     "cost_usd": "0",
@@ -135,6 +139,33 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
             headers=root,
         )
         assert denied.status_code == 200, denied.text
+
+
+@pytest.mark.parametrize("source", ["provider", "estimated", "not_applicable"])
+def test_token_usage_source_survives_ingestion_and_client_decoding(tmp_path, source):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "usage-source")
+        workspace_id = make_workspace(client, cp.headers(org_id), "workspace")
+        event = {**_event(org_id), "workspace_id": str(workspace_id), "token_usage_source": source}
+        if source == "not_applicable":
+            event.update(
+                status="denied",
+                provider_id="",
+                credential_id=None,
+                credential_scope=None,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd="0",
+                cost_input_usd="0",
+            )
+        response = client.post("/api/v1/events", json=[event], headers=cp.headers())
+        assert response.status_code == 200, response.text
+        for path in (f"/api/v1/organizations/{org_id}/events", f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/events"):
+            response = client.get(path, headers=cp.headers(org_id))
+            assert response.status_code == 200, response.text
+            stored = UsageEventOut.model_validate(response.json()["data"][0])
+            assert stored.token_usage_source.root == source
 
 
 def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):

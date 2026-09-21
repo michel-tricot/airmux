@@ -892,6 +892,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
+  /api/v1/instance/organizations/summary:
+    get:
+      tags:
+      - Instance Organizations
+      summary: Get Org Summary
+      description: 'Count all organizations on the instance, independent of collection pagination.
+
+
+        Required permission: `organizations.read`.'
+      operationId: get_org_summary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgSummaryOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
   /api/v1/instance/data-planes:
     get:
       tags:
@@ -4608,6 +4642,7 @@ components:
             $ref: '#/components/schemas/BundleManifestEntry'
           type: array
           title: Bundles
+      additionalProperties: false
       type: object
       required:
       - bundles
@@ -4623,6 +4658,7 @@ components:
           type: string
           format: uuid
           title: Bundle Id
+      additionalProperties: false
       type: object
       required:
       - org_id
@@ -4660,6 +4696,7 @@ components:
             $ref: '#/components/schemas/PolicyEntry'
           type: array
           title: Policies
+      additionalProperties: false
       type: object
       required:
       - bundle_id
@@ -4687,6 +4724,8 @@ components:
             $ref: '#/components/schemas/CredentialEntry'
           type: array
           title: Credentials
+          default: []
+      additionalProperties: false
       type: object
       required:
       - providers
@@ -4896,6 +4935,7 @@ components:
         version:
           type: integer
           title: Version
+      additionalProperties: false
       type: object
       required:
       - ref
@@ -5144,6 +5184,11 @@ components:
           type: 'null'
           title: Credential Scope
           description: No provider credential scope was selected before denial
+        token_usage_source:
+          type: string
+          const: not_applicable
+          title: Token Usage Source
+          description: No upstream token usage for a request denied before routing
       additionalProperties: false
       type: object
       required:
@@ -5164,6 +5209,7 @@ components:
       - max_output_tokens
       - latency_ms
       - stream
+      - token_usage_source
       title: DeniedUsageEventV1
     DenyRequest:
       properties:
@@ -5422,6 +5468,14 @@ components:
       required:
       - data
       title: Envelope[OrgServiceAccountCreatedOut]
+    Envelope_OrgSummaryOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgSummaryOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgSummaryOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -5830,12 +5884,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -5847,7 +5895,6 @@ components:
       - prefix
       - created_at
       - updated_at
-      - deleted_at
       title: InferenceKeyOut
     InferenceKeyOwnerOut:
       properties:
@@ -6037,6 +6084,7 @@ components:
             format: date-time
           - type: 'null'
           title: Expires At
+      additionalProperties: false
       type: object
       required:
       - key_id
@@ -6130,12 +6178,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -6162,7 +6204,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       - token
@@ -6254,12 +6295,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -6283,7 +6318,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       title: ManagementKeyOut
@@ -6378,12 +6412,19 @@ components:
       properties:
         model_id:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Model Id
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         upstream_model:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Upstream Model
         input_price_per_mtok:
           type: string
@@ -6403,10 +6444,14 @@ components:
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
+          maximum: 100000000.0
+          minimum: 1.0
           title: Context Window
         max_output_tokens:
           anyOf:
           - type: integer
+            maximum: 100000000.0
+            minimum: 1.0
           - type: 'null'
           title: Max Output Tokens
         input_modalities:
@@ -6444,6 +6489,7 @@ components:
             - reasoning
             - structured_output
           type: array
+          maxItems: 4
           title: Capabilities
         parameter_support:
           additionalProperties:
@@ -6452,12 +6498,17 @@ components:
             - supported
             - unsupported
           type: object
+          maxProperties: 128
           title: Parameter Support
         egress_kind:
           anyOf:
           - type: string
+            maxLength: 63
+            minLength: 1
+            pattern: ^[a-z0-9][a-z0-9_]*$
           - type: 'null'
           title: Egress Kind
+      additionalProperties: false
       type: object
       required:
       - model_id
@@ -6693,12 +6744,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6718,7 +6763,6 @@ components:
       - parameter_support
       - created_at
       - updated_at
-      - deleted_at
       title: ModelOut
     MyPermissionsOut:
       properties:
@@ -6860,12 +6904,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         status:
           type: string
           enum:
@@ -6889,7 +6927,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - status
       title: OrgInvitationOut
     OrgInvitationRevokedOut:
@@ -6983,12 +7020,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6997,7 +7028,6 @@ components:
       - personal_for
       - created_at
       - updated_at
-      - deleted_at
       title: OrgOut
     OrgPolicyState:
       properties:
@@ -7055,6 +7085,17 @@ components:
       - name
       - management_key
       title: OrgServiceAccountIn
+    OrgSummaryOut:
+      properties:
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+          description: Number of organizations currently on the instance, including personal organizations
+      type: object
+      required:
+      - total
+      title: OrgSummaryOut
     OrgUpdate:
       properties:
         name:
@@ -7406,12 +7447,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7423,7 +7458,6 @@ components:
       - definition
       - created_at
       - updated_at
-      - deleted_at
       title: PolicyOut
     PolicyState:
       properties:
@@ -7612,12 +7646,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           type: string
           enum:
@@ -7641,7 +7669,6 @@ components:
       - fingerprint
       - created_at
       - updated_at
-      - deleted_at
       - scope
       title: ProviderCredentialOut
     ProviderCredentialUpdate:
@@ -7683,9 +7710,15 @@ components:
       properties:
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         kind:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_]*$
           title: Kind
         base_url:
           type: string
@@ -7697,18 +7730,21 @@ components:
           additionalProperties:
             type: string
           type: object
+          maxProperties: 256
           title: Param Aliases
         accepted_params:
           anyOf:
           - items:
               type: string
             type: array
+            maxItems: 256
           - type: 'null'
           title: Accepted Params
         params_closed:
           type: boolean
           title: Params Closed
           default: false
+      additionalProperties: false
       type: object
       required:
       - provider_id
@@ -7816,12 +7852,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7834,7 +7864,6 @@ components:
       - params_closed
       - created_at
       - updated_at
-      - deleted_at
       title: ProviderOut
     RequestLimits:
       properties:
@@ -8090,6 +8119,14 @@ components:
           - workspace
           title: Credential Scope
           description: Scope of the provider credential used for the request
+        token_usage_source:
+          type: string
+          enum:
+          - provider
+          - estimated
+          title: Token Usage Source
+          description: 'provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining
+            partial provider counts. Independent of catalog-priced cost estimates'
       additionalProperties: false
       type: object
       required:
@@ -8114,6 +8151,7 @@ components:
       - stream
       - credential_id
       - credential_scope
+      - token_usage_source
       title: RoutedUsageEventV1
     RuleDefinition-Input:
       properties:
@@ -8450,6 +8488,13 @@ components:
       additionalProperties: false
       type: object
       title: TaxonomySpec
+    TokenUsageSource:
+      type: string
+      enum:
+      - provider
+      - estimated
+      - not_applicable
+      title: TokenUsageSource
     UsageEventOut:
       properties:
         event_id:
@@ -8507,6 +8552,10 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        token_usage_source:
+          $ref: '#/components/schemas/TokenUsageSource'
+          description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
+            for denials; independent of cost estimates'
         max_output_tokens:
           anyOf:
           - type: integer
@@ -8578,6 +8627,7 @@ components:
       - bundle_id
       - input_tokens
       - output_tokens
+      - token_usage_source
       - max_output_tokens
       - cost_usd
       - cost_input_usd
@@ -8624,12 +8674,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         orgs:
           items:
             type: string
@@ -8646,7 +8690,6 @@ components:
       - managing_org_id
       - created_at
       - updated_at
-      - deleted_at
       - orgs
       title: UserOut
     ValidationError:
@@ -8786,12 +8829,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -8800,7 +8837,6 @@ components:
       - slug
       - created_at
       - updated_at
-      - deleted_at
       title: WorkspaceOut
     WorkspaceRole:
       type: string

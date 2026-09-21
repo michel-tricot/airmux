@@ -14,6 +14,7 @@ without waiting for local persistence. SQLite deployments export durable events 
 | `event_id` | Unique event ID for one attempt |
 | `model_id`, `provider_id` | Route used for the attempt |
 | `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
+| `token_usage_source` | `provider`, `estimated`, or `not_applicable` for a denial before routing |
 | `cache_read_tokens`, `cache_write_tokens` | Cache traffic included in input tokens |
 | `cost_usd` | Cost derived from catalog rates and token counts |
 | `latency_ms` | Attempt latency observed by the gateway |
@@ -21,7 +22,25 @@ without waiting for local persistence. SQLite deployments export durable events 
 | `credential_id`, `credential_scope` | Credential metadata without the secret value |
 | `bundle_id` | Configuration version that governed the request |
 
-Costs use the prices stored in the catalog at request time. When complete provider usage is unavailable, airmux marks the event's usage as estimated.
+`token_usage_source` describes how the gateway obtained the token counts:
+
+- `provider`: the adapter accepted upstream usage counts without gateway estimation
+- `estimated`: usage was absent or the adapter identified it as incomplete, so the gateway estimated missing counts from the request and observed response content
+- `not_applicable`: the request was denied before routing, with zero token counts and cost
+
+The source applies to the whole event. An `estimated` event can retain partial provider counts, such as Anthropic input
+and cache counts received before a stream disconnect, while estimating output. It does not identify the source of each
+individual count. Cache counts are retained when available and are never estimated. A `provider` source does not promise
+that the request finished successfully or that the provider reported every usage detail; check `status` as well.
+
+Adapters determine whether usage is usable. OpenAI Chat Completions and Anthropic currently treat an all-zero usage
+object as absent; OpenAI Responses accepts explicit zero counts as provider usage. Estimates cover observable content
+and do not establish how many tokens a provider processed after a timeout or disconnect.
+
+All `cost_*_usd` fields are estimates using catalog prices at request time, including when `token_usage_source` is
+`provider`. Token-count provenance does not make the calculated cost a provider invoice amount. The source is preserved
+in local event files, durable export, management API responses, and generated clients. Console activity lists and CLI
+event tables show the token source; console costs are labeled separately as estimates.
 
 ## Inspect usage
 
@@ -32,6 +51,22 @@ airmux events tail --interval 2 --keep 30
 
 The console shows workspace usage and instance or organization activity where the current principal has permission. The
 management API supports opaque cursor pagination.
+
+The workspace overview counts **attempt events**. One caller request has one `request_id`, and credential or model
+fallback can produce several attempt events with that ID. Failed, cancelled, and denied events count too, including
+denials before an upstream call.
+
+Attempt counts, input and output tokens, spend, and the top five models all use the same window: up to the latest 200
+events recorded for the workspace, ordered by descending event ID. Recent Activity shows the first eight events from
+that window. Per-model attempt counts use the model recorded on each event. These are event-window totals, with no
+fixed time interval; a request's other attempts can fall outside the window or arrive later. The overview refreshes
+every three seconds and does not load older pages to calculate its metrics.
+
+The instance overview's organization total counts every organization currently stored on the instance, including
+personal organizations. Deleted organizations no longer count. The total comes from
+`GET /api/v1/instance/organizations/summary`, independently of collection pagination or previously loaded console pages.
+It requires instance-scoped `organizations.read` permission and returns `{"data":{"total":51}}` for an instance with
+51 organizations.
 
 ## Gateway health
 

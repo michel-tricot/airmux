@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def _bundle(*, providers=(PROVIDER,), models=(MODEL,), credentials=(), keys=()):
-    return make_bundle(catalog=Catalog(providers=list(providers), models=list(models), credentials=list(credentials)), keys=keys, org=ORG)
+    return make_bundle(catalog=Catalog(providers=tuple(providers), models=tuple(models), credentials=tuple(credentials)), keys=keys, org=ORG)
 
 
 @pytest.mark.parametrize(
@@ -57,3 +57,10 @@ def test_snapshot_indexes_are_immutable():
 
     with pytest.raises(TypeError):
         mutable_index["other"] = MODEL
+
+
+def test_compiled_profile_aliases_are_immutable():
+    snapshot = BundleSnapshot.from_bundle(_bundle())
+    aliases = cast("MutableMapping[str, str]", snapshot.profile_index[PROVIDER.provider_id].respelled)
+    with pytest.raises(TypeError):
+        aliases["max_tokens"] = "max_output_tokens"

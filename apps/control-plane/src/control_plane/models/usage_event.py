@@ -5,11 +5,11 @@ from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Column, Index, Numeric, String
+from sqlalchemy import CheckConstraint, Column, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
-from contract import CredentialScope, UsageStatus, UsdAmount
+from contract import CredentialScope, TokenUsageSource, UsageStatus, UsdAmount
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
@@ -20,6 +20,11 @@ from control_plane.models.common.wire import RecordOut
 
 class UsageEvent(Record, table=True):
     __table_args__: ClassVar = (
+        CheckConstraint(
+            "(status = 'denied' AND token_usage_source = 'not_applicable') OR "
+            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
+            name="usage_event_token_usage_source_valid",
+        ),
         Index("usage_event_org_occurred_event_idx", "org_id", "occurred_at", "event_id"),
         Index("usage_event_org_workspace_occurred_event_idx", "org_id", "workspace_id", "occurred_at", "event_id"),
         Index("usage_event_org_event_idx", "org_id", "event_id"),
@@ -40,6 +45,7 @@ class UsageEvent(Record, table=True):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    token_usage_source: TokenUsageSource = Field(sa_type=String)
     max_output_tokens: int | None = None
     cost_usd: UsdAmount = Field(sa_column=Column(Numeric(28, 12), nullable=False))
     cost_input_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
@@ -80,6 +86,10 @@ class UsageEventOut(RecordOut[UsageEvent]):
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    token_usage_source: TokenUsageSource = Field(
+        description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; "
+        "independent of cost estimates"
+    )
     max_output_tokens: int | None
     cost_usd: UsdAmount
     cost_input_usd: UsdAmount

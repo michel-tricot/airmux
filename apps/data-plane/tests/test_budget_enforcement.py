@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 
-import httpx
+import httpx2
 import pytest
 from conftest import ORG, WORKSPACE, make_bundle, make_key
 
@@ -169,7 +169,7 @@ def test_uninitialized_budget_state_allows_matching_requests():
 def test_no_budget_config_builds_no_budget_backend():
     metrics = DataPlaneMetrics()
     bundles = BundleHolder(metrics)
-    client = httpx.AsyncClient()
+    client = httpx2.AsyncClient()
     try:
         backend = build_budget_backend(NoBudgetConfig(), bundles, client, metrics)
         assert isinstance(backend, NoBudgetBackend)
@@ -181,7 +181,7 @@ def test_no_budget_config_builds_no_budget_backend():
 def test_control_plane_budget_backend_uses_its_own_configuration():
     metrics = DataPlaneMetrics()
     bundles = BundleHolder(metrics)
-    client = httpx.AsyncClient()
+    client = httpx2.AsyncClient()
     config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
     try:
         backend = build_budget_backend(config, bundles, client, metrics)
@@ -210,7 +210,7 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
         exhausted_buckets=(SharedBudgetBucket(),),
     )
     payload = PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),))
-    response = httpx.Response(200, json={"data": payload.model_dump(mode="json")})
+    response = httpx2.Response(200, json={"data": payload.model_dump(mode="json")})
 
     def respond(request):
         assert PolicyStateRequest.model_validate_json(request.content).org_ids == (ORG,)
@@ -236,12 +236,12 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
     bundles.swap(BundleSet.from_bundles((make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}),)), "test")
     holder = BudgetStateHolder()
     try:
-        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        async with httpx2.AsyncClient(transport=httpx2.MockTransport(respond)) as client:
             poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), bundles, holder, client, metrics)
             await poller.once()
-            for failed_response in (httpx.Response(503), httpx.Response(200, json={"data": {"computed_at": now.isoformat(), "organizations": []}})):
+            for failed_response in (httpx2.Response(503), httpx2.Response(200, json={"data": {"computed_at": now.isoformat(), "organizations": []}})):
                 response = failed_response
-                with pytest.raises((httpx.HTTPStatusError, ValueError)):
+                with pytest.raises((httpx2.HTTPStatusError, ValueError)):
                     await poller.once()
                 request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
                 snapshot = bundles.current.snapshots[ORG]

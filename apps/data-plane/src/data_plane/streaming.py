@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import anyio
-import httpx
+import httpx2
 from starlette.responses import Response, StreamingResponse
 
 from data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
@@ -34,7 +34,7 @@ class StreamSession:
     request: CanonicalRequest
     adjustments: tuple[CanonicalAdjustment, ...]
     reservation: OutboxReservation
-    http_client: httpx.AsyncClient
+    http_client: httpx2.AsyncClient
     metrics: DataPlaneMetrics
     egress_kind: str
     attempt_started_at: float
@@ -57,7 +57,7 @@ class _StreamResponse(StreamingResponse):
     def __init__(
         self,
         session: StreamSession,
-        response: httpx.Response,
+        response: httpx2.Response,
         handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
     ) -> None:
@@ -93,7 +93,7 @@ class _StreamResponse(StreamingResponse):
             for frame in self._renderer.closing(final, list(self._session.adjustments)):
                 yield frame
             self._record(usage_event(self._session.ctx, final, status="ok", request=self._session.request), "success")
-        except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as error:
+        except (UpstreamProtocolError, UpstreamStreamError, httpx2.HTTPError) as error:
             for frame in self._renderer.error(self._session.adapter.map_error(error)):
                 yield frame
             self._record(

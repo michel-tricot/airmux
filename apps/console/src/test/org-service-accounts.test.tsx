@@ -46,7 +46,6 @@ describe('organization service accounts', () => {
           managing_org_id: ORG.id,
           created_at: now,
           updated_at: now,
-          deleted_at: null,
           orgs: [ORG.id],
         };
         members = [
@@ -77,7 +76,6 @@ describe('organization service accounts', () => {
               revoked_at: null,
               created_at: now,
               updated_at: now,
-              deleted_at: null,
               scope: { level: 'org', org_id: ORG.id, workspace_id: null },
               status: 'active',
               token: 'sk-cp-show-once-secret',
@@ -106,7 +104,6 @@ describe('organization service accounts', () => {
             revoked_at: null,
             created_at: now,
             updated_at: now,
-            deleted_at: null,
             scope: { level: 'org', org_id: ORG.id, workspace_id: null },
             status: 'active',
             token: 'sk-cp-replacement-secret',

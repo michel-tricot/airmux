@@ -75,6 +75,7 @@ def _usage_event(metered, status, occurred_at):
         "provider_id": "openai",
         "bundle_id": str(uuid7()),
         "input_tokens": 1,
+        "token_usage_source": "provider",
         "output_tokens": 1,
         "max_output_tokens": 128,
         "cost_usd": "0.0",
@@ -350,7 +351,7 @@ def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
         org = cp.headers(org_id)
         created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
         c.patch(_credential_path(created), json={"enabled": False}, headers=org)
-        assert _latest_bundle(c, org).catalog.credentials == []
+        assert _latest_bundle(c, org).catalog.credentials == ()
 
 
 def test_a_rejected_body_does_not_echo_the_key(tmp_path):

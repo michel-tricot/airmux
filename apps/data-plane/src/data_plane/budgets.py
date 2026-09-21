@@ -7,7 +7,7 @@ from itertools import batched, groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING, override
 
-import httpx
+import httpx2
 from pydantic import ValidationError
 
 from contract.budgets import BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
@@ -141,7 +141,7 @@ class BudgetStatePoller:
         control_plane: ControlPlaneLink,
         bundles: BundleHolder,
         budgets: BudgetStateHolder,
-        client: httpx.AsyncClient,
+        client: httpx2.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._metrics = metrics
@@ -177,7 +177,7 @@ class BudgetStatePoller:
         return state
 
     async def run(self, poll_interval_s: float = 5.0) -> None:
-        await run_periodic(self.once, poll_interval_s, (httpx.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
+        await run_periodic(self.once, poll_interval_s, (httpx2.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
 
 
 class NoBudgetBackend:
@@ -193,7 +193,7 @@ class ControlPlaneBudgetBackend:
         self,
         config: ControlPlaneBudgetConfig,
         bundles: BundleHolder,
-        client: httpx.AsyncClient,
+        client: httpx2.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._config = config
@@ -224,7 +224,7 @@ BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
 def build_budget_backend(
     config: BudgetConfig,
     bundles: BundleHolder,
-    client: httpx.AsyncClient,
+    client: httpx2.AsyncClient,
     metrics: DataPlaneMetrics,
 ) -> BudgetBackend:
     if isinstance(config, ControlPlaneBudgetConfig):

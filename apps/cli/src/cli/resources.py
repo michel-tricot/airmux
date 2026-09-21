@@ -136,6 +136,7 @@ EVENT_COLS = [
     Col("status", "Status", style="yellow"),
     Col("input_tokens", "In"),
     Col("output_tokens", "Out"),
+    Col("token_usage_source", "Token source"),
     Col("cache_read_tokens", "Cached", fmt=lambda v: str(v) if v else ""),
     Col("cost_input_usd", "$ in", fmt=_money),
     Col("cost_output_usd", "$ out", fmt=_money),

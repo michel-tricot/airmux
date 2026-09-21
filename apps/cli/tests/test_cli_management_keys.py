@@ -40,7 +40,6 @@ class Client:
             revoked_at=None,
             created_at=now,
             updated_at=now,
-            deleted_at=None,
             scope=Scope.model_validate({"level": "instance"}),
             status="active",
             token="shown-once",

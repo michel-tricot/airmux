@@ -22,7 +22,6 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
     },
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
 }
 
@@ -253,7 +252,6 @@ it('shows workspace, principal, and key policies when inspecting an inference ke
     revoked: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   };
   const policies: Api.PolicyOut[] = [
     policy('workspace', 'Workspace restriction', 0),

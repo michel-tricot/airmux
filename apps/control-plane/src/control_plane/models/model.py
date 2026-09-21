@@ -52,7 +52,6 @@ class ModelOut(RecordOut[Model]):
     parameter_support: dict[str, ParameterSupport]
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
 
 
 class ModelIn(ModelSpec, RequestModel):

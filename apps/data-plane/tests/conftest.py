@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Literal
 from uuid import UUID, uuid4
 
 import httpx
+import httpx2
 import pytest
 import respx
+import respx.mocks
 
 from airmux_runtime.secrets import Secret
 from contract import (
@@ -40,6 +42,11 @@ if TYPE_CHECKING:
 
     from starlette.testclient import TestClient
     from starlette.types import ASGIApp
+
+
+@pytest.fixture(autouse=True)
+def use_httpcore2_respx(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(respx.mocks, "DEFAULT_MOCKER", "httpcore2")
 
 
 class GatewayTransport(httpx.BaseTransport):
@@ -74,9 +81,9 @@ MODEL = ModelEntry(
     cache_write_price_per_mtok="1.25",
     context_window=128000,
     max_output_tokens=4096,
-    input_modalities=["text", "image", "pdf"],
-    output_modalities=["text"],
-    capabilities=["streaming", "tools", "reasoning", "structured_output"],
+    input_modalities=("text", "image", "pdf"),
+    output_modalities=("text",),
+    capabilities=("streaming", "tools", "reasoning", "structured_output"),
 )
 
 
@@ -103,9 +110,9 @@ def make_bundle(keys=(), catalog=None, org=ORG):
         bundle_id=uuid4(),
         org_id=org,
         issued_at=NOW,
-        keys=list(keys),
+        keys=tuple(keys),
         policies=(),
-        catalog=catalog or Catalog(providers=[], models=[]),
+        catalog=catalog or Catalog(providers=(), models=()),
     )
 
 
@@ -123,7 +130,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
     )
 
 
-def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+def make_outbox(tmp_path, http_client: httpx2.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         SqliteOutboxConfig(
             control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token"),
@@ -214,7 +221,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     file is test_config.py's job.
     """
     caller_token, entry = make_key()
-    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    catalog = Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,))
     bundle = make_bundle(keys=[entry], catalog=catalog)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token")
@@ -237,6 +244,6 @@ def dp_app(booted: BootedApp) -> ASGIApp:
 
 
 @pytest.fixture
-async def http_client() -> AsyncIterator[httpx.AsyncClient]:
-    async with httpx.AsyncClient() as client:
+async def http_client() -> AsyncIterator[httpx2.AsyncClient]:
+    async with httpx2.AsyncClient() as client:
         yield client

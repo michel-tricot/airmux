@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-import httpx
+import httpx2
 from pydantic import BaseModel
 
 from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderErrorCode
@@ -200,9 +200,9 @@ class EgressAdapter[StateT: StreamState](ABC):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.invalid_upstream_response, message="invalid upstream response")
         elif isinstance(error, UpstreamStreamError):
             rendered = self._provider_error(502, ProviderDiagnostic(code=error.code, message=error.message))
-        elif isinstance(error, httpx.TimeoutException):
+        elif isinstance(error, httpx2.TimeoutException):
             rendered = CanonicalError(status=504, code=GatewayErrorCode.upstream_timeout, message="upstream request timed out")
-        elif isinstance(error, httpx.ConnectError):
+        elif isinstance(error, httpx2.ConnectError):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_unreachable, message="upstream service is unreachable")
         else:
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_error, message="upstream request failed")

@@ -36,6 +36,7 @@ def test_client_disconnect_records_partial_usage_and_other_requests_still_comple
     assert cancelled.stream is True
     assert cancelled.input_tokens > 0
     assert cancelled.output_tokens > 0
+    assert cancelled.token_usage_source == "estimated"
     release.set()
     assert gateway.request(dialect, model="model-b").status_code == 200
     assert [event.status for event in gateway.events(2)] == ["cancelled", "ok"]
@@ -52,6 +53,7 @@ def test_usage_is_estimated_when_absent_and_appended_across_restart(gateway: Gat
     (first,) = gateway.events(1)
     assert first.input_tokens > 0
     assert first.output_tokens > 0
+    assert first.token_usage_source == ("estimated" if usage is None else "provider")
     gateway.stop()
     gateway.launch()
     eventually(gateway.ready)
@@ -61,6 +63,7 @@ def test_usage_is_estimated_when_absent_and_appended_across_restart(gateway: Gat
     assert original.event_id != second.event_id
     assert original.request_id != second.request_id
     assert original.bundle_id == second.bundle_id
+    assert second.token_usage_source == first.token_usage_source
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)

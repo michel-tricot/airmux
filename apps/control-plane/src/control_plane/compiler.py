@@ -81,13 +81,13 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
         org_id=org_id,
         issued_at=now,
         policies=tuple(policy.entry() for policy in policies),
-        keys=[
-            *[
+        keys=(
+            *(
                 KeyEntry(key_id=str(key.id), org_id=key.org_id, workspace_id=key.workspace_id, user_id=key.user_id, token_hash=key.token_hash)
                 for key in key_rows
                 if not key.revoked
-            ],
-            *[
+            ),
+            *(
                 KeyEntry(
                     key_id=str(playground_session.id),
                     org_id=playground_session.org_id,
@@ -98,10 +98,10 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                 )
                 for playground_session in playground_sessions
                 if playground_session.active(now)
-            ],
-        ],
+            ),
+        ),
         catalog=Catalog(
-            providers=[
+            providers=tuple(
                 ProviderEntry.model_validate(
                     {
                         "provider_id": r.name,
@@ -113,9 +113,9 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     }
                 )
                 for r in provider_rows
-            ],
-            credentials=[CredentialEntry(ref=r.secret_ref(), priority=r.priority, version=r.version) for r in credential_rows if r.enabled],
-            models=[
+            ),
+            credentials=tuple(CredentialEntry(ref=r.secret_ref(), priority=r.priority, version=r.version) for r in credential_rows if r.enabled),
+            models=tuple(
                 ModelEntry(
                     model_id=r.name,
                     provider_id=provider_names[r.provider_id],
@@ -127,12 +127,12 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     cache_write_price_per_mtok=r.cache_write_price_per_mtok,
                     context_window=r.context_window,
                     max_output_tokens=r.max_output_tokens,
-                    input_modalities=r.input_modalities,
-                    output_modalities=r.output_modalities,
-                    capabilities=r.capabilities,
+                    input_modalities=tuple(r.input_modalities),
+                    output_modalities=tuple(r.output_modalities),
+                    capabilities=tuple(r.capabilities),
                     parameter_support=r.parameter_support,
                 )
                 for r in model_rows
-            ],
+            ),
         ),
     )

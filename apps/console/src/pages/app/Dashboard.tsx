@@ -6,6 +6,7 @@ import { TerminalSquare, FolderGit2, Activity } from 'lucide-react';
 import { Link } from 'wouter';
 import { formatDate } from '@/lib/format';
 import { DataTable } from '@/components/shared/data-table';
+import { TokenUsageSource } from '@/components/shared/token-usage-source';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { telemetryAccess } from '@/features/telemetry/policy';
@@ -106,8 +107,13 @@ export default function AppDashboard() {
                 cell: (event) => event.input_tokens + event.output_tokens,
               },
               {
+                key: 'token_source',
+                header: 'Token source',
+                cell: (event) => <TokenUsageSource source={event.token_usage_source} />,
+              },
+              {
                 key: 'cost',
-                header: 'Cost',
+                header: 'Est. cost',
                 headClassName: 'text-right',
                 cellClassName: 'text-right font-mono text-sm',
                 cell: (event) => formatUsd(parseUsdAmount(event.cost_usd)),

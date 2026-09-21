@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 
 from contract import HeartbeatV1
 from data_plane.tasks import run_periodic
@@ -27,7 +27,7 @@ class Heartbeat:
         interval_s: float,
         holder: BundleHolder,
         instance_id: UUID,
-        http_client: httpx.AsyncClient,
+        http_client: httpx2.AsyncClient,
     ) -> None:
         self._control_plane = control_plane
         self._interval_s = interval_s
@@ -53,6 +53,6 @@ class Heartbeat:
         await run_periodic(
             self.once,
             self._interval_s,
-            (httpx.HTTPError, OSError),
+            (httpx2.HTTPError, OSError),
             "heartbeat",
         )

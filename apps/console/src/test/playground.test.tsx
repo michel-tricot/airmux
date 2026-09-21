@@ -8,7 +8,11 @@ import { ORG, WORKSPACES, paged, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('playground', () => {
-  it('labels playground sessions in recent activity without exposing their ids', async () => {
+  it.each([
+    ['provider', 'Provider reported'],
+    ['estimated', 'Estimated'],
+    ['not_applicable', 'Not applicable'],
+  ] as const)('labels playground activity and %s token usage', async (source, label) => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
     server.use(
       http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
@@ -27,6 +31,7 @@ describe('playground', () => {
             provider_id: 'provider-1',
             bundle_id: '01941f29-7c00-7000-8000-000000000004',
             input_tokens: 12,
+            token_usage_source: source,
             output_tokens: 4,
             max_output_tokens: 128,
             cost_usd: '0.001',
@@ -49,7 +54,10 @@ describe('playground', () => {
     const activity = await screen.findByRole('row', { name: /openai\/gpt-test Playground/ });
 
     expect(within(activity).getByText('Playground')).toBeInTheDocument();
+    expect(within(activity).getByText(label)).toBeInTheDocument();
     expect(within(activity).queryByText(playgroundSessionId)).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/includes estimated counts/)).toHaveLength(source === 'estimated' ? 2 : 0);
+    expect(screen.queryAllByText('16 (estimated)')).toHaveLength(source === 'estimated' ? 1 : 0);
   });
 
   it('starts a session automatically and streams a response through the inference prefix', async () => {
@@ -72,7 +80,6 @@ describe('playground', () => {
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     let requestedWith = '';
     let requestBody: Record<string, unknown> = {};
@@ -182,7 +189,6 @@ describe('playground', () => {
       capabilities: ['streaming'],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     server.use(
       http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
@@ -236,7 +242,6 @@ describe('playground', () => {
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
       {
         egress_kind: null,
@@ -256,7 +261,6 @@ describe('playground', () => {
         capabilities: ['streaming'],
         created_at: now,
         updated_at: now,
-        deleted_at: null,
       } satisfies Api.ModelOut,
     ];
     server.use(
@@ -298,7 +302,6 @@ describe('playground', () => {
       parameter_support: { temperature: 'unsupported' },
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     } satisfies Api.ModelOut;
     let requestBody: Record<string, unknown> = {};
     server.use(

@@ -123,7 +123,7 @@ def test_supplied_pool_key_bootstraps_authenticated_bundle_access(tmp_path):
         response = client.get("/api/v1/bundles/manifest", headers={"authorization": f"Bearer {token}"})
 
     assert response.status_code == 200, response.text
-    assert BundleManifest.model_validate(response.json()["data"]) == BundleManifest(bundles=[])
+    assert BundleManifest.model_validate(response.json()["data"]) == BundleManifest(bundles=())
 
     async def seeded() -> tuple[list[User], list[ManagementKey]]:
         return await User.find(User.service_account == True), await ManagementKey.find()  # noqa: E712 SQLModel builds SQL from this comparison

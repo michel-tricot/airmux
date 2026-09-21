@@ -235,7 +235,6 @@ class ProviderCredentialOut(RecordOut[ProviderCredential]):
     fingerprint: str
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     scope: CredentialScope
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"scope"})

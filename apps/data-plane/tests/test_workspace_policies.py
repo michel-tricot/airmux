@@ -5,6 +5,7 @@ import json
 from decimal import Decimal
 
 import httpx
+import httpx2
 import pytest
 import respx
 from conftest import (
@@ -69,7 +70,7 @@ def snapshot(policies, *, credentials=None, models=None, provider=PROVIDER):
     _, key = make_key()
     bundle = make_bundle(
         keys=[key],
-        catalog=Catalog(providers=[provider], models=models or [MODEL], credentials=credentials or [make_credential(org=None)]),
+        catalog=Catalog(providers=(provider,), models=tuple(models or [MODEL]), credentials=tuple(credentials or [make_credential(org=None)])),
     )
     return key, BundleSnapshot.from_bundle(bundle.model_copy(update={"policies": tuple(policies)}))
 
@@ -347,7 +348,14 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
     )
     if restricted:
         policies.append(policy({"kind": "models", "names": [MODEL.model_id]}, match={"kind": "request", "models": [MODEL.model_id]}, target=target))
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(
+        keys=[key],
+        catalog=Catalog(
+            providers=(PROVIDER,),
+            models=(MODEL, backup),
+            credentials=(PLATFORM_CREDENTIAL,),
+        ),
+    )
     write_cached_bundles(
         tmp_path,
         CachedBundles(bundles=[bundle.model_copy(update={"policies": tuple(policies)})]),
@@ -379,7 +387,14 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     api_key, key = make_key()
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, backup], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(
+        keys=[key],
+        catalog=Catalog(
+            providers=(PROVIDER,),
+            models=(MODEL, backup),
+            credentials=(PLATFORM_CREDENTIAL,),
+        ),
+    )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
     outbox = DevNullOutbox(DataPlaneMetrics())
     reservations = iter((outbox.reserve(),))
@@ -426,7 +441,14 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
     entry = policy(
         {"kind": "fallback", "models": ["backup", "last"], "on": ["upstream_unavailable", "timeout"], "max_attempts": 2, "timeout_ms": 100}
     )
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL, *backups], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(
+        keys=[key],
+        catalog=Catalog(
+            providers=(PROVIDER,),
+            models=(MODEL, *backups),
+            credentials=(PLATFORM_CREDENTIAL,),
+        ),
+    )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (entry,)})]))
 
     async def upstream(incoming):
@@ -436,10 +458,10 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
             return httpx.Response(200, json=TEXT_NONSTREAM)
         if failure == "read_error":
             message = "connection reset"
-            raise httpx.ReadError(message, request=incoming)
+            raise httpx2.ReadError(message, request=incoming)
         if failure == "timeout":
             message = "timed out"
-            raise httpx.ReadTimeout(message, request=incoming)
+            raise httpx2.ReadTimeout(message, request=incoming)
         if failure == "midstream":
             return httpx.Response(200, content=TEXT_LOG.removesuffix(b"data: [DONE]\n\n"))
         if failure == "deadline":
@@ -480,7 +502,7 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
 @respx.mock
 def test_repeated_request_preserves_rate_limited_status_during_credential_cooldown(dp_app, tmp_path):
     api_key, key = make_key()
-    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL]))
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,)))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"message": "rate limited"}}))
     mock_control_plane()
