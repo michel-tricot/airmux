@@ -63,7 +63,7 @@ class ToolCallDraft:
 
     id: str = ""
     name: str = ""
-    arguments: str = ""
+    arguments: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -103,7 +103,7 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
             draft.id = tc.id
         if tc.function.name:
             draft.name = tc.function.name
-        draft.arguments += tc.function.arguments
+        draft.arguments.append(tc.function.arguments)
         deltas.append(CanonicalToolCallDelta(index=tc.index, id=tc.id, name=tc.function.name or None, arguments=tc.function.arguments))
     return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
@@ -195,7 +195,9 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             parts.append(CanonicalReasoningPart(text=reasoning))
         if text := "".join(state.text):
             parts.append(CanonicalTextPart(text=text))
-        parts.extend(CanonicalToolCallPart(id=draft.id, name=draft.name, arguments=draft.arguments) for _, draft in sorted(state.tool_drafts.items()))
+        parts.extend(
+            CanonicalToolCallPart(id=draft.id, name=draft.name, arguments="".join(draft.arguments)) for _, draft in sorted(state.tool_drafts.items())
+        )
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,

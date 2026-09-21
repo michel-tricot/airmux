@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -174,6 +175,57 @@ async def test_forget_drops_a_value_upstream_rejected():
     await store.put(entry.ref, Secret("fresh"))
     resolver.forget(entry)
     assert await value_of(resolver, entry) == "fresh"
+
+
+@pytest.mark.parametrize("missing", [False, True])
+async def test_expiration_is_enforced_between_cache_sweeps(monkeypatch, missing):
+    now = 100.0
+    monkeypatch.setattr("data_plane.credentials.time", SimpleNamespace(monotonic=lambda: now))
+    store = MemoryStoreConfig().build()
+    entry = make_credential()
+    if not missing:
+        await store.put(entry.ref, Secret("old"))
+    metrics = DataPlaneMetrics()
+    resolver = CredentialResolver(store, metrics, ttl_s=0.25, negative_ttl_s=0.25)
+    try:
+        initial = await resolver.fetch(entry)
+        assert (initial is None) is missing
+        await store.put(entry.ref, Secret("new"))
+        now += 0.2
+        assert await resolver.fetch(entry) is initial
+        now += 0.05
+        assert await value_of(resolver, entry) == "new"
+        resolver.forget(entry)
+        await store.put(entry.ref, Secret("rotated"))
+        assert await value_of(resolver, entry) == "rotated"
+    finally:
+        metrics.shutdown()
+
+
+async def test_cache_sweeps_retire_expired_credentials_and_cooldowns(monkeypatch):
+    now = 100.0
+    monkeypatch.setattr("data_plane.credentials.time", SimpleNamespace(monotonic=lambda: now))
+    store = MemoryStoreConfig().build()
+    entry = make_credential()
+    other = make_credential(name="other")
+    await store.put(entry.ref, Secret("cached"))
+    metrics = DataPlaneMetrics()
+    resolver = CredentialResolver(store, metrics, ttl_s=0.25)
+    try:
+        await resolver.fetch(entry)
+        resolver.rate_limit(entry)
+        assert resolver.available((entry, other)) == (other,)
+        now = 129.9
+        assert resolver.available((entry, other)) == (other,)
+        now = 130.0
+        assert resolver.available((entry, other)) == (entry, other)
+        now = 131.0
+        assert resolver.available((entry, other)) == (entry, other)
+        assert not resolver._values
+        assert not resolver._locks
+        assert not resolver._cooldowns
+    finally:
+        metrics.shutdown()
 
 
 BYOK_RESPONSE = {
