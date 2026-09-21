@@ -5,14 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from pydantic_core import to_json
-from starlette.responses import Response
-
 from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalGatewayInfo, CanonicalReasoningConfig, CanonicalRequest
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
+    from starlette.responses import Response
+
     from data_plane.canonical import CanonicalError, CanonicalResponse
     from data_plane.egress.base import Ctx
 
@@ -175,12 +175,10 @@ class AnthropicIngress(IngressAdapter):
             usage=fmt.usage_out(final.usage),
             gateway=final.gateway,
         )
-        return Response(to_json(message, by_alias=False, exclude_none=True), media_type="application/json")
+        return JSONResponse(message, exclude_none=True)
 
     def render_error(self, err: CanonicalError) -> Response:
-        return Response(
-            to_json({"type": "error", "error": {"type": err.code, "message": err.message}}), status_code=err.status, media_type="application/json"
-        )
+        return JSONResponse({"type": "error", "error": {"type": err.code, "message": err.message}}, status_code=err.status)
 
     def new_stream(self) -> AnthropicResponseStream:
         return AnthropicResponseStream()

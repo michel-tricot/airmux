@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 import httpx2
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger, log_event
@@ -23,6 +22,7 @@ from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics, metrics_endpoint
 from data_plane.outbox import build_outbox
 from data_plane.proxy import complete
+from data_plane.responses import JSONResponse
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:

@@ -6,7 +6,6 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from pydantic_core import to_json
-from starlette.responses import Response
 
 from data_plane.canonical import (
     CanonicalAdjustment,
@@ -18,8 +17,11 @@ from data_plane.canonical import (
 )
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
+    from starlette.responses import Response
+
     from data_plane.canonical import CanonicalError, CanonicalResponse
     from data_plane.egress.base import Ctx
 
@@ -156,10 +158,10 @@ class OpenAIChatCompletionsIngress(IngressAdapter):
         completion = fmt.ChatCompletionOut(
             id=final.id, created=int(time.time()), model=final.model, choices=[choice], usage=fmt.usage_out(final.usage), gateway=final.gateway
         )
-        return Response(to_json(completion, by_alias=False, exclude_none=True), media_type="application/json")
+        return JSONResponse(completion, exclude_none=True)
 
     def render_error(self, err: CanonicalError) -> Response:
-        return Response(to_json(_error_body(err.status, err.code, err.message)), status_code=err.status, media_type="application/json")
+        return JSONResponse(_error_body(err.status, err.code, err.message), status_code=err.status)
 
     def new_stream(self) -> OpenAIResponseStream:
         return OpenAIResponseStream()
