@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from gateway_harness import DIALECTS, FAMILIES, PROTOCOLS, eventually, request_body, stream_payloads, streamed_text
+from gateway_harness import DIALECTS, FAMILIES, PROTOCOLS, eventually, request_body, stream_payloads, streamed_text, text_of
 from upstream import DEFAULT_USAGE, TEXT, Reply
 
 if TYPE_CHECKING:
     from gateway_harness import Dialect, Gateway
-    from upstream import Family
+    from upstream import Family, ReportedUsage
 
     from contract import UsageEvent
 
@@ -287,6 +287,79 @@ def test_missing_usage_is_priced_from_estimated_tokens(gateway: Gateway, family:
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == (3, 2, 0, 0)
     assert event.token_usage_source == "estimated"
     assert_cost(event, "0.000006", "0.00001")
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.parametrize("stream", [False, True], ids=["buffered", "stream"])
+@pytest.mark.parametrize("usage", [None, "default"], ids=["estimated", "reported"])
+def test_special_token_text_preserves_usage_events(gateway: Gateway, dialect: Dialect, family: Family, stream: bool, usage: ReportedUsage):
+    text = "<|endoftext|>"
+    provider = gateway.add_provider(family)
+    provider.replies["upstream-model-a"] = Reply(text=text, usage=usage)
+    gateway.start()
+    parameters = {"input": text} if dialect == "openai_responses" else {"messages": [{"role": "user", "content": text}]}
+    response = gateway.request(dialect, body={**request_body(dialect, stream=stream), **parameters})
+
+    assert response.status_code == 200, response.text
+    assert (streamed_text(dialect, response) if stream else text_of(dialect, response)) == text
+    (event,) = gateway.events(1)
+    assert (event.status, event.stream) == ("ok", stream)
+    expected = DEFAULT_EXPECTATIONS[family] if usage is not None else MeteringExpectation((9, 7, 0, 0), "0.000018", "0.000035")
+    assert_metering(event, expected)
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("family", FAMILIES)
+@pytest.mark.parametrize(("stream", "status"), [(False, 503), (True, 503), (True, 200)], ids=["buffered_error", "stream_error", "truncated_stream"])
+def test_special_token_text_preserves_failed_usage_events(gateway: Gateway, dialect: Dialect, family: Family, stream: bool, status: int):
+    text = "<|endoftext|>"
+    provider = gateway.add_provider(family)
+    provider.replies["upstream-model-a"] = Reply(text=text, usage=None, status=status, terminal=False)
+    gateway.start()
+    parameters = {"input": text} if dialect == "openai_responses" else {"messages": [{"role": "user", "content": text}]}
+    response = gateway.request(dialect, body={**request_body(dialect, stream=stream), **parameters})
+
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert streamed_text(dialect, response) == text
+        assert "invalid_upstream_response" in response.text
+    (event,) = gateway.events(1)
+    assert (event.status, event.stream) == ("upstream_error", stream)
+    expected = MeteringExpectation((9, 7, 0, 0), "0.000018", "0.000035") if status == 200 else MeteringExpectation((9, 0, 0, 0), "0.000018", "0")
+    assert_metering(event, expected)
+
+
+@pytest.mark.parametrize("dialect", DIALECTS)
+@pytest.mark.parametrize("family", FAMILIES)
+def test_special_token_text_preserves_cancelled_usage_events(gateway: Gateway, dialect: Dialect, family: Family):
+    text = "<|endoftext|>"
+    provider = gateway.add_provider(family)
+    release = threading.Event()
+    provider.replies["upstream-model-a"] = Reply(text=text, usage=None, hold=release)
+    gateway.start()
+    parameters = {"input": text} if dialect == "openai_responses" else {"messages": [{"role": "user", "content": text}]}
+    with httpx.stream(
+        "POST",
+        gateway.url + PROTOCOLS["ingress"][dialect],
+        headers=gateway.headers(dialect),
+        json={**request_body(dialect, stream=True), **parameters},
+    ) as response:
+        assert response.status_code == 200
+        for line in response.iter_lines():
+            if line.startswith("data: ") and text in line:
+                break
+        else:
+            pytest.fail("stream ended before delivering content")
+
+    (event,) = gateway.events(1)
+    assert (event.status, event.stream) == ("cancelled", True)
+    assert_metering(event, MeteringExpectation((9, 7, 0, 0), "0.000018", "0.000035"))
+    release.set()
+    assert gateway.request(dialect, model="model-b").status_code == 200
+    _, second = gateway.events(2)
+    assert second.status == "ok"
+    assert_metering(second, DEFAULT_EXPECTATIONS[family])
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)
