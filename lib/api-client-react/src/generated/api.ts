@@ -106,9 +106,13 @@ import type {
   PasswordChangedOut,
   PlaygroundSessionEndedOut,
   PlaygroundSessionReadyOut,
+  PolicyBudgetStatus,
   PolicyCreate,
   PolicyOrder,
   PolicyOut,
+  PolicyState,
+  PolicyStateRequest,
+  PolicyStatusParams,
   PolicyUpdate,
   ProviderCredentialIn,
   ProviderCredentialOut,
@@ -5820,6 +5824,139 @@ export const useDeletePolicy = <TError = ErrorType<void | HTTPValidationError>,
       return useMutation(getDeletePolicyMutationOptions(options), queryClient);
     }
 
+export const getPolicyStatusUrl = (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status`
+}
+
+/**
+ * Required permissions: `policies.read` and `usage.read`.
+ * @summary Policy Status
+ */
+export const policyStatus = async (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: Parameters<typeof customFetch>[1]): Promise<PolicyBudgetStatus> => {
+
+  return customFetch<PolicyBudgetStatus>(getPolicyStatusUrl(orgId,workspaceRef,policyId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPolicyStatusQueryKey = (orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/${policyId}/status`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getPolicyStatusQueryOptions = <TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPolicyStatusQueryKey(orgId,workspaceRef,policyId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof policyStatus>>> = ({ signal }) => policyStatus(orgId,workspaceRef,policyId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined && policyId !== null && policyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PolicyStatusQueryResult = NonNullable<Awaited<ReturnType<typeof policyStatus>>>
+export type PolicyStatusQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params: undefined |  PolicyStatusParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof policyStatus>>,
+          TError,
+          Awaited<ReturnType<typeof policyStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof policyStatus>>,
+          TError,
+          Awaited<ReturnType<typeof policyStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Policy Status
+ */
+
+export function usePolicyStatus<TData = Awaited<ReturnType<typeof policyStatus>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    policyId: string,
+    params?: PolicyStatusParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof policyStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPolicyStatusQueryOptions(orgId,workspaceRef,policyId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListInstanceProviderCredentialsUrl = () => {
 
 
@@ -8155,6 +8292,78 @@ export const useHeartbeat = <TError = ErrorType<void | HTTPValidationError>,
         TContext
       > => {
       return useMutation(getHeartbeatMutationOptions(options), queryClient);
+    }
+
+export const getSyncPolicyStateUrl = () => {
+
+
+
+
+  return `/api/v1/policy-state/sync`
+}
+
+/**
+ * Required permission: `policy-state.sync`.
+ * @summary Sync Policy State
+ */
+export const syncPolicyState = async (policyStateRequest: PolicyStateRequest, options?: Parameters<typeof customFetch>[1]): Promise<PolicyState> => {
+
+  return customFetch<PolicyState>(getSyncPolicyStateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyStateRequest)
+  }
+);}
+
+
+
+
+
+export const getSyncPolicyStateMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext> => {
+
+const mutationKey = ['syncPolicyState'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncPolicyState>>, {data: BodyType<PolicyStateRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncPolicyState(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncPolicyStateMutationResult = NonNullable<Awaited<ReturnType<typeof syncPolicyState>>>
+    export type SyncPolicyStateMutationBody = BodyType<PolicyStateRequest>
+    export type SyncPolicyStateMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Sync Policy State
+ */
+export const useSyncPolicyState = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncPolicyState>>, TError,{data: BodyType<PolicyStateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof syncPolicyState>>,
+        TError,
+        {data: BodyType<PolicyStateRequest>},
+        TContext
+      > => {
+      return useMutation(getSyncPolicyStateMutationOptions(options), queryClient);
     }
 
 export const getGetInstanceTaxonomyUrl = () => {

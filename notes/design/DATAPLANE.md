@@ -318,8 +318,8 @@ with the required SQLite and atomic-rename semantics.
 
 ## Configuration
 
-`Config` is frozen and rejects unknown top-level fields. It contains a discriminated bundle config,
-a secret-store config, a discriminated event-outbox config, and the CLI-derived development flag.
+`Config` is frozen and rejects unknown top-level fields. It contains discriminated bundle, event-outbox,
+and budget-backend configs, a secret-store config, and the CLI-derived development flag.
 
 There is no global control-plane setting. Each component that uses the control plane owns a complete
 `ControlPlaneLink` containing its URL and management key. The bundle poller and event exporter may use
@@ -342,6 +342,11 @@ data_plane:
     kind: sqlite
     control_plane: *control_plane
     flush_interval_s: 5
+
+  budget:
+    kind: control_plane
+    control_plane: *control_plane
+    poll_interval_s: 5
 ```
 
 The anchor is YAML reuse only. Both nested configs validate their own complete link, and no equality
@@ -815,3 +820,27 @@ Before merging a data-plane change, verify:
 - Component configs contain their own required dependencies
 - Discovery needs no registry edit and rejects discriminator collisions
 - Tests assert behavior, and a real running request proves the change
+
+## Budget state
+
+The control-plane budget backend fetches current budget rules and exhaustion state through
+`/api/v1/policy-state/sync` on its own polling interval and connection. It runs independently from bundle polling
+and event export. It samples the organization IDs in the currently admitted bundle set, so polling begins without
+waiting for inference traffic. A `none` budget backend disables state polling and always accepts requests.
+`BudgetStateHolder` compiles exhausted-bucket lookups off the request path and replaces a
+per-organization snapshot at once. The existing policy index matches requests, then budget admission performs
+indexed memory lookups before each upstream attempt.
+`evaluate()` remains pure; no database driver or control-plane import enters the data plane.
+
+Missing, mismatched, or expired state allows the request because enforcement is best effort. Each fallback increments
+`airmux_data_plane_budget_state_fallbacks_total` with its reason. Usable state is enforced independently for every
+matching rule, so one unavailable rule does not disable another exhausted rule. Failed or incomplete refreshes leave
+the last complete snapshot. Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already
+in flight finish.
+
+No local spending delta is maintained. Overspend includes usage awaiting export, the next state poll, and
+in-flight attempts. There is no strict overspend bound during outages. All deployments contribute to the same history
+when they use the control-plane budget backend.
+
+The metric `airmux_data_plane_budget_state_computed_timestamp_seconds` exposes the calculation timestamp of
+the last accepted budget snapshot. It describes state age, not completeness of exporter delivery.

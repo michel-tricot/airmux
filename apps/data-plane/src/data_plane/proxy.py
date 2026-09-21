@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import httpx2
@@ -33,6 +34,7 @@ from data_plane.metrics import upstream_outcome
 from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
+from data_plane.requirements import requested_capabilities
 from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
 from data_plane.streaming import StreamSession
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
     from data_plane.http import InferenceContext
     from data_plane.ingress import IngressAdapter
     from data_plane.outbox import OutboxReservation
+    from data_plane.policies import CompiledRule
 
 
 logger = logging.getLogger("data_plane")
@@ -151,6 +154,8 @@ class RequestExecution:
             for entry in self.runtime.credentials.available(decision.candidates):
                 if attempts >= plan.max_attempts:
                     break
+                if plan.budget_rules:
+                    self._check_budgets(plan.budget_rules)
                 credential = await _resolve_credential(entry, self.runtime.credentials)
                 if credential is None:
                     continue
@@ -169,6 +174,14 @@ class RequestExecution:
         if failure is not None:
             return failure.response
         raise RequestRejectedError(502, GatewayErrorCode.credential_missing)
+
+    def _check_budgets(self, rules: tuple[CompiledRule, ...]) -> None:
+        try:
+            self.runtime.budgets.check(rules, self.key, datetime.now(UTC))
+        except RequestRejectedError:
+            with self.runtime.outbox.reserve() as reservation:
+                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
+            raise
 
     async def _attempt(
         self,
@@ -254,6 +267,9 @@ class RequestExecution:
             org_id=self.key.org_id,
             workspace_id=self.key.workspace_id,
             key_id=self.key.key_id,
+            user_id=self.key.user_id,
+            requested_model_id=self.request.model,
+            requested_capabilities=requested_capabilities(self.request),
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
             bundle_id=self.snapshot.bundle.bundle_id,

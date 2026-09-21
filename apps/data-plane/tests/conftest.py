@@ -152,6 +152,7 @@ def read_and_close_outbox(outbox: SqliteOutbox, limit: int = 10):
 
 
 def mock_control_plane() -> None:
+    respx.post(f"{CONTROL_PLANE_URL}/api/v1/policy-state/sync").mock(return_value=httpx.Response(503))
     respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest").mock(return_value=httpx.Response(503))
     respx.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat").mock(return_value=httpx.Response(200))
     respx.post(f"{CONTROL_PLANE_URL}/api/v1/events").mock(return_value=httpx.Response(503))
@@ -167,6 +168,9 @@ CTX = Ctx(
     org_id=ORG,
     workspace_id=WORKSPACE,
     key_id="k-dev",
+    user_id=ORG,
+    requested_model_id="gpt-test",
+    requested_capabilities=frozenset(),
     credential_id=uuid7(),
     credential_scope="workspace",
     bundle_id=uuid7(),

@@ -25,7 +25,7 @@ const credentialScopeOptions = [
   { value: 'platform', label: 'Platform credentials' },
 ];
 
-type TextFieldName = 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
+type TextFieldName = 'budgetAmount' | 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
 
 function TextField({
   form,
@@ -179,6 +179,54 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
       )}
       {kind === 'strict_parameters' && (
         <p className="text-sm text-muted-foreground">Rejects requests when the selected route would drop an unsupported parameter.</p>
+      )}
+      {kind === 'budget' && (
+        <>
+          <TextField form={form} name="budgetAmount" label="Budget amount (USD)" />
+          <FormField
+            control={form.control}
+            name="budgetPeriod"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget period</FormLabel>
+                <FormControl>
+                  <Dropdown
+                    aria-label="Budget period"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={[
+                      { value: 'day', label: 'Calendar day (UTC)' },
+                      { value: 'month', label: 'Calendar month (UTC)' },
+                    ]}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="budgetAggregation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget aggregation</FormLabel>
+                <FormControl>
+                  <Dropdown
+                    aria-label="Budget aggregation"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={[
+                      { value: 'shared', label: 'Shared across matching usage' },
+                      { value: 'per_key', label: 'Separate allowance per inference key' },
+                    ]}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <p className="text-sm text-muted-foreground">Includes earlier matching usage in the current period.</p>
+        </>
       )}
       {kind === 'price_limit' && (
         <>

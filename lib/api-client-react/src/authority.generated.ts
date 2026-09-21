@@ -386,6 +386,18 @@ export const operationAuthority = {
       },
     ],
   },
+  policyStatus: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.read"],
+      },
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
   listInstanceProviderCredentials: {
     checks: [
       {
@@ -575,6 +587,14 @@ export const operationAuthority = {
       {
         scope: "credential_scope",
         anyOf: ["data-planes.heartbeat"],
+      },
+    ],
+  },
+  syncPolicyState: {
+    checks: [
+      {
+        scope: "credential_scope",
+        anyOf: ["policy-state.sync"],
       },
     ],
   },

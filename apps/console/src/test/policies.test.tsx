@@ -173,6 +173,71 @@ describe('workspace policies', () => {
     expect(screen.queryByRole('button', { name: /Reorder/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create policy' })).not.toBeInTheDocument();
   });
+
+  it('shows shared spending and pages through per-key budgets', async () => {
+    const user = userEvent.setup();
+    const budgetPolicy: Api.PolicyOut = {
+      ...policy('budget', 'Spending', 0),
+      definition: {
+        target: { kind: 'workspace' },
+        rules: [
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '50', period: 'month', aggregation: 'shared' } },
+          { match: { kind: 'all_requests' }, action: { kind: 'budget', amount_usd: '10', period: 'day', aggregation: 'per_key' } },
+        ],
+      },
+    };
+    server.use(
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => enveloped([budgetPolicy])),
+      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/:policyId/status', ({ request }) => {
+        const query = new URL(request.url).searchParams;
+        const shared = query.get('rule_index') === '0';
+        const bucketId = query.get('bucket_id') ?? (query.has('after_bucket') ? 'key-b' : 'key-a');
+        const budget: Api.BudgetRuleStatus = shared
+          ? {
+              rule_index: 0,
+              aggregation: 'shared',
+              amount_usd: '50',
+              period: 'month',
+              window_start: now,
+              window_end: '2026-02-01T00:00:00Z',
+              buckets: [
+                {
+                  bucket: { kind: 'shared' },
+                  spent_usd: '70',
+                  remaining_usd: '0',
+                  exhausted: true,
+                },
+              ],
+              next_bucket: null,
+            }
+          : {
+              rule_index: 1,
+              aggregation: 'per_key',
+              amount_usd: '10',
+              period: 'day',
+              window_start: now,
+              window_end: '2026-01-02T00:00:00Z',
+              buckets: [{ bucket: { kind: 'key', key_id: bucketId }, spent_usd: '2', remaining_usd: '8', exhausted: false }],
+              next_bucket: bucketId === 'key-a' ? { kind: 'key', key_id: 'key-a' } : null,
+            };
+        return HttpResponse.json<{ data: Api.PolicyBudgetStatus }>({ data: { policy: budgetPolicy, computed_at: now, budgets: [budget] } });
+      }),
+    );
+    renderPolicies();
+    await user.click(await screen.findByRole('button', { name: 'View spending' }));
+    expect(await screen.findByText('$70')).toBeVisible();
+    expect(screen.getByText('Exhausted')).toBeVisible();
+    await user.click(screen.getByRole('combobox', { name: 'Budget rule' }));
+    await user.click(screen.getByRole('option', { name: 'Rule 2: $10 / day (per key)' }));
+    expect(await screen.findByText('Key key-a')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(await screen.findByText('Key key-b')).toBeVisible();
+    expect(screen.queryByText('Key key-a')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Bucket ID'), 'specific-key');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(await screen.findByText('Key specific-key')).toBeVisible();
+    expect(screen.queryByText('Key key-b')).not.toBeInTheDocument();
+  });
 });
 
 it('shows workspace, principal, and key policies when inspecting an inference key', async () => {

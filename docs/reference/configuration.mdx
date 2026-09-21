@@ -1,6 +1,6 @@
 ---
 title: 'Configuration reference'
-description: 'Reference Docker variables, runtime YAML sections, references, bundle sources, event outboxes, and secret stores.'
+description: 'Reference Docker variables, runtime YAML sections, references, bundle sources, event outboxes, budget backends, and secret stores.'
 ---
 
 airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
@@ -42,6 +42,10 @@ data_plane:
     kind: sqlite
     control_plane: *control_plane_link
     flush_interval_s: 5
+  budget:
+    kind: control_plane
+    control_plane: *control_plane_link
+    poll_interval_s: 5
   secrets:
     kind: file
 ```
@@ -89,6 +93,16 @@ Use it on a local POSIX filesystem. A file write failure terminates the worker i
 SQLite and file requests do not wait for local persistence. If the outbox cannot accept an event, the gateway returns
 `503 metering_capacity_exhausted` before starting that provider attempt. Graceful shutdown writes accepted events to
 local storage. `SIGKILL`, machine failure, power loss, or storage failure can lose events not yet written.
+
+## Budget backends
+
+| Kind            | Use                                                                    |
+| --------------- | ---------------------------------------------------------------------- |
+| `control_plane` | Poll policy state from a control plane using its own link and interval |
+| `none`          | Disable budget state polling; the default for standalone gateways     |
+
+Budget configuration is independent of the bundle source and event outbox. The `control_plane` backend is best effort;
+missing, mismatched, or expired state allows requests. With `budget.kind` set to `none`, budget rules always allow requests.
 
 ## Secret stores
 

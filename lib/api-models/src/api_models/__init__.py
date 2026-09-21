@@ -57,6 +57,16 @@ class AllowedProviders(BaseModel):
     names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
 
 
+class Budget(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["budget"], Field(title="Kind")]
+    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
+
+
 class BundleManifestEntry(BaseModel):
     """
     The immutable identity of one organization bundle available to a data plane.
@@ -230,6 +240,29 @@ class DeniedUsageEventV1(BaseModel):
             max_length=255,
             min_length=1,
             title="Key Id",
+        ),
+    ]
+    user_id: Annotated[
+        UUID,
+        Field(
+            description="Principal that owned the inference key when the request was made",
+            title="User Id",
+        ),
+    ]
+    requested_model_id: Annotated[
+        str,
+        Field(
+            description="Original caller-requested model before routing and fallback",
+            max_length=255,
+            min_length=1,
+            title="Requested Model Id",
+        ),
+    ]
+    requested_capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]],
+        Field(
+            description="Original request capabilities before reconciliation",
+            title="Requested Capabilities",
         ),
     ]
     model_id: Annotated[
@@ -541,6 +574,14 @@ class InvitationTokenIn(BaseModel):
             title="Token",
         ),
     ]
+
+
+class KeyBudgetBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["key"], Field(title="Kind")]
+    key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
 
 
 class KeyEntry(BaseModel):
@@ -1025,6 +1066,7 @@ class Permission(
             "policies.read",
             "policies.manage",
             "playground.execute",
+            "policy-state.sync",
             "bundles.read",
             "usage.read",
             "usage.ingest",
@@ -1060,6 +1102,7 @@ class Permission(
             "policies.read",
             "policies.manage",
             "playground.execute",
+            "policy-state.sync",
             "bundles.read",
             "usage.read",
             "usage.ingest",
@@ -1093,6 +1136,21 @@ class PolicyOrder(BaseModel):
         Field(
             description="Every workspace policy ID, from first to last evaluation priority",
             title="Policy Ids",
+        ),
+    ]
+
+
+class PolicyStateRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    org_ids: Annotated[
+        list[UUID],
+        Field(
+            description="Organizations whose current budget state is requested",
+            max_length=1000,
+            min_length=1,
+            title="Org Ids",
         ),
     ]
 
@@ -1443,6 +1501,29 @@ class RoutedUsageEventV1(BaseModel):
             title="Key Id",
         ),
     ]
+    user_id: Annotated[
+        UUID,
+        Field(
+            description="Principal that owned the inference key when the request was made",
+            title="User Id",
+        ),
+    ]
+    requested_model_id: Annotated[
+        str,
+        Field(
+            description="Original caller-requested model before routing and fallback",
+            max_length=255,
+            min_length=1,
+            title="Requested Model Id",
+        ),
+    ]
+    requested_capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]],
+        Field(
+            description="Original request capabilities before reconciliation",
+            title="Requested Capabilities",
+        ),
+    ]
     model_id: Annotated[
         str,
         Field(
@@ -1634,6 +1715,13 @@ class ServiceAccountIn(BaseModel):
     ] = None
 
 
+class SharedBudgetBucket(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Annotated[Literal["shared"], Field(title="Kind")]
+
+
 class InvitationToken(RootModel[str]):
     root: Annotated[
         str,
@@ -1739,6 +1827,12 @@ class UsageEventOut(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    requested_model_id: Annotated[str, Field(title="Requested Model Id")]
+    requested_capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]],
+        Field(title="Requested Capabilities"),
+    ]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
@@ -1862,6 +1956,51 @@ class WorkspaceUpdate(BaseModel):
         extra="forbid",
     )
     name: Annotated[Name4 | None, Field(description="Replacement workspace name", title="Name")] = None
+
+
+class BudgetBucketStatus(BaseModel):
+    bucket: Annotated[
+        SharedBudgetBucket | KeyBudgetBucket,
+        Field(discriminator="kind", title="Bucket"),
+    ]
+    spent_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Spent Usd")]
+    remaining_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Remaining Usd")]
+    exhausted: Annotated[bool, Field(title="Exhausted")]
+
+
+class BudgetRuleStatus(BaseModel):
+    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
+    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
+    window_end: Annotated[AwareDatetime, Field(title="Window End")]
+    buckets: Annotated[list[BudgetBucketStatus], Field(title="Buckets")]
+    next_bucket: Annotated[SharedBudgetBucket | KeyBudgetBucket | None, Field(title="Next Bucket")]
+
+
+class ExhaustedBuckets(RootModel[SharedBudgetBucket | KeyBudgetBucket]):
+    root: Annotated[SharedBudgetBucket | KeyBudgetBucket, Field(discriminator="kind")]
+
+
+class BudgetState(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    policy_id: Annotated[UUID, Field(title="Policy Id")]
+    rule_index: Annotated[int, Field(ge=0, lt=100, title="Rule Index")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    target: Annotated[
+        WorkspaceTarget | SelectedUsers | SelectedKeys,
+        Field(discriminator="kind", title="Target"),
+    ]
+    match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
+    aggregation: Annotated[Literal["shared", "per_key"], Field(title="Aggregation")]
+    amount_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Amount Usd")]
+    period: Annotated[Literal["day", "month"], Field(title="Period")]
+    window_start: Annotated[AwareDatetime, Field(title="Window Start")]
+    window_end: Annotated[AwareDatetime, Field(title="Window End")]
+    exhausted_buckets: Annotated[list[ExhaustedBuckets], Field(title="Exhausted Buckets")]
 
 
 class BundleManifest(BaseModel):
@@ -2103,6 +2242,14 @@ class OrgMembershipIn(BaseModel):
     role: Annotated[OrgRole, Field(description="Organization role to grant")]
 
 
+class OrgPolicyState(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    budgets: Annotated[list[BudgetState], Field(title="Budgets")]
+
+
 class OrgServiceAccountIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2137,13 +2284,21 @@ class PageEnvelopeUsageEventOut(BaseModel):
     page: PageInfo
 
 
+class PolicyState(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    computed_at: Annotated[AwareDatetime, Field(title="Computed At")]
+    organizations: Annotated[list[OrgPolicyState], Field(title="Organizations")]
+
+
 class RuleDefinitionInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
     match: Annotated[AllRequests | RequestMatchInput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2154,7 +2309,7 @@ class RuleDefinitionOutput(BaseModel):
     )
     match: Annotated[AllRequests | RequestMatchOutput, Field(discriminator="kind", title="Match")]
     action: Annotated[
-        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback,
+        AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
         Field(discriminator="kind", title="Action"),
     ]
 
@@ -2212,6 +2367,10 @@ class EnvelopeMyPermissionsOut(BaseModel):
 
 class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
+
+
+class EnvelopePolicyState(BaseModel):
+    data: PolicyState
 
 
 class EnvelopeTaxonomyApplyOut(BaseModel):
@@ -2408,6 +2567,12 @@ class EnvelopeListPolicyOut(BaseModel):
     data: Annotated[list[PolicyOut], Field(title="Data")]
 
 
+class PolicyBudgetStatus(BaseModel):
+    policy: PolicyOut
+    computed_at: Annotated[AwareDatetime, Field(title="Computed At")]
+    budgets: Annotated[list[BudgetRuleStatus], Field(title="Budgets")]
+
+
 class PolicyCreate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2441,3 +2606,7 @@ class PolicyCreate(BaseModel):
         PolicyDefinitionInput,
         Field(description="Workspace, user, or inference key target and inline rules"),
     ]
+
+
+class EnvelopePolicyBudgetStatus(BaseModel):
+    data: PolicyBudgetStatus

@@ -49,6 +49,167 @@ export interface AllowedProviders {
   names: string[];
 }
 
+export type BudgetPeriod = typeof BudgetPeriod[keyof typeof BudgetPeriod];
+
+
+export const BudgetPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export type BudgetAggregation = typeof BudgetAggregation[keyof typeof BudgetAggregation];
+
+
+export const BudgetAggregation = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export interface Budget {
+  kind: 'budget';
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetPeriod;
+  aggregation: BudgetAggregation;
+}
+
+export const SharedBudgetBucketValue = {
+  kind: 'shared',
+} as const;
+export type SharedBudgetBucket = typeof SharedBudgetBucketValue;
+
+export interface KeyBudgetBucket {
+  kind: 'key';
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+}
+
+export interface BudgetBucketStatus {
+  bucket: SharedBudgetBucket | KeyBudgetBucket;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  spent_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  remaining_usd: string;
+  exhausted: boolean;
+}
+
+export type BudgetRuleStatusAggregation = typeof BudgetRuleStatusAggregation[keyof typeof BudgetRuleStatusAggregation];
+
+
+export const BudgetRuleStatusAggregation = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export type BudgetRuleStatusPeriod = typeof BudgetRuleStatusPeriod[keyof typeof BudgetRuleStatusPeriod];
+
+
+export const BudgetRuleStatusPeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export interface BudgetRuleStatus {
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  aggregation: BudgetRuleStatusAggregation;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetRuleStatusPeriod;
+  window_start: string;
+  window_end: string;
+  buckets: BudgetBucketStatus[];
+  next_bucket: SharedBudgetBucket | KeyBudgetBucket | null;
+}
+
+export type BudgetStateAggregation = typeof BudgetStateAggregation[keyof typeof BudgetStateAggregation];
+
+
+export const BudgetStateAggregation = {
+  shared: 'shared',
+  per_key: 'per_key',
+} as const;
+
+export type BudgetStatePeriod = typeof BudgetStatePeriod[keyof typeof BudgetStatePeriod];
+
+
+export const BudgetStatePeriod = {
+  day: 'day',
+  month: 'month',
+} as const;
+
+export const WorkspaceTargetValue = {
+  kind: 'workspace',
+} as const;
+export type WorkspaceTarget = typeof WorkspaceTargetValue;
+
+export interface SelectedUsers {
+  kind: 'selected_users';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     */
+  user_ids: string[];
+}
+
+export interface SelectedKeys {
+  kind: 'selected_keys';
+  /**
+     * @minItems 1
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  key_ids: string[];
+}
+
+export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
+
+
+export const RequestMatchOutputCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface RequestMatchOutput {
+  kind: 'request';
+  /**
+     * @maxItems 1000
+     * @items.minLength 1
+     * @items.maxLength 255
+     */
+  models: string[];
+  stream: boolean | null;
+  /** @maxItems 3 */
+  capabilities: RequestMatchOutputCapabilitiesItem[];
+}
+
+export interface BudgetState {
+  policy_id: string;
+  /**
+     * @minimum 0
+     * @exclusiveMaximum 100
+     */
+  rule_index: number;
+  workspace_id: string;
+  target: WorkspaceTarget | SelectedUsers | SelectedKeys;
+  match: AllRequests | RequestMatchOutput;
+  aggregation: BudgetStateAggregation;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  amount_usd: string;
+  period: BudgetStatePeriod;
+  window_start: string;
+  window_end: string;
+  exhausted_buckets: (SharedBudgetBucket | KeyBudgetBucket)[];
+}
+
 /**
  * The immutable identity of one organization bundle available to a data plane.
  */
@@ -238,53 +399,6 @@ export interface Catalog {
   credentials?: CredentialEntry[];
 }
 
-export const WorkspaceTargetValue = {
-  kind: 'workspace',
-} as const;
-export type WorkspaceTarget = typeof WorkspaceTargetValue;
-
-export interface SelectedUsers {
-  kind: 'selected_users';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     */
-  user_ids: string[];
-}
-
-export interface SelectedKeys {
-  kind: 'selected_keys';
-  /**
-     * @minItems 1
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  key_ids: string[];
-}
-
-export type RequestMatchOutputCapabilitiesItem = typeof RequestMatchOutputCapabilitiesItem[keyof typeof RequestMatchOutputCapabilitiesItem];
-
-
-export const RequestMatchOutputCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
-
-export interface RequestMatchOutput {
-  kind: 'request';
-  /**
-     * @maxItems 1000
-     * @items.minLength 1
-     * @items.maxLength 255
-     */
-  models: string[];
-  stream: boolean | null;
-  /** @maxItems 3 */
-  capabilities: RequestMatchOutputCapabilitiesItem[];
-}
-
 export interface DenyRequest {
   kind: 'deny';
   /**
@@ -368,7 +482,7 @@ export interface Fallback {
 
 export interface RuleDefinitionOutput {
   match: AllRequests | RequestMatchOutput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget;
 }
 
 export interface PolicyDefinitionOutput {
@@ -538,6 +652,15 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const DeniedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 export interface DeniedUsageEventV1 {
   /** Usage event schema version */
   schema_version?: 1;
@@ -557,6 +680,16 @@ export interface DeniedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: DeniedUsageEventV1RequestedCapabilitiesItem[];
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -816,6 +949,7 @@ export const Permission = {
   policiesread: 'policies.read',
   policiesmanage: 'policies.manage',
   playgroundexecute: 'playground.execute',
+  'policy-statesync': 'policy-state.sync',
   bundlesread: 'bundles.read',
   usageread: 'usage.read',
   usageingest: 'usage.ingest',
@@ -1200,6 +1334,11 @@ export interface OrgMembershipIn {
   role: OrgRole;
 }
 
+export interface OrgPolicyState {
+  org_id: string;
+  budgets: BudgetState[];
+}
+
 export interface UserOut {
   id: string;
   email: string;
@@ -1277,6 +1416,24 @@ export interface PlaygroundSessionReadyOut {
   status: 'ready';
 }
 
+export interface PolicyOut {
+  id: string;
+  org_id: string;
+  workspace_id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  definition: PolicyDefinitionOutput;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PolicyBudgetStatus {
+  policy: PolicyOut;
+  computed_at: string;
+  budgets: BudgetRuleStatus[];
+}
+
 export type RequestMatchInputCapabilitiesItem = typeof RequestMatchInputCapabilitiesItem[keyof typeof RequestMatchInputCapabilitiesItem];
 
 
@@ -1301,7 +1458,7 @@ export interface RequestMatchInput {
 
 export interface RuleDefinitionInput {
   match: AllRequests | RequestMatchInput;
-  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback;
+  action: AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget;
 }
 
 export interface PolicyDefinitionInput {
@@ -1338,16 +1495,18 @@ export interface PolicyOrder {
   policy_ids: string[];
 }
 
-export interface PolicyOut {
-  id: string;
-  org_id: string;
-  workspace_id: string;
-  name: string;
-  enabled: boolean;
-  priority: number;
-  definition: PolicyDefinitionOutput;
-  created_at: string;
-  updated_at: string;
+export interface PolicyState {
+  computed_at: string;
+  organizations: OrgPolicyState[];
+}
+
+export interface PolicyStateRequest {
+  /**
+     * Organizations whose current budget state is requested
+     * @minItems 1
+     * @maxItems 1000
+     */
+  org_ids: string[];
 }
 
 export interface PolicyUpdate {
@@ -1506,6 +1665,15 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const RoutedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 /**
  * How the routed request ended
  */
@@ -1563,6 +1731,16 @@ export interface RoutedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: RoutedUsageEventV1RequestedCapabilitiesItem[];
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -1708,6 +1886,15 @@ export const TokenUsageSource = {
   not_applicable: 'not_applicable',
 } as const;
 
+export type UsageEventOutRequestedCapabilitiesItem = typeof UsageEventOutRequestedCapabilitiesItem[keyof typeof UsageEventOutRequestedCapabilitiesItem];
+
+
+export const UsageEventOutRequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 export type UsageEventOutStatus = typeof UsageEventOutStatus[keyof typeof UsageEventOutStatus];
 
 
@@ -1737,6 +1924,9 @@ export interface UsageEventOut {
   org_id: string;
   workspace_id: string;
   key_id: string;
+  user_id: string;
+  requested_model_id: string;
+  requested_capabilities: UsageEventOutRequestedCapabilitiesItem[];
   model_id: string;
   provider_id: string;
   bundle_id: string;
@@ -1913,6 +2103,27 @@ cursor?: CursorToken | null;
  * Maximum number of results to return
  * @minimum 1
  * @maximum 200
+ */
+limit?: number;
+};
+
+export type PolicyStatusParams = {
+/**
+ * Rule index
+ */
+rule_index?: number | null;
+/**
+ * Bucket id
+ */
+bucket_id?: string | null;
+/**
+ * After bucket
+ */
+after_bucket?: string | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 1000
  */
 limit?: number;
 };

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from contract import Capability, Modality
+    from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalRequest
 
 
@@ -24,3 +25,7 @@ def required_capabilities(request: CanonicalRequest) -> frozenset[Capability]:
 def required_input_modalities(request: CanonicalRequest) -> frozenset[Modality]:
     part_modalities: dict[str, Modality] = {"image": "image", "document": "pdf"}
     return frozenset(modality for message in request.messages for part in message.content if (modality := part_modalities.get(part.type)))
+
+
+def requested_capabilities(request: CanonicalRequest) -> frozenset[RequestCapability]:
+    return frozenset(capability for capability in required_capabilities(request) if capability != "streaming")

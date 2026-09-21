@@ -100,6 +100,7 @@ export function PolicyTable({
   error,
   onRetry,
   canManage,
+  onBudgetStatus,
   editorReady,
   isReordering,
   onReorder,
@@ -113,6 +114,7 @@ export function PolicyTable({
   error: unknown;
   onRetry: () => void;
   canManage: boolean;
+  onBudgetStatus?: (policy: PolicyOut) => void;
   editorReady: boolean;
   isReordering: boolean;
   onReorder: (policyIds: string[]) => Promise<unknown>;
@@ -217,6 +219,20 @@ export function PolicyTable({
                   header: 'Status',
                   cell: (policy) => <Badge variant={policy.enabled ? 'success' : 'secondary'}>{policy.enabled ? 'Enabled' : 'Disabled'}</Badge>,
                 },
+                ...(onBudgetStatus
+                  ? [
+                      {
+                        key: 'budgets',
+                        header: 'Budgets',
+                        cell: (policy: PolicyOut) =>
+                          policy.definition.rules.some((rule) => rule.action.kind === 'budget') ? (
+                            <Button variant="outline" size="sm" onClick={() => onBudgetStatus(policy)}>
+                              View spending
+                            </Button>
+                          ) : null,
+                      },
+                    ]
+                  : []),
                 ...(canManage
                   ? [
                       {

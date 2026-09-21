@@ -17,6 +17,7 @@ from airmux_runtime.observability import log_event
 from contract import DeniedUsageEventV1, RoutedUsageEventV1, TokenUsageSource, UsdAmount, uuid7
 from contract.money import USD_AMOUNT_QUANTUM, ZERO_USD
 from data_plane.canonical import CanonicalTextPart, CanonicalUsage
+from data_plane.requirements import requested_capabilities
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -106,6 +107,9 @@ def denied_event(
         org_id=key.org_id,
         workspace_id=key.workspace_id,
         key_id=key.key_id,
+        user_id=key.user_id,
+        requested_model_id=request.model,
+        requested_capabilities=requested_capabilities(request),
         model_id=request.model,
         provider_id="",
         bundle_id=bundle_id,
@@ -144,6 +148,9 @@ def usage_event(
         org_id=ctx.org_id,
         workspace_id=ctx.workspace_id,
         key_id=ctx.key_id,
+        user_id=ctx.user_id,
+        requested_model_id=ctx.requested_model_id,
+        requested_capabilities=ctx.requested_capabilities,
         model_id=ctx.model.model_id,
         provider_id=ctx.provider.provider_id,
         bundle_id=ctx.bundle_id,

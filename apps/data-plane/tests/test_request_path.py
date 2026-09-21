@@ -7,13 +7,31 @@ import httpx
 import httpx2
 import pytest
 import respx
-from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_key, make_outbox, mock_control_plane, read_and_close_outbox
+from conftest import (
+    MODEL,
+    ORG,
+    PLATFORM_CREDENTIAL,
+    PROVIDER,
+    WORKSPACE,
+    make_bundle,
+    make_config,
+    make_key,
+    make_outbox,
+    mock_control_plane,
+    read_and_close_outbox,
+)
 from prometheus_client.parser import text_string_to_metric_families
 from starlette.testclient import TestClient
 
 import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
+from contract import BundleV1, Catalog, uuid7
+from contract.policies import BudgetAggregation, PolicyDefinition, PolicyEntry
+from data_plane.app import create_app
+from data_plane.cache import CachedBundles, write_cached_bundles
 from data_plane.canonical import CanonicalRequest
+from data_plane.config import ControlPlaneBudgetConfig
+from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
@@ -30,6 +48,29 @@ OPENAI_RESPONSE = {
     "choices": [{"index": 0, "message": {"role": "assistant", "content": "hello there"}, "finish_reason": "stop"}],
     "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
 }
+
+
+def _budget_bundle(aggregation: BudgetAggregation) -> BundleV1:
+    _, key = make_key()
+    policy = PolicyEntry(
+        id=uuid7(),
+        workspace_id=WORKSPACE,
+        name="Advisory budget",
+        priority=100,
+        definition=PolicyDefinition.model_validate(
+            {
+                "target": {"kind": "workspace"},
+                "rules": [
+                    {
+                        "match": {"kind": "all_requests"},
+                        "action": {"kind": "budget", "period": "month", "amount_usd": "0.01", "aggregation": aggregation},
+                    }
+                ],
+            }
+        ),
+    )
+    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    return make_bundle(keys=[key], catalog=catalog).model_copy(update={"policies": (policy,)})
 
 
 @respx.mock
@@ -76,6 +117,47 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
     sent = json.loads(route.calls.last.request.content)
     assert sent["model"] == "gpt-real"
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-test-not-real"
+
+
+@respx.mock
+@pytest.mark.parametrize("aggregation", ["shared", "per_key"])
+def test_no_budget_backend_accepts_budget_policies(api_key, dp_app, tmp_path, aggregation):
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle(aggregation)]))
+    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
+        )
+
+    assert response.status_code == 200
+    assert upstream.call_count == 1
+
+
+@respx.mock
+def test_unavailable_budget_state_does_not_reject_inference(tmp_path, monkeypatch):
+    api_key, _ = make_key()
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle("shared")]))
+    control_plane = ControlPlaneLink(url="http://cp.test", management_key="dp-token")
+    config = make_config(tmp_path).model_copy(update={"budget": ControlPlaneBudgetConfig(control_plane=control_plane, poll_interval_s=60)})
+    monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")
+    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
+        )
+        metrics = client.get("/metrics").text
+
+    assert response.status_code == 200
+    assert upstream.call_count == 1
+    assert 'airmux_data_plane_budget_state_fallbacks_total{reason="missing"} 1.0' in metrics
 
 
 @respx.mock

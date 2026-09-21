@@ -6,9 +6,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import CheckConstraint, Column, Index, Numeric, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
 from contract import CredentialScope, TokenUsageSource, UsageStatus, UsdAmount
+from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
@@ -35,6 +37,9 @@ class UsageEvent(Record, table=True):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability] = Field(sa_column=Column(ARRAY(String), nullable=False))
     model_id: str
     provider_id: str
     bundle_id: UUID
@@ -63,12 +68,7 @@ class UsageEvent(Record, table=True):
         statement = select(cls).where(cls.org_id == org_id)
         if workspace_id is not None:
             statement = statement.where(cls.workspace_id == workspace_id)
-        return await keyset_page(
-            statement,
-            page,
-            col(cls.event_id),
-            UUID,
-        )
+        return await keyset_page(statement, page, col(cls.event_id), UUID)
 
 
 class UsageEventOut(RecordOut[UsageEvent]):
@@ -78,6 +78,9 @@ class UsageEventOut(RecordOut[UsageEvent]):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability]
     model_id: str
     provider_id: str
     bundle_id: UUID

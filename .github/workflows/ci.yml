@@ -309,9 +309,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-python
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - uses: ./.github/actions/download-artifact
         with:
-          artifact-ids: ${{ needs.package.outputs.artifact-id }}
+          artifact-id: ${{ needs.package.outputs.artifact-id }}
           path: candidate
       - run: cd candidate && sha256sum --check SHA256SUMS
       - name: Build the candidate image once

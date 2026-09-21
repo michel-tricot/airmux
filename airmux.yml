@@ -19,5 +19,9 @@ data_plane:
     kind: sqlite
     control_plane: *control_plane
     flush_interval_s: 5
+  budget:
+    kind: control_plane
+    control_plane: *control_plane
+    poll_interval_s: 5
   secrets:
     kind: file

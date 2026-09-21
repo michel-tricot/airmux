@@ -8,6 +8,7 @@ from pydantic_core import core_schema
 
 
 class GatewayErrorCode(StrEnum):
+    budget_exhausted = "budget_exhausted"
     bundle_unavailable = "bundle_unavailable"
     credential_backend_unavailable = "credential_backend_unavailable"
     credential_missing = "credential_missing"
