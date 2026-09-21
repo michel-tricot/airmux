@@ -70,11 +70,11 @@ class _Block:
     """One content block accumulating across the stream; tool blocks carry their ordinal."""
 
     type: str
-    text: str = ""
-    signature: str = ""
+    text: list[str] = field(default_factory=list)
+    signature: list[str] = field(default_factory=list)
     tool_id: str = ""
     name: str = ""
-    arguments: str = ""
+    arguments: list[str] = field(default_factory=list)
     ordinal: int = 0
 
 
@@ -99,11 +99,11 @@ def _final_parts(blocks: dict[int, _Block]) -> list[CanonicalAssistantPart]:
     parts: list[CanonicalAssistantPart] = []
     for block in (blocks[i] for i in sorted(blocks)):
         if block.type == "thinking":
-            parts.append(CanonicalReasoningPart(text=block.text, signature=block.signature or None))
+            parts.append(CanonicalReasoningPart(text="".join(block.text), signature="".join(block.signature) or None))
         elif block.type == "text":
-            parts.append(CanonicalTextPart(text=block.text))
+            parts.append(CanonicalTextPart(text="".join(block.text)))
         elif block.type == "tool_use":
-            parts.append(CanonicalToolCallPart(id=block.tool_id, name=block.name, arguments=block.arguments or "{}"))
+            parts.append(CanonicalToolCallPart(id=block.tool_id, name=block.name, arguments="".join(block.arguments) or "{}"))
     return parts
 
 
@@ -116,7 +116,7 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
         state.tool_count += 1
         state.blocks[event.index] = _Block(type="tool_use", tool_id=opened.id, name=opened.name, ordinal=ordinal)
         return [CanonicalChunk(id=state.chunk_id, delta=CanonicalToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
-    state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking)
+    state.blocks[event.index] = _Block(type=opened.type, text=[opened.text or opened.thinking])
     return []
 
 
@@ -125,16 +125,16 @@ def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
     delta = UpstreamBlockDelta.model_validate(event.delta)
     out: CanonicalDelta | None = None
     if delta.type == "text_delta":
-        block.text += delta.text
+        block.text.append(delta.text)
         out = CanonicalTextDelta(text=delta.text)
     elif delta.type == "thinking_delta":
-        block.text += delta.thinking
+        block.text.append(delta.thinking)
         out = CanonicalReasoningDelta(text=delta.thinking)
     elif delta.type == "signature_delta":
-        block.signature += delta.signature
+        block.signature.append(delta.signature)
         out = CanonicalReasoningDelta(signature=delta.signature)
     elif delta.type == "input_json_delta":
-        block.arguments += delta.partial_json
+        block.arguments.append(delta.partial_json)
         out = CanonicalToolCallDelta(index=block.ordinal, arguments=delta.partial_json)
     return [CanonicalChunk(id=state.chunk_id, delta=out)] if out is not None else []
 

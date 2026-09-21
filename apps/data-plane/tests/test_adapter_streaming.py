@@ -267,6 +267,26 @@ def test_stream_and_buffered_agree(kind, modality):
 
 
 @pytest.mark.parametrize("kind", KINDS)
+@pytest.mark.parametrize("modality", MODALITIES)
+def test_partial_finalization_preserves_accumulation_and_previous_responses(kind, modality):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    events = list(adapter.frame(CASES[kind][modality].log, adapter.new_stream_state(CTX)))
+    for event in events[:3]:
+        adapter.transform_stream_event(event, state)
+    partial = adapter.finalize(state)
+    previous = partial.model_dump_json()
+    assert adapter.finalize(state) == partial
+
+    for event in events[3:]:
+        adapter.transform_stream_event(event, state)
+    final = adapter.finalize(state)
+    _, uninterrupted = fold(adapter, CASES[kind][modality].log, 7)
+    assert final == uninterrupted
+    assert partial.model_dump_json() == previous
+
+
+@pytest.mark.parametrize("kind", KINDS)
 def test_stream_tool_identity_is_emitted_once(kind):
     chunks, final = fold(_adapter(kind), CASES[kind]["tools"].log, 7)
     deltas = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "tool_call"]

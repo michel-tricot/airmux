@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
 
 from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalGatewayInfo, CanonicalReasoningConfig, CanonicalRequest
@@ -40,7 +40,7 @@ class _OpenBlock:
     index: int
     key: str  # what the block holds: "text", "thinking", or one tool call
     reasoning_id: str | None = None
-    signature: str = ""
+    signature: list[str] = field(default_factory=list)
 
 
 class AnthropicResponseStream:
@@ -64,7 +64,7 @@ class AnthropicResponseStream:
         block, self.open = self.open, None
         events = []
         if block.key == "thinking" and (block.reasoning_id is not None or block.signature):
-            signature = fmt.reasoning_signature(block.reasoning_id, block.signature or None)
+            signature = fmt.reasoning_signature(block.reasoning_id, "".join(block.signature) or None)
             events.append(fmt.ContentBlockDelta(index=block.index, delta=fmt.SignatureDeltaOut(signature=signature)).sse())
         return [*events, fmt.ContentBlockStop(index=block.index).sse()]
 
@@ -88,7 +88,8 @@ class AnthropicResponseStream:
             events, index = self._switch("thinking", fmt.ThinkingOut(thinking=""))
             if self.open is not None:
                 self.open.reasoning_id = delta.id or self.open.reasoning_id
-                self.open.signature += delta.signature or ""
+                if delta.signature:
+                    self.open.signature.append(delta.signature)
             if delta.text:
                 events.append(fmt.ContentBlockDelta(index=index, delta=fmt.ThinkingDeltaOut(thinking=delta.text)).sse())
             return events

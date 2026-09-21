@@ -1,5 +1,7 @@
 # Airmux throughput audit
 
+The later [data-plane CPU review](DATA_PLANE_CPU_REVIEW.md) implements bounded credential-cache cleanup and linear stream accumulation, with new paired measurements while retaining HTTPX2.
+
 Airmux is primarily **CPU-bound in this one-worker benchmark**. Much of that CPU is spent managing asynchronous HTTP I/O: connection-pool scans, socket state checks, Python protocol processing, and client bookkeeping. The requests already await the provider asynchronously. Adding more asynchronous concurrency or retaining more idle connections does not remove that work.
 
 All new probes use the same offline ARM64 Docker image, four-core/8-GiB container limit, one worker, official Rust driver, Anthropic request, and 20 ms mock delay. Both the driver and provider are local to that container. Each unprofiled throughput trial warms up with 1,000 requests, then measures 20,000 at concurrency 64. Gateways start fresh; three comparison rounds alternate variant order and bracket each round with direct controls. Separate profiling probes use 5,000 measured requests. Raw results, diagnostic source, versions, and validation are in [the audit data](gateway-throughput-audit.json).
