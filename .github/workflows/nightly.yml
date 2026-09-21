@@ -150,8 +150,6 @@ jobs:
           artifact-id: ${{ needs.package.outputs.artifact-id }}
       - name: Validate performance harness coverage
         run: uv run --no-sync pytest -m performance tests/acceptance/gateway --junitxml=performance-results/tests.xml
-      - name: Measure JSON codec costs
-        run: uv run --no-sync python tests/acceptance/gateway/performance_codecs.py --output performance-results/codecs.json
       - name: Compare repeated performance samples
         run: |
           uv run --no-sync python tests/acceptance/gateway/performance.py --rounds 5 \
