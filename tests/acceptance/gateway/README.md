@@ -191,7 +191,7 @@ correctness; remote polling/export performance needs separate benchmark workload
 
 ## Codec and capacity experiments
 
-Use the installed Pydantic Core implementation to compare request decoding, provider body encoding, and stream-event
+Run the codec microbenchmark manually to compare request decoding, provider body encoding, and stream-event
 parsing against the previous stdlib operations. Encoding includes Pydantic model dumping and provider alias mapping:
 
 ```bash
@@ -214,7 +214,7 @@ PYTHONPATH=. uv run python tests/acceptance/gateway/performance_scaling.py \
   --output /tmp/gateway-scaling
 ```
 
-Nightly CI runs codecs with the paired benchmark and runs scaling in a separate job, retaining artifacts for 90 days.
+Nightly CI runs the paired gateway benchmark and scaling in separate jobs, retaining artifacts for 90 days.
 The output directory must be new. Three rounds reverse execution order on alternate rounds. Each round covers
 workers 1/2/4, total connections 100/256 per worker, concurrency 32/128, and provider HTTP/1.1/HTTP/2, for 24 cases.
 Keepalive stays at 20 per worker; timeouts and expiry stay at their defaults. All cases use buffered dev-null collection
