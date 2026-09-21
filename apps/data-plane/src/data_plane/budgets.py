@@ -115,7 +115,7 @@ class BudgetStateHolder:
                 raise RequestRejectedError(
                     429,
                     GatewayErrorCode.budget_exhausted,
-                    f"Estimated cost budget exhausted until {state.window_end.isoformat()}",
+                    f"Cost budget exhausted until {state.window_end.isoformat()}",
                     retry_after=max(1, math.ceil((state.window_end - now).total_seconds())),
                 )
         return fallback

@@ -86,6 +86,7 @@ it('adds an inline rule and saves it only with the policy', async () => {
   });
   await user.type(screen.getByLabelText('Policy name'), 'Production safeguards');
   await user.click(screen.getByRole('button', { name: 'Add rule' }));
+  expect(screen.getByRole('button', { name: 'Cost budget' })).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Parameter support' }));
   await user.click(screen.getByRole('button', { name: 'Add rule' }));
   expect(screen.getByText('Require parameter support')).toBeVisible();

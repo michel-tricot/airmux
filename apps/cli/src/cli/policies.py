@@ -83,7 +83,7 @@ def policy_status(  # noqa: PLR0913 CLI exposes independent filtering and output
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """Show observed estimated spending for each budget rule."""
+    """Show observed spending for each budget rule."""
     with access_client(control_plane_url) as client:
         response = ensure_ok(
             client.get(

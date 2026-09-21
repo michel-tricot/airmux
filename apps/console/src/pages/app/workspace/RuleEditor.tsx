@@ -225,9 +225,7 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
               </FormItem>
             )}
           />
-          <p className="text-sm text-muted-foreground">
-            Includes earlier matching usage in the current period. Enforcement is best effort and delayed usage can exceed the allowance.
-          </p>
+          <p className="text-sm text-muted-foreground">Includes earlier matching usage in the current period.</p>
         </>
       )}
       {kind === 'price_limit' && (

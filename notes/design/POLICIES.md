@@ -57,7 +57,7 @@ The same matched restrictions apply to every backup, so changing the route canno
 | `strict_parameters` | None | Rejects a route when reconciliation would drop a supplied parameter |
 | `price_limit` | input and output USD per million token ceilings | Rejects catalog models whose rates exceed either ceiling |
 | `request_limits` | maximum requested output tokens | Rejects requests above the configured output bound |
-| `budget` | `amount_usd`, `period`, `aggregation` | Rejects requests after observed estimated spending reaches the allowance |
+| `budget` | `amount_usd`, `period`, `aggregation` | Rejects requests after observed spending reaches the allowance |
 | `credential_access` | allowed credential scopes | Filters credentials to workspace, organization, or platform scopes before tier selection |
 | `fallback` | `models`, `on`, `max_attempts`, `timeout_ms` | Supplies an ordered, bounded backup plan |
 

@@ -233,9 +233,9 @@ Create one self-contained resource at `/api/v1/organizations/{org_id}/workspaces
 Successful control-plane responses wrap the result in `{"data": ...}`. See the
 [policy tutorial](/docs/guides/policy-workflow) for the CLI flow and the generated endpoint reference for exact schemas.
 
-## Estimated cost budgets
+## Cost budgets
 
-A budget limits observed estimated USD spending for matching usage in a UTC calendar day or month.
+A budget limits observed USD spending for matching usage in a UTC calendar day or month.
 Multiple budget rules can share one policy, and every matching budget must have remaining allowance.
 For example, one policy can impose both a daily and monthly shared budget:
 
@@ -269,21 +269,17 @@ Historical costs use recorded prices and completion timestamps. All attempts, in
 cancellation usage, count according to their recorded costs. Request filters use the original requested model
 and capabilities, even when a different model serves the request.
 
-Enforcement is best effort. Data planes export usage and refresh budget state in the background; the default
-five-second export and five-second state intervals normally add up to roughly ten seconds after completion,
-plus processing and network delays. In-flight work and delivery delays can exceed the allowance. No cost is
-reserved before a request and active streams are not interrupted.
+The control-plane budget backend is best effort. Data planes export usage and refresh budget state in the
+background, so delayed and in-flight usage can exceed the allowance.
 
-Exhaustion returns `429` with `budget_exhausted` and `Retry-After`. Before the first budget snapshot arrives,
-requests matching a budget in the loaded bundle return `503 policy_state_unavailable`. Later refresh failures
-keep the last state; expired UTC windows stop blocking until new state arrives. Bundle and budget polling are
-independent. Budget rules and their calculated exhaustion state travel together in the budget snapshot.
+Exhaustion returns `429` with `budget_exhausted` and `Retry-After`. Missing, mismatched, or expired budget state
+allows the request. Bundle and budget polling are independent.
 
 Budget state uses the configured budget backend independently of bundle loading and event export. Keep usage history
 for the full current month even when no budget is configured. Original user, requested-model, and capability facts must
 have been recorded to support historical filters; missing historical facts are not reconstructed.
 
-In the console, add an **Estimated cost budget** rule and use **View spending** on its policy. The view shows
+In the console, add a **Cost budget** rule and use **View spending** on its policy. The view shows
 observed spending, remaining allowance, reset time, and calculation time. Calculation time does not establish
 that every data plane has exported its latest usage.
 

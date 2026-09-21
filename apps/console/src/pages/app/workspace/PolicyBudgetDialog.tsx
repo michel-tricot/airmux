@@ -42,7 +42,7 @@ export function PolicyBudgetDialog({
       }}
       title={`${currentPolicy.name}: spending`}
       contentClassName="sm:max-w-2xl"
-      description="Observed estimated cost includes matching usage from the whole UTC period. Delivery delays and in-flight requests can exceed the allowance."
+      description="Observed cost includes matching usage from the whole UTC period. Delivery delays and in-flight requests can exceed the allowance."
     >
       <div className="space-y-4">
         <Dropdown
