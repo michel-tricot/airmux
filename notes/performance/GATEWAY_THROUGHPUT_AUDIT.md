@@ -76,12 +76,54 @@ The profiler corroborates the mechanism. The default pool made 105,674 socket-re
 
 The default-pool cProfile diagnostic attributes approximately 65% of its recorded execution time to the outbound HTTPX2 request subtree, including approximately 24% to connection-pool assignment. Usage-event construction including logging accounts for approximately 7%, while authentication is below 1%. These are hotspot rankings from an instrumented run, not unbiased CPU percentages: profiling slowed the worker significantly. The unprofiled experiments and thread-CPU measurements are the quantitative evidence for improvement priorities.
 
+## Options while keeping HTTPX2
+
+HTTPX2 and httpcore2 were already on [the latest released version, 2.13.0](https://pypi.org/project/httpx2/), when these probes ran. The follow-up keeps that client and tests configuration changes and small internal optimizations in the same Docker environment. All successful-request gateway behavior, including accounting, logs, and metrics, remains enabled. The [follow-up measurements and diagnostic source](httpx2-optimization-options.json) retain every completed probe.
+
+The initial one-round screen gave:
+
+| Change from the default client | Requests/s | CPU per request |
+| --- | ---: | ---: |
+| Unchanged HTTPX2, 100 active / 20 idle | 1,424 | 636.5 µs |
+| Limit active connections to 32 | 870 | 580.5 µs |
+| Limit active connections to 48 | 1,253 | 571.5 µs |
+| Cache the socket reference used for health checks | 1,539 | 574.5 µs |
+| Combine pool classification passes | 1,440 | 630.5 µs |
+| Socket cache plus combined pool passes | 1,549 | 569.0 µs |
+
+Lower active limits reduced CPU work slightly but constrained overlapping upstream requests enough to reduce throughput. Combining pool passes added little in this screen and was not pursued. The smaller socket-cache prototype received three additional alternating rounds:
+
+| Three-round median | Unchanged HTTPX2 | Socket-cache prototype |
+| --- | ---: | ---: |
+| Requests/s | 1,467 | 1,529 |
+| CPU per request | 621.0 µs | 582.0 µs |
+| Worker CPU | 90.9% | 88.9% |
+
+That is **4.2% more throughput and 6.3% less CPU per request**. Every paired round improved, but the confirmed gain is smaller than the initial screen's approximately 8%. Baseline throughput ranged from 1,464 to 1,474; the prototype ranged from 1,516 to 1,556. These are observations on one workload, not statistical confidence intervals.
+
+The prototype changes only `httpcore2._backends.anyio.AnyIOStream`: obtain the raw socket reference when the stream wrapper is created, then reuse it when checking readability. It still calls the same socket-readability check every time; it does not cache whether the connection is healthy or skip expiry checks. This avoids repeatedly rebuilding AnyIO's socket-attribute mapping. The pool's algorithms, timeout values, active/idle limits, and protocol handling stay unchanged. TLS creates a new wrapper and therefore captures the wrapped stream's socket separately.
+
+The unchanged library and the socket-cache prototype each passed **148 upstream async transport tests**, including HTTP/1.1, HTTP/2, proxy, local TLS integration, pool behavior, and cancellation coverage, from official tag `v2.13.0` at `f2951854442e78cb8f6d2256b7c1d83bd2b77d0b`. Those checks ran on macOS with the project's installed libraries; the throughput probes ran in Linux with uvloop. Passing this suite is useful evidence, not a substitute for upstream review of socket lifetime and backend compatibility. The prototype remains a temporary diagnostic patch; no dependency or gateway runtime change was shipped.
+
+The follow-up covered 240,000 timed gateway requests, 12,000 warmups, 24 complete-response checks, and 252,024 verified usage records, all successful. Reproduce with the embedded scripts and the same container mount described below: `run.py --output /audit/confirm --variants baseline:20,cached_socket:20 --rounds 3`. The screen additionally uses `cap32:20,cap48:20,fused_pool:20,combined:20` alongside the baseline and socket-cache variants.
+
+### A pool per provider
+
+Separating HTTPX2 pools by upstream origin can reduce cross-provider scanning and competition when multiple providers are active. It can also keep an overloaded provider from using another provider's reserved connection budget. This is an architectural option for mixed-provider workloads, not a measured result from these runs.
+
+It would not improve this benchmark: there is already only one provider and one upstream origin, so all 64 concurrent requests would still use one pool. A provider split also needs explicit connection budgets; replacing one 100-connection pool with a 100-connection pool for each provider multiplies the possible total. Pools grouped by origin and traffic purpose should keep management traffic separate and have defined per-provider and overall limits.
+
+Airmux already enables HTTP/2. Where providers negotiate it, multiplexing can reduce the number of connections subject to pool scans. The published benchmark mock serves HTTP/1.1, so this comparison does not measure that behavior. Confirm negotiation and profile a matched HTTP/2 workload before claiming a gain.
+
 ## Recommended improvements
 
-1. **Prioritize the outbound HTTP transport**: optimize the shared httpcore2 pool or evaluate a client with native HTTP parsing and destination-indexed idle connection reuse. Preserve the canonical adapter path. The transport-only diagnostic gives a measured target without requiring a gateway rewrite
-2. **Fix pool bookkeeping before tuning pool size**: avoid global connection scans and repeated socket probes where safe, reuse stable socket information, and select idle connections by origin. Preserve expiry, disconnect detection, cancellation, HTTP/2 multiplexing, and connection limits. Raising keepalive capacity alone regressed this workload
-3. **Reduce observability cost while retaining accounting**: reuse stable metric attributes, reduce per-request label/aggregation work where profiling supports it, and measure faster structured-log serialization or bounded batched output. Logging and metrics are secondary costs; removing them does not close the transport gap
-4. **Validate under both CPU pressure and realistic I/O**: keep the one-worker comparison, add body-consuming throughput probes, and verify HTTP/1.1, HTTP/2, streams, disconnects, timeouts, provider failures, usage records, and multiple upstream origins before promoting a change. Report CPU microseconds per request alongside CPU percentage and request rate
+1. **Keep HTTPX2 and prioritize a small upstream-reviewed fix**: the socket-reference cache produced a modest, repeated gain with the existing client and passed the selected upstream tests. Adopt through a reviewed release after socket lifetime and backend compatibility are established
+2. **Consider per-origin pools for mixed-provider isolation**: measure multiple providers and define per-provider and overall connection budgets. This does not improve the present single-origin workload
+3. **Verify HTTP/2 where providers support it**: it is already enabled in Airmux, but the mock does not exercise it. Measure negotiated protocol behavior before changing settings or making performance claims
+4. **Reduce observability cost while retaining accounting**: reuse stable metric attributes, reduce per-request label/aggregation work where profiling supports it, and measure faster structured-log serialization or bounded batched output. Logging and metrics are secondary costs; removing them does not close the transport gap
+5. **Validate under both CPU pressure and realistic I/O**: keep the one-worker comparison, add body-consuming throughput probes, and verify HTTP/1.1, HTTP/2, streams, disconnects, timeouts, provider failures, usage records, and multiple upstream origins before promoting a change. Report CPU microseconds per request alongside CPU percentage and request rate
+
+The earlier alternative-transport measurements remain useful diagnostic evidence about where CPU is spent. The follow-up establishes a smaller optimization opportunity while retaining HTTPX2; it does not reproduce the alternative transport's 50% CPU reduction.
 
 ## Evidence and reproduction
 
