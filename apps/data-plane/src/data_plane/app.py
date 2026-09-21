@@ -87,7 +87,7 @@ def create_app(config: Config) -> ASGIApp:
             try:
                 holder = BundleHolder(metrics)
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
-                budget_backend = build_budget_backend(config.budget, http_client, metrics)
+                budget_backend = build_budget_backend(config.budget, holder, http_client, metrics)
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,

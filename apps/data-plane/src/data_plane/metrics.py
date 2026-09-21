@@ -24,6 +24,7 @@ type CredentialCacheResult = Literal["hit", "miss", "negative_hit", "backend_una
 type CredentialLoadOutcome = Literal["success", "missing", "backend_unavailable"]
 type MeteringAdmissionOutcome = Literal["accepted", "full", "closed"]
 type MeteringExportOutcome = Literal["success", "failed"]
+type BudgetStateFallback = Literal["missing", "mismatch", "expired"]
 
 
 class DataPlaneMetrics:
@@ -55,6 +56,9 @@ class DataPlaneMetrics:
             "airmux_data_plane_credential_load_duration_seconds", description="Credential backend load duration"
         )
         self._bundle_poll = meter.create_counter("airmux_data_plane_bundle_poll", description="Bundle poll outcomes")
+        self._budget_state_fallbacks = meter.create_counter(
+            "airmux_data_plane_budget_state_fallbacks", description="Budget checks allowed without usable state"
+        )
         self._metering_admission = meter.create_counter("airmux_data_plane_metering_admission", description="Metering admission outcomes")
         self._metering_exports = meter.create_counter("airmux_data_plane_metering_exports", description="Metering export outcomes")
         self._metering_export_duration = meter.create_histogram(
@@ -98,6 +102,8 @@ class DataPlaneMetrics:
         )
         for outcome in ("unchanged", "adopted", "rejected", "failed"):
             self._bundle_poll.add(0, {"outcome": outcome})
+        for reason in ("missing", "mismatch", "expired"):
+            self._budget_state_fallbacks.add(0, {"reason": reason})
         for result in ("hit", "miss", "negative_hit", "backend_unavailable"):
             self._credential_cache_requests.add(0, {"result": result})
         for outcome in ("accepted", "full", "closed"):
@@ -133,6 +139,9 @@ class DataPlaneMetrics:
 
     def observe_budget_state(self, computed_at: float) -> None:
         self._budget_state_computed_at = computed_at
+
+    def observe_budget_state_fallback(self, reason: BudgetStateFallback) -> None:
+        self._budget_state_fallbacks.add(1, {"reason": reason})
 
     def observe_bundle_adopted(self, snapshots: int) -> None:
         self.observe_bundle_poll("adopted")

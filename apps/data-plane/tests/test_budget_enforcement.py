@@ -73,7 +73,14 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
             holder.check(_budget_rules(request, key, snapshot), key, now)
         assert denied.value.code == "budget_exhausted"
         assert denied.value.status == 429
-        holder.check(_budget_rules(request, key, snapshot), key, end + timedelta(seconds=1))
+        assert holder.check(_budget_rules(request, key, snapshot), key, end + timedelta(seconds=1)) == "expired"
+    revised_rule = RuleDefinition(
+        match=state.match,
+        action=Budget(kind="budget", amount_usd="101", period=state.period, aggregation=state.aggregation),
+    )
+    revised_policy = policy.model_copy(update={"definition": policy.definition.model_copy(update={"rules": (revised_rule,)})})
+    revised_snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]).model_copy(update={"policies": (revised_policy,)}))
+    assert holder.check(_budget_rules(request, key, revised_snapshot), key, now) == "mismatch"
     holder.adopt(PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=()),)))
     snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]))
     holder.check(_budget_rules(request, key, snapshot), key, now)
@@ -131,7 +138,7 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
         holder.check(_budget_rules(unmatched, key, snapshot), key, now)
 
 
-def test_uninitialized_budget_state_only_blocks_matching_requests():
+def test_uninitialized_budget_state_allows_matching_requests():
 
     _, key = make_key()
     policy = PolicyEntry(
@@ -154,17 +161,17 @@ def test_uninitialized_budget_state_only_blocks_matching_requests():
     snapshot = BundleSnapshot.from_bundle(make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}))
     holder = BudgetStateHolder()
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}], stream=True)
-    with pytest.raises(RequestRejectedError, match="policy_state_unavailable"):
-        holder.check(_budget_rules(request, key, snapshot), key, datetime.now(UTC))
+    assert holder.check(_budget_rules(request, key, snapshot), key, datetime.now(UTC)) == "missing"
     unmatched = request.model_copy(update={"stream": False})
-    holder.check(_budget_rules(unmatched, key, snapshot), key, datetime.now(UTC))
+    assert holder.check(_budget_rules(unmatched, key, snapshot), key, datetime.now(UTC)) is None
 
 
 def test_no_budget_config_builds_no_budget_backend():
     metrics = DataPlaneMetrics()
+    bundles = BundleHolder(metrics)
     client = httpx.AsyncClient()
     try:
-        backend = build_budget_backend(NoBudgetConfig(), client, metrics)
+        backend = build_budget_backend(NoBudgetConfig(), bundles, client, metrics)
         assert isinstance(backend, NoBudgetBackend)
     finally:
         asyncio.run(client.aclose())
@@ -173,10 +180,11 @@ def test_no_budget_config_builds_no_budget_backend():
 
 def test_control_plane_budget_backend_uses_its_own_configuration():
     metrics = DataPlaneMetrics()
+    bundles = BundleHolder(metrics)
     client = httpx.AsyncClient()
     config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
     try:
-        backend = build_budget_backend(config, client, metrics)
+        backend = build_budget_backend(config, bundles, client, metrics)
         assert isinstance(backend, ControlPlaneBudgetBackend)
     finally:
         asyncio.run(client.aclose())
@@ -229,8 +237,7 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
     holder = BudgetStateHolder()
     try:
         async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-            holder.request_state(ORG)
-            poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), holder, client, metrics)
+            poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), bundles, holder, client, metrics)
             await poller.once()
             for failed_response in (httpx.Response(503), httpx.Response(200, json={"data": {"computed_at": now.isoformat(), "organizations": []}})):
                 response = failed_response

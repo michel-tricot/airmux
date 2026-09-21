@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from itertools import groupby
+from itertools import batched, groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING, override
 
@@ -24,8 +24,9 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from contract import KeyEntry
+    from data_plane.bundle.holder import BundleHolder
     from data_plane.control_plane_link import ControlPlaneLink
-    from data_plane.metrics import DataPlaneMetrics
+    from data_plane.metrics import BudgetStateFallback, DataPlaneMetrics
     from data_plane.policies import CompiledRule
 
 
@@ -71,14 +72,7 @@ def _compile(state: BudgetState) -> _CompiledBudget:
 class BudgetStateHolder:
     def __init__(self) -> None:
         self._organizations: Mapping[UUID, Mapping[UUID, Mapping[tuple[UUID, int], _CompiledBudget]]] = MappingProxyType({})
-        self._tracked_orgs: set[UUID] = set()
         self.computed_at: datetime | None = None
-
-    def request_state(self, org_id: UUID) -> None:
-        self._tracked_orgs.add(org_id)
-
-    def requested_orgs(self) -> tuple[UUID, ...]:
-        return tuple(self._tracked_orgs)
 
     def adopt(self, state: PolicyState) -> None:
         organizations = {
@@ -97,24 +91,25 @@ class BudgetStateHolder:
         self._organizations = MappingProxyType(current)
         self.computed_at = state.computed_at
 
-    def check(self, rules: tuple[CompiledRule, ...], key: KeyEntry, now: datetime) -> None:
+    def check(self, rules: tuple[CompiledRule, ...], key: KeyEntry, now: datetime) -> BudgetStateFallback | None:
         if not rules:
-            return
+            return None
         workspaces = self._organizations.get(key.org_id)
         if workspaces is None:
-            self.request_state(key.org_id)
-            raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
+            return "missing"
         budget_by_rule = workspaces.get(key.workspace_id, {})
-        budgets: list[_CompiledBudget] = []
+        fallback: BudgetStateFallback | None = None
         for rule in rules:
             budget = budget_by_rule.get((rule.policy.id, rule.rule_index))
-            if budget is None or not _state_matches_rule(budget, rule):
-                self.request_state(key.org_id)
-                raise RequestRejectedError(503, GatewayErrorCode.policy_state_unavailable, "Budget state has not loaded")
-            budgets.append(budget)
-        for budget in budgets:
+            if budget is None:
+                fallback = fallback or "missing"
+                continue
+            if not _state_matches_rule(budget, rule):
+                fallback = fallback or "mismatch"
+                continue
             state = budget.state
             if not state.window_start <= now < state.window_end:
+                fallback = fallback or "expired"
                 continue
             if budget.exhausted_for(key):
                 raise RequestRejectedError(
@@ -123,6 +118,7 @@ class BudgetStateHolder:
                     f"Estimated cost budget exhausted until {state.window_end.isoformat()}",
                     retry_after=max(1, math.ceil((state.window_end - now).total_seconds())),
                 )
+        return fallback
 
 
 def _state_matches_rule(budget: _CompiledBudget, rule: CompiledRule) -> bool:
@@ -143,19 +139,30 @@ class BudgetStatePoller:
     def __init__(
         self,
         control_plane: ControlPlaneLink,
+        bundles: BundleHolder,
         budgets: BudgetStateHolder,
         client: httpx.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._metrics = metrics
         self._control_plane = control_plane
+        self._bundles = bundles
         self._budgets = budgets
         self._client = client
 
     async def once(self) -> None:
-        org_ids = self._budgets.requested_orgs()
-        if not org_ids:
+        org_ids = tuple(self._bundles.current.snapshots)
+        states = tuple([await self._fetch(batch) for batch in batched(org_ids, 1000, strict=False)])
+        if not states:
             return
+        state = PolicyState(
+            computed_at=min(item.computed_at for item in states),
+            organizations=tuple(org for item in states for org in item.organizations),
+        )
+        self._budgets.adopt(state)
+        self._metrics.observe_budget_state(state.computed_at.timestamp())
+
+    async def _fetch(self, org_ids: tuple[UUID, ...]) -> PolicyState:
         response = await self._client.post(
             f"{self._control_plane.url}/api/v1/policy-state/sync",
             headers={"authorization": f"Bearer {self._control_plane.management_key}"},
@@ -167,8 +174,7 @@ class BudgetStatePoller:
         if {org.org_id for org in state.organizations} != set(org_ids):
             message = "Budget state must contain every requested organization exactly once"
             raise ValueError(message)
-        self._budgets.adopt(state)
-        self._metrics.observe_budget_state(state.computed_at.timestamp())
+        return state
 
     async def run(self, poll_interval_s: float = 5.0) -> None:
         await run_periodic(self.once, poll_interval_s, (httpx.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
@@ -186,20 +192,25 @@ class ControlPlaneBudgetBackend:
     def __init__(
         self,
         config: ControlPlaneBudgetConfig,
+        bundles: BundleHolder,
         client: httpx.AsyncClient,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._config = config
+        self._bundles = bundles
         self._budgets = BudgetStateHolder()
         self._client = client
         self._metrics = metrics
 
     def check(self, rules: tuple[CompiledRule, ...], key: KeyEntry, now: datetime) -> None:
-        self._budgets.check(rules, key, now)
+        fallback = self._budgets.check(rules, key, now)
+        if fallback is not None:
+            self._metrics.observe_budget_state_fallback(fallback)
 
     def start(self, task_group: asyncio.TaskGroup) -> tuple[asyncio.Task[None], ...]:
         poller = BudgetStatePoller(
             self._config.control_plane,
+            self._bundles,
             self._budgets,
             self._client,
             self._metrics,
@@ -212,9 +223,10 @@ BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
 
 def build_budget_backend(
     config: BudgetConfig,
+    bundles: BundleHolder,
     client: httpx.AsyncClient,
     metrics: DataPlaneMetrics,
 ) -> BudgetBackend:
     if isinstance(config, ControlPlaneBudgetConfig):
-        return ControlPlaneBudgetBackend(config, client, metrics)
+        return ControlPlaneBudgetBackend(config, bundles, client, metrics)
     return NoBudgetBackend()

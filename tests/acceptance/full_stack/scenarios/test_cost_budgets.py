@@ -2,18 +2,12 @@ from __future__ import annotations
 
 import time
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import httpx
 import pytest
 import yaml
-from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, _bin, _payload, _poll, metric
+from stack_harness import ADMIN_EMAIL, ADMIN_PASSWORD, MODEL, Stack, _bin, _payload, _poll, metric
 from tests.acceptance.process_harness import uvicorn_port
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-    from stack_harness import Stack
 
 
 def _start_two_deployments(stack: Stack) -> tuple[str, str]:
@@ -54,14 +48,11 @@ def _start_two_deployments(stack: Stack) -> tuple[str, str]:
     return stack.dp_url, second_url
 
 
-def _wait_for_budget(urls: tuple[str, str], committed: float, authentication: dict[str, str], body: Mapping[str, object]) -> None:
+def _wait_for_budget(urls: tuple[str, str], committed: float) -> None:
     assert _poll(
         lambda: all(metric(f"{url}/metrics", "airmux_data_plane_bundle_last_adopted_timestamp_seconds") > committed for url in urls),
         20,
     )
-    for url in urls:
-        response = httpx.post(f"{url}/inf/v1/chat/completions", headers=authentication, json=body)
-        assert response.status_code in {429, 503}, response.text
     assert _poll(
         lambda: all(metric(f"{url}/metrics", "airmux_data_plane_budget_state_computed_timestamp_seconds") > committed for url in urls),
         20,
@@ -95,7 +86,7 @@ def test_two_deployments_enforce_historical_budgets_during_control_plane_outage(
         for _ in range(2):
             committed = time.time()
             policy = _payload(admin.post(path, json={"name": "Historical limits", "definition": definition}))
-            _wait_for_budget(urls, committed, authentication, body)
+            _wait_for_budget(urls, committed)
             for url in urls:
                 response = httpx.post(f"{url}/inf/v1/chat/completions", headers=authentication, json=body)
                 assert response.status_code == 429, response.text
@@ -107,7 +98,7 @@ def test_two_deployments_enforce_historical_budgets_during_control_plane_outage(
             _payload(admin.delete(f"{path}/{policy['id']}"))
         committed = time.time()
         _payload(admin.post(path, json={"name": "Outage limit", "definition": definition}))
-        _wait_for_budget(urls, committed, authentication, body)
+        _wait_for_budget(urls, committed)
     stack.stop("cp")
     for url in urls:
         started = time.monotonic()
