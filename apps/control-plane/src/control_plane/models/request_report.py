@@ -49,6 +49,7 @@ _CURSOR_CHARACTERS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv
 
 RequestOutcome = Literal["pending", "succeeded", "failed", "denied", "timeout", "cancelled"]
 RequestConfidence = Literal["provider", "estimated", "partial", "unavailable", "not_applicable"]
+ProviderCredentialFilter = UUID | Literal["unattributed"]
 RequestCursorToken = Annotated[str, StringConstraints(min_length=1, max_length=MAX_CURSOR_LENGTH, pattern=r"^[A-Za-z0-9_-]+$")]
 
 
@@ -69,6 +70,11 @@ class _RequestFilterQuery(_ReportPeriodQueryBase):
     inference_key: list[KeyFilter] = Field(default_factory=list, max_length=50, description="Repeated inference key snapshot ID filter")
     model: list[ModelFilter] = Field(default_factory=list, max_length=50, description="Repeated routed-model request selector")
     provider: list[ProviderFilter] = Field(default_factory=list, max_length=50, description="Repeated routed-provider request selector")
+    provider_credential: list[ProviderCredentialFilter] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Repeated immutable provider credential snapshot UUID or unattributed request selector",
+    )
     outcome: list[RequestOutcome] = Field(default_factory=list, max_length=50, description="Repeated terminal outcome or pending filter")
     confidence: list[RequestConfidence] = Field(default_factory=list, max_length=50, description="Repeated request accounting confidence filter")
     search: str | None = Field(default=None, max_length=320, description="Literal search across immutable request and attempt snapshots")
@@ -281,7 +287,7 @@ def request_query_fingerprint(
     period: OverviewPeriodOut,
 ) -> str:
     values = query.model_dump(mode="json", exclude={"as_of", "cursor", "limit"})
-    for field in ("workspace", "principal", "inference_key", "model", "provider", "outcome", "confidence"):
+    for field in ("workspace", "principal", "inference_key", "model", "provider", "provider_credential", "outcome", "confidence"):
         if field in values:
             values[field] = sorted(set(values[field]))
     values["org_id"] = str(org_id)

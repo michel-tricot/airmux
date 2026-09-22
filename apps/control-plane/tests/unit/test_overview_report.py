@@ -31,7 +31,15 @@ def _freshness(received_at: datetime) -> OverviewFreshnessOut:
     )
 
 
-def _fact(request_id: UUID, started_at: datetime, *, user_id: UUID | None = None, cost: str = "0.000000000001") -> ReportFact:
+def _fact(  # noqa: PLR0913 report fact fixture exposes attribution dimensions
+    request_id: UUID,
+    started_at: datetime,
+    *,
+    user_id: UUID | None = None,
+    cost: str = "0.000000000001",
+    credential_id: UUID | None = None,
+    credential_name: str = "default",
+) -> ReportFact:
     return ReportFact(
         request_id=request_id,
         request_started_at=started_at,
@@ -47,6 +55,9 @@ def _fact(request_id: UUID, started_at: datetime, *, user_id: UUID | None = None
         attempt_index=1,
         model_id="gpt-test",
         provider_id="openai",
+        credential_id=credential_id or uuid7(),
+        credential_scope="workspace",
+        credential_name=credential_name,
         input_tokens=1,
         output_tokens=1,
         cache_read_tokens=0,
@@ -160,3 +171,43 @@ def test_attribution_share_is_fixed_point_and_generated_python_accepts_exponent_
     assert small_share is not None
     assert f'"share_of_known_cost":"{format(small_share, "f")}"' in payload
     assert "E-" not in payload
+
+
+def test_provider_credential_attribution_includes_exact_current_accounting_and_empty_comparison_change():
+    query = OverviewReportQuery(
+        range="custom",
+        timezone="UTC",
+        start_date=date(2026, 1, 2),
+        end_date=date(2026, 1, 2),
+        group="provider_credential",
+    )
+    received_at = datetime(2026, 1, 3, tzinfo=UTC)
+    periods = resolve_periods(query, received_at)
+    credential_id = uuid7()
+
+    report = build_overview_report(
+        query,
+        _freshness(received_at),
+        periods,
+        [
+            _fact(
+                uuid7(),
+                datetime(2026, 1, 2, 1, tzinfo=UTC),
+                cost="0.000000000003",
+                credential_id=credential_id,
+                credential_name="Primary",
+            )
+        ],
+    )
+
+    attribution = report.attribution[0]
+    assert attribution.id == str(credential_id)
+    assert attribution.label == "workspace / Primary"
+    assert attribution.summary.current.known_input_tokens == 1
+    assert attribution.summary.current.known_output_tokens == 1
+    assert attribution.summary.current.known_cache_read_tokens == 0
+    assert attribution.summary.current.known_cache_write_tokens == 0
+    assert attribution.summary.current.cost_per_request_denominator == 1
+    assert attribution.summary.current.cost_per_request_usd == Decimal("0.000000000003")
+    assert attribution.summary.comparison.known_cost_usd == Decimal(0)
+    assert attribution.summary.delta.known_cost_usd == Decimal("0.000000000003")

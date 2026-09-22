@@ -34,6 +34,7 @@ export function PolicyBudgetDialog({
   const [bucketInput, setBucketInput] = useState('');
   const status = usePolicyStatus(orgId, workspaceRef, policy.id, { rule_index: ruleIndex, after_bucket: afterBucket, bucket_id: bucketIdFilter });
   const currentPolicy = status.data?.policy ?? policy;
+  const selectedAction = currentPolicy.definition.rules[ruleIndex]?.action;
   return (
     <Modal
       open
@@ -65,30 +66,29 @@ export function PolicyBudgetDialog({
               : [],
           )}
         />
-        {currentPolicy.definition.rules[ruleIndex]?.action.kind === 'budget' &&
-          currentPolicy.definition.rules[ruleIndex]?.action.aggregation !== 'shared' && (
-            <form
-              className="flex items-end gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setBucketIdFilter(bucketInput.trim() || undefined);
-                setAfterBucket(undefined);
-              }}
-            >
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="budget-bucket">Bucket ID</Label>
-                <Input
-                  id="budget-bucket"
-                  value={bucketInput}
-                  onChange={(event) => setBucketInput(event.target.value)}
-                  placeholder="All matching buckets"
-                />
-              </div>
-              <Button type="submit" variant="outline">
-                Filter
-              </Button>
-            </form>
-          )}
+        {selectedAction?.kind === 'budget' && selectedAction.aggregation !== 'shared' && (
+          <form
+            className="flex items-end gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setBucketIdFilter(bucketInput.trim() || undefined);
+              setAfterBucket(undefined);
+            }}
+          >
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="budget-bucket">Bucket ID</Label>
+              <Input
+                id="budget-bucket"
+                value={bucketInput}
+                onChange={(event) => setBucketInput(event.target.value)}
+                placeholder="All matching buckets"
+              />
+            </div>
+            <Button type="submit" variant="outline">
+              Filter
+            </Button>
+          </form>
+        )}
         {status.isLoading ? (
           <LoadingState label="Loading spending..." />
         ) : status.isError ? (

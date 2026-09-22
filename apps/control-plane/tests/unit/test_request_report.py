@@ -163,11 +163,13 @@ def _export_row(*, request_id: UUID | None = None, attempt_indexes: tuple[int, .
 
 
 def test_query_trims_search_and_string_filters_without_mutating_closed_values():
+    credential_id = uuid7()
     query = _query(
         search="  checkout  ",
         inference_key=["  checkout-key  "],
         model=["  gpt-test  "],
         provider=["  openai  "],
+        provider_credential=[credential_id, "unattributed"],
         outcome=["succeeded"],
         confidence=["provider"],
     )
@@ -176,6 +178,7 @@ def test_query_trims_search_and_string_filters_without_mutating_closed_values():
     assert query.inference_key == ["checkout-key"]
     assert query.model == ["gpt-test"]
     assert query.provider == ["openai"]
+    assert query.provider_credential == [credential_id, "unattributed"]
     assert query.outcome == ["succeeded"]
     assert query.confidence == ["provider"]
 
@@ -187,6 +190,8 @@ def test_query_trims_search_and_string_filters_without_mutating_closed_values():
         {"search": "x" * 321},
         {"model": [f"model-{index}" for index in range(51)]},
         {"provider": ["   "]},
+        {"provider_credential": ["not-a-uuid"]},
+        {"provider_credential": [str(uuid7()) for _ in range(51)]},
         {"limit": 0},
         {"limit": 201},
         {"outcome": ["unknown"]},
@@ -270,6 +275,7 @@ def test_query_fingerprint_binds_filters_scope_period_and_sort_but_not_page_tran
 
     assert request_query_fingerprint(_query(search="checkout", limit=200), org_id, None, period) == fingerprint
     assert request_query_fingerprint(_query(search="other", limit=25), org_id, None, period) != fingerprint
+    assert request_query_fingerprint(_query(search="checkout", provider_credential=[uuid7()]), org_id, None, period) != fingerprint
     assert request_query_fingerprint(_query(search="checkout", sort="latency_ms"), org_id, None, period) != fingerprint
     assert request_query_fingerprint(base, org_id, workspace_id, period) != fingerprint
     shifted = period.model_copy(update={"end_at": datetime(2026, 1, 9, tzinfo=UTC)})

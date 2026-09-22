@@ -1947,24 +1947,6 @@ export interface OutcomeCountsOut {
   cancelled: number;
 }
 
-export type OverviewAttributionOutTokenCompleteness = typeof OverviewAttributionOutTokenCompleteness[keyof typeof OverviewAttributionOutTokenCompleteness];
-
-
-export const OverviewAttributionOutTokenCompleteness = {
-  complete: 'complete',
-  partial: 'partial',
-  unavailable: 'unavailable',
-} as const;
-
-export type OverviewAttributionOutCostCompleteness = typeof OverviewAttributionOutCostCompleteness[keyof typeof OverviewAttributionOutCostCompleteness];
-
-
-export const OverviewAttributionOutCostCompleteness = {
-  complete: 'complete',
-  partial: 'partial',
-  unavailable: 'unavailable',
-} as const;
-
 export interface TokenSourceCountsOut {
   /** @minimum 0 */
   provider: number;
@@ -1976,74 +1958,6 @@ export interface TokenSourceCountsOut {
   unavailable: number;
   /** @minimum 0 */
   not_applicable: number;
-}
-
-export interface OverviewAttributionOut {
-  id: string | null;
-  label: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  known_cost_usd: string;
-  share_of_known_cost: string | null;
-  /** @minimum 0 */
-  logical_requests: number;
-  /** @minimum 0 */
-  attempts: number;
-  /** @minimum 0 */
-  incomplete_requests: number;
-  /** @minimum 0 */
-  unavailable_usage_attempts: number;
-  token_sources: TokenSourceCountsOut;
-  /** @minimum 0 */
-  unpriced_attempts: number;
-  cost_sources: CostSourceCountsOut;
-  token_completeness: OverviewAttributionOutTokenCompleteness;
-  cost_completeness: OverviewAttributionOutCostCompleteness;
-}
-
-export type OverviewBucket = typeof OverviewBucket[keyof typeof OverviewBucket];
-
-
-export const OverviewBucket = {
-  hour: 'hour',
-  day: 'day',
-} as const;
-
-export type OverviewGroup = typeof OverviewGroup[keyof typeof OverviewGroup];
-
-
-export const OverviewGroup = {
-  workspace: 'workspace',
-  principal: 'principal',
-  inference_key: 'inference_key',
-  model: 'model',
-  provider: 'provider',
-} as const;
-
-export interface TokenSourceCountsDeltaOut {
-  provider: number;
-  estimated: number;
-  partial: number;
-  unavailable: number;
-  not_applicable: number;
-}
-
-export interface OverviewMetricsDeltaOut {
-  logical_requests: number;
-  attempts: number;
-  outcomes: OutcomeCountsDeltaOut;
-  pending_requests: number;
-  incomplete_requests: number;
-  known_input_tokens: number;
-  known_output_tokens: number;
-  known_cache_read_tokens: number;
-  known_cache_write_tokens: number;
-  unavailable_usage_attempts: number;
-  token_sources: TokenSourceCountsDeltaOut;
-  /** @pattern ^-?\d+(?:\.\d+)?$ */
-  known_cost_usd: string;
-  unpriced_attempts: number;
-  cost_sources: CostSourceCountsDeltaOut;
-  cost_per_request_usd: string | null;
 }
 
 export type OverviewMetricsOutTokenCompleteness = typeof OverviewMetricsOutTokenCompleteness[keyof typeof OverviewMetricsOutTokenCompleteness];
@@ -2066,7 +1980,7 @@ export const OverviewMetricsOutCostCompleteness = {
 
 export interface OverviewMetricsOut {
   /**
-     * Distinct logical requests; model and provider splits assign each request to its final included routed attempt
+     * Distinct logical requests; model, provider, and provider credential breakdowns assign each request to its final included routed attempt
      * @minimum 0
      */
   logical_requests: number;
@@ -2102,6 +2016,68 @@ export interface OverviewMetricsOut {
   cost_completeness: OverviewMetricsOutCostCompleteness;
 }
 
+export interface TokenSourceCountsDeltaOut {
+  provider: number;
+  estimated: number;
+  partial: number;
+  unavailable: number;
+  not_applicable: number;
+}
+
+export interface OverviewMetricsDeltaOut {
+  logical_requests: number;
+  attempts: number;
+  outcomes: OutcomeCountsDeltaOut;
+  pending_requests: number;
+  incomplete_requests: number;
+  known_input_tokens: number;
+  known_output_tokens: number;
+  known_cache_read_tokens: number;
+  known_cache_write_tokens: number;
+  unavailable_usage_attempts: number;
+  token_sources: TokenSourceCountsDeltaOut;
+  /** @pattern ^-?\d+(?:\.\d+)?$ */
+  known_cost_usd: string;
+  unpriced_attempts: number;
+  cost_sources: CostSourceCountsDeltaOut;
+  cost_per_request_usd: string | null;
+}
+
+export interface OverviewSummaryOut {
+  current: OverviewMetricsOut;
+  comparison: OverviewMetricsOut;
+  delta: OverviewMetricsDeltaOut;
+}
+
+export interface OverviewAttributionOut {
+  id: string | null;
+  label: string;
+  /** Share of current-period known spend; null when current-period known spend is zero */
+  share_of_known_cost: string | null;
+  /** Current and equivalent-period comparison metrics; a group absent from either period has zero metrics for that period */
+  summary: OverviewSummaryOut;
+}
+
+export type OverviewBucket = typeof OverviewBucket[keyof typeof OverviewBucket];
+
+
+export const OverviewBucket = {
+  hour: 'hour',
+  day: 'day',
+} as const;
+
+export type OverviewGroup = typeof OverviewGroup[keyof typeof OverviewGroup];
+
+
+export const OverviewGroup = {
+  workspace: 'workspace',
+  principal: 'principal',
+  inference_key: 'inference_key',
+  model: 'model',
+  provider: 'provider',
+  provider_credential: 'provider_credential',
+} as const;
+
 export interface OverviewPeriodsOut {
   current: OverviewPeriodOut;
   comparison: OverviewPeriodOut;
@@ -2127,12 +2103,6 @@ export const OverviewSplit = {
   model: 'model',
   provider: 'provider',
 } as const;
-
-export interface OverviewSummaryOut {
-  current: OverviewMetricsOut;
-  comparison: OverviewMetricsOut;
-  delta: OverviewMetricsDeltaOut;
-}
 
 export interface OverviewSeriesPointOut {
   start_at: string;
@@ -3057,7 +3027,7 @@ bucket?: OverviewBucket;
  */
 split?: OverviewSplit;
 /**
- * Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+ * Attribution grouping; model, provider, and provider credential request counts are assigned to the final included routed attempt
  */
 group?: OverviewGroup;
 /**
@@ -3125,7 +3095,7 @@ bucket?: OverviewBucket;
  */
 split?: OverviewSplit;
 /**
- * Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+ * Attribution grouping; model, provider, and provider credential request counts are assigned to the final included routed attempt
  */
 group?: OverviewGroup;
 /**
@@ -3205,6 +3175,11 @@ model?: string[];
  * @items.maxLength 63
  */
 provider?: string[];
+/**
+ * Repeated immutable provider credential snapshot UUID or unattributed request selector
+ * @maxItems 50
+ */
+provider_credential?: (string | 'unattributed')[];
 /**
  * Repeated terminal outcome or pending filter
  * @maxItems 50
@@ -3317,6 +3292,11 @@ model?: string[];
  */
 provider?: string[];
 /**
+ * Repeated immutable provider credential snapshot UUID or unattributed request selector
+ * @maxItems 50
+ */
+provider_credential?: (string | 'unattributed')[];
+/**
  * Repeated terminal outcome or pending filter
  * @maxItems 50
  */
@@ -3423,6 +3403,11 @@ model?: string[];
  */
 provider?: string[];
 /**
+ * Repeated immutable provider credential snapshot UUID or unattributed request selector
+ * @maxItems 50
+ */
+provider_credential?: (string | 'unattributed')[];
+/**
  * Repeated terminal outcome or pending filter
  * @maxItems 50
  */
@@ -3523,6 +3508,11 @@ model?: string[];
  * @items.maxLength 63
  */
 provider?: string[];
+/**
+ * Repeated immutable provider credential snapshot UUID or unattributed request selector
+ * @maxItems 50
+ */
+provider_credential?: (string | 'unattributed')[];
 /**
  * Repeated terminal outcome or pending filter
  * @maxItems 50

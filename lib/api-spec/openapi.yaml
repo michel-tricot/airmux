@@ -3460,9 +3460,11 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/OverviewGroup'
-          description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+          description: Attribution grouping; model, provider, and provider credential request counts are assigned to the final
+            included routed attempt
           default: workspace
-        description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+        description: Attribution grouping; model, provider, and provider credential request counts are assigned to the final
+          included routed attempt
       - name: principal
         in: query
         required: false
@@ -3652,9 +3654,11 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/OverviewGroup'
-          description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+          description: Attribution grouping; model, provider, and provider credential request counts are assigned to the final
+            included routed attempt
           default: workspace
-        description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+        description: Attribution grouping; model, provider, and provider credential request counts are assigned to the final
+          included routed attempt
       - name: principal
         in: query
         required: false
@@ -3855,6 +3859,21 @@ paths:
           description: Repeated routed-provider request selector
           title: Provider
         description: Repeated routed-provider request selector
+      - name: provider_credential
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            anyOf:
+            - type: string
+              format: uuid
+            - const: unattributed
+              type: string
+          maxItems: 50
+          description: Repeated immutable provider credential snapshot UUID or unattributed request selector
+          title: Provider Credential
+        description: Repeated immutable provider credential snapshot UUID or unattributed request selector
       - name: outcome
         in: query
         required: false
@@ -4101,6 +4120,21 @@ paths:
           description: Repeated routed-provider request selector
           title: Provider
         description: Repeated routed-provider request selector
+      - name: provider_credential
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            anyOf:
+            - type: string
+              format: uuid
+            - const: unattributed
+              type: string
+          maxItems: 50
+          description: Repeated immutable provider credential snapshot UUID or unattributed request selector
+          title: Provider Credential
+        description: Repeated immutable provider credential snapshot UUID or unattributed request selector
       - name: outcome
         in: query
         required: false
@@ -4328,6 +4362,21 @@ paths:
           description: Repeated routed-provider request selector
           title: Provider
         description: Repeated routed-provider request selector
+      - name: provider_credential
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            anyOf:
+            - type: string
+              format: uuid
+            - const: unattributed
+              type: string
+          maxItems: 50
+          description: Repeated immutable provider credential snapshot UUID or unattributed request selector
+          title: Provider Credential
+        description: Repeated immutable provider credential snapshot UUID or unattributed request selector
       - name: outcome
         in: query
         required: false
@@ -4552,6 +4601,21 @@ paths:
           description: Repeated routed-provider request selector
           title: Provider
         description: Repeated routed-provider request selector
+      - name: provider_credential
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            anyOf:
+            - type: string
+              format: uuid
+            - const: unattributed
+              type: string
+          maxItems: 50
+          description: Repeated immutable provider credential snapshot UUID or unattributed request selector
+          title: Provider Credential
+        description: Repeated immutable provider credential snapshot UUID or unattributed request selector
       - name: outcome
         in: query
         required: false
@@ -9401,69 +9465,23 @@ components:
         label:
           type: string
           title: Label
-        known_cost_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
-          title: Known Cost Usd
         share_of_known_cost:
           anyOf:
           - type: string
             pattern: ^\d+(?:\.\d+)?$
           - type: 'null'
           title: Share Of Known Cost
-        logical_requests:
-          type: integer
-          minimum: 0.0
-          title: Logical Requests
-        attempts:
-          type: integer
-          minimum: 0.0
-          title: Attempts
-        incomplete_requests:
-          type: integer
-          minimum: 0.0
-          title: Incomplete Requests
-        unavailable_usage_attempts:
-          type: integer
-          minimum: 0.0
-          title: Unavailable Usage Attempts
-        token_sources:
-          $ref: '#/components/schemas/TokenSourceCountsOut'
-        unpriced_attempts:
-          type: integer
-          minimum: 0.0
-          title: Unpriced Attempts
-        cost_sources:
-          $ref: '#/components/schemas/CostSourceCountsOut'
-        token_completeness:
-          type: string
-          enum:
-          - complete
-          - partial
-          - unavailable
-          title: Token Completeness
-        cost_completeness:
-          type: string
-          enum:
-          - complete
-          - partial
-          - unavailable
-          title: Cost Completeness
+          description: Share of current-period known spend; null when current-period known spend is zero
+        summary:
+          $ref: '#/components/schemas/OverviewSummaryOut'
+          description: Current and equivalent-period comparison metrics; a group absent from either period has zero metrics
+            for that period
       type: object
       required:
       - id
       - label
-      - known_cost_usd
       - share_of_known_cost
-      - logical_requests
-      - attempts
-      - incomplete_requests
-      - unavailable_usage_attempts
-      - token_sources
-      - unpriced_attempts
-      - cost_sources
-      - token_completeness
-      - cost_completeness
+      - summary
       title: OverviewAttributionOut
     OverviewBucket:
       type: string
@@ -9510,6 +9528,7 @@ components:
       - inference_key
       - model
       - provider
+      - provider_credential
       title: OverviewGroup
     OverviewMetricsDeltaOut:
       properties:
@@ -9583,8 +9602,8 @@ components:
           type: integer
           minimum: 0.0
           title: Logical Requests
-          description: Distinct logical requests; model and provider splits assign each request to its final included routed
-            attempt
+          description: Distinct logical requests; model, provider, and provider credential breakdowns assign each request
+            to its final included routed attempt
         attempts:
           type: integer
           minimum: 0.0

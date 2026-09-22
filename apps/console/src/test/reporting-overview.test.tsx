@@ -101,17 +101,41 @@ function report(overrides: Partial<OverviewReportOut> = {}): OverviewReportOut {
       {
         id: WORKSPACES[0].id,
         label: WORKSPACES[0].name,
-        known_cost_usd: '0.000000000444',
         share_of_known_cost: '1',
-        logical_requests: 1,
-        attempts: 2,
-        incomplete_requests: 0,
-        unavailable_usage_attempts: 0,
-        token_sources: sources,
-        unpriced_attempts: 0,
-        cost_sources: costs,
-        token_completeness: 'complete',
-        cost_completeness: 'complete',
+        summary: {
+          current,
+          comparison: metrics({
+            logical_requests: 0,
+            attempts: 0,
+            outcomes: zeroOutcomes,
+            known_input_tokens: 0,
+            known_output_tokens: 0,
+            known_cache_read_tokens: 0,
+            known_cache_write_tokens: 0,
+            token_sources: zeroSources,
+            known_cost_usd: '0',
+            cost_sources: zeroCosts,
+            cost_per_request_usd: null,
+            cost_per_request_denominator: 0,
+          }),
+          delta: {
+            logical_requests: 1,
+            attempts: 2,
+            outcomes,
+            pending_requests: 0,
+            incomplete_requests: 0,
+            known_input_tokens: 12,
+            known_output_tokens: 8,
+            known_cache_read_tokens: 3,
+            known_cache_write_tokens: 2,
+            unavailable_usage_attempts: 0,
+            token_sources: sources,
+            known_cost_usd: '0.000000000444',
+            unpriced_attempts: 0,
+            cost_sources: costs,
+            cost_per_request_usd: null,
+          },
+        },
       },
     ],
     ...overrides,
@@ -143,6 +167,11 @@ describe('shared spending overview', () => {
     expect(within(screen.getByText('Known spend', { selector: 'div' }).parentElement!).getByText('$0.000000000444')).toBeInTheDocument();
     expect(screen.getByText('Production')).toBeInTheDocument();
     expect(screen.getByText('100.00%')).toBeInTheDocument();
+    const attribution = screen.getByRole('heading', { level: 2, name: 'Attribution' }).closest('section')!;
+    expect(within(attribution).getByRole('columnheader', { name: 'Period change' })).toBeInTheDocument();
+    expect(within(attribution).getByRole('columnheader', { name: 'Known tokens' })).toBeInTheDocument();
+    expect(within(attribution).getByRole('columnheader', { name: 'Cost per request' })).toBeInTheDocument();
+    expect(within(attribution).getByText('+$0.000000000444')).toBeInTheDocument();
     await waitFor(() => expect(orgReport).toHaveBeenCalled());
     expect(events).not.toHaveBeenCalled();
   });
@@ -154,7 +183,7 @@ describe('shared spending overview', () => {
     renderAt(`/org/workspaces/${WORKSPACES[0].slug}`);
 
     expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
-    expect(screen.getByText('Spending and usage for this workspace.')).toBeInTheDocument();
+    expect(screen.getByText('Gateway-observed estimated spending and usage for this workspace.')).toBeInTheDocument();
     expect((await screen.findAllByRole('columnheader', { name: 'Known spend' })).length).toBe(2);
     await waitFor(() => expect(workspaceReport).toHaveBeenCalled());
   });
@@ -180,12 +209,8 @@ describe('shared spending overview', () => {
       attribution: [
         {
           ...report().attribution[0],
-          known_cost_usd: '0',
           share_of_known_cost: null,
-          unavailable_usage_attempts: 1,
-          unpriced_attempts: 1,
-          token_completeness: 'unavailable',
-          cost_completeness: 'unavailable',
+          summary: { ...report().attribution[0].summary, current: unavailable },
         },
       ],
     });
@@ -195,7 +220,7 @@ describe('shared spending overview', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
     const spend = (await screen.findByText('Known spend', { selector: 'div' })).parentElement!;
-    const tokens = screen.getByText('Known tokens').parentElement!;
+    const tokens = screen.getByText('Known tokens', { selector: 'div' }).parentElement!;
     expect(within(spend).getByText('Unavailable', { selector: '.text-2xl' })).toBeInTheDocument();
     expect(within(tokens).getByText('Unavailable', { selector: '.text-2xl' })).toBeInTheDocument();
     expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
@@ -233,7 +258,7 @@ describe('shared spending overview', () => {
     renderAt('/org');
 
     const spend = (await screen.findByText('Known spend', { selector: 'div' })).parentElement!;
-    const tokens = screen.getByText('Known tokens').parentElement!;
+    const tokens = screen.getByText('Known tokens', { selector: 'div' }).parentElement!;
     expect(within(spend).getByText('$0.000000000444 known')).toBeInTheDocument();
     expect(within(spend).getByText('Partial')).toBeInTheDocument();
     expect(within(tokens).getByText('20 known')).toBeInTheDocument();
@@ -250,7 +275,7 @@ describe('shared spending overview', () => {
     );
 
     renderAt(
-      '/org?range=custom&timezone=UTC&start_date=2026-09-01&end_date=2026-09-22&bucket=hour&split=model&group=provider' +
+      '/org?range=custom&timezone=UTC&start_date=2026-09-01&end_date=2026-09-22&bucket=hour&split=model&group=provider_credential' +
         '&workspace=ws-1&workspace=ws-2&principal=user-1&inference_key=key-1&model=gpt-4o&model=claude&provider=openai',
     );
 
@@ -258,9 +283,11 @@ describe('shared spending overview', () => {
     const params = new URL(requestedUrl).searchParams;
     expect(params.get('range')).toBe('custom');
     expect(params.get('bucket')).toBe('hour');
+    expect(params.get('group')).toBe('provider_credential');
     expect(params.getAll('workspace')).toEqual(['ws-1', 'ws-2']);
     expect(params.getAll('model')).toEqual(['gpt-4o', 'claude']);
     expect(params.getAll('provider')).toEqual(['openai']);
+    expect(screen.getByRole('combobox', { name: 'Attribution group' })).toHaveTextContent('Provider credential');
   });
 
   it('does not request reporting without usage.read', async () => {
@@ -322,5 +349,60 @@ describe('shared spending overview', () => {
     );
     renderAt('/org');
     expect(await screen.findByText('No matching gateway requests for this period.')).toBeInTheDocument();
+  });
+
+  it('keeps comparison-only attribution visible when the current period is empty', async () => {
+    const empty = metrics({
+      logical_requests: 0,
+      attempts: 0,
+      outcomes: zeroOutcomes,
+      known_input_tokens: 0,
+      known_output_tokens: 0,
+      known_cache_read_tokens: 0,
+      known_cache_write_tokens: 0,
+      token_sources: zeroSources,
+      known_cost_usd: '0',
+      cost_sources: zeroCosts,
+      cost_per_request_usd: null,
+      cost_per_request_denominator: 0,
+    });
+    const prior = metrics({ known_cost_usd: '1.234560000001', cost_per_request_usd: '1.234560000001' });
+    const base = report();
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/overview', () =>
+        HttpResponse.json({
+          data: report({
+            summary: { ...base.summary, current: empty },
+            series: [],
+            attribution: [
+              {
+                id: 'former-workspace',
+                label: 'Former workspace',
+                share_of_known_cost: null,
+                summary: {
+                  current: empty,
+                  comparison: prior,
+                  delta: {
+                    ...base.summary.delta,
+                    logical_requests: -1,
+                    attempts: -2,
+                    known_cost_usd: '-1.234560000001',
+                    cost_per_request_usd: '-1.234560000001',
+                  },
+                },
+              },
+            ],
+          }),
+        }),
+      ),
+    );
+
+    renderAt('/org');
+
+    expect(await screen.findByText('No matching gateway requests for this period.')).toBeInTheDocument();
+    const attribution = screen.getByRole('heading', { level: 2, name: 'Attribution' }).closest('section')!;
+    expect(within(attribution).getByText('Former workspace')).toBeInTheDocument();
+    expect(within(attribution).getByText('-$1.234560000001')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Trend' })).not.toBeInTheDocument();
   });
 });

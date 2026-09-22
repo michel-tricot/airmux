@@ -168,6 +168,9 @@ class GatewayRequest(Record, table=True):
                 ue.attempt_index,
                 ue.model_id,
                 ue.provider_id,
+                ue.credential_id,
+                ue.credential_scope,
+                ue.credential_name,
                 ue.input_tokens,
                 ue.output_tokens,
                 ue.cache_read_tokens,
@@ -485,7 +488,9 @@ def _filter_clauses(
         if values:
             clauses.append(clause)
             parameters[name] = values
-    if query.model or query.provider:
+    if query.model or query.provider or query.provider_credential:
+        credential_ids = [value for value in query.provider_credential if isinstance(value, UUID)]
+        includes_unattributed = "unattributed" in query.provider_credential
         attempt_filters = [
             "visible.request_id = gr.request_id",
             "visible.org_id = gr.org_id",
@@ -498,7 +503,25 @@ def _filter_clauses(
         if query.provider:
             attempt_filters.append("visible.provider_id = ANY(CAST(:provider AS text[]))")
             parameters["provider"] = query.provider
-        clauses.append(f"EXISTS (SELECT 1 FROM usage_event visible WHERE {' AND '.join(attempt_filters)})")  # noqa: S608 fixed query clauses
+        selectors = []
+        if not query.provider_credential or credential_ids:
+            if credential_ids:
+                attempt_filters.append("visible.credential_id = ANY(CAST(:provider_credential AS uuid[]))")
+                parameters["provider_credential"] = credential_ids
+            selectors.append(
+                f"EXISTS (SELECT 1 FROM usage_event visible WHERE {' AND '.join(attempt_filters)})"  # noqa: S608 fixed query clauses
+            )
+        if includes_unattributed and not query.model and not query.provider:
+            selectors.append(
+                """NOT EXISTS (
+                    SELECT 1 FROM usage_event routed
+                    WHERE routed.request_id = gr.request_id
+                        AND routed.org_id = gr.org_id
+                        AND routed.ingest_id <= :ingest_id
+                        AND routed.attempt_index IS NOT NULL
+                )"""
+            )
+        clauses.append(f"({' OR '.join(selectors)})" if selectors else "FALSE")
     if query.search is not None:
         parameters["search"] = _literal_search_pattern(query.search)
         clauses.append(

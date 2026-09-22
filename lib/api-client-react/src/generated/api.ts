@@ -7121,7 +7121,7 @@ export const getListOrgGatewayRequestsUrl = (orgId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence","workspace"];
+    const arrayFormatParameters = ["principal","inference_key","model","provider","provider_credential","outcome","confidence","workspace"];
 
     if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
       value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
@@ -7326,7 +7326,7 @@ export const getListWorkspaceGatewayRequestsUrl = (orgId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence"];
+    const arrayFormatParameters = ["principal","inference_key","model","provider","provider_credential","outcome","confidence"];
 
     if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
       value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
@@ -7543,7 +7543,7 @@ export const getExportOrgGatewayRequestsUrl = (orgId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence","workspace"];
+    const arrayFormatParameters = ["principal","inference_key","model","provider","provider_credential","outcome","confidence","workspace"];
 
     if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
       value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
@@ -7669,7 +7669,7 @@ export const getExportWorkspaceGatewayRequestsUrl = (orgId: string,
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence"];
+    const arrayFormatParameters = ["principal","inference_key","model","provider","provider_credential","outcome","confidence"];
 
     if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
       value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });

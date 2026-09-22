@@ -7,15 +7,18 @@ from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal, cast
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, PlainSerializer, StringConstraints, WithJsonSchema, field_validator, model_validator
 
-from contract import CostSource, GatewayRequestOutcome, TokenUsageSource, UsdAmount
+from contract import CostSource, CredentialScope, GatewayRequestOutcome, TokenUsageSource, UsdAmount
 from contract.money import USD_AMOUNT_QUANTUM, fixed_point
 from control_plane.models.common.wire import RequestModel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class OverviewRange(StrEnum):
@@ -44,6 +47,7 @@ class OverviewGroup(StrEnum):
     inference_key = "inference_key"
     model = "model"
     provider = "provider"
+    provider_credential = "provider_credential"
 
 
 AccountingCompleteness = Literal["complete", "partial", "unavailable"]
@@ -67,6 +71,7 @@ MAX_CUSTOM_DAYS = 366
 MAX_REPORT_AS_OF_LENGTH = 320
 _REPORT_AS_OF_CHARACTERS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 ReportAsOfToken = Annotated[str, StringConstraints(min_length=1, max_length=MAX_REPORT_AS_OF_LENGTH, pattern=r"^[A-Za-z0-9_-]+$")]
+_UNATTRIBUTED = object()
 
 
 class ReportSnapshotV1(BaseModel):
@@ -169,7 +174,7 @@ class _OverviewReportQueryBase(_ReportPeriodQueryBase):
     )
     group: OverviewGroup = Field(
         default=OverviewGroup.workspace,
-        description="Attribution grouping; model/provider request counts are assigned to the final included routed attempt",
+        description="Attribution grouping; model, provider, and provider credential request counts are assigned to the final included routed attempt",
     )
     principal: list[UUID] = Field(default_factory=list, max_length=50, description="Repeated principal/user snapshot ID filter")
     inference_key: list[KeyFilter] = Field(default_factory=list, max_length=50, description="Repeated inference key snapshot ID filter")
@@ -239,7 +244,8 @@ class CostSourceCountsOut(BaseModel):
 class OverviewMetricsOut(BaseModel):
     logical_requests: int = Field(
         ge=0,
-        description="Distinct logical requests; model and provider splits assign each request to its final included routed attempt",
+        description="Distinct logical requests; model, provider, and provider credential breakdowns assign each request "
+        "to its final included routed attempt",
     )
     attempts: int = Field(ge=0)
     outcomes: OutcomeCountsOut
@@ -317,17 +323,10 @@ class OverviewSeriesPointOut(BaseModel):
 class OverviewAttributionOut(BaseModel):
     id: str | None
     label: str
-    known_cost_usd: UsdAmount
-    share_of_known_cost: ExactRatio | None
-    logical_requests: int = Field(ge=0)
-    attempts: int = Field(ge=0)
-    incomplete_requests: int = Field(ge=0)
-    unavailable_usage_attempts: int = Field(ge=0)
-    token_sources: TokenSourceCountsOut
-    unpriced_attempts: int = Field(ge=0)
-    cost_sources: CostSourceCountsOut
-    token_completeness: AccountingCompleteness
-    cost_completeness: AccountingCompleteness
+    share_of_known_cost: ExactRatio | None = Field(description="Share of current-period known spend; null when current-period known spend is zero")
+    summary: OverviewSummaryOut = Field(
+        description="Current and equivalent-period comparison metrics; a group absent from either period has zero metrics for that period"
+    )
 
 
 class OverviewReportOut(BaseModel):
@@ -356,6 +355,9 @@ class ReportFact(BaseModel):
     attempt_index: int | None
     model_id: str | None
     provider_id: str | None
+    credential_id: UUID | None
+    credential_scope: CredentialScope | None
+    credential_name: str | None
     input_tokens: int | None
     output_tokens: int | None
     cache_read_tokens: int | None
@@ -407,7 +409,7 @@ def build_overview_report(
         group=query.group,
         summary=OverviewSummaryOut(current=current, comparison=comparison, delta=_delta(current, comparison)),
         series=_series(query, periods.current, current_requests),
-        attribution=_attribution(query.group, current_requests),
+        attribution=_attribution(query.group, current_requests, comparison_requests),
     )
 
 
@@ -577,51 +579,81 @@ def _partition(request: list[ReportFact], split: OverviewSplit) -> list[tuple[st
         return [(None, "All", request, True)]
     if split is OverviewSplit.workspace:
         return [(str(first.workspace_id), first.workspace_label, request, True)]
+    return _attempt_partition(
+        request,
+        lambda attempt: (
+            attempt.model_id if split is OverviewSplit.model else attempt.provider_id,
+            (attempt.model_id if split is OverviewSplit.model else attempt.provider_id) or "Unattributed",
+        ),
+    )
+
+
+def _attempt_partition(
+    request: list[ReportFact],
+    identity: Callable[[ReportFact], tuple[str | None, str]],
+) -> list[tuple[str | None, str, list[ReportFact], bool]]:
     attempts = _attempts(request)
     if not attempts:
         return [(None, "Unattributed", request, True)]
-    grouped: dict[str, list[ReportFact]] = defaultdict(list)
+    grouped: dict[tuple[str | None, str], list[ReportFact]] = defaultdict(list)
     for attempt in attempts:
-        value = attempt.model_id if split is OverviewSplit.model else attempt.provider_id
-        if value is not None:
-            grouped[value].append(attempt)
+        grouped[identity(attempt)].append(attempt)
     final_attempt = max(attempts, key=lambda attempt: attempt.attempt_index or 0)
-    final_value = (final_attempt.model_id if split is OverviewSplit.model else final_attempt.provider_id) or ""
-    grouped[final_value].extend(fact for fact in request if fact.attempt_index is None and fact.token_usage_source is not None)
-    return [(value or None, value or "Unattributed", facts, value == final_value) for value, facts in grouped.items()]
+    final_identity = identity(final_attempt)
+    grouped[final_identity].extend(fact for fact in request if fact.attempt_index is None and fact.token_usage_source is not None)
+    return [(group_id, label, facts, (group_id, label) == final_identity) for (group_id, label), facts in grouped.items()]
 
 
-def _attribution(group: OverviewGroup, requests: list[list[ReportFact]]) -> list[OverviewAttributionOut]:
-    grouped: dict[tuple[str | None, str], dict[UUID, list[ReportFact]]] = defaultdict(lambda: defaultdict(list))
-    counted: dict[tuple[str | None, str], set[UUID]] = defaultdict(set)
+def _attribution(
+    group: OverviewGroup,
+    current_requests: list[list[ReportFact]],
+    comparison_requests: list[list[ReportFact]],
+) -> list[OverviewAttributionOut]:
+    comparison_grouped, comparison_counted, comparison_labels = _attribution_groups(group, comparison_requests)
+    current_grouped, current_counted, current_labels = _attribution_groups(group, current_requests)
+    keys = current_grouped.keys() | comparison_grouped.keys()
+    known_total = _metrics(current_requests).known_cost_usd
+    attribution = []
+    for key in keys:
+        current = _metrics(list(current_grouped[key].values()), current_counted[key])
+        comparison = _metrics(list(comparison_grouped[key].values()), comparison_counted[key])
+        label = (current_labels.get(key) or comparison_labels[key])[-1]
+        attribution.append(
+            OverviewAttributionOut(
+                id=None if key is _UNATTRIBUTED else cast("str", key),
+                label=label,
+                share_of_known_cost=current.known_cost_usd / known_total if known_total else None,
+                summary=OverviewSummaryOut(current=current, comparison=comparison, delta=_delta(current, comparison)),
+            )
+        )
+    return sorted(attribution, key=lambda item: (-item.summary.current.known_cost_usd, item.label, item.id or ""))
+
+
+def _attribution_groups(
+    group: OverviewGroup,
+    requests: list[list[ReportFact]],
+) -> tuple[
+    dict[object, dict[UUID, list[ReportFact]]],
+    dict[object, set[UUID]],
+    dict[object, tuple[datetime, int, int, str]],
+]:
+    grouped: dict[object, dict[UUID, list[ReportFact]]] = defaultdict(lambda: defaultdict(list))
+    counted: dict[object, set[UUID]] = defaultdict(set)
+    labels: dict[object, tuple[datetime, int, int, str]] = {}
     for request in requests:
         for group_id, label, group_request, counts_request in _group(request, group):
-            key = (group_id, label)
+            key = group_id if group_id is not None else _UNATTRIBUTED
             grouped[key][request[0].request_id].extend(group_request)
             if counts_request:
                 counted[key].add(request[0].request_id)
-    known_total = _metrics(requests).known_cost_usd
-    attribution = []
-    for (group_id, label), grouped_requests in grouped.items():
-        metrics = _metrics(list(grouped_requests.values()), counted[(group_id, label)])
-        attribution.append(
-            OverviewAttributionOut(
-                id=group_id,
-                label=label,
-                known_cost_usd=metrics.known_cost_usd,
-                share_of_known_cost=metrics.known_cost_usd / known_total if known_total else None,
-                logical_requests=metrics.logical_requests,
-                attempts=metrics.attempts,
-                incomplete_requests=metrics.incomplete_requests,
-                unavailable_usage_attempts=metrics.unavailable_usage_attempts,
-                token_sources=metrics.token_sources,
-                unpriced_attempts=metrics.unpriced_attempts,
-                cost_sources=metrics.cost_sources,
-                token_completeness=metrics.token_completeness,
-                cost_completeness=metrics.cost_completeness,
+            label_candidate = (
+                request[0].request_started_at,
+                request[0].request_id.int,
+                max((fact.attempt_index or 0 for fact in group_request), default=0),
+                label,
             )
-        )
-    return sorted(attribution, key=lambda item: (-item.known_cost_usd, item.label, item.id or ""))
+            labels[key] = max(labels.get(key, label_candidate), label_candidate)
+    return grouped, counted, labels
 
 
 def _group(request: list[ReportFact], group: OverviewGroup) -> list[tuple[str | None, str, list[ReportFact], bool]]:
@@ -632,5 +664,14 @@ def _group(request: list[ReportFact], group: OverviewGroup) -> list[tuple[str | 
         return [(str(first.user_id), first.principal_label, request, True)]
     if group is OverviewGroup.inference_key:
         return [(first.key_id, first.authentication_label, request, True)]
+    if group is OverviewGroup.provider_credential:
+        return _attempt_partition(request, _credential_identity)
     split = OverviewSplit.model if group is OverviewGroup.model else OverviewSplit.provider
     return _partition(request, split)
+
+
+def _credential_identity(attempt: ReportFact) -> tuple[str | None, str]:
+    if attempt.credential_id is None or attempt.credential_scope is None or attempt.credential_name is None:
+        return None, "Unattributed"
+    scope = "organization" if attempt.credential_scope == "org" else attempt.credential_scope
+    return str(attempt.credential_id), f"{scope} / {attempt.credential_name}"

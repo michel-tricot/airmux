@@ -17,7 +17,7 @@ export default function AppDashboard() {
   return (
     <SpendingOverview
       title="Organization Overview"
-      description="Spending and usage across all workspaces."
+      description="Gateway-observed estimated spending and usage across all workspaces."
       scope="organization"
       filters={filters}
       onFilterChange={(name, value) => setSearch(setOverviewFilter(search, name, value), { replace: true })}

@@ -27,13 +27,16 @@ class RequestSeed:
     key_id: str = "key-production"
 
 
-def _attempt(
+def _attempt(  # noqa: PLR0913 event fixture exposes attribution dimensions
     seed: RequestSeed,
     *,
     attempt_index: int,
     model: str = "gpt-test",
     provider: str = "openai",
     cost: str | None = "0.000000000123",
+    credential_id: UUID | None = None,
+    credential_name: str = "default",
+    credential_scope: str = "workspace",
 ) -> dict:
     source = "provider" if cost is not None else "unavailable"
     tokens = 10 if cost is not None else None
@@ -76,9 +79,9 @@ def _attempt(
         "latency_ms": 50,
         "status": "ok" if attempt_index == 2 else "upstream_error",
         "stream": False,
-        "credential_id": str(uuid7()),
-        "credential_scope": "workspace",
-        "credential_name": "default",
+        "credential_id": str(credential_id or uuid7()),
+        "credential_scope": credential_scope,
+        "credential_name": credential_name,
     }
 
 
@@ -212,9 +215,9 @@ def test_overview_reconciles_retry_attempts_under_a_stable_watermark(tmp_path):
         }
         assert sum(point["metrics"]["attempts"] for point in latest["series"]) == 2
         assert sum(point["metrics"]["logical_requests"] for point in latest["series"]) == 1
-        assert sum(Decimal(point["known_cost_usd"]) for point in latest["attribution"]) == Decimal("0.000000000444")
-        assert sum(point["logical_requests"] for point in latest["attribution"]) == 1
-        assert sum(point["incomplete_requests"] for point in latest["attribution"]) == 0
+        assert sum(Decimal(point["summary"]["current"]["known_cost_usd"]) for point in latest["attribution"]) == Decimal("0.000000000444")
+        assert sum(point["summary"]["current"]["logical_requests"] for point in latest["attribution"]) == 1
+        assert sum(point["summary"]["current"]["incomplete_requests"] for point in latest["attribution"]) == 0
         assert frozen["summary"] == old["summary"]
 
         filtered = _overview(client, org_id, cp.headers(org_id), model="gpt-test", split="model", group="model")
@@ -223,7 +226,7 @@ def test_overview_reconciles_retry_attempts_under_a_stable_watermark(tmp_path):
         assert filtered["summary"]["current"]["known_cost_usd"] == "0.000000000444"
         assert filtered["summary"]["current"]["incomplete_requests"] == 0
         assert sum(point["metrics"]["logical_requests"] for point in filtered["series"]) == 1
-        assert sum(point["logical_requests"] for point in filtered["attribution"]) == 1
+        assert sum(point["summary"]["current"]["logical_requests"] for point in filtered["attribution"]) == 1
         assert {point["id"] for point in filtered["attribution"]} == {"gpt-test", "fallback-model"}
         mismatched_attempt = _overview(client, org_id, cp.headers(org_id), model="gpt-test", provider="anthropic")
         assert mismatched_attempt["summary"]["current"]["logical_requests"] == 0
@@ -271,6 +274,136 @@ def test_overview_filters_attempt_facts_without_fabricating_unknown_accounting(t
         assert current["cost_completeness"] == "unavailable"
         assert current["cost_per_request_usd"] == "0.000000000000"
         assert report["attribution"][0]["label"] == "anthropic"
+
+
+def test_provider_credential_attribution_assigns_retry_costs_and_requests_to_the_final_credential(  # noqa: PLR0915 integration scenario covers current, comparison, and unavailable accounting
+    tmp_path,
+):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "overview-credential-attribution")
+        workspace_id = make_workspace(client, cp.headers(org_id), "production")
+        today = datetime.now(tz=UTC).date()
+        current_started = datetime.combine(today, datetime.min.time(), UTC) + timedelta(hours=1)
+        comparison_started = current_started - timedelta(days=1)
+        primary_id = uuid7()
+        fallback_id = uuid7()
+        unavailable_id = uuid7()
+        prior_only_id = uuid7()
+
+        comparison = _attempt(
+            RequestSeed(org_id, workspace_id, uuid7(), comparison_started, uuid7()),
+            attempt_index=1,
+            cost="0.000000000001",
+            credential_id=primary_id,
+            credential_name="Old primary",
+            credential_scope="org",
+        )
+        prior_only = _attempt(
+            RequestSeed(org_id, workspace_id, uuid7(), comparison_started, uuid7()),
+            attempt_index=1,
+            cost="0.000000000005",
+            credential_id=prior_only_id,
+            credential_name="Prior only",
+        )
+        retry_seed = RequestSeed(org_id, workspace_id, uuid7(), current_started, uuid7())
+        primary = _attempt(
+            retry_seed,
+            attempt_index=1,
+            cost="0.000000000003",
+            credential_id=primary_id,
+            credential_name="Shared",
+            credential_scope="org",
+        )
+        primary["cache_read_tokens"] = 2
+        primary["cache_write_tokens"] = 1
+        fallback = _attempt(
+            retry_seed,
+            attempt_index=2,
+            cost="0.000000000007",
+            credential_id=fallback_id,
+            credential_name="Shared",
+        )
+        fallback["cache_read_tokens"] = 4
+        fallback["cache_write_tokens"] = 3
+        unavailable = _attempt(
+            RequestSeed(org_id, workspace_id, uuid7(), current_started, uuid7()),
+            attempt_index=1,
+            cost=None,
+            credential_id=unavailable_id,
+            credential_name="Unavailable",
+        )
+        events = [
+            comparison,
+            _terminal(comparison, expected_attempts=1),
+            prior_only,
+            _terminal(prior_only, expected_attempts=1),
+            primary,
+            fallback,
+            _terminal(fallback, expected_attempts=2),
+            unavailable,
+            _terminal(unavailable, expected_attempts=1, outcome="failed"),
+        ]
+        accepted = client.post("/api/v1/events", json=events, headers=cp.headers())
+        assert accepted.status_code == 200, accepted.text
+
+        report = _overview(
+            client,
+            org_id,
+            cp.headers(org_id),
+            range="custom",
+            start_date=today.isoformat(),
+            end_date=today.isoformat(),
+            group="provider_credential",
+        )
+
+        assert [item["label"] for item in report["attribution"]] == [
+            "workspace / Shared",
+            "organization / Shared",
+            "workspace / Prior only",
+            "workspace / Unavailable",
+        ]
+        attribution = {item["id"]: item for item in report["attribution"]}
+        primary_row = attribution[str(primary_id)]
+        assert primary_row["label"] == "organization / Shared"
+        assert primary_row["summary"]["current"]["known_cost_usd"] == "0.000000000003"
+        assert primary_row["summary"]["comparison"]["known_cost_usd"] == "0.000000000001"
+        assert primary_row["summary"]["delta"]["known_cost_usd"] == "0.000000000002"
+        assert primary_row["summary"]["current"]["known_input_tokens"] == 10
+        assert primary_row["summary"]["current"]["known_output_tokens"] == 5
+        assert primary_row["summary"]["current"]["known_cache_read_tokens"] == 2
+        assert primary_row["summary"]["current"]["known_cache_write_tokens"] == 1
+        assert primary_row["summary"]["current"]["logical_requests"] == 0
+        assert primary_row["summary"]["current"]["cost_per_request_usd"] is None
+        assert primary_row["summary"]["current"]["cost_per_request_denominator"] == 0
+
+        fallback_row = attribution[str(fallback_id)]
+        assert fallback_row["label"] == "workspace / Shared"
+        assert fallback_row["summary"]["current"]["known_cost_usd"] == "0.000000000007"
+        assert fallback_row["summary"]["comparison"]["known_cost_usd"] == "0"
+        assert fallback_row["summary"]["delta"]["known_cost_usd"] == "0.000000000007"
+        assert fallback_row["summary"]["current"]["known_cache_read_tokens"] == 4
+        assert fallback_row["summary"]["current"]["known_cache_write_tokens"] == 3
+        assert fallback_row["summary"]["current"]["logical_requests"] == 1
+        assert fallback_row["summary"]["current"]["cost_per_request_usd"] == "0.000000000007"
+        assert fallback_row["summary"]["current"]["cost_per_request_denominator"] == 1
+
+        unavailable_row = attribution[str(unavailable_id)]
+        assert unavailable_row["summary"]["current"]["known_cost_usd"] == "0"
+        assert unavailable_row["summary"]["delta"]["known_cost_usd"] == "0"
+        assert unavailable_row["summary"]["current"]["known_input_tokens"] == 0
+        assert unavailable_row["summary"]["current"]["known_output_tokens"] == 0
+        assert unavailable_row["summary"]["current"]["logical_requests"] == 1
+        assert unavailable_row["summary"]["current"]["cost_per_request_usd"] == "0.000000000000"
+        assert unavailable_row["summary"]["current"]["cost_per_request_denominator"] == 1
+        assert unavailable_row["summary"]["current"]["token_completeness"] == "unavailable"
+        assert unavailable_row["summary"]["current"]["cost_completeness"] == "unavailable"
+
+        prior_only_row = attribution[str(prior_only_id)]
+        assert prior_only_row["summary"]["current"]["known_cost_usd"] == "0"
+        assert prior_only_row["summary"]["comparison"]["known_cost_usd"] == "0.000000000005"
+        assert prior_only_row["summary"]["delta"]["known_cost_usd"] == "-0.000000000005"
+        assert sum(item["summary"]["current"]["logical_requests"] for item in report["attribution"]) == 2
 
 
 def test_workspace_report_enforces_scope_and_rejects_a_workspace_filter(tmp_path):

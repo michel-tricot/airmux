@@ -193,6 +193,18 @@ def test_request_report_reconciles_ordered_retries_under_a_stable_watermark(tmp_
         ).json()["data"]
         assert len(filtered["items"]) == 1
         assert [attempt["attempt_index"] for attempt in filtered["items"][0]["attempts"]] == [1, 2]
+        credential_filtered = client.get(
+            _org_path(org_id),
+            params=_query(provider_credential=first["credential_id"]),
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        assert [attempt["attempt_index"] for attempt in credential_filtered["items"][0]["attempts"]] == [1, 2]
+        wrong_credential_attempt = client.get(
+            _org_path(org_id),
+            params=_query(model="gpt-test", provider="openai", provider_credential=second["credential_id"]),
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        assert wrong_credential_attempt["items"] == []
         mismatched = client.get(
             _org_path(org_id),
             params=_query(model="gpt-test", provider="anthropic"),
@@ -387,6 +399,12 @@ def test_request_report_preserves_denial_evidence_and_hides_later_requests_at_cu
         assert item["attempts"] == []
         assert item["denial"]["status"] == "denied"
         assert item["known_cost_usd"] == "0"
+        unattributed = client.get(
+            _org_path(org_id),
+            params=_query(provider_credential="unattributed"),
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        assert [request["request_id"] for request in unattributed["items"]] == [str(denied_seed.request_id)]
 
         denied_detail = client.get(_org_path(org_id, f"/{denied_seed.request_id}"), headers=cp.headers(org_id))
         assert denied_detail.status_code == 200, denied_detail.text

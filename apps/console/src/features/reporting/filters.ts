@@ -11,7 +11,7 @@ const FILTER_LIMIT = 50;
 const ranges = new Set<OverviewRange>(['today', '7d', '30d', 'month_to_date', 'custom']);
 const buckets = new Set<OverviewBucket>(['hour', 'day']);
 const splits = new Set<OverviewSplit>(['none', 'workspace', 'model', 'provider']);
-const groups = new Set<OverviewGroup>(['workspace', 'principal', 'inference_key', 'model', 'provider']);
+const groups = new Set<OverviewGroup>(['workspace', 'principal', 'inference_key', 'model', 'provider', 'provider_credential']);
 const timezones = new Set(['UTC', ...(typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : [])]);
 
 export interface OverviewFilters {

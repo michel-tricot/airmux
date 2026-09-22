@@ -26,7 +26,7 @@ export default function WorkspaceOverview() {
   return (
     <SpendingOverview
       title={workspace.data.name}
-      description="Spending and usage for this workspace."
+      description="Gateway-observed estimated spending and usage for this workspace."
       scope="workspace"
       filters={filters}
       onFilterChange={(name, value) => setSearch(setOverviewFilter(search, name, value), { replace: true })}

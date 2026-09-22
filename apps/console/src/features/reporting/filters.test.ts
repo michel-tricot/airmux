@@ -38,6 +38,13 @@ describe('overview report URL filters', () => {
     expect(filters.group).toBe('workspace');
   });
 
+  it('accepts provider credential attribution grouping', () => {
+    const filters = parseOverviewFilters(new URLSearchParams('group=provider_credential'), 'UTC');
+
+    expect(filters.group).toBe('provider_credential');
+    expect(orgOverviewParams(filters).group).toBe('provider_credential');
+  });
+
   it('caps repeated identity filters at the API limit', () => {
     const search = new URLSearchParams();
     for (let index = 0; index < 60; index += 1) search.append('model', `model-${index}`);

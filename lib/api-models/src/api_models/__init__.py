@@ -1378,7 +1378,14 @@ class OutcomeCountsOut(BaseModel):
 
 
 class ShareOfKnownCost(RootModel[str]):
-    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Share Of Known Cost")]
+    root: Annotated[
+        str,
+        Field(
+            description="Share of current-period known spend; null when current-period known spend is zero",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Share Of Known Cost",
+        ),
+    ]
 
 
 class OverviewBucket(RootModel[Literal["hour", "day"]]):
@@ -1395,9 +1402,27 @@ class OverviewFreshnessOut(BaseModel):
     delivery_completeness: Annotated[Literal["unavailable"], Field(title="Delivery Completeness")] = "unavailable"
 
 
-class OverviewGroup(RootModel[Literal["workspace", "principal", "inference_key", "model", "provider"]]):
+class OverviewGroup(
+    RootModel[
+        Literal[
+            "workspace",
+            "principal",
+            "inference_key",
+            "model",
+            "provider",
+            "provider_credential",
+        ]
+    ]
+):
     root: Annotated[
-        Literal["workspace", "principal", "inference_key", "model", "provider"],
+        Literal[
+            "workspace",
+            "principal",
+            "inference_key",
+            "model",
+            "provider",
+            "provider_credential",
+        ],
         Field(title="OverviewGroup"),
     ]
 
@@ -2974,22 +2999,6 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
-class OverviewAttributionOut(BaseModel):
-    id: Annotated[str | None, Field(title="Id")]
-    label: Annotated[str, Field(title="Label")]
-    known_cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Known Cost Usd")]
-    share_of_known_cost: Annotated[ShareOfKnownCost | None, Field(title="Share Of Known Cost")]
-    logical_requests: Annotated[int, Field(ge=0, title="Logical Requests")]
-    attempts: Annotated[int, Field(ge=0, title="Attempts")]
-    incomplete_requests: Annotated[int, Field(ge=0, title="Incomplete Requests")]
-    unavailable_usage_attempts: Annotated[int, Field(ge=0, title="Unavailable Usage Attempts")]
-    token_sources: TokenSourceCountsOut
-    unpriced_attempts: Annotated[int, Field(ge=0, title="Unpriced Attempts")]
-    cost_sources: CostSourceCountsOut
-    token_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Token Completeness")]
-    cost_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Cost Completeness")]
-
-
 class OverviewMetricsDeltaOut(BaseModel):
     logical_requests: Annotated[int, Field(title="Logical Requests")]
     attempts: Annotated[int, Field(title="Attempts")]
@@ -3012,7 +3021,7 @@ class OverviewMetricsOut(BaseModel):
     logical_requests: Annotated[
         int,
         Field(
-            description="Distinct logical requests; model and provider splits assign each request to its final included routed attempt",
+            description="Distinct logical requests; model, provider, and provider credential breakdowns assign each request to its final included routed attempt",
             ge=0,
             title="Logical Requests",
         ),
@@ -3231,6 +3240,22 @@ class OrgServiceAccountCreatedOut(BaseModel):
     service_account: UserOut
     membership: MembershipOut
     management_key: ManagementKeyCreatedOut
+
+
+class OverviewAttributionOut(BaseModel):
+    id: Annotated[str | None, Field(title="Id")]
+    label: Annotated[str, Field(title="Label")]
+    share_of_known_cost: Annotated[
+        ShareOfKnownCost | None,
+        Field(
+            description="Share of current-period known spend; null when current-period known spend is zero",
+            title="Share Of Known Cost",
+        ),
+    ]
+    summary: Annotated[
+        OverviewSummaryOut,
+        Field(description="Current and equivalent-period comparison metrics; a group absent from either period has zero metrics for that period"),
+    ]
 
 
 class OverviewReportOut(BaseModel):

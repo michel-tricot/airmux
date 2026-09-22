@@ -9,6 +9,7 @@ const repeatedFilters = {
   inference_key: ['key-a', 'key-b'],
   model: ['model-a', 'model-b'],
   provider: ['provider-a', 'provider-b'],
+  provider_credential: ['0199a288-363a-7a4e-94ce-184b03906c3b', 'unattributed'],
   outcome: ['succeeded', 'pending'] as const,
   confidence: ['provider', 'partial'] as const,
 };
@@ -22,6 +23,7 @@ describe('request report client', () => {
     expect(url.searchParams.getAll('inference_key')).toEqual(['key-a', 'key-b']);
     expect(url.searchParams.getAll('model')).toEqual(['model-a', 'model-b']);
     expect(url.searchParams.getAll('provider')).toEqual(['provider-a', 'provider-b']);
+    expect(url.searchParams.getAll('provider_credential')).toEqual(['0199a288-363a-7a4e-94ce-184b03906c3b', 'unattributed']);
     expect(url.searchParams.getAll('outcome')).toEqual(['succeeded', 'pending']);
     expect(url.searchParams.getAll('confidence')).toEqual(['provider', 'partial']);
   });

@@ -1,13 +1,14 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { OverviewAttributionOut, OverviewMetricsOut, OverviewReportOut, OverviewSeriesPointOut } from '@workspace/api-client-react';
+import type { OverviewAttributionOut, OverviewMetricsOut, OverviewReportOut } from '@workspace/api-client-react';
 import { Activity, Coins, Gauge, ReceiptText, TimerReset } from 'lucide-react';
 import { Badge, Card, CardContent, CardHeader, CardTitle, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
+import { formatKnownMoney, formatKnownTokens, OverviewTimeSeries } from '@/components/shared/overview-time-series';
 import { SearchPicker } from '@/components/shared/search-picker';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import type { OverviewFilters } from '@/features/reporting/filters';
-import { formatExactUsd, formatSignedExactUsd } from '@/lib/money';
+import { formatSignedExactUsd } from '@/lib/money';
 
 type FilterName =
   | 'range'
@@ -42,17 +43,6 @@ const timezoneOptions = (current: string) => {
 const completenessVariant = (value: OverviewMetricsOut['cost_completeness']) =>
   value === 'complete' ? 'success' : value === 'partial' ? 'warning' : 'destructive';
 const signedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.toLocaleString()}`;
-
-function formatKnownMoney(value: string, completeness: OverviewMetricsOut['cost_completeness']) {
-  if (completeness === 'unavailable') return 'Unavailable';
-  return `${formatExactUsd(value)}${completeness === 'partial' ? ' known' : ''}`;
-}
-
-function formatKnownTokens(metrics: OverviewMetricsOut) {
-  if (metrics.token_completeness === 'unavailable') return 'Unavailable';
-  const total = BigInt(metrics.known_input_tokens) + BigInt(metrics.known_output_tokens);
-  return `${total.toLocaleString()}${metrics.token_completeness === 'partial' ? ' known' : ''}`;
-}
 
 function formatTimestamp(value: string, timezone: string) {
   try {
@@ -208,7 +198,7 @@ function Filters({
             id="overview-group"
             value={filters.group}
             onValueChange={(value) => onChange('group', value)}
-            options={filterOptions(['workspace', 'principal', 'inference_key', 'model', 'provider'])}
+            options={filterOptions(['workspace', 'principal', 'inference_key', 'model', 'provider', 'provider_credential'])}
           />
         </div>
         {scope === 'organization' && <IdFilter name="workspace" label="Workspace" values={filters.workspace} onChange={onChange} />}
@@ -316,37 +306,6 @@ function Summary({ report }: { report: OverviewReportOut }) {
   );
 }
 
-const trendColumns = (report: OverviewReportOut) => [
-  {
-    key: 'period',
-    header: 'Period',
-    cell: (point: OverviewSeriesPointOut) =>
-      `${formatTimestamp(point.start_at, report.periods.current.timezone)} to ${formatTimestamp(point.end_at, report.periods.current.timezone)}`,
-  },
-  { key: 'split', header: labels(report.split), cell: (point: OverviewSeriesPointOut) => point.split_label },
-  {
-    key: 'spend',
-    header: 'Known spend',
-    headClassName: 'text-right',
-    cellClassName: 'text-right font-mono',
-    cell: (point: OverviewSeriesPointOut) => formatKnownMoney(point.metrics.known_cost_usd, point.metrics.cost_completeness),
-  },
-  {
-    key: 'requests',
-    header: 'Logical requests',
-    headClassName: 'text-right',
-    cellClassName: 'text-right font-mono',
-    cell: (point: OverviewSeriesPointOut) => point.metrics.logical_requests,
-  },
-  {
-    key: 'attempts',
-    header: 'Attempts',
-    headClassName: 'text-right',
-    cellClassName: 'text-right font-mono',
-    cell: (point: OverviewSeriesPointOut) => point.metrics.attempts,
-  },
-];
-
 function formatShare(value: string | null) {
   if (value === null) return 'Unavailable';
   const match = /^(\d+)(?:\.(\d+))?$/.exec(value);
@@ -356,6 +315,13 @@ function formatShare(value: string | null) {
   return `${basisPoints / 100n}.${(basisPoints % 100n).toString().padStart(2, '0')}%`;
 }
 
+function formatAttributionChange(row: OverviewAttributionOut) {
+  const { current, comparison, delta } = row.summary;
+  if (current.cost_completeness === 'unavailable' && comparison.cost_completeness === 'unavailable') return 'Unavailable';
+  const suffix = current.cost_completeness === 'complete' && comparison.cost_completeness === 'complete' ? '' : ' known';
+  return `${formatSignedExactUsd(delta.known_cost_usd)}${suffix}`;
+}
+
 const attributionColumns = [
   { key: 'group', header: 'Group', cell: (row: OverviewAttributionOut) => row.label },
   {
@@ -363,7 +329,7 @@ const attributionColumns = [
     header: 'Known spend',
     headClassName: 'text-right',
     cellClassName: 'text-right font-mono',
-    cell: (row: OverviewAttributionOut) => formatKnownMoney(row.known_cost_usd, row.cost_completeness),
+    cell: (row: OverviewAttributionOut) => formatKnownMoney(row.summary.current.known_cost_usd, row.summary.current.cost_completeness),
   },
   {
     key: 'share',
@@ -373,18 +339,35 @@ const attributionColumns = [
     cell: (row: OverviewAttributionOut) => formatShare(row.share_of_known_cost),
   },
   {
+    key: 'change',
+    header: 'Period change',
+    headClassName: 'text-right',
+    cellClassName: 'text-right font-mono',
+    cell: formatAttributionChange,
+  },
+  {
     key: 'requests',
     header: 'Logical requests',
     headClassName: 'text-right',
     cellClassName: 'text-right font-mono',
-    cell: (row: OverviewAttributionOut) => row.logical_requests,
+    cell: (row: OverviewAttributionOut) => row.summary.current.logical_requests.toLocaleString(),
   },
   {
-    key: 'attempts',
-    header: 'Attempts',
+    key: 'tokens',
+    header: 'Known tokens',
     headClassName: 'text-right',
     cellClassName: 'text-right font-mono',
-    cell: (row: OverviewAttributionOut) => row.attempts,
+    cell: (row: OverviewAttributionOut) => formatKnownTokens(row.summary.current),
+  },
+  {
+    key: 'cost-per-request',
+    header: 'Cost per request',
+    headClassName: 'text-right',
+    cellClassName: 'text-right font-mono',
+    cell: (row: OverviewAttributionOut) => {
+      const { current } = row.summary;
+      return current.cost_per_request_usd === null ? 'Unavailable' : formatKnownMoney(current.cost_per_request_usd, current.cost_completeness);
+    },
   },
 ];
 
@@ -438,29 +421,28 @@ export function SpendingOverview({ title, description, scope, filters, onFilterC
               </div>
             </CardContent>
           </Card>
-          {query.data.summary.current.logical_requests === 0 && query.data.summary.current.attempts === 0 ? (
+          {query.data.summary.current.logical_requests === 0 && query.data.summary.current.attempts === 0 && (
             <EmptyState>No matching gateway requests for this period.</EmptyState>
-          ) : (
-            <>
-              <section className="space-y-3">
-                <SectionHeader title="Trend" description="Only observed buckets are shown. Missing intervals are not interpolated." />
-                <DataTable
-                  rows={query.data.series}
-                  rowKey={(point) => `${point.start_at}:${point.split_id ?? 'all'}`}
-                  empty="No trend buckets in this period."
-                  columns={trendColumns(query.data)}
-                />
-              </section>
-              <section className="space-y-3">
-                <SectionHeader title="Attribution" description="Known spend and counts use the same report filters and accounting window." />
-                <DataTable
-                  rows={query.data.attribution}
-                  rowKey={(row) => row.id ?? row.label}
-                  empty="No attribution rows in this period."
-                  columns={attributionColumns}
-                />
-              </section>
-            </>
+          )}
+          {query.data.series.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title="Trend" description="Only observed buckets are shown. Missing intervals are not interpolated." />
+              <OverviewTimeSeries report={query.data} />
+            </section>
+          )}
+          {query.data.attribution.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader
+                title="Attribution"
+                description="Current and equivalent-period values use the same report filters and accounting window."
+              />
+              <DataTable
+                rows={query.data.attribution}
+                rowKey={(row) => row.id ?? row.label}
+                empty="No attribution rows in this period."
+                columns={attributionColumns}
+              />
+            </section>
           )}
         </>
       )}
