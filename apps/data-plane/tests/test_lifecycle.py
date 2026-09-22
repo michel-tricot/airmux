@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import gc
 import os
 import socket
 import subprocess
 import sys
 import threading
 import time
+import weakref
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -182,3 +184,29 @@ def test_unexpected_worker_failure_terminates_a_uvicorn_process():
 
     assert served, output
     assert returncode != 0, output
+
+
+def test_gateway_worker_reduces_collection_frequency_and_still_reclaims_cycles(tmp_path, monkeypatch):
+    class RequestCycle:
+        def __init__(self):
+            self.request = self
+
+    thresholds = gc.get_threshold()
+    enabled = gc.isenabled()
+    monkeypatch.setattr(app_module, "load_config", lambda: Config(bundle=LocalBundleConfig(kind="local", path=tmp_path / "bundle.yml")))
+    try:
+        gc.enable()
+        gc.set_threshold(2_000, 11, 12)
+        app_module.load_app()
+        assert gc.isenabled()
+        assert gc.get_threshold() == (20_000, 11, 12)
+        request = RequestCycle()
+        reference = weakref.ref(request)
+        del request
+        retained = [[] for _ in range(30_000)]
+        assert reference() is None
+        assert len(retained) == 30_000
+    finally:
+        gc.set_threshold(*thresholds)
+        if not enabled:
+            gc.disable()
