@@ -15,7 +15,7 @@ from data_plane.metering import status_for_error, usage_event
 from data_plane.metrics import upstream_outcome
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncGenerator, Iterator
 
     from starlette.types import Receive, Scope, Send
 
@@ -71,18 +71,19 @@ class _StreamResponse(StreamingResponse):
         self._renderer = session.ingress.new_stream()
         self._reservation = session.reservation.transfer()
         self._recorded = False
-        super().__init__(self._events(), media_type="text/event-stream")
+        self._event_stream = self._events()
+        super().__init__(self._event_stream, media_type="text/event-stream")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         with self._reservation:
-            async with self._handoff:
+            async with self._handoff, contextlib.aclosing(self._event_stream):
                 try:
                     await super().__call__(scope, receive, send)
                 finally:
                     if not self._recorded:
                         self._record(self._cancelled_event(), "cancelled")
 
-    async def _events(self) -> AsyncIterator[bytes]:
+    async def _events(self) -> AsyncGenerator[bytes]:
         try:
             for frame in self._renderer.start(self._session.ctx):
                 yield frame
