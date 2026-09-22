@@ -327,3 +327,19 @@ def test_upstream_timeout_is_metered_as_timeout(http_mock, api_key, dp_app, tmp_
     assert r.status_code == 504
     events = _recorded(tmp_path, http_client)
     assert [e.status for e in events] == ["timeout"]
+
+
+def test_credential_timeout_without_fallback_preserves_gateway_error(http_mock, api_key, dp_app, monkeypatch):
+    async def credential_timeout(entry, resolver):
+        raise TimeoutError
+
+    monkeypatch.setattr("data_plane.proxy._resolve_credential", credential_timeout)
+    mock_control_plane(http_mock)
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert response.status_code == 504
+    assert response.json()["error"]["code"] == "fallback_deadline_exceeded"

@@ -121,3 +121,20 @@ def test_repeated_reasoning_identity_does_not_allocate_discarded_blocks(dialect)
             tracemalloc.stop()
         peaks.append(peak)
     assert statistics.median(peaks) < 256, peaks
+
+
+def test_credentials_without_cooldowns_do_not_allocate_a_candidate_copy():
+    entries = tuple(make_credential(name=f"credential-{index}") for index in range(1024))
+    metrics = DataPlaneMetrics()
+    resolver = CredentialResolver(MemoryStoreConfig().build(), metrics)
+    try:
+        tracemalloc.start()
+        try:
+            available = resolver.available(entries)
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        assert available == entries
+        assert peak < 1024, peak
+    finally:
+        metrics.shutdown()
