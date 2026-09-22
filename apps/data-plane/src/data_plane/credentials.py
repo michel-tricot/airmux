@@ -100,6 +100,8 @@ class CredentialResolver:
     def available(self, entries: tuple[CredentialEntry, ...]) -> tuple[CredentialEntry, ...]:
         now = time.monotonic()
         self._prune(now)
+        if not self._cooldowns:
+            return entries
         available = tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
         if available or not entries:
             return available

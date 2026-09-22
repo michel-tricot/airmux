@@ -143,7 +143,9 @@ class RequestExecution:
                 reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
             raise RequestRejectedError(plan.status, GatewayErrorCode(plan.code), plan.message)
         try:
-            async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
+            if plan.timeout_ms is None:
+                return await self._execute(plan)
+            async with asyncio.timeout(plan.timeout_ms / 1000):
                 return await self._execute(plan)
         except TimeoutError as error:
             raise RequestRejectedError(504, GatewayErrorCode.fallback_deadline_exceeded, "The fallback time limit was reached") from error
@@ -193,7 +195,9 @@ class RequestExecution:
     ) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         attempt_started_at = time.monotonic()
-        routed_request = self.request.model_copy(update={"model": decision.model.model_id})
+        routed_request = (
+            self.request if self.request.model == decision.model.model_id else self.request.model_copy(update={"model": decision.model.model_id})
+        )
         request, reconcile_adjustments = reconcile(
             routed_request,
             decision.model,
