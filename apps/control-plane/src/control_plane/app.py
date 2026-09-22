@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 from starlette.routing import Route
 
-from airmux_runtime.observability import configure_logger
+from airmux_runtime.observability import configure_logger, flush_logger
 from control_plane.authority import AuthorizationError, CredentialError
 from control_plane.bootstrap import bootstrap_data_plane
 from control_plane.config import load_settings
@@ -100,7 +100,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             await engine.dispose()
         finally:
-            await asyncio.to_thread(app.state.metrics.shutdown)
+            try:
+                await asyncio.to_thread(app.state.metrics.shutdown)
+            finally:
+                flush_logger(logger)
 
 
 async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:

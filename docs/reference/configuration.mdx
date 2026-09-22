@@ -100,6 +100,21 @@ Provider cookies are never stored, and redirects are not followed. aiohttp honor
 `NO_PROXY` when a proxy is configured at startup. Without a configured proxy, environment and netrc lookups are disabled
 to avoid thread-pool work on each request. Changing these settings requires restarting the gateway.
 
+## Application logs
+
+Both planes write application logs to stderr. Outside dev mode, each log record is JSON. Writes are batched until
+100 records or 65,536 characters accumulate, or a 100 ms timer expires, whichever happens first. A single large record
+is written intact. Timer delivery depends on the event loop being able to run; a blocked output stream can still block
+that loop. Error and critical records flush the pending batch immediately. Application shutdown and normal process
+exit flush remaining records. Logging outside an active event loop is immediate.
+
+Formatting happens when the event is logged, so timestamps and request IDs retain the original request context.
+Abrupt termination can lose buffered lines. Failed writes use Python logging's error handling and discard the failed
+batch rather than retrying potentially partial output. These diagnostic logs are separate from the usage-event
+outbox and do not change its accounting or persistence behavior.
+
+Dev mode keeps immediate plain-text application logs. Gateway HTTP access logs remain enabled only in dev mode.
+
 ## Event outboxes
 
 | Kind      | Use                                                                            |
