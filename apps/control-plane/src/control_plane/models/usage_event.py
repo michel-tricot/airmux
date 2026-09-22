@@ -136,7 +136,7 @@ class UsageEvent(Record, table=True):
         events_stmt = (
             select(cls)
             .where(col(cls.org_id) == org_id, col(cls.request_id).in_(request_ids))
-            .order_by(col(cls.request_id), col(cls.attempt_index), col(cls.occurred_at), col(cls.event_id))
+            .order_by(col(cls.request_id), col(cls.attempt_started_at), col(cls.occurred_at), col(cls.event_id))
         )
         if workspace_id is not None:
             events_stmt = events_stmt.where(col(cls.workspace_id) == workspace_id)
@@ -226,7 +226,6 @@ class UsageReportOut(BaseModel):
 
 class RequestAttemptOut(BaseModel):
     event_id: UUID
-    attempt_index: int | None
     provider_id: str
     model_id: str
     status: UsageStatus
@@ -263,7 +262,7 @@ class UsageReportQuery(BaseModel):
 
 
 def _request_out(events: list[UsageEvent]) -> RequestOut:
-    latest = max(events, key=lambda event: (event.attempt_index or 0, event.occurred_at, event.event_id))
+    latest = max(events, key=lambda event: (event.attempt_started_at or event.request_started_at, event.occurred_at, event.event_id))
     return RequestOut(
         request_id=latest.request_id,
         started_at=latest.request_started_at,
@@ -275,7 +274,6 @@ def _request_out(events: list[UsageEvent]) -> RequestOut:
         attempts=[
             RequestAttemptOut(
                 event_id=event.event_id,
-                attempt_index=event.attempt_index,
                 provider_id=event.provider_id,
                 model_id=event.model_id,
                 status=event.status,
