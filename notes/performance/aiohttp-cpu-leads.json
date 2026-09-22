@@ -1,0 +1,3239 @@
+{
+  "baseline_commit": "9d6f10bac60de2e8ea313c1eb07159f75d4b39e2",
+  "image_id": "sha256:949b35ffa05699e3e7d0e7f45b9d47c339a379ed99e263da8cf4056cd1387995",
+  "configuration": {
+    "workers": 1,
+    "cpus": 4,
+    "memory_gib": 8,
+    "network": "none",
+    "event_sink": "devnull",
+    "control_plane": false
+  },
+  "money_parity": {
+    "cases": 68946,
+    "result_sha256": "cbd2b28266763c7ee28d423faf0c44d3d86385c3cdca6c9c9245b1bbd95c0b1d",
+    "schemas": {
+      "rate": {
+        "pattern": "^\\d+(?:\\.\\d+)?$",
+        "type": "string"
+      },
+      "amount": {
+        "pattern": "^\\d+(?:\\.\\d+)?$",
+        "type": "string"
+      }
+    },
+    "before_timings_ns": {
+      "rate": [
+        1689.5625,
+        1679.2225,
+        1694.74918,
+        1687.58834,
+        1729.41834,
+        1732.41584,
+        1747.54332
+      ],
+      "amount": [
+        1771.06416,
+        1767.47666,
+        1769.36584,
+        1762.785,
+        1769.94916,
+        1747.14584,
+        1773.75666
+      ]
+    },
+    "after_timings_ns": {
+      "rate": [
+        987.6575,
+        997.82082,
+        1002.8575,
+        998.145,
+        989.48,
+        995.16834,
+        981.11334
+      ],
+      "amount": [
+        1047.89166,
+        1042.47166,
+        1036.045,
+        1057.67166,
+        1070.18666,
+        1085.81584,
+        1062.87916
+      ]
+    },
+    "contract_tests": "........................................................................ [ 56%]\n........................................................                 [100%]\n128 passed in 0.34s\n"
+  },
+  "metrics_parity": [
+    {
+      "round": 1,
+      "variant": "native_metrics",
+      "matched_series": 102
+    },
+    {
+      "round": 1,
+      "variant": "combined",
+      "matched_series": 102
+    },
+    {
+      "round": 2,
+      "variant": "native_metrics",
+      "matched_series": 102
+    },
+    {
+      "round": 2,
+      "variant": "combined",
+      "matched_series": 102
+    },
+    {
+      "round": 3,
+      "variant": "native_metrics",
+      "matched_series": 102
+    },
+    {
+      "round": 3,
+      "variant": "combined",
+      "matched_series": 102
+    }
+  ],
+  "log_parity": [
+    {
+      "round": 1,
+      "variant": "baseline",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 1,
+      "variant": "money",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 1,
+      "variant": "batch_logs",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 1,
+      "variant": "native_metrics",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 1,
+      "variant": "combined",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 2,
+      "variant": "baseline",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 2,
+      "variant": "money",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 2,
+      "variant": "batch_logs",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 2,
+      "variant": "native_metrics",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 2,
+      "variant": "combined",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 3,
+      "variant": "baseline",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 3,
+      "variant": "money",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 3,
+      "variant": "batch_logs",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 3,
+      "variant": "native_metrics",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    },
+    {
+      "round": 3,
+      "variant": "combined",
+      "verified_records": 21002,
+      "payload": {
+        "level": "info",
+        "logger": "data_plane",
+        "event": "usage_recorded",
+        "message": "usage_recorded",
+        "outcome": "ok",
+        "model": "anthropic/mock",
+        "provider": "stub",
+        "stream": false,
+        "input_tokens": 1,
+        "output_tokens": 40,
+        "max_output_tokens": 40,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "token_usage_source": "provider",
+        "cost_usd": "0.000202000000"
+      }
+    }
+  ],
+  "profile": {
+    "total_calls": 5813424,
+    "total_profiled_cpu_s": 4.659796933000001,
+    "functions": [
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+        "calls": 65000,
+        "own_cpu_s": 0.153985964,
+        "cumulative_cpu_s": 0.48402093900000004
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'get' of 'dict' objects>",
+        "calls": 330000,
+        "own_cpu_s": 0.08896134900000001,
+        "cumulative_cpu_s": 0.09606990300000001
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'write' of '_io.TextIOWrapper' objects>",
+        "calls": 5000,
+        "own_cpu_s": 0.082313222,
+        "cumulative_cpu_s": 0.082313222
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/uvicorn/protocols/http/httptools_impl.py",
+        "line": 463,
+        "function": "send",
+        "calls": 10000,
+        "own_cpu_s": 0.075761244,
+        "cumulative_cpu_s": 0.146714071
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client.py",
+        "line": 537,
+        "function": "_request",
+        "calls": 10000,
+        "own_cpu_s": 0.07238211700000001,
+        "cumulative_cpu_s": 0.605046022
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/pydantic/_internal/_validators.py",
+        "line": 343,
+        "function": "_extract_decimal_digits_info",
+        "calls": 45000,
+        "own_cpu_s": 0.070508655,
+        "cumulative_cpu_s": 0.17193552
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/proxy.py",
+        "line": 187,
+        "function": "_attempt",
+        "calls": 10000,
+        "own_cpu_s": 0.069672197,
+        "cumulative_cpu_s": 2.468688911
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/_view_instrument_match.py",
+        "line": 87,
+        "function": "consume_measurement",
+        "calls": 40000,
+        "own_cpu_s": 0.06416935800000001,
+        "cumulative_cpu_s": 0.153344274
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.isinstance>",
+        "calls": 265512,
+        "own_cpu_s": 0.062783424,
+        "cumulative_cpu_s": 0.062783424
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py",
+        "line": 47,
+        "function": "__call__",
+        "calls": 10000,
+        "own_cpu_s": 0.054764253000000006,
+        "cumulative_cpu_s": 3.948902277
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/ingress/anthropic.py",
+        "line": 121,
+        "function": "parse",
+        "calls": 5000,
+        "own_cpu_s": 0.054547218,
+        "cumulative_cpu_s": 0.23501091500000001
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/measurement_consumer.py",
+        "line": 68,
+        "function": "consume_measurement",
+        "calls": 40000,
+        "own_cpu_s": 0.051131746000000006,
+        "cumulative_cpu_s": 0.339741043
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/instrument.py",
+        "line": 193,
+        "function": "add",
+        "calls": 20000,
+        "own_cpu_s": 0.048981536000000006,
+        "cumulative_cpu_s": 0.278411915
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/http.py",
+        "line": 68,
+        "function": "__call__",
+        "calls": 10000,
+        "own_cpu_s": 0.044092150000000004,
+        "cumulative_cpu_s": 4.461856609000001
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/proxy.py",
+        "line": 151,
+        "function": "_execute",
+        "calls": 10000,
+        "own_cpu_s": 0.041465877000000005,
+        "cumulative_cpu_s": 2.7122629000000003
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'as_tuple' of 'decimal.Decimal' objects>",
+        "calls": 60000,
+        "own_cpu_s": 0.040305563,
+        "cumulative_cpu_s": 0.08699329900000001
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_reqrep.py",
+        "line": 1430,
+        "function": "send",
+        "calls": 5000,
+        "own_cpu_s": 0.038844863,
+        "cumulative_cpu_s": 0.13063404
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/metric_reader_storage.py",
+        "line": 104,
+        "function": "consume_measurement",
+        "calls": 40000,
+        "own_cpu_s": 0.038138824,
+        "cumulative_cpu_s": 0.20349787400000002
+      },
+      {
+        "file": "/usr/local/lib/python3.13/logging/__init__.py",
+        "line": 298,
+        "function": "__init__",
+        "calls": 5000,
+        "own_cpu_s": 0.035691786,
+        "cumulative_cpu_s": 0.094903637
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/egress/anthropic.py",
+        "line": 153,
+        "function": "transform_request",
+        "calls": 5000,
+        "own_cpu_s": 0.034843844,
+        "cumulative_cpu_s": 0.15612377100000002
+      },
+      {
+        "file": "/app/lib/contract/src/contract/ids.py",
+        "line": 8,
+        "function": "uuid7",
+        "calls": 10000,
+        "own_cpu_s": 0.033968206,
+        "cumulative_cpu_s": 0.071437047
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/pydantic/main.py",
+        "line": 253,
+        "function": "__init__",
+        "calls": 55000,
+        "own_cpu_s": 0.033565749,
+        "cumulative_cpu_s": 0.47395259100000003
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_proto.py",
+        "line": 300,
+        "function": "data_received",
+        "calls": 10000,
+        "own_cpu_s": 0.033565492,
+        "cumulative_cpu_s": 0.088248293
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/http.py",
+        "line": 85,
+        "function": "send_headers",
+        "calls": 10000,
+        "own_cpu_s": 0.033155452,
+        "cumulative_cpu_s": 0.251363217
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/metering.py",
+        "line": 127,
+        "function": "usage_event",
+        "calls": 5000,
+        "own_cpu_s": 0.032834293,
+        "cumulative_cpu_s": 0.8553305990000001
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/uvicorn/protocols/http/httptools_impl.py",
+        "line": 170,
+        "function": "data_received",
+        "calls": 5000,
+        "own_cpu_s": 0.031752158,
+        "cumulative_cpu_s": 0.136149767
+      },
+      {
+        "file": "<string>",
+        "line": 1,
+        "function": "<lambda>",
+        "calls": 60000,
+        "own_cpu_s": 0.030486783000000003,
+        "cumulative_cpu_s": 0.046687736
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_reqrep.py",
+        "line": 851,
+        "function": "__init__",
+        "calls": 5000,
+        "own_cpu_s": 0.030311274000000003,
+        "cumulative_cpu_s": 0.140366513
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/aggregation.py",
+        "line": 173,
+        "function": "aggregate",
+        "calls": 30000,
+        "own_cpu_s": 0.030287494,
+        "cumulative_cpu_s": 0.044313511
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.len>",
+        "calls": 130000,
+        "own_cpu_s": 0.029954397,
+        "cumulative_cpu_s": 0.029954397
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/routing.py",
+        "line": 238,
+        "function": "matches",
+        "calls": 10000,
+        "own_cpu_s": 0.029336897,
+        "cumulative_cpu_s": 0.053989970000000005
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/http.py",
+        "line": 51,
+        "function": "authenticated",
+        "calls": 10000,
+        "own_cpu_s": 0.027915422000000002,
+        "cumulative_cpu_s": 3.495895012
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'get' of 'mappingproxy' objects>",
+        "calls": 80000,
+        "own_cpu_s": 0.027426808,
+        "cumulative_cpu_s": 0.037928354000000004
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/datastructures.py",
+        "line": 578,
+        "function": "__setitem__",
+        "calls": 15000,
+        "own_cpu_s": 0.027249742,
+        "cumulative_cpu_s": 0.043079892
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_reqrep.py",
+        "line": 547,
+        "function": "start",
+        "calls": 10000,
+        "own_cpu_s": 0.027061955000000002,
+        "cumulative_cpu_s": 0.113749312
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/proxy.py",
+        "line": 137,
+        "function": "run",
+        "calls": 10000,
+        "own_cpu_s": 0.026983944000000003,
+        "cumulative_cpu_s": 2.9734739770000003
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/pydantic/main.py",
+        "line": 971,
+        "function": "__copy__",
+        "calls": 10000,
+        "own_cpu_s": 0.026962403000000003,
+        "cumulative_cpu_s": 0.076570123
+      },
+      {
+        "file": "/usr/local/lib/python3.13/copy.py",
+        "line": 62,
+        "function": "copy",
+        "calls": 30000,
+        "own_cpu_s": 0.026004958,
+        "cumulative_cpu_s": 0.043594188000000006
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/instrument.py",
+        "line": 233,
+        "function": "add",
+        "calls": 10000,
+        "own_cpu_s": 0.025845838000000003,
+        "cumulative_cpu_s": 0.14803011700000002
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method pydantic_core._pydantic_core.to_json>",
+        "calls": 10000,
+        "own_cpu_s": 0.025672347,
+        "cumulative_cpu_s": 0.025672347
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'search' of 're.Pattern' objects>",
+        "calls": 75000,
+        "own_cpu_s": 0.024640348000000003,
+        "cumulative_cpu_s": 0.024640348000000003
+      },
+      {
+        "file": "/app/lib/contract/src/contract/money.py",
+        "line": 34,
+        "function": "_precision",
+        "calls": 15000,
+        "own_cpu_s": 0.024485118,
+        "cumulative_cpu_s": 0.062164960000000005
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/pydantic/main.py",
+        "line": 393,
+        "function": "model_copy",
+        "calls": 10000,
+        "own_cpu_s": 0.023622704,
+        "cumulative_cpu_s": 0.112658353
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/requests.py",
+        "line": 254,
+        "function": "body",
+        "calls": 5000,
+        "own_cpu_s": 0.023582651000000003,
+        "cumulative_cpu_s": 0.071861583
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/exemplar/exemplar_filter.py",
+        "line": 104,
+        "function": "should_sample",
+        "calls": 40000,
+        "own_cpu_s": 0.023505789000000003,
+        "cumulative_cpu_s": 0.07459357
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.max>",
+        "calls": 100000,
+        "own_cpu_s": 0.023428489,
+        "cumulative_cpu_s": 0.023428489
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'append' of 'list' objects>",
+        "calls": 90000,
+        "own_cpu_s": 0.023388152000000002,
+        "cumulative_cpu_s": 0.023388152000000002
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method __new__ of type object at 0xffffb687b9f0>",
+        "calls": 80064,
+        "own_cpu_s": 0.02286467,
+        "cumulative_cpu_s": 0.02286467
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/instrument.py",
+        "line": 309,
+        "function": "record",
+        "calls": 10000,
+        "own_cpu_s": 0.022784459,
+        "cumulative_cpu_s": 0.14889638400000002
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/policy.py",
+        "line": 100,
+        "function": "_route",
+        "calls": 5000,
+        "own_cpu_s": 0.022636075000000002,
+        "cumulative_cpu_s": 0.078705905
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/instrument.py",
+        "line": 96,
+        "function": "_is_enabled",
+        "calls": 40000,
+        "own_cpu_s": 0.022630551000000002,
+        "cumulative_cpu_s": 0.032695369
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/uvicorn/middleware/proxy_headers.py",
+        "line": 28,
+        "function": "__call__",
+        "calls": 10000,
+        "own_cpu_s": 0.022423353,
+        "cumulative_cpu_s": 4.490973643
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/uvicorn/protocols/http/httptools_impl.py",
+        "line": 248,
+        "function": "on_headers_complete",
+        "calls": 5000,
+        "own_cpu_s": 0.02224136,
+        "cumulative_cpu_s": 0.049792625
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/proxy.py",
+        "line": 61,
+        "function": "complete",
+        "calls": 10000,
+        "own_cpu_s": 0.022071133,
+        "cumulative_cpu_s": 3.3409657000000004
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/trace/propagation/__init__.py",
+        "line": 24,
+        "function": "get_current_span",
+        "calls": 40000,
+        "own_cpu_s": 0.02168159,
+        "cumulative_cpu_s": 0.051087781000000006
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py",
+        "line": 103,
+        "function": "get_current",
+        "calls": 40000,
+        "own_cpu_s": 0.021529427,
+        "cumulative_cpu_s": 0.053123692
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client.py",
+        "line": 806,
+        "function": "_connect_and_send_request",
+        "calls": 10000,
+        "own_cpu_s": 0.021478173,
+        "cumulative_cpu_s": 0.322961135
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/formats/anthropic.py",
+        "line": 504,
+        "function": "from_request",
+        "calls": 5000,
+        "own_cpu_s": 0.021448483,
+        "cumulative_cpu_s": 0.09538803900000001
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/reconcile.py",
+        "line": 60,
+        "function": "reconcile",
+        "calls": 5000,
+        "own_cpu_s": 0.021431731000000002,
+        "cumulative_cpu_s": 0.049988483
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/policy.py",
+        "line": 71,
+        "function": "evaluate_policies",
+        "calls": 5000,
+        "own_cpu_s": 0.020965986000000002,
+        "cumulative_cpu_s": 0.18149399400000002
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/sdk/metrics/_internal/aggregation.py",
+        "line": 502,
+        "function": "aggregate",
+        "calls": 10000,
+        "own_cpu_s": 0.02037092,
+        "cumulative_cpu_s": 0.034225069000000004
+      },
+      {
+        "file": "/candidate/lib/runtime/src/airmux_runtime/observability.py",
+        "line": 27,
+        "function": "format",
+        "calls": 5000,
+        "own_cpu_s": 0.020202499000000002,
+        "cumulative_cpu_s": 0.08659773300000001
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/context/contextvars_context.py",
+        "line": 32,
+        "function": "get_current",
+        "calls": 40000,
+        "own_cpu_s": 0.020099719000000002,
+        "cumulative_cpu_s": 0.031594265
+      },
+      {
+        "file": "/usr/local/lib/python3.13/json/encoder.py",
+        "line": 207,
+        "function": "iterencode",
+        "calls": 5000,
+        "own_cpu_s": 0.019578154,
+        "cumulative_cpu_s": 0.019578154
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py",
+        "line": 65,
+        "function": "get_value",
+        "calls": 40000,
+        "own_cpu_s": 0.019531712,
+        "cumulative_cpu_s": 0.029406191
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'items' of 'dict' objects>",
+        "calls": 75010,
+        "own_cpu_s": 0.019447326,
+        "cumulative_cpu_s": 0.019447326
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client.py",
+        "line": 1388,
+        "function": "_prepare_headers",
+        "calls": 5000,
+        "own_cpu_s": 0.019396384000000003,
+        "cumulative_cpu_s": 0.026603352
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client.py",
+        "line": 525,
+        "function": "request",
+        "calls": 5000,
+        "own_cpu_s": 0.01877333,
+        "cumulative_cpu_s": 0.020087300000000002
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/uvicorn/protocols/http/httptools_impl.py",
+        "line": 242,
+        "function": "on_header",
+        "calls": 25000,
+        "own_cpu_s": 0.018118189,
+        "cumulative_cpu_s": 0.029959255
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'validate_json' of 'pydantic_core._pydantic_core.SchemaValidator' objects>",
+        "calls": 5000,
+        "own_cpu_s": 0.018045145000000002,
+        "cumulative_cpu_s": 0.018045145000000002
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/pydantic/_internal/_validators.py",
+        "line": 386,
+        "function": "max_digits_validator",
+        "calls": 15000,
+        "own_cpu_s": 0.017855701,
+        "cumulative_cpu_s": 0.138395393
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/connector.py",
+        "line": 724,
+        "function": "_get",
+        "calls": 5000,
+        "own_cpu_s": 0.017433860000000002,
+        "cumulative_cpu_s": 0.028737158000000002
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<method 'encode' of 'str' objects>",
+        "calls": 60005,
+        "own_cpu_s": 0.016690243,
+        "cumulative_cpu_s": 0.016690243
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/requests.py",
+        "line": 188,
+        "function": "state",
+        "calls": 15000,
+        "own_cpu_s": 0.016661482000000002,
+        "cumulative_cpu_s": 0.02853852
+      },
+      {
+        "file": "~",
+        "line": 0,
+        "function": "<built-in method builtins.hasattr>",
+        "calls": 60000,
+        "own_cpu_s": 0.016626763000000003,
+        "cumulative_cpu_s": 0.016626763000000003
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_proto.py",
+        "line": 271,
+        "function": "_reschedule_timeout",
+        "calls": 10000,
+        "own_cpu_s": 0.0166122,
+        "cumulative_cpu_s": 0.0166122
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client_reqrep.py",
+        "line": 1193,
+        "function": "update_body_from_data",
+        "calls": 5000,
+        "own_cpu_s": 0.016589087000000002,
+        "cumulative_cpu_s": 0.052372774000000004
+      },
+      {
+        "file": "/candidate/apps/data-plane/src/data_plane/egress/base.py",
+        "line": 30,
+        "function": "encode",
+        "calls": 5000,
+        "own_cpu_s": 0.016287001000000002,
+        "cumulative_cpu_s": 0.040678178
+      },
+      {
+        "file": "/aiohttp-deps/aiohttp/client.py",
+        "line": 1692,
+        "function": "__aenter__",
+        "calls": 10000,
+        "own_cpu_s": 0.016142722,
+        "cumulative_cpu_s": 0.6226055930000001
+      },
+      {
+        "file": "/app/.venv/lib/python3.13/site-packages/starlette/routing.py",
+        "line": 57,
+        "function": "app",
+        "calls": 10000,
+        "own_cpu_s": 0.016126817,
+        "cumulative_cpu_s": 3.819160033
+      }
+    ]
+  },
+  "experiments": {
+    "profile": {
+      "trials": [
+        {
+          "concurrency": 64,
+          "count": 5000,
+          "elapsed_s": 5.153153896,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 64.656844,
+          "latency_p99_ms": 94.827571,
+          "rps": 970.2795804101869,
+          "url": "http://127.0.0.1:43397/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.198914675998822,
+            "cpu_s": 4.82,
+            "cpu_percent_one_core": 92.71165811302676,
+            "peak_rss_mb": 90.349568
+          },
+          "variant": "baseline",
+          "round": 1,
+          "usage_records": 6002,
+          "cpu_us_per_request": 964.0
+        }
+      ],
+      "summary": {
+        "baseline": {
+          "cpu_us_per_request": 964.0,
+          "rps": 970.2795804101869,
+          "cpu_percent_one_core": 92.71165811302676,
+          "paired_cpu_savings_us": [
+            0.0
+          ],
+          "paired_cpu_savings_pct": [
+            0.0
+          ]
+        }
+      },
+      "direct_controls": {
+        "r1-direct-after.json": {
+          "concurrency": 64,
+          "count": 5000,
+          "elapsed_s": 1.933344209,
+          "errors": [],
+          "label": "r1-direct-after",
+          "latency_p50_ms": 24.251207,
+          "latency_p99_ms": 31.792025000000002,
+          "rps": 2586.1923483279743,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r1-direct-before.json": {
+          "concurrency": 64,
+          "count": 5000,
+          "elapsed_s": 1.996622756,
+          "errors": [],
+          "label": "r1-direct-before",
+          "latency_p50_ms": 25.146294,
+          "latency_p99_ms": 32.669402,
+          "rps": 2504.228695668537,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        }
+      }
+    },
+    "phases": {
+      "trials": [
+        {
+          "concurrency": 64,
+          "count": 10000,
+          "elapsed_s": 5.357550212,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 33.148529,
+          "latency_p99_ms": 58.766116,
+          "rps": 1866.5247369220551,
+          "url": "http://127.0.0.1:33939/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.373062930997548,
+            "cpu_s": 3.2300000000000004,
+            "cpu_percent_one_core": 60.1146876833681,
+            "peak_rss_mb": 90.017792
+          },
+          "phases": {
+            "auth_cpu_ns": 51105977,
+            "auth_calls": 10000,
+            "route_label_cpu_ns": 30509025,
+            "route_label_calls": 10000,
+            "parse_cpu_ns": 108451474,
+            "parse_calls": 10000,
+            "routing_cpu_ns": 121746372,
+            "routing_calls": 10000,
+            "reconcile_cpu_ns": 28153997,
+            "reconcile_calls": 10000,
+            "request_translation_cpu_ns": 138863287,
+            "request_translation_calls": 10000,
+            "response_translation_cpu_ns": 107225323,
+            "response_translation_calls": 10000,
+            "render_response_cpu_ns": 108499757,
+            "render_response_calls": 10000,
+            "usage_accounting_including_log_cpu_ns": 580628711,
+            "usage_accounting_including_log_calls": 10000,
+            "pricing_cpu_ns": 23794703,
+            "pricing_calls": 10000,
+            "usage_log_cpu_ns": 326558661,
+            "usage_log_calls": 10000,
+            "log_format_cpu_ns": 88795561,
+            "log_format_calls": 10000,
+            "observe_inflight_cpu_ns": 77877360,
+            "observe_inflight_calls": 20000,
+            "observe_http_cpu_ns": 60387303,
+            "observe_http_calls": 10000,
+            "observe_upstream_cpu_ns": 68695132,
+            "observe_upstream_calls": 10000,
+            "observe_credential_cache_cpu_ns": 33943712,
+            "observe_credential_cache_calls": 10000,
+            "observe_credential_load_cpu_ns": 0,
+            "observe_credential_load_calls": 0,
+            "observe_budget_state_cpu_ns": 0,
+            "observe_budget_state_calls": 0,
+            "observe_budget_state_fallback_cpu_ns": 0,
+            "observe_budget_state_fallback_calls": 0,
+            "observe_bundle_adopted_cpu_ns": 0,
+            "observe_bundle_adopted_calls": 0,
+            "observe_bundle_poll_cpu_ns": 0,
+            "observe_bundle_poll_calls": 0,
+            "observe_metering_admission_cpu_ns": 21724127,
+            "observe_metering_admission_calls": 10000,
+            "observe_metering_export_cpu_ns": 0,
+            "observe_metering_export_calls": 0
+          },
+          "variant": "baseline",
+          "round": 1,
+          "usage_records": 11002,
+          "cpu_us_per_request": 323.00000000000006
+        }
+      ],
+      "summary": {
+        "baseline": {
+          "cpu_us_per_request": 323.00000000000006,
+          "rps": 1866.5247369220551,
+          "cpu_percent_one_core": 60.1146876833681,
+          "paired_cpu_savings_us": [
+            0.0
+          ],
+          "paired_cpu_savings_pct": [
+            0.0
+          ]
+        }
+      },
+      "direct_controls": {
+        "r1-direct-after.json": {
+          "concurrency": 64,
+          "count": 10000,
+          "elapsed_s": 3.924719155,
+          "errors": [],
+          "label": "r1-direct-after",
+          "latency_p50_ms": 24.831959,
+          "latency_p99_ms": 32.533318,
+          "rps": 2547.9530139781427,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r1-direct-before.json": {
+          "concurrency": 64,
+          "count": 10000,
+          "elapsed_s": 3.896060434,
+          "errors": [],
+          "label": "r1-direct-before",
+          "latency_p50_ms": 24.477791,
+          "latency_p99_ms": 31.675981999999998,
+          "rps": 2566.695298854289,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        }
+      }
+    },
+    "screen": {
+      "trials": [
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.575657648,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 33.00732,
+          "latency_p99_ms": 59.740077,
+          "rps": 1891.1353473873344,
+          "url": "http://127.0.0.1:34977/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.623836935999861,
+            "cpu_s": 6.170000000000001,
+            "cpu_percent_one_core": 58.07694561926474,
+            "peak_rss_mb": 90.341376
+          },
+          "variant": "baseline",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 308.50000000000006
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.605862489,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 29.660392,
+          "latency_p99_ms": 55.305521000000006,
+          "rps": 2082.0618682500067,
+          "url": "http://127.0.0.1:39071/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.623790466001083,
+            "cpu_s": 5.430000000000001,
+            "cpu_percent_one_core": 56.422674820104405,
+            "peak_rss_mb": 90.333184
+          },
+          "variant": "no_logs",
+          "round": 1,
+          "usage_records": 0,
+          "cpu_us_per_request": 271.50000000000006
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.19233585,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.622148000000003,
+          "latency_p99_ms": 55.697604999999996,
+          "rps": 1962.258729925977,
+          "url": "http://127.0.0.1:39701/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.21684172499954,
+            "cpu_s": 5.76,
+            "cpu_percent_one_core": 56.37750055289478,
+            "peak_rss_mb": 90.390528
+          },
+          "variant": "no_log_io",
+          "round": 1,
+          "usage_records": 0,
+          "cpu_us_per_request": 288.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.891442705,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 30.785812,
+          "latency_p99_ms": 49.795085,
+          "rps": 2021.9497394338898,
+          "url": "http://127.0.0.1:33317/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.926004573000682,
+            "cpu_s": 5.55,
+            "cpu_percent_one_core": 55.913736077619056,
+            "peak_rss_mb": 90.202112
+          },
+          "variant": "no_metrics",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 277.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.471676368,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 29.348516,
+          "latency_p99_ms": 57.545153,
+          "rps": 2111.558632595374,
+          "url": "http://127.0.0.1:39325/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.513187841999752,
+            "cpu_s": 4.86,
+            "cpu_percent_one_core": 51.08697610850905,
+            "peak_rss_mb": 90.165248
+          },
+          "variant": "no_observability",
+          "round": 1,
+          "usage_records": 0,
+          "cpu_us_per_request": 243.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.49144403,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.959652999999996,
+          "latency_p99_ms": 56.998776,
+          "rps": 1906.3152739327913,
+          "url": "http://127.0.0.1:42333/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.508830047001538,
+            "cpu_s": 5.91,
+            "cpu_percent_one_core": 56.238420200603464,
+            "peak_rss_mb": 90.116096
+          },
+          "variant": "money",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 295.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.248546832,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.055608,
+          "latency_p99_ms": 51.656341000000005,
+          "rps": 1951.4961806635963,
+          "url": "http://127.0.0.1:39025/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.287161920998187,
+            "cpu_s": 6.14,
+            "cpu_percent_one_core": 59.68604409217097,
+            "peak_rss_mb": 90.443776
+          },
+          "variant": "fast_json_logs",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 307.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.304044048,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.468361,
+          "latency_p99_ms": 47.326161,
+          "rps": 1940.9854914082953,
+          "url": "http://127.0.0.1:36025/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.3466999509983,
+            "cpu_s": 5.89,
+            "cpu_percent_one_core": 56.92636326456634,
+            "peak_rss_mb": 90.230784
+          },
+          "variant": "exemplars_off",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 294.5
+        }
+      ],
+      "summary": {
+        "baseline": {
+          "cpu_us_per_request": 308.50000000000006,
+          "rps": 1891.1353473873344,
+          "cpu_percent_one_core": 58.07694561926474,
+          "paired_cpu_savings_us": [
+            0.0
+          ],
+          "paired_cpu_savings_pct": [
+            0.0
+          ]
+        },
+        "no_logs": {
+          "cpu_us_per_request": 271.50000000000006,
+          "rps": 2082.0618682500067,
+          "cpu_percent_one_core": 56.422674820104405,
+          "paired_cpu_savings_us": [
+            37.0
+          ],
+          "paired_cpu_savings_pct": [
+            11.993517017828204
+          ]
+        },
+        "no_log_io": {
+          "cpu_us_per_request": 288.0,
+          "rps": 1962.258729925977,
+          "cpu_percent_one_core": 56.37750055289478,
+          "paired_cpu_savings_us": [
+            20.500000000000057
+          ],
+          "paired_cpu_savings_pct": [
+            6.6450567260940225
+          ]
+        },
+        "no_metrics": {
+          "cpu_us_per_request": 277.5,
+          "rps": 2021.9497394338898,
+          "cpu_percent_one_core": 55.913736077619056,
+          "paired_cpu_savings_us": [
+            31.000000000000057
+          ],
+          "paired_cpu_savings_pct": [
+            10.048622366288507
+          ]
+        },
+        "no_observability": {
+          "cpu_us_per_request": 243.0,
+          "rps": 2111.558632595374,
+          "cpu_percent_one_core": 51.08697610850905,
+          "paired_cpu_savings_us": [
+            65.50000000000006
+          ],
+          "paired_cpu_savings_pct": [
+            21.231766612641835
+          ]
+        },
+        "money": {
+          "cpu_us_per_request": 295.5,
+          "rps": 1906.3152739327913,
+          "cpu_percent_one_core": 56.238420200603464,
+          "paired_cpu_savings_us": [
+            13.000000000000057
+          ],
+          "paired_cpu_savings_pct": [
+            4.213938411669382
+          ]
+        },
+        "fast_json_logs": {
+          "cpu_us_per_request": 307.0,
+          "rps": 1951.4961806635963,
+          "cpu_percent_one_core": 59.68604409217097,
+          "paired_cpu_savings_us": [
+            1.5000000000000568
+          ],
+          "paired_cpu_savings_pct": [
+            0.4862236628849437
+          ]
+        },
+        "exemplars_off": {
+          "cpu_us_per_request": 294.5,
+          "rps": 1940.9854914082953,
+          "cpu_percent_one_core": 56.92636326456634,
+          "paired_cpu_savings_us": [
+            14.000000000000057
+          ],
+          "paired_cpu_savings_pct": [
+            4.538087520259337
+          ]
+        }
+      },
+      "direct_controls": {
+        "r1-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.774462915,
+          "errors": [],
+          "label": "r1-direct-after",
+          "latency_p50_ms": 24.407781,
+          "latency_p99_ms": 35.034902,
+          "rps": 2572.524972935703,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r1-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.823801162,
+          "errors": [],
+          "label": "r1-direct-before",
+          "latency_p50_ms": 24.566042,
+          "latency_p99_ms": 32.921362,
+          "rps": 2556.3021843064575,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        }
+      }
+    },
+    "candidates": {
+      "trials": [
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.117678605,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.546945,
+          "latency_p99_ms": 56.303475,
+          "rps": 1976.738022703776,
+          "url": "http://127.0.0.1:39191/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.161071419999644,
+            "cpu_s": 6.11,
+            "cpu_percent_one_core": 60.13145412966907,
+            "peak_rss_mb": 90.468352
+          },
+          "variant": "baseline",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 305.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.046137886,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.243403,
+          "latency_p99_ms": 50.752978,
+          "rps": 1990.814801364752,
+          "url": "http://127.0.0.1:33317/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.074987082000007,
+            "cpu_s": 5.8500000000000005,
+            "cpu_percent_one_core": 58.06459057849933,
+            "peak_rss_mb": 90.099712
+          },
+          "variant": "money",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 292.50000000000006
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.754562535,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 30.373186,
+          "latency_p99_ms": 48.549645000000005,
+          "rps": 2050.322598090761,
+          "url": "http://127.0.0.1:33867/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.808949213998858,
+            "cpu_s": 5.59,
+            "cpu_percent_one_core": 56.988775026199775,
+            "peak_rss_mb": 90.333184
+          },
+          "variant": "batch_logs",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 279.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.105108658,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.511190000000003,
+          "latency_p99_ms": 52.540760999999996,
+          "rps": 1979.1969267115621,
+          "url": "http://127.0.0.1:34025/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.163623230000667,
+            "cpu_s": 5.66,
+            "cpu_percent_one_core": 55.688801836858616,
+            "peak_rss_mb": 90.74688
+          },
+          "variant": "native_metrics",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 283.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.681378765,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 30.041852000000002,
+          "latency_p99_ms": 48.150371,
+          "rps": 2065.821458437692,
+          "url": "http://127.0.0.1:44653/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.712461037001049,
+            "cpu_s": 5.42,
+            "cpu_percent_one_core": 55.80459967202661,
+            "peak_rss_mb": 90.689536
+          },
+          "variant": "combined",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 271.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.954257266,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.066908,
+          "latency_p99_ms": 51.898722,
+          "rps": 2009.1905870579092,
+          "url": "http://127.0.0.1:36389/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.965267569998105,
+            "cpu_s": 5.45,
+            "cpu_percent_one_core": 54.689951491197505,
+            "peak_rss_mb": 90.693632
+          },
+          "variant": "combined",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 272.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.170213204,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.964159,
+          "latency_p99_ms": 50.437095,
+          "rps": 1966.5271119521753,
+          "url": "http://127.0.0.1:44305/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.191321101003268,
+            "cpu_s": 5.71,
+            "cpu_percent_one_core": 56.02806489374462,
+            "peak_rss_mb": 90.775552
+          },
+          "variant": "native_metrics",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 285.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.179328588,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.760658999999997,
+          "latency_p99_ms": 52.20868,
+          "rps": 1964.7661264788321,
+          "url": "http://127.0.0.1:34473/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.232268310999643,
+            "cpu_s": 5.619999999999999,
+            "cpu_percent_one_core": 54.924282956483104,
+            "peak_rss_mb": 90.492928
+          },
+          "variant": "batch_logs",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 280.99999999999994
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.380239259,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.558909,
+          "latency_p99_ms": 54.962725,
+          "rps": 1926.737862295357,
+          "url": "http://127.0.0.1:32933/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.386202097997739,
+            "cpu_s": 6.0,
+            "cpu_percent_one_core": 57.76895099274724,
+            "peak_rss_mb": 90.128384
+          },
+          "variant": "money",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 300.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.346356306,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.468118,
+          "latency_p99_ms": 50.745594999999994,
+          "rps": 1933.0476748033232,
+          "url": "http://127.0.0.1:35485/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.37076249799793,
+            "cpu_s": 6.23,
+            "cpu_percent_one_core": 60.0727285115506,
+            "peak_rss_mb": 90.226688
+          },
+          "variant": "baseline",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 311.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.497941299,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 33.168077,
+          "latency_p99_ms": 56.008517,
+          "rps": 1905.135438498321,
+          "url": "http://127.0.0.1:40663/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.510345979000704,
+            "cpu_s": 6.2,
+            "cpu_percent_one_core": 58.98949485000188,
+            "peak_rss_mb": 90.23488
+          },
+          "variant": "baseline",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 310.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.218168337,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 32.022034,
+          "latency_p99_ms": 51.559929999999994,
+          "rps": 1957.2979559927562,
+          "url": "http://127.0.0.1:43391/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.241138112000044,
+            "cpu_s": 5.98,
+            "cpu_percent_one_core": 58.39194759997368,
+            "peak_rss_mb": 90.386432
+          },
+          "variant": "money",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 299.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.122276124,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.648992,
+          "latency_p99_ms": 52.725554,
+          "rps": 1975.8401919682703,
+          "url": "http://127.0.0.1:37121/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.169649364997895,
+            "cpu_s": 5.7,
+            "cpu_percent_one_core": 56.04913006753581,
+            "peak_rss_mb": 90.279936
+          },
+          "variant": "batch_logs",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 285.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 10.09932,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 31.652939999999997,
+          "latency_p99_ms": 46.966896,
+          "rps": 1980.3313490413216,
+          "url": "http://127.0.0.1:35683/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 10.146357397999964,
+            "cpu_s": 5.71,
+            "cpu_percent_one_core": 56.276353927031465,
+            "peak_rss_mb": 90.791936
+          },
+          "variant": "native_metrics",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 285.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 9.454936772,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 29.132607,
+          "latency_p99_ms": 52.440617,
+          "rps": 2115.2970646221897,
+          "url": "http://127.0.0.1:44797/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 9.474762982998072,
+            "cpu_s": 5.33,
+            "cpu_percent_one_core": 56.254705363758276,
+            "peak_rss_mb": 90.46016
+          },
+          "variant": "combined",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 266.5
+        }
+      ],
+      "summary": {
+        "baseline": {
+          "cpu_us_per_request": 310.0,
+          "rps": 1933.0476748033232,
+          "cpu_percent_one_core": 60.0727285115506,
+          "paired_cpu_savings_us": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "paired_cpu_savings_pct": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "money": {
+          "cpu_us_per_request": 299.0,
+          "rps": 1957.2979559927562,
+          "cpu_percent_one_core": 58.06459057849933,
+          "paired_cpu_savings_us": [
+            12.999999999999943,
+            11.5,
+            11.0
+          ],
+          "paired_cpu_savings_pct": [
+            4.255319148936154,
+            3.6918138041733495,
+            3.548387096774197
+          ]
+        },
+        "batch_logs": {
+          "cpu_us_per_request": 280.99999999999994,
+          "rps": 1975.8401919682703,
+          "cpu_percent_one_core": 56.04913006753581,
+          "paired_cpu_savings_us": [
+            26.0,
+            30.500000000000057,
+            25.0
+          ],
+          "paired_cpu_savings_pct": [
+            8.510638297872342,
+            9.791332263242392,
+            8.064516129032262
+          ]
+        },
+        "native_metrics": {
+          "cpu_us_per_request": 285.5,
+          "rps": 1979.1969267115621,
+          "cpu_percent_one_core": 56.02806489374462,
+          "paired_cpu_savings_us": [
+            22.5,
+            26.0,
+            24.5
+          ],
+          "paired_cpu_savings_pct": [
+            7.364975450081834,
+            8.34670947030498,
+            7.9032258064516085
+          ]
+        },
+        "combined": {
+          "cpu_us_per_request": 271.0,
+          "rps": 2065.821458437692,
+          "cpu_percent_one_core": 55.80459967202661,
+          "paired_cpu_savings_us": [
+            34.5,
+            39.0,
+            43.5
+          ],
+          "paired_cpu_savings_pct": [
+            11.292962356792147,
+            12.520064205457459,
+            14.032258064516135
+          ]
+        }
+      },
+      "direct_controls": {
+        "r1-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.786347879,
+          "errors": [],
+          "label": "r1-direct-after",
+          "latency_p50_ms": 24.464916,
+          "latency_p99_ms": 31.134022,
+          "rps": 2568.5983096055297,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r1-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.8672509999999996,
+          "errors": [],
+          "label": "r1-direct-before",
+          "latency_p50_ms": 24.541406000000002,
+          "latency_p99_ms": 35.084943,
+          "rps": 2542.1840487865456,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r2-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.69210346,
+          "errors": [],
+          "label": "r2-direct-after",
+          "latency_p50_ms": 24.164567,
+          "latency_p99_ms": 32.535992,
+          "rps": 2600.069032352823,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r2-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.84315862,
+          "errors": [],
+          "label": "r2-direct-before",
+          "latency_p50_ms": 24.646443,
+          "latency_p99_ms": 33.923411,
+          "rps": 2549.993053691422,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r3-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.768515374,
+          "errors": [],
+          "label": "r3-direct-after",
+          "latency_p50_ms": 24.318179999999998,
+          "latency_p99_ms": 31.729070999999998,
+          "rps": 2574.49448667333,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r3-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 7.885560789,
+          "errors": [],
+          "label": "r3-direct-before",
+          "latency_p50_ms": 24.822776,
+          "latency_p99_ms": 31.579116999999997,
+          "rps": 2536.281253186088,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        }
+      }
+    },
+    "cpu_saturation": {
+      "trials": [
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.523025019,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.170996000000002,
+          "latency_p99_ms": 35.218246,
+          "rps": 3621.2039473290674,
+          "url": "http://127.0.0.1:35501/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.562412732000666,
+            "cpu_s": 5.32,
+            "cpu_percent_one_core": 95.64194992928049,
+            "peak_rss_mb": 90.19392
+          },
+          "variant": "baseline",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 266.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 6.289092607,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.922998999999997,
+          "latency_p99_ms": 66.012689,
+          "rps": 3180.1089997846807,
+          "url": "http://127.0.0.1:36881/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 6.335534212001221,
+            "cpu_s": 6.08,
+            "cpu_percent_one_core": 95.9666509018739,
+            "peak_rss_mb": 90.177536
+          },
+          "variant": "exemplars_off",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 304.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.294498258,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 16.280369999999998,
+          "latency_p99_ms": 37.476084,
+          "rps": 3777.506200852923,
+          "url": "http://127.0.0.1:46691/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.341695446997619,
+            "cpu_s": 5.1,
+            "cpu_percent_one_core": 95.47530462199099,
+            "peak_rss_mb": 90.447872
+          },
+          "variant": "combined",
+          "round": 1,
+          "usage_records": 21002,
+          "cpu_us_per_request": 255.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 4.958600007,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 15.449076000000002,
+          "latency_p99_ms": 35.808205,
+          "rps": 4033.396517518296,
+          "url": "http://127.0.0.1:38137/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.021411272999103,
+            "cpu_s": 4.749999999999999,
+            "cpu_percent_one_core": 94.59492046671174,
+            "peak_rss_mb": 90.611712
+          },
+          "variant": "combined",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 237.49999999999994
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.483858515,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.016745999999998,
+          "latency_p99_ms": 37.397084,
+          "rps": 3647.0671052679413,
+          "url": "http://127.0.0.1:37931/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.545714737003436,
+            "cpu_s": 5.29,
+            "cpu_percent_one_core": 95.3889669928892,
+            "peak_rss_mb": 90.19392
+          },
+          "variant": "exemplars_off",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 264.5
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.649576885,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.392456,
+          "latency_p99_ms": 41.737718,
+          "rps": 3540.0881175900663,
+          "url": "http://127.0.0.1:37879/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.698404869999649,
+            "cpu_s": 5.449999999999999,
+            "cpu_percent_one_core": 95.64079991389475,
+            "peak_rss_mb": 90.181632
+          },
+          "variant": "baseline",
+          "round": 2,
+          "usage_records": 21002,
+          "cpu_us_per_request": 272.49999999999994
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.588272915,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.234205,
+          "latency_p99_ms": 38.420752,
+          "rps": 3578.923274544475,
+          "url": "http://127.0.0.1:45109/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.614782141001342,
+            "cpu_s": 5.4,
+            "cpu_percent_one_core": 96.17470214146122,
+            "peak_rss_mb": 90.46016
+          },
+          "variant": "baseline",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 270.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 5.681725374,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 17.741456,
+          "latency_p99_ms": 38.207001999999996,
+          "rps": 3520.05749723869,
+          "url": "http://127.0.0.1:38685/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 5.698531661997549,
+            "cpu_s": 5.4799999999999995,
+            "cpu_percent_one_core": 96.16512331668004,
+            "peak_rss_mb": 90.312704
+          },
+          "variant": "exemplars_off",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 274.0
+        },
+        {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 4.922603177,
+          "errors": [],
+          "label": "throughput",
+          "latency_p50_ms": 15.361868000000001,
+          "latency_p99_ms": 35.043245,
+          "rps": 4062.890970664971,
+          "url": "http://127.0.0.1:37399/inf/v1/messages",
+          "resources": {
+            "elapsed_s": 4.935346705002303,
+            "cpu_s": 4.739999999999999,
+            "cpu_percent_one_core": 96.04188486283432,
+            "peak_rss_mb": 90.505216
+          },
+          "variant": "combined",
+          "round": 3,
+          "usage_records": 21002,
+          "cpu_us_per_request": 236.99999999999994
+        }
+      ],
+      "summary": {
+        "baseline": {
+          "cpu_us_per_request": 270.0,
+          "rps": 3578.923274544475,
+          "cpu_percent_one_core": 95.64194992928049,
+          "paired_cpu_savings_us": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "paired_cpu_savings_pct": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "exemplars_off": {
+          "cpu_us_per_request": 274.0,
+          "rps": 3520.05749723869,
+          "cpu_percent_one_core": 95.9666509018739,
+          "paired_cpu_savings_us": [
+            -38.0,
+            7.999999999999943,
+            -4.0
+          ],
+          "paired_cpu_savings_pct": [
+            -14.28571428571428,
+            2.9357798165137394,
+            -1.4814814814814836
+          ]
+        },
+        "combined": {
+          "cpu_us_per_request": 237.49999999999994,
+          "rps": 4033.396517518296,
+          "cpu_percent_one_core": 95.47530462199099,
+          "paired_cpu_savings_us": [
+            11.0,
+            35.0,
+            33.00000000000006
+          ],
+          "paired_cpu_savings_pct": [
+            4.135338345864659,
+            12.844036697247708,
+            12.222222222222246
+          ]
+        }
+      },
+      "direct_controls": {
+        "r1-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.921116019,
+          "errors": [],
+          "label": "r1-direct-after",
+          "latency_p50_ms": 2.816048,
+          "latency_p99_ms": 6.698557,
+          "rps": 21712.791426331714,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r1-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.952908798,
+          "errors": [],
+          "label": "r1-direct-before",
+          "latency_p50_ms": 2.738798,
+          "latency_p99_ms": 6.74864,
+          "rps": 20988.367451299364,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r2-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.913868419,
+          "errors": [],
+          "label": "r2-direct-after",
+          "latency_p50_ms": 2.751215,
+          "latency_p99_ms": 6.459890000000001,
+          "rps": 21884.988674720797,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r2-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.95484851,
+          "errors": [],
+          "label": "r2-direct-before",
+          "latency_p50_ms": 2.5945899999999997,
+          "latency_p99_ms": 6.928015,
+          "rps": 20945.730962076905,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r3-direct-after.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.972083216,
+          "errors": [],
+          "label": "r3-direct-after",
+          "latency_p50_ms": 2.90309,
+          "latency_p99_ms": 7.392557999999999,
+          "rps": 20574.37025021117,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        },
+        "r3-direct-before.json": {
+          "concurrency": 64,
+          "count": 20000,
+          "elapsed_s": 0.963842406,
+          "errors": [],
+          "label": "r3-direct-before",
+          "latency_p50_ms": 2.6959649999999997,
+          "latency_p99_ms": 7.254599,
+          "rps": 20750.2802071151,
+          "url": "http://127.0.0.1:19000/v1/messages"
+        }
+      }
+    }
+  },
+  "source_sha256": {
+    "apps/data-plane/src/data_plane/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "apps/data-plane/src/data_plane/app.py": "aa6d613ceead25bd6632b6835027e69b75fefb226d720615ad7379c2be703ed2",
+    "apps/data-plane/src/data_plane/auth.py": "5fd20f60a7c854fe4e84d69032738da83813631daf5eeb2ae0146172bb7e6df0",
+    "apps/data-plane/src/data_plane/budgets.py": "a1131fec781ee69a1bd451e34ae1105726bc4189bac26c47197af78f6f7b94fd",
+    "apps/data-plane/src/data_plane/bundle/__init__.py": "f1642ff633397436fc18ef97b4e159b5cf96cf340ba666c398ef69663dbb465f",
+    "apps/data-plane/src/data_plane/bundle/base.py": "136bace294af2dea9a9891dccd04037640f9afc14587566a4dcf879019834b50",
+    "apps/data-plane/src/data_plane/bundle/config.py": "3121aac23702aa314949b7c9f42569cc9e8ba36aac41667350e0c32349838ae9",
+    "apps/data-plane/src/data_plane/bundle/holder.py": "2b541d51f2b2db4759355c1b677d121390f4a7588cfafe7c246bfcf2580d99bf",
+    "apps/data-plane/src/data_plane/bundle/local.py": "6c5777f8fa42f724111d34392e690f492c1600e44e72bda541321c0eed69ce27",
+    "apps/data-plane/src/data_plane/bundle/remote.py": "543b440ea41f1e28c280f4bb0e055ebdfc24406896175824e4e9be158e2292b3",
+    "apps/data-plane/src/data_plane/cache.py": "31d0dcfde7cc7c531ccf5761a569cde2e40a0cc2b671cd9eba29316136f51df0",
+    "apps/data-plane/src/data_plane/canonical/__init__.py": "0d98c86f32075c079061769b76938d5bef88aba4b903704fdcb0d31632763a41",
+    "apps/data-plane/src/data_plane/canonical/completion.py": "5948b903c4092f21c4294fdc43f13a50afa59335db5e386473e7d99436d93c07",
+    "apps/data-plane/src/data_plane/canonical/error.py": "c07f161bb0a224fb6a1e851e7d402df2991f7615ac1755e61fed740dd8514021",
+    "apps/data-plane/src/data_plane/config.py": "8b83b734a735dd6bac8658de9cebfe911c03203ea20e877213e732626377aac5",
+    "apps/data-plane/src/data_plane/control_plane_link.py": "beb6791474be0da30ac86c87450c974725caafa7711dcf3e113ab07fd88a9528",
+    "apps/data-plane/src/data_plane/credentials.py": "378420ef0bc4555b1c075fd56dfa909a3f0c26c4175e499647135b0dd56ecdcc",
+    "apps/data-plane/src/data_plane/discovery.py": "27ac9f57729f83bad95f2d41f503938e2c7021192e6a84ef8b73818d513b1938",
+    "apps/data-plane/src/data_plane/egress/__init__.py": "567248102d946e5581121cd5d1ed9bdb65ce479e6b64cef74d9f370f3d670e25",
+    "apps/data-plane/src/data_plane/egress/anthropic.py": "63a4fa154393ca71484e246339ea5fa656fed7984f8b6b5ac2bd476798986851",
+    "apps/data-plane/src/data_plane/egress/base.py": "f13f6016ac30d9909b484f15ac2372aa113a76f2957a035a812549d378327bab",
+    "apps/data-plane/src/data_plane/egress/openai_compatible.py": "2aeb917c464ff7118242269d8fbbfe447e10725f40d05eac8e8855406944a6b8",
+    "apps/data-plane/src/data_plane/egress/openai_responses.py": "658f295086a2fd7d73e25d6c5d46e6fdca48123add78e603b36d62b26c36a70d",
+    "apps/data-plane/src/data_plane/errors.py": "f842df3e9be3e1c1bf81bad377a588f4d016417b3db566b92aed109b1b7aa65d",
+    "apps/data-plane/src/data_plane/formats/__init__.py": "72e8311241a803b39030140b0cbb67976254f031bbeb7c8cf4c5b1f00d0a4bfd",
+    "apps/data-plane/src/data_plane/formats/anthropic.py": "05ce7303ccce862ce5627f20ab04358b4801ab237eb3d50542fc203a59218877",
+    "apps/data-plane/src/data_plane/formats/openai.py": "f30d55fb2dc44d50857a7ef1bbc11fa3e97e7139bfb7ea9b7d3d5ad80833ba44",
+    "apps/data-plane/src/data_plane/formats/openai_responses.py": "a35362ea68e2ceb16c5a0121aa7e20b8ab6596f929e690a6616c44ce6588aa74",
+    "apps/data-plane/src/data_plane/heartbeat.py": "8bdb340950953ce35e1278abb502b9b3bb07eb56fd365b3305eafcbff167a8f6",
+    "apps/data-plane/src/data_plane/http.py": "a3e97b1a492e38d7b5b7bcfa2d5a412e3b499f9d53fd1d7cc85e78fd014c56d7",
+    "apps/data-plane/src/data_plane/ingress/__init__.py": "994e6778f11eb88790b517a94ce65cb4ae945387059124b943529406583a13ac",
+    "apps/data-plane/src/data_plane/ingress/anthropic.py": "7ddc45c58e5fdd9621c26a7142c55c3df466de6b9673ac96edc7c18f344dc742",
+    "apps/data-plane/src/data_plane/ingress/base.py": "d6dbe3864edce4316d4d8a90c3512ca7512141f2b52e616620337b121ad22044",
+    "apps/data-plane/src/data_plane/ingress/openai_chat_completions.py": "80b09977a5d6b3340e634641ae77a074b7b16489b5462d52af027ff4b712d553",
+    "apps/data-plane/src/data_plane/ingress/openai_responses.py": "21539502da34873aa7f44dd76bf6729f96df84c167afbff7b309cc7f7fd88e9e",
+    "apps/data-plane/src/data_plane/metering.py": "4ee9b21828593e511fadf51103447bf02d7a6c43b68e6f8edb848026a4165662",
+    "apps/data-plane/src/data_plane/metrics.py": "8d82172c81922d092cfc25cd0507022856f3860f57542a79be1a3c28b48a61c9",
+    "apps/data-plane/src/data_plane/operations.py": "4def57884a0c9f56908807839d16e673eb39548cad017bda2844e480bd1ec1ed",
+    "apps/data-plane/src/data_plane/outbox/__init__.py": "d1adc136e3e0ee7f7e8d6e0e59588a91b50b7117459bddce2e0deadd1e1f1c1d",
+    "apps/data-plane/src/data_plane/outbox/base.py": "8b846e776d1bab9f0a72424f00080b6882311439179f9812adef1e67d80316ba",
+    "apps/data-plane/src/data_plane/outbox/devnull.py": "92cb259a2411a975d23915f2d4fa5ef20ba423229e912a83cf16cc90d4bb84bb",
+    "apps/data-plane/src/data_plane/outbox/file.py": "20e5607d793473d31c6da9d29b62e979ca8c4568333d6508c8d107fb3d38a858",
+    "apps/data-plane/src/data_plane/outbox/queued.py": "dca00f76f51c819bda00547e24c4b94043d1c44ea44b7f98f1ea76a8cf4f9356",
+    "apps/data-plane/src/data_plane/outbox/sqlite.py": "e063c28053d4ed978f51020893818a3df9da0e8b784d0a533fb9634966d32e1b",
+    "apps/data-plane/src/data_plane/policies.py": "e00361eb86405716a0bca3c543e4d096a5594d87ae0f959a6d8c8055298add48",
+    "apps/data-plane/src/data_plane/policy.py": "efb88cd1ec1c03448436c4cfdff56cb68181da09b6ce68c447fb889b5d596344",
+    "apps/data-plane/src/data_plane/policy_actions/__init__.py": "e56fac9343c599114d54545789b503146706cfe0d9cc70b6d666f67dd3bf864f",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_models.py": "10fa6c9869ef149e5db9627099c7d3399bd02adb01ac60df14702b7008e08200",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_providers.py": "f8324e512203fc3cbf3294381c40a77f17f7e7e443410104c6fdab47dfa7f0f4",
+    "apps/data-plane/src/data_plane/policy_actions/base.py": "c04cef0ea8e9dbe658564244404518908d34008876b9c0418494a86da6097745",
+    "apps/data-plane/src/data_plane/policy_actions/budget.py": "09412a4cecb22a6abe11ba29359a6078f471d33327604d89b4ddbe2886fc0b6b",
+    "apps/data-plane/src/data_plane/policy_actions/credential_access.py": "e11693702dcbd5f010579857a5976b77d1dfe32281e1710ceee53e2b0903c885",
+    "apps/data-plane/src/data_plane/policy_actions/deny.py": "15c3334b9fed763a41bc10f3fd8d0837874814930ed1b33b4b67733de700230c",
+    "apps/data-plane/src/data_plane/policy_actions/fallback.py": "d72d3394050ec742441df74538aa978920aa3d2dff90e079f19cca1fd5628cb0",
+    "apps/data-plane/src/data_plane/policy_actions/price_limit.py": "c183f07a3130f763dfac20d3d2bc3bc180eb19c3a33707376f8ce3e3ae259c91",
+    "apps/data-plane/src/data_plane/policy_actions/request_limits.py": "e637ec59b3c7e3604de9adf3478ff47a8477b7126288b274d917db0cebf2b5c2",
+    "apps/data-plane/src/data_plane/policy_actions/strict_parameters.py": "e85ad56a16a014c30f03e7ce4e800477ee8a83b98a17af8a7274a9dd49435d4d",
+    "apps/data-plane/src/data_plane/profiles.py": "1b208d051a44d653bca5f0c3c2e4ca65c4af1336b21eb8487936c2fe81a453ba",
+    "apps/data-plane/src/data_plane/proxy.py": "52f1ca45084951376f60c7261ad6785e42686436016efeed6d820d6a7c00f79f",
+    "apps/data-plane/src/data_plane/reconcile.py": "f258edbb394bb49712ce10bab40ab7a9f0c7a183fdacf144df6ce7ffe857548a",
+    "apps/data-plane/src/data_plane/requirements.py": "4657f8b75dd9aeefbf1f6aae7995734f10bcec2df392e94f0172b21d021d4aee",
+    "apps/data-plane/src/data_plane/responses.py": "3f89ee93fa8b6dd696ac8fec4ea2b749c54fb431dbab14f00556e3f3f6c7eb46",
+    "apps/data-plane/src/data_plane/routing.py": "e7dff207519db6a57db535f38cf31c5144069fac43b5a9c10f65d55ce342c054",
+    "apps/data-plane/src/data_plane/runtime.py": "ec47afea1a11b9de47e1461af45af92194a3cdeff7f68db686eb56208670b49c",
+    "apps/data-plane/src/data_plane/setup.py": "957667fdb500f7c7674622de21cb102572dd18e65cd72685967fb9cb7636f492",
+    "apps/data-plane/src/data_plane/streaming.py": "62869390813a6c6b78c238952c2452d8042bb06a7286686245bb57545c24bdcd",
+    "apps/data-plane/src/data_plane/tasks.py": "62832b44200669111a9f6aae185511e4a59fe83ced11a33ed5b2a0f9772b651d",
+    "lib/runtime/src/airmux_runtime/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "lib/runtime/src/airmux_runtime/config.py": "e1380ce569676503e78aaa71ff4177d1c859a784b245d383872f45174bedeb27",
+    "lib/runtime/src/airmux_runtime/files.py": "2a9eb0cc4c389044be1fbfef09c8f4694f799af7f787f77dde6f3dc6ba42bb5e",
+    "lib/runtime/src/airmux_runtime/observability.py": "1106021a3c4c3353b39f44adbf8bef426f7972667f3c96dcfb3b7b3c5261ecc5",
+    "lib/runtime/src/airmux_runtime/secrets/__init__.py": "310f2b66a1ac6310094a80475467ce2e1bd508c539d6116dccfbc7c259d83c64",
+    "lib/runtime/src/airmux_runtime/secrets/base.py": "575a5fbea0b16e3729113a685ec15f7b90da893929aee01810ada272e466051a",
+    "lib/runtime/src/airmux_runtime/secrets/env.py": "c25b9b321e51c82e0023bcea6e4063d0211ea5227d44dd7edbee4338cf44fba9",
+    "lib/runtime/src/airmux_runtime/secrets/file.py": "c6bc503f077f87f7feef7c28aee04a1a8013b15073f42e924308642d0af52bd1",
+    "lib/runtime/src/airmux_runtime/secrets/insecure_database.py": "2c631bffa2bf2a4555620b7f3843ecd596d4ba29f3edc43c681cd56c5ef73957",
+    "lib/runtime/src/airmux_runtime/secrets/memory.py": "29db8bf45827983f3b45627412ad41b911745eb36a37ecff02b89bd1b82aa22b",
+    "lib/runtime/src/airmux_runtime/taxonomy.py": "2f94236ee0ac9bc5e47697356fb6d2ad9d7e08766d76c5518c4aa01506a4c5cd",
+    "lib/runtime/src/airmux_runtime/telemetry.py": "55ca2f56dd5268c5ac292876057504925f78ae5f4a8ec3e729d2db1696043449",
+    "lib/contract/src/contract/__init__.py": "c1b8fa73a03d7c9b9759c93ccb3b2b3d1ebebc5df9d1f529fdf6d9e682fbd2a8",
+    "lib/contract/src/contract/budgets.py": "959bde99e3ad1b2926d30e56c03e1c163e1179f264badd1dbde57d26c96f6399",
+    "lib/contract/src/contract/bundle.py": "a438d1f141305534788681c1c8231c26cef1f126b35435c5e82fb2aa6a1f2f63",
+    "lib/contract/src/contract/credentials.py": "f02b6e053b0812d73a18ac2644a04cea802c5f1dd5e0c0f8a4b57287cb7523ea",
+    "lib/contract/src/contract/events.py": "7ce39c735bf177a8c8f253416fba5b6ec52e15c294ee3ff9dc0ba880d9ad2927",
+    "lib/contract/src/contract/ids.py": "dccdc5e4a06ef72b3e84bfd0d8c618c8c3b93659285579775415213b5670d9ed",
+    "lib/contract/src/contract/model_types.py": "cc0ff304f49a66e875558fbdf907a2b8e9dd961f96de49e127c581967a48e950",
+    "lib/contract/src/contract/money.py": "f00855dda717c5ec53776f50e7950cb4f18d58fb6a16a3a324e8f702dae07fe1",
+    "lib/contract/src/contract/policies.py": "c4b5f65c0b86e04da067b2a39d388f0b79db71c29224efb9bdb933e6ddaeeae2",
+    "lib/contract/src/contract/secrets/__init__.py": "3b665061316c7e3a3e097f0e1f4aece7c0824b3daccedcd95fd6c8a0a67c19e8",
+    "lib/contract/src/contract/taxonomy.py": "d7485f47b28311ce2efcc3ceee14b7fb4f924369f9fafc2087e98b90d9141974"
+  },
+  "diagnostic_sources": {
+    "gateway": "#!/app/.venv/bin/python\nimport sys\nimport os\nif os.environ['AUDIT_VARIANT'] in {'money', 'combined'}:\n    sys.path.insert(0, '/audit/money')\nsys.path[:0] = ['/candidate/apps/data-plane/src', '/candidate/lib/runtime/src', '/aiohttp-deps']\nimport cProfile\nimport json\nimport logging\nimport os\nimport signal\nimport time\nfrom pathlib import Path\n\nif os.environ['AUDIT_VARIANT'] == 'coalesce':\n    import data_plane\n    data_plane.__path__.insert(0, '/audit/coalesce/data_plane')\n\nimport data_plane.app\nfrom data_plane.metrics import DataPlaneMetrics\n\nvariant = os.environ['AUDIT_VARIANT']\noutput = Path(os.environ['AUDIT_OUTPUT'])\nif variant in {'no_logs', 'no_observability'}:\n    configure = data_plane.app.configure_logger\n    def quiet(logger, *, dev):\n        configure(logger, dev=dev)\n        logger.setLevel(logging.WARNING)\n    data_plane.app.configure_logger = quiet\nif variant in {'no_metrics', 'no_observability'}:\n    for name in vars(DataPlaneMetrics):\n        if name.startswith(('observe_', 'set_', 'relabel_')):\n            setattr(DataPlaneMetrics, name, lambda *args, **kwargs: None)\n\nif variant == 'exemplars_off':\n    os.environ['OTEL_METRICS_EXEMPLAR_FILTER'] = 'always_off'\nif variant in {'fast_json_logs', 'combined'}:\n    import airmux_runtime.observability as obs\n    from datetime import UTC, datetime\n    from pydantic_core import to_json\n    def format_record(self, record):\n        payload = {'timestamp': datetime.now(tz=UTC).isoformat(), 'level': record.levelname.lower(), 'logger': record.name, 'event': getattr(record, 'event', 'log'), 'message': record.getMessage()}\n        if request_id := obs._request_id.get():\n            payload['request_id'] = request_id\n        payload.update(getattr(record, 'fields', {}))\n        if record.exc_info:\n            payload['exception'] = self.formatException(record.exc_info)\n        return to_json(payload, fallback=str).decode()\n    obs.JsonFormatter.format = format_record\nif variant == 'no_log_io':\n    import airmux_runtime.observability as obs\n    class FormatOnly(logging.Handler):\n        def emit(self, record):\n            self.format(record)\n    def format_only_logger(logger, *, dev):\n        if not logger.handlers:\n            handler=FormatOnly()\n            handler.setFormatter(obs.JsonFormatter())\n            logger.addHandler(handler)\n            logger.setLevel(logging.INFO)\n    data_plane.app.configure_logger = format_only_logger\n\nif variant in {'batch_logs', 'combined'}:\n    import asyncio\n    import atexit\n    import sys\n    import airmux_runtime.observability as obs\n    class BatchedHandler(logging.StreamHandler):\n        def __init__(self):\n            super().__init__()\n            self.lines=[]\n            self.timer=None\n        def emit(self, record):\n            self.lines.append(self.format(record)+'\\n')\n            if len(self.lines)>=100 or record.levelno>=logging.ERROR:\n                self.flush()\n            elif self.timer is None:\n                try:\n                    self.timer=asyncio.get_running_loop().call_later(0.1,self.flush)\n                except RuntimeError:\n                    self.flush()\n        def flush(self):\n            self.acquire()\n            try:\n                if self.timer is not None:\n                    self.timer.cancel()\n                    self.timer=None\n                if self.lines:\n                    self.stream.write(''.join(self.lines))\n                    self.lines.clear()\n                    self.stream.flush()\n            finally:\n                self.release()\n    def buffered_logger(logger, *, dev):\n        if not logger.handlers:\n            handler=BatchedHandler()\n            handler.setFormatter(obs.JsonFormatter())\n            logger.addHandler(handler)\n            logger.setLevel(logging.INFO)\n    data_plane.app.configure_logger=buffered_logger\n\nif variant in {'native_metrics', 'combined'}:\n    import data_plane.metrics\n    from prometheus_probe import PrometheusTelemetry\n    data_plane.metrics.MetricsTelemetry=PrometheusTelemetry\n\ncounts = {}\nif os.environ.get('AUDIT_PHASES') == '1':\n    import data_plane.proxy as proxy\n    import data_plane.http as http\n    import data_plane.metering as metering\n    from data_plane.egress.anthropic import AnthropicAdapter\n    from data_plane.ingress.anthropic import AnthropicIngress\n    from airmux_runtime.observability import JsonFormatter\n    def timed(owner, name, label):\n        function = getattr(owner, name)\n        counts[label + '_cpu_ns'] = 0\n        counts[label + '_calls'] = 0\n        def measured(*args, **kwargs):\n            started = time.thread_time_ns()\n            try:\n                return function(*args, **kwargs)\n            finally:\n                counts[label + '_cpu_ns'] += time.thread_time_ns() - started\n                counts[label + '_calls'] += 1\n        setattr(owner, name, measured)\n    for owner, name, label in (\n        (http, 'authenticate_request', 'auth'),\n        (http.ResponseHeadersMiddleware, '_route', 'route_label'),\n        (proxy, '_parse', 'parse'),\n        (proxy, 'plan_routes', 'routing'),\n        (proxy, 'reconcile', 'reconcile'),\n        (proxy, '_transform', 'request_translation'),\n        (AnthropicAdapter, 'transform_response', 'response_translation'),\n        (AnthropicIngress, 'render_response', 'render_response'),\n        (proxy, 'usage_event', 'usage_accounting_including_log'),\n        (metering, 'cost_breakdown', 'pricing'),\n        (metering, 'log_event', 'usage_log'),\n        (JsonFormatter, 'format', 'log_format'),\n    ):\n        timed(owner, name, label)\n    for name in vars(DataPlaneMetrics):\n        if name.startswith('observe_'):\n            timed(DataPlaneMetrics, name, name)\nsignal.signal(signal.SIGUSR2, lambda *_: output.with_suffix('.counts.json').write_text(json.dumps(counts)))\nprofile = cProfile.Profile(timer=time.thread_time)\nprofiling = False\nif os.environ.get('AUDIT_PROFILE') == '1':\n    def toggle(*_):\n        global profiling\n        if profiling:\n            profile.disable()\n            profile.dump_stats(str(output.with_suffix('.prof')))\n        else:\n            profile.enable()\n        profiling = not profiling\n    signal.signal(signal.SIGUSR1, toggle)\nfrom cli.main import main\nmain()\n",
+    "run.py": "import json\nimport os\nimport signal\nimport subprocess\nimport time\nfrom pathlib import Path\nfrom contextlib import contextmanager\nfrom typing import Annotated\nimport httpx\nimport typer\nimport comparison as bench\n\napp = typer.Typer()\n\n@contextmanager\ndef gateway(directory, variant, *, profile=False, phases=False):\n    item = bench.PerformanceGateway(directory, directory.name)\n    item.event_store = 'devnull'\n    item.reload_interval_s = 3600\n    item.executable = '/audit/gateway'\n    item.environment.update(AUDIT_VARIANT=variant, AUDIT_OUTPUT=str(directory/'diagnostic'), AUDIT_PROFILE=str(int(profile)), AUDIT_PHASES=str(int(phases)))\n    item.taxonomy = {'providers': [{'provider_id': 'stub', 'kind': 'anthropic', 'base_url': 'http://127.0.0.1:19000/v1'}], 'models': [{'model_id': 'anthropic/mock', 'provider_id': 'stub', 'upstream_model': 'anthropic/mock', 'input_price_per_mtok': '2', 'output_price_per_mtok': '5', 'context_window': 128000, 'max_output_tokens': 4096, 'input_modalities': ['text'], 'output_modalities': ['text'], 'capabilities': ['streaming', 'tools']}]}\n    try:\n        item.write_files()\n        item.launch(1)\n        bench.eventually(item.ready, timeout=60)\n        yield item.process, item.url+'/inf/v1/messages'\n    finally:\n        item.close()\n\n@app.command()\ndef run(output: Annotated[Path, typer.Option()], variants: str = 'baseline,no_logs,no_metrics,no_observability', rounds: int = 1, count: int = 20000, concurrency: int = 64, profile: bool = False, phases: bool = False, upstream_delay_ms: int = 20):\n    output.mkdir(parents=True, exist_ok=False)\n    results=[]\n    with (output/'mock.log').open('w') as log:\n        mock = subprocess.Popen([str(bench.BENCH/'target/release/mock-upstream')],env={**os.environ,'MOCK_PORT':'19000','MOCK_TTFT_MS':str(upstream_delay_ms),'MOCK_OUTPUT_TOKENS':'40'},stdout=log,stderr=subprocess.STDOUT)\n        try:\n            bench.eventually(lambda:httpx.get('http://127.0.0.1:19000/health').status_code==200)\n            for round_number in range(1,rounds+1):\n                bench.rust_probe('http://127.0.0.1:19000/v1/messages',output/f'r{round_number}-direct-before.json',count=count,concurrency=concurrency)\n                order=variants.split(',')\n                if round_number%2==0:\n                    order.reverse()\n                for variant in order:\n                    directory=output/f'r{round_number}-{variant}'\n                    with gateway(directory,variant,profile=profile,phases=phases) as (process,url):\n                        bench.verify_response(url)\n                        bench.rust_probe(url,directory/'warmup.json',count=1000,concurrency=concurrency)\n                        if phases:\n                            process.send_signal(signal.SIGUSR2)\n                            time.sleep(0.05)\n                            before=json.loads((directory/'diagnostic.counts.json').read_text())\n                        if profile:\n                            process.send_signal(signal.SIGUSR1)\n                        result=bench.rust_probe(url,directory/'throughput.json',process.pid,count=count,concurrency=concurrency)\n                        if profile:\n                            process.send_signal(signal.SIGUSR1)\n                            time.sleep(0.1)\n                        if phases:\n                            process.send_signal(signal.SIGUSR2)\n                            time.sleep(0.05)\n                            after=json.loads((directory/'diagnostic.counts.json').read_text())\n                            result['phases']={key:after[key]-value for key,value in before.items()}\n                        bench.verify_response(url)\n                        with httpx.Client() as client:\n                            metrics=client.get(url.removesuffix('/inf/v1/messages')+'/metrics')\n                            metrics.raise_for_status()\n                            (directory/'metrics.txt').write_text(metrics.text)\n                    logs=[json.loads(line) for line in (directory/'gateway.log').read_text().splitlines() if line.startswith('{')]\n                    usage=[e for e in logs if e.get('event')=='usage_recorded']\n                    expected=0 if variant in {'no_logs','no_observability','no_log_io'} else count+1002\n                    assert len(usage)==expected,(len(usage),expected)\n                    assert all(e['outcome']=='ok' and e['input_tokens']==1 and e['output_tokens']==40 for e in usage)\n                    result.update(variant=variant,round=round_number,usage_records=len(usage),cpu_us_per_request=result['resources']['cpu_s']*1e6/count)\n                    results.append(result)\n                    print('RESULT',variant,round_number,'rps',result['rps'],'cpu_us',result['cpu_us_per_request'],'cpu_percent',result['resources']['cpu_percent_one_core'],flush=True)\n                    (output/'summary.json').write_text(json.dumps(results,indent=2)+'\\n')\n                bench.rust_probe('http://127.0.0.1:19000/v1/messages',output/f'r{round_number}-direct-after.json',count=count,concurrency=concurrency)\n        finally:\n            mock.terminate()\n            mock.wait(timeout=15)\nif __name__=='__main__':\n    app()\n",
+    "comparison.py": "from __future__ import annotations\n\nimport json\nimport os\nimport statistics\nimport subprocess\nimport sys\nimport threading\nimport time\nfrom pathlib import Path\nfrom typing import Annotated\n\nimport httpx\nimport typer\n\nsys.path.insert(0, str(Path.cwd() / 'tests/acceptance/gateway'))\nsys.path.append('/benchmark-deps')\nimport psutil\nfrom gateway_harness import INFERENCE_KEY, eventually\nfrom performance import PerformanceGateway\n\napp = typer.Typer()\nBENCH = Path('/benchmark')\nBODY = {'model': 'anthropic/mock', 'max_tokens': 40, 'stream': False, 'messages': [{'role': 'user', 'content': 'token ' * 32}]}\n\n\ndef processes(pid):\n    parent = psutil.Process(pid)\n    return [parent, *parent.children(recursive=True)]\n\n\ndef snapshot(pid):\n    return {process.pid: {'rss_bytes': process.memory_info().rss, 'cpu_s': sum(process.cpu_times()[:2])} for process in processes(pid)}\n\n\ndef measure(command, output, pid=None):\n    samples = []\n    stop = threading.Event()\n    def sample():\n        while not stop.is_set():\n            samples.append({'at': time.monotonic(), 'processes': snapshot(pid)})\n            stop.wait(0.05)\n    before = snapshot(pid) if pid else {}\n    sampler = threading.Thread(target=sample) if pid else None\n    if sampler:\n        sampler.start()\n    started = time.monotonic()\n    try:\n        with output.with_suffix('.log').open('w') as log:\n            subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT, env={**os.environ, 'PYTHONPATH': '/benchmark-deps'}, timeout=180)\n    finally:\n        elapsed = time.monotonic() - started\n        stop.set()\n        if sampler:\n            sampler.join()\n    after = snapshot(pid) if pid else {}\n    result = json.loads(output.read_text())\n    assert result['errors'] == [], result\n    if pid:\n        assert before.keys() == after.keys(), 'Gateway process tree changed during measurement'\n        cpu = sum(after[pid]['cpu_s'] - values['cpu_s'] for pid, values in before.items())\n        result['resources'] = {'elapsed_s': elapsed, 'cpu_s': cpu, 'cpu_percent_one_core': 100 * cpu / elapsed, 'peak_rss_mb': max(sum(item['rss_bytes'] for item in sample['processes'].values()) for sample in samples) / 1e6, 'samples': samples}\n        output.write_text(json.dumps(result, indent=2) + '\\n')\n    print(output.name, {key: result[key] for key in ('latency_p99_ms', 'rps') if key in result}, flush=True)\n    return result\n\n\ndef python_probe(url, output, pid=None, count=5000, concurrency=16):\n    command = [sys.executable, str(BENCH / 'tools/run_http_bench.py'), '--label', output.stem, '--url', url, '--endpoint', 'anthropic', '--model', 'anthropic/mock', '--count', str(count), '--concurrency', str(concurrency), '--header', f'authorization: Bearer {INFERENCE_KEY}', '--output', str(output)]\n    return measure(command, output, pid)\n\n\ndef rust_probe(url, output, pid=None, count=2000, concurrency=64):\n    command = [str(BENCH / 'target/release/load-probe'), '--label', output.stem, '--url', url, '--model', 'anthropic/mock', '--count', str(count), '--concurrency', str(concurrency), '--header', f'authorization: Bearer {INFERENCE_KEY}', '--output', str(output)]\n    return measure(command, output, pid)\n\n\nfrom contextlib import contextmanager\n\n\n@contextmanager\ndef running_gateway(name, directory):\n    if name == 'airmux':\n        gateway = PerformanceGateway(directory, directory.name)\n        gateway.event_store = 'devnull'\n        gateway.reload_interval_s = 3600\n        gateway.executable = '/app/.venv/bin/airmux'\n        gateway.taxonomy = {'providers': [{'provider_id': 'stub', 'kind': 'anthropic', 'base_url': 'http://127.0.0.1:19000/v1'}], 'models': [{'model_id': 'anthropic/mock', 'provider_id': 'stub', 'upstream_model': 'anthropic/mock', 'input_price_per_mtok': '2', 'output_price_per_mtok': '5', 'context_window': 128000, 'max_output_tokens': 4096, 'input_modalities': ['text'], 'output_modalities': ['text'], 'capabilities': ['streaming', 'tools']}]}\n        try:\n            gateway.write_files()\n            gateway.launch(1)\n            eventually(gateway.ready, timeout=60)\n            yield gateway.process, gateway.url + '/inf/v1/messages'\n        finally:\n            gateway.close()\n    else:\n        raise ValueError('Only Airmux is supported')\n\n\ndef verify_response(url, *, auth=True):\n    with httpx.Client() as client:\n        headers = {'authorization': f'Bearer {INFERENCE_KEY}'} if auth else {}\n        response = client.post(url, json=BODY, headers=headers)\n        if not auth:\n            assert response.status_code == 401, (response.status_code, response.text)\n            return\n        response.raise_for_status()\n        content = response.json()\n        assert content['content'] == [{'type': 'text', 'text': 'token ' * 40}], content\n        assert content['usage']['input_tokens'] == 1 and content['usage']['output_tokens'] == 40, content\n\n\n@app.command()\ndef run(output: Annotated[Path, typer.Option()], rounds: int = 3, latency_count: int = 5000, throughput_count: int = 2000, extended_count: int = 20000, smoke: bool = False):\n    output.mkdir(parents=True, exist_ok=False)\n    direct = 'http://127.0.0.1:19000/v1/messages'\n    results = []\n    with (output / 'mock.log').open('w') as log:\n        mock = subprocess.Popen([str(BENCH / 'target/release/mock-upstream')], env={**os.environ, 'MOCK_PORT': '19000', 'MOCK_TTFT_MS': '20', 'MOCK_OUTPUT_TOKENS': '40'}, stdout=log, stderr=subprocess.STDOUT)\n        try:\n            eventually(lambda: httpx.get('http://127.0.0.1:19000/health').status_code == 200)\n            verify_response(direct)\n            if smoke:\n                for name in ['airmux']:\n                    with running_gateway(name, output / name) as (process, url):\n                        time.sleep(2)\n                        verify_response(url, auth=False)\n                        verify_response(url)\n                        print('Smoke passed:', name, snapshot(process.pid), flush=True)\n                return\n            floor = rust_probe(direct, output / 'direct-floor-c1.json', count=2000, concurrency=1)\n            for round_number in range(1, rounds + 1):\n                order = ['airmux']\n                before = python_probe(direct, output / f'r{round_number}-latency-before.json', count=latency_count)\n                round_results = []\n                for name in order:\n                    directory = output / f'r{round_number}-{name}'\n                    print('Round', round_number, name, flush=True)\n                    with running_gateway(name, directory) as (process, url):\n                        time.sleep(2)\n                        idle = []\n                        for _ in range(20):\n                            idle.append(snapshot(process.pid))\n                            time.sleep(0.1)\n                        verify_response(url)\n                        idle_rss = statistics.median(sum(p['rss_bytes'] for p in sample.values()) for sample in idle) / 1e6\n                        print(name, 'idle RSS MB', idle_rss, flush=True)\n                        latency = python_probe(url, directory / 'latency.json', process.pid, count=latency_count)\n                        throughput = rust_probe(url, directory / 'throughput.json', process.pid, count=throughput_count)\n                        extended = rust_probe(url, directory / 'extended.json', process.pid, count=extended_count)\n                        verify_response(url)\n                        round_results.append({'gateway': name, 'round': round_number, 'idle_rss_mb': idle_rss, 'idle_samples': idle, 'process_threads': {p.pid: p.num_threads() for p in processes(process.pid)}, 'gateway_p99_ms': latency['latency_p99_ms'], 'throughput_rps': throughput['rps'], 'throughput_cpu_percent': throughput['resources']['cpu_percent_one_core'], 'extended_rps': extended['rps'], 'extended_cpu_percent': extended['resources']['cpu_percent_one_core']})\n                    if name == 'airmux':\n                        usage = [json.loads(line) for line in (directory / 'gateway.log').read_text().splitlines() if line.startswith('{')]\n                        usage = [event for event in usage if event.get('event') == 'usage_recorded']\n                        expected = latency_count + throughput_count + extended_count + 2\n                        assert len(usage) == expected, (len(usage), expected)\n                        assert all(event['outcome'] == 'ok' and event['input_tokens'] == 1 and event['output_tokens'] == 40 and event['token_usage_source'] == 'provider' for event in usage)\n                        round_results[-1]['verified_usage_records'] = len(usage)\n                after = python_probe(direct, output / f'r{round_number}-latency-after.json', count=latency_count)\n                baseline = rust_probe(direct, output / f'r{round_number}-throughput-direct.json', count=throughput_count)\n                extended_baseline = rust_probe(direct, output / f'r{round_number}-extended-direct.json', count=extended_count)\n                assert baseline['latency_p99_ms'] < 2 * floor['latency_p99_ms']\n                assert extended_baseline['latency_p99_ms'] < 2 * floor['latency_p99_ms']\n                for result in round_results:\n                    result.update({'direct_before_p99_ms': before['latency_p99_ms'], 'direct_after_p99_ms': after['latency_p99_ms'], 'p99_added_ms': result['gateway_p99_ms'] - (before['latency_p99_ms'] + after['latency_p99_ms']) / 2, 'baseline_rps': baseline['rps'], 'extended_baseline_rps': extended_baseline['rps']})\n                    print({k: v for k, v in result.items() if k not in ('idle_samples', 'process_threads')}, flush=True)\n                results.extend(round_results)\n                (output / 'summary.json').write_text(json.dumps({'rounds': results}, indent=2) + '\\n')\n        finally:\n            mock.terminate()\n            mock.wait(timeout=15)\n\n\nif __name__ == '__main__':\n    app()\n",
+    "streams.py": "from pathlib import Path\nfrom typing import Annotated\nimport json\nimport os\nimport subprocess\nimport sys\nimport time\nimport statistics\nimport typer\nimport httpx\nimport uvicorn\nfrom starlette.applications import Starlette\nfrom starlette.responses import Response\nfrom starlette.routing import Route\nsys.path.insert(0, '/app')\nimport comparison as bench\nfrom run import gateway\n\napp = typer.Typer()\n\ndef sse(body):\n    return b'data: ' + json.dumps(body, separators=(',', ':')).encode() + b'\\n\\n'\n\n@app.command()\ndef serve(fragment_bytes: int = 64, fragments: int = 4096, malformed: bool = False):\n    events = [\n        sse({'type':'message_start','message':{'id':'benchmark','usage':{'input_tokens':1,'output_tokens':0}}}),\n        sse({'type':'content_block_start','index':0,'content_block':{'type':'text','text':''}}),\n        *[sse({'type':'content_block_delta','index':0,'delta':{'type':'text_delta','text':'x'*fragment_bytes}})]*fragments,\n        sse({'type':'content_block_stop','index':0}),\n        sse({'type':'message_delta','delta':{'stop_reason':'end_turn'},'usage':{'output_tokens':fragments}}),\n        sse({'type':'message_stop'}),\n    ]\n    content = b''.join(events[:3] + events[-2:-1]) + b'data: not-json\\n\\n' if malformed else b''.join(events)\n    async def complete(request):\n        return Response(content, media_type='text/event-stream')\n    async def ready(request):\n        return Response('ok')\n    uvicorn.run(Starlette(routes=[Route('/v1/messages',complete,methods=['POST']),Route('/ready',ready)]),host='127.0.0.1',port=19000,access_log=False)\n\n@app.command()\ndef load(url: Annotated[str,typer.Option()], output: Annotated[Path,typer.Option()], fragment_bytes: int = 64, fragments: int = 4096, count: int = 10):\n    samples = []\n    firsts = []\n    total = time.perf_counter()\n    with httpx.Client(timeout=60) as client:\n        for _ in range(count):\n            started = time.perf_counter()\n            first = None\n            text = []\n            terminal = False\n            usage = None\n            with client.stream('POST',url,headers={'authorization':f'Bearer {bench.INFERENCE_KEY}'},json={**bench.BODY,'stream':True}) as response:\n                response.raise_for_status()\n                for line in response.iter_lines():\n                    if not line.startswith('data: '):\n                        continue\n                    event = json.loads(line[6:])\n                    if event['type'] == 'content_block_delta':\n                        text.append(event['delta']['text'])\n                        if first is None:\n                            first = time.perf_counter()\n                    if event['type'] == 'message_delta':\n                        usage = event['usage']\n                    if event['type'] == 'message_stop':\n                        terminal = True\n            ended = time.perf_counter()\n            assert ''.join(text) == 'x'*(fragment_bytes*fragments)\n            assert terminal and usage['input_tokens'] == 1 and usage['output_tokens'] == fragments\n            samples.append((ended-started)*1000)\n            firsts.append((first-started)*1000)\n    elapsed=time.perf_counter()-total\n    output.write_text(json.dumps({'count':count,'errors':[],'rps':count/elapsed,'latency_ms':samples,'latency_p50_ms':statistics.median(samples),'first_content_p50_ms':statistics.median(firsts)})+'\\n')\n\n@app.command()\ndef run(output: Annotated[Path,typer.Option()], rounds: int = 3):\n    output.mkdir(parents=True,exist_ok=False)\n    results=[]\n    for label,fragment_bytes,fragments in [('dense',64,4096),('large',1024,8192)]:\n        with (output/f'{label}-provider.log').open('w') as log:\n            provider=subprocess.Popen([sys.executable,__file__,'serve','--fragment-bytes',str(fragment_bytes),'--fragments',str(fragments)],stdout=log,stderr=subprocess.STDOUT)\n            try:\n                bench.eventually(lambda:httpx.get('http://127.0.0.1:19000/ready').status_code==200)\n                for round_number in range(1,rounds+1):\n                    for variant in (['baseline','coalesce'] if round_number%2 else ['coalesce','baseline']):\n                        directory=output/f'{label}-r{round_number}-{variant}'\n                        with gateway(directory,variant) as (process,url):\n                            load(url,directory/'warmup.json',fragment_bytes,fragments,2)\n                            result=bench.measure([sys.executable,__file__,'load','--url',url,'--output',str(directory/'result.json'),'--fragment-bytes',str(fragment_bytes),'--fragments',str(fragments),'--count','10'],directory/'result.json',process.pid)\n                        usage=[json.loads(line) for line in (directory/'gateway.log').read_text().splitlines() if line.startswith('{')]\n                        usage=[event for event in usage if event.get('event')=='usage_recorded']\n                        assert len(usage)==12 and all(event['input_tokens']==1 and event['output_tokens']==fragments and event['outcome']=='ok' for event in usage)\n                        result.update(variant=variant,workload=label,fragment_bytes=fragment_bytes,fragments=fragments,round=round_number,verified_usage_records=len(usage),cpu_ms_per_request=result['resources']['cpu_s']*1000/10)\n                        results.append(result)\n                        print('RESULT',{key:value for key,value in result.items() if key not in ('resources','latency_ms')},flush=True)\n                        (output/'summary.json').write_text(json.dumps(results,indent=2)+'\\n')\n            finally:\n                provider.terminate()\n                provider.wait(timeout=15)\n\nif __name__=='__main__':\n    app()\n",
+    "prometheus_probe.py": "from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, disable_created_metrics, generate_latest\nfrom prometheus_client.exposition import CONTENT_TYPE_LATEST\n\nclass Instrument:\n    def __init__(self, kind, name, description, registry):\n        self.kind=kind\n        self.name=name\n        self.description=description\n        self.registry=registry\n        self.collector=None\n        self.children={}\n        self.label_names=()\n    def _child(self, attributes):\n        if self.collector is None:\n            self.label_names=tuple(attributes)\n            kwargs={'buckets':(0,5,10,25,50,75,100,250,500,750,1000,2500,5000,7500,10000)} if self.kind is Histogram else {}\n            self.collector=self.kind(self.name,self.description,self.label_names,registry=self.registry,**kwargs)\n        key=tuple(attributes[name] for name in self.label_names)\n        child=self.children.get(key)\n        if child is None:\n            child=self.collector.labels(*key) if key else self.collector\n            self.children[key]=child\n        return child\n    def add(self, value, attributes):\n        self._child(attributes).inc(value)\n    def record(self, value, attributes):\n        self._child(attributes).observe(value)\n\nclass PrometheusTelemetry:\n    content_type=CONTENT_TYPE_LATEST\n    def __init__(self, service_name):\n        disable_created_metrics()\n        self.registry=CollectorRegistry(auto_describe=True)\n        self.meter=self\n    def create_counter(self,name,description):\n        return Instrument(Counter,name,description,self.registry)\n    def create_up_down_counter(self,name,description):\n        return Instrument(Gauge,name,description,self.registry)\n    def create_histogram(self,name,description):\n        return Instrument(Histogram,name,description,self.registry)\n    def observable_gauge(self,name,description,value):\n        Gauge(name,description,registry=self.registry).set_function(value)\n    def render(self):\n        return generate_latest(self.registry)\n    def shutdown(self):\n        pass\n",
+    "failure_probe.py": "import json\nimport subprocess\nimport sys\nfrom pathlib import Path\nfrom typing import Annotated\nimport httpx\nimport typer\nimport comparison as bench\nfrom run import gateway\n\napp=typer.Typer()\n\n@app.command()\ndef run(output:Annotated[Path,typer.Option()]):\n    output.mkdir(parents=True,exist_ok=False)\n    results=[]\n    with (output/'provider.log').open('w') as log:\n        provider=subprocess.Popen([sys.executable,'/audit/streams.py','serve','--fragments','1','--malformed'],stdout=log,stderr=subprocess.STDOUT)\n        try:\n            bench.eventually(lambda:httpx.get('http://127.0.0.1:19000/ready').status_code==200)\n            for variant in ('baseline','coalesce'):\n                with gateway(output/variant,variant) as (process,url), httpx.Client() as client:\n                    for attempt in range(5):\n                        response=client.post(url,headers={'authorization':f'Bearer {bench.INFERENCE_KEY}'},json={**bench.BODY,'stream':True})\n                        events=[json.loads(line[6:]) for line in response.text.splitlines() if line.startswith('data: ')]\n                        content=''.join(event.get('delta',{}).get('text','') for event in events)\n                        errors=[event for event in events if event['type']=='error']\n                        assert response.status_code==200 and len(errors)==1\n                        results.append({'variant':variant,'attempt':attempt,'text':content,'events':events})\n            assert all(len(r['text'])==64 for r in results if r['variant']=='baseline')\n            assert all(len(r['text'])==0 for r in results if r['variant']=='coalesce')\n            (output/'results.json').write_text(json.dumps(results,indent=2)+'\\n')\n            print('Confirmed: naive batching drops valid text before a malformed event in the same upstream read')\n        finally:\n            provider.terminate(); provider.wait(timeout=15)\nif __name__=='__main__':\n    app()\n",
+    "money_probe.py": "import hashlib\nimport json\nimport random\nimport time\nfrom decimal import Decimal, localcontext\nfrom pathlib import Path\nfrom typing import Annotated\nimport typer\nfrom pydantic import TypeAdapter, ValidationError\nfrom contract.money import UsdAmount, UsdRate\n\napp=typer.Typer()\n\n@app.command()\ndef run(output: Annotated[Path,typer.Option()]):\n    randomizer=random.Random(42)\n    values=[None,True,False,0,1,-1,0.1,{},[],float('inf'),float('nan')]\n    values += ['', '0', '-0', '+0', '.1', '1.', '1e3', 'NaN', 'Infinity', '１２.３', '٠١.٢', ' 1', '1 ', '1\\n', '000.01000']\n    values += [Decimal(v) for v in ('NaN','sNaN','Infinity','-Infinity','-0','0E+100','0E-100')]\n    values += [Decimal((sign,tuple(map(int,str(coefficient))),exponent)) for sign in (0,1) for coefficient in (0,1,10,123,999999,10**15-1,10**16,10**27-1,10**28) for exponent in range(-40,41)]\n    values += [''.join(str(randomizer.randrange(10)) for _ in range(randomizer.randrange(1,35)))+'.'+''.join(str(randomizer.randrange(10)) for _ in range(randomizer.randrange(1,20))) for _ in range(10000)]\n    results=[]\n    timings={}\n    schemas={}\n    for name,money in [('rate',UsdRate),('amount',UsdAmount)]:\n        adapter=TypeAdapter(money)\n        schemas[name]=adapter.json_schema()\n        for precision in (6,28,50):\n            with localcontext() as context:\n                context.prec=precision\n                for value in values:\n                    try:\n                        result=adapter.validate_python(value)\n                        results.append([name,precision,repr(value),True,str(result),adapter.dump_json(result).decode()])\n                    except (ValidationError,ValueError,TypeError,ArithmeticError):\n                        results.append([name,precision,repr(value),False])\n        value=Decimal('0.000202000000') if name=='amount' else Decimal('2.000000')\n        samples=[]\n        for _ in range(7):\n            start=time.thread_time_ns()\n            for _ in range(50000):\n                adapter.validate_python(value)\n            samples.append((time.thread_time_ns()-start)/50000)\n        timings[name]=samples\n    output.write_text(json.dumps({'results':results,'timings_ns':timings,'schemas':schemas},indent=2)+'\\n')\n    print('cases',len(results),'digest',hashlib.sha256(json.dumps(results).encode()).hexdigest(),'timings',timings)\nif __name__=='__main__':\n    app()\n",
+    "money/contract/money.py": "from __future__ import annotations\n\nimport re\nfrom decimal import Decimal\nfrom typing import Annotated\n\nfrom pydantic import AfterValidator, BeforeValidator, Field, PlainSerializer, WithJsonSchema\n\n_DECIMAL_PATTERN = re.compile(r\"\\d+(?:\\.\\d+)?\\Z\")\n_MONEY_SCHEMA = {\"type\": \"string\", \"pattern\": r\"^\\d+(?:\\.\\d+)?$\"}\n\n\ndef parse_fixed_point(value: str) -> Decimal:\n    if not _DECIMAL_PATTERN.fullmatch(value):\n        message = \"money must be a finite fixed-point decimal string\"\n        raise ValueError(message)\n    return Decimal(value)\n\n\ndef _exact_decimal(value: object) -> Decimal:\n    if isinstance(value, Decimal):\n        if value.is_finite():\n            return value\n    elif isinstance(value, str):\n        return parse_fixed_point(value)\n    message = \"money must be a finite fixed-point decimal string\"\n    raise ValueError(message)\n\n\ndef fixed_point(value: Decimal) -> str:\n    return format(value, \"f\")\n\n\ndef _precision(value: Decimal, *, digits: int, scale: int) -> Decimal:\n    _, coefficient, exponent = value.as_tuple()\n    if not isinstance(exponent, int):\n        message = \"money must be finite\"\n        raise TypeError(message)\n    decimal_places = max(-exponent, 0)\n    whole_digits = max(len(coefficient) + exponent, 0)\n    if decimal_places > scale or whole_digits > digits - scale:\n        message = f\"money must have at most {digits - scale} whole digits and {scale} decimal places\"\n        raise ValueError(message)\n    return value\n\n\ndef _rate_precision(value: Decimal) -> Decimal:\n    return _precision(value, digits=16, scale=6)\n\n\ndef _amount_precision(value: Decimal) -> Decimal:\n    return _precision(value, digits=28, scale=12)\n\n\nUsdRate = Annotated[\n    Decimal,\n    Field(ge=0, max_digits=16, decimal_places=6),\n    BeforeValidator(_exact_decimal),\n    AfterValidator(_rate_precision),\n    PlainSerializer(fixed_point, return_type=str, when_used=\"json\"),\n    WithJsonSchema(_MONEY_SCHEMA),\n]\nUsdAmount = Annotated[\n    Decimal,\n    Field(ge=0, max_digits=28, decimal_places=12),\n    BeforeValidator(_exact_decimal),\n    AfterValidator(_amount_precision),\n    PlainSerializer(fixed_point, return_type=str, when_used=\"json\"),\n    WithJsonSchema(_MONEY_SCHEMA),\n]\n\nZERO_USD = Decimal(0)\nUSD_AMOUNT_QUANTUM = Decimal(\"0.000000000001\")\n",
+    "coalesce/data_plane/streaming.py": "from __future__ import annotations\n\nimport asyncio\nimport contextlib\nfrom dataclasses import dataclass\nfrom http import HTTPStatus\nfrom typing import TYPE_CHECKING\n\nimport aiohttp\nimport anyio\nfrom starlette.responses import Response, StreamingResponse\n\nfrom data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError\nfrom data_plane.metering import status_for_error, usage_event\nfrom data_plane.metrics import upstream_outcome\n\nif TYPE_CHECKING:\n    from collections.abc import AsyncIterator\n\n    from starlette.types import Receive, Scope, Send\n\n    from contract import UsageEvent\n    from data_plane.canonical import CanonicalAdjustment, CanonicalRequest\n    from data_plane.egress.base import Ctx, EgressAdapter, StreamState, UpstreamRequest\n    from data_plane.ingress import IngressAdapter\n    from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome\n    from data_plane.outbox import OutboxReservation\n\n\n@dataclass(frozen=True)\nclass StreamSession:\n    adapter: EgressAdapter\n    ingress: IngressAdapter\n    ctx: Ctx\n    request: CanonicalRequest\n    adjustments: tuple[CanonicalAdjustment, ...]\n    reservation: OutboxReservation\n    http_client: aiohttp.ClientSession\n    metrics: DataPlaneMetrics\n    egress_kind: str\n    attempt_started_at: float\n\n    async def open(self, upstream: UpstreamRequest) -> Response:\n        async with contextlib.AsyncExitStack() as stack:\n            response = await stack.enter_async_context(\n                self.http_client.request(upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, allow_redirects=False)\n            )\n            if response.status >= HTTPStatus.BAD_REQUEST:\n                body = await response.read()\n                raise UpstreamResponseError(response.status, body)\n            stream_state = self.adapter.new_stream_state(self.ctx)\n            handoff = stack.pop_all()\n\n        return _StreamResponse(self, response, handoff, stream_state)\n\n\nclass _StreamResponse(StreamingResponse):\n    def __init__(\n        self,\n        session: StreamSession,\n        response: aiohttp.ClientResponse,\n        handoff: contextlib.AsyncExitStack,\n        stream_state: StreamState,\n    ) -> None:\n        self._session = session\n        self._response = response\n        self._handoff = handoff\n        self._stream_state = stream_state\n        self._renderer = session.ingress.new_stream()\n        self._reservation = session.reservation.transfer()\n        self._recorded = False\n        super().__init__(self._events(), media_type=\"text/event-stream\")\n\n    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:\n        with self._reservation:\n            async with self._handoff:\n                try:\n                    await super().__call__(scope, receive, send)\n                finally:\n                    if not self._recorded:\n                        self._record(self._cancelled_event(), \"cancelled\")\n\n    async def _events(self) -> AsyncIterator[bytes]:\n        try:\n            for frame in self._renderer.start(self._session.ctx):\n                yield frame\n            async for payload in self._response.content.iter_any():\n                frames = []\n                for event in self._session.adapter.frame(payload, self._stream_state):\n                    for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):\n                        for frame in self._renderer.chunk(canonical_chunk):\n                            frames.append(frame)\n                            if len(frames) >= 32:\n                                yield b\"\".join(frames)\n                                frames = []\n                if frames:\n                    yield b\"\".join(frames)\n            self._session.adapter.validate_stream(self._stream_state)\n            final = self._session.adapter.finalize(self._stream_state)\n            for frame in self._renderer.closing(final, list(self._session.adjustments)):\n                yield frame\n            self._record(usage_event(self._session.ctx, final, status=\"ok\", request=self._session.request), \"success\")\n        except (UpstreamProtocolError, UpstreamStreamError, aiohttp.ClientError, TimeoutError) as error:\n            for frame in self._renderer.error(self._session.adapter.map_error(error)):\n                yield frame\n            self._record(\n                usage_event(\n                    self._session.ctx,\n                    self._session.adapter.finalize(self._stream_state),\n                    status=status_for_error(error),\n                    request=self._session.request,\n                ),\n                upstream_outcome(error),\n            )\n        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):\n            self._record(self._cancelled_event(), \"cancelled\")\n            raise\n\n    def _cancelled_event(self) -> UsageEvent:\n        return usage_event(\n            self._session.ctx,\n            self._session.adapter.finalize(self._stream_state),\n            status=\"cancelled\",\n            request=self._session.request,\n        )\n\n    def _record(self, event: UsageEvent, outcome: UpstreamOutcome) -> None:\n        self._reservation.record(event)\n        self._session.metrics.observe_upstream(self._session.egress_kind, outcome, self._session.attempt_started_at)\n        self._recorded = True\n",
+    "collect.py": "import hashlib\nimport json\nimport pstats\nimport statistics\nfrom pathlib import Path\nfrom prometheus_client.parser import text_string_to_metric_families\n\nroot=Path.cwd()\naudit=Path('/private/tmp/airmux-aiohttp-cpu-leads')\n\ndef digest(path):\n    return hashlib.sha256(path.read_bytes()).hexdigest()\n\ndef slim(value):\n    if isinstance(value,dict): return {k:slim(v) for k,v in value.items() if k!='samples'}\n    if isinstance(value,list): return [slim(v) for v in value]\n    return value\n\ndef summarize(trials):\n    baseline={t['round']:t for t in trials if t['variant']=='baseline'}\n    result={}\n    for variant in dict.fromkeys(t['variant'] for t in trials):\n        group=[t for t in trials if t['variant']==variant]\n        result[variant]={\n            'cpu_us_per_request':statistics.median(t['cpu_us_per_request'] for t in group),\n            'rps':statistics.median(t['rps'] for t in group),\n            'cpu_percent_one_core':statistics.median(t['resources']['cpu_percent_one_core'] for t in group),\n            'paired_cpu_savings_us':[baseline[t['round']]['cpu_us_per_request']-t['cpu_us_per_request'] for t in group],\n            'paired_cpu_savings_pct':[(1-t['cpu_us_per_request']/baseline[t['round']]['cpu_us_per_request'])*100 for t in group],\n        }\n    return result\n\ndef metric_samples(path):\n    return {(s.name,tuple(sorted(s.labels.items()))):s.value for family in text_string_to_metric_families(path.read_text()) for s in family.samples}\n\nmetrics_parity=[]\nlog_parity=[]\nfor number in (1,2,3):\n    directory=audit/'candidates'\n    baseline=metric_samples(directory/f'r{number}-baseline/metrics.txt')\n    for variant in ('native_metrics','combined'):\n        candidate=metric_samples(directory/f'r{number}-{variant}/metrics.txt')\n        assert baseline.keys()==candidate.keys()\n        differences=[(key,baseline[key],candidate[key]) for key in baseline if baseline[key]!=candidate[key] and not key[0].endswith('_sum') and 'timestamp' not in key[0] and 'last_adopted' not in key[0]]\n        assert not differences,differences\n        metrics_parity.append({'round':number,'variant':variant,'matched_series':len(baseline)})\n    for variant in ('baseline','money','batch_logs','native_metrics','combined'):\n        usage=[json.loads(line) for line in (directory/f'r{number}-{variant}/gateway.log').read_text().splitlines() if line.startswith('{')]\n        usage=[e for e in usage if e.get('event')=='usage_recorded']\n        assert len(usage)==21002\n        normalized=[{k:v for k,v in e.items() if k not in ('timestamp','request_id','latency_ms')} for e in usage]\n        assert all(e==normalized[0] for e in normalized)\n        if variant=='baseline':\n            expected=normalized[0]\n        assert normalized[0]==expected,(variant,normalized[0],expected)\n        log_parity.append({'round':number,'variant':variant,'verified_records':len(usage),'payload':normalized[0]})\n\nbefore=json.loads((audit/'money-before.json').read_text()); after=json.loads((audit/'money-after.json').read_text())\nassert before['results']==after['results'] and before['schemas']==after['schemas']\nmoney={'cases':len(before['results']),'result_sha256':hashlib.sha256(json.dumps(before['results']).encode()).hexdigest(),'schemas':before['schemas'],'before_timings_ns':before['timings_ns'],'after_timings_ns':after['timings_ns'],'contract_tests':(audit/'money-contract-tests.log').read_text()}\nprofile=pstats.Stats(str(audit/'profile/r1-baseline/diagnostic.prof'))\nfunctions=[{'file':key[0],'line':key[1],'function':key[2],'calls':value[1],'own_cpu_s':value[2],'cumulative_cpu_s':value[3]} for key,value in sorted(profile.stats.items(),key=lambda i:-i[1][2])]\ndata={\n    'baseline_commit':'9d6f10bac60de2e8ea313c1eb07159f75d4b39e2',\n    'image_id':'sha256:949b35ffa05699e3e7d0e7f45b9d47c339a379ed99e263da8cf4056cd1387995',\n    'configuration':{'workers':1,'cpus':4,'memory_gib':8,'network':'none','event_sink':'devnull','control_plane':False},\n    'money_parity':money,'metrics_parity':metrics_parity,'log_parity':log_parity,\n    'profile':{'total_calls':profile.total_calls,'total_profiled_cpu_s':profile.total_tt,'functions':functions[:80]},\n    'experiments':{},\n    'source_sha256':{str(path.relative_to(root)):digest(path) for prefix in ('apps/data-plane/src','lib/runtime/src','lib/contract/src') for path in sorted((root/prefix).rglob('*.py'))},\n    'diagnostic_sources':{name:(audit/name).read_text() for name in ('gateway','run.py','comparison.py','streams.py','prometheus_probe.py','failure_probe.py','money_probe.py','money/contract/money.py','coalesce/data_plane/streaming.py','collect.py')},\n    'raw_artifacts':str(audit),\n}\nfor name in ('profile','phases','screen','candidates','cpu_saturation'):\n    trials=json.loads((audit/name/'summary.json').read_text())\n    assert all(not t['errors'] for t in trials)\n    data['experiments'][name]={'trials':slim(trials),'summary':summarize(trials),'direct_controls':{p.name:json.loads(p.read_text()) for p in sorted((audit/name).glob('r*-direct-*.json'))}}\nstreams=json.loads((audit/'streams/summary.json').read_text())\nassert len(streams)==12 and all(not t['errors'] for t in streams)\ndata['streams']=slim(streams)\ndata['stream_failure_probe']=json.loads((audit/'stream_failure/results.json').read_text())\ndata['stream_summary']={}\nfor workload in ('dense','large'):\n    data['stream_summary'][workload]={}\n    for variant in ('baseline','coalesce'):\n        group=[t for t in streams if t['workload']==workload and t['variant']==variant]\n        data['stream_summary'][workload][variant]={key:statistics.median(t[key] for t in group) for key in ('cpu_ms_per_request','latency_p50_ms','first_content_p50_ms')}\n(root/'notes/performance/aiohttp-cpu-leads.json').write_text(json.dumps(data,indent=2)+'\\n')\nfor name in ('candidates','cpu_saturation'):\n print(name,json.dumps(data['experiments'][name]['summary'],indent=2))\nprint('streams',data['stream_summary'])\n"
+  },
+  "raw_artifacts": "/private/tmp/airmux-aiohttp-cpu-leads",
+  "streams": [
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.10628442558034,
+      "latency_ms": [
+        56.99150200234726,
+        53.355700001702644,
+        51.69877799926326,
+        53.17465700136381,
+        54.64757899972028,
+        46.75926300114952,
+        50.41589900065446,
+        51.008150996494805,
+        52.204571999027394,
+        52.389488999324385
+      ],
+      "latency_p50_ms": 52.29703049917589,
+      "first_content_p50_ms": 4.896243999610306,
+      "resources": {
+        "elapsed_s": 0.9254088270026841,
+        "cpu_s": 0.36,
+        "cpu_percent_one_core": 38.90172532349919,
+        "peak_rss_mb": 90.906624
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 36.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 25.432013162447518,
+      "latency_ms": [
+        38.94657300043036,
+        37.524528001085855,
+        34.89214499859372,
+        35.06835400185082,
+        36.18719000223791,
+        36.489109003014164,
+        39.7931180013984,
+        36.27335700002732,
+        35.547022001992445,
+        34.99210399968433
+      ],
+      "latency_p50_ms": 36.230273501132615,
+      "first_content_p50_ms": 5.0683690005826065,
+      "resources": {
+        "elapsed_s": 0.7334084649992292,
+        "cpu_s": 0.30000000000000004,
+        "cpu_percent_one_core": 40.904900109152045,
+        "peak_rss_mb": 91.099136
+      },
+      "variant": "coalesce",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 30.000000000000007
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 24.80273898049993,
+      "latency_ms": [
+        38.48353099965607,
+        37.181943996984046,
+        37.01485999772558,
+        37.48902799998177,
+        38.208947000384796,
+        36.81677500208025,
+        38.34365500006243,
+        39.52911699889228,
+        36.354316001961706,
+        37.141527001949726
+      ],
+      "latency_p50_ms": 37.33548599848291,
+      "first_content_p50_ms": 5.131890498887515,
+      "resources": {
+        "elapsed_s": 0.7651990599988494,
+        "cpu_s": 0.31999999999999995,
+        "cpu_percent_one_core": 41.81918362530152,
+        "peak_rss_mb": 90.865664
+      },
+      "variant": "coalesce",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 31.999999999999993
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 17.05827406134665,
+      "latency_ms": [
+        57.16446100268513,
+        55.24578900076449,
+        54.67436999970232,
+        58.173339002678404,
+        57.06091899992316,
+        58.95113299993682,
+        56.87362600292545,
+        52.44957200193312,
+        54.766912002378376,
+        54.61332899722038
+      ],
+      "latency_p50_ms": 56.05970750184497,
+      "first_content_p50_ms": 5.494225000802544,
+      "resources": {
+        "elapsed_s": 0.9558468329996685,
+        "cpu_s": 0.36,
+        "cpu_percent_one_core": 37.66293799083235,
+        "peak_rss_mb": 90.976256
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 36.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.55724053780454,
+      "latency_ms": [
+        54.14299400217715,
+        55.86620699978084,
+        51.019983999140095,
+        51.21248499926878,
+        49.95577299996512,
+        50.01956400155905,
+        53.27407400181983,
+        45.77013599919155,
+        51.95744499724242,
+        49.48418799904175
+      ],
+      "latency_p50_ms": 51.11623449920444,
+      "first_content_p50_ms": 5.336265998266754,
+      "resources": {
+        "elapsed_s": 0.9105750739981886,
+        "cpu_s": 0.3400000000000001,
+        "cpu_percent_one_core": 37.33904097628269,
+        "peak_rss_mb": 90.980352
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 34.00000000000001
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 25.71321582399053,
+      "latency_ms": [
+        36.16514899840695,
+        35.569354997278424,
+        34.85239500150783,
+        34.89322899986291,
+        34.11785100252018,
+        35.79164799884893,
+        36.168940998322796,
+        38.01190400190535,
+        36.37294099826249,
+        41.620332001912175
+      ],
+      "latency_p50_ms": 35.97839849862794,
+      "first_content_p50_ms": 4.622262998964288,
+      "resources": {
+        "elapsed_s": 0.7124973619975208,
+        "cpu_s": 0.29999999999999993,
+        "cpu_percent_one_core": 42.10541905150855,
+        "peak_rss_mb": 90.857472
+      },
+      "variant": "coalesce",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 29.999999999999993
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.2226133929451,
+      "latency_ms": [
+        139.96679000047152,
+        127.79075399885187,
+        137.49332400038838,
+        132.4431419998291,
+        130.2373450016603,
+        143.87755200004904,
+        118.40635100088548,
+        136.01511099841446,
+        128.74579799972707,
+        138.99228700029198
+      ],
+      "latency_p50_ms": 134.22912649912178,
+      "first_content_p50_ms": 4.506658999162028,
+      "resources": {
+        "elapsed_s": 1.7525174859983963,
+        "cpu_s": 0.9,
+        "cpu_percent_one_core": 51.35469444330689,
+        "peak_rss_mb": 108.204032
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 90.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 8.812585373033732,
+      "latency_ms": [
+        111.85399899841286,
+        105.0516030009021,
+        115.36804999923334,
+        115.18109100143192,
+        107.96190299879527,
+        109.96041000180412,
+        103.48868199798744,
+        102.9228459992737,
+        106.80910800147103,
+        107.29286000059801
+      ],
+      "latency_p50_ms": 107.62738149969664,
+      "first_content_p50_ms": 5.158556999958819,
+      "resources": {
+        "elapsed_s": 1.497806605999358,
+        "cpu_s": 0.83,
+        "cpu_percent_one_core": 55.414363688575946,
+        "peak_rss_mb": 108.232704
+      },
+      "variant": "coalesce",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 83.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 8.647397425386346,
+      "latency_ms": [
+        110.53416100185132,
+        105.85864699896774,
+        103.46672299783677,
+        122.0633609991637,
+        133.77856300212443,
+        104.23930899924017,
+        118.53422700005467,
+        105.41860499870381,
+        105.03951999999117,
+        101.77992699755123
+      ],
+      "latency_p50_ms": 105.63862599883578,
+      "first_content_p50_ms": 4.751430500618881,
+      "resources": {
+        "elapsed_s": 1.5480071300007694,
+        "cpu_s": 0.84,
+        "cpu_percent_one_core": 54.26331595769733,
+        "peak_rss_mb": 107.864064
+      },
+      "variant": "coalesce",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 84.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.21122586356384,
+      "latency_ms": [
+        144.15471900065313,
+        152.07624200047576,
+        137.1624889980012,
+        137.90924199929577,
+        130.90659699810203,
+        133.94418800089625,
+        120.41719099943293,
+        128.40858900017338,
+        122.82228099866188,
+        134.2773149990535
+      ],
+      "latency_p50_ms": 134.11075149997487,
+      "first_content_p50_ms": 4.635076000340632,
+      "resources": {
+        "elapsed_s": 1.7560924550016352,
+        "cpu_s": 0.89,
+        "cpu_percent_one_core": 50.68070291317158,
+        "peak_rss_mb": 108.269568
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 89.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.272621753601788,
+      "latency_ms": [
+        135.37244300096063,
+        130.57496999681462,
+        133.4047290001763,
+        125.2211629980593,
+        141.57758700093837,
+        130.58038699819008,
+        126.51995900159818,
+        126.45683300070232,
+        139.79545600159327,
+        137.67240900051547
+      ],
+      "latency_p50_ms": 131.9925579991832,
+      "first_content_p50_ms": 4.186054000456352,
+      "resources": {
+        "elapsed_s": 1.7762233060020662,
+        "cpu_s": 0.89,
+        "cpu_percent_one_core": 50.10631247729866,
+        "peak_rss_mb": 108.437504
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 89.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 9.1941586652404,
+      "latency_ms": [
+        103.8185990000784,
+        103.02230600063922,
+        99.04254399953061,
+        108.46111300270422,
+        96.78645299936761,
+        109.48174100121832,
+        100.72571500131744,
+        100.67013200023212,
+        104.74968599737622,
+        108.62432199792238
+      ],
+      "latency_p50_ms": 103.4204525003588,
+      "first_content_p50_ms": 5.527391500436352,
+      "resources": {
+        "elapsed_s": 1.4404259369985084,
+        "cpu_s": 0.7999999999999999,
+        "cpu_percent_one_core": 55.53912766018378,
+        "peak_rss_mb": 108.335104
+      },
+      "variant": "coalesce",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 79.99999999999999
+    }
+  ],
+  "stream_failure_probe": [
+    {
+      "variant": "baseline",
+      "attempt": 0,
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c685-fd48-73e1-8b71-cca2d3713ca3",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "text_delta",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "attempt": 1,
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c685-fd4d-7922-bdc8-e916fbef016d",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "text_delta",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "attempt": 2,
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c685-fd4e-7b71-b8df-41a022e768a7",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "text_delta",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "attempt": 3,
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c685-fd4f-7084-bf62-37cc94a10a68",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "text_delta",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "baseline",
+      "attempt": 4,
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c685-fd50-78fc-bec9-35eb7fb02401",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "content_block_start",
+          "index": 0,
+          "content_block": {
+            "type": "text",
+            "text": ""
+          }
+        },
+        {
+          "type": "content_block_delta",
+          "index": 0,
+          "delta": {
+            "type": "text_delta",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "coalesce",
+      "attempt": 0,
+      "text": "",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c686-003c-7354-a24b-ec4036756db2",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "coalesce",
+      "attempt": 1,
+      "text": "",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c686-0040-7cf0-9b72-9a0cc556a046",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "coalesce",
+      "attempt": 2,
+      "text": "",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c686-0041-7575-a306-558b6694f97f",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "coalesce",
+      "attempt": 3,
+      "text": "",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c686-0042-71e2-bac2-7fcc332353b2",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    },
+    {
+      "variant": "coalesce",
+      "attempt": 4,
+      "text": "",
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "id": "01a0c686-0043-703b-931f-17f9174fa37d",
+            "type": "message",
+            "role": "assistant",
+            "model": "anthropic/mock",
+            "content": [],
+            "stop_reason": null,
+            "stop_sequence": null,
+            "usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            }
+          }
+        },
+        {
+          "type": "ping"
+        },
+        {
+          "type": "error",
+          "error": {
+            "type": "invalid_upstream_response",
+            "message": "invalid upstream response"
+          }
+        }
+      ]
+    }
+  ],
+  "stream_summary": {
+    "dense": {
+      "baseline": {
+        "cpu_ms_per_request": 36.0,
+        "latency_p50_ms": 52.29703049917589,
+        "first_content_p50_ms": 5.336265998266754
+      },
+      "coalesce": {
+        "cpu_ms_per_request": 30.000000000000007,
+        "latency_p50_ms": 36.230273501132615,
+        "first_content_p50_ms": 5.0683690005826065
+      }
+    },
+    "large": {
+      "baseline": {
+        "cpu_ms_per_request": 89.0,
+        "latency_p50_ms": 134.11075149997487,
+        "first_content_p50_ms": 4.506658999162028
+      },
+      "coalesce": {
+        "cpu_ms_per_request": 83.0,
+        "latency_p50_ms": 105.63862599883578,
+        "first_content_p50_ms": 5.158556999958819
+      }
+    }
+  },
+  "diagnostic_source_note": "Embedded scripts contain only Airmux and direct-mock runs. Install diagnostic dependencies in the active Python environment before replaying historical probes. Stored source_sha256 values describe the included scripts; measured_source_sha256 retains the original hashes for edited scripts. Measurement values are unchanged."
+}
