@@ -33,6 +33,7 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
+    UsageEvent,
     User,
     set_actor,
 )
@@ -97,6 +98,17 @@ def test_apply_allows_the_deployment_service_account(tmp_path):
     users = run_in_db(tmp_path, User.find)
     assert {user.service_account for user in users} == {True, False}
     assert {user.email for user in users if not user.service_account} == {"m@airbyte.com", "b@airbyte.com"}
+
+
+def test_usage_fixtures_include_request_and_attempt_timestamps(tmp_path):
+    setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+
+    run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
+
+    events = run_in_db(tmp_path, UsageEvent.find)
+    assert events
+    assert all(event.request_started_at is not None and event.attempt_started_at is not None for event in events)
 
 
 def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):

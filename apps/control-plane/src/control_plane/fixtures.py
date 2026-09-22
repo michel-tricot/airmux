@@ -235,12 +235,17 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
     rng = Random(f"usage:{workspace.id}")  # noqa: S311 fixture traffic, not cryptography
     for index in range(count):
         model_id, provider_id = rng.choice(MODELS)
+        occurred_at = now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400))
+        latency_ms = rng.randint(180, 4000)
+        attempt_started_at = occurred_at - timedelta(milliseconds=latency_ms)
         cost_input_usd = Decimal(rng.randint(1000, 200000)) / 1_000_000
         cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
         await UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
             request_id=fixture_id(f"request:{workspace.id}:{index}"),
-            occurred_at=now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400)),
+            request_started_at=attempt_started_at,
+            attempt_started_at=attempt_started_at,
+            occurred_at=occurred_at,
             org_id=workspace.org_id,
             workspace_id=workspace.id,
             key_id=str(key.id),
@@ -258,7 +263,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             cost_output_usd=cost_output_usd,
             cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
             cache_write_tokens=0,
-            latency_ms=rng.randint(180, 4000),
+            latency_ms=latency_ms,
             status=rng.choice(STATUSES),
             stream=rng.choice([True, False]),
         ).save()
