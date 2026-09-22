@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
-import httpx2
+import aiohttp
 from pydantic import BaseModel
 from pydantic_core import to_json
 
@@ -200,9 +200,9 @@ class EgressAdapter[StateT: StreamState](ABC):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.invalid_upstream_response, message="invalid upstream response")
         elif isinstance(error, UpstreamStreamError):
             rendered = self._provider_error(502, ProviderDiagnostic(code=error.code, message=error.message))
-        elif isinstance(error, httpx2.TimeoutException):
+        elif isinstance(error, TimeoutError):
             rendered = CanonicalError(status=504, code=GatewayErrorCode.upstream_timeout, message="upstream request timed out")
-        elif isinstance(error, httpx2.ConnectError):
+        elif isinstance(error, aiohttp.ClientConnectorError):
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_unreachable, message="upstream service is unreachable")
         else:
             rendered = CanonicalError(status=502, code=GatewayErrorCode.upstream_error, message="upstream request failed")

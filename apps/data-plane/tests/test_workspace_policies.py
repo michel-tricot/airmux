@@ -4,10 +4,9 @@ import asyncio
 import json
 from decimal import Decimal
 
-import httpx
-import httpx2
+import aiohttp
 import pytest
-import respx
+from aioresponses import CallbackResult
 from conftest import (
     MODEL,
     PLATFORM_CREDENTIAL,
@@ -329,13 +328,17 @@ def test_invalid_policies_rejected_before_bundle_admission(invalid):
         snapshot(entries)
 
 
-@pytest.mark.parametrize("stream", [False, True])
 @pytest.mark.parametrize(
-    "restriction", [(restricted, target) for restricted in (False, True) for target in ("workspace", "selected_users", "selected_keys")]
+    "case",
+    [
+        (stream, restricted, target)
+        for stream in (False, True)
+        for restricted in (False, True)
+        for target in ("workspace", "selected_users", "selected_keys")
+    ],
 )
-@respx.mock
-def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_path, http_client, stream, restriction):
-    restricted, target_kind = restriction
+def test_fallback_respects_restrictions_and_accounts_each_attempt(http_mock, dp_app, tmp_path, http_client, case):
+    stream, restricted, target_kind = case
     api_key, key = make_key()
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     policies = [policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})]
@@ -361,14 +364,14 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
         CachedBundles(bundles=[bundle.model_copy(update={"policies": tuple(policies)})]),
     )
 
-    def upstream(incoming):
-        model = json.loads(incoming.content)["model"]
+    def upstream(_url, **kwargs):
+        model = json.loads(kwargs["data"])["model"]
         if model == MODEL.upstream_model:
-            return httpx.Response(503, json={"error": {"message": "unavailable"}})
-        return httpx.Response(200, content=TEXT_LOG) if stream else httpx.Response(200, json=TEXT_NONSTREAM)
+            return CallbackResult(status=503, payload={"error": {"message": "unavailable"}})
+        return CallbackResult(status=200, body=TEXT_LOG) if stream else CallbackResult(status=200, payload=TEXT_NONSTREAM)
 
-    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", callback=upstream, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         result = client.post(
             "/inf/v1/chat/completions",
@@ -382,8 +385,7 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
     )
 
 
-@respx.mock
-def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_path, monkeypatch):
+def test_fallback_stops_before_an_attempt_without_metering_capacity(http_mock, dp_app, tmp_path, monkeypatch):
     api_key, key = make_key()
     backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
     fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
@@ -409,17 +411,17 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
     attempted_models = []
 
-    def upstream(incoming):
-        model = json.loads(incoming.content)["model"]
+    def upstream(_url, **kwargs):
+        model = json.loads(kwargs["data"])["model"]
         attempted_models.append(model)
         return (
-            httpx.Response(503, json={"error": {"message": "unavailable"}})
+            CallbackResult(status=503, payload={"error": {"message": "unavailable"}})
             if model == MODEL.upstream_model
-            else httpx.Response(200, json=TEXT_NONSTREAM)
+            else CallbackResult(status=200, payload=TEXT_NONSTREAM)
         )
 
-    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", callback=upstream, repeat=True)
+    mock_control_plane(http_mock)
 
     with TestClient(dp_app) as client:
         result = client.post(
@@ -434,8 +436,7 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
 
 
 @pytest.mark.parametrize("failure", ["read_error", "timeout", "attempt_limit", "unmatched_reason", "midstream", "deadline"])
-@respx.mock
-def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
+def test_fallback_failure_boundaries(http_mock, dp_app, tmp_path, http_client, failure):
     api_key, key = make_key()
     backups = [MODEL.model_copy(update={"model_id": name, "upstream_model": name}) for name in ["backup", "last"]]
     entry = policy(
@@ -451,25 +452,25 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
     )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (entry,)})]))
 
-    async def upstream(incoming):
+    async def upstream(_url, **kwargs):
         if failure == "attempt_limit":
-            return httpx.Response(503, json={"error": {"message": "unavailable"}})
-        if json.loads(incoming.content)["model"] != MODEL.upstream_model:
-            return httpx.Response(200, json=TEXT_NONSTREAM)
+            return CallbackResult(status=503, payload={"error": {"message": "unavailable"}})
+        if json.loads(kwargs["data"])["model"] != MODEL.upstream_model:
+            return CallbackResult(status=200, payload=TEXT_NONSTREAM)
         if failure == "read_error":
             message = "connection reset"
-            raise httpx2.ReadError(message, request=incoming)
+            raise aiohttp.ClientPayloadError(message)
         if failure == "timeout":
             message = "timed out"
-            raise httpx2.ReadTimeout(message, request=incoming)
+            raise TimeoutError(message)
         if failure == "midstream":
-            return httpx.Response(200, content=TEXT_LOG.removesuffix(b"data: [DONE]\n\n"))
+            return CallbackResult(status=200, body=TEXT_LOG.removesuffix(b"data: [DONE]\n\n"))
         if failure == "deadline":
             await asyncio.sleep(1)
-        return httpx.Response(429, json={"error": {"message": "rate limited"}})
+        return CallbackResult(status=429, payload={"error": {"message": "rate limited"}})
 
-    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", callback=upstream, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         result = client.post(
             "/inf/v1/chat/completions",
@@ -499,13 +500,12 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
     )
 
 
-@respx.mock
-def test_repeated_request_preserves_rate_limited_status_during_credential_cooldown(dp_app, tmp_path):
+def test_repeated_request_preserves_rate_limited_status_during_credential_cooldown(http_mock, dp_app, tmp_path):
     api_key, key = make_key()
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,)))
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"message": "rate limited"}}))
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=429, payload={"error": {"message": "rate limited"}}, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         for _ in range(2):
             response = client.post(

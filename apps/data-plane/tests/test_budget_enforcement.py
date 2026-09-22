@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 
-import httpx2
+import aiohttp
 import pytest
+from aioresponses import CallbackResult
 from conftest import ORG, WORKSPACE, make_bundle, make_key
 
 from contract import KeyEntry, uuid7
@@ -166,32 +166,28 @@ def test_uninitialized_budget_state_allows_matching_requests():
     assert holder.check(_budget_rules(unmatched, key, snapshot), key, datetime.now(UTC)) is None
 
 
-def test_no_budget_config_builds_no_budget_backend():
+def test_no_budget_config_builds_no_budget_backend(http_client):
     metrics = DataPlaneMetrics()
     bundles = BundleHolder(metrics)
-    client = httpx2.AsyncClient()
     try:
-        backend = build_budget_backend(NoBudgetConfig(), bundles, client, metrics)
+        backend = build_budget_backend(NoBudgetConfig(), bundles, http_client, metrics)
         assert isinstance(backend, NoBudgetBackend)
     finally:
-        asyncio.run(client.aclose())
         metrics.shutdown()
 
 
-def test_control_plane_budget_backend_uses_its_own_configuration():
+def test_control_plane_budget_backend_uses_its_own_configuration(http_client):
     metrics = DataPlaneMetrics()
     bundles = BundleHolder(metrics)
-    client = httpx2.AsyncClient()
     config = ControlPlaneBudgetConfig(control_plane=ControlPlaneLink(url="http://budget-cp.test", management_key="budget-token"), poll_interval_s=11)
     try:
-        backend = build_budget_backend(config, bundles, client, metrics)
+        backend = build_budget_backend(config, bundles, http_client, metrics)
         assert isinstance(backend, ControlPlaneBudgetBackend)
     finally:
-        asyncio.run(client.aclose())
         metrics.shutdown()
 
 
-async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
+async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot(http_mock, http_client):
 
     now = datetime.now(UTC)
     start, end = budget_window("day", now)
@@ -210,10 +206,10 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
         exhausted_buckets=(SharedBudgetBucket(),),
     )
     payload = PolicyState(computed_at=now, organizations=(OrgPolicyState(org_id=ORG, budgets=(state,)),))
-    response = httpx2.Response(200, json={"data": payload.model_dump(mode="json")})
+    response = CallbackResult(status=200, payload={"data": payload.model_dump(mode="json")})
 
-    def respond(request):
-        assert PolicyStateRequest.model_validate_json(request.content).org_ids == (ORG,)
+    def respond(_url, **kwargs):
+        assert PolicyStateRequest.model_validate(kwargs["json"]).org_ids == (ORG,)
         return response
 
     metrics = DataPlaneMetrics()
@@ -236,17 +232,20 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot():
     bundles.swap(BundleSet.from_bundles((make_bundle(keys=[key]).model_copy(update={"policies": (policy,)}),)), "test")
     holder = BudgetStateHolder()
     try:
-        async with httpx2.AsyncClient(transport=httpx2.MockTransport(respond)) as client:
-            poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), bundles, holder, client, metrics)
-            await poller.once()
-            for failed_response in (httpx2.Response(503), httpx2.Response(200, json={"data": {"computed_at": now.isoformat(), "organizations": []}})):
-                response = failed_response
-                with pytest.raises((httpx2.HTTPStatusError, ValueError)):
-                    await poller.once()
-                request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
-                snapshot = bundles.current.snapshots[ORG]
-                with pytest.raises(RequestRejectedError, match="budget_exhausted"):
-                    holder.check(_budget_rules(request, key, snapshot), key, now)
-            assert holder.computed_at == now
+        http_mock.post("http://cp.test/api/v1/policy-state/sync", callback=respond, repeat=True)
+        poller = BudgetStatePoller(ControlPlaneLink(url="http://cp.test", management_key="test"), bundles, holder, http_client, metrics)
+        await poller.once()
+        for failed_response in (
+            CallbackResult(status=503),
+            CallbackResult(status=200, payload={"data": {"computed_at": now.isoformat(), "organizations": []}}),
+        ):
+            response = failed_response
+            with pytest.raises((aiohttp.ClientResponseError, ValueError)):
+                await poller.once()
+            request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hello"}])
+            snapshot = bundles.current.snapshots[ORG]
+            with pytest.raises(RequestRejectedError, match="budget_exhausted"):
+                holder.check(_budget_rules(request, key, snapshot), key, now)
+        assert holder.computed_at == now
     finally:
         metrics.shutdown()

@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 Revision = Literal["base", "candidate"]
 Scenario = Literal["upstream", "buffered", "buffered_devnull", "stream", "policies"]
 EventStore = Literal["sqlite", "devnull"]
-ProviderProtocol = Literal["http1", "http2"]
+ProviderProtocol = Literal["http1", "https"]
 Metric = Literal["p50_ms", "p95_ms", "p99_ms", "first_content_p50_ms", "requests_per_second"]
 WORKLOADS: tuple[tuple[Scenario, int, ProviderProtocol], ...] = (
     ("upstream", 1, "http1"),
@@ -45,12 +45,12 @@ WORKLOADS: tuple[tuple[Scenario, int, ProviderProtocol], ...] = (
     ("buffered_devnull", 8, "http1"),
     ("buffered_devnull", 32, "http1"),
     ("buffered_devnull", 128, "http1"),
-    ("upstream", 1, "http2"),
-    ("upstream", 32, "http2"),
-    ("buffered_devnull", 1, "http2"),
-    ("buffered_devnull", 32, "http2"),
-    ("buffered_devnull", 128, "http2"),
-    ("stream", 32, "http2"),
+    ("upstream", 1, "https"),
+    ("upstream", 32, "https"),
+    ("buffered_devnull", 1, "https"),
+    ("buffered_devnull", 32, "https"),
+    ("buffered_devnull", 128, "https"),
+    ("stream", 32, "https"),
     ("policies", 1, "http1"),
 )
 LATENCY_METRICS: tuple[Metric, ...] = ("p50_ms", "p95_ms", "p99_ms", "first_content_p50_ms")
@@ -96,7 +96,7 @@ class PerformanceGateway(Gateway):
         super().write_files()
         configuration = yaml.safe_load(self.config_path.read_text())
         if self.max_connections is not None:
-            configuration["data_plane"]["http"] = {"max_connections": self.max_connections, "max_keepalive_connections": 20}
+            configuration["data_plane"]["http"] = {"max_connections": self.max_connections}
         configuration["data_plane"]["events"] = (
             {
                 "kind": "sqlite",
@@ -222,7 +222,7 @@ OVERHEAD_METHOD = (
     "Model inference, external network/provider variability, control-plane traffic, periodic polling/export, startup and warmup are excluded. "
     "Controls match request fields (using the upstream model name), response fixture, streaming, concurrency and provider protocol. "
     "The local upstream retains idle connections for one hour; client keepalive expiry stays at five seconds. "
-    "HTTP/1.1 direct controls use one sequential closed-loop request per connection; HTTP/2 controls multiplex over one connection. "
+    "Direct and proxied traffic use HTTP/1.1 with one sequential closed-loop request per caller connection. "
     "Windows run separately without competing direct/proxied load. "
     "Client parsing, the extra local HTTP hop, scheduling, queueing and connection-pool effects are included. "
     "Round ranges and maximum direct-control drift show noise, not confidence intervals; non-positive estimates are retained. "
@@ -363,10 +363,10 @@ class FastProvider:
         self.log_path = directory / f"upstream-{protocol}.log"
         self.log = self.log_path.open("a", encoding="utf-8")
         self.process: subprocess.Popen[bytes] | None = None
-        self.ca_path = directory / "upstream-http2-ca.pem"
-        self.cert_path = directory / "upstream-http2-cert.pem"
-        self.key_path = directory / "upstream-http2-key.pem"
-        if protocol == "http2":
+        self.ca_path = directory / "upstream-https-ca.pem"
+        self.cert_path = directory / "upstream-https-cert.pem"
+        self.key_path = directory / "upstream-https-key.pem"
+        if protocol == "https":
             ca = trustme.CA()
             certificate = ca.issue_cert("127.0.0.1")
             ca.cert_pem.write_to_path(self.ca_path)
@@ -374,7 +374,7 @@ class FastProvider:
             certificate.private_key_pem.write_to_path(self.key_path)
 
     def ssl_context(self) -> ssl.SSLContext:
-        return ssl.create_default_context(cafile=self.ca_path if self.protocol == "http2" else None)
+        return ssl.create_default_context(cafile=self.ca_path if self.protocol == "https" else None)
 
     def start(self) -> None:
         self.process = subprocess.Popen(  # noqa: S603 the benchmark starts its trusted local upstream script
@@ -396,7 +396,7 @@ class FastProvider:
                 "--stream-chunk-delay-ms",
                 str(self.stream_chunk_delay_ms),
                 *(["--observe-connections"] if self.observe_connections else []),
-                *(["--certfile", str(self.cert_path), "--keyfile", str(self.key_path)] if self.protocol == "http2" else []),
+                *(["--certfile", str(self.cert_path), "--keyfile", str(self.key_path)] if self.protocol == "https" else []),
             ],
             stdout=self.log,
             stderr=subprocess.STDOUT,
@@ -410,17 +410,16 @@ class FastProvider:
                 if match is None:
                     return False
                 self.port = int(match.group(1))
-                scheme = "https" if self.protocol == "http2" else "http"
+                scheme = "https" if self.protocol == "https" else "http"
                 self.url = f"{scheme}://127.0.0.1:{self.port}"
-            with httpx2.Client(http2=self.protocol == "http2", verify=self.ssl_context(), trust_env=False, timeout=1) as client:
+            with httpx2.Client(verify=self.ssl_context(), trust_env=False, timeout=1) as client:
                 response = client.get(self.url + "/readyz")
-            expected = "HTTP/2" if self.protocol == "http2" else "HTTP/1.1"
-            return response.status_code == 200 and response.http_version == expected
+            return response.status_code == 200 and response.http_version == "HTTP/1.1"
 
         eventually(ready)
 
     def connections(self, *, reset: bool = False) -> int:
-        with httpx2.Client(http2=self.protocol == "http2", verify=self.ssl_context(), trust_env=False) as client:
+        with httpx2.Client(verify=self.ssl_context(), trust_env=False) as client:
             response = client.request("DELETE" if reset else "GET", self.url + "/connections")
             response.raise_for_status()
             return int(response.text)
@@ -445,7 +444,6 @@ class LoadTarget(NamedTuple):
     url: str
     headers: dict[str, str]
     body: dict[str, object]
-    http2: bool
     verify: ssl.SSLContext
     expected_text: str = TEXT
 
@@ -493,14 +491,13 @@ async def measure(target: LoadTarget, concurrency: int, settings: Settings) -> t
         clients = [
             await connections.enter_async_context(
                 httpx2.AsyncClient(
-                    http2=target.http2,
                     verify=target.verify,
                     timeout=settings.request_timeout_s,
                     trust_env=False,
                     limits=httpx2.Limits(max_connections=1, max_keepalive_connections=1),
                 )
             )
-            for _ in range(1 if target.http2 else concurrency)
+            for _ in range(concurrency)
         ]
         workers = [clients[index % len(clients)] for index in range(concurrency)]
 
@@ -565,14 +562,14 @@ def request_body(scenario: Scenario, provider_protocol: ProviderProtocol, *, dir
 
 def run_revision(directory: Path, executable: Path, revision: Revision, round_number: int, settings: Settings) -> RevisionMeasurements:
     gateway = PerformanceGateway(directory, f"performance-{revision}-{round_number}")
-    providers = {protocol: FastProvider(directory, protocol, settings) for protocol in ("http1", "http2")}
+    providers = {protocol: FastProvider(directory, protocol, settings) for protocol in ("http1", "https")}
     expected_text = sized_text(settings.response_bytes, TEXT)
     gateway.executable = str(executable.resolve())
     gateway.reload_interval_s = 3600
     gateway.max_connections = settings.max_connections
-    gateway.environment["SSL_CERT_FILE"] = str(providers["http2"].ca_path)
+    gateway.environment["SSL_CERT_FILE"] = str(providers["https"].ca_path)
     gateway.environment["STUB_HTTP1_API_KEY"] = UPSTREAM_KEY
-    gateway.environment["STUB_HTTP2_API_KEY"] = UPSTREAM_KEY
+    gateway.environment["STUB_HTTPS_API_KEY"] = UPSTREAM_KEY
     measurements: list[Measurement] = []
     overhead_measurements: list[OverheadMeasurement] = []
     event_count = 0
@@ -627,7 +624,6 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                         url=url,
                         headers=gateway.headers("openai_chat_completions") if proxied else {"Authorization": f"Bearer {UPSTREAM_KEY}"},
                         body=body if proxied else request_body(scenario, provider.protocol, direct=True, request_bytes=settings.request_bytes),
-                        http2=not proxied and provider.protocol == "http2",
                         verify=provider.ssl_context(),
                         expected_text=expected_text,
                     ),
@@ -773,23 +769,23 @@ def benchmark(  # noqa: PLR0913 flags define the benchmark command interface
         "scenario": scenario,
         "connection_settings": {
             "caller_http_version": "1.1",
-            "provider_http_versions": {"http1": "1.1", "http2": "2"},
+            "provider_http_versions": {"http1": "1.1", "https": "1.1"},
             "http1_direct_connections": "one per concurrent worker",
-            "http2_direct_connections": 1,
+            "https_direct_connections": "one per concurrent worker",
             "max_connections_per_direct_client": 1,
             "keepalive_connections_per_direct_client": 1,
             "keepalive_expiry_s": 5,
             "timeout_s": request_timeout_s,
         },
-        "upstream_settings": {"server_keepalive_timeout_s": 3600, "http2_keepalive_max_requests": 1_000_000},
+        "upstream_settings": {"server_keepalive_timeout_s": 3600},
         "gateway_settings": {
             "workers": 1,
             "event_stores": ["sqlite", "devnull"],
             "reload_interval_s": 3600,
             "export_interval_s": 3600,
             "provider_max_connections": 100,
-            "provider_max_keepalive_connections": 20,
-            "provider_timeouts_s": {"connect": 5, "read": 120, "write": 30, "pool": 5},
+            "provider_keepalive_timeout_s": 15,
+            "provider_timeouts_s": {"connect_and_pool": 5, "read": 120},
         },
         "runner": {name: os.environ.get(name) for name in ("RUNNER_OS", "RUNNER_ARCH", "RUNNER_NAME", "ImageOS", "ImageVersion")},
         "base_revision": base_revision,

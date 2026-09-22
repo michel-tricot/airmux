@@ -79,7 +79,7 @@ async def connections(request: Request) -> Response:
     return Response(str(len(request.app.state.connections)))
 
 
-async def serve_http2(upstream: ASGIFramework, config: Config) -> None:
+async def serve_https(upstream: ASGIFramework, config: Config) -> None:
     await hypercorn_serve(upstream, config, mode="asgi")
 
 
@@ -87,7 +87,7 @@ async def serve_http2(upstream: ASGIFramework, config: Config) -> None:
 def serve(  # noqa: PLR0913, PLR0917 CLI flags define the benchmark workload
     port: Annotated[int, typer.Option(min=0, max=65535)],
     delay_ms: Annotated[float, typer.Option(min=0, max=1000)] = 0,
-    http_version: Annotated[Literal["http1", "http2"], typer.Option()] = "http1",
+    http_version: Annotated[Literal["http1", "https"], typer.Option()] = "http1",
     request_bytes: Annotated[int, typer.Option(min=1, max=1_048_576)] = 2,
     response_bytes: Annotated[int, typer.Option(min=1, max=1_048_576)] = 10,
     stream_chunks: Annotated[int, typer.Option(min=1, max=4096)] = 1,
@@ -106,7 +106,7 @@ def serve(  # noqa: PLR0913, PLR0917 CLI flags define the benchmark workload
     upstream.state.observe_connections = observe_connections
     upstream.state.connections = set()
     upstream.state.delay_ms = delay_ms
-    upstream.state.http_version = "2" if http_version == "http2" else "1.1"
+    upstream.state.http_version = "1.1"
     upstream.state.request_text = sized_text(request_bytes, "hi")
     response_text = sized_text(response_bytes, "hello 🌍")
     upstream.state.body = json.dumps(buffered("openai_compatible", Reply(text=response_text))).encode()
@@ -117,16 +117,16 @@ def serve(  # noqa: PLR0913, PLR0917 CLI flags define the benchmark workload
         uvicorn.run(upstream, host="127.0.0.1", port=port, log_level="info", access_log=False, timeout_keep_alive=3600)
         return
     if certfile is None or keyfile is None:
-        message = "HTTP/2 benchmark providers require --certfile and --keyfile"
+        message = "HTTPS benchmark providers require --certfile and --keyfile"
         raise typer.BadParameter(message)
     config = Config()
     config.bind = [f"127.0.0.1:{port}"]
     config.certfile = str(certfile)
     config.keyfile = str(keyfile)
-    config.alpn_protocols = ["h2"]
+    config.alpn_protocols = ["http/1.1"]
     config.keep_alive_timeout = 3600
     config.keep_alive_max_requests = 1_000_000
-    trio.run(serve_http2, cast("ASGIFramework", upstream), config)
+    trio.run(serve_https, cast("ASGIFramework", upstream), config)
 
 
 if __name__ == "__main__":

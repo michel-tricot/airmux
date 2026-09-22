@@ -7,13 +7,14 @@ from itertools import batched, groupby
 from types import MappingProxyType
 from typing import TYPE_CHECKING, override
 
-import httpx2
+import aiohttp
 from pydantic import ValidationError
 
 from contract.budgets import BudgetState, KeyBudgetBucket, PolicyState, PolicyStateRequest
 from contract.policies import Budget
 from data_plane.canonical import GatewayErrorCode
 from data_plane.config import BudgetConfig, ControlPlaneBudgetConfig
+from data_plane.control_plane_link import complete_response
 from data_plane.errors import RequestRejectedError
 from data_plane.tasks import run_periodic
 
@@ -141,7 +142,7 @@ class BudgetStatePoller:
         control_plane: ControlPlaneLink,
         bundles: BundleHolder,
         budgets: BudgetStateHolder,
-        client: httpx2.AsyncClient,
+        client: aiohttp.ClientSession,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._metrics = metrics
@@ -163,21 +164,25 @@ class BudgetStatePoller:
         self._metrics.observe_budget_state(state.computed_at.timestamp())
 
     async def _fetch(self, org_ids: tuple[UUID, ...]) -> PolicyState:
-        response = await self._client.post(
+        async with self._client.post(
             f"{self._control_plane.url}/api/v1/policy-state/sync",
             headers={"authorization": f"Bearer {self._control_plane.management_key}"},
             json=PolicyStateRequest(org_ids=org_ids).model_dump(mode="json"),
-            timeout=5.0,
-        )
-        response.raise_for_status()
-        state = PolicyState.model_validate(response.json()["data"])
+            timeout=aiohttp.ClientTimeout(total=5),
+            allow_redirects=False,
+        ) as response:
+            await complete_response(response)
+            payload = await response.json(content_type=None)
+        state = PolicyState.model_validate(payload["data"])
         if {org.org_id for org in state.organizations} != set(org_ids):
             message = "Budget state must contain every requested organization exactly once"
             raise ValueError(message)
         return state
 
     async def run(self, poll_interval_s: float = 5.0) -> None:
-        await run_periodic(self.once, poll_interval_s, (httpx2.HTTPError, ValueError, ValidationError, KeyError), "budget state poll")
+        await run_periodic(
+            self.once, poll_interval_s, (aiohttp.ClientError, TimeoutError, ValueError, ValidationError, KeyError), "budget state poll"
+        )
 
 
 class NoBudgetBackend:
@@ -193,7 +198,7 @@ class ControlPlaneBudgetBackend:
         self,
         config: ControlPlaneBudgetConfig,
         bundles: BundleHolder,
-        client: httpx2.AsyncClient,
+        client: aiohttp.ClientSession,
         metrics: DataPlaneMetrics,
     ) -> None:
         self._config = config
@@ -224,7 +229,7 @@ BudgetBackend = NoBudgetBackend | ControlPlaneBudgetBackend
 def build_budget_backend(
     config: BudgetConfig,
     bundles: BundleHolder,
-    client: httpx2.AsyncClient,
+    client: aiohttp.ClientSession,
     metrics: DataPlaneMetrics,
 ) -> BudgetBackend:
     if isinstance(config, ControlPlaneBudgetConfig):

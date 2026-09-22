@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+import aiohttp
 import anyio
-import httpx2
 from starlette.responses import Response, StreamingResponse
 
 from data_plane.egress.base import UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
@@ -34,7 +35,7 @@ class StreamSession:
     request: CanonicalRequest
     adjustments: tuple[CanonicalAdjustment, ...]
     reservation: OutboxReservation
-    http_client: httpx2.AsyncClient
+    http_client: aiohttp.ClientSession
     metrics: DataPlaneMetrics
     egress_kind: str
     attempt_started_at: float
@@ -42,11 +43,11 @@ class StreamSession:
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
             response = await stack.enter_async_context(
-                self.http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+                self.http_client.request(upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, allow_redirects=False)
             )
-            if response.is_error:
-                body = await response.aread()
-                raise UpstreamResponseError(response.status_code, body)
+            if response.status >= HTTPStatus.BAD_REQUEST:
+                body = await response.read()
+                raise UpstreamResponseError(response.status, body)
             stream_state = self.adapter.new_stream_state(self.ctx)
             handoff = stack.pop_all()
 
@@ -57,7 +58,7 @@ class _StreamResponse(StreamingResponse):
     def __init__(
         self,
         session: StreamSession,
-        response: httpx2.Response,
+        response: aiohttp.ClientResponse,
         handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
     ) -> None:
@@ -83,7 +84,7 @@ class _StreamResponse(StreamingResponse):
         try:
             for frame in self._renderer.start(self._session.ctx):
                 yield frame
-            async for payload in self._response.aiter_bytes():
+            async for payload in self._response.content.iter_any():
                 for event in self._session.adapter.frame(payload, self._stream_state):
                     for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):
                         for frame in self._renderer.chunk(canonical_chunk):
@@ -93,7 +94,7 @@ class _StreamResponse(StreamingResponse):
             for frame in self._renderer.closing(final, list(self._session.adjustments)):
                 yield frame
             self._record(usage_event(self._session.ctx, final, status="ok", request=self._session.request), "success")
-        except (UpstreamProtocolError, UpstreamStreamError, httpx2.HTTPError) as error:
+        except (UpstreamProtocolError, UpstreamStreamError, aiohttp.ClientError, TimeoutError) as error:
             for frame in self._renderer.error(self._session.adapter.map_error(error)):
                 yield frame
             self._record(

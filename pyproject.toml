@@ -20,7 +20,7 @@ backend = ["airmux"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",
-  "pytest", "pytest-asyncio", "pytest-httpx2", "pytest-xdist", "respx", "anyio",
+  "pytest", "pytest-asyncio", "httpx2[http2]>=2.13", "aioresponses", "pytest-xdist", "respx", "anyio",
   "jsonschema",
   "openai",
   "anthropic",

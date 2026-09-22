@@ -3,10 +3,8 @@ from __future__ import annotations
 import json
 
 import httpx
-import httpx2
 import openai
 import pytest
-import respx
 from anthropic import Anthropic
 from anthropic.types import Message, RawMessageStreamEvent
 from conftest import TEXT_LOG, TEXT_NONSTREAM, GatewayTransport, mock_control_plane
@@ -14,6 +12,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from pydantic import TypeAdapter
 from starlette.testclient import TestClient
+from yarl import URL
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
 
@@ -36,10 +35,9 @@ def _post(client: TestClient, api_key: str, body: dict, **kwargs):
     return client.request("POST", "/inf/v1/messages", headers={"Authorization": f"Bearer {api_key}"}, json=body, **kwargs)
 
 
-@respx.mock
-def test_openai_the_sdk_completes_a_text_round_trip(api_key, dp_app):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+def test_openai_the_sdk_completes_a_text_round_trip(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     assert completion.choices[0].message.content == "héllo \U0001f30d world"
@@ -48,8 +46,7 @@ def test_openai_the_sdk_completes_a_text_round_trip(api_key, dp_app):
     assert (completion.usage.prompt_tokens, completion.usage.completion_tokens, completion.usage.total_tokens) == (5, 7, 12)
 
 
-@respx.mock
-def test_openai_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
+def test_openai_the_sdk_completes_a_tool_round_trip(http_mock, api_key, dp_app):
     upstream_reply = {
         "id": "chatcmpl-9",
         "model": "gpt-real",
@@ -66,8 +63,8 @@ def test_openai_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
         ],
         "usage": {"prompt_tokens": 9, "completion_tokens": 4, "total_tokens": 13},
     }
-    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=upstream_reply))
-    mock_control_plane()
+    http_mock.post(UPSTREAM, status=200, payload=upstream_reply, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test",
@@ -83,15 +80,14 @@ def test_openai_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
     assert (call.id, call.function.name) == ("call_1", "get_weather")
     assert json.loads(call.function.arguments) == {"city": "Paris"}
 
-    sent = json.loads(route.calls.last.request.content)
+    sent = json.loads(http_mock.requests.get(("POST", URL(UPSTREAM)), [])[-1].kwargs["data"])
     assert [m["role"] for m in sent["messages"]] == ["user", "assistant", "tool"]  # the tool turn survives the double translation
     assert sent["tools"][0]["function"]["name"] == "get_weather"
 
 
-@respx.mock
-def test_openai_the_sdk_parses_the_stream(api_key, dp_app):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
-    mock_control_plane()
+def test_openai_the_sdk_parses_the_stream(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, body=TEXT_LOG, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         stream = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
         chunks = list(stream)
@@ -104,10 +100,9 @@ def test_openai_the_sdk_parses_the_stream(api_key, dp_app):
     assert (usage.prompt_tokens, usage.completion_tokens) == (5, 7)
 
 
-@respx.mock
-def test_openai_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, dp_app):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+def test_openai_what_the_gateway_dropped_is_visible_to_the_sdk_caller(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"n": 2}
@@ -120,10 +115,9 @@ def test_openai_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, d
     ]
 
 
-@respx.mock
-def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(api_key, dp_app):
-    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -137,21 +131,20 @@ def test_openai_supported_chat_reasoning_and_tool_options_reach_the_provider(api
         )
 
     assert response.status_code == 200
-    sent = json.loads(route.calls.last.request.content)
+    sent = json.loads(http_mock.requests.get(("POST", URL(UPSTREAM)), [])[-1].kwargs["data"])
     assert sent["reasoning_effort"] == "low"
     assert sent["parallel_tool_calls"] is True
     assert sent["tools"][0]["function"]["strict"] is True
 
 
-@respx.mock
-def test_openai_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_key, dp_app):
-    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+def test_openai_a_forwardable_extra_reaches_the_provider_with_no_adjustment(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"frequency_penalty": 0.5}
         )
-    assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
+    assert json.loads(http_mock.requests.get(("POST", URL(UPSTREAM)), [])[-1].kwargs["data"])["frequency_penalty"] == 0.5
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway == {
         "finish_reason": "stop",
@@ -174,7 +167,6 @@ def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
     assert "unknown_model" in str(err.value)
 
 
-@respx.mock
 @pytest.mark.parametrize(
     "headers",
     [
@@ -184,9 +176,9 @@ def test_openai_errors_come_back_in_the_callers_dialect(api_key, dp_app):
         {"x-airmux-dialect": "unknown"},
     ],
 )
-def test_chat_completions_path_always_returns_chat_completions(api_key, dp_app, headers):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+def test_chat_completions_path_always_returns_chat_completions(http_mock, api_key, dp_app, headers):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -198,11 +190,10 @@ def test_chat_completions_path_always_returns_chat_completions(api_key, dp_app, 
     assert "content" not in body
 
 
-@respx.mock
-def test_anthropic_a_cross_provider_round_trip_parses_with_the_sdk_models(api_key, dp_app):
+def test_anthropic_a_cross_provider_round_trip_parses_with_the_sdk_models(http_mock, api_key, dp_app):
     """An Anthropic-speaking caller served by an OpenAI-family upstream: the route's reason to exist."""
-    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
-    mock_control_plane()
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = _post(
             client, api_key, {"model": "gpt-test", "max_tokens": 64, "system": "You are terse.", "messages": [{"role": "user", "content": "hi"}]}
@@ -214,14 +205,14 @@ def test_anthropic_a_cross_provider_round_trip_parses_with_the_sdk_models(api_ke
     assert message.stop_reason == "end_turn"
     assert (message.usage.input_tokens, message.usage.output_tokens) == (5, 7)
 
-    sent = json.loads(route.calls.last.request.content)
+    sent = json.loads(http_mock.requests.get(("POST", URL(UPSTREAM)), [])[-1].kwargs["data"])
     assert sent["messages"][0] == {"role": "system", "content": "You are terse."}  # hoisted system, respelled for OpenAI
 
 
-@respx.mock
-def test_anthropic_the_documented_sdk_configuration_handles_buffered_and_streaming_responses(api_key, dp_app):
-    respx.post(UPSTREAM).mock(side_effect=[httpx.Response(200, json=TEXT_NONSTREAM), httpx.Response(200, content=TEXT_LOG)])
-    mock_control_plane()
+def test_anthropic_the_documented_sdk_configuration_handles_buffered_and_streaming_responses(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, payload=TEXT_NONSTREAM, repeat=False)
+    http_mock.post(UPSTREAM, status=200, body=TEXT_LOG, repeat=False)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as gateway, httpx.Client(transport=GatewayTransport(gateway)) as transport:
         client = _anthropic_sdk(transport, api_key)
         message = client.messages.create(model="gpt-test", max_tokens=64, messages=[{"role": "user", "content": "hi"}])
@@ -232,10 +223,9 @@ def test_anthropic_the_documented_sdk_configuration_handles_buffered_and_streami
     assert text == "héllo \U0001f30d world"
 
 
-@respx.mock
-def test_anthropic_the_stream_parses_with_the_sdk_models(api_key, dp_app):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
-    mock_control_plane()
+def test_anthropic_the_stream_parses_with_the_sdk_models(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, status=200, body=TEXT_LOG, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 64, "messages": [{"role": "user", "content": "hi"}], "stream": True})
     payloads = [line[6:] for line in response.text.splitlines() if line.startswith("data: ")]
@@ -251,8 +241,7 @@ def test_anthropic_the_stream_parses_with_the_sdk_models(api_key, dp_app):
     assert message_delta.usage.output_tokens == 7
 
 
-@respx.mock
-def test_anthropic_tools_translate_on_the_way_through(api_key, dp_app):
+def test_anthropic_tools_translate_on_the_way_through(http_mock, api_key, dp_app):
     reply = {
         "id": "chatcmpl-9",
         "model": "gpt-real",
@@ -269,8 +258,8 @@ def test_anthropic_tools_translate_on_the_way_through(api_key, dp_app):
         ],
         "usage": {"prompt_tokens": 9, "completion_tokens": 4, "total_tokens": 13},
     }
-    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=reply))
-    mock_control_plane()
+    http_mock.post(UPSTREAM, status=200, payload=reply, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = _post(
             client,
@@ -288,7 +277,7 @@ def test_anthropic_tools_translate_on_the_way_through(api_key, dp_app):
     assert (call.id, call.name, call.input) == ("call_1", "get_weather", {"city": "Paris"})
     assert message.stop_reason == "tool_use"
 
-    sent = json.loads(route.calls.last.request.content)
+    sent = json.loads(http_mock.requests.get(("POST", URL(UPSTREAM)), [])[-1].kwargs["data"])
     assert sent["tools"][0]["function"]["name"] == "get_weather"  # Anthropic tool shape respelled for OpenAI
 
 
@@ -300,11 +289,10 @@ def test_anthropic_errors_speak_this_dialect(api_key, dp_app):
     assert response.json() == {"type": "error", "error": {"type": "unknown_model", "message": ""}}
 
 
-@respx.mock
 @pytest.mark.parametrize("stream", [False, True])
-def test_anthropic_cross_provider_http_errors_speak_this_dialect(api_key, dp_app, stream):
-    respx.post(UPSTREAM).mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "slow down"}}))
-    mock_control_plane()
+def test_anthropic_cross_provider_http_errors_speak_this_dialect(http_mock, api_key, dp_app, stream):
+    http_mock.post(UPSTREAM, status=429, payload={"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = _post(
             client,
@@ -315,10 +303,9 @@ def test_anthropic_cross_provider_http_errors_speak_this_dialect(api_key, dp_app
     assert response.json() == {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}}
 
 
-@respx.mock
-def test_anthropic_cross_provider_transport_errors_speak_this_dialect(api_key, dp_app):
-    respx.post(UPSTREAM).mock(side_effect=httpx2.ReadTimeout("timed out"))
-    mock_control_plane()
+def test_anthropic_cross_provider_transport_errors_speak_this_dialect(http_mock, api_key, dp_app):
+    http_mock.post(UPSTREAM, exception=TimeoutError("timed out"), repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
     assert response.status_code == 504
