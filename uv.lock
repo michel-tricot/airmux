@@ -267,7 +267,7 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "starlette" },
     { name = "tiktoken" },
-    { name = "uvicorn", extras = ["standard"] },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.1" },
 ]
 
 [[package]]
