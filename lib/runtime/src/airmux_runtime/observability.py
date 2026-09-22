@@ -6,15 +6,19 @@ import contextvars
 import json
 import logging
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any, TextIO
+from uuid import UUID
+
+from pydantic_core import PydanticSerializationError, to_json
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from uuid import UUID
 
 _MAX_BATCH_RECORDS = 100
 _MAX_BATCH_CHARACTERS = 65_536
 _FLUSH_INTERVAL_SECONDS = 0.1
+_JSON_SCALARS = (str, int, float, Decimal, UUID)
 
 _request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("airmux_request_id", default=None)
 
@@ -42,6 +46,11 @@ class JsonFormatter(logging.Formatter):
         payload.update(getattr(record, "fields", {}))
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
+        if all(value is None or isinstance(value, _JSON_SCALARS) for value in payload.values()):
+            try:
+                return to_json(payload, ensure_ascii=True, fallback=str).decode()
+            except (PydanticSerializationError, UnicodeError):
+                pass
         return json.dumps(payload, separators=(",", ":"), default=str)
 
 
