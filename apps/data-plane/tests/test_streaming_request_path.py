@@ -375,3 +375,38 @@ async def test_stream_prefix_arrives_before_next_provider_read(protocols, cancel
             if not task.done():
                 task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+
+
+@pytest.mark.parametrize("disconnect", [(version, stage) for version in ("2.3", "2.4") for stage in ("http.response.start", "http.response.body")])
+async def test_disconnect_closes_stream_iterator_and_preserves_usage(protocols, disconnect, http_mock, metering, http_client):
+    spec_version, disconnect_at = disconnect
+    kind, _ = protocols
+    _, outbox = metering
+    http_mock.post(UPSTREAM.url, status=200, body=CASES[kind]["text"].log)
+    response = await _open_stream(metering, http_client, protocols=protocols)
+    iterator = _body_gen(response)
+    disconnected = asyncio.Event()
+
+    async def receive():
+        await disconnected.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == disconnect_at:
+            if spec_version == "2.4":
+                raise OSError
+            disconnected.set()
+            await asyncio.Event().wait()
+
+    scope = {"type": "http", "asgi": {"spec_version": spec_version}}
+    if spec_version == "2.4":
+        with pytest.raises(ClientDisconnect):
+            await response(scope, receive, send)
+    else:
+        await asyncio.wait_for(response(scope, receive, send), 1)
+
+    event = await _event(outbox)
+    assert event.status == "cancelled"
+    with pytest.raises(StopAsyncIteration):
+        await anext(iterator)
+    assert await _event(outbox) == event
