@@ -3,18 +3,24 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from contextlib import suppress
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
 import aiohttp
 import pytest
-from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
+from aiohttp import web
+from aiohttp.test_utils import TestServer
+from conftest import CTX, ORG, PROVIDER, TEXT_LOG, WORKSPACE, delta_event, make_outbox, mock_control_plane, sse
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
+from test_adapter_streaming import CASES, ERROR_LOGS
 
+from airmux_runtime.secrets import Secret
 from contract import uuid7
 from data_plane.canonical import CanonicalRequest
+from data_plane.egress import REGISTRY as EGRESS
 from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics
@@ -91,39 +97,45 @@ def test_streaming_upstream_error_status_passes_through(http_mock, api_key, dp_a
     assert r.status_code == 429
 
 
+def _payloads(chunks):
+    return [json.loads(line[6:]) for line in b"".join(chunks).splitlines() if line.startswith(b"data: ") and line != b"data: [DONE]"]
+
+
 def _body_gen(response: object) -> AsyncGenerator[bytes]:
     assert isinstance(response, StreamingResponse)
     return cast("AsyncGenerator[bytes]", response.body_iterator)
 
 
 async def _open_stream(
-    ctx: Ctx,
-    request: CanonicalRequest,
-    outbox: SqliteOutbox,
+    metering: tuple[Ctx, SqliteOutbox],
     http_client: aiohttp.ClientSession,
     metrics: DataPlaneMetrics | None = None,
+    *,
+    protocols: tuple[str, str] = ("openai_compatible", "openai_chat_completions"),
+    upstream: UpstreamRequest = UPSTREAM,
 ) -> Response:
+    ctx, outbox = metering
+    kind, dialect = protocols
     with outbox.reserve() as reservation:
         session = StreamSession(
-            adapter=make_adapter(),
-            ingress=INGRESS["openai_chat_completions"],
+            adapter=EGRESS[kind](PROVIDER.model_copy(update={"kind": kind}), Secret("sk-test")),
+            ingress=INGRESS[dialect],
             ctx=ctx,
-            request=request,
+            request=REQUEST,
             adjustments=(),
             reservation=reservation,
             http_client=http_client,
             metrics=metrics or DataPlaneMetrics(),
-            egress_kind="openai_compatible",
+            egress_kind=kind,
             attempt_started_at=time.monotonic(),
         )
-        return await session.open(UPSTREAM)
+        return await session.open(upstream)
 
 
 async def test_cancellation_estimates_partial_tokens(http_mock, metering, http_client):
-    ctx, outbox = metering
+    _, outbox = metering
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=TEXT_LOG, repeat=True)
-    req = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "count to three"}], stream=True)
-    iterator = _body_gen(await _open_stream(ctx, req, outbox, http_client))
+    iterator = _body_gen(await _open_stream(metering, http_client))
     await anext(iterator)
     await anext(iterator)
     with pytest.raises(asyncio.CancelledError):
@@ -136,7 +148,7 @@ async def test_cancellation_estimates_partial_tokens(http_mock, metering, http_c
 
 
 async def test_disconnect_before_first_body_releases_stream_resources(monkeypatch, metering, http_client):
-    ctx, outbox = metering
+    _, outbox = metering
 
     class FakeResponse:
         status = 200
@@ -152,7 +164,7 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
 
     stream = FakeStream()
     monkeypatch.setattr(http_client, "request", lambda *_args, **_kwargs: stream)
-    response = await _open_stream(ctx, REQUEST, outbox, http_client)
+    response = await _open_stream(metering, http_client)
 
     async def receive():
         return {"type": "http.disconnect"}
@@ -169,37 +181,35 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
 
 
 async def test_mid_stream_error_event_becomes_sse_error(http_mock, metering, http_client):
-    ctx, outbox = metering
+    _, outbox = metering
     metrics = DataPlaneMetrics()
     hi = {"id": "cmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": {"content": "héllo "}, "finish_reason": None}]}
     log = sse(hi) + sse({"error": {"code": "overloaded", "message": "try later"}})
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=log, repeat=True)
-    chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client, metrics))]
-    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "overloaded" for chunk in chunks if chunk != b"data: [DONE]\n\n")
+    chunks = [chunk async for chunk in _body_gen(await _open_stream(metering, http_client, metrics))]
+    assert any(event.get("error", {}).get("code") == "overloaded" for event in _payloads(chunks))
     assert (await _event(outbox)).status == "upstream_error"
     assert 'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0' in metrics.render().decode()
 
 
 async def test_stream_ending_before_the_provider_terminal_becomes_sse_error(http_mock, metering, http_client):
-    ctx, outbox = metering
+    _, outbox = metering
     incomplete = TEXT_LOG.removesuffix(b"data: [DONE]\n\n")
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=incomplete, repeat=True)
-    chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
-    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
+    chunks = [chunk async for chunk in _body_gen(await _open_stream(metering, http_client))]
+    assert any(event.get("error", {}).get("code") == "invalid_upstream_response" for event in _payloads(chunks))
     assert (await _event(outbox)).status == "upstream_error"
 
 
 async def test_malformed_stream_event_becomes_sse_error(http_mock, metering, http_client):
-    ctx, outbox = metering
+    _, outbox = metering
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=b"data: not-json\n\n", repeat=True)
-    chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
-    assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
+    chunks = [chunk async for chunk in _body_gen(await _open_stream(metering, http_client))]
+    assert any(event.get("error", {}).get("code") == "invalid_upstream_response" for event in _payloads(chunks))
     assert (await _event(outbox)).status == "upstream_error"
 
 
 async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatch, metering, http_client):
-    ctx, outbox = metering
-
     class FakeResp:
         status = 502
 
@@ -225,5 +235,138 @@ async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatc
 
     monkeypatch.setattr(http_client, "request", FakeClient().request)
     with pytest.raises(aiohttp.ClientPayloadError, match="connection reset"):
-        await _open_stream(ctx, REQUEST, outbox, http_client)
+        await _open_stream(metering, http_client)
     assert cm.exited
+
+
+@pytest.fixture(params=[(kind, dialect) for kind in sorted(EGRESS) for dialect in sorted(INGRESS)])
+def protocols(request):
+    return request.param
+
+
+@pytest.fixture
+def stream_clock(monkeypatch):
+    monkeypatch.setattr(time, "time", lambda: 1_700_000_000)
+
+
+def _render_frames(kind, dialect, ctx, payload, *, complete=True):
+    adapter = EGRESS[kind](PROVIDER.model_copy(update={"kind": kind}), Secret("sk-test"))
+    state = adapter.new_stream_state(ctx)
+    renderer = INGRESS[dialect].new_stream()
+    frames = renderer.start(ctx)
+    for event in adapter.frame(payload, state):
+        for chunk in adapter.transform_stream_event(event, state):
+            frames.extend(renderer.chunk(chunk))
+    if complete:
+        frames.extend(renderer.closing(adapter.finalize(state), []))
+    return frames
+
+
+@pytest.mark.parametrize("modality", ["text", "tools"])
+@pytest.mark.usefixtures("stream_clock")
+async def test_available_stream_frames_are_batched_without_changing_bytes(protocols, modality, http_mock, metering, http_client):
+    kind, dialect = protocols
+    ctx, outbox = metering
+    payload = CASES[kind][modality].log
+    http_mock.post(UPSTREAM.url, status=200, body=payload)
+    expected = _render_frames(kind, dialect, ctx, payload)
+    response = await _open_stream(metering, http_client, protocols=protocols)
+    batches = [batch async for batch in _body_gen(response)]
+    assert b"".join(batches) == b"".join(expected)
+    assert len(batches) < len(expected)
+    assert (await _event(outbox)).status == "ok"
+
+
+@pytest.mark.parametrize("failure", ["provider", "malformed"])
+@pytest.mark.usefixtures("stream_clock")
+async def test_buffered_stream_prefix_precedes_error(protocols, failure, http_mock, metering, http_client):
+    kind, dialect = protocols
+    ctx, outbox = metering
+    prefix = b"\n\n".join(CASES[kind]["text"].log.split(b"\n\n")[:3]) + b"\n\n"
+    expected = b"".join(_render_frames(kind, dialect, ctx, prefix, complete=False))
+    suffix = ERROR_LOGS[kind] if failure == "provider" else b"data: not-json\n\n"
+    http_mock.post(UPSTREAM.url, status=200, body=prefix + suffix)
+    response = await _open_stream(metering, http_client, protocols=protocols)
+    body = b"".join([batch async for batch in _body_gen(response)])
+    assert body.startswith(expected)
+    code = b"overloaded" if failure == "provider" else b"invalid_upstream_response"
+    assert code in body[len(expected) :]
+    assert (await _event(outbox)).status == "upstream_error"
+
+
+@pytest.mark.parametrize("dialect", sorted(INGRESS))
+@pytest.mark.usefixtures("stream_clock")
+async def test_large_stream_batches_are_bounded_and_preserve_content(dialect, metering, http_client):
+    ctx, outbox = metering
+    payload = sse(delta_event({"content": "x" * 1024})) * 512 + sse(delta_event({}, finish="stop")) + b"data: [DONE]\n\n"
+    expected = _render_frames("openai_compatible", dialect, ctx, payload)
+
+    async def stream(_request):
+        return web.Response(body=payload, content_type="text/event-stream")
+
+    provider = web.Application()
+    provider.router.add_post("/", stream)
+    async with TestServer(provider) as server:
+        response = await _open_stream(
+            metering, http_client, protocols=("openai_compatible", dialect), upstream=replace(UPSTREAM, url=str(server.make_url("/")))
+        )
+        batches = [batch async for batch in _body_gen(response)]
+    assert b"".join(batches) == b"".join(expected)
+    assert max(map(len, batches)) < 65_536 + max(map(len, expected))
+    assert len(batches) < len(expected) // 2
+    assert (await _event(outbox)).status == "ok"
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_stream_prefix_arrives_before_next_provider_read(protocols, cancel, metering, http_client):
+    kind, _ = protocols
+    _, outbox = metering
+    release = asyncio.Event()
+    delivered = asyncio.Event()
+    payload = CASES[kind]["text"].log
+    prefix = b"\n\n".join(payload.split(b"\n\n")[:3]) + b"\n\n"
+    received = bytearray()
+
+    async def stream(request):
+        response = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
+        await response.prepare(request)
+        await response.write(prefix)
+        await release.wait()
+        with suppress(ConnectionResetError):
+            await response.write(payload[len(prefix) :])
+        return response
+
+    async def send(message):
+        if message["type"] == "http.response.body":
+            received.extend(message["body"])
+            if "héllo".encode() in received:
+                delivered.set()
+
+    async def receive():
+        await asyncio.Event().wait()
+        return {"type": "http.disconnect"}
+
+    provider = web.Application()
+    provider.router.add_post("/", stream)
+    async with TestServer(provider) as server:
+        response = await _open_stream(metering, http_client, protocols=protocols, upstream=replace(UPSTREAM, url=str(server.make_url("/"))))
+        task = asyncio.create_task(response({"type": "http", "asgi": {"spec_version": "2.4"}}, receive, send))
+        try:
+            await asyncio.wait_for(delivered.wait(), 1)
+            assert not release.is_set()
+            if cancel:
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+            else:
+                release.set()
+                await asyncio.wait_for(task, 1)
+            event = await _event(outbox)
+            assert event.status == ("cancelled" if cancel else "ok")
+            assert event.input_tokens > 0
+            assert event.output_tokens > 0
+        finally:
+            release.set()
+            if not task.done():
+                task.cancel()
+            await asyncio.gather(task, return_exceptions=True)

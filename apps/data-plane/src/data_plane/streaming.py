@@ -15,7 +15,7 @@ from data_plane.metering import status_for_error, usage_event
 from data_plane.metrics import upstream_outcome
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Iterator
 
     from starlette.types import Receive, Scope, Send
 
@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from data_plane.ingress import IngressAdapter
     from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome
     from data_plane.outbox import OutboxReservation
+
+_MAX_STREAM_BATCH_BYTES = 65_536
 
 
 @dataclass(frozen=True)
@@ -85,10 +87,8 @@ class _StreamResponse(StreamingResponse):
             for frame in self._renderer.start(self._session.ctx):
                 yield frame
             async for payload in self._response.content.iter_any():
-                for event in self._session.adapter.frame(payload, self._stream_state):
-                    for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):
-                        for frame in self._renderer.chunk(canonical_chunk):
-                            yield frame
+                for batch in self._render_payload(payload):
+                    yield batch
             self._session.adapter.validate_stream(self._stream_state)
             final = self._session.adapter.finalize(self._stream_state)
             for frame in self._renderer.closing(final, list(self._session.adjustments)):
@@ -109,6 +109,23 @@ class _StreamResponse(StreamingResponse):
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             self._record(self._cancelled_event(), "cancelled")
             raise
+
+    def _render_payload(self, payload: bytes) -> Iterator[bytes]:
+        batch = bytearray()
+        try:
+            for event in self._session.adapter.frame(payload, self._stream_state):
+                for canonical_chunk in self._session.adapter.transform_stream_event(event, self._stream_state):
+                    for frame in self._renderer.chunk(canonical_chunk):
+                        batch.extend(frame)
+                        if len(batch) >= _MAX_STREAM_BATCH_BYTES:
+                            yield bytes(batch)
+                            batch.clear()
+        except Exception:
+            if batch:
+                yield bytes(batch)
+            raise
+        if batch:
+            yield bytes(batch)
 
     def _cancelled_event(self) -> UsageEvent:
         return usage_event(
