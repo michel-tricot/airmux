@@ -28,7 +28,6 @@ def serve(config: Path, *, host: str, port: int, dev: bool, workers: int) -> Non
         factory=True,
         access_log=dev,
         http=RequestDispatchProtocol,
-        loop="asyncio",
     )
 
 
