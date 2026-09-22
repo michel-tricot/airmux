@@ -18,7 +18,7 @@ from starlette.testclient import TestClient
 from test_adapter_streaming import CASES, ERROR_LOGS
 
 from airmux_runtime.secrets import Secret
-from contract import uuid7
+from contract import TokenUsageSource, uuid7
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY as EGRESS
 from data_plane.egress.base import Ctx, UpstreamRequest
@@ -132,9 +132,11 @@ async def _open_stream(
         return await session.open(upstream)
 
 
-async def test_cancellation_estimates_partial_tokens(http_mock, metering, http_client):
+@pytest.mark.parametrize("complete", [False, True])
+async def test_cancellation_records_available_provider_usage(complete, http_mock, metering, http_client):
     _, outbox = metering
-    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=TEXT_LOG, repeat=True)
+    payload = TEXT_LOG if complete else sse(delta_event({"content": "héllo "}))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=payload, repeat=True)
     iterator = _body_gen(await _open_stream(metering, http_client))
     await anext(iterator)
     await anext(iterator)
@@ -145,6 +147,9 @@ async def test_cancellation_estimates_partial_tokens(http_mock, metering, http_c
     assert event.input_tokens > 0
     assert event.output_tokens > 0
     assert event.cost_usd > 0
+    assert event.token_usage_source == (TokenUsageSource.PROVIDER if complete else TokenUsageSource.ESTIMATED)
+    if complete:
+        assert (event.input_tokens, event.output_tokens) == (5, 7)
 
 
 async def test_disconnect_before_first_body_releases_stream_resources(monkeypatch, metering, http_client):
