@@ -73,11 +73,11 @@ class AnthropicResponseStream:
         if self.open is not None and self.open.key == key:
             return [], self.open.index
         if delta.type == "text":
-            opening = fmt.TextOut(text="")
+            opening = fmt.TextOut(type="text", text="")
         elif delta.type == "reasoning":
-            opening = fmt.ThinkingOut(thinking="")
+            opening = fmt.ThinkingOut(type="thinking", thinking="", signature="")
         else:
-            opening = fmt.ToolUseOut(id=delta.id or "", name=delta.name or "", input={})
+            opening = fmt.ToolUseOut(type="tool_use", id=delta.id or "", name=delta.name or "", input={})
         events = self._close()
         self.open = _OpenBlock(index=self.opened, key=key)
         self.opened += 1
@@ -173,15 +173,7 @@ class AnthropicIngress(IngressAdapter):
         return request, adjustments
 
     def render_response(self, final: CanonicalResponse) -> Response:
-        message = fmt.MessageOut(
-            id=final.id,
-            model=final.model,
-            content=fmt.to_response_content(final.content),
-            stop_reason=fmt.stop_reason(final.finish_reason),
-            usage=fmt.usage_out(final.usage),
-            gateway=final.gateway,
-        )
-        return JSONResponse(message, exclude_none=True)
+        return JSONResponse(fmt.response_body(final), exclude_none=True)
 
     def render_error(self, err: CanonicalError) -> Response:
         return JSONResponse({"type": "error", "error": {"type": err.code, "message": err.message}}, status_code=err.status)
