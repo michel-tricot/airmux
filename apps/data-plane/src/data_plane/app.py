@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gc
 import logging
 import os
 import signal
@@ -116,4 +117,5 @@ def create_app(config: Config) -> ASGIApp:
 
 
 def load_app() -> ASGIApp:
+    gc.set_threshold(20_000, *gc.get_threshold()[1:])
     return create_app(load_config())
