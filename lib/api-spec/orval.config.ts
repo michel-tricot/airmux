@@ -114,6 +114,7 @@ export default defineConfig({
         },
         fetch: {
           includeHttpResponseReturnType: false,
+          arrayFormat: 'repeat',
         },
         mutator: {
           path: path.resolve(apiClientReactSrc, 'custom-fetch.ts'),

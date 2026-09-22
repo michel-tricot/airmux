@@ -3379,6 +3379,367 @@ paths:
       - scope: credential_scope
         anyOf:
         - provider-credentials.manage
+  /api/v1/organizations/{org_id}/reports/overview:
+    get:
+      tags:
+      - Organization Reporting
+      summary: Get Organization Overview Report
+      description: 'Report reconciled request, usage, cost, trend, and attribution facts for an organization.
+
+
+        Required permission: `usage.read`.'
+      operationId: get_org_overview_report
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: bucket
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewBucket'
+          description: Current-period series bucket size
+          default: day
+        description: Current-period series bucket size
+      - name: split
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewSplit'
+          description: Optional series split; model/provider request counts are assigned to the final included routed attempt
+          default: none
+        description: Optional series split; model/provider request counts are assigned to the final included routed attempt
+      - name: group
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewGroup'
+          description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+          default: workspace
+        description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal/user snapshot ID filter
+          title: Principal
+        description: Repeated principal/user snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same
+            visible attempt
+          title: Model
+        description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible
+          attempt
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
+            visible attempt
+          title: Provider
+        description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
+          visible attempt
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          description: Opaque committed ingestion watermark; omit for the latest committed batch
+          title: As Of
+        description: Opaque committed ingestion watermark; omit for the latest committed batch
+      - name: workspace
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated workspace snapshot ID filter
+          title: Workspace
+        description: Repeated workspace snapshot ID filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OverviewReportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: org_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/overview:
+    get:
+      tags:
+      - Workspace Reporting
+      summary: Get Workspace Overview Report
+      description: 'Report reconciled request, usage, cost, trend, and attribution facts for one workspace.
+
+
+        Required permission: `usage.read`.'
+      operationId: get_workspace_overview_report
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: bucket
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewBucket'
+          description: Current-period series bucket size
+          default: day
+        description: Current-period series bucket size
+      - name: split
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewSplit'
+          description: Optional series split; model/provider request counts are assigned to the final included routed attempt
+          default: none
+        description: Optional series split; model/provider request counts are assigned to the final included routed attempt
+      - name: group
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/OverviewGroup'
+          description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+          default: workspace
+        description: Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal/user snapshot ID filter
+          title: Principal
+        description: Repeated principal/user snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same
+            visible attempt
+          title: Model
+        description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible
+          attempt
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
+            visible attempt
+          title: Provider
+        description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
+          visible attempt
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          description: Opaque committed ingestion watermark; omit for the latest committed batch
+          title: As Of
+        description: Opaque committed ingestion watermark; omit for the latest committed batch
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OverviewReportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
   /api/v1/organizations/{org_id}/users:
     get:
       tags:
@@ -4922,6 +5283,43 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
+    CostSourceCountsDeltaOut:
+      properties:
+        catalog_estimate:
+          type: integer
+          title: Catalog Estimate
+        unavailable:
+          type: integer
+          title: Unavailable
+        not_applicable:
+          type: integer
+          title: Not Applicable
+      type: object
+      required:
+      - catalog_estimate
+      - unavailable
+      - not_applicable
+      title: CostSourceCountsDeltaOut
+    CostSourceCountsOut:
+      properties:
+        catalog_estimate:
+          type: integer
+          minimum: 0.0
+          title: Catalog Estimate
+        unavailable:
+          type: integer
+          minimum: 0.0
+          title: Unavailable
+        not_applicable:
+          type: integer
+          minimum: 0.0
+          title: Not Applicable
+      type: object
+      required:
+      - catalog_estimate
+      - unavailable
+      - not_applicable
+      title: CostSourceCountsOut
     CredentialAccess:
       properties:
         kind:
@@ -5595,6 +5993,14 @@ components:
       required:
       - data
       title: Envelope[OrgSummaryOut]
+    Envelope_OverviewReportOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OverviewReportOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OverviewReportOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -7430,6 +7836,463 @@ components:
       additionalProperties: false
       type: object
       title: OrgUpdate
+    OutcomeCountsDeltaOut:
+      properties:
+        succeeded:
+          type: integer
+          title: Succeeded
+        failed:
+          type: integer
+          title: Failed
+        denied:
+          type: integer
+          title: Denied
+        timeout:
+          type: integer
+          title: Timeout
+        cancelled:
+          type: integer
+          title: Cancelled
+      type: object
+      required:
+      - succeeded
+      - failed
+      - denied
+      - timeout
+      - cancelled
+      title: OutcomeCountsDeltaOut
+    OutcomeCountsOut:
+      properties:
+        succeeded:
+          type: integer
+          minimum: 0.0
+          title: Succeeded
+        failed:
+          type: integer
+          minimum: 0.0
+          title: Failed
+        denied:
+          type: integer
+          minimum: 0.0
+          title: Denied
+        timeout:
+          type: integer
+          minimum: 0.0
+          title: Timeout
+        cancelled:
+          type: integer
+          minimum: 0.0
+          title: Cancelled
+      type: object
+      required:
+      - succeeded
+      - failed
+      - denied
+      - timeout
+      - cancelled
+      title: OutcomeCountsOut
+    OverviewAttributionOut:
+      properties:
+        id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+        label:
+          type: string
+          title: Label
+        known_cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Known Cost Usd
+        share_of_known_cost:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Share Of Known Cost
+        logical_requests:
+          type: integer
+          minimum: 0.0
+          title: Logical Requests
+        attempts:
+          type: integer
+          minimum: 0.0
+          title: Attempts
+        incomplete_requests:
+          type: integer
+          minimum: 0.0
+          title: Incomplete Requests
+        unavailable_usage_attempts:
+          type: integer
+          minimum: 0.0
+          title: Unavailable Usage Attempts
+        token_sources:
+          $ref: '#/components/schemas/TokenSourceCountsOut'
+        unpriced_attempts:
+          type: integer
+          minimum: 0.0
+          title: Unpriced Attempts
+        cost_sources:
+          $ref: '#/components/schemas/CostSourceCountsOut'
+        token_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Token Completeness
+        cost_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Cost Completeness
+      type: object
+      required:
+      - id
+      - label
+      - known_cost_usd
+      - share_of_known_cost
+      - logical_requests
+      - attempts
+      - incomplete_requests
+      - unavailable_usage_attempts
+      - token_sources
+      - unpriced_attempts
+      - cost_sources
+      - token_completeness
+      - cost_completeness
+      title: OverviewAttributionOut
+    OverviewBucket:
+      type: string
+      enum:
+      - hour
+      - day
+      title: OverviewBucket
+    OverviewFreshnessOut:
+      properties:
+        watermark:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Watermark
+        received_at:
+          type: string
+          format: date-time
+          title: Received At
+        delivery_completeness:
+          type: string
+          const: unavailable
+          title: Delivery Completeness
+          default: unavailable
+      type: object
+      required:
+      - watermark
+      - received_at
+      title: OverviewFreshnessOut
+    OverviewGroup:
+      type: string
+      enum:
+      - workspace
+      - principal
+      - inference_key
+      - model
+      - provider
+      title: OverviewGroup
+    OverviewMetricsDeltaOut:
+      properties:
+        logical_requests:
+          type: integer
+          title: Logical Requests
+        attempts:
+          type: integer
+          title: Attempts
+        outcomes:
+          $ref: '#/components/schemas/OutcomeCountsDeltaOut'
+        pending_requests:
+          type: integer
+          title: Pending Requests
+        incomplete_requests:
+          type: integer
+          title: Incomplete Requests
+        known_input_tokens:
+          type: integer
+          title: Known Input Tokens
+        known_output_tokens:
+          type: integer
+          title: Known Output Tokens
+        known_cache_read_tokens:
+          type: integer
+          title: Known Cache Read Tokens
+        known_cache_write_tokens:
+          type: integer
+          title: Known Cache Write Tokens
+        unavailable_usage_attempts:
+          type: integer
+          title: Unavailable Usage Attempts
+        token_sources:
+          $ref: '#/components/schemas/TokenSourceCountsDeltaOut'
+        known_cost_usd:
+          type: string
+          pattern: ^-?\d+(?:\.\d+)?$
+          title: Known Cost Usd
+        unpriced_attempts:
+          type: integer
+          title: Unpriced Attempts
+        cost_sources:
+          $ref: '#/components/schemas/CostSourceCountsDeltaOut'
+        cost_per_request_usd:
+          anyOf:
+          - type: string
+            pattern: ^-?\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Cost Per Request Usd
+      type: object
+      required:
+      - logical_requests
+      - attempts
+      - outcomes
+      - pending_requests
+      - incomplete_requests
+      - known_input_tokens
+      - known_output_tokens
+      - known_cache_read_tokens
+      - known_cache_write_tokens
+      - unavailable_usage_attempts
+      - token_sources
+      - known_cost_usd
+      - unpriced_attempts
+      - cost_sources
+      - cost_per_request_usd
+      title: OverviewMetricsDeltaOut
+    OverviewMetricsOut:
+      properties:
+        logical_requests:
+          type: integer
+          minimum: 0.0
+          title: Logical Requests
+          description: Distinct logical requests; model and provider splits assign each request to its final included routed
+            attempt
+        attempts:
+          type: integer
+          minimum: 0.0
+          title: Attempts
+        outcomes:
+          $ref: '#/components/schemas/OutcomeCountsOut'
+        pending_requests:
+          type: integer
+          minimum: 0.0
+          title: Pending Requests
+        incomplete_requests:
+          type: integer
+          minimum: 0.0
+          title: Incomplete Requests
+        known_input_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Input Tokens
+        known_output_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Output Tokens
+        known_cache_read_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Cache Read Tokens
+        known_cache_write_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Cache Write Tokens
+        unavailable_usage_attempts:
+          type: integer
+          minimum: 0.0
+          title: Unavailable Usage Attempts
+        token_sources:
+          $ref: '#/components/schemas/TokenSourceCountsOut'
+          description: Stored token provenance counts for routed attempts and denial observations
+        known_cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Known Cost Usd
+        unpriced_attempts:
+          type: integer
+          minimum: 0.0
+          title: Unpriced Attempts
+        cost_sources:
+          $ref: '#/components/schemas/CostSourceCountsOut'
+          description: Stored pricing provenance counts for routed attempts and denial observations
+        cost_per_request_usd:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Cost Per Request Usd
+        cost_per_request_denominator:
+          type: integer
+          minimum: 0.0
+          title: Cost Per Request Denominator
+        token_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Token Completeness
+        cost_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Cost Completeness
+      type: object
+      required:
+      - logical_requests
+      - attempts
+      - outcomes
+      - pending_requests
+      - incomplete_requests
+      - known_input_tokens
+      - known_output_tokens
+      - known_cache_read_tokens
+      - known_cache_write_tokens
+      - unavailable_usage_attempts
+      - token_sources
+      - known_cost_usd
+      - unpriced_attempts
+      - cost_sources
+      - cost_per_request_usd
+      - cost_per_request_denominator
+      - token_completeness
+      - cost_completeness
+      title: OverviewMetricsOut
+    OverviewPeriodOut:
+      properties:
+        start_at:
+          type: string
+          format: date-time
+          title: Start At
+        end_at:
+          type: string
+          format: date-time
+          title: End At
+        timezone:
+          type: string
+          title: Timezone
+      type: object
+      required:
+      - start_at
+      - end_at
+      - timezone
+      title: OverviewPeriodOut
+    OverviewPeriodsOut:
+      properties:
+        current:
+          $ref: '#/components/schemas/OverviewPeriodOut'
+        comparison:
+          $ref: '#/components/schemas/OverviewPeriodOut'
+      type: object
+      required:
+      - current
+      - comparison
+      title: OverviewPeriodsOut
+    OverviewRange:
+      type: string
+      enum:
+      - today
+      - 7d
+      - 30d
+      - month_to_date
+      - custom
+      title: OverviewRange
+    OverviewReportOut:
+      properties:
+        freshness:
+          $ref: '#/components/schemas/OverviewFreshnessOut'
+        periods:
+          $ref: '#/components/schemas/OverviewPeriodsOut'
+        bucket:
+          $ref: '#/components/schemas/OverviewBucket'
+        split:
+          $ref: '#/components/schemas/OverviewSplit'
+        group:
+          $ref: '#/components/schemas/OverviewGroup'
+        summary:
+          $ref: '#/components/schemas/OverviewSummaryOut'
+        series:
+          items:
+            $ref: '#/components/schemas/OverviewSeriesPointOut'
+          type: array
+          title: Series
+        attribution:
+          items:
+            $ref: '#/components/schemas/OverviewAttributionOut'
+          type: array
+          title: Attribution
+      type: object
+      required:
+      - freshness
+      - periods
+      - bucket
+      - split
+      - group
+      - summary
+      - series
+      - attribution
+      title: OverviewReportOut
+    OverviewSeriesPointOut:
+      properties:
+        start_at:
+          type: string
+          format: date-time
+          title: Start At
+        end_at:
+          type: string
+          format: date-time
+          title: End At
+        split_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Split Id
+        split_label:
+          type: string
+          title: Split Label
+        metrics:
+          $ref: '#/components/schemas/OverviewMetricsOut'
+      type: object
+      required:
+      - start_at
+      - end_at
+      - split_id
+      - split_label
+      - metrics
+      title: OverviewSeriesPointOut
+    OverviewSplit:
+      type: string
+      enum:
+      - none
+      - workspace
+      - model
+      - provider
+      title: OverviewSplit
+    OverviewSummaryOut:
+      properties:
+        current:
+          $ref: '#/components/schemas/OverviewMetricsOut'
+        comparison:
+          $ref: '#/components/schemas/OverviewMetricsOut'
+        delta:
+          $ref: '#/components/schemas/OverviewMetricsDeltaOut'
+      type: object
+      required:
+      - current
+      - comparison
+      - delta
+      title: OverviewSummaryOut
     PageEnvelope_ActivityOut_:
       properties:
         data:
@@ -8927,6 +9790,61 @@ components:
       additionalProperties: false
       type: object
       title: TaxonomySpec
+    TokenSourceCountsDeltaOut:
+      properties:
+        provider:
+          type: integer
+          title: Provider
+        estimated:
+          type: integer
+          title: Estimated
+        partial:
+          type: integer
+          title: Partial
+        unavailable:
+          type: integer
+          title: Unavailable
+        not_applicable:
+          type: integer
+          title: Not Applicable
+      type: object
+      required:
+      - provider
+      - estimated
+      - partial
+      - unavailable
+      - not_applicable
+      title: TokenSourceCountsDeltaOut
+    TokenSourceCountsOut:
+      properties:
+        provider:
+          type: integer
+          minimum: 0.0
+          title: Provider
+        estimated:
+          type: integer
+          minimum: 0.0
+          title: Estimated
+        partial:
+          type: integer
+          minimum: 0.0
+          title: Partial
+        unavailable:
+          type: integer
+          minimum: 0.0
+          title: Unavailable
+        not_applicable:
+          type: integer
+          minimum: 0.0
+          title: Not Applicable
+      type: object
+      required:
+      - provider
+      - estimated
+      - partial
+      - unavailable
+      - not_applicable
+      title: TokenSourceCountsOut
     TokenUsageSource:
       type: string
       enum:
@@ -9481,6 +10399,9 @@ tags:
 - name: Organization Usage Events
   description: Inspect usage events across an organization
   x-displayName: Usage Events
+- name: Organization Reporting
+  description: Inspect reconciled request, usage, cost, trend, and attribution reports across an organization
+  x-displayName: Reporting
 - name: Organization Activity
   description: Inspect recent audited changes in an organization
   x-displayName: Activity
@@ -9511,6 +10432,9 @@ tags:
 - name: Workspace Usage Events
   description: Inspect usage events for one workspace
   x-displayName: Usage Events
+- name: Workspace Reporting
+  description: Inspect reconciled request, usage, cost, trend, and attribution reports for one workspace
+  x-displayName: Reporting
 - name: Workspace Model Catalog
   description: Inspect the provider and model catalog available to a workspace
   x-displayName: Model Catalog
@@ -9542,6 +10466,7 @@ x-tagGroups:
   - Organization Management Keys
   - Organization Provider Credentials
   - Organization Usage Events
+  - Organization Reporting
   - Organization Activity
   - Organization Model Catalog
 - name: Workspace
@@ -9554,6 +10479,7 @@ x-tagGroups:
   - Workspace Inference Keys
   - Workspace Provider Credentials
   - Workspace Usage Events
+  - Workspace Reporting
   - Workspace Model Catalog
 - name: Data Plane API
   tags:

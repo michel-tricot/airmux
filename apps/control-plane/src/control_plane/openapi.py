@@ -86,6 +86,11 @@ API_TAGS = [
         "x-displayName": "Usage Events",
         "description": "Inspect usage events across an organization",
     },
+    {
+        "name": "Organization Reporting",
+        "x-displayName": "Reporting",
+        "description": "Inspect reconciled request, usage, cost, trend, and attribution reports across an organization",
+    },
     {"name": "Organization Activity", "x-displayName": "Activity", "description": "Inspect recent audited changes in an organization"},
     {
         "name": "Organization Model Catalog",
@@ -125,6 +130,11 @@ API_TAGS = [
         "description": "Inspect usage events for one workspace",
     },
     {
+        "name": "Workspace Reporting",
+        "x-displayName": "Reporting",
+        "description": "Inspect reconciled request, usage, cost, trend, and attribution reports for one workspace",
+    },
+    {
         "name": "Workspace Model Catalog",
         "x-displayName": "Model Catalog",
         "description": "Inspect the provider and model catalog available to a workspace",
@@ -162,6 +172,7 @@ TAG_GROUPS = [
             "Organization Management Keys",
             "Organization Provider Credentials",
             "Organization Usage Events",
+            "Organization Reporting",
             "Organization Activity",
             "Organization Model Catalog",
         ],
@@ -177,6 +188,7 @@ TAG_GROUPS = [
             "Workspace Inference Keys",
             "Workspace Provider Credentials",
             "Workspace Usage Events",
+            "Workspace Reporting",
             "Workspace Model Catalog",
         ],
     },
@@ -217,6 +229,8 @@ OPERATION_SUMMARIES = {
     "ensure_playground_session": "Prepare Playground Session",
     "end_playground_session": "End Playground Session",
     "list_activity": "List Organization Activity",
+    "get_org_overview_report": "Get Organization Overview Report",
+    "get_workspace_overview_report": "Get Workspace Overview Report",
     "bundle_manifest": "Get Authorized Bundle Manifest",
     "get_bundle": "Get Bundle",
     "ingest_events": "Ingest Usage Events",

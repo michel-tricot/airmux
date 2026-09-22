@@ -54,6 +54,8 @@ import type {
   EnrollOut,
   EventsIngestedOut,
   GatewayRequestFinishedV1,
+  GetOrgOverviewReportParams,
+  GetWorkspaceOverviewReportParams,
   HTTPValidationError,
   HeartbeatOut,
   HeartbeatV1,
@@ -100,6 +102,7 @@ import type {
   OrgServiceAccountIn,
   OrgSummaryOut,
   OrgUpdate,
+  OverviewReportOut,
   PageActivityOut,
   PageOrgOut,
   PageUsageEventOut,
@@ -6845,6 +6848,264 @@ export const useRotateProviderCredential = <TError = ErrorType<void | HTTPValida
       > => {
       return useMutation(getRotateProviderCredentialMutationOptions(options), queryClient);
     }
+
+export const getGetOrgOverviewReportUrl = (orgId: string,
+    params: GetOrgOverviewReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider","workspace"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/overview?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/overview`
+}
+
+/**
+ * Report reconciled request, usage, cost, trend, and attribution facts for an organization.
+ *
+ * Required permission: `usage.read`.
+ * @summary Get Organization Overview Report
+ */
+export const getOrgOverviewReport = async (orgId: string,
+    params: GetOrgOverviewReportParams, options?: Parameters<typeof customFetch>[1]): Promise<OverviewReportOut> => {
+
+  return customFetch<OverviewReportOut>(getGetOrgOverviewReportUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrgOverviewReportQueryKey = (orgId: string,
+    params?: GetOrgOverviewReportParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/overview`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetOrgOverviewReportQueryOptions = <TData = Awaited<ReturnType<typeof getOrgOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params: GetOrgOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrgOverviewReportQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrgOverviewReport>>> = ({ signal }) => getOrgOverviewReport(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOrgOverviewReportQueryResult = NonNullable<Awaited<ReturnType<typeof getOrgOverviewReport>>>
+export type GetOrgOverviewReportQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetOrgOverviewReport<TData = Awaited<ReturnType<typeof getOrgOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetOrgOverviewReportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgOverviewReport>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgOverviewReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgOverviewReport<TData = Awaited<ReturnType<typeof getOrgOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetOrgOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgOverviewReport>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgOverviewReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgOverviewReport<TData = Awaited<ReturnType<typeof getOrgOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetOrgOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Organization Overview Report
+ */
+
+export function useGetOrgOverviewReport<TData = Awaited<ReturnType<typeof getOrgOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: GetOrgOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOrgOverviewReportQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWorkspaceOverviewReportUrl = (orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/overview?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/overview`
+}
+
+/**
+ * Report reconciled request, usage, cost, trend, and attribution facts for one workspace.
+ *
+ * Required permission: `usage.read`.
+ * @summary Get Workspace Overview Report
+ */
+export const getWorkspaceOverviewReport = async (orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options?: Parameters<typeof customFetch>[1]): Promise<OverviewReportOut> => {
+
+  return customFetch<OverviewReportOut>(getGetWorkspaceOverviewReportUrl(orgId,workspaceRef,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceOverviewReportQueryKey = (orgId: string,
+    workspaceRef: string,
+    params?: GetWorkspaceOverviewReportParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/overview`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWorkspaceOverviewReportQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceOverviewReportQueryKey(orgId,workspaceRef,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>> = ({ signal }) => getWorkspaceOverviewReport(orgId,workspaceRef,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWorkspaceOverviewReportQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>>
+export type GetWorkspaceOverviewReportQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetWorkspaceOverviewReport<TData = Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceOverviewReport>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceOverviewReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkspaceOverviewReport<TData = Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceOverviewReport>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceOverviewReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkspaceOverviewReport<TData = Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Workspace Overview Report
+ */
+
+export function useGetWorkspaceOverviewReport<TData = Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: GetWorkspaceOverviewReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceOverviewReport>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWorkspaceOverviewReportQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListOrgUsersUrl = (orgId: string,) => {
 

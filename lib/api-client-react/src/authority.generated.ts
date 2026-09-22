@@ -478,6 +478,22 @@ export const operationAuthority = {
       },
     ],
   },
+  getOrgOverviewReport: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getWorkspaceOverviewReport: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
   listOrgUsers: {
     checks: [
       {

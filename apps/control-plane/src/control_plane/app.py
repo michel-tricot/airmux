@@ -27,6 +27,7 @@ from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.common import InvalidCursorError
 from control_plane.models.org import OrgSlugTakenError
 from control_plane.models.org_membership import LastOrgOwnerError
+from control_plane.models.overview_report import UnknownReportWatermarkError
 from control_plane.models.policy import InvalidPolicyError
 from control_plane.models.user import LastInstanceOwnerError, ManagedServiceAccountInstanceRoleError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
@@ -43,6 +44,7 @@ from control_plane.routes.oss import router as oss_router
 from control_plane.routes.policies import router as policies_router
 from control_plane.routes.provider_credentials import instance_router as instance_provider_credentials_router
 from control_plane.routes.provider_credentials import router as provider_credentials_router
+from control_plane.routes.reports import router as reports_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
@@ -202,6 +204,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(AuthorizationError, authorization_handler)
     app.add_exception_handler(CredentialError, credential_handler)
     app.add_exception_handler(InvalidPolicyError, domain_validation_handler)
+    app.add_exception_handler(UnknownReportWatermarkError, domain_validation_handler)
     app.add_exception_handler(OrgSlugTakenError, org_slug_taken_handler)
     app.add_exception_handler(LastOrgOwnerError, domain_conflict_handler)
     app.add_exception_handler(LastInstanceOwnerError, domain_conflict_handler)
@@ -224,6 +227,7 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
         policies_router,
         instance_provider_credentials_router,
         provider_credentials_router,
+        reports_router,
         org_router,
         sync_router,
         taxonomy_router,

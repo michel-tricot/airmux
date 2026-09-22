@@ -651,6 +651,21 @@ export interface CliAuthStartOut {
   expires_in_seconds: number;
 }
 
+export interface CostSourceCountsDeltaOut {
+  catalog_estimate: number;
+  unavailable: number;
+  not_applicable: number;
+}
+
+export interface CostSourceCountsOut {
+  /** @minimum 0 */
+  catalog_estimate: number;
+  /** @minimum 0 */
+  unavailable: number;
+  /** @minimum 0 */
+  not_applicable: number;
+}
+
 /**
  * @minLength 1
  * @maxLength 512
@@ -1601,6 +1616,245 @@ export interface OrgUpdate {
   name?: string | null;
 }
 
+export interface OutcomeCountsDeltaOut {
+  succeeded: number;
+  failed: number;
+  denied: number;
+  timeout: number;
+  cancelled: number;
+}
+
+export interface OutcomeCountsOut {
+  /** @minimum 0 */
+  succeeded: number;
+  /** @minimum 0 */
+  failed: number;
+  /** @minimum 0 */
+  denied: number;
+  /** @minimum 0 */
+  timeout: number;
+  /** @minimum 0 */
+  cancelled: number;
+}
+
+export type OverviewAttributionOutTokenCompleteness = typeof OverviewAttributionOutTokenCompleteness[keyof typeof OverviewAttributionOutTokenCompleteness];
+
+
+export const OverviewAttributionOutTokenCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type OverviewAttributionOutCostCompleteness = typeof OverviewAttributionOutCostCompleteness[keyof typeof OverviewAttributionOutCostCompleteness];
+
+
+export const OverviewAttributionOutCostCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export interface TokenSourceCountsOut {
+  /** @minimum 0 */
+  provider: number;
+  /** @minimum 0 */
+  estimated: number;
+  /** @minimum 0 */
+  partial: number;
+  /** @minimum 0 */
+  unavailable: number;
+  /** @minimum 0 */
+  not_applicable: number;
+}
+
+export interface OverviewAttributionOut {
+  id: string | null;
+  label: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  known_cost_usd: string;
+  share_of_known_cost: string | null;
+  /** @minimum 0 */
+  logical_requests: number;
+  /** @minimum 0 */
+  attempts: number;
+  /** @minimum 0 */
+  incomplete_requests: number;
+  /** @minimum 0 */
+  unavailable_usage_attempts: number;
+  token_sources: TokenSourceCountsOut;
+  /** @minimum 0 */
+  unpriced_attempts: number;
+  cost_sources: CostSourceCountsOut;
+  token_completeness: OverviewAttributionOutTokenCompleteness;
+  cost_completeness: OverviewAttributionOutCostCompleteness;
+}
+
+export type OverviewBucket = typeof OverviewBucket[keyof typeof OverviewBucket];
+
+
+export const OverviewBucket = {
+  hour: 'hour',
+  day: 'day',
+} as const;
+
+export interface OverviewFreshnessOut {
+  watermark: string | null;
+  received_at: string;
+  delivery_completeness?: 'unavailable';
+}
+
+export type OverviewGroup = typeof OverviewGroup[keyof typeof OverviewGroup];
+
+
+export const OverviewGroup = {
+  workspace: 'workspace',
+  principal: 'principal',
+  inference_key: 'inference_key',
+  model: 'model',
+  provider: 'provider',
+} as const;
+
+export interface TokenSourceCountsDeltaOut {
+  provider: number;
+  estimated: number;
+  partial: number;
+  unavailable: number;
+  not_applicable: number;
+}
+
+export interface OverviewMetricsDeltaOut {
+  logical_requests: number;
+  attempts: number;
+  outcomes: OutcomeCountsDeltaOut;
+  pending_requests: number;
+  incomplete_requests: number;
+  known_input_tokens: number;
+  known_output_tokens: number;
+  known_cache_read_tokens: number;
+  known_cache_write_tokens: number;
+  unavailable_usage_attempts: number;
+  token_sources: TokenSourceCountsDeltaOut;
+  /** @pattern ^-?\d+(?:\.\d+)?$ */
+  known_cost_usd: string;
+  unpriced_attempts: number;
+  cost_sources: CostSourceCountsDeltaOut;
+  cost_per_request_usd: string | null;
+}
+
+export type OverviewMetricsOutTokenCompleteness = typeof OverviewMetricsOutTokenCompleteness[keyof typeof OverviewMetricsOutTokenCompleteness];
+
+
+export const OverviewMetricsOutTokenCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type OverviewMetricsOutCostCompleteness = typeof OverviewMetricsOutCostCompleteness[keyof typeof OverviewMetricsOutCostCompleteness];
+
+
+export const OverviewMetricsOutCostCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export interface OverviewMetricsOut {
+  /**
+     * Distinct logical requests; model and provider splits assign each request to its final included routed attempt
+     * @minimum 0
+     */
+  logical_requests: number;
+  /** @minimum 0 */
+  attempts: number;
+  outcomes: OutcomeCountsOut;
+  /** @minimum 0 */
+  pending_requests: number;
+  /** @minimum 0 */
+  incomplete_requests: number;
+  /** @minimum 0 */
+  known_input_tokens: number;
+  /** @minimum 0 */
+  known_output_tokens: number;
+  /** @minimum 0 */
+  known_cache_read_tokens: number;
+  /** @minimum 0 */
+  known_cache_write_tokens: number;
+  /** @minimum 0 */
+  unavailable_usage_attempts: number;
+  /** Stored token provenance counts for routed attempts and denial observations */
+  token_sources: TokenSourceCountsOut;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  known_cost_usd: string;
+  /** @minimum 0 */
+  unpriced_attempts: number;
+  /** Stored pricing provenance counts for routed attempts and denial observations */
+  cost_sources: CostSourceCountsOut;
+  cost_per_request_usd: string | null;
+  /** @minimum 0 */
+  cost_per_request_denominator: number;
+  token_completeness: OverviewMetricsOutTokenCompleteness;
+  cost_completeness: OverviewMetricsOutCostCompleteness;
+}
+
+export interface OverviewPeriodOut {
+  start_at: string;
+  end_at: string;
+  timezone: string;
+}
+
+export interface OverviewPeriodsOut {
+  current: OverviewPeriodOut;
+  comparison: OverviewPeriodOut;
+}
+
+export type OverviewRange = typeof OverviewRange[keyof typeof OverviewRange];
+
+
+export const OverviewRange = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type OverviewSplit = typeof OverviewSplit[keyof typeof OverviewSplit];
+
+
+export const OverviewSplit = {
+  none: 'none',
+  workspace: 'workspace',
+  model: 'model',
+  provider: 'provider',
+} as const;
+
+export interface OverviewSummaryOut {
+  current: OverviewMetricsOut;
+  comparison: OverviewMetricsOut;
+  delta: OverviewMetricsDeltaOut;
+}
+
+export interface OverviewSeriesPointOut {
+  start_at: string;
+  end_at: string;
+  split_id: string | null;
+  split_label: string;
+  metrics: OverviewMetricsOut;
+}
+
+export interface OverviewReportOut {
+  freshness: OverviewFreshnessOut;
+  periods: OverviewPeriodsOut;
+  bucket: OverviewBucket;
+  split: OverviewSplit;
+  group: OverviewGroup;
+  summary: OverviewSummaryOut;
+  series: OverviewSeriesPointOut[];
+  attribution: OverviewAttributionOut[];
+}
+
 export interface PageInfo {
   next_cursor: string | null;
 }
@@ -2461,6 +2715,137 @@ after_bucket?: string | null;
  * @maximum 1000
  */
 limit?: number;
+};
+
+export type GetOrgOverviewReportParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Current-period series bucket size
+ */
+bucket?: OverviewBucket;
+/**
+ * Optional series split; model/provider request counts are assigned to the final included routed attempt
+ */
+split?: OverviewSplit;
+/**
+ * Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+ */
+group?: OverviewGroup;
+/**
+ * Repeated principal/user snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible attempt
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider filter; values are ORed, while model and provider filters must match the same visible attempt
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Opaque committed ingestion watermark; omit for the latest committed batch
+ */
+as_of?: string | null;
+/**
+ * Repeated workspace snapshot ID filter
+ * @maxItems 50
+ */
+workspace?: string[];
+};
+
+export type GetWorkspaceOverviewReportParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Current-period series bucket size
+ */
+bucket?: OverviewBucket;
+/**
+ * Optional series split; model/provider request counts are assigned to the final included routed attempt
+ */
+split?: OverviewSplit;
+/**
+ * Attribution grouping; model/provider request counts are assigned to the final included routed attempt
+ */
+group?: OverviewGroup;
+/**
+ * Repeated principal/user snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible attempt
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider filter; values are ORed, while model and provider filters must match the same visible attempt
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Opaque committed ingestion watermark; omit for the latest committed batch
+ */
+as_of?: string | null;
 };
 
 export type ListOrgEventsParams = {

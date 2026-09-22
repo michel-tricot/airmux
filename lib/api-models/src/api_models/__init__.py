@@ -169,6 +169,18 @@ class CliAuthStartOut(BaseModel):
     expires_in_seconds: Annotated[int, Field(title="Expires In Seconds")]
 
 
+class CostSourceCountsDeltaOut(BaseModel):
+    catalog_estimate: Annotated[int, Field(title="Catalog Estimate")]
+    unavailable: Annotated[int, Field(title="Unavailable")]
+    not_applicable: Annotated[int, Field(title="Not Applicable")]
+
+
+class CostSourceCountsOut(BaseModel):
+    catalog_estimate: Annotated[int, Field(ge=0, title="Catalog Estimate")]
+    unavailable: Annotated[int, Field(ge=0, title="Unavailable")]
+    not_applicable: Annotated[int, Field(ge=0, title="Not Applicable")]
+
+
 class CredentialAccess(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1291,6 +1303,73 @@ class OrgUpdate(BaseModel):
     name: Annotated[Name2 | None, Field(description="Replacement organization name", title="Name")] = None
 
 
+class OutcomeCountsDeltaOut(BaseModel):
+    succeeded: Annotated[int, Field(title="Succeeded")]
+    failed: Annotated[int, Field(title="Failed")]
+    denied: Annotated[int, Field(title="Denied")]
+    timeout: Annotated[int, Field(title="Timeout")]
+    cancelled: Annotated[int, Field(title="Cancelled")]
+
+
+class OutcomeCountsOut(BaseModel):
+    succeeded: Annotated[int, Field(ge=0, title="Succeeded")]
+    failed: Annotated[int, Field(ge=0, title="Failed")]
+    denied: Annotated[int, Field(ge=0, title="Denied")]
+    timeout: Annotated[int, Field(ge=0, title="Timeout")]
+    cancelled: Annotated[int, Field(ge=0, title="Cancelled")]
+
+
+class ShareOfKnownCost(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Share Of Known Cost")]
+
+
+class OverviewBucket(RootModel[Literal["hour", "day"]]):
+    root: Annotated[Literal["hour", "day"], Field(title="OverviewBucket")]
+
+
+class OverviewFreshnessOut(BaseModel):
+    watermark: Annotated[UUID | None, Field(title="Watermark")]
+    received_at: Annotated[AwareDatetime, Field(title="Received At")]
+    delivery_completeness: Annotated[Literal["unavailable"], Field(title="Delivery Completeness")] = "unavailable"
+
+
+class OverviewGroup(RootModel[Literal["workspace", "principal", "inference_key", "model", "provider"]]):
+    root: Annotated[
+        Literal["workspace", "principal", "inference_key", "model", "provider"],
+        Field(title="OverviewGroup"),
+    ]
+
+
+class CostPerRequestUsd(RootModel[str]):
+    root: Annotated[str, Field(pattern="^-?\\d+(?:\\.\\d+)?$", title="Cost Per Request Usd")]
+
+
+class CostPerRequestUsd1(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Per Request Usd")]
+
+
+class OverviewPeriodOut(BaseModel):
+    start_at: Annotated[AwareDatetime, Field(title="Start At")]
+    end_at: Annotated[AwareDatetime, Field(title="End At")]
+    timezone: Annotated[str, Field(title="Timezone")]
+
+
+class OverviewPeriodsOut(BaseModel):
+    current: OverviewPeriodOut
+    comparison: OverviewPeriodOut
+
+
+class OverviewRange(RootModel[Literal["today", "7d", "30d", "month_to_date", "custom"]]):
+    root: Annotated[
+        Literal["today", "7d", "30d", "month_to_date", "custom"],
+        Field(title="OverviewRange"),
+    ]
+
+
+class OverviewSplit(RootModel[Literal["none", "workspace", "model", "provider"]]):
+    root: Annotated[Literal["none", "workspace", "model", "provider"], Field(title="OverviewSplit")]
+
+
 class PageInfo(BaseModel):
     next_cursor: Annotated[str | None, Field(title="Next Cursor")]
 
@@ -2193,6 +2272,22 @@ class TaxonomySpec(BaseModel):
     ] = None
 
 
+class TokenSourceCountsDeltaOut(BaseModel):
+    provider: Annotated[int, Field(title="Provider")]
+    estimated: Annotated[int, Field(title="Estimated")]
+    partial: Annotated[int, Field(title="Partial")]
+    unavailable: Annotated[int, Field(title="Unavailable")]
+    not_applicable: Annotated[int, Field(title="Not Applicable")]
+
+
+class TokenSourceCountsOut(BaseModel):
+    provider: Annotated[int, Field(ge=0, title="Provider")]
+    estimated: Annotated[int, Field(ge=0, title="Estimated")]
+    partial: Annotated[int, Field(ge=0, title="Partial")]
+    unavailable: Annotated[int, Field(ge=0, title="Unavailable")]
+    not_applicable: Annotated[int, Field(ge=0, title="Not Applicable")]
+
+
 class TokenUsageSource(RootModel[Literal["provider", "estimated", "partial", "unavailable", "not_applicable"]]):
     root: Annotated[
         Literal["provider", "estimated", "partial", "unavailable", "not_applicable"],
@@ -2698,6 +2793,88 @@ class OrgServiceAccountIn(BaseModel):
     ]
 
 
+class OverviewAttributionOut(BaseModel):
+    id: Annotated[str | None, Field(title="Id")]
+    label: Annotated[str, Field(title="Label")]
+    known_cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Known Cost Usd")]
+    share_of_known_cost: Annotated[ShareOfKnownCost | None, Field(title="Share Of Known Cost")]
+    logical_requests: Annotated[int, Field(ge=0, title="Logical Requests")]
+    attempts: Annotated[int, Field(ge=0, title="Attempts")]
+    incomplete_requests: Annotated[int, Field(ge=0, title="Incomplete Requests")]
+    unavailable_usage_attempts: Annotated[int, Field(ge=0, title="Unavailable Usage Attempts")]
+    token_sources: TokenSourceCountsOut
+    unpriced_attempts: Annotated[int, Field(ge=0, title="Unpriced Attempts")]
+    cost_sources: CostSourceCountsOut
+    token_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Token Completeness")]
+    cost_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Cost Completeness")]
+
+
+class OverviewMetricsDeltaOut(BaseModel):
+    logical_requests: Annotated[int, Field(title="Logical Requests")]
+    attempts: Annotated[int, Field(title="Attempts")]
+    outcomes: OutcomeCountsDeltaOut
+    pending_requests: Annotated[int, Field(title="Pending Requests")]
+    incomplete_requests: Annotated[int, Field(title="Incomplete Requests")]
+    known_input_tokens: Annotated[int, Field(title="Known Input Tokens")]
+    known_output_tokens: Annotated[int, Field(title="Known Output Tokens")]
+    known_cache_read_tokens: Annotated[int, Field(title="Known Cache Read Tokens")]
+    known_cache_write_tokens: Annotated[int, Field(title="Known Cache Write Tokens")]
+    unavailable_usage_attempts: Annotated[int, Field(title="Unavailable Usage Attempts")]
+    token_sources: TokenSourceCountsDeltaOut
+    known_cost_usd: Annotated[str, Field(pattern="^-?\\d+(?:\\.\\d+)?$", title="Known Cost Usd")]
+    unpriced_attempts: Annotated[int, Field(title="Unpriced Attempts")]
+    cost_sources: CostSourceCountsDeltaOut
+    cost_per_request_usd: Annotated[CostPerRequestUsd | None, Field(title="Cost Per Request Usd")]
+
+
+class OverviewMetricsOut(BaseModel):
+    logical_requests: Annotated[
+        int,
+        Field(
+            description="Distinct logical requests; model and provider splits assign each request to its final included routed attempt",
+            ge=0,
+            title="Logical Requests",
+        ),
+    ]
+    attempts: Annotated[int, Field(ge=0, title="Attempts")]
+    outcomes: OutcomeCountsOut
+    pending_requests: Annotated[int, Field(ge=0, title="Pending Requests")]
+    incomplete_requests: Annotated[int, Field(ge=0, title="Incomplete Requests")]
+    known_input_tokens: Annotated[int, Field(ge=0, title="Known Input Tokens")]
+    known_output_tokens: Annotated[int, Field(ge=0, title="Known Output Tokens")]
+    known_cache_read_tokens: Annotated[int, Field(ge=0, title="Known Cache Read Tokens")]
+    known_cache_write_tokens: Annotated[int, Field(ge=0, title="Known Cache Write Tokens")]
+    unavailable_usage_attempts: Annotated[int, Field(ge=0, title="Unavailable Usage Attempts")]
+    token_sources: Annotated[
+        TokenSourceCountsOut,
+        Field(description="Stored token provenance counts for routed attempts and denial observations"),
+    ]
+    known_cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Known Cost Usd")]
+    unpriced_attempts: Annotated[int, Field(ge=0, title="Unpriced Attempts")]
+    cost_sources: Annotated[
+        CostSourceCountsOut,
+        Field(description="Stored pricing provenance counts for routed attempts and denial observations"),
+    ]
+    cost_per_request_usd: Annotated[CostPerRequestUsd1 | None, Field(title="Cost Per Request Usd")]
+    cost_per_request_denominator: Annotated[int, Field(ge=0, title="Cost Per Request Denominator")]
+    token_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Token Completeness")]
+    cost_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Cost Completeness")]
+
+
+class OverviewSeriesPointOut(BaseModel):
+    start_at: Annotated[AwareDatetime, Field(title="Start At")]
+    end_at: Annotated[AwareDatetime, Field(title="End At")]
+    split_id: Annotated[str | None, Field(title="Split Id")]
+    split_label: Annotated[str, Field(title="Split Label")]
+    metrics: OverviewMetricsOut
+
+
+class OverviewSummaryOut(BaseModel):
+    current: OverviewMetricsOut
+    comparison: OverviewMetricsOut
+    delta: OverviewMetricsDeltaOut
+
+
 class PageEnvelopeActivityOut(BaseModel):
     data: Annotated[list[ActivityOut], Field(max_length=200, title="Data")]
     page: PageInfo
@@ -2859,6 +3036,17 @@ class OrgServiceAccountCreatedOut(BaseModel):
     management_key: ManagementKeyCreatedOut
 
 
+class OverviewReportOut(BaseModel):
+    freshness: OverviewFreshnessOut
+    periods: OverviewPeriodsOut
+    bucket: OverviewBucket
+    split: OverviewSplit
+    group: OverviewGroup
+    summary: OverviewSummaryOut
+    series: Annotated[list[OverviewSeriesPointOut], Field(title="Series")]
+    attribution: Annotated[list[OverviewAttributionOut], Field(title="Attribution")]
+
+
 class PolicyDefinitionInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2982,6 +3170,10 @@ class EnvelopeManagementKeyOut(BaseModel):
 
 class EnvelopeOrgServiceAccountCreatedOut(BaseModel):
     data: OrgServiceAccountCreatedOut
+
+
+class EnvelopeOverviewReportOut(BaseModel):
+    data: OverviewReportOut
 
 
 class EnvelopePolicyOut(BaseModel):
