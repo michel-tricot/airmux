@@ -90,8 +90,9 @@ a one-time secret. Store the returned value immediately; later list and get oper
 Collections that callers browse incrementally use cursor pagination. Pagination is not added to an endpoint merely
 because it is scoped or returns a list; consumers of configuration and selection endpoints need the complete set.
 
-The paginated collections are organizations, usage events, and audit activity. Usage events are paginated
-at both organization and workspace scope, and audit activity is paginated at instance and organization scope.
+The paginated collections are organizations, usage events, audit activity, and logical request reports. Usage events
+and request reports are paginated at organization and workspace scope. Audit activity is paginated at instance and
+organization scope.
 
 - `limit` is the maximum number of results per page, defaults to 50, and accepts 1 through 200
 - `cursor` is the opaque `page.next_cursor` returned by the preceding request
@@ -107,5 +108,41 @@ curl 'https://llm.example.com/api/v1/organizations?limit=50' \
 curl "https://llm.example.com/api/v1/organizations?limit=50&cursor=$NEXT_CURSOR" \
   -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
 ```
+
+Request-report cursors also carry the original report snapshot and are bound to the scope, filters, period, sort, and
+direction. Keep those query values unchanged when sending `data.page.next_cursor`. Request-report pages nest both the
+items and page metadata inside the data envelope:
+
+```json
+{
+  "data": {
+    "freshness": { "as_of": "eyJvIjoiLi4u", "watermark": "019...", "received_at": "2026-09-22T12:00:00Z", "delivery_completeness": "unavailable" },
+    "period": { "start_at": "2026-09-22T00:00:00Z", "end_at": "2026-09-22T12:00:00Z", "timezone": "UTC" },
+    "items": [],
+    "page": { "next_cursor": null }
+  }
+}
+```
+
+## Reporting snapshots
+
+Organization and workspace reporting endpoints return these data shapes:
+
+| Operation | `data` fields |
+| --- | --- |
+| Overview | `freshness`, `periods`, `bucket`, `split`, `group`, `summary`, `series`, `attribution` |
+| Request list | `freshness`, `period`, `items`, `page` |
+| Request detail | `freshness`, `request` |
+| Request export | `filename`, `content_type`, `row_count`, `freshness`, `period`, `csv` |
+
+Start with an Overview or request-list response and retain `freshness.as_of`. Passing that opaque token to the other
+reporting endpoints in the same organization or workspace fixes both the visible ingestion watermark and the time used
+to resolve relative periods. Tokens are scope-bound and invalid in another organization or workspace. Request detail
+accepts `as_of` and the request ID; it does not repeat list filters.
+
+The export endpoint returns a JSON envelope whose `csv` field contains the file contents. It does not return a raw CSV
+response. Export applies the same range and filters as the request list without pagination. It returns `413` when the
+result would exceed 100,000 requests, 500,000 attempt or denial evidence records, or 32 MiB. Narrow the period or filters
+and request another export.
 
 Use the endpoint pages that follow this overview for request bodies, response schemas, required permissions, and interactive examples.

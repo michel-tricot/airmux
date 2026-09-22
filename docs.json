@@ -228,6 +228,15 @@
                     "pages": ["GET /api/v1/organizations/{org_id}/events"]
                   },
                   {
+                    "group": "Reporting",
+                    "pages": [
+                      "GET /api/v1/organizations/{org_id}/reports/overview",
+                      "GET /api/v1/organizations/{org_id}/reports/requests",
+                      "GET /api/v1/organizations/{org_id}/reports/request-export",
+                      "GET /api/v1/organizations/{org_id}/reports/requests/{request_id}"
+                    ]
+                  },
+                  {
                     "group": "Activity",
                     "pages": ["GET /api/v1/organizations/{org_id}/activity"]
                   },
@@ -308,6 +317,15 @@
                   {
                     "group": "Usage Events",
                     "pages": ["GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/events"]
+                  },
+                  {
+                    "group": "Reporting",
+                    "pages": [
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/overview",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/requests",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/request-export",
+                      "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/requests/{request_id}"
+                    ]
                   },
                   {
                     "group": "Model Catalog",

@@ -3,20 +3,21 @@ title: "Usage and activity"
 description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
 ---
 
-airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
-without waiting for local persistence. SQLite deployments export durable events to the control plane in batches.
+airmux records one usage event for each upstream attempt, including failed and cancelled attempts, or one
+`not_applicable` usage observation when policy denies a request before routing. Gateways accept events without waiting
+for local persistence. SQLite deployments export durable events to the control plane in batches.
 
 ## Usage event fields
 
 | Field | Meaning |
 | --- | --- |
 | `request_id` | One caller request; fallback attempts share this ID |
-| `event_id` | Unique event ID for one attempt |
-| `model_id`, `provider_id` | Route used for the attempt |
-| `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
-| `token_usage_source` | `provider`, `estimated`, or `not_applicable` for a denial before routing |
-| `cache_read_tokens`, `cache_write_tokens` | Cache traffic included in input tokens |
-| `cost_usd` | Cost derived from catalog rates and token counts |
+| `event_id` | Unique event ID for one usage observation |
+| `model_id`, `provider_id` | Route used for an attempt; provider is empty for a pre-route denial |
+| `input_tokens`, `output_tokens` | Provider-reported or estimated counts; null when usage is unavailable |
+| `token_usage_source` | `provider`, `estimated`, `partial`, `unavailable`, or `not_applicable` |
+| `cache_read_tokens`, `cache_write_tokens` | Cache traffic included in input tokens; null when usage is unavailable |
+| `cost_usd` | Catalog-estimated cost; null when usage is unavailable |
 | `latency_ms` | Attempt latency observed by the gateway |
 | `status` | `ok`, a denial or provider failure class, or `cancelled` |
 | `credential_id`, `credential_scope` | Credential metadata without the secret value |
@@ -26,12 +27,14 @@ without waiting for local persistence. SQLite deployments export durable events 
 
 - `provider`: the adapter accepted upstream usage counts without gateway estimation
 - `estimated`: usage was absent or the adapter identified it as incomplete, so the gateway estimated missing counts from the request and observed response content
+- `partial`: the event contains a mixture of observed or provider evidence and gateway estimation
+- `unavailable`: the gateway could not observe or estimate reliable counts
 - `not_applicable`: the request was denied before routing, with zero token counts and cost
 
-The source applies to the whole event. An `estimated` event can retain partial provider counts, such as Anthropic input
-and cache counts received before a stream disconnect, while estimating output. It does not identify the source of each
-individual count. Cache counts are retained when available and are never estimated. A `provider` source does not promise
-that the request finished successfully or that the provider reported every usage detail; check `status` as well.
+The source applies to the whole event. A `partial` event can retain provider input and cache counts received before a
+stream disconnect while estimating output. It does not identify the source of each individual count. Cache counts are
+retained when available and are never estimated. A `provider` source does not promise that the request finished
+successfully; check `status` as well.
 
 Adapters determine whether usage is usable. OpenAI Chat Completions and Anthropic currently treat an all-zero usage
 object as absent; OpenAI Responses accepts explicit zero counts as provider usage. Estimates cover observable content
@@ -49,18 +52,91 @@ airmux events list
 airmux events tail --interval 2 --keep 30
 ```
 
-The console shows workspace usage and instance or organization activity where the current principal has permission. The
-management API supports opaque cursor pagination.
+The console has organization and workspace Overview and Requests pages for principals with `usage.read` permission.
+Organization scope can include all workspaces or filter to selected workspaces.
 
-The workspace overview counts **attempt events**. One caller request has one `request_id`, and credential or model
-fallback can produce several attempt events with that ID. Failed, cancelled, and denied events count too, including
-denials before an upstream call.
+## Reporting periods
 
-Attempt counts, input and output tokens, spend, and the top five models all use the same window: up to the latest 200
-events recorded for the workspace, ordered by descending event ID. Recent Activity shows the first eight events from
-that window. Per-model attempt counts use the model recorded on each event. These are event-window totals, with no
-fixed time interval; a request's other attempts can fall outside the window or arrive later. The overview refreshes
-every three seconds and does not load older pages to calculate its metrics.
+A logical request is one caller request identified by `request_id`. An attempt is one routed upstream try. Credential,
+provider, or model fallback adds attempts to the same logical request. A denial before routing has zero attempts.
+
+Reports include a request when its `request_started_at` falls in the half-open period `[start_at, end_at)`. `today`,
+`7d`, `30d`, and `month_to_date` start at a local calendar boundary and end at the control plane's report-resolution
+time. A custom range accepts inclusive local start and end dates and can cover at most 366 days. The comparison period
+is the immediately preceding interval of equal elapsed duration.
+
+The selected IANA timezone controls calendar boundaries and day buckets. Local days can contain 23 or 25 hours across
+daylight saving transitions. The API returns the resolved UTC boundaries so clients do not need to reconstruct them.
+
+## Overview metrics
+
+`known_input_tokens`, `known_output_tokens`, and the cache token metrics sum observable routed-attempt values. Known
+spend sums the catalog-estimated cost captured for observable attempts. An unavailable value is not treated as an exact
+zero: reports expose `token_completeness`, `cost_completeness`, unavailable usage attempts, unpriced attempts, and source
+counts alongside the known totals. Completeness is:
+
+- `complete` when every expected attempt has visible accounting
+- `partial` when some expected evidence or pricing is missing
+- `unavailable` when there is no usable accounting for the request or group
+
+Cost per request is known catalog-estimated spend divided by every logical request in the group and period. Catalog
+estimates use the rates captured at execution time. They are not provider invoice amounts, and requests that bypass
+airmux are outside the report.
+
+Outcomes count terminal logical requests. A request is pending when no terminal observation is visible. It is incomplete
+when its terminal observation is missing or the number of visible attempts differs from the terminal's expected count.
+
+Workspace, principal, and inference-key attribution assign the whole request directly. Model, provider, and
+provider-credential breakdowns keep token and cost evidence on every attempted route, while assigning the logical
+request count to its final visible routed attempt. Spend share uses current-period known spend. Rows that exist only in
+the comparison period remain visible with zero current spend so a complete drop is not hidden.
+
+## Filters and request evidence
+
+Repeated values within one filter are alternatives. Different filter fields combine. Workspace, principal, and
+inference-key filters use the immutable labels and identifiers captured when the request ran. Model, provider, and
+provider-credential filters select requests where the supplied route values match the same visible attempt, then include
+all visible attempts for each selected request. `unattributed` is accepted only by the provider-credential filter.
+Search is literal across request, workspace, principal, inference-key, and provider-credential IDs; captured workspace,
+principal, authentication, and credential labels; the requested model; and attempted model and provider names.
+
+The Requests page shows one row per logical request and expands to ordered attempts. The request records the caller's
+requested model, while each attempt records the model, provider, credential, status, timing, token counts, rates, and
+cost actually observed for that route. Terminal outcome and latency describe the whole logical request.
+
+For an observed attempt, fresh input is `input_tokens - cache_read_tokens - cache_write_tokens`. Input cost is:
+
+```text
+(fresh input * input rate + cache reads * cache-read rate + cache writes * cache-write rate) / 1,000,000
+```
+
+Output cost is `output_tokens * output rate / 1,000,000`. The request confidence is:
+
+- `provider` when all expected attempts are visible and provider-reported
+- `estimated` when all expected attempts are visible and at least one is estimated
+- `partial` when expected evidence is missing or an attempt has partial usage
+- `unavailable` when no routed evidence is visible or any visible attempt has unavailable usage
+- `not_applicable` for a denial before routing with zero expected attempts
+
+## Freshness and exports
+
+Every report returns `freshness.as_of`, an opaque token bound to the organization or workspace. It captures the latest
+relevant committed ingestion watermark and the time used to resolve the period. Reuse it across Overview, request list,
+request detail, and CSV export to compare the same evidence and period boundaries. A late attempt or terminal observation
+appears in a later report, but it does not change a frozen `as_of` report.
+
+`freshness.received_at` is when the control plane received the watermark, not when the provider request ran.
+`delivery_completeness` is currently `unavailable`: report freshness cannot prove that every data-plane outbox has
+drained. Accounting completeness describes the evidence already received and does not make that delivery claim.
+
+CSV export returns the full filtered request set at one `as_of`, with one row per logical request and nested attempt
+evidence as JSON fields. Exports are limited to 100,000 requests, 500,000 evidence records, and 32 MiB. Narrow the range
+or filters when the API returns `413`.
+
+An empty result is still a successful frozen report. Overview returns zero metrics, null cost per request, and empty
+series and attribution arrays. Its accounting completeness is `complete` because the snapshot contains no received
+evidence that is missing accounting. Requests returns an empty `items` array with no next cursor. CSV export returns
+`row_count: 0` and a header-only CSV. Each response still carries a reusable `freshness.as_of` token.
 
 The instance overview's organization total counts every organization currently stored on the instance, including
 personal organizations. Deleted organizations no longer count. The total comes from

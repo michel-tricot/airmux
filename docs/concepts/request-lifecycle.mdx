@@ -43,11 +43,29 @@ One inference request follows the same stages regardless of caller dialect or pr
   </Step>
 
   <Step title="Account">
-    airmux records tokens, cache usage, estimated status, cost, latency, route, credential metadata, bundle ID, and
-    outcome. The event's request ID matches the response's `X-Request-ID` header. The local outbox exports the event to the control plane.
+    airmux records immutable usage evidence for each routed attempt, including tokens, cache usage, provenance, catalog
+    rates and cost, timing, route, credential metadata, and bundle ID. It also records one terminal observation with the
+    logical request's outcome, expected attempt count, and end-to-end latency. A denial before routing records
+    `not_applicable` evidence with zero attempts. The request ID matches the response's `X-Request-ID` header, and the
+    local outbox exports the observations to the control plane.
   </Step>
 </Steps>
 
 If an eligible failure occurs before response headers, routing can advance to another credential or fallback model
 within the attempt and deadline limits. After streaming starts, failures are rendered as events because the HTTP status
-has already been sent.
+has already been sent. A disconnect can leave a cancelled attempt with partial accounting for the content observed before
+the stream ended.
+
+## Reporting reconciliation
+
+Every fallback try keeps the same `request_id` and receives a one-based `attempt_index`. Attempt status describes that
+single upstream try. The terminal outcome describes how the logical request ended after all attempts and records how many
+routed attempts the gateway made.
+
+Each observation has a unique `event_id`, so an outbox replay is idempotent. The control plane can receive terminal and
+attempt observations in separate batches or out of order. It reconciles them by request ID, attempt index, and terminal
+observation instead of using arrival order.
+
+Until every expected attempt is visible, request accounting is partial or unavailable. Late evidence appears in a new
+report snapshot. An existing `freshness.as_of` token remains fixed to its original ingestion watermark, so pagination,
+detail, Overview, and export can continue to describe the same evidence even while newer batches arrive.
