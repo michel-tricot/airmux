@@ -85,7 +85,10 @@ def create_app(config: Config) -> ASGIApp:
         configure_logger(logger, dev=config.dev)
         async with config.secrets.build() as secret_store, _build_http_client(config.http) as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
-            try:
+            async with contextlib.AsyncExitStack() as cleanup:
+                cleanup.callback(flush_logger, logger)
+                cleanup.push_async_callback(asyncio.to_thread, metrics.shutdown)
+                cleanup.push_async_callback(outbox.close)
                 holder = BundleHolder(metrics)
                 bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 budget_backend = build_budget_backend(config.budget, holder, http_client, metrics)
@@ -106,14 +109,6 @@ def create_app(config: Config) -> ASGIApp:
                     finally:
                         for task in tasks:
                             task.cancel()
-            finally:
-                try:
-                    await outbox.close()
-                finally:
-                    try:
-                        await asyncio.to_thread(metrics.shutdown)
-                    finally:
-                        flush_logger(logger)
 
     app = Starlette(
         routes=[
