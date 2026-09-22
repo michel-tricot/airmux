@@ -217,6 +217,22 @@ class DeletedOutStr(BaseModel):
     deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
 
 
+class DeniedRequestEvidenceOut(BaseModel):
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    input_tokens: Annotated[Literal[0], Field(title="Input Tokens")]
+    output_tokens: Annotated[Literal[0], Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[Literal[0], Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[Literal[0], Field(title="Cache Write Tokens")]
+    token_usage_source: Annotated[Literal["not_applicable"], Field(title="Token Usage Source")]
+    cost_source: Annotated[Literal["not_applicable"], Field(title="Cost Source")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
+    cost_output_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Output Usd")]
+    latency_ms: Annotated[int, Field(ge=0, title="Latency Ms")]
+    status: Annotated[Literal["denied"], Field(title="Status")]
+
+
 class InputTokens(RootModel[int]):
     root: Annotated[
         int,
@@ -1168,6 +1184,48 @@ class ModelOut(BaseModel):
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
 
+class MaxOutputTokens3(RootModel[int]):
+    root: Annotated[int, Field(ge=1, title="Max Output Tokens")]
+
+
+class ObservedRequestAttemptOut(BaseModel):
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    attempt_index: Annotated[int, Field(ge=1, title="Attempt Index")]
+    attempt_started_at: Annotated[AwareDatetime, Field(title="Attempt Started At")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    max_output_tokens: Annotated[MaxOutputTokens3 | None, Field(title="Max Output Tokens")]
+    input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
+    latency_ms: Annotated[int, Field(ge=0, title="Latency Ms")]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(title="Status"),
+    ]
+    credential_id: Annotated[UUID, Field(title="Credential Id")]
+    credential_scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Credential Scope")]
+    credential_name: Annotated[str, Field(title="Credential Name")]
+    token_usage_source: Annotated[Literal["estimated", "partial", "provider"], Field(title="Token Usage Source")]
+    input_tokens: Annotated[int, Field(ge=0, title="Input Tokens")]
+    output_tokens: Annotated[int, Field(ge=0, title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(ge=0, title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(ge=0, title="Cache Write Tokens")]
+    cost_source: Annotated[Literal["catalog_estimate"], Field(title="Cost Source")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
+    cost_output_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Output Usd")]
+
+
 class OrgCreate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1328,8 +1386,12 @@ class OverviewBucket(RootModel[Literal["hour", "day"]]):
 
 
 class OverviewFreshnessOut(BaseModel):
+    as_of: Annotated[
+        str,
+        Field(max_length=320, min_length=1, pattern="^[A-Za-z0-9_-]+$", title="As Of"),
+    ]
     watermark: Annotated[UUID | None, Field(title="Watermark")]
-    received_at: Annotated[AwareDatetime, Field(title="Received At")]
+    received_at: Annotated[AwareDatetime | None, Field(title="Received At")]
     delivery_completeness: Annotated[Literal["unavailable"], Field(title="Delivery Completeness")] = "unavailable"
 
 
@@ -1825,7 +1887,25 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
-class MaxOutputTokens3(RootModel[int]):
+class RequestSort(RootModel[Literal["request_started_at", "latency_ms", "known_cost_usd", "known_tokens"]]):
+    root: Annotated[
+        Literal["request_started_at", "latency_ms", "known_cost_usd", "known_tokens"],
+        Field(title="RequestSort"),
+    ]
+
+
+class RequestTerminalOut(BaseModel):
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    outcome: Annotated[
+        Literal["succeeded", "failed", "denied", "timeout", "cancelled"],
+        Field(title="Outcome"),
+    ]
+    expected_attempts: Annotated[int, Field(ge=0, title="Expected Attempts")]
+    latency_ms: Annotated[int, Field(ge=0, title="Latency Ms")]
+
+
+class MaxOutputTokens4(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -1984,7 +2064,7 @@ class RoutedUsageEventV1(BaseModel):
         ),
     ]
     max_output_tokens: Annotated[
-        MaxOutputTokens3 | None,
+        MaxOutputTokens4 | None,
         Field(
             description="Effective upstream output-token limit",
             title="Max Output Tokens",
@@ -2232,6 +2312,10 @@ class SignupIn(BaseModel):
     ] = None
 
 
+class SortDirection(RootModel[Literal["asc", "desc"]]):
+    root: Annotated[Literal["asc", "desc"], Field(title="SortDirection")]
+
+
 class StrictParameters(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2293,6 +2377,48 @@ class TokenUsageSource(RootModel[Literal["provider", "estimated", "partial", "un
         Literal["provider", "estimated", "partial", "unavailable", "not_applicable"],
         Field(title="TokenUsageSource"),
     ]
+
+
+class MaxOutputTokens5(RootModel[int]):
+    root: Annotated[int, Field(ge=1, title="Max Output Tokens")]
+
+
+class UnavailableRequestAttemptOut(BaseModel):
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    attempt_index: Annotated[int, Field(ge=1, title="Attempt Index")]
+    attempt_started_at: Annotated[AwareDatetime, Field(title="Attempt Started At")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    max_output_tokens: Annotated[MaxOutputTokens5 | None, Field(title="Max Output Tokens")]
+    input_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
+    latency_ms: Annotated[int, Field(ge=0, title="Latency Ms")]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(title="Status"),
+    ]
+    credential_id: Annotated[UUID, Field(title="Credential Id")]
+    credential_scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Credential Scope")]
+    credential_name: Annotated[str, Field(title="Credential Name")]
+    token_usage_source: Annotated[Literal["unavailable"], Field(title="Token Usage Source")]
+    input_tokens: Annotated[None, Field(title="Input Tokens")]
+    output_tokens: Annotated[None, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[None, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[None, Field(title="Cache Write Tokens")]
+    cost_source: Annotated[Literal["unavailable"], Field(title="Cost Source")]
+    cost_usd: Annotated[None, Field(title="Cost Usd")]
+    cost_input_usd: Annotated[None, Field(title="Cost Input Usd")]
+    cost_output_usd: Annotated[None, Field(title="Cost Output Usd")]
 
 
 class InputPricePerMtok(RootModel[str]):
@@ -2675,6 +2801,61 @@ class EnvelopeListWorkspaceOut(BaseModel):
     data: Annotated[list[WorkspaceOut], Field(title="Data")]
 
 
+class GatewayRequestCsvExportOut(BaseModel):
+    filename: Annotated[str, Field(title="Filename")]
+    content_type: Annotated[Literal["text/csv; charset=utf-8"], Field(title="Content Type")] = "text/csv; charset=utf-8"
+    row_count: Annotated[int, Field(ge=0, title="Row Count")]
+    freshness: OverviewFreshnessOut
+    period: OverviewPeriodOut
+    csv: Annotated[str, Field(title="Csv")]
+
+
+class Attempts(RootModel[ObservedRequestAttemptOut | UnavailableRequestAttemptOut]):
+    root: Annotated[
+        ObservedRequestAttemptOut | UnavailableRequestAttemptOut,
+        Field(discriminator="token_usage_source"),
+    ]
+
+
+class GatewayRequestReportOut(BaseModel):
+    request_id: Annotated[UUID, Field(title="Request Id")]
+    request_started_at: Annotated[AwareDatetime, Field(title="Request Started At")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    workspace_label: Annotated[str, Field(title="Workspace Label")]
+    key_id: Annotated[str, Field(title="Key Id")]
+    authentication_source: Annotated[
+        Literal["inference_key", "playground", "local"],
+        Field(title="Authentication Source"),
+    ]
+    authentication_label: Annotated[str, Field(title="Authentication Label")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    principal_label: Annotated[str, Field(title="Principal Label")]
+    principal_type: Annotated[Literal["human", "service_account", "local"], Field(title="Principal Type")]
+    requested_model_id: Annotated[str, Field(title="Requested Model Id")]
+    requested_capabilities: Annotated[
+        list[Literal["tools", "reasoning", "structured_output"]],
+        Field(title="Requested Capabilities"),
+    ]
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    stream: Annotated[bool, Field(title="Stream")]
+    terminal: RequestTerminalOut | None
+    attempts: Annotated[list[Attempts], Field(title="Attempts")]
+    denial: DeniedRequestEvidenceOut | None
+    evidence_complete: Annotated[bool, Field(title="Evidence Complete")]
+    confidence: Annotated[
+        Literal["provider", "estimated", "partial", "unavailable", "not_applicable"],
+        Field(title="Confidence"),
+    ]
+    known_input_tokens: Annotated[int, Field(ge=0, title="Known Input Tokens")]
+    known_output_tokens: Annotated[int, Field(ge=0, title="Known Output Tokens")]
+    known_cache_read_tokens: Annotated[int, Field(ge=0, title="Known Cache Read Tokens")]
+    known_cache_write_tokens: Annotated[int, Field(ge=0, title="Known Cache Write Tokens")]
+    known_cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Known Cost Usd")]
+    token_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Token Completeness")]
+    cost_completeness: Annotated[Literal["complete", "partial", "unavailable"], Field(title="Cost Completeness")]
+
+
 class HTTPValidationError(BaseModel):
     detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
 
@@ -2963,6 +3144,10 @@ class Catalog(BaseModel):
     credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials", validate_default=True)] = []
 
 
+class EnvelopeGatewayRequestCsvExportOut(BaseModel):
+    data: GatewayRequestCsvExportOut
+
+
 class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
 
@@ -2993,6 +3178,18 @@ class EnvelopeListOrgMemberOut(BaseModel):
 
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
+
+
+class GatewayRequestDetailOut(BaseModel):
+    freshness: OverviewFreshnessOut
+    request: GatewayRequestReportOut
+
+
+class GatewayRequestPageOut(BaseModel):
+    freshness: OverviewFreshnessOut
+    period: OverviewPeriodOut
+    items: Annotated[list[GatewayRequestReportOut], Field(max_length=200, title="Items")]
+    page: PageInfo
 
 
 class ManagementKeyCreatedOut(BaseModel):
@@ -3158,6 +3355,14 @@ class BundleV1(BaseModel):
 
 class EnvelopeBundleV1(BaseModel):
     data: BundleV1
+
+
+class EnvelopeGatewayRequestDetailOut(BaseModel):
+    data: GatewayRequestDetailOut
+
+
+class EnvelopeGatewayRequestPageOut(BaseModel):
+    data: GatewayRequestPageOut
 
 
 class EnvelopeManagementKeyCreatedOut(BaseModel):

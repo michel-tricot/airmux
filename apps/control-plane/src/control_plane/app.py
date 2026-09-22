@@ -27,8 +27,9 @@ from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.common import InvalidCursorError
 from control_plane.models.org import OrgSlugTakenError
 from control_plane.models.org_membership import LastOrgOwnerError
-from control_plane.models.overview_report import UnknownReportWatermarkError
+from control_plane.models.overview_report import InvalidReportSnapshotError
 from control_plane.models.policy import InvalidPolicyError
+from control_plane.models.request_report import RequestExportTooLargeError
 from control_plane.models.user import LastInstanceOwnerError, ManagedServiceAccountInstanceRoleError
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
 from control_plane.passwords import PasswordWorkers
@@ -134,6 +135,10 @@ async def domain_conflict_handler(_request: Request, exc: Exception) -> JSONResp
     return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
+async def export_too_large_handler(_request: Request, exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=413, content={"detail": str(exc)})
+
+
 async def org_slug_taken_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": "slug is already taken"})
 
@@ -204,7 +209,8 @@ def create_app(settings: Settings | None = None, *, throttle_backend: ThrottleBa
     app.add_exception_handler(AuthorizationError, authorization_handler)
     app.add_exception_handler(CredentialError, credential_handler)
     app.add_exception_handler(InvalidPolicyError, domain_validation_handler)
-    app.add_exception_handler(UnknownReportWatermarkError, domain_validation_handler)
+    app.add_exception_handler(InvalidReportSnapshotError, domain_validation_handler)
+    app.add_exception_handler(RequestExportTooLargeError, export_too_large_handler)
     app.add_exception_handler(OrgSlugTakenError, org_slug_taken_handler)
     app.add_exception_handler(LastOrgOwnerError, domain_conflict_handler)
     app.add_exception_handler(LastInstanceOwnerError, domain_conflict_handler)

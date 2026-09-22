@@ -41,7 +41,7 @@ const emptyMetrics: Api.OverviewMetricsOut = {
 };
 
 const emptyReport: Api.OverviewReportOut = {
-  freshness: { watermark: null, received_at: now, delivery_completeness: 'unavailable' },
+  freshness: { as_of: 'snapshot-empty', watermark: null, received_at: null, delivery_completeness: 'unavailable' },
   periods: {
     current: { start_at: now, end_at: now, timezone: 'UTC' },
     comparison: { start_at: now, end_at: now, timezone: 'UTC' },

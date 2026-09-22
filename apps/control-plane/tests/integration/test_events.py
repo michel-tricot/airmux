@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -146,6 +146,53 @@ def test_policy_denial_may_finish_before_routing_or_after_an_attempt(tmp_path):
         budget_terminal = _finished(after, expected_attempts=1, outcome="denied")
         response = client.post("/api/v1/events", json=[after, budget_denial, budget_terminal], headers=cp.headers())
         assert response.status_code == 200, response.text
+
+
+def test_ingest_rejects_denial_with_non_denied_terminal_in_same_or_later_batch(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "contradictory-denial")
+        same_batch = _event(org_id)
+        rejected = client.post(
+            "/api/v1/events",
+            json=[same_batch, _denial(same_batch), _finished(same_batch, outcome="succeeded")],
+            headers=cp.headers(),
+        )
+        assert rejected.status_code == 409
+
+        later = _event(org_id)
+        assert client.post("/api/v1/events", json=[later, _finished(later, outcome="failed")], headers=cp.headers()).status_code == 200
+        assert client.post("/api/v1/events", json=[_denial(later)], headers=cp.headers()).status_code == 409
+
+
+def test_ingest_rejects_evidence_after_terminal_or_routing_after_denial(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "contradictory-order")
+        attempt = _event(org_id)
+        terminal = _finished(attempt, expected_attempts=2, outcome="failed")
+        assert client.post("/api/v1/events", json=[attempt, terminal], headers=cp.headers()).status_code == 200
+        after_terminal = {
+            **attempt,
+            "event_id": str(uuid7()),
+            "attempt_index": 2,
+            "attempt_started_at": (datetime.fromisoformat(terminal["occurred_at"]) + timedelta(milliseconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(terminal["occurred_at"]) + timedelta(milliseconds=2)).isoformat(),
+        }
+        assert client.post("/api/v1/events", json=[after_terminal], headers=cp.headers()).status_code == 409
+
+        denied = _event(org_id)
+        denial = _denial({**denied, "event_id": str(uuid7())})
+        denied_terminal = _finished(denied, expected_attempts=2, outcome="denied")
+        assert client.post("/api/v1/events", json=[denied, denial, denied_terminal], headers=cp.headers()).status_code == 200
+        after_denial = {
+            **denied,
+            "event_id": str(uuid7()),
+            "attempt_index": 2,
+            "attempt_started_at": (datetime.fromisoformat(denial["occurred_at"]) + timedelta(milliseconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(denial["occurred_at"]) + timedelta(milliseconds=2)).isoformat(),
+        }
+        assert client.post("/api/v1/events", json=[after_denial], headers=cp.headers()).status_code == 409
 
 
 def test_conflicting_terminal_rolls_back_every_new_fact_and_watermark(tmp_path):

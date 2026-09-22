@@ -46,7 +46,7 @@ function metrics(overrides: Partial<OverviewMetricsOut> = {}): OverviewMetricsOu
 function report(overrides: Partial<OverviewReportOut> = {}): OverviewReportOut {
   const current = metrics();
   return {
-    freshness: { watermark: 'watermark-1', received_at: '2026-09-22T16:00:00Z', delivery_completeness: 'unavailable' },
+    freshness: { as_of: 'snapshot-1', watermark: 'watermark-1', received_at: '2026-09-22T16:00:00Z', delivery_completeness: 'unavailable' },
     periods: {
       current: { start_at: '2026-09-16T00:00:00Z', end_at: '2026-09-22T16:00:00Z', timezone: 'UTC' },
       comparison: { start_at: '2026-09-09T08:00:00Z', end_at: '2026-09-16T00:00:00Z', timezone: 'UTC' },
@@ -200,6 +200,19 @@ describe('shared spending overview', () => {
     expect(within(tokens).getByText('Unavailable', { selector: '.text-2xl' })).toBeInTheDocument();
     expect(screen.queryByText('$0.0000')).not.toBeInTheDocument();
     expect(screen.getByText(/1 unpriced attempt/)).toBeInTheDocument();
+  });
+
+  it('renders a missing receipt timestamp as unavailable', async () => {
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/overview', () =>
+        HttpResponse.json({ data: report({ freshness: { ...report().freshness, received_at: null } }) }),
+      ),
+    );
+
+    renderAt('/org');
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    expect((await screen.findByText('Receipt')).parentElement).toHaveTextContent('Unavailable');
   });
 
   it('keeps known partial values visible and qualified', async () => {

@@ -702,6 +702,26 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+export interface DeniedRequestEvidenceOut {
+  event_id: string;
+  occurred_at: string;
+  input_tokens: 0;
+  output_tokens: 0;
+  cache_read_tokens: 0;
+  cache_write_tokens: 0;
+  token_usage_source: 'not_applicable';
+  cost_source: 'not_applicable';
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_input_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_output_usd: string;
+  /** @minimum 0 */
+  latency_ms: number;
+  status: 'denied';
+}
+
 /**
  * Credential kind authenticated by the data plane
  */
@@ -909,6 +929,284 @@ export interface EventsIngestedOut {
   watermark: string | null;
 }
 
+export interface OverviewFreshnessOut {
+  /**
+     * @minLength 1
+     * @maxLength 320
+     * @pattern ^[A-Za-z0-9_-]+$
+     */
+  as_of: string;
+  watermark: string | null;
+  received_at: string | null;
+  delivery_completeness?: 'unavailable';
+}
+
+export interface OverviewPeriodOut {
+  start_at: string;
+  end_at: string;
+  timezone: string;
+}
+
+export interface GatewayRequestCsvExportOut {
+  filename: string;
+  content_type?: 'text/csv; charset=utf-8';
+  /** @minimum 0 */
+  row_count: number;
+  freshness: OverviewFreshnessOut;
+  period: OverviewPeriodOut;
+  csv: string;
+}
+
+export type GatewayRequestReportOutAuthenticationSource = typeof GatewayRequestReportOutAuthenticationSource[keyof typeof GatewayRequestReportOutAuthenticationSource];
+
+
+export const GatewayRequestReportOutAuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+export type GatewayRequestReportOutPrincipalType = typeof GatewayRequestReportOutPrincipalType[keyof typeof GatewayRequestReportOutPrincipalType];
+
+
+export const GatewayRequestReportOutPrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
+export type GatewayRequestReportOutRequestedCapabilitiesItem = typeof GatewayRequestReportOutRequestedCapabilitiesItem[keyof typeof GatewayRequestReportOutRequestedCapabilitiesItem];
+
+
+export const GatewayRequestReportOutRequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export type RequestTerminalOutOutcome = typeof RequestTerminalOutOutcome[keyof typeof RequestTerminalOutOutcome];
+
+
+export const RequestTerminalOutOutcome = {
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export interface RequestTerminalOut {
+  event_id: string;
+  occurred_at: string;
+  outcome: RequestTerminalOutOutcome;
+  /** @minimum 0 */
+  expected_attempts: number;
+  /** @minimum 0 */
+  latency_ms: number;
+}
+
+export type ObservedRequestAttemptOutStatus = typeof ObservedRequestAttemptOutStatus[keyof typeof ObservedRequestAttemptOutStatus];
+
+
+export const ObservedRequestAttemptOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type ObservedRequestAttemptOutCredentialScope = typeof ObservedRequestAttemptOutCredentialScope[keyof typeof ObservedRequestAttemptOutCredentialScope];
+
+
+export const ObservedRequestAttemptOutCredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export type ObservedRequestAttemptOutTokenUsageSource = typeof ObservedRequestAttemptOutTokenUsageSource[keyof typeof ObservedRequestAttemptOutTokenUsageSource];
+
+
+export const ObservedRequestAttemptOutTokenUsageSource = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+} as const;
+
+export interface ObservedRequestAttemptOut {
+  event_id: string;
+  /** @minimum 1 */
+  attempt_index: number;
+  attempt_started_at: string;
+  occurred_at: string;
+  model_id: string;
+  provider_id: string;
+  max_output_tokens: number | null;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  input_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  output_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_read_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_write_price_per_mtok: string;
+  /** @minimum 0 */
+  latency_ms: number;
+  status: ObservedRequestAttemptOutStatus;
+  credential_id: string;
+  credential_scope: ObservedRequestAttemptOutCredentialScope;
+  credential_name: string;
+  token_usage_source: ObservedRequestAttemptOutTokenUsageSource;
+  /** @minimum 0 */
+  input_tokens: number;
+  /** @minimum 0 */
+  output_tokens: number;
+  /** @minimum 0 */
+  cache_read_tokens: number;
+  /** @minimum 0 */
+  cache_write_tokens: number;
+  cost_source: 'catalog_estimate';
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_input_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_output_usd: string;
+}
+
+export type UnavailableRequestAttemptOutStatus = typeof UnavailableRequestAttemptOutStatus[keyof typeof UnavailableRequestAttemptOutStatus];
+
+
+export const UnavailableRequestAttemptOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type UnavailableRequestAttemptOutCredentialScope = typeof UnavailableRequestAttemptOutCredentialScope[keyof typeof UnavailableRequestAttemptOutCredentialScope];
+
+
+export const UnavailableRequestAttemptOutCredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface UnavailableRequestAttemptOut {
+  event_id: string;
+  /** @minimum 1 */
+  attempt_index: number;
+  attempt_started_at: string;
+  occurred_at: string;
+  model_id: string;
+  provider_id: string;
+  max_output_tokens: number | null;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  input_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  output_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_read_price_per_mtok: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cache_write_price_per_mtok: string;
+  /** @minimum 0 */
+  latency_ms: number;
+  status: UnavailableRequestAttemptOutStatus;
+  credential_id: string;
+  credential_scope: UnavailableRequestAttemptOutCredentialScope;
+  credential_name: string;
+  token_usage_source: 'unavailable';
+  /** @nullable */
+  input_tokens: null;
+  /** @nullable */
+  output_tokens: null;
+  /** @nullable */
+  cache_read_tokens: null;
+  /** @nullable */
+  cache_write_tokens: null;
+  cost_source: 'unavailable';
+  /** @nullable */
+  cost_usd: null;
+  /** @nullable */
+  cost_input_usd: null;
+  /** @nullable */
+  cost_output_usd: null;
+}
+
+export type GatewayRequestReportOutConfidence = typeof GatewayRequestReportOutConfidence[keyof typeof GatewayRequestReportOutConfidence];
+
+
+export const GatewayRequestReportOutConfidence = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type GatewayRequestReportOutTokenCompleteness = typeof GatewayRequestReportOutTokenCompleteness[keyof typeof GatewayRequestReportOutTokenCompleteness];
+
+
+export const GatewayRequestReportOutTokenCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export type GatewayRequestReportOutCostCompleteness = typeof GatewayRequestReportOutCostCompleteness[keyof typeof GatewayRequestReportOutCostCompleteness];
+
+
+export const GatewayRequestReportOutCostCompleteness = {
+  complete: 'complete',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export interface GatewayRequestReportOut {
+  request_id: string;
+  request_started_at: string;
+  org_id: string;
+  workspace_id: string;
+  workspace_label: string;
+  key_id: string;
+  authentication_source: GatewayRequestReportOutAuthenticationSource;
+  authentication_label: string;
+  user_id: string;
+  principal_label: string;
+  principal_type: GatewayRequestReportOutPrincipalType;
+  requested_model_id: string;
+  requested_capabilities: GatewayRequestReportOutRequestedCapabilitiesItem[];
+  bundle_id: string;
+  stream: boolean;
+  terminal: RequestTerminalOut | null;
+  attempts: (ObservedRequestAttemptOut | UnavailableRequestAttemptOut)[];
+  denial: DeniedRequestEvidenceOut | null;
+  evidence_complete: boolean;
+  confidence: GatewayRequestReportOutConfidence;
+  /** @minimum 0 */
+  known_input_tokens: number;
+  /** @minimum 0 */
+  known_output_tokens: number;
+  /** @minimum 0 */
+  known_cache_read_tokens: number;
+  /** @minimum 0 */
+  known_cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  known_cost_usd: string;
+  token_completeness: GatewayRequestReportOutTokenCompleteness;
+  cost_completeness: GatewayRequestReportOutCostCompleteness;
+}
+
+export interface GatewayRequestDetailOut {
+  freshness: OverviewFreshnessOut;
+  request: GatewayRequestReportOut;
+}
+
 /**
  * Credential kind authenticated by the data plane
  */
@@ -1029,6 +1327,18 @@ export interface GatewayRequestFinishedV1 {
      * @maximum 2147483647
      */
   latency_ms: number;
+}
+
+export interface PageInfo {
+  next_cursor: string | null;
+}
+
+export interface GatewayRequestPageOut {
+  freshness: OverviewFreshnessOut;
+  period: OverviewPeriodOut;
+  /** @maxItems 200 */
+  items: GatewayRequestReportOut[];
+  page: PageInfo;
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -1698,12 +2008,6 @@ export const OverviewBucket = {
   day: 'day',
 } as const;
 
-export interface OverviewFreshnessOut {
-  watermark: string | null;
-  received_at: string;
-  delivery_completeness?: 'unavailable';
-}
-
 export type OverviewGroup = typeof OverviewGroup[keyof typeof OverviewGroup];
 
 
@@ -1798,12 +2102,6 @@ export interface OverviewMetricsOut {
   cost_completeness: OverviewMetricsOutCostCompleteness;
 }
 
-export interface OverviewPeriodOut {
-  start_at: string;
-  end_at: string;
-  timezone: string;
-}
-
 export interface OverviewPeriodsOut {
   current: OverviewPeriodOut;
   comparison: OverviewPeriodOut;
@@ -1853,10 +2151,6 @@ export interface OverviewReportOut {
   summary: OverviewSummaryOut;
   series: OverviewSeriesPointOut[];
   attribution: OverviewAttributionOut[];
-}
-
-export interface PageInfo {
-  next_cursor: string | null;
 }
 
 export interface PasswordChangeIn {
@@ -2139,6 +2433,16 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+export type RequestSort = typeof RequestSort[keyof typeof RequestSort];
+
+
+export const RequestSort = {
+  request_started_at: 'request_started_at',
+  latency_ms: 'latency_ms',
+  known_cost_usd: 'known_cost_usd',
+  known_tokens: 'known_tokens',
+} as const;
+
 /**
  * Credential kind authenticated by the data plane
  */
@@ -2394,6 +2698,14 @@ export interface SignupIn {
   /** Invitation authorizing this account signup */
   invitation_token?: string | null;
 }
+
+export type SortDirection = typeof SortDirection[keyof typeof SortDirection];
+
+
+export const SortDirection = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
 
 export interface TaxonomyChangeCounts {
   created: number;
@@ -2761,21 +3073,21 @@ principal?: string[];
  */
 inference_key?: string[];
 /**
- * Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible attempt
+ * Repeated routed-model request selector; model and provider must match one visible attempt, then every visible attempt contributes
  * @maxItems 50
  * @items.minLength 1
  * @items.maxLength 255
  */
 model?: string[];
 /**
- * Repeated routed-provider filter; values are ORed, while model and provider filters must match the same visible attempt
+ * Repeated routed-provider request selector; model and provider must match one visible attempt, then every visible attempt contributes
  * @maxItems 50
  * @items.minLength 1
  * @items.maxLength 63
  */
 provider?: string[];
 /**
- * Opaque committed ingestion watermark; omit for the latest committed batch
+ * Opaque report snapshot; omit for the latest relevant committed evidence
  */
 as_of?: string | null;
 /**
@@ -2829,21 +3141,449 @@ principal?: string[];
  */
 inference_key?: string[];
 /**
- * Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible attempt
+ * Repeated routed-model request selector; model and provider must match one visible attempt, then every visible attempt contributes
  * @maxItems 50
  * @items.minLength 1
  * @items.maxLength 255
  */
 model?: string[];
 /**
- * Repeated routed-provider filter; values are ORed, while model and provider filters must match the same visible attempt
+ * Repeated routed-provider request selector; model and provider must match one visible attempt, then every visible attempt contributes
  * @maxItems 50
  * @items.minLength 1
  * @items.maxLength 63
  */
 provider?: string[];
 /**
- * Opaque committed ingestion watermark; omit for the latest committed batch
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+};
+
+export type ListOrgGatewayRequestsParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Repeated principal snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Repeated terminal outcome or pending filter
+ * @maxItems 50
+ */
+outcome?: ListOrgGatewayRequestsOutcomeItem[];
+/**
+ * Repeated request accounting confidence filter
+ * @maxItems 50
+ */
+confidence?: ListOrgGatewayRequestsConfidenceItem[];
+/**
+ * Literal search across immutable request and attempt snapshots
+ */
+search?: string | null;
+/**
+ * Sort
+ */
+sort?: RequestSort;
+/**
+ * Direction
+ */
+direction?: SortDirection;
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+/**
+ * Repeated workspace snapshot ID filter
+ * @maxItems 50
+ */
+workspace?: string[];
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: string | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListOrgGatewayRequestsOutcomeItem = typeof ListOrgGatewayRequestsOutcomeItem[keyof typeof ListOrgGatewayRequestsOutcomeItem];
+
+
+export const ListOrgGatewayRequestsOutcomeItem = {
+  pending: 'pending',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export type ListOrgGatewayRequestsConfidenceItem = typeof ListOrgGatewayRequestsConfidenceItem[keyof typeof ListOrgGatewayRequestsConfidenceItem];
+
+
+export const ListOrgGatewayRequestsConfidenceItem = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type ListWorkspaceGatewayRequestsParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Repeated principal snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Repeated terminal outcome or pending filter
+ * @maxItems 50
+ */
+outcome?: ListWorkspaceGatewayRequestsOutcomeItem[];
+/**
+ * Repeated request accounting confidence filter
+ * @maxItems 50
+ */
+confidence?: ListWorkspaceGatewayRequestsConfidenceItem[];
+/**
+ * Literal search across immutable request and attempt snapshots
+ */
+search?: string | null;
+/**
+ * Sort
+ */
+sort?: RequestSort;
+/**
+ * Direction
+ */
+direction?: SortDirection;
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+/**
+ * Opaque continuation token from the previous page
+ */
+cursor?: string | null;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+};
+
+export type ListWorkspaceGatewayRequestsOutcomeItem = typeof ListWorkspaceGatewayRequestsOutcomeItem[keyof typeof ListWorkspaceGatewayRequestsOutcomeItem];
+
+
+export const ListWorkspaceGatewayRequestsOutcomeItem = {
+  pending: 'pending',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export type ListWorkspaceGatewayRequestsConfidenceItem = typeof ListWorkspaceGatewayRequestsConfidenceItem[keyof typeof ListWorkspaceGatewayRequestsConfidenceItem];
+
+
+export const ListWorkspaceGatewayRequestsConfidenceItem = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type ExportOrgGatewayRequestsParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Repeated principal snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Repeated terminal outcome or pending filter
+ * @maxItems 50
+ */
+outcome?: ExportOrgGatewayRequestsOutcomeItem[];
+/**
+ * Repeated request accounting confidence filter
+ * @maxItems 50
+ */
+confidence?: ExportOrgGatewayRequestsConfidenceItem[];
+/**
+ * Literal search across immutable request and attempt snapshots
+ */
+search?: string | null;
+/**
+ * Sort
+ */
+sort?: RequestSort;
+/**
+ * Direction
+ */
+direction?: SortDirection;
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+/**
+ * Repeated workspace snapshot ID filter
+ * @maxItems 50
+ */
+workspace?: string[];
+};
+
+export type ExportOrgGatewayRequestsOutcomeItem = typeof ExportOrgGatewayRequestsOutcomeItem[keyof typeof ExportOrgGatewayRequestsOutcomeItem];
+
+
+export const ExportOrgGatewayRequestsOutcomeItem = {
+  pending: 'pending',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export type ExportOrgGatewayRequestsConfidenceItem = typeof ExportOrgGatewayRequestsConfidenceItem[keyof typeof ExportOrgGatewayRequestsConfidenceItem];
+
+
+export const ExportOrgGatewayRequestsConfidenceItem = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type ExportWorkspaceGatewayRequestsParams = {
+/**
+ * Server-resolved report period preset
+ */
+range: OverviewRange;
+/**
+ * IANA timezone used for calendar boundaries and buckets
+ * @minLength 1
+ * @maxLength 100
+ */
+timezone: string;
+/**
+ * First included local calendar date for a custom range
+ */
+start_date?: string | null;
+/**
+ * Last included local calendar date for a custom range
+ */
+end_date?: string | null;
+/**
+ * Repeated principal snapshot ID filter
+ * @maxItems 50
+ */
+principal?: string[];
+/**
+ * Repeated inference key snapshot ID filter
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+inference_key?: string[];
+/**
+ * Repeated routed-model request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 255
+ */
+model?: string[];
+/**
+ * Repeated routed-provider request selector
+ * @maxItems 50
+ * @items.minLength 1
+ * @items.maxLength 63
+ */
+provider?: string[];
+/**
+ * Repeated terminal outcome or pending filter
+ * @maxItems 50
+ */
+outcome?: ExportWorkspaceGatewayRequestsOutcomeItem[];
+/**
+ * Repeated request accounting confidence filter
+ * @maxItems 50
+ */
+confidence?: ExportWorkspaceGatewayRequestsConfidenceItem[];
+/**
+ * Literal search across immutable request and attempt snapshots
+ */
+search?: string | null;
+/**
+ * Sort
+ */
+sort?: RequestSort;
+/**
+ * Direction
+ */
+direction?: SortDirection;
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+};
+
+export type ExportWorkspaceGatewayRequestsOutcomeItem = typeof ExportWorkspaceGatewayRequestsOutcomeItem[keyof typeof ExportWorkspaceGatewayRequestsOutcomeItem];
+
+
+export const ExportWorkspaceGatewayRequestsOutcomeItem = {
+  pending: 'pending',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export type ExportWorkspaceGatewayRequestsConfidenceItem = typeof ExportWorkspaceGatewayRequestsConfidenceItem[keyof typeof ExportWorkspaceGatewayRequestsConfidenceItem];
+
+
+export const ExportWorkspaceGatewayRequestsConfidenceItem = {
+  provider: 'provider',
+  estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+  not_applicable: 'not_applicable',
+} as const;
+
+export type GetOrgGatewayRequestParams = {
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
+ */
+as_of?: string | null;
+};
+
+export type GetWorkspaceGatewayRequestParams = {
+/**
+ * Opaque report snapshot; omit for the latest relevant committed evidence
  */
 as_of?: string | null;
 };

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import json
 from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
@@ -8,7 +11,7 @@ from typing import Annotated, Literal, cast
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, Field, PlainSerializer, WithJsonSchema, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, PlainSerializer, StringConstraints, WithJsonSchema, field_validator, model_validator
 
 from contract import CostSource, GatewayRequestOutcome, TokenUsageSource, UsdAmount
 from contract.money import USD_AMOUNT_QUANTUM, fixed_point
@@ -61,35 +64,74 @@ ExactRatio = Annotated[
     WithJsonSchema({"type": "string", "pattern": r"^\d+(?:\.\d+)?$"}),
 ]
 MAX_CUSTOM_DAYS = 366
+MAX_REPORT_AS_OF_LENGTH = 320
+_REPORT_AS_OF_CHARACTERS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+ReportAsOfToken = Annotated[str, StringConstraints(min_length=1, max_length=MAX_REPORT_AS_OF_LENGTH, pattern=r"^[A-Za-z0-9_-]+$")]
 
 
-class _OverviewReportQueryBase(RequestModel):
+class ReportSnapshotV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1] = 1
+    watermark: UUID | None
+    resolved_at: AwareDatetime
+    org_id: UUID
+    workspace_id: UUID | None
+
+
+class InvalidReportSnapshotError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("invalid report snapshot")
+
+
+def encode_report_snapshot(snapshot: ReportSnapshotV1) -> ReportAsOfToken:
+    payload = {
+        "o": str(snapshot.org_id),
+        "r": snapshot.resolved_at.isoformat(),
+        "v": snapshot.version,
+        "w": str(snapshot.watermark) if snapshot.watermark is not None else None,
+        "x": str(snapshot.workspace_id) if snapshot.workspace_id is not None else None,
+    }
+    encoded = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    token = base64.urlsafe_b64encode(encoded).decode().rstrip("=")
+    if len(token) > MAX_REPORT_AS_OF_LENGTH:
+        raise InvalidReportSnapshotError
+    return token
+
+
+def _decoded_report_snapshot(token: str) -> ReportSnapshotV1:
+    if len(token) > MAX_REPORT_AS_OF_LENGTH or not token or any(character not in _REPORT_AS_OF_CHARACTERS for character in token):
+        raise ValueError
+    raw = base64.b64decode(token + "=" * (-len(token) % 4), altchars=b"-_", validate=True)
+    payload = json.loads(raw)
+    if not isinstance(payload, dict) or set(payload) != {"o", "r", "v", "w", "x"}:
+        raise ValueError
+    snapshot = ReportSnapshotV1(
+        version=payload["v"],
+        watermark=payload["w"],
+        resolved_at=payload["r"],
+        org_id=payload["o"],
+        workspace_id=payload["x"],
+    )
+    if encode_report_snapshot(snapshot) != token:
+        raise ValueError
+    return snapshot
+
+
+def decode_report_snapshot(token: str) -> ReportSnapshotV1:
+    try:
+        snapshot = _decoded_report_snapshot(token)
+    except (KeyError, TypeError, UnicodeDecodeError, binascii.Error, json.JSONDecodeError, ValueError, OverflowError) as error:
+        raise InvalidReportSnapshotError from error
+    else:
+        return snapshot
+
+
+class _ReportPeriodQueryBase(RequestModel):
     range: OverviewRange = Field(description="Server-resolved report period preset")
     timezone: str = Field(min_length=1, max_length=100, description="IANA timezone used for calendar boundaries and buckets")
     start_date: date | None = Field(default=None, description="First included local calendar date for a custom range")
     end_date: date | None = Field(default=None, description="Last included local calendar date for a custom range")
-    bucket: OverviewBucket = Field(default=OverviewBucket.day, description="Current-period series bucket size")
-    split: OverviewSplit = Field(
-        default=OverviewSplit.none,
-        description="Optional series split; model/provider request counts are assigned to the final included routed attempt",
-    )
-    group: OverviewGroup = Field(
-        default=OverviewGroup.workspace,
-        description="Attribution grouping; model/provider request counts are assigned to the final included routed attempt",
-    )
-    principal: list[UUID] = Field(default_factory=list, max_length=50, description="Repeated principal/user snapshot ID filter")
-    inference_key: list[KeyFilter] = Field(default_factory=list, max_length=50, description="Repeated inference key snapshot ID filter")
-    model: list[ModelFilter] = Field(
-        default_factory=list,
-        max_length=50,
-        description="Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible attempt",
-    )
-    provider: list[ProviderFilter] = Field(
-        default_factory=list,
-        max_length=50,
-        description="Repeated routed-provider filter; values are ORed, while model and provider filters must match the same visible attempt",
-    )
-    as_of: UUID | None = Field(default=None, description="Opaque committed ingestion watermark; omit for the latest committed batch")
 
     @field_validator("timezone")
     @classmethod
@@ -102,7 +144,7 @@ class _OverviewReportQueryBase(RequestModel):
         return value
 
     @model_validator(mode="after")
-    def valid_dates(self) -> _OverviewReportQueryBase:
+    def valid_dates(self) -> _ReportPeriodQueryBase:
         if self.range is OverviewRange.custom:
             if self.start_date is None or self.end_date is None:
                 message = "start_date and end_date are required for custom range"
@@ -117,6 +159,33 @@ class _OverviewReportQueryBase(RequestModel):
             message = "start_date and end_date are only accepted for custom range"
             raise ValueError(message)
         return self
+
+
+class _OverviewReportQueryBase(_ReportPeriodQueryBase):
+    bucket: OverviewBucket = Field(default=OverviewBucket.day, description="Current-period series bucket size")
+    split: OverviewSplit = Field(
+        default=OverviewSplit.none,
+        description="Optional series split; model/provider request counts are assigned to the final included routed attempt",
+    )
+    group: OverviewGroup = Field(
+        default=OverviewGroup.workspace,
+        description="Attribution grouping; model/provider request counts are assigned to the final included routed attempt",
+    )
+    principal: list[UUID] = Field(default_factory=list, max_length=50, description="Repeated principal/user snapshot ID filter")
+    inference_key: list[KeyFilter] = Field(default_factory=list, max_length=50, description="Repeated inference key snapshot ID filter")
+    model: list[ModelFilter] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Repeated routed-model request selector; model and provider must match one visible attempt, "
+        "then every visible attempt contributes",
+    )
+    provider: list[ProviderFilter] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Repeated routed-provider request selector; model and provider must match one visible attempt, "
+        "then every visible attempt contributes",
+    )
+    as_of: ReportAsOfToken | None = Field(default=None, description="Opaque report snapshot; omit for the latest relevant committed evidence")
 
 
 class OverviewReportQuery(_OverviewReportQueryBase):
@@ -139,8 +208,9 @@ class OverviewPeriodsOut(BaseModel):
 
 
 class OverviewFreshnessOut(BaseModel):
+    as_of: ReportAsOfToken
     watermark: UUID | None
-    received_at: datetime
+    received_at: datetime | None
     delivery_completeness: DeliveryCompleteness = "unavailable"
 
 
@@ -271,11 +341,6 @@ class OverviewReportOut(BaseModel):
     attribution: list[OverviewAttributionOut]
 
 
-class UnknownReportWatermarkError(ValueError):
-    def __init__(self) -> None:
-        super().__init__("Unknown report watermark")
-
-
 class ReportFact(BaseModel):
     request_id: UUID
     request_started_at: datetime
@@ -300,7 +365,7 @@ class ReportFact(BaseModel):
     cost_usd: UsdAmount | None
 
 
-def resolve_periods(query: _OverviewReportQueryBase, anchor: datetime) -> OverviewPeriodsOut:
+def resolve_periods(query: _ReportPeriodQueryBase, anchor: datetime) -> OverviewPeriodsOut:
     timezone = ZoneInfo(query.timezone)
     local_anchor = anchor.astimezone(timezone)
     if query.range is OverviewRange.custom:

@@ -494,6 +494,54 @@ export const operationAuthority = {
       },
     ],
   },
+  listOrgGatewayRequests: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  listWorkspaceGatewayRequests: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  exportOrgGatewayRequests: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  exportWorkspaceGatewayRequests: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getOrgGatewayRequest: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getWorkspaceGatewayRequest: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
   listOrgUsers: {
     checks: [
       {

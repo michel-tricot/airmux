@@ -109,6 +109,7 @@ class UsageIngestBatch(Record, table=True):
         new_events = _new_events(unique_events, requests_by_id, usage, terminal_id_requests)
 
         _validate_attempt_bounds(unique_events, usage, requests_by_id)
+        _validate_request_histories(unique_events, usage, requests_by_id)
         if not new_events:
             return IngestResult(ingested=0, inserted_usage_event_ids=(), watermark=await cls.latest_watermark())
 
@@ -287,4 +288,39 @@ def _validate_attempt_bounds(events: list[IngestEvent], stored_usage: list[Usage
         if isinstance(event, GatewayRequestFinishedV1) or event.attempt_index is None:
             continue
         if event.request_id in expected and event.attempt_index > expected[event.request_id]:
+            raise IngestConflictError
+
+
+def _validate_request_histories(
+    events: list[IngestEvent],
+    stored_usage: list[UsageEvent],
+    requests: dict[UUID, GatewayRequest],
+) -> None:
+    request_ids = {event.request_id for event in events}
+    usage_by_request: dict[UUID, dict[tuple[UUID, UUID, int | None], UsageEventContract | UsageEvent]] = {
+        request_id: {} for request_id in request_ids
+    }
+    for event in stored_usage:
+        if event.request_id in usage_by_request:
+            usage_by_request[event.request_id][_usage_identity(event)] = event
+    terminals: dict[UUID, GatewayRequestFinishedV1 | GatewayRequest] = {
+        request_id: request for request_id, request in requests.items() if request.terminal_event_id is not None
+    }
+    for event in events:
+        if isinstance(event, GatewayRequestFinishedV1):
+            terminals[event.request_id] = event
+        else:
+            usage_by_request[event.request_id][_usage_identity(event)] = event
+    for request_id, usage in usage_by_request.items():
+        evidence = list(usage.values())
+        denials = [event for event in evidence if event.attempt_index is None]
+        routed = [event for event in evidence if event.attempt_index is not None]
+        terminal = terminals.get(request_id)
+        if terminal is not None:
+            terminal_at = terminal.occurred_at if isinstance(terminal, GatewayRequestFinishedV1) else terminal.finished_at
+            if terminal_at is None or any(event.occurred_at > terminal_at for event in evidence):
+                raise IngestConflictError
+            if denials and terminal.outcome != "denied":
+                raise IngestConflictError
+        if denials and any(event.occurred_at > denials[0].occurred_at for event in routed):
             raise IngestConflictError

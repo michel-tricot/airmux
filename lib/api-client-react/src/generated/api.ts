@@ -53,8 +53,15 @@ import type {
   DeniedUsageEventV1,
   EnrollOut,
   EventsIngestedOut,
+  ExportOrgGatewayRequestsParams,
+  ExportWorkspaceGatewayRequestsParams,
+  GatewayRequestCsvExportOut,
+  GatewayRequestDetailOut,
   GatewayRequestFinishedV1,
+  GatewayRequestPageOut,
+  GetOrgGatewayRequestParams,
   GetOrgOverviewReportParams,
+  GetWorkspaceGatewayRequestParams,
   GetWorkspaceOverviewReportParams,
   HTTPValidationError,
   HeartbeatOut,
@@ -73,10 +80,12 @@ import type {
   ListInstanceActivityParams,
   ListInstanceManagementKeysParams,
   ListOrgEventsParams,
+  ListOrgGatewayRequestsParams,
   ListOrgManagementKeysParams,
   ListOrgsParams,
   ListUsersParams,
   ListWorkspaceEventsParams,
+  ListWorkspaceGatewayRequestsParams,
   ListWorkspaceManagementKeysParams,
   LoginIn,
   ManagementKeyCreatedOut,
@@ -7095,6 +7104,948 @@ export function useGetWorkspaceOverviewReport<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetWorkspaceOverviewReportQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListOrgGatewayRequestsUrl = (orgId: string,
+    params: ListOrgGatewayRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence","workspace"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/requests?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/requests`
+}
+
+/**
+ * List logical requests and their visible provider-attempt evidence for an organization.
+ *
+ * Required permission: `usage.read`.
+ * @summary List Organization Requests
+ */
+export const listOrgGatewayRequests = async (orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestPageOut> => {
+
+  return customFetch<GatewayRequestPageOut>(getListOrgGatewayRequestsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgGatewayRequestsInfiniteQueryKey = (orgId: string,
+    params?: ListOrgGatewayRequestsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListOrgGatewayRequestsQueryKey = (orgId: string,
+    params?: ListOrgGatewayRequestsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOrgGatewayRequestsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listOrgGatewayRequests>>, ListOrgGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgGatewayRequestsInfiniteQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgGatewayRequests>>, QueryKey, ListOrgGatewayRequestsParams['cursor']> = ({ signal, pageParam }) => listOrgGatewayRequests(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgGatewayRequestsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgGatewayRequests>>>
+export type ListOrgGatewayRequestsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListOrgGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgGatewayRequests>>, ListOrgGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgGatewayRequests>>, ListOrgGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgGatewayRequests>>, ListOrgGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Organization Requests
+ */
+
+export function useListOrgGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgGatewayRequests>>, ListOrgGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData, QueryKey, ListOrgGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgGatewayRequestsInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListOrgGatewayRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgGatewayRequestsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgGatewayRequests>>> = ({ signal }) => listOrgGatewayRequests(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgGatewayRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgGatewayRequests>>>
+export type ListOrgGatewayRequestsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListOrgGatewayRequests<TData = Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgGatewayRequests<TData = Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgGatewayRequests<TData = Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Organization Requests
+ */
+
+export function useListOrgGatewayRequests<TData = Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ListOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgGatewayRequestsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListWorkspaceGatewayRequestsUrl = (orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests`
+}
+
+/**
+ * List logical requests and their visible provider-attempt evidence for one workspace.
+ *
+ * Required permission: `usage.read`.
+ * @summary List Workspace Requests
+ */
+export const listWorkspaceGatewayRequests = async (orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestPageOut> => {
+
+  return customFetch<GatewayRequestPageOut>(getListWorkspaceGatewayRequestsUrl(orgId,workspaceRef,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceGatewayRequestsInfiniteQueryKey = (orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceGatewayRequestsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListWorkspaceGatewayRequestsQueryKey = (orgId: string,
+    workspaceRef: string,
+    params?: ListWorkspaceGatewayRequestsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWorkspaceGatewayRequestsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, ListWorkspaceGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceGatewayRequestsInfiniteQueryKey(orgId,workspaceRef,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']> = ({ signal, pageParam }) => listWorkspaceGatewayRequests(orgId,workspaceRef,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListWorkspaceGatewayRequestsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>>
+export type ListWorkspaceGatewayRequestsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListWorkspaceGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, ListWorkspaceGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, ListWorkspaceGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, ListWorkspaceGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Workspace Requests
+ */
+
+export function useListWorkspaceGatewayRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, ListWorkspaceGatewayRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData, QueryKey, ListWorkspaceGatewayRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListWorkspaceGatewayRequestsInfiniteQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListWorkspaceGatewayRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceGatewayRequestsQueryKey(orgId,workspaceRef,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>> = ({ signal }) => listWorkspaceGatewayRequests(orgId,workspaceRef,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListWorkspaceGatewayRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>>
+export type ListWorkspaceGatewayRequestsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Workspace Requests
+ */
+
+export function useListWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ListWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListWorkspaceGatewayRequestsQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportOrgGatewayRequestsUrl = (orgId: string,
+    params: ExportOrgGatewayRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence","workspace"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/request-export?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/request-export`
+}
+
+/**
+ * Export every matching logical request as one CSV row at one ingestion watermark.
+ *
+ * Required permission: `usage.read`.
+ * @summary Export Organization Requests
+ */
+export const exportOrgGatewayRequests = async (orgId: string,
+    params: ExportOrgGatewayRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestCsvExportOut> => {
+
+  return customFetch<GatewayRequestCsvExportOut>(getExportOrgGatewayRequestsUrl(orgId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportOrgGatewayRequestsQueryKey = (orgId: string,
+    params?: ExportOrgGatewayRequestsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/request-export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportOrgGatewayRequestsQueryOptions = <TData = Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params: ExportOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportOrgGatewayRequestsQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportOrgGatewayRequests>>> = ({ signal }) => exportOrgGatewayRequests(orgId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportOrgGatewayRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof exportOrgGatewayRequests>>>
+export type ExportOrgGatewayRequestsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useExportOrgGatewayRequests<TData = Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ExportOrgGatewayRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof exportOrgGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportOrgGatewayRequests<TData = Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ExportOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportOrgGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof exportOrgGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportOrgGatewayRequests<TData = Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ExportOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Organization Requests
+ */
+
+export function useExportOrgGatewayRequests<TData = Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: ExportOrgGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportOrgGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportOrgGatewayRequestsQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportWorkspaceGatewayRequestsUrl = (orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const arrayFormatParameters = ["principal","inference_key","model","provider","outcome","confidence"];
+
+    if (Array.isArray(value) && arrayFormatParameters.includes(key)) {
+      value.forEach((v) => { normalizedParams.append(key, v === null ? 'null' : String(v)); });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/request-export?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/request-export`
+}
+
+/**
+ * Export every matching logical request in one workspace as one CSV row at one ingestion watermark.
+ *
+ * Required permission: `usage.read`.
+ * @summary Export Workspace Requests
+ */
+export const exportWorkspaceGatewayRequests = async (orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestCsvExportOut> => {
+
+  return customFetch<GatewayRequestCsvExportOut>(getExportWorkspaceGatewayRequestsUrl(orgId,workspaceRef,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportWorkspaceGatewayRequestsQueryKey = (orgId: string,
+    workspaceRef: string,
+    params?: ExportWorkspaceGatewayRequestsParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/request-export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportWorkspaceGatewayRequestsQueryOptions = <TData = Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportWorkspaceGatewayRequestsQueryKey(orgId,workspaceRef,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>> = ({ signal }) => exportWorkspaceGatewayRequests(orgId,workspaceRef,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportWorkspaceGatewayRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>>
+export type ExportWorkspaceGatewayRequestsQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useExportWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>,
+          TError,
+          Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export Workspace Requests
+ */
+
+export function useExportWorkspaceGatewayRequests<TData = Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    params: ExportWorkspaceGatewayRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportWorkspaceGatewayRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportWorkspaceGatewayRequestsQueryOptions(orgId,workspaceRef,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOrgGatewayRequestUrl = (orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/requests/${requestId}?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/requests/${requestId}`
+}
+
+/**
+ * Get one logical request and all of its visible provider-attempt evidence.
+ *
+ * Required permission: `usage.read`.
+ * @summary Get Organization Request
+ */
+export const getOrgGatewayRequest = async (orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestDetailOut> => {
+
+  return customFetch<GatewayRequestDetailOut>(getGetOrgGatewayRequestUrl(orgId,requestId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOrgGatewayRequestQueryKey = (orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/reports/requests/${requestId}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetOrgGatewayRequestQueryOptions = <TData = Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOrgGatewayRequestQueryKey(orgId,requestId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrgGatewayRequest>>> = ({ signal }) => getOrgGatewayRequest(orgId,requestId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOrgGatewayRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getOrgGatewayRequest>>>
+export type GetOrgGatewayRequestQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetOrgGatewayRequest<TData = Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params: undefined |  GetOrgGatewayRequestParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgGatewayRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgGatewayRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgGatewayRequest<TData = Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOrgGatewayRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getOrgGatewayRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrgGatewayRequest<TData = Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Organization Request
+ */
+
+export function useGetOrgGatewayRequest<TData = Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    requestId: string,
+    params?: GetOrgGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOrgGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOrgGatewayRequestQueryOptions(orgId,requestId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetWorkspaceGatewayRequestUrl = (orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests/${requestId}?${stringifiedParams}` : `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests/${requestId}`
+}
+
+/**
+ * Get one logical request and all of its visible provider-attempt evidence for one workspace.
+ *
+ * Required permission: `usage.read`.
+ * @summary Get Workspace Request
+ */
+export const getWorkspaceGatewayRequest = async (orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams, options?: Parameters<typeof customFetch>[1]): Promise<GatewayRequestDetailOut> => {
+
+  return customFetch<GatewayRequestDetailOut>(getGetWorkspaceGatewayRequestUrl(orgId,workspaceRef,requestId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceGatewayRequestQueryKey = (orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams,) => {
+    return [
+    `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/reports/requests/${requestId}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWorkspaceGatewayRequestQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceGatewayRequestQueryKey(orgId,workspaceRef,requestId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>> = ({ signal }) => getWorkspaceGatewayRequest(orgId,workspaceRef,requestId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined && requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetWorkspaceGatewayRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>>
+export type GetWorkspaceGatewayRequestQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useGetWorkspaceGatewayRequest<TData = Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params: undefined |  GetWorkspaceGatewayRequestParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkspaceGatewayRequest<TData = Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetWorkspaceGatewayRequest<TData = Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Workspace Request
+ */
+
+export function useGetWorkspaceGatewayRequest<TData = Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string,
+    requestId: string,
+    params?: GetWorkspaceGatewayRequestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceGatewayRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetWorkspaceGatewayRequestQueryOptions(orgId,workspaceRef,requestId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

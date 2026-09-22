@@ -174,9 +174,8 @@ def test_overview_reconciles_retry_attempts_under_a_stable_watermark(tmp_path):
         terminal["occurred_at"] = second["occurred_at"]
         accepted = client.post("/api/v1/events", json=[terminal, first], headers=cp.headers())
         assert accepted.status_code == 200, accepted.text
-        old_watermark = accepted.json()["data"]["watermark"]
-
-        old = _overview(client, org_id, cp.headers(org_id), as_of=old_watermark, group="model")
+        old = _overview(client, org_id, cp.headers(org_id), group="model")
+        old_as_of = old["freshness"]["as_of"]
         old_current = old["summary"]["current"]
         assert (
             old_current["logical_requests"],
@@ -185,16 +184,16 @@ def test_overview_reconciles_retry_attempts_under_a_stable_watermark(tmp_path):
             old_current["incomplete_requests"],
             old_current["cost_per_request_denominator"],
         ) == (1, 1, "0.000000000123", 1, 1)
-        assert old["freshness"]["watermark"] == old_watermark
+        assert old["freshness"]["as_of"] == old_as_of
         assert old["freshness"]["delivery_completeness"] == "unavailable"
 
         accepted = client.post("/api/v1/events", json=[second], headers=cp.headers())
         assert accepted.status_code == 200, accepted.text
         latest = _overview(client, org_id, cp.headers(org_id), group="model")
-        frozen = _overview(client, org_id, cp.headers(org_id), as_of=old_watermark, group="model")
+        frozen = _overview(client, org_id, cp.headers(org_id), as_of=old_as_of, group="model")
 
         OverviewReportOut.model_validate(latest)
-        assert latest["freshness"]["watermark"] != old_watermark
+        assert latest["freshness"]["as_of"] != old_as_of
         assert latest["summary"]["current"]["logical_requests"] == 1
         assert latest["summary"]["current"]["attempts"] == 2
         assert latest["summary"]["current"]["known_cost_usd"] == "0.000000000444"
@@ -220,11 +219,12 @@ def test_overview_reconciles_retry_attempts_under_a_stable_watermark(tmp_path):
 
         filtered = _overview(client, org_id, cp.headers(org_id), model="gpt-test", split="model", group="model")
         assert filtered["summary"]["current"]["logical_requests"] == 1
-        assert filtered["summary"]["current"]["attempts"] == 1
+        assert filtered["summary"]["current"]["attempts"] == 2
+        assert filtered["summary"]["current"]["known_cost_usd"] == "0.000000000444"
         assert filtered["summary"]["current"]["incomplete_requests"] == 0
         assert sum(point["metrics"]["logical_requests"] for point in filtered["series"]) == 1
         assert sum(point["logical_requests"] for point in filtered["attribution"]) == 1
-        assert filtered["attribution"][0]["id"] == "gpt-test"
+        assert {point["id"] for point in filtered["attribution"]} == {"gpt-test", "fallback-model"}
         mismatched_attempt = _overview(client, org_id, cp.headers(org_id), model="gpt-test", provider="anthropic")
         assert mismatched_attempt["summary"]["current"]["logical_requests"] == 0
 
@@ -442,18 +442,19 @@ def test_custom_current_comparison_and_delta_use_request_start_membership(tmp_pa
         assert report["periods"]["comparison"]["end_at"] == report["periods"]["current"]["start_at"]
 
 
-def test_latest_presets_use_server_now_while_explicit_as_of_uses_batch_receipt(tmp_path):
+def test_report_snapshot_keeps_latest_period_after_batch_metadata_changes(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         org_id = make_org(client, cp.headers(), "overview-period-anchor")
         workspace_id = make_workspace(client, cp.headers(org_id), "production")
         today_start = datetime.combine(datetime.now(tz=UTC).date(), datetime.min.time(), UTC)
-        yesterday_request = today_start - timedelta(hours=14)
+        yesterday_request = datetime.now(tz=UTC) - timedelta(hours=1)
         yesterday_receipt = today_start - timedelta(hours=12)
         attempt = _attempt(RequestSeed(org_id, workspace_id, uuid7(), yesterday_request, uuid7()), attempt_index=1)
         accepted = client.post("/api/v1/events", json=[attempt, _terminal(attempt, expected_attempts=1)], headers=cp.headers())
         assert accepted.status_code == 200, accepted.text
-        watermark = accepted.json()["data"]["watermark"]
+        latest = _overview(client, org_id, cp.headers(org_id), range="today")
+        as_of = latest["freshness"]["as_of"]
 
         async def age_batch() -> None:
             batches = await UsageIngestBatch.find()
@@ -463,12 +464,12 @@ def test_latest_presets_use_server_now_while_explicit_as_of_uses_batch_receipt(t
 
         run_in_db(tmp_path, age_batch)
 
-        latest = _overview(client, org_id, cp.headers(org_id), range="today")
-        frozen = _overview(client, org_id, cp.headers(org_id), range="today", as_of=watermark)
+        frozen = _overview(client, org_id, cp.headers(org_id), range="today", as_of=as_of)
 
-        assert latest["summary"]["current"]["logical_requests"] == 0
+        assert latest["summary"]["current"]["logical_requests"] == 1
         assert frozen["summary"]["current"]["logical_requests"] == 1
-        assert latest["freshness"]["received_at"] == frozen["freshness"]["received_at"]
+        assert latest["periods"] == frozen["periods"]
+        assert frozen["freshness"]["as_of"] == as_of
 
 
 def test_report_query_validation_is_exposed_by_both_routes(tmp_path):

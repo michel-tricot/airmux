@@ -12,12 +12,23 @@ from control_plane.models.overview_report import (
     OverviewFreshnessOut,
     OverviewReportQuery,
     ReportFact,
+    ReportSnapshotV1,
     build_overview_report,
+    encode_report_snapshot,
     resolve_periods,
 )
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+
+def _freshness(received_at: datetime) -> OverviewFreshnessOut:
+    org_id = uuid7()
+    return OverviewFreshnessOut(
+        as_of=encode_report_snapshot(ReportSnapshotV1(watermark=None, resolved_at=received_at, org_id=org_id, workspace_id=None)),
+        watermark=None,
+        received_at=received_at,
+    )
 
 
 def _fact(request_id: UUID, started_at: datetime, *, user_id: UUID | None = None, cost: str = "0.000000000001") -> ReportFact:
@@ -106,7 +117,7 @@ def test_hourly_series_keeps_both_fall_back_folds_distinct_and_reconciled():
     periods = resolve_periods(query, received_at)
     report = build_overview_report(
         query,
-        OverviewFreshnessOut(watermark=None, received_at=received_at),
+        _freshness(received_at),
         periods,
         [
             _fact(uuid7(), datetime(2026, 11, 1, 8, 30, tzinfo=UTC)),
@@ -135,7 +146,7 @@ def test_attribution_share_is_fixed_point_and_generated_python_accepts_exponent_
     small_principal = uuid7()
     report = build_overview_report(
         query,
-        OverviewFreshnessOut(watermark=None, received_at=received_at),
+        _freshness(received_at),
         periods,
         [
             _fact(uuid7(), datetime(2026, 1, 1, 1, tzinfo=UTC), user_id=small_principal),

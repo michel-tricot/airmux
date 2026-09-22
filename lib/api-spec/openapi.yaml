@@ -3498,11 +3498,11 @@ paths:
             minLength: 1
             maxLength: 255
           maxItems: 50
-          description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same
-            visible attempt
+          description: Repeated routed-model request selector; model and provider must match one visible attempt, then every
+            visible attempt contributes
           title: Model
-        description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible
-          attempt
+        description: Repeated routed-model request selector; model and provider must match one visible attempt, then every
+          visible attempt contributes
       - name: provider
         in: query
         required: false
@@ -3513,22 +3513,24 @@ paths:
             minLength: 1
             maxLength: 63
           maxItems: 50
-          description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
-            visible attempt
+          description: Repeated routed-provider request selector; model and provider must match one visible attempt, then
+            every visible attempt contributes
           title: Provider
-        description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
-          visible attempt
+        description: Repeated routed-provider request selector; model and provider must match one visible attempt, then every
+          visible attempt contributes
       - name: as_of
         in: query
         required: false
         schema:
           anyOf:
           - type: string
-            format: uuid
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
           - type: 'null'
-          description: Opaque committed ingestion watermark; omit for the latest committed batch
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
           title: As Of
-        description: Opaque committed ingestion watermark; omit for the latest committed batch
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
       - name: workspace
         in: query
         required: false
@@ -3688,11 +3690,11 @@ paths:
             minLength: 1
             maxLength: 255
           maxItems: 50
-          description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same
-            visible attempt
+          description: Repeated routed-model request selector; model and provider must match one visible attempt, then every
+            visible attempt contributes
           title: Model
-        description: Repeated routed-model filter; values are ORed, while model and provider filters must match the same visible
-          attempt
+        description: Repeated routed-model request selector; model and provider must match one visible attempt, then every
+          visible attempt contributes
       - name: provider
         in: query
         required: false
@@ -3703,22 +3705,24 @@ paths:
             minLength: 1
             maxLength: 63
           maxItems: 50
-          description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
-            visible attempt
+          description: Repeated routed-provider request selector; model and provider must match one visible attempt, then
+            every visible attempt contributes
           title: Provider
-        description: Repeated routed-provider filter; values are ORed, while model and provider filters must match the same
-          visible attempt
+        description: Repeated routed-provider request selector; model and provider must match one visible attempt, then every
+          visible attempt contributes
       - name: as_of
         in: query
         required: false
         schema:
           anyOf:
           - type: string
-            format: uuid
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
           - type: 'null'
-          description: Opaque committed ingestion watermark; omit for the latest committed batch
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
           title: As Of
-        description: Opaque committed ingestion watermark; omit for the latest committed batch
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
       responses:
         '200':
           description: Successful Response
@@ -3726,6 +3730,1041 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_OverviewReportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/reports/requests:
+    get:
+      tags:
+      - Organization Reporting
+      summary: List Organization Requests
+      description: 'List logical requests and their visible provider-attempt evidence for an organization.
+
+
+        Required permission: `usage.read`.'
+      operationId: list_org_gateway_requests
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal snapshot ID filter
+          title: Principal
+        description: Repeated principal snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model request selector
+          title: Model
+        description: Repeated routed-model request selector
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider request selector
+          title: Provider
+        description: Repeated routed-provider request selector
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - pending
+            - succeeded
+            - failed
+            - denied
+            - timeout
+            - cancelled
+            type: string
+          maxItems: 50
+          description: Repeated terminal outcome or pending filter
+          title: Outcome
+        description: Repeated terminal outcome or pending filter
+      - name: confidence
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - provider
+            - estimated
+            - partial
+            - unavailable
+            - not_applicable
+            type: string
+          maxItems: 50
+          description: Repeated request accounting confidence filter
+          title: Confidence
+        description: Repeated request accounting confidence filter
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 320
+          - type: 'null'
+          description: Literal search across immutable request and attempt snapshots
+          title: Search
+        description: Literal search across immutable request and attempt snapshots
+      - name: sort
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RequestSort'
+          default: request_started_at
+        description: Sort
+      - name: direction
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+          default: desc
+        description: Direction
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      - name: workspace
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated workspace snapshot ID filter
+          title: Workspace
+        description: Repeated workspace snapshot ID filter
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 512
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestPageOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: org_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/requests:
+    get:
+      tags:
+      - Workspace Reporting
+      summary: List Workspace Requests
+      description: 'List logical requests and their visible provider-attempt evidence for one workspace.
+
+
+        Required permission: `usage.read`.'
+      operationId: list_workspace_gateway_requests
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal snapshot ID filter
+          title: Principal
+        description: Repeated principal snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model request selector
+          title: Model
+        description: Repeated routed-model request selector
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider request selector
+          title: Provider
+        description: Repeated routed-provider request selector
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - pending
+            - succeeded
+            - failed
+            - denied
+            - timeout
+            - cancelled
+            type: string
+          maxItems: 50
+          description: Repeated terminal outcome or pending filter
+          title: Outcome
+        description: Repeated terminal outcome or pending filter
+      - name: confidence
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - provider
+            - estimated
+            - partial
+            - unavailable
+            - not_applicable
+            type: string
+          maxItems: 50
+          description: Repeated request accounting confidence filter
+          title: Confidence
+        description: Repeated request accounting confidence filter
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 320
+          - type: 'null'
+          description: Literal search across immutable request and attempt snapshots
+          title: Search
+        description: Literal search across immutable request and attempt snapshots
+      - name: sort
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RequestSort'
+          default: request_started_at
+        description: Sort
+      - name: direction
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+          default: desc
+        description: Direction
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 512
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestPageOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/reports/request-export:
+    get:
+      tags:
+      - Organization Reporting
+      summary: Export Organization Requests
+      description: 'Export every matching logical request as one CSV row at one ingestion watermark.
+
+
+        Required permission: `usage.read`.'
+      operationId: export_org_gateway_requests
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal snapshot ID filter
+          title: Principal
+        description: Repeated principal snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model request selector
+          title: Model
+        description: Repeated routed-model request selector
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider request selector
+          title: Provider
+        description: Repeated routed-provider request selector
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - pending
+            - succeeded
+            - failed
+            - denied
+            - timeout
+            - cancelled
+            type: string
+          maxItems: 50
+          description: Repeated terminal outcome or pending filter
+          title: Outcome
+        description: Repeated terminal outcome or pending filter
+      - name: confidence
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - provider
+            - estimated
+            - partial
+            - unavailable
+            - not_applicable
+            type: string
+          maxItems: 50
+          description: Repeated request accounting confidence filter
+          title: Confidence
+        description: Repeated request accounting confidence filter
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 320
+          - type: 'null'
+          description: Literal search across immutable request and attempt snapshots
+          title: Search
+        description: Literal search across immutable request and attempt snapshots
+      - name: sort
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RequestSort'
+          default: request_started_at
+        description: Sort
+      - name: direction
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+          default: desc
+        description: Direction
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      - name: workspace
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated workspace snapshot ID filter
+          title: Workspace
+        description: Repeated workspace snapshot ID filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestCsvExportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: org_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/request-export:
+    get:
+      tags:
+      - Workspace Reporting
+      summary: Export Workspace Requests
+      description: 'Export every matching logical request in one workspace as one CSV row at one ingestion watermark.
+
+
+        Required permission: `usage.read`.'
+      operationId: export_workspace_gateway_requests
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: range
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/OverviewRange'
+          description: Server-resolved report period preset
+        description: Server-resolved report period preset
+      - name: timezone
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used for calendar boundaries and buckets
+          title: Timezone
+        description: IANA timezone used for calendar boundaries and buckets
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: First included local calendar date for a custom range
+          title: Start Date
+        description: First included local calendar date for a custom range
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: Last included local calendar date for a custom range
+          title: End Date
+        description: Last included local calendar date for a custom range
+      - name: principal
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 50
+          description: Repeated principal snapshot ID filter
+          title: Principal
+        description: Repeated principal snapshot ID filter
+      - name: inference_key
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated inference key snapshot ID filter
+          title: Inference Key
+        description: Repeated inference key snapshot ID filter
+      - name: model
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 255
+          maxItems: 50
+          description: Repeated routed-model request selector
+          title: Model
+        description: Repeated routed-model request selector
+      - name: provider
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 63
+          maxItems: 50
+          description: Repeated routed-provider request selector
+          title: Provider
+        description: Repeated routed-provider request selector
+      - name: outcome
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - pending
+            - succeeded
+            - failed
+            - denied
+            - timeout
+            - cancelled
+            type: string
+          maxItems: 50
+          description: Repeated terminal outcome or pending filter
+          title: Outcome
+        description: Repeated terminal outcome or pending filter
+      - name: confidence
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            enum:
+            - provider
+            - estimated
+            - partial
+            - unavailable
+            - not_applicable
+            type: string
+          maxItems: 50
+          description: Repeated request accounting confidence filter
+          title: Confidence
+        description: Repeated request accounting confidence filter
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 320
+          - type: 'null'
+          description: Literal search across immutable request and attempt snapshots
+          title: Search
+        description: Literal search across immutable request and attempt snapshots
+      - name: sort
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/RequestSort'
+          default: request_started_at
+        description: Sort
+      - name: direction
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/SortDirection'
+          default: desc
+        description: Direction
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestCsvExportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/reports/requests/{request_id}:
+    get:
+      tags:
+      - Organization Reporting
+      summary: Get Organization Request
+      description: 'Get one logical request and all of its visible provider-attempt evidence.
+
+
+        Required permission: `usage.read`.'
+      operationId: get_org_gateway_request
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Request Id
+        description: Request id
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestDetailOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: org_scope
+        anyOf:
+        - usage.read
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/reports/requests/{request_id}:
+    get:
+      tags:
+      - Workspace Reporting
+      summary: Get Workspace Request
+      description: 'Get one logical request and all of its visible provider-attempt evidence for one workspace.
+
+
+        Required permission: `usage.read`.'
+      operationId: get_workspace_gateway_request
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Request Id
+        description: Request id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: as_of
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 320
+            pattern: ^[A-Za-z0-9_-]+$
+          - type: 'null'
+          description: Opaque report snapshot; omit for the latest relevant committed evidence
+          title: As Of
+        description: Opaque report snapshot; omit for the latest relevant committed evidence
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GatewayRequestDetailOut_'
         '422':
           description: Validation Error
           content:
@@ -5449,6 +6488,76 @@ components:
       - id
       - deleted_at
       title: DeletedOut[str]
+    DeniedRequestEvidenceOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        input_tokens:
+          type: integer
+          const: 0
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          const: 0
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          const: 0
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          const: 0
+          title: Cache Write Tokens
+        token_usage_source:
+          type: string
+          const: not_applicable
+          title: Token Usage Source
+        cost_source:
+          type: string
+          const: not_applicable
+          title: Cost Source
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        cost_input_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Input Usd
+        cost_output_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Output Usd
+        latency_ms:
+          type: integer
+          minimum: 0.0
+          title: Latency Ms
+        status:
+          type: string
+          const: denied
+          title: Status
+      type: object
+      required:
+      - event_id
+      - occurred_at
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - token_usage_source
+      - cost_source
+      - cost_usd
+      - cost_input_usd
+      - cost_output_usd
+      - latency_ms
+      - status
+      title: DeniedRequestEvidenceOut
     DeniedUsageEventV1:
       properties:
         schema_version:
@@ -5857,6 +6966,30 @@ components:
       required:
       - data
       title: Envelope[EventsIngestedOut]
+    Envelope_GatewayRequestCsvExportOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/GatewayRequestCsvExportOut'
+      type: object
+      required:
+      - data
+      title: Envelope[GatewayRequestCsvExportOut]
+    Envelope_GatewayRequestDetailOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/GatewayRequestDetailOut'
+      type: object
+      required:
+      - data
+      title: Envelope[GatewayRequestDetailOut]
+    Envelope_GatewayRequestPageOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/GatewayRequestPageOut'
+      type: object
+      required:
+      - data
+      title: Envelope[GatewayRequestPageOut]
     Envelope_HeartbeatOut_:
       properties:
         data:
@@ -6302,6 +7435,46 @@ components:
       - max_attempts
       - timeout_ms
       title: Fallback
+    GatewayRequestCsvExportOut:
+      properties:
+        filename:
+          type: string
+          title: Filename
+        content_type:
+          type: string
+          const: text/csv; charset=utf-8
+          title: Content Type
+          default: text/csv; charset=utf-8
+        row_count:
+          type: integer
+          minimum: 0.0
+          title: Row Count
+        freshness:
+          $ref: '#/components/schemas/OverviewFreshnessOut'
+        period:
+          $ref: '#/components/schemas/OverviewPeriodOut'
+        csv:
+          type: string
+          title: Csv
+      type: object
+      required:
+      - filename
+      - row_count
+      - freshness
+      - period
+      - csv
+      title: GatewayRequestCsvExportOut
+    GatewayRequestDetailOut:
+      properties:
+        freshness:
+          $ref: '#/components/schemas/OverviewFreshnessOut'
+        request:
+          $ref: '#/components/schemas/GatewayRequestReportOut'
+      type: object
+      required:
+      - freshness
+      - request
+      title: GatewayRequestDetailOut
     GatewayRequestFinishedV1:
       properties:
         schema_version:
@@ -6463,6 +7636,192 @@ components:
       - expected_attempts
       - latency_ms
       title: GatewayRequestFinishedV1
+    GatewayRequestPageOut:
+      properties:
+        freshness:
+          $ref: '#/components/schemas/OverviewFreshnessOut'
+        period:
+          $ref: '#/components/schemas/OverviewPeriodOut'
+        items:
+          items:
+            $ref: '#/components/schemas/GatewayRequestReportOut'
+          type: array
+          maxItems: 200
+          title: Items
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - freshness
+      - period
+      - items
+      - page
+      title: GatewayRequestPageOut
+    GatewayRequestReportOut:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        workspace_label:
+          type: string
+          title: Workspace Label
+        key_id:
+          type: string
+          title: Key Id
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+        authentication_label:
+          type: string
+          title: Authentication Label
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        principal_label:
+          type: string
+          title: Principal Label
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+        requested_model_id:
+          type: string
+          title: Requested Model Id
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          title: Requested Capabilities
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+        stream:
+          type: boolean
+          title: Stream
+        terminal:
+          anyOf:
+          - $ref: '#/components/schemas/RequestTerminalOut'
+          - type: 'null'
+        attempts:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/ObservedRequestAttemptOut'
+            - $ref: '#/components/schemas/UnavailableRequestAttemptOut'
+            discriminator:
+              propertyName: token_usage_source
+              mapping:
+                estimated: '#/components/schemas/ObservedRequestAttemptOut'
+                partial: '#/components/schemas/ObservedRequestAttemptOut'
+                provider: '#/components/schemas/ObservedRequestAttemptOut'
+                unavailable: '#/components/schemas/UnavailableRequestAttemptOut'
+          type: array
+          title: Attempts
+        denial:
+          anyOf:
+          - $ref: '#/components/schemas/DeniedRequestEvidenceOut'
+          - type: 'null'
+        evidence_complete:
+          type: boolean
+          title: Evidence Complete
+        confidence:
+          type: string
+          enum:
+          - provider
+          - estimated
+          - partial
+          - unavailable
+          - not_applicable
+          title: Confidence
+        known_input_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Input Tokens
+        known_output_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Output Tokens
+        known_cache_read_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Cache Read Tokens
+        known_cache_write_tokens:
+          type: integer
+          minimum: 0.0
+          title: Known Cache Write Tokens
+        known_cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Known Cost Usd
+        token_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Token Completeness
+        cost_completeness:
+          type: string
+          enum:
+          - complete
+          - partial
+          - unavailable
+          title: Cost Completeness
+      type: object
+      required:
+      - request_id
+      - request_started_at
+      - org_id
+      - workspace_id
+      - workspace_label
+      - key_id
+      - authentication_source
+      - authentication_label
+      - user_id
+      - principal_label
+      - principal_type
+      - requested_model_id
+      - requested_capabilities
+      - bundle_id
+      - stream
+      - terminal
+      - attempts
+      - denial
+      - evidence_complete
+      - confidence
+      - known_input_tokens
+      - known_output_tokens
+      - known_cache_read_tokens
+      - known_cache_write_tokens
+      - known_cost_usd
+      - token_completeness
+      - cost_completeness
+      title: GatewayRequestReportOut
     HTTPValidationError:
       properties:
         detail:
@@ -7503,6 +8862,147 @@ components:
       required:
       - permissions
       title: MyPermissionsOut
+    ObservedRequestAttemptOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        attempt_index:
+          type: integer
+          minimum: 1.0
+          title: Attempt Index
+        attempt_started_at:
+          type: string
+          format: date-time
+          title: Attempt Started At
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+        input_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Input Price Per Mtok
+        output_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Output Price Per Mtok
+        cache_read_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Read Price Per Mtok
+        cache_write_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Write Price Per Mtok
+        latency_ms:
+          type: integer
+          minimum: 0.0
+          title: Latency Ms
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+        credential_id:
+          type: string
+          format: uuid
+          title: Credential Id
+        credential_scope:
+          type: string
+          enum:
+          - platform
+          - org
+          - workspace
+          title: Credential Scope
+        credential_name:
+          type: string
+          title: Credential Name
+        token_usage_source:
+          type: string
+          enum:
+          - provider
+          - estimated
+          - partial
+          title: Token Usage Source
+        input_tokens:
+          type: integer
+          minimum: 0.0
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          minimum: 0.0
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          minimum: 0.0
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          minimum: 0.0
+          title: Cache Write Tokens
+        cost_source:
+          type: string
+          const: catalog_estimate
+          title: Cost Source
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        cost_input_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Input Usd
+        cost_output_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Output Usd
+      type: object
+      required:
+      - event_id
+      - attempt_index
+      - attempt_started_at
+      - occurred_at
+      - model_id
+      - provider_id
+      - max_output_tokens
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
+      - latency_ms
+      - status
+      - credential_id
+      - credential_scope
+      - credential_name
+      - token_usage_source
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_source
+      - cost_usd
+      - cost_input_usd
+      - cost_output_usd
+      title: ObservedRequestAttemptOut
     OrgCreate:
       properties:
         name:
@@ -7973,6 +9473,12 @@ components:
       title: OverviewBucket
     OverviewFreshnessOut:
       properties:
+        as_of:
+          type: string
+          maxLength: 320
+          minLength: 1
+          pattern: ^[A-Za-z0-9_-]+$
+          title: As Of
         watermark:
           anyOf:
           - type: string
@@ -7980,8 +9486,10 @@ components:
           - type: 'null'
           title: Watermark
         received_at:
-          type: string
-          format: date-time
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
           title: Received At
         delivery_completeness:
           type: string
@@ -7990,6 +9498,7 @@ components:
           default: unavailable
       type: object
       required:
+      - as_of
       - watermark
       - received_at
       title: OverviewFreshnessOut
@@ -9140,6 +10649,49 @@ components:
       - stream
       - capabilities
       title: RequestMatch
+    RequestSort:
+      type: string
+      enum:
+      - request_started_at
+      - latency_ms
+      - known_cost_usd
+      - known_tokens
+      title: RequestSort
+    RequestTerminalOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        outcome:
+          type: string
+          enum:
+          - succeeded
+          - failed
+          - denied
+          - timeout
+          - cancelled
+          title: Outcome
+        expected_attempts:
+          type: integer
+          minimum: 0.0
+          title: Expected Attempts
+        latency_ms:
+          type: integer
+          minimum: 0.0
+          title: Latency Ms
+      type: object
+      required:
+      - event_id
+      - occurred_at
+      - outcome
+      - expected_attempts
+      - latency_ms
+      title: RequestTerminalOut
     RoutedUsageEventV1:
       properties:
         schema_version:
@@ -9711,6 +11263,12 @@ components:
       - email
       - password
       title: SignupIn
+    SortDirection:
+      type: string
+      enum:
+      - asc
+      - desc
+      title: SortDirection
     StrictParameters:
       properties:
         kind:
@@ -9854,6 +11412,137 @@ components:
       - unavailable
       - not_applicable
       title: TokenUsageSource
+    UnavailableRequestAttemptOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        attempt_index:
+          type: integer
+          minimum: 1.0
+          title: Attempt Index
+        attempt_started_at:
+          type: string
+          format: date-time
+          title: Attempt Started At
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+        input_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Input Price Per Mtok
+        output_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Output Price Per Mtok
+        cache_read_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Read Price Per Mtok
+        cache_write_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Write Price Per Mtok
+        latency_ms:
+          type: integer
+          minimum: 0.0
+          title: Latency Ms
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+        credential_id:
+          type: string
+          format: uuid
+          title: Credential Id
+        credential_scope:
+          type: string
+          enum:
+          - platform
+          - org
+          - workspace
+          title: Credential Scope
+        credential_name:
+          type: string
+          title: Credential Name
+        token_usage_source:
+          type: string
+          const: unavailable
+          title: Token Usage Source
+        input_tokens:
+          type: 'null'
+          title: Input Tokens
+        output_tokens:
+          type: 'null'
+          title: Output Tokens
+        cache_read_tokens:
+          type: 'null'
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: 'null'
+          title: Cache Write Tokens
+        cost_source:
+          type: string
+          const: unavailable
+          title: Cost Source
+        cost_usd:
+          type: 'null'
+          title: Cost Usd
+        cost_input_usd:
+          type: 'null'
+          title: Cost Input Usd
+        cost_output_usd:
+          type: 'null'
+          title: Cost Output Usd
+      type: object
+      required:
+      - event_id
+      - attempt_index
+      - attempt_started_at
+      - occurred_at
+      - model_id
+      - provider_id
+      - max_output_tokens
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
+      - latency_ms
+      - status
+      - credential_id
+      - credential_scope
+      - credential_name
+      - token_usage_source
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_source
+      - cost_usd
+      - cost_input_usd
+      - cost_output_usd
+      title: UnavailableRequestAttemptOut
     UsageEventOut:
       properties:
         event_id:

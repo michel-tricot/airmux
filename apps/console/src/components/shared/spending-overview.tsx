@@ -409,7 +409,11 @@ export function SpendingOverview({ title, description, scope, filters, onFilterC
             <CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <span className="text-muted-foreground">Receipt</span>
-                <div className="font-mono">{formatTimestamp(query.data.freshness.received_at, query.data.periods.current.timezone)}</div>
+                <div className="font-mono">
+                  {query.data.freshness.received_at
+                    ? formatTimestamp(query.data.freshness.received_at, query.data.periods.current.timezone)
+                    : 'Unavailable'}
+                </div>
               </div>
               <div>
                 <span className="text-muted-foreground">Watermark</span>
