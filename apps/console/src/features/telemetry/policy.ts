@@ -5,5 +5,7 @@ export const telemetryAccess = {
   orgActivity: operationAuthority.listActivity,
   orgUsage: operationAuthority.listOrgEvents,
   workspaceUsage: operationAuthority.listWorkspaceEvents,
+  orgOverview: operationAuthority.getOrgOverviewReport,
+  workspaceOverview: operationAuthority.getWorkspaceOverviewReport,
   dataPlanes: operationAuthority.listDataPlanes,
 } as const;

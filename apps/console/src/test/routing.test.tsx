@@ -48,7 +48,7 @@ describe('organization section deep links', () => {
     expect(screen.queryByRole('combobox', { name: 'Workspace' })).toBeInTheDocument();
   });
 
-  it('keeps the current workspace selected while navigating organization pages', async () => {
+  it('selects all workspaces while navigating organization pages', async () => {
     const user = userEvent.setup();
     renderAt(`/org/workspaces/${WS.slug}`);
     await screen.findByRole('heading', { level: 1, name: WS.name });
@@ -56,30 +56,32 @@ describe('organization section deep links', () => {
 
     await user.click(screen.getByRole('link', { name: 'Models' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Models' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent('All workspaces');
 
     await user.click(screen.getAllByRole('link', { name: 'Settings' }).find((link) => link.getAttribute('href') === '/org/settings')!);
     expect(await screen.findByRole('heading', { level: 1, name: 'Organization Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent('All workspaces');
   });
 });
 
 describe('default workspace selection', () => {
-  it('redirects /org to the first workspace when none was selected before', async () => {
+  it('keeps /org on the all-workspaces overview when none was selected before', async () => {
     renderAt('/org');
     await waitFor(() => {
-      expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[0].slug}`);
+      expect(window.location.pathname).toBe('/org');
     });
-    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Workspace' })).toHaveTextContent('All workspaces');
   });
 
-  it('redirects /org to the last-selected workspace', async () => {
+  it('keeps the last concrete workspace without redirecting the organization overview', async () => {
     window.localStorage.setItem(`airmux_last_ws_${ORG.id}`, WORKSPACES[1].slug);
     renderAt('/org');
     await waitFor(() => {
-      expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[1].slug}`);
+      expect(window.location.pathname).toBe('/org');
     });
-    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[1].name })).toBeInTheDocument();
+    expect(window.localStorage.getItem(`airmux_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
+    expect(await screen.findByRole('combobox', { name: 'Workspace' })).toHaveTextContent('All workspaces');
   });
 
   it('remembers the workspace visited via a deep link', async () => {
@@ -88,6 +90,18 @@ describe('default workspace selection', () => {
     await waitFor(() => {
       expect(window.localStorage.getItem(`airmux_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].slug);
     });
+  });
+
+  it('navigates explicitly to all workspaces and preserves the last concrete workspace', async () => {
+    const user = userEvent.setup();
+    renderAt(`/org/workspaces/${WS.slug}`);
+    await screen.findByRole('heading', { level: 1, name: WS.name });
+    await user.click(screen.getByRole('combobox', { name: 'Workspace' }));
+    await user.click(await screen.findByRole('option', { name: 'All workspaces' }));
+
+    await waitFor(() => expect(window.location.pathname).toBe('/org'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    expect(window.localStorage.getItem(`airmux_last_ws_${ORG.id}`)).toBe(WS.slug);
   });
 });
 

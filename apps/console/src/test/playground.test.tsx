@@ -4,80 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES, paged, server } from './msw';
+import { ORG, WORKSPACES, server } from './msw';
 import { now, taxonomyProvider } from './fixtures';
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
 describe('playground', () => {
-  it.each([
-    ['provider', 'Provider reported'],
-    ['estimated', 'Estimated'],
-    ['partial', 'Partial'],
-    ['not_applicable', 'Not applicable'],
-  ] as const)('labels playground activity and %s token usage', async (source, label) => {
-    const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
-    server.use(
-      http.get(`/api/v1/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
-        paged<Api.UsageEventOut>([
-          {
-            event_id: '01941f29-7c00-7000-8000-000000000002',
-            ingest_id: 1,
-            request_id: '01941f29-7c00-7000-8000-000000000003',
-            request_started_at: now,
-            attempt_started_at: source === 'not_applicable' ? null : now,
-            occurred_at: now,
-            org_id: ORG.id,
-            workspace_id: WORKSPACES[0].id,
-            user_id: '00000000-0000-0000-0000-000000000001',
-            authentication_source: 'playground',
-            authentication_label: 'Playground',
-            principal_label: 'Test user',
-            principal_type: 'human',
-            workspace_label: WORKSPACES[0].name,
-            requested_model_id: 'test',
-            requested_capabilities: [],
-            key_id: playgroundSessionId,
-            model_id: 'openai/gpt-test',
-            provider_id: source === 'not_applicable' ? '' : 'provider-1',
-            bundle_id: '01941f29-7c00-7000-8000-000000000004',
-            input_tokens: source === 'not_applicable' ? 0 : 12,
-            token_usage_source: source,
-            output_tokens: source === 'not_applicable' ? 0 : 4,
-            attempt_index: source === 'not_applicable' ? null : 1,
-            max_output_tokens: 128,
-            input_price_per_mtok: source === 'not_applicable' ? null : '1',
-            output_price_per_mtok: source === 'not_applicable' ? null : '2',
-            cache_read_price_per_mtok: source === 'not_applicable' ? null : '0',
-            cache_write_price_per_mtok: source === 'not_applicable' ? null : '0',
-            cost_source: source === 'not_applicable' ? 'not_applicable' : 'catalog_estimate',
-            cost_usd: source === 'not_applicable' ? '0' : '0.001',
-            cost_input_usd: source === 'not_applicable' ? '0' : '0.0005',
-            cost_output_usd: source === 'not_applicable' ? '0' : '0.0005',
-            cache_read_tokens: 0,
-            cache_write_tokens: 0,
-            latency_ms: 100,
-            status: source === 'not_applicable' ? 'denied' : 'ok',
-            stream: true,
-            credential_id: source === 'not_applicable' ? null : '00000000-0000-0000-0000-000000000002',
-            credential_scope: source === 'not_applicable' ? null : 'workspace',
-            credential_name: source === 'not_applicable' ? null : 'default',
-          },
-        ]),
-      ),
-    );
-    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}`);
-    render(<App />);
-
-    const activity = await screen.findByRole('row', { name: /openai\/gpt-test Playground/ });
-
-    expect(within(activity).getByText('Playground')).toBeInTheDocument();
-    expect(within(activity).getByText(label)).toBeInTheDocument();
-    expect(within(activity).queryByText(playgroundSessionId)).not.toBeInTheDocument();
-    expect(screen.queryAllByText(/includes estimated counts/)).toHaveLength(source === 'estimated' ? 2 : 0);
-    expect(screen.queryAllByText('16 (estimated)')).toHaveLength(source === 'estimated' ? 1 : 0);
-    expect(screen.queryAllByText(/includes partially observed counts/)).toHaveLength(source === 'partial' ? 2 : 0);
-    expect(screen.queryAllByText('16 (partial)')).toHaveLength(source === 'partial' ? 1 : 0);
-  });
-
   it('starts a session automatically and streams a response through the inference prefix', async () => {
     const provider = taxonomyProvider('provider-1', 'openai');
     const model = {

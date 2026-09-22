@@ -19,6 +19,61 @@ export const WORKSPACES: Api.WorkspaceOut[] = [
   { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now },
 ];
 
+const emptyMetrics: Api.OverviewMetricsOut = {
+  logical_requests: 0,
+  attempts: 0,
+  outcomes: { succeeded: 0, failed: 0, denied: 0, timeout: 0, cancelled: 0 },
+  pending_requests: 0,
+  incomplete_requests: 0,
+  known_input_tokens: 0,
+  known_output_tokens: 0,
+  known_cache_read_tokens: 0,
+  known_cache_write_tokens: 0,
+  unavailable_usage_attempts: 0,
+  token_sources: { provider: 0, estimated: 0, partial: 0, unavailable: 0, not_applicable: 0 },
+  known_cost_usd: '0',
+  unpriced_attempts: 0,
+  cost_sources: { catalog_estimate: 0, unavailable: 0, not_applicable: 0 },
+  cost_per_request_usd: null,
+  cost_per_request_denominator: 0,
+  token_completeness: 'complete',
+  cost_completeness: 'complete',
+};
+
+const emptyReport: Api.OverviewReportOut = {
+  freshness: { watermark: null, received_at: now, delivery_completeness: 'unavailable' },
+  periods: {
+    current: { start_at: now, end_at: now, timezone: 'UTC' },
+    comparison: { start_at: now, end_at: now, timezone: 'UTC' },
+  },
+  bucket: 'day',
+  split: 'none',
+  group: 'workspace',
+  summary: {
+    current: emptyMetrics,
+    comparison: emptyMetrics,
+    delta: {
+      logical_requests: 0,
+      attempts: 0,
+      outcomes: { succeeded: 0, failed: 0, denied: 0, timeout: 0, cancelled: 0 },
+      pending_requests: 0,
+      incomplete_requests: 0,
+      known_input_tokens: 0,
+      known_output_tokens: 0,
+      known_cache_read_tokens: 0,
+      known_cache_write_tokens: 0,
+      unavailable_usage_attempts: 0,
+      token_sources: { provider: 0, estimated: 0, partial: 0, unavailable: 0, not_applicable: 0 },
+      known_cost_usd: '0',
+      unpriced_attempts: 0,
+      cost_sources: { catalog_estimate: 0, unavailable: 0, not_applicable: 0 },
+      cost_per_request_usd: null,
+    },
+  },
+  series: [],
+  attribution: [],
+};
+
 export function paged<T>(data: T[]) {
   return HttpResponse.json({ data, page: { next_cursor: null } });
 }
@@ -68,4 +123,6 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/invitations', () => enveloped<Api.OrgInvitationOut>([])),
   http.get('/api/v1/organizations/:orgId/events', () => paged<Api.UsageEventOut>([])),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () => paged<Api.UsageEventOut>([])),
+  http.get('/api/v1/organizations/:orgId/reports/overview', () => HttpResponse.json({ data: emptyReport })),
+  http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/reports/overview', () => HttpResponse.json({ data: emptyReport })),
 );

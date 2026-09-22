@@ -132,7 +132,7 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Password'), 'secret');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
   });
 
   it('creates the first account directly', async () => {
@@ -158,7 +158,7 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Password'), 'secure-password');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
   });
 
   it('explains that public signup is closed and directs visitors to an administrator', async () => {
@@ -223,7 +223,7 @@ describe('sign-in landing', () => {
   it('lands in the last-selected org', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
   });
 
   it('lands on the picker when no org was selected before', async () => {
@@ -237,7 +237,7 @@ describe('instance admin gate', () => {
   it('redirects non-admin users from /instance to the org console', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/instance');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
     expect(window.location.pathname).not.toBe('/instance');
   });
 });
@@ -261,18 +261,18 @@ describe('organization picker', () => {
     expect(screen.getByText(ORG2.name)).toBeInTheDocument();
   });
 
-  it('lands in the org after picking one, defaulting to its first workspace', async () => {
+  it('lands in the all-workspaces overview after picking an organization', async () => {
     withTwoOrgs();
     const user = userEvent.setup();
     renderAt('/org');
     await user.click(await screen.findByRole('button', { name: new RegExp(ORG.name) }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
     expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
   });
 
   it('auto-selects the org when the user belongs to exactly one', async () => {
     renderAt('/org');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
     expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
   });
 });
@@ -284,7 +284,7 @@ describe('switching organizations', () => {
     const user = userEvent.setup();
     renderAt('/org');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch organization' }));
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
@@ -292,9 +292,7 @@ describe('switching organizations', () => {
 
     await user.click(screen.getByRole('button', { name: new RegExp(ORG2.name) }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Beta Staging' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.queryByText('Acme Production')).not.toBeInTheDocument();
-    });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    await waitFor(() => expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG2.id));
   });
 });

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { estimateUsd, formatUsdAmount, formatUsdRate, parseUsdAmount, parseUsdRate, sumUsdAmounts } from './money';
+import {
+  estimateUsd,
+  formatExactUsd,
+  formatSignedExactUsd,
+  formatUsdAmount,
+  formatUsdRate,
+  parseUsdAmount,
+  parseUsdRate,
+  sumUsdAmounts,
+} from './money';
 
 describe('fixed-scale money', () => {
   it('parses and sums amounts without numeric conversion', () => {
@@ -21,5 +30,13 @@ describe('fixed-scale money', () => {
     expect(formatUsdAmount(parseUsdAmount('0.00995'), 4)).toBe('0.0100');
     expect(formatUsdRate(parseUsdRate('0.3'))).toBe('0.30');
     expect(formatUsdRate(parseUsdRate('3.75'))).toBe('3.75');
+  });
+
+  it('preserves nonzero sub-cent amounts and signed deltas', () => {
+    expect(formatExactUsd('0.000000000444')).toBe('$0.000000000444');
+    expect(formatExactUsd('1.234560000001')).toBe('$1.234560000001');
+    expect(formatExactUsd('0')).toBe('$0.0000');
+    expect(formatSignedExactUsd('-0.000000000444')).toBe('-$0.000000000444');
+    expect(formatSignedExactUsd('1.25')).toBe('+$1.2500');
   });
 });

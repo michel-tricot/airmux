@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 import { LogOut, Shield, ArrowLeftRight, Plus } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
 import { Avatar, AvatarFallback, Button, Input, Dropdown } from '@/components/ui/elements';
@@ -17,6 +17,7 @@ import { workspaceRoutes } from '@/pages/app/workspace/routes';
 import { orgRoutes } from '@/pages/app/routes';
 
 const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required') });
+const ALL_WORKSPACES = '__all_workspaces__';
 
 const navigationClassName =
   'flex items-center gap-3 rounded-md border-l-2 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors';
@@ -31,14 +32,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const enrollment = useEnrollment();
   const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
   const [location, setLocation] = useLocation();
+  const search = useSearch();
   const [createOpen, setCreateOpen] = useState(false);
 
   const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
   const routedWorkspaceRef = match?.[1] ?? '';
   const activeSuffix = match?.[2] ?? '';
   const lastWorkspaceKey = `airmux_last_ws_${orgId}`;
-  const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
-  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef);
+  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === routedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
   const workspaceAuthorization = useScopedAuthorization(
     { level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug },
@@ -50,18 +51,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
   }, [activeWorkspaceSlug, lastWorkspaceKey]);
 
-  const autoPickedOrg = useRef<string | null>(null);
-  useEffect(() => {
-    if (autoPickedOrg.current === orgId || !workspaces) return;
-    autoPickedOrg.current = orgId;
-    if (location !== '/org' || workspaces.length === 0) return;
-    const lastWorkspace = window.localStorage.getItem(lastWorkspaceKey);
-    const workspace = workspaces.find((candidate) => candidate.slug === lastWorkspace) ?? workspaces[0];
-    setLocation(`/org/workspaces/${workspace.slug}`, { replace: true });
-  }, [lastWorkspaceKey, location, orgId, setLocation, workspaces]);
-
   const createWorkspace = useCreateWorkspaceMutation(orgId);
-  const switchWorkspace = (slug: string) => setLocation(`/org/workspaces/${slug}${activeSuffix}`);
+  const switchWorkspace = (slug: string) => {
+    const preserveFilters = location === '/org' || (activeSuffix === '' && routedWorkspaceRef !== '');
+    const query = preserveFilters && search ? `?${search}` : '';
+    setLocation(slug === ALL_WORKSPACES ? `/org${query}` : `/org/workspaces/${slug}${activeSuffix}${query}`);
+  };
 
   const sidebar = (close: () => void) => (
     <div className="flex min-h-full flex-col bg-card text-card-foreground">
@@ -87,7 +82,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="shrink-0 border-b border-border/50 p-3">
         <Dropdown
-          value={activeWorkspaceSlug}
+          value={activeWorkspaceSlug || ALL_WORKSPACES}
           onValueChange={(slug) => {
             close();
             switchWorkspace(slug);
@@ -96,7 +91,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           placeholder={workspacesQuery.isLoading ? 'Loading workspaces...' : 'Select a workspace'}
           disabled={workspacesQuery.isLoading || workspacesQuery.isError}
           className="bg-muted font-medium"
-          options={(workspaces ?? []).map((workspace) => ({ value: workspace.slug, label: workspace.name }))}
+          options={[
+            { value: ALL_WORKSPACES, label: 'All workspaces' },
+            ...(workspaces ?? []).map((workspace) => ({ value: workspace.slug, label: workspace.name })),
+          ]}
           actions={
             canCreateWorkspace
               ? [

@@ -25,3 +25,18 @@ export const estimateUsd = (buckets: Array<{ tokens: number; rate: string }>) =>
 export const formatUsdAmount = (value: bigint, fractionDigits = 4) => formatFixed(value, AMOUNT_SCALE, fractionDigits, fractionDigits);
 export const formatUsdRate = (value: bigint) => formatFixed(value, RATE_SCALE, 4);
 export const formatUsd = (value: bigint) => `$${formatUsdAmount(value, value >= 1_000_000_000_000n ? 2 : 4)}`;
+
+export const formatExactUsd = (value: string) => {
+  const amount = parseUsdAmount(value);
+  const exact = formatUsdAmount(amount, AMOUNT_SCALE);
+  const [whole, fraction] = exact.split('.');
+  return `$${whole}.${fraction.replace(/0+$/, '').padEnd(4, '0')}`;
+};
+
+export const formatSignedExactUsd = (value: string) => {
+  const match = /^(-)?(\d+(?:\.\d+)?)$/.exec(value);
+  if (!match) throw new Error(`Invalid fixed-point value: ${value}`);
+  const formatted = formatExactUsd(match[2]);
+  if (parseUsdAmount(match[2]) === 0n) return formatted;
+  return match[1] ? `-${formatted}` : `+${formatted}`;
+};

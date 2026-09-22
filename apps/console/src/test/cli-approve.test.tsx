@@ -123,7 +123,7 @@ describe('CLI device sign-in approval', () => {
   it('does not treat routes that merely start with cli as approval routes', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/client');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/org/workspaces/production');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org');
   });
 });
