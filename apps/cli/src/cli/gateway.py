@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from shlex import quote as shell_quote
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import typer
 
@@ -86,12 +86,13 @@ def validate(config: ConfigOption = None) -> None:
 
 @gateway_app.command()
 @runtime_command
-def serve(
+def serve(  # noqa: PLR0913, PLR0917 -- expose the server choice as a CLI option
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
     port: PortOption = 8080,
     dev: Annotated[bool, typer.Option("--dev", help="Reload Python code during development")] = False,
     workers: Annotated[int, typer.Option("--workers", min=1, help="Worker processes sharing one gateway state directory")] = 1,
+    server: Annotated[Literal["uvicorn", "robyn"], typer.Option("--server", help="HTTP server implementation")] = "uvicorn",
 ) -> None:
     """Run the inference gateway in the foreground."""
     from data_plane.operations import serve as serve_gateway  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
@@ -100,9 +101,12 @@ def serve(
     if dev and workers != 1:
         message = "--dev requires --workers 1"
         raise typer.BadParameter(message)
+    if dev and server == "robyn":
+        message = "--dev reload is available with the Uvicorn server"
+        raise typer.BadParameter(message)
     path = configuration_path(config, "gateway")
     validate_configuration(path)
-    serve_gateway(path, host=host, port=port, dev=dev, workers=workers)
+    serve_gateway(path, host=host, port=port, dev=dev, workers=workers, server=server)
 
 
 @gateway_app.command()
