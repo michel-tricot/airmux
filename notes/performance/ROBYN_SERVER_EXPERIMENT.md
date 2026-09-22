@@ -1,11 +1,11 @@
-# Robyn server experiment
+# Native Robyn server experiment
 
-This experiment compares Airmux's existing Uvicorn server with Robyn 0.88.0 under the same production request path. Robyn currently adapts requests into ASGI and calls the existing Starlette application, preserving Airmux behavior while measuring the cost of using Robyn as the server.
+This experiment registers Airmux routes with Robyn and invokes their existing endpoints directly. Robyn handles routing and HTTP responses; the request does not pass through the Starlette ASGI application or ASGI response bridge. A lightweight Starlette `Request` and the existing response objects remain at the endpoint boundary so authentication, ingress adapters, canonical processing, provider logic, streaming, and metering stay shared.
 
 ## Method
 
 - ARM64 Linux container on Apple M3 Max, CPython 3.13.15, one gateway worker pinned to one CPU
-- One mock provider, one load generator, and one gateway CPU; no control plane
+- One mock provider and one load generator; no control plane
 - Same Airmux configuration for both servers, including production logging, Prometheus metrics, and usage accounting to a devnull sink
 - Three alternating rounds at concurrency 256, 512, and 1024; 20 seconds per measurement
 - Metrics include RPS, client-observed latency, gateway CPU time per request, and peak gateway RSS
@@ -14,21 +14,23 @@ This experiment compares Airmux's existing Uvicorn server with Robyn 0.88.0 unde
 
 ## Results
 
-Values are medians across three rounds. At concurrency 1024, Uvicorn's p99 was unstable: two runs exceeded five seconds and one was about three seconds.
+Values are medians across three rounds.
 
 | Server | Concurrency | RPS | p50 ms | p99 ms | CPU µs/request | Peak RSS MB |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Uvicorn | 256 | 3312 | 75.9 | 124.2 | 302 | 102.0 |
-| Robyn ASGI adapter | 256 | 2943 | 86.4 | 136.5 | 335 | 112.6 |
-| Uvicorn | 512 | 3214 | 144.7 | 228.3 | 311 | 110.9 |
-| Robyn ASGI adapter | 512 | 2809 | 178.9 | 265.6 | 355 | 131.8 |
-| Uvicorn | 1024 | 3090 | 161.8 | 5125.6 | 324 | 114.5 |
-| Robyn ASGI adapter | 1024 | 2662 | 379.2 | 503.4 | 376 | 170.3 |
+| Uvicorn | 256 | 3051 | 83.0 | 133.9 | 328 | 102.3 |
+| Native Robyn | 256 | 2990 | 83.4 | 131.8 | 332 | 109.5 |
+| Uvicorn | 512 | 2978 | 163.0 | 256.3 | 336 | 111.3 |
+| Native Robyn | 512 | 2957 | 172.3 | 249.0 | 338 | 126.2 |
+| Uvicorn | 1024 | 2934 | 171.1 | 6190.2 | 341 | 116.2 |
+| Native Robyn | 1024 | 2841 | 353.7 | 500.1 | 352 | 159.0 |
 
-Robyn delivered 11%, 13%, and 14% less throughput at the three concurrency levels. Its CPU cost per request was 11%, 14%, and 16% higher. Peak RSS was 10%, 19%, and 49% higher. Both servers saturated the single gateway core, so the run does not point to a worker-count or CPU-quota mistake.
+In this final run, Robyn was within 1–3% of Uvicorn's throughput at all three levels. At concurrency 1024, its median p99 was lower, while median p50 more than doubled and peak RSS was 37% higher. Both gateways saturated the same single core. A preceding paired run on the same request path showed about 4% higher Robyn throughput at 256 and 512, then 6% lower at 1024; the small throughput differences are within run-to-run variation and do not establish a general win.
+
+The earlier ASGI-bridge implementation was 11–14% slower than Uvicorn across these load levels. Direct route invocation removed that bridge penalty, but did not eliminate the high-concurrency tradeoff.
 
 ## Interpretation
 
-The comparison tests the current compatibility adapter, not a native Robyn port. Each request still enters Starlette and runs the existing ASGI middleware and routes; the adapter additionally builds an ASGI scope, starts a Python task, and moves response events through an asyncio queue. This extra bridge is the likely reason for the regression. Changing process or worker settings is unlikely to remove that per-request work in a one-worker comparison.
+This is a native Robyn server and routing path around the existing Airmux endpoint layer, not a rewrite of canonical or provider behavior. It still constructs a Starlette `Request` value for the existing endpoint interfaces and converts their response values into Robyn responses. That preserves a single implementation of gateway behavior while removing Starlette route dispatch, ASGI app invocation, and ASGI event queueing from each request.
 
-The measurements do not establish Robyn's maximum performance with native Robyn routes. Such a port would need to replace the Starlette request path while preserving middleware, authentication, streaming, metrics, and usage behavior. This experiment does not justify adopting Robyn for throughput.
+The result is promising enough to keep as an experiment, but does not justify replacing Uvicorn yet. The 1024-concurrency p50 and RSS regressions need investigation. A real HTTP test confirmed the upstream stream generator finalizes after an early client disconnect.

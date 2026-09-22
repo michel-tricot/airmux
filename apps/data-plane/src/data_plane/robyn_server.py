@@ -3,7 +3,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-from collections.abc import AsyncGenerator, Callable, Mapping, Sequence
+import time
+from collections.abc import Awaitable, Callable, Generator, Mapping
+from dataclasses import dataclass
+from http import HTTPStatus
 from typing import TYPE_CHECKING, cast
 from urllib.parse import urlencode
 
@@ -12,34 +15,57 @@ from robyn.responses import StreamingResponse as RobynStreamingResponse
 from robyn.robyn import Headers
 from robyn.robyn import Request as RobynRequest
 from robyn.robyn import Response as RobynResponse
-from starlette.routing import BaseRoute, Route
+from starlette.requests import Request
+from starlette.responses import Response, StreamingResponse
+from starlette.routing import Route
 
+from airmux_runtime.observability import request_context
+from contract import uuid7
 from data_plane.app import load_app
+from data_plane.metering import RequestStart
 
 if TYPE_CHECKING:
     from contextlib import AbstractAsyncContextManager
 
     from starlette.applications import Starlette
-    from starlette.types import ASGIApp, Message, Receive, Scope
+    from starlette.types import Message, Receive, Scope
 
     from data_plane.http import ResponseHeadersMiddleware
+    from data_plane.metrics import DataPlaneMetrics
 
 
 type State = Mapping[str, object] | None
 type Lifespan = Callable[[], AbstractAsyncContextManager[State]]
-type Event = Message | Exception
+type Endpoint = Callable[[Request], Awaitable[Response]]
+type StreamEvent = bytes | None
 
 
-class ASGIProtocolError(RuntimeError):
-    pass
+@dataclass
+class RequestObservation:
+    metrics: DataPlaneMetrics | None
+    state: Mapping[str, object]
+    route: str
+    method: str
+    started: float
+    request_start: RequestStart
+    finished: bool = False
+    status: int = HTTPStatus.INTERNAL_SERVER_ERROR
+
+    def finish(self, status: int) -> None:
+        if self.metrics is not None and not self.finished:
+            stream = bool(self.state["metrics_stream"])
+            self.metrics.observe_inflight(self.route, stream, -1)
+            self.metrics.observe_http((self.route, self.method, str(self.state["metrics_dialect"]), stream), status, time.monotonic() - self.started)
+        self.finished = True
 
 
-def create_robyn_app(asgi_app: ASGIApp, routes: Sequence[BaseRoute], *, lifespan: Lifespan | None = None) -> Robyn:
+def create_robyn_app(starlette_app: Starlette, *, lifespan: Lifespan | None = None) -> Robyn:
     state: dict[str, object] = {}
     lifecycle: AbstractAsyncContextManager[State] | None = None
     robyn_app = Robyn(__file__, config=config)
     robyn_app.config.disable_openapi = True
     robyn_app.config.log_level = "WARNING"
+    metrics = cast("DataPlaneMetrics | None", getattr(starlette_app.state, "metrics", None))
 
     @robyn_app.startup_handler
     async def startup() -> None:
@@ -55,10 +81,16 @@ def create_robyn_app(asgi_app: ASGIApp, routes: Sequence[BaseRoute], *, lifespan
         if lifecycle is not None:
             await lifecycle.__aexit__(None, None, None)
 
-    for route in routes:
+    for route in starlette_app.routes:
         if isinstance(route, Route):
             for method in route.methods or ():
-                robyn_app.add_route(method, _robyn_path(route.path), _handler(asgi_app, state), include_in_schema=False)
+                endpoint = cast("Endpoint", route.endpoint)
+                robyn_app.add_route(
+                    method,
+                    _robyn_path(route.path),
+                    _handler(endpoint, route, starlette_app, state, metrics),
+                    include_in_schema=False,
+                )
     return robyn_app
 
 
@@ -69,8 +101,7 @@ def serve_robyn(*, host: str, port: int, workers: int) -> None:
     config.processes = workers
     config.workers = 1
     create_robyn_app(
-        asgi_app,
-        starlette_app.routes,
+        starlette_app,
         lifespan=lambda: starlette_app.router.lifespan_context(starlette_app),
     ).start(host=host, port=port)
 
@@ -80,7 +111,7 @@ def _robyn_path(path: str) -> str:
     return re.sub(r"\{([A-Za-z_]\w*)\}", r":\1", path)
 
 
-def _scope(request: RobynRequest, state: dict[str, object]) -> Scope:
+def _scope(request: RobynRequest, route: Route, app: Starlette, state: Mapping[str, object], start: RequestStart) -> Scope:
     url = request.url
     host = request.headers.get("host") or url.host
     raw_headers = [(name.encode("latin-1"), value.encode("latin-1")) for name, value in request.headers.multi_items()]
@@ -98,100 +129,149 @@ def _scope(request: RobynRequest, state: dict[str, object]) -> Scope:
         "headers": raw_headers,
         "client": (request.ip_addr or "127.0.0.1", 0),
         "server": (host, 443 if url.scheme == "https" else 80),
-        "state": state,
+        "state": {**state, "request_start": start, "metrics_route": route.path, "metrics_dialect": "none", "metrics_stream": False},
+        "path_params": request.path_params,
+        "app": app,
+        "router": app.router,
         "extensions": {},
     }
 
 
-def _receiver(body: bytes, disconnected: asyncio.Event) -> Receive:
+def _receive(body: bytes) -> Receive:
     body_sent = False
 
     async def receive() -> Message:
         nonlocal body_sent
-        if not body_sent:
-            body_sent = True
-            return {"type": "http.request", "body": body, "more_body": False}
-        await disconnected.wait()
-        return {"type": "http.disconnect"}
+        if body_sent:
+            return {"type": "http.disconnect"}
+        body_sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
 
     return receive
 
 
-def _message(event: Event, expected: str) -> Message:
-    if isinstance(event, Exception):
-        raise event
-    if event["type"] != expected:
-        raise ASGIProtocolError
-    return event
-
-
-def _response_headers(message: Message) -> Headers:
-    headers = Headers({})
-    response_headers = cast("list[tuple[bytes, bytes]]", message["headers"])
-    for name, value in response_headers:
-        headers.append(name.decode("latin-1"), value.decode("latin-1"))
-    return headers
-
-
-def _handler(asgi_app: ASGIApp, state: dict[str, object]) -> Callable[[RobynRequest], object]:
+def _handler(
+    endpoint: Endpoint,
+    route: Route,
+    app: Starlette,
+    state: Mapping[str, object],
+    metrics: DataPlaneMetrics | None,
+) -> Callable[[RobynRequest], object]:
     async def handle(request: RobynRequest) -> RobynResponse | RobynStreamingResponse:
-        body = request.body.encode() if isinstance(request.body, str) else request.body
-        disconnect = asyncio.Event()
-        scope = _scope(request, state)
-        events: asyncio.Queue[Event] = asyncio.Queue(maxsize=1)
-
-        async def send(message: Message) -> None:
-            await events.put(message)
-
-        async def produce() -> None:
-            try:
-                await asgi_app(scope, _receiver(body, disconnect), send)
-            except asyncio.CancelledError:
-                raise
-            except Exception as error:  # noqa: BLE001 ASGI exceptions must reach the response adapter
-                await events.put(error)
-
-        producer = asyncio.create_task(produce())
+        started = time.monotonic()
+        request_start = RequestStart(request_id=uuid7(), started_at=started)
+        scope = _scope(request, route, app, state, request_start)
+        starlette_request = Request(scope, _receive(_request_body(request)))
+        scope_state = cast("dict[str, object]", scope["state"])
+        observation = RequestObservation(metrics, scope_state, route.path, request.method, started, request_start)
+        if metrics is not None:
+            metrics.observe_inflight(route.path, False, 1)
         try:
-            response_start = _message(await events.get(), "http.response.start")
-            first_body = _message(await events.get(), "http.response.body")
-            status_code = cast("int", response_start["status"])
-            headers = _response_headers(response_start)
-            first_chunk = cast("bytes", first_body.get("body", b""))
-            if not first_body.get("more_body", False):
-                await producer
-                return RobynResponse(status_code=status_code, headers=headers, body=first_chunk)
-            return RobynStreamingResponse(
-                _stream(events, producer, first_chunk, disconnect),
-                status_code=status_code,
-                headers=headers,
-                media_type=headers.get("content-type") or "application/octet-stream",
-            )
+            with request_context(request_start.request_id):
+                response = await endpoint(starlette_request)
+            _response_headers(response, request_start.request_id)
+            observation.status = response.status_code
+            if isinstance(response, StreamingResponse):
+                loop = asyncio.get_running_loop()
+                events: asyncio.Queue[StreamEvent] = asyncio.Queue(maxsize=1)
+                producer = asyncio.create_task(_produce_stream(response, events, request_start))
+                return RobynStreamingResponse(
+                    _stream(events, loop, producer, observation),
+                    status_code=response.status_code,
+                    headers=_headers(response),
+                    media_type=response.media_type or "application/octet-stream",
+                )
+            if request.method == "HEAD":
+                response.body = b""
+            result = RobynResponse(status_code=response.status_code, headers=_headers(response), body=bytes(response.body))
         except BaseException:
-            if not producer.done():
-                producer.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await producer
+            observation.finish(HTTPStatus.INTERNAL_SERVER_ERROR)
             raise
+        else:
+            observation.finish(response.status_code)
+            return result
 
     return handle
 
 
-async def _stream(events: asyncio.Queue[Event], producer: asyncio.Task[None], first_chunk: bytes, disconnect: asyncio.Event) -> AsyncGenerator[bytes]:
+def _request_body(request: RobynRequest) -> bytes:
+    return request.body.encode() if isinstance(request.body, str) else request.body
+
+
+def _response_headers(response: Response, request_id: object) -> None:
+    response.headers["x-request-id"] = str(request_id)
+    response.headers["x-content-type-options"] = "nosniff"
+    streaming = response.headers.get("content-type", "").partition(";")[0].strip().casefold() == "text/event-stream"
+    response.headers["cache-control"] = "no-store, no-transform" if streaming else "no-store"
+    if streaming:
+        response.headers["x-accel-buffering"] = "no"
+    if response.status_code == HTTPStatus.UNAUTHORIZED:
+        response.headers.setdefault("www-authenticate", 'Bearer realm="airmux"')
+
+
+def _headers(response: Response) -> Headers:
+    headers = Headers({})
+    for name, value in response.raw_headers:
+        headers.append(name.decode("latin-1"), value.decode("latin-1"))
+    return headers
+
+
+async def _produce_stream(
+    response: StreamingResponse,
+    events: asyncio.Queue[StreamEvent],
+    request_start: RequestStart,
+) -> None:
+    iterator = response.body_iterator.__aiter__()
     try:
-        if first_chunk:
-            yield first_chunk
         while True:
-            event = _message(await events.get(), "http.response.body")
-            chunk = cast("bytes", event.get("body", b""))
-            if chunk:
-                yield chunk
-            if not event.get("more_body", False):
-                await producer
-                return
+            with request_context(request_start.request_id):
+                try:
+                    chunk = await anext(iterator)
+                except StopAsyncIteration:
+                    await events.put(None)
+                    return
+            await events.put(chunk.encode() if isinstance(chunk, str) else bytes(chunk))
     finally:
-        disconnect.set()
-        if not producer.done():
-            producer.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await producer
+        if close := getattr(iterator, "aclose", None):
+            with contextlib.suppress(RuntimeError):
+                await close()
+
+
+def _stream(
+    events: asyncio.Queue[StreamEvent],
+    loop: asyncio.AbstractEventLoop,
+    producer: asyncio.Task[None],
+    observation: RequestObservation,
+) -> Generator[bytes]:
+    try:
+        while (event := asyncio.run_coroutine_threadsafe(_next_stream_event(events, producer), loop).result()) is not None:
+            yield event
+    finally:
+        try:
+            asyncio.run_coroutine_threadsafe(_cancel(producer), loop).result()
+        finally:
+            observation.finish(observation.status)
+
+
+async def _cancel(task: asyncio.Task[None]) -> None:
+    if not task.done():
+        task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+async def _next_stream_event(events: asyncio.Queue[StreamEvent], producer: asyncio.Task[None]) -> bytes | None:
+    if not events.empty():
+        return events.get_nowait()
+    if producer.done():
+        producer.result()
+        return None
+    event = asyncio.create_task(events.get())
+    done, _ = await asyncio.wait((event, producer), return_when=asyncio.FIRST_COMPLETED)
+    if event in done:
+        return event.result()
+    event.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await event
+    producer.result()
+    return None
