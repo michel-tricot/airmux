@@ -87,6 +87,7 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
             with outbox.reserve() as reservation:
                 reservation.record(
                     DeniedUsageEventV1(
+                        event_type="usage",
                         event_id=uuid7(),
                         request_id=uuid7(),
                         request_started_at=datetime.now(tz=UTC),
@@ -110,6 +111,10 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
                         output_tokens=0,
                         max_output_tokens=None,
                         cost_usd="0",
+                        cost_input_usd="0",
+                        cost_output_usd="0",
+                        cache_read_tokens=0,
+                        cache_write_tokens=0,
                         cost_source="not_applicable",
                         latency_ms=0,
                         status="denied",

@@ -34,9 +34,11 @@ def test_client_disconnect_records_partial_usage_and_other_requests_still_comple
     (cancelled,) = gateway.events(1)
     assert cancelled.status == "cancelled"
     assert cancelled.stream is True
+    assert cancelled.input_tokens is not None
+    assert cancelled.output_tokens is not None
     assert cancelled.input_tokens > 0
     assert cancelled.output_tokens > 0
-    assert cancelled.token_usage_source == "estimated"
+    assert cancelled.token_usage_source == "partial"
     release.set()
     assert gateway.request(dialect, model="model-b").status_code == 200
     assert [event.status for event in gateway.events(2)] == ["cancelled", "ok"]
@@ -51,6 +53,8 @@ def test_usage_is_estimated_when_absent_and_appended_across_restart(gateway: Gat
     gateway.start()
     assert gateway.request(stream=stream).status_code == 200
     (first,) = gateway.events(1)
+    assert first.input_tokens is not None
+    assert first.output_tokens is not None
     assert first.input_tokens > 0
     assert first.output_tokens > 0
     assert first.token_usage_source == ("estimated" if usage is None else "provider")

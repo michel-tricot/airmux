@@ -9,24 +9,25 @@ from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, UsageStatus
+from contract import BundleManifest, BundleManifestEntry, BundleV1, GatewayRequestFinishedV1, HeartbeatV1, IngestEvent, UsageStatus
 from contract import UsageEvent as UsageEventContract
 from contract.budgets import OrgPolicyState, PolicyState, PolicyStateRequest
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, CredentialScopeDep, SessionDep, credential_scope, require
-from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
+from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageIngestBatch
 from control_plane.models.budget import budget_states
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
-from control_plane.models.usage_event import EventsIngestedOut, UsageEventConflictError
+from control_plane.models.usage_event import EventsIngestedOut
+from control_plane.models.usage_ingest_batch import IngestConflictError
 
 if TYPE_CHECKING:
     from control_plane.models.provider_credential import ProviderCredentialStatus
 
 router = APIRouter(tags=["Data Plane API"])
 
-EventBatch = Annotated[list[UsageEventContract], Field(max_length=1000)]
+EventBatch = Annotated[list[IngestEvent], Field(max_length=1000)]
 
 CREDENTIAL_HEALTH: dict[UsageStatus, ProviderCredentialStatus] = {
     "ok": "live",
@@ -70,21 +71,22 @@ async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
 
 @router.post("/events", dependencies=[require("operational", credential_scope, Permission.usage_ingest)])
 async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch) -> Envelope[EventsIngestedOut]:
-    """Ingest up to 1,000 usage events; repeated events and request attempts are ignored."""
+    """Ingest up to 1,000 request observations under one stable watermark."""
     if not events:
-        return Envelope(data=EventsIngestedOut(received=0, ingested=0))
+        return Envelope(data=EventsIngestedOut(received=0, ingested=0, watermark=await UsageIngestBatch.latest_watermark()))
     await ensure_allowed_for_scopes(
         actor,
         Permission.usage_ingest,
         (Scope.workspace(event.org_id, event.workspace_id) for event in events),
     )
     try:
-        inserted = await UsageEvent.ingest(events)
-    except UsageEventConflictError as error:
+        result = await UsageIngestBatch.ingest(events)
+    except IngestConflictError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-    events_by_id = {event.event_id: event for event in events}
-    await ProviderCredential.observe(_credential_health([events_by_id[event_id] for event_id in inserted]), org_id=scope.org_id)
-    return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
+    usage_by_id = {event.event_id: event for event in events if not isinstance(event, GatewayRequestFinishedV1)}
+    inserted_usage = [usage_by_id[event_id] for event_id in result.inserted_usage_event_ids]
+    await ProviderCredential.observe(_credential_health(inserted_usage), org_id=scope.org_id)
+    return Envelope(data=EventsIngestedOut(received=len(events), ingested=result.ingested, watermark=result.watermark))
 
 
 def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[datetime, ProviderCredentialStatus]]:

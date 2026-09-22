@@ -5,9 +5,10 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from contract import UsageEvent, uuid7
+from contract import GatewayRequestFinishedV1, IngestEvent, UsageEvent, uuid7
 
 USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
+INGEST_EVENT_ADAPTER = TypeAdapter(IngestEvent)
 
 
 def usage_event(**overrides: object) -> dict[str, object]:
@@ -15,6 +16,7 @@ def usage_event(**overrides: object) -> dict[str, object]:
     request_started_at = datetime(2026, 9, 22, 12, tzinfo=UTC)
     attempt_started_at = datetime(2026, 9, 22, 12, 0, 1, tzinfo=UTC)
     return {
+        "event_type": "usage",
         "event_id": uuid7(),
         "request_id": uuid7(),
         "request_started_at": request_started_at,
@@ -45,6 +47,10 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "cache_write_price_per_mtok": "1.25",
         "cost_source": "catalog_estimate",
         "cost_usd": "0",
+        "cost_input_usd": "0",
+        "cost_output_usd": "0",
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
         "latency_ms": 1,
         "status": "ok",
         "stream": False,
@@ -53,6 +59,99 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "credential_name": "default",
         **overrides,
     }
+
+
+def finished_request(**overrides: object) -> dict[str, object]:
+    request_started_at = datetime(2026, 9, 22, 12, tzinfo=UTC)
+    return {
+        "event_type": "gateway_request_finished",
+        "schema_version": 1,
+        "event_id": uuid7(),
+        "request_id": uuid7(),
+        "request_started_at": request_started_at,
+        "occurred_at": datetime(2026, 9, 22, 12, 0, 2, tzinfo=UTC),
+        "org_id": uuid7(),
+        "workspace_id": uuid7(),
+        "key_id": "external-key",
+        "authentication_source": "inference_key",
+        "authentication_label": "Production key",
+        "user_id": uuid7(),
+        "principal_label": "Checkout service",
+        "principal_type": "service_account",
+        "workspace_label": "Production",
+        "requested_model_id": "model",
+        "requested_capabilities": [],
+        "bundle_id": uuid7(),
+        "stream": False,
+        "outcome": "succeeded",
+        "expected_attempts": 2,
+        "latency_ms": 2000,
+        **overrides,
+    }
+
+
+def test_ingest_event_distinguishes_terminal_request_observations():
+    event = INGEST_EVENT_ADAPTER.validate_python(finished_request())
+
+    assert isinstance(event, GatewayRequestFinishedV1)
+    assert event.expected_attempts == 2
+    assert event.outcome == "succeeded"
+
+
+@pytest.mark.parametrize("field", ["event_id", "request_started_at", "outcome", "expected_attempts", "latency_ms"])
+def test_terminal_request_observation_requires_every_fact(field):
+    payload = finished_request()
+    del payload[field]
+
+    with pytest.raises(ValidationError):
+        INGEST_EVENT_ADAPTER.validate_python(payload)
+
+
+def test_terminal_request_observation_rejects_unordered_time_and_negative_attempts():
+    with pytest.raises(ValidationError):
+        GatewayRequestFinishedV1.model_validate(finished_request(expected_attempts=-1))
+    with pytest.raises(ValidationError):
+        GatewayRequestFinishedV1.model_validate(
+            finished_request(
+                request_started_at=datetime(2026, 9, 22, 12, 0, 3, tzinfo=UTC),
+                occurred_at=datetime(2026, 9, 22, 12, 0, 2, tzinfo=UTC),
+            )
+        )
+    with pytest.raises(ValidationError, match="at least one routed attempt"):
+        GatewayRequestFinishedV1.model_validate(finished_request(outcome="succeeded", expected_attempts=0))
+
+
+def test_unavailable_attempt_requires_unknown_tokens_and_cost_but_keeps_rates():
+    event = USAGE_EVENT_ADAPTER.validate_python(
+        usage_event(
+            token_usage_source="unavailable",
+            input_tokens=None,
+            output_tokens=None,
+            cache_read_tokens=None,
+            cache_write_tokens=None,
+            cost_source="unavailable",
+            cost_usd=None,
+            cost_input_usd=None,
+            cost_output_usd=None,
+            status="timeout",
+        )
+    )
+
+    assert event.token_usage_source == "unavailable"
+    assert event.input_tokens is None
+    assert event.input_price_per_mtok == 1
+
+
+def test_partial_attempt_requires_known_counts_and_catalog_cost():
+    event = USAGE_EVENT_ADAPTER.validate_python(usage_event(token_usage_source="partial", status="cancelled"))
+
+    assert event.token_usage_source == "partial"
+    assert event.cost_source == "catalog_estimate"
+
+
+def test_usage_rejects_cache_counts_larger_than_total_input():
+    with pytest.raises(ValidationError, match="cache"):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(input_tokens=5, cache_read_tokens=4, cache_write_tokens=2))
 
 
 def test_routed_usage_requires_a_complete_credential_reference():

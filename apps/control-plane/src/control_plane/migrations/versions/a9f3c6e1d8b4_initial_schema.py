@@ -171,10 +171,73 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
     )
     op.create_table(
+        "usage_ingest_batch",
+        sa.Column("ingest_id", sa.BigInteger(), sa.Identity(), nullable=False),
+        sa.Column("watermark", sa.Uuid(), nullable=False),
+        sa.Column("received_at", UTCDateTime(), server_default=sa.text("clock_timestamp()"), nullable=False),
+        sa.PrimaryKeyConstraint("ingest_id"),
+        sa.UniqueConstraint("watermark"),
+    )
+    op.create_table(
+        "gateway_request",
+        sa.CheckConstraint(
+            "(authentication_source = 'local' AND principal_type = 'local') OR "
+            "(authentication_source IN ('inference_key', 'playground') AND principal_type IN ('human', 'service_account'))",
+            name="gateway_request_attribution_valid",
+        ),
+        sa.CheckConstraint(
+            "(terminal_event_id IS NULL AND terminal_ingest_id IS NULL AND finished_at IS NULL AND outcome IS NULL "
+            "AND expected_attempts IS NULL AND latency_ms IS NULL) OR "
+            "(terminal_event_id IS NOT NULL AND terminal_ingest_id IS NOT NULL AND finished_at IS NOT NULL AND outcome IS NOT NULL "
+            "AND expected_attempts IS NOT NULL AND expected_attempts >= 0 AND latency_ms IS NOT NULL AND latency_ms >= 0)",
+            name="gateway_request_terminal_all_or_none",
+        ),
+        sa.CheckConstraint("finished_at IS NULL OR request_started_at <= finished_at", name="gateway_request_timestamps_ordered"),
+        sa.CheckConstraint(
+            "outcome IS NULL OR outcome IN ('succeeded', 'failed', 'denied', 'timeout', 'cancelled')",
+            name="gateway_request_outcome_valid",
+        ),
+        sa.CheckConstraint("outcome <> 'succeeded' OR expected_attempts > 0", name="gateway_request_succeeded_was_routed"),
+        sa.Column("request_id", sa.Uuid(), nullable=False),
+        sa.Column("request_started_at", UTCDateTime(), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
+        sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("authentication_source", sa.String(), nullable=False),
+        sa.Column("authentication_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("principal_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("principal_type", sa.String(), nullable=False),
+        sa.Column("workspace_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("requested_model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("requested_capabilities", sa.ARRAY(sa.String()), nullable=False),
+        sa.Column("bundle_id", sa.Uuid(), nullable=False),
+        sa.Column("stream", sa.Boolean(), nullable=False),
+        sa.Column("first_ingest_id", sa.BigInteger(), nullable=False),
+        sa.Column("terminal_event_id", sa.Uuid(), nullable=True),
+        sa.Column("terminal_ingest_id", sa.BigInteger(), nullable=True),
+        sa.Column("finished_at", UTCDateTime(), nullable=True),
+        sa.Column("outcome", sa.String(), nullable=True),
+        sa.Column("expected_attempts", sa.Integer(), nullable=True),
+        sa.Column("latency_ms", sa.Integer(), nullable=True),
+        sa.ForeignKeyConstraint(["first_ingest_id"], ["usage_ingest_batch.ingest_id"]),
+        sa.ForeignKeyConstraint(["terminal_ingest_id"], ["usage_ingest_batch.ingest_id"]),
+        sa.PrimaryKeyConstraint("request_id"),
+        sa.UniqueConstraint("terminal_event_id"),
+    )
+    op.create_index("gateway_request_first_ingest_idx", "gateway_request", ["first_ingest_id"], unique=False)
+    op.create_index("gateway_request_org_started_request_idx", "gateway_request", ["org_id", "request_started_at", "request_id"], unique=False)
+    op.create_index(
+        "gateway_request_org_workspace_started_request_idx",
+        "gateway_request",
+        ["org_id", "workspace_id", "request_started_at", "request_id"],
+        unique=False,
+    )
+    op.create_table(
         "usage_event",
         sa.CheckConstraint(
             "(status = 'denied' AND token_usage_source = 'not_applicable') OR "
-            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
+            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated', 'partial', 'unavailable'))",
             name="usage_event_token_usage_source_valid",
         ),
         sa.CheckConstraint(
@@ -186,11 +249,21 @@ def upgrade() -> None:
             "(status = 'denied' AND attempt_index IS NULL AND attempt_started_at IS NULL "
             "AND credential_id IS NULL AND credential_scope IS NULL AND credential_name IS NULL "
             "AND input_price_per_mtok IS NULL AND output_price_per_mtok IS NULL "
-            "AND cache_read_price_per_mtok IS NULL AND cache_write_price_per_mtok IS NULL AND cost_source = 'not_applicable') OR "
+            "AND cache_read_price_per_mtok IS NULL AND cache_write_price_per_mtok IS NULL AND cost_source = 'not_applicable' "
+            "AND input_tokens = 0 AND output_tokens = 0 AND cache_read_tokens = 0 AND cache_write_tokens = 0 "
+            "AND cost_usd = 0 AND cost_input_usd = 0 AND cost_output_usd = 0) OR "
             "(status <> 'denied' AND attempt_index > 0 AND attempt_started_at IS NOT NULL "
             "AND credential_id IS NOT NULL AND credential_scope IS NOT NULL AND credential_name IS NOT NULL "
             "AND input_price_per_mtok IS NOT NULL AND output_price_per_mtok IS NOT NULL "
-            "AND cache_read_price_per_mtok IS NOT NULL AND cache_write_price_per_mtok IS NOT NULL AND cost_source = 'catalog_estimate')",
+            "AND cache_read_price_per_mtok IS NOT NULL AND cache_write_price_per_mtok IS NOT NULL "
+            "AND ((token_usage_source = 'unavailable' AND cost_source = 'unavailable' "
+            "AND input_tokens IS NULL AND output_tokens IS NULL AND cache_read_tokens IS NULL AND cache_write_tokens IS NULL "
+            "AND cost_usd IS NULL AND cost_input_usd IS NULL AND cost_output_usd IS NULL) OR "
+            "(token_usage_source IN ('provider', 'estimated', 'partial') AND cost_source = 'catalog_estimate' "
+            "AND input_tokens IS NOT NULL AND output_tokens IS NOT NULL AND cache_read_tokens IS NOT NULL AND cache_write_tokens IS NOT NULL "
+            "AND input_tokens >= cache_read_tokens + cache_write_tokens "
+            "AND cost_usd IS NOT NULL AND cost_input_usd IS NOT NULL AND cost_output_usd IS NOT NULL "
+            "AND cost_usd = cost_input_usd + cost_output_usd)))",
             name="usage_event_attempt_evidence_valid",
         ),
         sa.CheckConstraint(
@@ -199,6 +272,7 @@ def upgrade() -> None:
             name="usage_event_timestamps_ordered",
         ),
         sa.Column("event_id", sa.Uuid(), nullable=False),
+        sa.Column("ingest_id", sa.BigInteger(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
         sa.Column("request_started_at", UTCDateTime(), nullable=False),
         sa.Column("attempt_started_at", UTCDateTime(), nullable=True),
@@ -217,8 +291,8 @@ def upgrade() -> None:
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bundle_id", sa.Uuid(), nullable=False),
-        sa.Column("input_tokens", sa.Integer(), nullable=False),
-        sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("input_tokens", sa.Integer(), nullable=True),
+        sa.Column("output_tokens", sa.Integer(), nullable=True),
         sa.Column("token_usage_source", sa.String(), nullable=False),
         sa.Column("attempt_index", sa.Integer(), nullable=True),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
@@ -227,19 +301,22 @@ def upgrade() -> None:
         sa.Column("cache_read_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
         sa.Column("cache_write_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
         sa.Column("cost_source", sa.String(), nullable=False),
-        sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
-        sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),
-        sa.Column("cost_output_usd", sa.Numeric(precision=28, scale=12), nullable=False),
-        sa.Column("cache_read_tokens", sa.Integer(), nullable=False),
-        sa.Column("cache_write_tokens", sa.Integer(), nullable=False),
+        sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=True),
+        sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=True),
+        sa.Column("cost_output_usd", sa.Numeric(precision=28, scale=12), nullable=True),
+        sa.Column("cache_read_tokens", sa.Integer(), nullable=True),
+        sa.Column("cache_write_tokens", sa.Integer(), nullable=True),
         sa.Column("latency_ms", sa.Integer(), nullable=False),
         sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("stream", sa.Boolean(), nullable=False),
         sa.Column("credential_id", sa.Uuid(), nullable=True),
         sa.Column("credential_scope", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("credential_name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.ForeignKeyConstraint(["ingest_id"], ["usage_ingest_batch.ingest_id"]),
+        sa.ForeignKeyConstraint(["request_id"], ["gateway_request.request_id"]),
         sa.PrimaryKeyConstraint("event_id"),
     )
+    op.create_index("usage_event_ingest_id_idx", "usage_event", ["ingest_id"], unique=False)
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
     op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
     op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
@@ -678,11 +755,17 @@ def downgrade() -> None:
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_request_denial_key", table_name="usage_event")
     op.drop_index("usage_event_org_request_attempt_key", table_name="usage_event")
+    op.drop_index("usage_event_ingest_id_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")
+    op.drop_index("gateway_request_org_workspace_started_request_idx", table_name="gateway_request")
+    op.drop_index("gateway_request_org_started_request_idx", table_name="gateway_request")
+    op.drop_index("gateway_request_first_ingest_idx", table_name="gateway_request")
+    op.drop_table("gateway_request")
+    op.drop_table("usage_ingest_batch")
     op.drop_table("provider")
     op.drop_table("data_plane_instance")
     op.drop_constraint("user_managing_org_id_fkey", "user", type_="foreignkey")

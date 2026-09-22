@@ -30,7 +30,7 @@ OTHER_WORKSPACE = uuid7()
 
 def _recorded(tmp_path, http_client):
     """The events the data plane buffered, read straight from its outbox."""
-    return read_and_close_outbox(make_outbox(tmp_path, http_client))
+    return [event for event in read_and_close_outbox(make_outbox(tmp_path, http_client)) if event.event_type == "usage"]
 
 
 async def value_of(resolver, entry) -> str:

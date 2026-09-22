@@ -80,6 +80,7 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         key = cp.headers_for(org_id, viewer.id, first, permissions=frozenset({Permission.usage_read}))
         events = [
             {
+                "event_type": "usage",
                 "event_id": str(uuid7()),
                 "request_id": str(uuid7()),
                 "request_started_at": datetime.now(tz=UTC).isoformat(),
@@ -110,6 +111,10 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
                 "cache_write_price_per_mtok": "0",
                 "cost_source": "catalog_estimate",
                 "cost_usd": "0",
+                "cost_input_usd": "0",
+                "cost_output_usd": "0",
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
                 "latency_ms": 1,
                 "status": "ok",
                 "stream": False,

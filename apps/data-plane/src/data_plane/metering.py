@@ -14,7 +14,7 @@ import tiktoken
 from pydantic import BaseModel
 
 from airmux_runtime.observability import log_event
-from contract import DeniedUsageEventV1, RoutedUsageEventV1, TokenUsageSource, UsdAmount, uuid7
+from contract import DeniedUsageEventV1, GatewayRequestFinishedV1, GatewayRequestOutcome, RoutedUsageEventV1, TokenUsageSource, UsdAmount, uuid7
 from contract.money import USD_AMOUNT_QUANTUM, ZERO_USD
 from data_plane.canonical import CanonicalTextPart, CanonicalUsage
 from data_plane.requirements import requested_capabilities
@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from contract import KeyEntry, ModelEntry, RoutedUsageStatus
     from data_plane.canonical import CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import Ctx
+    from data_plane.outbox import OutboxReservation
 
 
 logger = logging.getLogger("data_plane")
@@ -40,8 +41,34 @@ class RequestStart:
     started_monotonic: float
 
 
+@dataclass
+class RequestTerminal:
+    key: KeyEntry
+    bundle_id: UUID
+    request: CanonicalRequest
+    start: RequestStart
+    reservation: OutboxReservation
+    attempts: int = 0
+    outcome: GatewayRequestOutcome | None = None
+    finished: bool = False
+
+    def start_attempt(self) -> int:
+        self.attempts += 1
+        return self.attempts
+
+    def conclude(self, outcome: GatewayRequestOutcome) -> None:
+        self.outcome = outcome
+
+    def finish(self) -> None:
+        if self.finished:
+            return
+        with self.reservation:
+            self.reservation.record(finished_event(self))
+        self.finished = True
+
+
 def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[UsdAmount, UsdAmount]:
-    fresh_input_tokens = max(0, usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
+    fresh_input_tokens = usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens
     input_cost = (
         fresh_input_tokens * model.input_price_per_mtok
         + usage.cache_read_tokens * model.cache_read_price_per_mtok
@@ -102,6 +129,7 @@ def denied_event(
     start: RequestStart,
 ) -> DeniedUsageEventV1:
     return DeniedUsageEventV1(
+        event_type="usage",
         event_id=uuid7(),
         request_id=start.request_id,
         request_started_at=start.started_at,
@@ -124,11 +152,44 @@ def denied_event(
         output_tokens=0,
         token_usage_source=TokenUsageSource.NOT_APPLICABLE,
         cost_usd=ZERO_USD,
+        cost_input_usd=ZERO_USD,
+        cost_output_usd=ZERO_USD,
         cost_source="not_applicable",
+        cache_read_tokens=0,
+        cache_write_tokens=0,
         max_output_tokens=None,
         latency_ms=int((time.monotonic() - start.started_monotonic) * 1000),
         status="denied",
         stream=request.stream,
+    )
+
+
+def finished_event(terminal: RequestTerminal) -> GatewayRequestFinishedV1:
+    key = terminal.key
+    request = terminal.request
+    start = terminal.start
+    return GatewayRequestFinishedV1(
+        event_type="gateway_request_finished",
+        event_id=uuid7(),
+        request_id=start.request_id,
+        request_started_at=start.started_at,
+        occurred_at=max(datetime.now(tz=UTC), start.started_at),
+        org_id=key.org_id,
+        workspace_id=key.workspace_id,
+        key_id=key.key_id,
+        authentication_source=key.authentication_source,
+        authentication_label=key.authentication_label,
+        user_id=key.user_id,
+        principal_label=key.principal_label,
+        principal_type=key.principal_type,
+        workspace_label=key.workspace_label,
+        requested_model_id=request.model,
+        requested_capabilities=requested_capabilities(request),
+        bundle_id=terminal.bundle_id,
+        stream=request.stream,
+        outcome=terminal.outcome or "failed",
+        expected_attempts=terminal.attempts,
+        latency_ms=int((time.monotonic() - start.started_monotonic) * 1000),
     )
 
 
@@ -139,7 +200,10 @@ def usage_event(
     request: CanonicalRequest,
 ) -> RoutedUsageEventV1:
     usage = response.usage
-    if usage.estimated:
+    provider_counts = any((usage.input_tokens, usage.output_tokens, usage.cache_read_tokens, usage.cache_write_tokens))
+    partial = usage.estimated and (provider_counts or (status != "ok" and bool(response.content)))
+    unavailable = usage.estimated and status != "ok" and not partial
+    if usage.estimated and not unavailable:
         usage = CanonicalUsage(
             input_tokens=usage.input_tokens or estimate_tokens(_prompt_text(request), ctx.model),
             output_tokens=usage.output_tokens or estimate_tokens(_text_of(response.content), ctx.model),
@@ -147,10 +211,15 @@ def usage_event(
             cache_write_tokens=usage.cache_write_tokens,
             estimated=True,
         )
-    cost_in, cost_out = cost_breakdown(usage, ctx.model)
+    if unavailable:
+        cost_in = cost_out = total_cost = None
+    else:
+        cost_in, cost_out = cost_breakdown(usage, ctx.model)
+        total_cost = cost_in + cost_out
     occurred_at = max(datetime.now(tz=UTC), ctx.attempt_started_at)
     latency_ms = int((time.monotonic() - ctx.attempt_started_monotonic) * 1000)
     event = RoutedUsageEventV1(
+        event_type="usage",
         event_id=uuid7(),
         request_id=ctx.request_id,
         request_started_at=ctx.request_started_at,
@@ -170,19 +239,27 @@ def usage_event(
         model_id=ctx.model.model_id,
         provider_id=ctx.provider.provider_id,
         bundle_id=ctx.bundle_id,
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        token_usage_source=TokenUsageSource.ESTIMATED if usage.estimated else TokenUsageSource.PROVIDER,
+        input_tokens=None if unavailable else usage.input_tokens,
+        output_tokens=None if unavailable else usage.output_tokens,
+        token_usage_source=(
+            TokenUsageSource.UNAVAILABLE
+            if unavailable
+            else TokenUsageSource.PARTIAL
+            if partial
+            else TokenUsageSource.ESTIMATED
+            if usage.estimated
+            else TokenUsageSource.PROVIDER
+        ),
         attempt_index=ctx.attempt_index,
         max_output_tokens=request.max_output_tokens,
         input_price_per_mtok=ctx.model.input_price_per_mtok,
         output_price_per_mtok=ctx.model.output_price_per_mtok,
         cache_read_price_per_mtok=ctx.model.cache_read_price_per_mtok,
         cache_write_price_per_mtok=ctx.model.cache_write_price_per_mtok,
-        cost_source="catalog_estimate",
-        cache_read_tokens=usage.cache_read_tokens,
-        cache_write_tokens=usage.cache_write_tokens,
-        cost_usd=cost_in + cost_out,
+        cost_source="unavailable" if unavailable else "catalog_estimate",
+        cache_read_tokens=None if unavailable else usage.cache_read_tokens,
+        cache_write_tokens=None if unavailable else usage.cache_write_tokens,
+        cost_usd=total_cost,
         cost_input_usd=cost_in,
         cost_output_usd=cost_out,
         latency_ms=latency_ms,
@@ -206,7 +283,7 @@ def usage_event(
         cache_read_tokens=usage.cache_read_tokens,
         cache_write_tokens=usage.cache_write_tokens,
         token_usage_source=event.token_usage_source,
-        cost_usd=cost_in + cost_out,
+        cost_usd=total_cost,
         latency_ms=latency_ms,
     )
     return event

@@ -104,7 +104,8 @@ export default function AppDashboard() {
                 header: 'Tokens',
                 headClassName: 'text-right',
                 cellClassName: 'text-right font-mono text-sm',
-                cell: (event) => event.input_tokens + event.output_tokens,
+                cell: (event) =>
+                  event.input_tokens === null || event.output_tokens === null ? 'Unavailable' : event.input_tokens + event.output_tokens,
               },
               {
                 key: 'token_source',
@@ -116,7 +117,7 @@ export default function AppDashboard() {
                 header: 'Est. cost',
                 headClassName: 'text-right',
                 cellClassName: 'text-right font-mono text-sm',
-                cell: (event) => formatUsd(parseUsdAmount(event.cost_usd)),
+                cell: (event) => (event.cost_usd === null ? 'Unavailable' : formatUsd(parseUsdAmount(event.cost_usd))),
               },
               {
                 key: 'when',

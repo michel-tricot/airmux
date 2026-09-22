@@ -8,7 +8,7 @@ from data_plane.outbox.queued import QueuedOutbox
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from contract import UsageEvent
+    from contract import IngestEvent
     from data_plane.config import FileOutboxConfig
     from data_plane.metrics import DataPlaneMetrics
 
@@ -22,7 +22,7 @@ class FileOutbox(QueuedOutbox):
         self._config.path.parent.mkdir(parents=True, exist_ok=True)
         self._event_file = os.open(self._config.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
 
-    def _persist(self, events: Sequence[UsageEvent], /) -> None:
+    def _persist(self, events: Sequence[IngestEvent], /) -> None:
         body = "".join(event.model_dump_json() + "\n" for event in events).encode()
         if os.write(self._event_file, body) != len(body):
             message = "incomplete event batch write"

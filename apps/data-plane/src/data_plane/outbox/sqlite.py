@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import httpx2
 from pydantic import TypeAdapter
 
-from contract import UsageEvent
+from contract import IngestEvent
 from data_plane.outbox.queued import QueuedOutbox
 from data_plane.tasks import run_periodic
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from data_plane.outbox.base import OutboxStat
 
 logger = logging.getLogger("data_plane")
-USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
+INGEST_EVENT_ADAPTER = TypeAdapter(IngestEvent)
 
 BATCH_SIZE = 1000
 MAX_BATCHES_PER_FLUSH = 20
@@ -73,7 +73,7 @@ class SqliteOutbox(QueuedOutbox):
         self._conn = _connect(self._config.cache_dir)
         self._update_backlog_metrics()
 
-    def _persist(self, events: Sequence[UsageEvent], /) -> None:
+    def _persist(self, events: Sequence[IngestEvent], /) -> None:
         with self._conn:
             self._conn.executemany(
                 "INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)",
@@ -87,11 +87,11 @@ class SqliteOutbox(QueuedOutbox):
     def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         return (*super().start(task_group), task_group.create_task(self._run_export(), name="event export"))
 
-    def _next_batch(self, limit: int) -> list[UsageEvent]:
+    def _next_batch(self, limit: int) -> list[IngestEvent]:
         bodies = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
-        return [USAGE_EVENT_ADAPTER.validate_json(body) for (body,) in bodies]
+        return [INGEST_EVENT_ADAPTER.validate_json(body) for (body,) in bodies]
 
-    async def next_batch(self, limit: int, /) -> list[UsageEvent]:
+    async def next_batch(self, limit: int, /) -> list[IngestEvent]:
         return await self._storage_call(lambda: self._next_batch(limit))
 
     def _claim_export(self, ttl: float, now: float) -> bool:
@@ -119,7 +119,7 @@ class SqliteOutbox(QueuedOutbox):
     def _durable_backlog(self) -> _DurableBacklog:
         (events,) = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()
         first = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT 1").fetchone()
-        oldest = USAGE_EVENT_ADAPTER.validate_json(first[0]).occurred_at if first is not None else None
+        oldest = INGEST_EVENT_ADAPTER.validate_json(first[0]).occurred_at if first is not None else None
         return _DurableBacklog(events=events, oldest_event_at=oldest)
 
     async def stats(self) -> dict[str, OutboxStat]:

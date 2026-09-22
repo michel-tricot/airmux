@@ -15,7 +15,7 @@ from data_plane.outbox.base import EventOutbox, OutboxClosedError, OutboxFullErr
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from contract import UsageEvent
+    from contract import IngestEvent
     from data_plane.metrics import DataPlaneMetrics
 
 CAPACITY = 10_000
@@ -49,7 +49,7 @@ class QueuedOutbox(EventOutbox):
         self._gracefully_drained_events = 0
         self._storage_worker_failures = 0
         self._failure: BaseException | None = None
-        self._events: deque[UsageEvent] = deque()
+        self._events: deque[IngestEvent] = deque()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=thread_name)
         self._drain_scheduled = False
         self._closing = False
@@ -79,7 +79,7 @@ class QueuedOutbox(EventOutbox):
         with self._lock:
             return self._failure is None and self._accepting and self._reserved + self._filled < CAPACITY
 
-    def _record_reserved(self, event: UsageEvent, /) -> None:
+    def _record_reserved(self, event: IngestEvent, /) -> None:
         with self._lock:
             if self._failure is not None:
                 raise _StorageWorkerError from self._failure
@@ -231,7 +231,7 @@ class QueuedOutbox(EventOutbox):
         pass
 
     @abstractmethod
-    def _persist(self, events: Sequence[UsageEvent], /) -> None:
+    def _persist(self, events: Sequence[IngestEvent], /) -> None:
         pass
 
     @abstractmethod

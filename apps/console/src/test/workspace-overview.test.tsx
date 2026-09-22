@@ -7,6 +7,7 @@ import { ORG, WORKSPACES, server } from './msw';
 
 const attempt: Api.UsageEventOut = {
   event_id: 'event-1',
+  ingest_id: 1,
   request_id: 'request-1',
   request_started_at: '2026-01-01T00:00:00Z',
   attempt_started_at: '2026-01-01T00:00:00Z',
@@ -46,6 +47,21 @@ const attempt: Api.UsageEventOut = {
   credential_id: '00000000-0000-0000-0000-000000000002',
   credential_scope: 'workspace',
   credential_name: 'default',
+};
+
+const unavailableAttempt: Api.UsageEventOut = {
+  ...attempt,
+  event_id: 'event-unavailable',
+  input_tokens: null,
+  output_tokens: null,
+  token_usage_source: 'unavailable',
+  cost_source: 'unavailable',
+  cost_usd: null,
+  cost_input_usd: null,
+  cost_output_usd: null,
+  cache_read_tokens: null,
+  cache_write_tokens: null,
+  status: 'upstream_error',
 };
 
 it('labels a multi-attempt request and per-model totals as attempts within the event window', async () => {
@@ -103,4 +119,38 @@ it('limits totals to 200 attempt events even when a request crosses the window b
   expect(within(modelTable).getByRole('row', { name: 'primary-model 200 1.0k $20.00' })).toBeInTheDocument();
   expect(within(screen.getByText('Attempts', { selector: 'div' }).parentElement!).getByText('200')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /load more/i })).not.toBeInTheDocument();
+});
+
+it('marks workspace rows and totals unavailable when any attempt has unavailable accounting', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () =>
+      HttpResponse.json({ data: [unavailableAttempt, attempt], page: { next_cursor: null } }),
+    ),
+  );
+  window.localStorage.setItem('airmux_org_id', ORG.id);
+  window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}`);
+  render(<App />);
+
+  const modelTable = (await screen.findByRole('columnheader', { name: 'Attempts' })).closest('table')!;
+  expect(within(modelTable).getByRole('row', { name: 'primary-model 2 Unavailable Unavailable' })).toBeInTheDocument();
+  expect(within(screen.getByText('Input Tokens').parentElement!).getByText('Unavailable')).toBeInTheDocument();
+  expect(within(screen.getByText('Output Tokens').parentElement!).getByText('Unavailable')).toBeInTheDocument();
+  expect(within(screen.getByText('Est. cost', { selector: 'div' }).parentElement!).getByText('Unavailable')).toBeInTheDocument();
+  const activity = screen.getByRole('row', { name: /primary-model Playground Unavailable Unavailable/ });
+  expect(within(activity).getAllByText('Unavailable')).toHaveLength(2);
+});
+
+it('does not render unavailable organization usage as zero', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/workspaces', () => HttpResponse.json({ data: [] })),
+    http.get('/api/v1/organizations/:orgId/events', () => HttpResponse.json({ data: [unavailableAttempt], page: { next_cursor: null } })),
+  );
+  window.localStorage.setItem('airmux_org_id', ORG.id);
+  window.history.replaceState(null, '', '/org');
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  render(<App />);
+
+  const activity = await screen.findByRole('row', { name: /primary-model upstream_error/ });
+  expect(within(activity).getAllByText('Unavailable')).toHaveLength(3);
+  expect(within(activity).queryByText('0')).not.toBeInTheDocument();
 });

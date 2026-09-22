@@ -16,6 +16,7 @@ from conftest import (
     TEXT_NONSTREAM,
     WORKSPACE,
     make_bundle,
+    make_config,
     make_credential,
     make_key,
     make_outbox,
@@ -27,9 +28,11 @@ from starlette.testclient import TestClient
 import data_plane.app as app_module
 from contract import Catalog, uuid7
 from contract.policies import PolicyDefinition, PolicyEntry, RuleDefinition
+from data_plane.app import create_app
 from data_plane.bundle.holder import BundleSnapshot
 from data_plane.cache import CachedBundles, write_cached_bundles
-from data_plane.canonical import CanonicalRequest
+from data_plane.canonical import CanonicalRequest, GatewayErrorCode
+from data_plane.errors import RequestRejectedError
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
@@ -376,12 +379,15 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
             json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}], "stream": stream},
         )
     assert result.status_code == (503 if restricted else 200)
-    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
+    observations = read_and_close_outbox(make_outbox(tmp_path, http_client))
+    events = [event for event in observations if event.event_type == "usage"]
+    terminal = next(event for event in observations if event.event_type == "gateway_request_finished")
     assert [(event.model_id, event.status) for event in events] == (
         [(MODEL.model_id, "upstream_error")] if restricted else [(MODEL.model_id, "upstream_error"), ("backup", "ok")]
     )
     assert [event.attempt_index for event in events] == ([1] if restricted else [1, 2])
     assert all(event.request_started_at <= event.attempt_started_at <= event.occurred_at for event in events)
+    assert (terminal.outcome, terminal.expected_attempts) == (("failed", 1) if restricted else ("succeeded", 2))
 
 
 @respx.mock
@@ -399,7 +405,7 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     )
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle.model_copy(update={"policies": (fallback,)})]))
     outbox = DevNullOutbox(DataPlaneMetrics())
-    reservations = iter((outbox.reserve(),))
+    reservations = iter((outbox.reserve(), outbox.reserve()))
 
     def reserve():
         try:
@@ -433,6 +439,52 @@ def test_fallback_stops_before_an_attempt_without_metering_capacity(dp_app, tmp_
     assert result.status_code == 503
     assert result.json()["error"]["code"] == "metering_capacity_exhausted"
     assert attempted_models == [MODEL.upstream_model]
+
+
+@respx.mock
+def test_budget_denial_after_an_attempt_keeps_both_observations(tmp_path, http_client, monkeypatch):
+    api_key, key = make_key()
+    backup = MODEL.model_copy(update={"model_id": "backup", "upstream_model": "backup-upstream"})
+    fallback = policy({"kind": "fallback", "models": ["backup"], "on": ["upstream_unavailable"], "max_attempts": 2, "timeout_ms": 1000})
+    budget = policy({"kind": "budget", "period": "month", "amount_usd": "1", "aggregation": "shared"})
+    bundle = make_bundle(
+        keys=[key],
+        catalog=Catalog(providers=(PROVIDER,), models=(MODEL, backup), credentials=(PLATFORM_CREDENTIAL,)),
+    ).model_copy(update={"policies": (fallback, budget)})
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
+
+    class DenySecondCheck:
+        checks = 0
+
+        def check(self, _rules, _key, _now):
+            self.checks += 1
+            if self.checks == 2:
+                raise RequestRejectedError(429, GatewayErrorCode.budget_exhausted)
+
+        def start(self, _task_group):
+            return ()
+
+    monkeypatch.setattr(app_module, "build_budget_backend", lambda *_args: DenySecondCheck())
+    monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")
+    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(
+        return_value=httpx.Response(503, json={"error": {"message": "unavailable"}})
+    )
+    mock_control_plane()
+
+    with TestClient(create_app(make_config(tmp_path))) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": MODEL.model_id, "messages": [{"role": "user", "content": "hi"}]},
+        )
+
+    observations = read_and_close_outbox(make_outbox(tmp_path, http_client))
+    usage = [event for event in observations if event.event_type == "usage"]
+    terminal = next(event for event in observations if event.event_type == "gateway_request_finished")
+    assert response.status_code == 429
+    assert upstream.call_count == 1
+    assert [(event.status, event.attempt_index) for event in usage] == [("upstream_error", 1), ("denied", None)]
+    assert (terminal.outcome, terminal.expected_attempts) == ("denied", 1)
 
 
 @pytest.mark.parametrize("failure", ["read_error", "timeout", "attempt_limit", "unmatched_reason", "midstream", "deadline"])
@@ -484,7 +536,9 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
         assert "invalid_upstream_response" in result.text
     if failure == "deadline":
         assert "fallback_deadline_exceeded" in result.text
-    events = read_and_close_outbox(make_outbox(tmp_path, http_client))
+    observations = read_and_close_outbox(make_outbox(tmp_path, http_client))
+    events = [event for event in observations if event.event_type == "usage"]
+    terminal = next(event for event in observations if event.event_type == "gateway_request_finished")
     assert [event.model_id for event in events] == (
         [MODEL.model_id, "backup"] if failure in {"read_error", "timeout", "attempt_limit"} else [MODEL.model_id]
     )
@@ -497,6 +551,18 @@ def test_fallback_failure_boundaries(dp_app, tmp_path, http_client, failure):
             "unmatched_reason": "rate_limited",
             "midstream": "upstream_error",
             "deadline": "cancelled",
+        }[failure]
+    )
+    assert terminal.expected_attempts == len(events)
+    assert (
+        terminal.outcome
+        == {
+            "read_error": "succeeded",
+            "timeout": "succeeded",
+            "attempt_limit": "failed",
+            "unmatched_reason": "failed",
+            "midstream": "failed",
+            "deadline": "timeout",
         }[failure]
     )
 

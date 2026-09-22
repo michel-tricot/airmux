@@ -10,7 +10,7 @@ import httpx
 import httpx2
 import pytest
 import respx
-from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
+from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_key, make_outbox, mock_control_plane, sse
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
@@ -19,8 +19,10 @@ from contract import uuid7
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import REGISTRY as INGRESS
+from data_plane.metering import RequestStart, RequestTerminal
 from data_plane.metrics import DataPlaneMetrics
-from data_plane.streaming import StreamSession
+from data_plane.outbox import DevNullOutbox
+from data_plane.streaming import StreamSession, _StreamResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -107,6 +109,13 @@ async def _open_stream(
     http_client: httpx2.AsyncClient,
     metrics: DataPlaneMetrics | None = None,
 ) -> Response:
+    terminal = RequestTerminal(
+        key=make_key()[1],
+        bundle_id=ctx.bundle_id,
+        request=request,
+        start=RequestStart(ctx.request_id, ctx.request_started_at, time.monotonic()),
+        reservation=DevNullOutbox(DataPlaneMetrics()).reserve(),
+    )
     with outbox.reserve() as reservation:
         session = StreamSession(
             adapter=make_adapter(),
@@ -119,6 +128,7 @@ async def _open_stream(
             metrics=metrics or DataPlaneMetrics(),
             egress_kind="openai_compatible",
             attempt_started_at=time.monotonic(),
+            terminal=terminal,
         )
         return await session.open(UPSTREAM)
 
@@ -171,6 +181,7 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
     assert stream.exited
     assert (await outbox.stats())["reserved"] == 0
     assert (await _event(outbox)).status == "cancelled"
+    assert cast("_StreamResponse", response)._session.terminal.outcome == "cancelled"
 
 
 @respx.mock

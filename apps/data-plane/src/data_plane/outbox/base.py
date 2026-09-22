@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from types import TracebackType
 
-    from contract import UsageEvent
+    from contract import IngestEvent
     from data_plane.metrics import DataPlaneMetrics
 
 type OutboxStat = int | float | None
@@ -25,7 +25,7 @@ class OutboxClosedError(OutboxFullError):
 class OutboxReservation:
     def __init__(
         self,
-        record: Callable[[UsageEvent], None],
+        record: Callable[[IngestEvent], None],
         release: Callable[[], None],
         fail: Callable[[str], None],
     ) -> None:
@@ -51,7 +51,7 @@ class OutboxReservation:
             self._release()
             self._available = False
 
-    def record(self, event: UsageEvent, /) -> None:
+    def record(self, event: IngestEvent, /) -> None:
         if self._closed or not self._available:
             self._fail("usage event recorded without a reserved outbox slot")
         self._record(event)
@@ -91,7 +91,7 @@ class EventOutbox(ABC):
         return None
 
     @abstractmethod
-    def _record_reserved(self, event: UsageEvent, /) -> None:
+    def _record_reserved(self, event: IngestEvent, /) -> None:
         pass
 
     def _release_reserved(self) -> None:

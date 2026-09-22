@@ -30,7 +30,7 @@ from uuid import UUID, uuid5
 from sqlmodel import col
 
 from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
-from contract import INFERENCE_TOKEN_PREFIX, UsageStatus, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, GatewayRequestFinishedV1, RoutedUsageEventV1, RoutedUsageStatus, TokenUsageSource, token_hash
 from contract.policies import (
     AllowedModels,
     AllowedProviders,
@@ -63,7 +63,7 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
-    UsageEvent,
+    UsageIngestBatch,
     User,
     Workspace,
     WorkspaceMembership,
@@ -106,7 +106,7 @@ FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 ROUTED_MODELS = sorted({model for model, _ in MODELS})
 
 
-STATUSES: tuple[UsageStatus, ...] = (*("ok",) * 9, "upstream_error")
+STATUSES: tuple[RoutedUsageStatus, ...] = (*("ok",) * 9, "upstream_error")
 
 USAGE_DAYS = 30
 
@@ -239,9 +239,13 @@ async def record_usage(workspace: Workspace, key: InferenceKey, principal: User,
         cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
         occurred_at = now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400))
         latency_ms = rng.randint(180, 4000)
-        await UsageEvent(
+        input_tokens = rng.randint(300, 6000)
+        request_id = fixture_id(f"request:{workspace.id}:{index}")
+        status = rng.choice(STATUSES)
+        usage = RoutedUsageEventV1(
+            event_type="usage",
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
-            request_id=fixture_id(f"request:{workspace.id}:{index}"),
+            request_id=request_id,
             request_started_at=occurred_at - timedelta(milliseconds=latency_ms),
             attempt_started_at=occurred_at - timedelta(milliseconds=latency_ms),
             occurred_at=occurred_at,
@@ -255,14 +259,15 @@ async def record_usage(workspace: Workspace, key: InferenceKey, principal: User,
             principal_type="service_account" if principal.service_account else "human",
             workspace_label=workspace.name,
             requested_model_id=model_id,
-            requested_capabilities=[],
+            requested_capabilities=frozenset(),
             model_id=model_id,
             provider_id=provider_id,
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
-            input_tokens=rng.randint(300, 6000),
+            input_tokens=input_tokens,
             output_tokens=rng.randint(80, 1500),
-            token_usage_source="estimated" if index % 3 == 0 else "provider",
+            token_usage_source=TokenUsageSource.ESTIMATED if index % 3 == 0 else TokenUsageSource.PROVIDER,
             attempt_index=1,
+            max_output_tokens=None,
             input_price_per_mtok=Decimal(1),
             output_price_per_mtok=Decimal(1),
             cache_read_price_per_mtok=Decimal(0),
@@ -271,15 +276,39 @@ async def record_usage(workspace: Workspace, key: InferenceKey, principal: User,
             cost_usd=cost_input_usd + cost_output_usd,
             cost_input_usd=cost_input_usd,
             cost_output_usd=cost_output_usd,
-            cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
+            cache_read_tokens=rng.choice([0, rng.randint(100, input_tokens)]),
             cache_write_tokens=0,
             latency_ms=latency_ms,
-            status=rng.choice(STATUSES),
+            status=status,
             stream=rng.choice([True, False]),
             credential_id=fixture_id(f"credential:{workspace.id}:{index}"),
             credential_scope="workspace",
             credential_name="fixture",
-        ).save()
+        )
+        terminal = GatewayRequestFinishedV1(
+            event_type="gateway_request_finished",
+            event_id=fixture_id(f"terminal:{workspace.id}:{index}"),
+            request_id=request_id,
+            request_started_at=occurred_at - timedelta(milliseconds=latency_ms),
+            occurred_at=occurred_at,
+            org_id=workspace.org_id,
+            workspace_id=workspace.id,
+            key_id=str(key.id),
+            authentication_source="inference_key",
+            authentication_label=key.label,
+            user_id=key.user_id,
+            principal_label=principal.name,
+            principal_type="service_account" if principal.service_account else "human",
+            workspace_label=workspace.name,
+            requested_model_id=model_id,
+            requested_capabilities=frozenset(),
+            bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
+            stream=usage.stream,
+            outcome="succeeded" if status == "ok" else "failed",
+            expected_attempts=1,
+            latency_ms=latency_ms,
+        )
+        await UsageIngestBatch.ingest([usage, terminal])
 
 
 async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa: PLR0915 fixture graph stays readable as one declared instance

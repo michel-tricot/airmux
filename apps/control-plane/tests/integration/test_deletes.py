@@ -6,9 +6,19 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from helpers import inference_key_body, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
-from contract import uuid7
+from contract import GatewayRequestFinishedV1, RoutedUsageEventV1, TokenUsageSource, uuid7
 from control_plane.authz import Permission
-from control_plane.models import DataPlaneInstance, InferenceKey, ManagementKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
+from control_plane.models import (
+    DataPlaneInstance,
+    InferenceKey,
+    ManagementKey,
+    Org,
+    OrgMembership,
+    UsageEvent,
+    UsageIngestBatch,
+    Workspace,
+    WorkspaceMembership,
+)
 
 
 def _record_usage(tmp_path, org_id, workspace_id, workspace_label):
@@ -16,9 +26,12 @@ def _record_usage(tmp_path, org_id, workspace_id, workspace_label):
 
     async def write():
         occurred_at = datetime.now(tz=UTC)
-        await UsageEvent(
+        request_id = uuid7()
+        bundle_id = uuid7()
+        usage = RoutedUsageEventV1(
+            event_type="usage",
             event_id=uuid7(),
-            request_id=uuid7(),
+            request_id=request_id,
             request_started_at=occurred_at,
             attempt_started_at=occurred_at,
             occurred_at=occurred_at,
@@ -32,27 +45,56 @@ def _record_usage(tmp_path, org_id, workspace_id, workspace_label):
             principal_type="human",
             workspace_label=workspace_label,
             requested_model_id="gpt-test",
-            requested_capabilities=[],
+            requested_capabilities=frozenset(),
             model_id="gpt-test",
             provider_id="openai",
-            bundle_id=uuid7(),
+            bundle_id=bundle_id,
             input_tokens=1,
-            token_usage_source="provider",
+            token_usage_source=TokenUsageSource.PROVIDER,
             attempt_index=1,
             output_tokens=1,
+            max_output_tokens=None,
             input_price_per_mtok=Decimal(0),
             output_price_per_mtok=Decimal(0),
             cache_read_price_per_mtok=Decimal(0),
             cache_write_price_per_mtok=Decimal(0),
             cost_source="catalog_estimate",
             cost_usd=Decimal(0),
+            cost_input_usd=Decimal(0),
+            cost_output_usd=Decimal(0),
+            cache_read_tokens=0,
+            cache_write_tokens=0,
             latency_ms=1,
             status="ok",
             stream=False,
             credential_id=uuid7(),
             credential_scope="workspace",
             credential_name="deleted",
-        ).save()
+        )
+        terminal = GatewayRequestFinishedV1(
+            event_type="gateway_request_finished",
+            event_id=uuid7(),
+            request_id=request_id,
+            request_started_at=occurred_at,
+            occurred_at=occurred_at,
+            org_id=org_id,
+            workspace_id=workspace_id,
+            key_id="k",
+            authentication_source="inference_key",
+            authentication_label="Deleted key",
+            user_id=org_id,
+            principal_label="Deleted principal",
+            principal_type="human",
+            workspace_label=workspace_label,
+            requested_model_id="gpt-test",
+            requested_capabilities=frozenset(),
+            bundle_id=bundle_id,
+            stream=False,
+            outcome="succeeded",
+            expected_attempts=1,
+            latency_ms=1,
+        )
+        await UsageIngestBatch.ingest([usage, terminal])
 
     run_in_db(tmp_path, write)
 

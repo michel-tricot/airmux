@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from data_plane.canonical import CanonicalAdjustment, CanonicalRequest
     from data_plane.egress.base import Ctx, EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
+    from data_plane.metering import RequestTerminal
     from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome
     from data_plane.outbox import OutboxReservation
 
@@ -38,6 +39,7 @@ class StreamSession:
     metrics: DataPlaneMetrics
     egress_kind: str
     attempt_started_at: float
+    terminal: RequestTerminal
 
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
@@ -119,5 +121,15 @@ class _StreamResponse(StreamingResponse):
 
     def _record(self, event: UsageEvent, outcome: UpstreamOutcome) -> None:
         self._reservation.record(event)
+        terminal_outcome = (
+            "succeeded"
+            if event.status == "ok"
+            else "timeout"
+            if event.status == "timeout"
+            else "cancelled"
+            if event.status == "cancelled"
+            else "failed"
+        )
+        self._session.terminal.conclude(terminal_outcome)
         self._session.metrics.observe_upstream(self._session.egress_kind, outcome, self._session.attempt_started_at)
         self._recorded = True

@@ -252,7 +252,9 @@ def test_catalog_prices_determine_each_event_cost(gateway: Gateway, dialect: Dia
     response = gateway.request(dialect, stream=stream)
     assert response.status_code == 200, response.text
     (event,) = gateway.events(1)
+    (terminal,) = gateway.terminals(1)
     assert event.status == "ok"
+    assert (terminal.request_id, terminal.outcome, terminal.expected_attempts) == (event.request_id, "succeeded", 1)
     assert_metering(event, case.expected[family])
 
 
@@ -413,6 +415,8 @@ def test_fallback_prices_each_attempt_using_its_own_model(gateway: Gateway, dial
     assert first.credential_id != second.credential_id
     assert_cost(first, "0.000006", "0")
     assert_metering(second, RELOADED_EXPECTATIONS[backup_family])
+    assert first.cost_usd is not None
+    assert second.cost_usd is not None
     assert first.cost_usd + second.cost_usd == Decimal(total_cost)
 
 

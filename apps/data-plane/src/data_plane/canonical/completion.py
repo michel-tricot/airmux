@@ -17,7 +17,7 @@ text part at the edge. Everything stored, translated or emitted is the typed for
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
@@ -270,11 +270,18 @@ class CanonicalGatewayInfo(BaseModel):
 class CanonicalUsage(BaseModel):
     model_config = _WIRE
 
-    input_tokens: int = 0  # total prompt tokens, cache traffic included
-    output_tokens: int = 0
-    cache_read_tokens: int = 0  # part of input_tokens
-    cache_write_tokens: int = 0  # part of input_tokens
+    input_tokens: int = Field(default=0, ge=0)  # total prompt tokens, cache traffic included
+    output_tokens: int = Field(default=0, ge=0)
+    cache_read_tokens: int = Field(default=0, ge=0)  # part of input_tokens
+    cache_write_tokens: int = Field(default=0, ge=0)  # part of input_tokens
     estimated: bool = False
+
+    @model_validator(mode="after")
+    def cache_is_part_of_input(self) -> Self:
+        if self.input_tokens < self.cache_read_tokens + self.cache_write_tokens:
+            message = "input tokens must include cache-read and cache-write tokens"
+            raise ValueError(message)
+        return self
 
 
 class CanonicalResponse(BaseModel):

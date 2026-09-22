@@ -19,6 +19,7 @@ import { inferenceKeyAccess } from '@/features/keys/policy';
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { formatUsd, sumUsdAmounts } from '@/lib/money';
+import type { UsageEventOut } from '@workspace/api-client-react';
 
 const EVENTS_WINDOW = 200;
 
@@ -49,6 +50,25 @@ function MetricCard({
 
 const formatTokens = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n));
 
+const sumTokenCounts = (counts: Array<number | null>) => {
+  const known = counts.filter((count): count is number => count !== null);
+  return known.length === counts.length ? known.reduce((sum, count) => sum + count, 0) : null;
+};
+
+const sumCosts = (amounts: Array<string | null>) => {
+  const known = amounts.filter((amount): amount is string => amount !== null);
+  return known.length === amounts.length ? sumUsdAmounts(known) : null;
+};
+
+const tokenConfidence = (events: UsageEventOut[]) =>
+  events.some((event) => event.token_usage_source === 'unavailable')
+    ? 'unavailable'
+    : events.some((event) => event.token_usage_source === 'partial')
+      ? 'partial'
+      : events.some((event) => event.token_usage_source === 'estimated')
+        ? 'estimated'
+        : 'reported';
+
 export default function WorkspaceOverview() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
@@ -72,12 +92,18 @@ export default function WorkspaceOverview() {
 
   const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;
   const attempts = events?.length;
-  const inputTokens = events?.reduce((sum, event) => sum + event.input_tokens, 0);
-  const outputTokens = events?.reduce((sum, event) => sum + event.output_tokens, 0);
-  const tokensHint = events?.some((event) => event.token_usage_source === 'estimated')
-    ? `latest ${EVENTS_WINDOW} attempt events, includes estimated counts`
-    : `latest ${EVENTS_WINDOW} attempt events`;
-  const costUsd = events ? sumUsdAmounts(events.map((event) => event.cost_usd)) : undefined;
+  const inputTokens = events ? sumTokenCounts(events.map((event) => event.input_tokens)) : undefined;
+  const outputTokens = events ? sumTokenCounts(events.map((event) => event.output_tokens)) : undefined;
+  const confidence = events ? tokenConfidence(events) : undefined;
+  const tokensHint =
+    confidence === 'unavailable'
+      ? `latest ${EVENTS_WINDOW} attempt events, one or more counts unavailable`
+      : confidence === 'partial'
+        ? `latest ${EVENTS_WINDOW} attempt events, includes partially observed counts`
+        : confidence === 'estimated'
+          ? `latest ${EVENTS_WINDOW} attempt events, includes estimated counts`
+          : `latest ${EVENTS_WINDOW} attempt events`;
+  const costUsd = events ? sumCosts(events.map((event) => event.cost_usd)) : undefined;
   const recent = events?.slice(0, 8);
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeKey = (keyId: string) => keyLabels.get(keyId) ?? (canReadKeys && keysQuery.isSuccess ? 'Playground' : null);
@@ -86,12 +112,13 @@ export default function WorkspaceOverview() {
     ? [...new Set(events.map((event) => event.model_id))]
         .map((model) => {
           const modelEvents = events.filter((event) => event.model_id === model);
+          const confidence = tokenConfidence(modelEvents);
           return {
             model,
             attempts: modelEvents.length,
-            tokens: modelEvents.reduce((sum, event) => sum + event.input_tokens + event.output_tokens, 0),
-            tokensEstimated: modelEvents.some((event) => event.token_usage_source === 'estimated'),
-            cost: sumUsdAmounts(modelEvents.map((event) => event.cost_usd)),
+            tokens: sumTokenCounts(modelEvents.flatMap((event) => [event.input_tokens, event.output_tokens])),
+            confidence,
+            cost: sumCosts(modelEvents.map((event) => event.cost_usd)),
           };
         })
         .sort((a, b) => b.attempts - a.attempts)
@@ -148,20 +175,20 @@ export default function WorkspaceOverview() {
           <MetricCard
             icon={ArrowDownToLine}
             label="Input Tokens"
-            value={inputTokens === undefined ? '-' : formatTokens(inputTokens)}
+            value={inputTokens === undefined ? '-' : inputTokens === null ? 'Unavailable' : formatTokens(inputTokens)}
             hint={tokensHint}
           />
           <MetricCard
             icon={ArrowUpFromLine}
             label="Output Tokens"
-            value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
+            value={outputTokens === undefined ? '-' : outputTokens === null ? 'Unavailable' : formatTokens(outputTokens)}
             hint={tokensHint}
           />
           <MetricCard
             icon={Coins}
             label="Est. cost"
-            value={costUsd === undefined ? '-' : formatUsd(costUsd)}
-            hint={`latest ${EVENTS_WINDOW} attempt events, at catalog prices`}
+            value={costUsd === undefined ? '-' : costUsd === null ? 'Unavailable' : formatUsd(costUsd)}
+            hint={`latest ${EVENTS_WINDOW} attempt events${costUsd === null ? ', one or more costs unavailable' : ', at catalog prices'}`}
           />
         </div>
       )}
@@ -202,14 +229,17 @@ export default function WorkspaceOverview() {
                     header: 'Tokens',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
-                    cell: (row) => `${formatTokens(row.tokens)}${row.tokensEstimated ? ' (estimated)' : ''}`,
+                    cell: (row) =>
+                      row.tokens === null
+                        ? 'Unavailable'
+                        : `${formatTokens(row.tokens)}${row.confidence === 'reported' ? '' : ` (${row.confidence})`}`,
                   },
                   {
                     key: 'cost',
                     header: 'Est. cost',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
-                    cell: (row) => formatUsd(row.cost),
+                    cell: (row) => (row.cost === null ? 'Unavailable' : formatUsd(row.cost)),
                   },
                 ]}
               />
@@ -255,7 +285,8 @@ export default function WorkspaceOverview() {
                     header: 'Tokens',
                     headClassName: 'text-right',
                     cellClassName: 'text-right tabular-nums',
-                    cell: (e) => formatTokens(e.input_tokens + e.output_tokens),
+                    cell: (e) =>
+                      e.input_tokens === null || e.output_tokens === null ? 'Unavailable' : formatTokens(e.input_tokens + e.output_tokens),
                   },
                   {
                     key: 'token_source',

@@ -53,6 +53,7 @@ import type {
   DeniedUsageEventV1,
   EnrollOut,
   EventsIngestedOut,
+  GatewayRequestFinishedV1,
   HTTPValidationError,
   HeartbeatOut,
   HeartbeatV1,
@@ -8155,19 +8156,19 @@ export const getIngestEventsUrl = () => {
 }
 
 /**
- * Ingest up to 1,000 usage events; repeated events and request attempts are ignored.
+ * Ingest up to 1,000 request observations under one stable watermark.
  *
  * Required permission: `usage.ingest`.
  * @summary Ingest Usage Events
  */
-export const ingestEvents = async (deniedUsageEventV1RoutedUsageEventV1: (DeniedUsageEventV1 | RoutedUsageEventV1)[], options?: Parameters<typeof customFetch>[1]): Promise<EventsIngestedOut> => {
+export const ingestEvents = async (deniedUsageEventV1RoutedUsageEventV1GatewayRequestFinishedV1: (DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[], options?: Parameters<typeof customFetch>[1]): Promise<EventsIngestedOut> => {
 
   return customFetch<EventsIngestedOut>(getIngestEventsUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(deniedUsageEventV1RoutedUsageEventV1)
+    body: JSON.stringify(deniedUsageEventV1RoutedUsageEventV1GatewayRequestFinishedV1)
   }
 );}
 
@@ -8176,8 +8177,8 @@ export const ingestEvents = async (deniedUsageEventV1RoutedUsageEventV1: (Denied
 
 
 export const getIngestEventsMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>}, TContext> => {
 
 const mutationKey = ['ingestEvents'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -8189,7 +8190,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEvents>>, {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ingestEvents>>, {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>}> = (props) => {
           const {data} = props ?? {};
 
           return  ingestEvents(data,requestOptions)
@@ -8203,18 +8204,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type IngestEventsMutationResult = NonNullable<Awaited<ReturnType<typeof ingestEvents>>>
-    export type IngestEventsMutationBody = BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>
+    export type IngestEventsMutationBody = BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>
     export type IngestEventsMutationError = ErrorType<void | HTTPValidationError>
 
     /**
  * @summary Ingest Usage Events
  */
 export const useIngestEvents = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ingestEvents>>, TError,{data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof ingestEvents>>,
         TError,
-        {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1)[]>},
+        {data: BodyType<(DeniedUsageEventV1 | RoutedUsageEventV1 | GatewayRequestFinishedV1)[]>},
         TContext
       > => {
       return useMutation(getIngestEventsMutationOptions(options), queryClient);

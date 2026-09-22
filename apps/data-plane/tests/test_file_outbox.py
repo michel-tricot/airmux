@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 def event_of(index: int) -> RoutedUsageEventV1:
     started_at = datetime.now(tz=UTC)
     return RoutedUsageEventV1(
+        event_type="usage",
         event_id=uuid7(),
         request_id=uuid7(),
         request_started_at=started_at,
@@ -54,6 +55,9 @@ def event_of(index: int) -> RoutedUsageEventV1:
         cost_source="catalog_estimate",
         cost_usd="0.000037",
         cost_input_usd="0.000037",
+        cost_output_usd="0",
+        cache_read_tokens=0,
+        cache_write_tokens=0,
         latency_ms=1,
         status="ok",
         stream=False,

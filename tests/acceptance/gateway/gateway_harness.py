@@ -19,7 +19,7 @@ from pydantic import TypeAdapter
 from tests.acceptance.process_harness import uvicorn_port
 from upstream import UPSTREAM_KEY, Family, Upstream
 
-from contract import UsageEvent, uuid7
+from contract import GatewayRequestFinishedV1, IngestEvent, UsageEvent, uuid7
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -241,18 +241,35 @@ class Gateway:
             responses.write(json.dumps({"status": response.status_code, "body": response.text}, ensure_ascii=False) + "\n")
         return response
 
-    def events(self, count: int) -> list[UsageEvent]:
-        eventually(lambda: self.events_path.exists() and self.events_path.read_bytes().count(b"\n") >= count)
+    def observations(self) -> list[IngestEvent]:
         contents = self.events_path.read_text(encoding="utf-8")
         assert contents.endswith("\n") or not contents
-        events = TypeAdapter(list[UsageEvent]).validate_json("[" + ",".join(contents.splitlines()) + "]", strict=True)
-        assert len(events) == count
-        assert len({event.event_id for event in events}) == count
-        assert all(event.event_id.version == 7 and event.request_id.version == 7 for event in events)
-        assert all(event.org_id == UUID(int=0) and event.workspace_id == UUID(int=0) for event in events)
-        assert all(event.cost_usd == event.cost_input_usd + event.cost_output_usd for event in events)
+        observations = TypeAdapter(list[IngestEvent]).validate_json("[" + ",".join(contents.splitlines()) + "]", strict=True)
+        assert len({event.event_id for event in observations}) == len(observations)
+        assert all(event.event_id.version == 7 and event.request_id.version == 7 for event in observations)
+        assert all(event.org_id == UUID(int=0) and event.workspace_id == UUID(int=0) for event in observations)
         assert all(secret not in contents for secret in (UPSTREAM_KEY, INFERENCE_KEY, SECOND_KEY))
+        return observations
+
+    def events(self, count: int) -> list[UsageEvent]:
+        eventually(lambda: self.events_path.exists() and self.events_path.read_bytes().count(b'"event_type":"usage"') >= count)
+        events = [event for event in self.observations() if not isinstance(event, GatewayRequestFinishedV1)]
+        assert len(events) == count
+        for event in events:
+            if event.cost_source == "unavailable":
+                assert event.cost_usd is event.cost_input_usd is event.cost_output_usd is None
+            else:
+                assert event.cost_usd is not None
+                assert event.cost_input_usd is not None
+                assert event.cost_output_usd is not None
+                assert event.cost_usd == event.cost_input_usd + event.cost_output_usd
         return events
+
+    def terminals(self, count: int) -> list[GatewayRequestFinishedV1]:
+        eventually(lambda: self.events_path.exists() and self.events_path.read_bytes().count(b'"event_type":"gateway_request_finished"') >= count)
+        terminals = [event for event in self.observations() if isinstance(event, GatewayRequestFinishedV1)]
+        assert len(terminals) == count
+        return terminals
 
     def close(self) -> None:
         for provider in self.providers:

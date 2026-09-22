@@ -37,6 +37,7 @@ def test_live_output_limit_is_enforced_and_forwarded(live_gateway: LiveGateway) 
     assert denied.status == "denied"
     assert denied.cost_usd == 0
     assert live_gateway.provider.deliveries[0].request[live_gateway.case.output_limit] == 32
+    assert accepted.output_tokens is not None
     assert accepted.output_tokens <= 32
     live_gateway.assert_metering(accepted)
 

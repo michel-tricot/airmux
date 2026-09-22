@@ -721,7 +721,7 @@ export const DeniedUsageEventV1RequestedCapabilitiesItem = {
 } as const;
 
 export interface DeniedUsageEventV1 {
-  /** Usage event schema version */
+  /** Ingest event schema version */
   schema_version?: 1;
   /** Idempotency key for event ingestion */
   event_id: string;
@@ -749,7 +749,7 @@ export interface DeniedUsageEventV1 {
      * @maxLength 200
      */
   authentication_label: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Authenticated principal for the request */
   user_id: string;
   /**
      * Principal label at execution time
@@ -773,6 +773,12 @@ export interface DeniedUsageEventV1 {
   requested_model_id: string;
   /** Original request capabilities before reconciliation */
   requested_capabilities: DeniedUsageEventV1RequestedCapabilitiesItem[];
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /** Whether the response was streamed */
+  stream: boolean;
+  /** Usage-attempt or denial observation */
+  event_type: 'usage';
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -781,49 +787,22 @@ export interface DeniedUsageEventV1 {
   model_id: string;
   /** No provider was selected before denial */
   provider_id?: '';
-  /** Policy bundle used for the request */
-  bundle_id: string;
-  /**
-     * Total input tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  input_tokens: number;
-  /**
-     * Total output tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  output_tokens: number;
-  /**
-     * Total estimated cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_usd: string;
-  /**
-     * Estimated input cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_input_usd?: string;
-  /**
-     * Estimated output cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_output_usd?: string;
+  /** Total input tokens when observable */
+  input_tokens: number | null;
+  /** Total output tokens when observable */
+  output_tokens: number | null;
+  /** Total catalog-estimated cost when usage is observable */
+  cost_usd: string | null;
+  /** Catalog-estimated input cost when usage is observable */
+  cost_input_usd: string | null;
+  /** Catalog-estimated output cost when usage is observable */
+  cost_output_usd: string | null;
   /** Effective upstream output-token limit */
   max_output_tokens: number | null;
-  /**
-     * Input tokens read from a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_read_tokens?: number;
-  /**
-     * Input tokens written to a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_write_tokens?: number;
+  /** Input tokens read from a provider cache when observable */
+  cache_read_tokens: number | null;
+  /** Input tokens written to a provider cache when observable */
+  cache_write_tokens: number | null;
   /**
      * Request evaluation latency in milliseconds
      * @minimum 0
@@ -832,8 +811,6 @@ export interface DeniedUsageEventV1 {
   latency_ms: number;
   /** The request was denied before routing */
   status?: 'denied';
-  /** Whether the response was streamed */
-  stream: boolean;
   /**
      * No provider credential was selected before denial
      * @nullable
@@ -914,6 +891,129 @@ export interface EnrollOut {
 export interface EventsIngestedOut {
   received: number;
   ingested: number;
+  watermark: string | null;
+}
+
+/**
+ * Credential kind authenticated by the data plane
+ */
+export type GatewayRequestFinishedV1AuthenticationSource = typeof GatewayRequestFinishedV1AuthenticationSource[keyof typeof GatewayRequestFinishedV1AuthenticationSource];
+
+
+export const GatewayRequestFinishedV1AuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+/**
+ * Principal kind at execution time
+ */
+export type GatewayRequestFinishedV1PrincipalType = typeof GatewayRequestFinishedV1PrincipalType[keyof typeof GatewayRequestFinishedV1PrincipalType];
+
+
+export const GatewayRequestFinishedV1PrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
+export type GatewayRequestFinishedV1RequestedCapabilitiesItem = typeof GatewayRequestFinishedV1RequestedCapabilitiesItem[keyof typeof GatewayRequestFinishedV1RequestedCapabilitiesItem];
+
+
+export const GatewayRequestFinishedV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+/**
+ * Final gateway outcome for the logical request
+ */
+export type GatewayRequestFinishedV1Outcome = typeof GatewayRequestFinishedV1Outcome[keyof typeof GatewayRequestFinishedV1Outcome];
+
+
+export const GatewayRequestFinishedV1Outcome = {
+  succeeded: 'succeeded',
+  failed: 'failed',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+} as const;
+
+export interface GatewayRequestFinishedV1 {
+  /** Ingest event schema version */
+  schema_version?: 1;
+  /** Idempotency key for event ingestion */
+  event_id: string;
+  /** Data-plane request ID */
+  request_id: string;
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /** Timestamp when this observation completed */
+  occurred_at: string;
+  /** Organization that made the request */
+  org_id: string;
+  /** Workspace that made the request */
+  workspace_id: string;
+  /**
+     * Inference key ID used for the request
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /** Credential kind authenticated by the data plane */
+  authentication_source: GatewayRequestFinishedV1AuthenticationSource;
+  /**
+     * Credential label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  authentication_label: string;
+  /** Authenticated principal for the request */
+  user_id: string;
+  /**
+     * Principal label at execution time
+     * @minLength 1
+     * @maxLength 320
+     */
+  principal_label: string;
+  /** Principal kind at execution time */
+  principal_type: GatewayRequestFinishedV1PrincipalType;
+  /**
+     * Workspace label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  workspace_label: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: GatewayRequestFinishedV1RequestedCapabilitiesItem[];
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /** Whether the response was streamed */
+  stream: boolean;
+  /** Terminal logical-request observation */
+  event_type: 'gateway_request_finished';
+  /** Final gateway outcome for the logical request */
+  outcome: GatewayRequestFinishedV1Outcome;
+  /**
+     * Actual number of routed provider attempts
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  expected_attempts: number;
+  /**
+     * End-to-end logical-request latency in milliseconds
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  latency_ms: number;
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -1846,7 +1946,7 @@ export const RoutedUsageEventV1CredentialScope = {
 } as const;
 
 /**
- * provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates
+ * Whether counts were provider-reported, fully estimated, partially observed, or unavailable
  */
 export type RoutedUsageEventV1TokenUsageSource = typeof RoutedUsageEventV1TokenUsageSource[keyof typeof RoutedUsageEventV1TokenUsageSource];
 
@@ -1854,10 +1954,23 @@ export type RoutedUsageEventV1TokenUsageSource = typeof RoutedUsageEventV1TokenU
 export const RoutedUsageEventV1TokenUsageSource = {
   provider: 'provider',
   estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+/**
+ * Cost confidence for the attempt
+ */
+export type RoutedUsageEventV1CostSource = typeof RoutedUsageEventV1CostSource[keyof typeof RoutedUsageEventV1CostSource];
+
+
+export const RoutedUsageEventV1CostSource = {
+  catalog_estimate: 'catalog_estimate',
+  unavailable: 'unavailable',
 } as const;
 
 export interface RoutedUsageEventV1 {
-  /** Usage event schema version */
+  /** Ingest event schema version */
   schema_version?: 1;
   /** Idempotency key for event ingestion */
   event_id: string;
@@ -1885,7 +1998,7 @@ export interface RoutedUsageEventV1 {
      * @maxLength 200
      */
   authentication_label: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Authenticated principal for the request */
   user_id: string;
   /**
      * Principal label at execution time
@@ -1909,6 +2022,12 @@ export interface RoutedUsageEventV1 {
   requested_model_id: string;
   /** Original request capabilities before reconciliation */
   requested_capabilities: RoutedUsageEventV1RequestedCapabilitiesItem[];
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /** Whether the response was streamed */
+  stream: boolean;
+  /** Usage-attempt or denial observation */
+  event_type: 'usage';
   /**
      * Caller-facing model ID
      * @minLength 1
@@ -1921,49 +2040,22 @@ export interface RoutedUsageEventV1 {
      * @maxLength 63
      */
   provider_id: string;
-  /** Policy bundle used for the request */
-  bundle_id: string;
-  /**
-     * Total input tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  input_tokens: number;
-  /**
-     * Total output tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  output_tokens: number;
-  /**
-     * Total estimated cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_usd: string;
-  /**
-     * Estimated input cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_input_usd?: string;
-  /**
-     * Estimated output cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_output_usd?: string;
+  /** Total input tokens when observable */
+  input_tokens: number | null;
+  /** Total output tokens when observable */
+  output_tokens: number | null;
+  /** Total catalog-estimated cost when usage is observable */
+  cost_usd: string | null;
+  /** Catalog-estimated input cost when usage is observable */
+  cost_input_usd: string | null;
+  /** Catalog-estimated output cost when usage is observable */
+  cost_output_usd: string | null;
   /** Effective upstream output-token limit */
   max_output_tokens: number | null;
-  /**
-     * Input tokens read from a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_read_tokens?: number;
-  /**
-     * Input tokens written to a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_write_tokens?: number;
+  /** Input tokens read from a provider cache when observable */
+  cache_read_tokens: number | null;
+  /** Input tokens written to a provider cache when observable */
+  cache_write_tokens: number | null;
   /**
      * Provider attempt latency in milliseconds
      * @minimum 0
@@ -1972,8 +2064,6 @@ export interface RoutedUsageEventV1 {
   latency_ms: number;
   /** How the routed request ended */
   status: RoutedUsageEventV1Status;
-  /** Whether the response was streamed */
-  stream: boolean;
   /** Provider credential used for the request */
   credential_id: string;
   /** Scope of the provider credential used for the request */
@@ -1986,7 +2076,7 @@ export interface RoutedUsageEventV1 {
   attempt_index: number;
   /** Timestamp when this provider attempt began */
   attempt_started_at: string;
-  /** provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates */
+  /** Whether counts were provider-reported, fully estimated, partially observed, or unavailable */
   token_usage_source: RoutedUsageEventV1TokenUsageSource;
   /**
      * Provider credential name at execution time
@@ -2014,8 +2104,8 @@ export interface RoutedUsageEventV1 {
      * @pattern ^\d+(?:\.\d+)?$
      */
   cache_write_price_per_mtok: string;
-  /** Cost derived from catalog rates at execution time */
-  cost_source: 'catalog_estimate';
+  /** Cost confidence for the attempt */
+  cost_source: RoutedUsageEventV1CostSource;
 }
 
 export interface ServiceAccountIn {
@@ -2087,6 +2177,8 @@ export type TokenUsageSource = typeof TokenUsageSource[keyof typeof TokenUsageSo
 export const TokenUsageSource = {
   provider: 'provider',
   estimated: 'estimated',
+  partial: 'partial',
+  unavailable: 'unavailable',
   not_applicable: 'not_applicable',
 } as const;
 
@@ -2122,6 +2214,7 @@ export type UsageEventOutCostSource = typeof UsageEventOutCostSource[keyof typeo
 
 export const UsageEventOutCostSource = {
   catalog_estimate: 'catalog_estimate',
+  unavailable: 'unavailable',
   not_applicable: 'not_applicable',
 } as const;
 
@@ -2149,6 +2242,7 @@ export const UsageEventOutCredentialScope = {
 
 export interface UsageEventOut {
   event_id: string;
+  ingest_id: number;
   request_id: string;
   request_started_at: string;
   attempt_started_at: string | null;
@@ -2167,9 +2261,9 @@ export interface UsageEventOut {
   model_id: string;
   provider_id: string;
   bundle_id: string;
-  input_tokens: number;
-  output_tokens: number;
-  /** Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates */
+  input_tokens: number | null;
+  output_tokens: number | null;
+  /** Token-count provenance: provider-reported, wholly estimated, partial observation plus estimates, unavailable, or not_applicable for denials; independent of cost confidence */
   token_usage_source: TokenUsageSource;
   attempt_index: number | null;
   max_output_tokens: number | null;
@@ -2178,14 +2272,11 @@ export interface UsageEventOut {
   cache_read_price_per_mtok: string | null;
   cache_write_price_per_mtok: string | null;
   cost_source: UsageEventOutCostSource;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  cost_usd: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  cost_input_usd: string;
-  /** @pattern ^\d+(?:\.\d+)?$ */
-  cost_output_usd: string;
-  cache_read_tokens: number;
-  cache_write_tokens: number;
+  cost_usd: string | null;
+  cost_input_usd: string | null;
+  cost_output_usd: string | null;
+  cache_read_tokens: number | null;
+  cache_write_tokens: number | null;
   latency_ms: number;
   status: UsageEventOutStatus;
   stream: boolean;

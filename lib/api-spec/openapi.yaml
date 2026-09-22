@@ -3958,33 +3958,56 @@ paths:
       tags:
       - Data Plane API
       summary: Ingest Usage Events
-      description: 'Ingest up to 1,000 usage events; repeated events and request attempts are ignored.
+      description: 'Ingest up to 1,000 request observations under one stable watermark.
 
 
         Required permission: `usage.ingest`.'
       operationId: ingest_events
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
+              type: array
               items:
                 oneOf:
-                - $ref: '#/components/schemas/DeniedUsageEventV1'
-                - $ref: '#/components/schemas/RoutedUsageEventV1'
+                - oneOf:
+                  - $ref: '#/components/schemas/DeniedUsageEventV1'
+                  - $ref: '#/components/schemas/RoutedUsageEventV1'
+                  discriminator:
+                    propertyName: status
+                    mapping:
+                      denied: '#/components/schemas/DeniedUsageEventV1'
+                      ok: '#/components/schemas/RoutedUsageEventV1'
+                      upstream_error: '#/components/schemas/RoutedUsageEventV1'
+                      timeout: '#/components/schemas/RoutedUsageEventV1'
+                      cancelled: '#/components/schemas/RoutedUsageEventV1'
+                      credential_rejected: '#/components/schemas/RoutedUsageEventV1'
+                      rate_limited: '#/components/schemas/RoutedUsageEventV1'
+                - $ref: '#/components/schemas/GatewayRequestFinishedV1'
                 discriminator:
-                  propertyName: status
+                  propertyName: event_type
                   mapping:
-                    denied: '#/components/schemas/DeniedUsageEventV1'
-                    ok: '#/components/schemas/RoutedUsageEventV1'
-                    upstream_error: '#/components/schemas/RoutedUsageEventV1'
-                    timeout: '#/components/schemas/RoutedUsageEventV1'
-                    cancelled: '#/components/schemas/RoutedUsageEventV1'
-                    credential_rejected: '#/components/schemas/RoutedUsageEventV1'
-                    rate_limited: '#/components/schemas/RoutedUsageEventV1'
-              type: array
+                    usage:
+                      oneOf:
+                      - $ref: '#/components/schemas/DeniedUsageEventV1'
+                      - $ref: '#/components/schemas/RoutedUsageEventV1'
+                      discriminator:
+                        propertyName: status
+                        mapping:
+                          denied: '#/components/schemas/DeniedUsageEventV1'
+                          ok: '#/components/schemas/RoutedUsageEventV1'
+                          upstream_error: '#/components/schemas/RoutedUsageEventV1'
+                          timeout: '#/components/schemas/RoutedUsageEventV1'
+                          cancelled: '#/components/schemas/RoutedUsageEventV1'
+                          credential_rejected: '#/components/schemas/RoutedUsageEventV1'
+                          rate_limited: '#/components/schemas/RoutedUsageEventV1'
+                    gateway_request_finished: '#/components/schemas/GatewayRequestFinishedV1'
               maxItems: 1000
               title: Events
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -4002,9 +4025,6 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
       x-airmux-authority:
       - scope: credential_scope
         anyOf:
@@ -5037,7 +5057,7 @@ components:
           type: integer
           const: 1
           title: Schema Version
-          description: Usage event schema version
+          description: Ingest event schema version
           default: 1
         event_id:
           type: string
@@ -5093,7 +5113,7 @@ components:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Authenticated principal for the request
         principal_label:
           type: string
           maxLength: 320
@@ -5131,6 +5151,20 @@ components:
           uniqueItems: true
           title: Requested Capabilities
           description: Original request capabilities before reconciliation
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+          description: Policy bundle used for the request
+        stream:
+          type: boolean
+          title: Stream
+          description: Whether the response was streamed
+        event_type:
+          type: string
+          const: usage
+          title: Event Type
+          description: Usage-attempt or denial observation
         model_id:
           type: string
           maxLength: 255
@@ -5143,40 +5177,43 @@ components:
           title: Provider Id
           description: No provider was selected before denial
           default: ''
-        bundle_id:
-          type: string
-          format: uuid
-          title: Bundle Id
-          description: Policy bundle used for the request
         input_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Input Tokens
-          description: Total input tokens
+          description: Total input tokens when observable
         output_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Output Tokens
-          description: Total output tokens
+          description: Total output tokens when observable
         cost_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Usd
-          description: Total estimated cost in USD
+          description: Total catalog-estimated cost when usage is observable
         cost_input_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Input Usd
-          description: Estimated input cost in USD
-          default: '0'
+          description: Catalog-estimated input cost when usage is observable
         cost_output_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Output Usd
-          description: Estimated output cost in USD
-          default: '0'
+          description: Catalog-estimated output cost when usage is observable
         max_output_tokens:
           anyOf:
           - type: integer
@@ -5186,19 +5223,21 @@ components:
           title: Max Output Tokens
           description: Effective upstream output-token limit
         cache_read_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Cache Read Tokens
-          description: Input tokens read from a provider cache
-          default: 0
+          description: Input tokens read from a provider cache when observable
         cache_write_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Cache Write Tokens
-          description: Input tokens written to a provider cache
-          default: 0
+          description: Input tokens written to a provider cache when observable
         latency_ms:
           type: integer
           maximum: 2147483647.0
@@ -5211,10 +5250,6 @@ components:
           title: Status
           description: The request was denied before routing
           default: denied
-        stream:
-          type: boolean
-          title: Stream
-          description: Whether the response was streamed
         credential_id:
           type: 'null'
           title: Credential Id
@@ -5279,14 +5314,19 @@ components:
       - workspace_label
       - requested_model_id
       - requested_capabilities
-      - model_id
       - bundle_id
+      - stream
+      - event_type
+      - model_id
       - input_tokens
       - output_tokens
       - cost_usd
+      - cost_input_usd
+      - cost_output_usd
       - max_output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - latency_ms
-      - stream
       - token_usage_source
       - cost_source
       title: DeniedUsageEventV1
@@ -5799,10 +5839,17 @@ components:
         ingested:
           type: integer
           title: Ingested
+        watermark:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Watermark
       type: object
       required:
       - received
       - ingested
+      - watermark
       title: EventsIngestedOut
     Fallback:
       properties:
@@ -5849,6 +5896,167 @@ components:
       - max_attempts
       - timeout_ms
       title: Fallback
+    GatewayRequestFinishedV1:
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+          title: Schema Version
+          description: Ingest event schema version
+          default: 1
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+          description: Idempotency key for event ingestion
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+          description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+          description: Timestamp when this observation completed
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+          description: Organization that made the request
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+          description: Workspace that made the request
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+          description: Inference key ID used for the request
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+          description: Credential kind authenticated by the data plane
+        authentication_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Authentication Label
+          description: Credential label at execution time
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Authenticated principal for the request
+        principal_label:
+          type: string
+          maxLength: 320
+          minLength: 1
+          title: Principal Label
+          description: Principal label at execution time
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+          description: Principal kind at execution time
+        workspace_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Workspace Label
+          description: Workspace label at execution time
+        requested_model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Requested Model Id
+          description: Original caller-requested model before routing and fallback
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          uniqueItems: true
+          title: Requested Capabilities
+          description: Original request capabilities before reconciliation
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+          description: Policy bundle used for the request
+        stream:
+          type: boolean
+          title: Stream
+          description: Whether the response was streamed
+        event_type:
+          type: string
+          const: gateway_request_finished
+          title: Event Type
+          description: Terminal logical-request observation
+        outcome:
+          type: string
+          enum:
+          - succeeded
+          - failed
+          - denied
+          - timeout
+          - cancelled
+          title: Outcome
+          description: Final gateway outcome for the logical request
+        expected_attempts:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Expected Attempts
+          description: Actual number of routed provider attempts
+        latency_ms:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Latency Ms
+          description: End-to-end logical-request latency in milliseconds
+      additionalProperties: false
+      type: object
+      required:
+      - event_id
+      - request_id
+      - request_started_at
+      - occurred_at
+      - org_id
+      - workspace_id
+      - key_id
+      - authentication_source
+      - authentication_label
+      - user_id
+      - principal_label
+      - principal_type
+      - workspace_label
+      - requested_model_id
+      - requested_capabilities
+      - bundle_id
+      - stream
+      - event_type
+      - outcome
+      - expected_attempts
+      - latency_ms
+      title: GatewayRequestFinishedV1
     HTTPValidationError:
       properties:
         detail:
@@ -8075,7 +8283,7 @@ components:
           type: integer
           const: 1
           title: Schema Version
-          description: Usage event schema version
+          description: Ingest event schema version
           default: 1
         event_id:
           type: string
@@ -8131,7 +8339,7 @@ components:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Authenticated principal for the request
         principal_label:
           type: string
           maxLength: 320
@@ -8169,6 +8377,20 @@ components:
           uniqueItems: true
           title: Requested Capabilities
           description: Original request capabilities before reconciliation
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+          description: Policy bundle used for the request
+        stream:
+          type: boolean
+          title: Stream
+          description: Whether the response was streamed
+        event_type:
+          type: string
+          const: usage
+          title: Event Type
+          description: Usage-attempt or denial observation
         model_id:
           type: string
           maxLength: 255
@@ -8181,40 +8403,43 @@ components:
           minLength: 1
           title: Provider Id
           description: Provider that served the request
-        bundle_id:
-          type: string
-          format: uuid
-          title: Bundle Id
-          description: Policy bundle used for the request
         input_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Input Tokens
-          description: Total input tokens
+          description: Total input tokens when observable
         output_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Output Tokens
-          description: Total output tokens
+          description: Total output tokens when observable
         cost_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Usd
-          description: Total estimated cost in USD
+          description: Total catalog-estimated cost when usage is observable
         cost_input_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Input Usd
-          description: Estimated input cost in USD
-          default: '0'
+          description: Catalog-estimated input cost when usage is observable
         cost_output_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Output Usd
-          description: Estimated output cost in USD
-          default: '0'
+          description: Catalog-estimated output cost when usage is observable
         max_output_tokens:
           anyOf:
           - type: integer
@@ -8224,19 +8449,21 @@ components:
           title: Max Output Tokens
           description: Effective upstream output-token limit
         cache_read_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Cache Read Tokens
-          description: Input tokens read from a provider cache
-          default: 0
+          description: Input tokens read from a provider cache when observable
         cache_write_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 0.0
+          - type: 'null'
           title: Cache Write Tokens
-          description: Input tokens written to a provider cache
-          default: 0
+          description: Input tokens written to a provider cache when observable
         latency_ms:
           type: integer
           maximum: 2147483647.0
@@ -8254,10 +8481,6 @@ components:
           - rate_limited
           title: Status
           description: How the routed request ended
-        stream:
-          type: boolean
-          title: Stream
-          description: Whether the response was streamed
         credential_id:
           type: string
           format: uuid
@@ -8287,9 +8510,10 @@ components:
           enum:
           - provider
           - estimated
+          - partial
+          - unavailable
           title: Token Usage Source
-          description: 'provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining
-            partial provider counts. Independent of catalog-priced cost estimates'
+          description: Whether counts were provider-reported, fully estimated, partially observed, or unavailable
         credential_name:
           type: string
           maxLength: 80
@@ -8318,9 +8542,11 @@ components:
           description: Cache-write catalog rate used for this attempt
         cost_source:
           type: string
-          const: catalog_estimate
+          enum:
+          - catalog_estimate
+          - unavailable
           title: Cost Source
-          description: Cost derived from catalog rates at execution time
+          description: Cost confidence for the attempt
       additionalProperties: false
       type: object
       required:
@@ -8339,16 +8565,21 @@ components:
       - workspace_label
       - requested_model_id
       - requested_capabilities
+      - bundle_id
+      - stream
+      - event_type
       - model_id
       - provider_id
-      - bundle_id
       - input_tokens
       - output_tokens
       - cost_usd
+      - cost_input_usd
+      - cost_output_usd
       - max_output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - latency_ms
       - status
-      - stream
       - credential_id
       - credential_scope
       - attempt_index
@@ -8701,6 +8932,8 @@ components:
       enum:
       - provider
       - estimated
+      - partial
+      - unavailable
       - not_applicable
       title: TokenUsageSource
     UsageEventOut:
@@ -8709,6 +8942,9 @@ components:
           type: string
           format: uuid
           title: Event Id
+        ingest_id:
+          type: integer
+          title: Ingest Id
         request_id:
           type: string
           format: uuid
@@ -8788,15 +9024,19 @@ components:
           format: uuid
           title: Bundle Id
         input_tokens:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Input Tokens
         output_tokens:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Output Tokens
         token_usage_source:
           $ref: '#/components/schemas/TokenUsageSource'
-          description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
-            for denials; independent of cost estimates'
+          description: 'Token-count provenance: provider-reported, wholly estimated, partial observation plus estimates, unavailable,
+            or not_applicable for denials; independent of cost confidence'
         attempt_index:
           anyOf:
           - type: integer
@@ -8835,25 +9075,36 @@ components:
           type: string
           enum:
           - catalog_estimate
+          - unavailable
           - not_applicable
           title: Cost Source
         cost_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Usd
         cost_input_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Input Usd
         cost_output_usd:
-          type: string
-          pattern: ^\d+(?:\.\d+)?$
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
           title: Cost Output Usd
         cache_read_tokens:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Cache Read Tokens
         cache_write_tokens:
-          type: integer
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Cache Write Tokens
         latency_ms:
           type: integer
@@ -8895,6 +9146,7 @@ components:
       type: object
       required:
       - event_id
+      - ingest_id
       - request_id
       - request_started_at
       - attempt_started_at

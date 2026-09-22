@@ -65,7 +65,7 @@ def _write(tmp_path, text=BUNDLE_YML):
 
 
 def _recorded(cache_dir, http_client):
-    return read_and_close_outbox(make_outbox(cache_dir, http_client))
+    return [event for event in read_and_close_outbox(make_outbox(cache_dir, http_client)) if event.event_type == "usage"]
 
 
 def test_the_compiled_bundle_authenticates_the_plaintext_key(tmp_path):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -14,7 +15,7 @@ from contract import uuid7
 from data_plane.auth import authenticate_request
 from data_plane.canonical import CanonicalError
 from data_plane.errors import RequestRejectedError
-from data_plane.metering import RequestStart
+from data_plane.metering import RequestStart, RequestTerminal
 from data_plane.runtime import runtime_of
 
 if TYPE_CHECKING:
@@ -102,8 +103,16 @@ class ResponseHeadersMiddleware:
         try:
             with request_context(start.request_id):
                 await self.app(scope, receive, send_headers)
+        except asyncio.CancelledError:
+            terminal = scope["state"].get("request_terminal")
+            if isinstance(terminal, RequestTerminal):
+                terminal.conclude("cancelled")
+            raise
         finally:
             state = scope["state"]
+            terminal = state.get("request_terminal")
+            if isinstance(terminal, RequestTerminal):
+                terminal.finish()
             actual_stream = bool(state["metrics_stream"])
             self.metrics.observe_inflight(route, actual_stream, -1)
             self.metrics.observe_http(

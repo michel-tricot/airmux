@@ -11,6 +11,7 @@ describe('playground', () => {
   it.each([
     ['provider', 'Provider reported'],
     ['estimated', 'Estimated'],
+    ['partial', 'Partial'],
     ['not_applicable', 'Not applicable'],
   ] as const)('labels playground activity and %s token usage', async (source, label) => {
     const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
@@ -19,6 +20,7 @@ describe('playground', () => {
         paged<Api.UsageEventOut>([
           {
             event_id: '01941f29-7c00-7000-8000-000000000002',
+            ingest_id: 1,
             request_id: '01941f29-7c00-7000-8000-000000000003',
             request_started_at: now,
             attempt_started_at: source === 'not_applicable' ? null : now,
@@ -72,6 +74,8 @@ describe('playground', () => {
     expect(within(activity).queryByText(playgroundSessionId)).not.toBeInTheDocument();
     expect(screen.queryAllByText(/includes estimated counts/)).toHaveLength(source === 'estimated' ? 2 : 0);
     expect(screen.queryAllByText('16 (estimated)')).toHaveLength(source === 'estimated' ? 1 : 0);
+    expect(screen.queryAllByText(/includes partially observed counts/)).toHaveLength(source === 'partial' ? 2 : 0);
+    expect(screen.queryAllByText('16 (partial)')).toHaveLength(source === 'partial' ? 1 : 0);
   });
 
   it('starts a session automatically and streams a response through the inference prefix', async () => {

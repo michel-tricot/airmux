@@ -51,8 +51,10 @@ def test_provider_errors_keep_the_caller_shape_and_record_a_valid_event(
     assert UPSTREAM_KEY not in response.text
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.stream) == (event_status, "model-a", "stub", stream)
-    assert event.input_tokens > 0
-    assert event.output_tokens == 0
+    assert event.token_usage_source == "unavailable"
+    assert event.cost_source == "unavailable"
+    assert event.input_tokens is event.output_tokens is None
+    assert event.cost_usd is event.cost_input_usd is event.cost_output_usd is None
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)
@@ -94,6 +96,8 @@ def test_truncated_stream_reports_failure_without_switching_to_a_backup(gateway:
     (event,) = gateway.events(1)
     assert event.status == "upstream_error"
     if family == "openai_responses":
+        assert event.input_tokens is not None
+        assert event.output_tokens is not None
         assert event.input_tokens > 0
         assert event.output_tokens > 0
         assert event.cache_read_tokens == 0

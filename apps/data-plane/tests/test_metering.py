@@ -40,9 +40,8 @@ def test_each_usage_bucket_has_a_direct_model_price():
 
 
 def test_cache_counts_cannot_make_fresh_input_negative():
-    usage = CanonicalUsage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
-    cost_in, _ = cost_breakdown(usage, _model())
-    assert cost_in == Decimal("0.00012")
+    with pytest.raises(ValueError, match="cache"):
+        CanonicalUsage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
 
 
 def test_smallest_rate_one_token_cost_is_exact():
@@ -108,11 +107,97 @@ def test_usage_has_request_attribution_and_token_source(estimated):
     assert event.cost_source == "catalog_estimate"
     assert 900 <= event.latency_ms <= 1500
     assert event.status == "cancelled"
-    assert event.token_usage_source == ("estimated" if estimated else "provider")
+    assert event.token_usage_source == ("partial" if estimated else "provider")
+    assert event.input_tokens is not None
+    assert event.output_tokens is not None
     assert (event.input_tokens > 0) == estimated
     assert (event.output_tokens > 0) == estimated
     assert event.max_output_tokens == 37
+    assert event.cost_usd is not None
+    assert event.cost_input_usd is not None
+    assert event.cost_output_usd is not None
     assert event.cost_usd == event.cost_input_usd + event.cost_output_usd
+
+
+def test_empty_failed_attempt_has_unavailable_usage_and_cost():
+    ctx = _ctx()
+    request = CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "secret prompt"}])
+    response = CanonicalResponse(id=str(ctx.request_id), model=MODEL.model_id, content=[], finish_reason=None, usage=CanonicalUsage(estimated=True))
+
+    event = usage_event(ctx, response, "timeout", request)
+
+    assert event.token_usage_source == "unavailable"
+    assert event.cost_source == "unavailable"
+    assert event.input_tokens is event.output_tokens is None
+    assert event.cost_usd is event.cost_input_usd is event.cost_output_usd is None
+
+
+def test_observed_failed_stream_has_partial_usage_and_cost():
+    ctx = _ctx()
+    request = CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "count"}], stream=True)
+    response = CanonicalResponse(
+        id=str(ctx.request_id),
+        model=MODEL.model_id,
+        content=[CanonicalTextPart(text="one")],
+        finish_reason=None,
+        usage=CanonicalUsage(estimated=True),
+    )
+
+    event = usage_event(ctx, response, "cancelled", request)
+
+    assert event.token_usage_source == "partial"
+    assert event.cost_source == "catalog_estimate"
+    assert event.input_tokens is not None
+    assert event.input_tokens > 0
+    assert event.output_tokens is not None
+    assert event.output_tokens > 0
+
+
+def test_success_with_retained_provider_counts_has_partial_usage():
+    ctx = _ctx()
+    request = CanonicalRequest(model=MODEL.model_id, messages=[{"role": "user", "content": "count"}], stream=True)
+    response = CanonicalResponse(
+        id=str(ctx.request_id),
+        model=MODEL.model_id,
+        content=[CanonicalTextPart(text="one")],
+        finish_reason="stop",
+        usage=CanonicalUsage(input_tokens=7, estimated=True),
+    )
+
+    event = usage_event(ctx, response, "ok", request)
+
+    assert event.token_usage_source == "partial"
+    assert event.input_tokens == 7
+    assert event.output_tokens is not None
+    assert event.output_tokens > 0
+
+
+def _ctx() -> Ctx:
+    return Ctx(
+        request_id=uuid7(),
+        model=_model(),
+        provider=PROVIDER,
+        stream=True,
+        org_id=ORG,
+        workspace_id=WORKSPACE,
+        key_id=str(uuid7()),
+        authentication_source="inference_key",
+        authentication_label="Production key",
+        user_id=ORG,
+        principal_label="Checkout service",
+        principal_type="service_account",
+        workspace_label="Production",
+        requested_model_id="gpt-test",
+        requested_capabilities=frozenset(),
+        credential_id=uuid7(),
+        credential_scope="workspace",
+        credential_name="default",
+        bundle_id=uuid7(),
+        attempt_index=1,
+        request_started_at=datetime.now(tz=UTC) - timedelta(seconds=1),
+        attempt_started_at=datetime.now(tz=UTC),
+        attempt_started_monotonic=time.monotonic(),
+    )
 
 
 def test_estimation_preserves_reported_input_and_counts_non_text_content():
@@ -158,8 +243,9 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content():
     event = usage_event(ctx, response, "cancelled", request)
 
     assert event.input_tokens == 37
+    assert event.output_tokens is not None
     assert event.output_tokens > 0
-    assert event.token_usage_source == "estimated"
+    assert event.token_usage_source == "partial"
 
 
 def test_denial_uses_the_request_identity_and_elapsed_latency():

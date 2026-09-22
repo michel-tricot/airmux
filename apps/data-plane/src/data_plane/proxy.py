@@ -29,7 +29,7 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx, UpstreamProtocolError, UpstreamResponseError
 from data_plane.errors import RequestRejectedError, UnsupportedFeatureError
 from data_plane.http import render_rejection
-from data_plane.metering import RequestStart, denied_event, status_for_error, status_for_upstream, usage_event
+from data_plane.metering import RequestStart, RequestTerminal, denied_event, status_for_error, status_for_upstream, usage_event
 from data_plane.metrics import upstream_outcome
 from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
@@ -66,16 +66,26 @@ async def complete(request: Request, context: InferenceContext, ingress: Ingress
             request.scope["state"]["metrics_stream"] = True
             runtime.metrics.relabel_inflight_stream(route)
         canonical_request, adjustments = _parse(body, ingress)
-        execution = RequestExecution(
-            request=canonical_request,
-            key=context.key,
-            snapshot=context.snapshot,
-            ingress=ingress,
-            parse_adjustments=tuple(adjustments),
-            runtime=runtime,
-            start=context.start,
-        )
-        return await execution.run()
+        with runtime.outbox.reserve() as reservation:
+            terminal = RequestTerminal(
+                key=context.key,
+                bundle_id=context.snapshot.bundle.bundle_id,
+                request=canonical_request,
+                start=context.start,
+                reservation=reservation.transfer(),
+            )
+            request.scope["state"]["request_terminal"] = terminal
+            execution = RequestExecution(
+                request=canonical_request,
+                key=context.key,
+                snapshot=context.snapshot,
+                ingress=ingress,
+                parse_adjustments=tuple(adjustments),
+                runtime=runtime,
+                start=context.start,
+                terminal=terminal,
+            )
+            return await execution.run()
     except RequestRejectedError as error:
         return render_rejection(ingress, error)
     except OutboxFullError:
@@ -119,6 +129,7 @@ class AttemptFailure:
     response: Response
     reason: FallbackReason | None
     retry_credential: bool
+    outcome: Literal["failed", "timeout"]
 
 
 @dataclass(frozen=True)
@@ -132,12 +143,14 @@ class RequestExecution:
     parse_adjustments: tuple[CanonicalAdjustment, ...]
     runtime: Runtime
     start: RequestStart
+    terminal: RequestTerminal
 
     async def run(self) -> Response:
         if self.snapshot.provider_param_aliases.intersection(self.request.extra):
             raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "Provider parameter aliases must use canonical names")
         plan = plan_routes(self.request, self.key, self.snapshot)
         if isinstance(plan, Deny):
+            self.terminal.conclude("denied")
             with self.runtime.outbox.reserve() as reservation:
                 reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
             raise RequestRejectedError(plan.status, GatewayErrorCode(plan.code), plan.message)
@@ -145,6 +158,7 @@ class RequestExecution:
             async with asyncio.timeout(plan.timeout_ms / 1000 if plan.timeout_ms is not None else None):
                 return await self._execute(plan)
         except TimeoutError as error:
+            self.terminal.conclude("timeout")
             raise RequestRejectedError(504, GatewayErrorCode.fallback_deadline_exceeded, "The fallback time limit was reached") from error
 
     async def _execute(self, plan: RoutePlan) -> Response:
@@ -159,8 +173,8 @@ class RequestExecution:
                 credential = await _resolve_credential(entry, self.runtime.credentials)
                 if credential is None:
                     continue
-                attempts += 1
                 with self.runtime.outbox.reserve() as reservation:
+                    attempts = self.terminal.start_attempt()
                     outcome = await self._attempt(decision, entry, credential, attempts, reservation)
                 if isinstance(outcome, Response):
                     return outcome
@@ -168,17 +182,22 @@ class RequestExecution:
                 if not failure.retry_credential:
                     break
             if failure is None:
+                self.terminal.conclude("failed")
                 raise RequestRejectedError(502, GatewayErrorCode.credential_missing)
             if failure.reason not in plan.retry_on or attempts >= plan.max_attempts:
+                self.terminal.conclude(failure.outcome)
                 return failure.response
         if failure is not None:
+            self.terminal.conclude(failure.outcome)
             return failure.response
+        self.terminal.conclude("failed")
         raise RequestRejectedError(502, GatewayErrorCode.credential_missing)
 
     def _check_budgets(self, rules: tuple[CompiledRule, ...]) -> None:
         try:
             self.runtime.budgets.check(rules, self.key, datetime.now(UTC))
         except RequestRejectedError:
+            self.terminal.conclude("denied")
             with self.runtime.outbox.reserve() as reservation:
                 reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
             raise
@@ -218,6 +237,7 @@ class RequestExecution:
                     metrics=self.runtime.metrics,
                     egress_kind=egress_kind,
                     attempt_started_at=attempt_started_monotonic,
+                    terminal=self.terminal,
                 )
                 return await session.open(upstream)
             response = await self.runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
@@ -243,21 +263,25 @@ class RequestExecution:
                 httpx2.codes.FORBIDDEN,
                 httpx2.codes.TOO_MANY_REQUESTS,
             }
-            return AttemptFailure(rendered, reason, rejects_credential)
+            return AttemptFailure(rendered, reason, rejects_credential, "failed")
         except httpx2.HTTPError as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_monotonic)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
-            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_unavailable", False)
+            is_timeout = isinstance(error, httpx2.TimeoutException)
+            return AttemptFailure(rendered, "timeout" if is_timeout else "upstream_unavailable", False, "timeout" if is_timeout else "failed")
         except UpstreamProtocolError as error:
             self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_monotonic)
+            self.terminal.conclude("failed")
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
         except asyncio.CancelledError:
             self.runtime.metrics.observe_upstream(egress_kind, "cancelled", attempt_started_monotonic)
             reservation.record(usage_event(ctx, _empty_response(ctx), status="cancelled", request=request))
+            self.terminal.conclude("cancelled")
             raise
         final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
         reservation.record(usage_event(ctx, final, status="ok", request=request))
         self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_monotonic)
+        self.terminal.conclude("succeeded")
         return self.ingress.render_response(final)
 
     def _ctx(

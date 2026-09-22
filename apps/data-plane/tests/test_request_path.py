@@ -39,6 +39,10 @@ from data_plane.proxy import RequestRejectedError, _transform
 
 
 def _recorded(tmp_path, http_client):
+    return [event for event in read_and_close_outbox(make_outbox(tmp_path, http_client)) if event.event_type == "usage"]
+
+
+def _observations(tmp_path, http_client):
     return read_and_close_outbox(make_outbox(tmp_path, http_client))
 
 
@@ -120,6 +124,28 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
 
 
 @respx.mock
+def test_transform_failure_finishes_with_one_incomplete_attempt(api_key, dp_app, tmp_path, http_client):
+    _, key = make_key()
+    provider = PROVIDER.model_copy(update={"kind": "openai_responses"})
+    bundle = make_bundle(keys=[key], catalog=Catalog(providers=[provider], models=[MODEL], credentials=[PLATFORM_CREDENTIAL]))
+    write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
+    mock_control_plane()
+
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}], "stop": ["END"]},
+        )
+
+    observations = _observations(tmp_path, http_client)
+    terminal = next(event for event in observations if event.event_type == "gateway_request_finished")
+    assert response.status_code == 400
+    assert [event for event in observations if event.event_type == "usage"] == []
+    assert (terminal.outcome, terminal.expected_attempts) == ("failed", 1)
+
+
+@respx.mock
 @pytest.mark.parametrize("aggregation", ["shared", "per_key"])
 def test_no_budget_backend_accepts_budget_policies(api_key, dp_app, tmp_path, aggregation):
     write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle(aggregation)]))
@@ -174,7 +200,7 @@ def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
         while True:
             metrics = client.get("/metrics")
             samples = {sample.name: sample.value for family in text_string_to_metric_families(metrics.text) for sample in family.samples}
-            if samples["airmux_data_plane_metering_outbox_pending"] == 1:
+            if samples["airmux_data_plane_metering_outbox_pending"] == 2:
                 break
             assert time.monotonic() < deadline
             time.sleep(0.01)
@@ -183,7 +209,7 @@ def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
     assert metrics.status_code == 200
     assert samples["airmux_data_plane_metering_outbox_oldest_age_seconds"] >= 0
     assert samples["airmux_data_plane_metering_writer_queue_capacity"] == 10_000
-    assert 'airmux_data_plane_metering_admission_total{outcome="accepted"} 1.0' in metrics.text
+    assert 'airmux_data_plane_metering_admission_total{outcome="accepted"} 2.0' in metrics.text
 
 
 @respx.mock

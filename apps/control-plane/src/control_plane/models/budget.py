@@ -48,7 +48,7 @@ def _budget_rules(policy: Policy, now: datetime) -> Iterator[_BudgetRule]:
 
 
 async def _spending(budget: _BudgetRule, page: BudgetUsagePage | None = None) -> tuple[tuple[BudgetBucket, UsdAmount], ...]:
-    spend = func.coalesce(func.sum(UsageEvent.cost_usd), ZERO_USD)
+    spend = cast("ColumnElement[UsdAmount]", func.coalesce(func.sum(UsageEvent.cost_usd), ZERO_USD))
     filters = _budget_filters(budget)
     if budget.action.aggregation == "shared":
         result = await current_session().execute(select(spend).where(*filters))

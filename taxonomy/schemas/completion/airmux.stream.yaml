@@ -142,18 +142,22 @@ $defs:
     properties:
       input_tokens:
         default: 0
+        minimum: 0
         title: Input Tokens
         type: integer
       output_tokens:
         default: 0
+        minimum: 0
         title: Output Tokens
         type: integer
       cache_read_tokens:
         default: 0
+        minimum: 0
         title: Cache Read Tokens
         type: integer
       cache_write_tokens:
         default: 0
+        minimum: 0
         title: Cache Write Tokens
         type: integer
       estimated:

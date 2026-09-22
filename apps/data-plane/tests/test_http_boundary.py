@@ -151,8 +151,11 @@ def test_request_id_matches_response_and_usage_accounting(dp_app, api_key, tmp_p
         assert response.json()["id"] == "chatcmpl-9"
         assert "x-accel-buffering" not in response.headers
     events = read_and_close_outbox(make_outbox(tmp_path, http_client))
-    assert len(events) == 1
-    assert events[0].request_id == request_id
+    assert len(events) == 2
+    assert {event.request_id for event in events} == {request_id}
+    terminal = next(event for event in events if event.event_type == "gateway_request_finished")
+    assert terminal.outcome == "succeeded"
+    assert terminal.expected_attempts == 1
 
 
 @respx.mock
@@ -167,7 +170,12 @@ def test_policy_denials_have_the_same_request_id_as_the_usage_event(dp_app, api_
     assert response.status_code == 404
     assert_private_headers(response)
     events = read_and_close_outbox(make_outbox(tmp_path, http_client))
-    assert events[0].request_id == UUID(response.headers["x-request-id"])
+    assert {event.request_id for event in events} == {UUID(response.headers["x-request-id"])}
+    terminal = next(event for event in events if event.event_type == "gateway_request_finished")
+    denial = next(event for event in events if event.event_type == "usage")
+    assert terminal.outcome == "denied"
+    assert terminal.expected_attempts == 0
+    assert denial.status == "denied"
 
 
 @respx.mock

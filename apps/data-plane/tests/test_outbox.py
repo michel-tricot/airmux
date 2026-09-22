@@ -24,6 +24,7 @@ from data_plane.outbox.sqlite import BATCH_SIZE
 def make_event(request_id) -> RoutedUsageEventV1:
     started_at = datetime.now(tz=UTC)
     return RoutedUsageEventV1(
+        event_type="usage",
         event_id=uuid4(),
         request_id=request_id,
         request_started_at=started_at,
@@ -55,6 +56,9 @@ def make_event(request_id) -> RoutedUsageEventV1:
         cost_source="catalog_estimate",
         cost_usd="0.000004",
         cost_input_usd="0.000004",
+        cost_output_usd="0",
+        cache_read_tokens=0,
+        cache_write_tokens=0,
         latency_ms=100,
         status="ok",
         stream=False,

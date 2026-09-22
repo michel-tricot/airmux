@@ -62,6 +62,7 @@ def _stored(cp, credential: dict) -> str:
 def _usage_event(metered, status, occurred_at):
     """One event as the data plane would send it, attributed to the credential that paid."""
     return {
+        "event_type": "usage",
         "event_id": str(uuid7()),
         "request_id": str(uuid7()),
         "request_started_at": occurred_at.isoformat(),
@@ -92,6 +93,10 @@ def _usage_event(metered, status, occurred_at):
         "cache_write_price_per_mtok": "0",
         "cost_source": "catalog_estimate",
         "cost_usd": "0.0",
+        "cost_input_usd": "0",
+        "cost_output_usd": "0",
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
         "latency_ms": 1,
         "status": status,
         "stream": False,
