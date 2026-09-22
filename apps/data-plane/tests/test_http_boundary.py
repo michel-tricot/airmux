@@ -13,7 +13,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from data_plane.http import ResponseHeadersMiddleware
+from data_plane.http import ObservedRoute, ResponseHeadersMiddleware
 from data_plane.metrics import DataPlaneMetrics
 
 INFERENCE_ROUTES = (
@@ -187,3 +187,34 @@ def test_each_request_gets_a_distinct_gateway_id(http_mock, dp_app, api_key):
         second = client.get("/inf/v1/models", headers=headers)
     assert UUID(first.headers["x-request-id"]).version == UUID(second.headers["x-request-id"]).version == 7
     assert first.headers["x-request-id"] != second.headers["x-request-id"]
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "status", "route"),
+    [
+        ("GET", "/items/one", 200, "/items/{name}"),
+        ("POST", "/items/one", 405, "unmatched"),
+        ("GET", "/missing", 404, "unmatched"),
+        ("GET", "/items/one/", 307, "unmatched"),
+    ],
+)
+def test_route_metrics_preserve_templates_and_unmatched_requests(method, path, status, route):
+    metrics = DataPlaneMetrics()
+
+    async def endpoint(request):
+        assert request.state.metrics_route == "/items/{name}"
+        assert 'airmux_data_plane_inflight_requests{route="/items/{name}",stream="false"} 1.0' in metrics.render().decode()
+        return Response("ok")
+
+    app = Starlette(routes=[ObservedRoute("/items/{name}", endpoint)])
+    app.state.metrics = metrics
+    try:
+        with TestClient(ResponseHeadersMiddleware(app, metrics)) as client:
+            response = client.request(method, path, follow_redirects=False)
+        assert response.status_code == status
+        rendered = metrics.render().decode()
+        assert f'route="{route}",status_class="{status // 100}xx",stream="false"}} 1.0' in rendered
+        assert f'airmux_data_plane_inflight_requests{{route="{route}",stream="false"}} 0.0' in rendered
+        assert_private_headers(response)
+    finally:
+        metrics.shutdown()
