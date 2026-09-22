@@ -19,7 +19,7 @@ from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, 
 from control_plane.models.budget import budget_states
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
-from control_plane.models.usage_event import EventsIngestedOut
+from control_plane.models.usage_event import EventsIngestedOut, UsageEventConflictError
 
 if TYPE_CHECKING:
     from control_plane.models.provider_credential import ProviderCredentialStatus
@@ -69,8 +69,8 @@ async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
 
 
 @router.post("/events", dependencies=[require("operational", credential_scope, Permission.usage_ingest)])
-async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
-    """Ingest up to 1,000 usage events; repeated event IDs are ignored."""
+async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch) -> Envelope[EventsIngestedOut]:
+    """Ingest up to 1,000 usage events; repeated events and request attempts are ignored."""
     if not events:
         return Envelope(data=EventsIngestedOut(received=0, ingested=0))
     await ensure_allowed_for_scopes(
@@ -78,10 +78,12 @@ async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: Even
         Permission.usage_ingest,
         (Scope.workspace(event.org_id, event.workspace_id) for event in events),
     )
-    values = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
-    stmt = pg_insert(UsageEvent).values(values).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
-    inserted = (await session.execute(stmt)).scalars().all()
-    await ProviderCredential.observe(_credential_health(events), org_id=scope.org_id)
+    try:
+        inserted = await UsageEvent.ingest(events)
+    except UsageEventConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    events_by_id = {event.event_id: event for event in events}
+    await ProviderCredential.observe(_credential_health([events_by_id[event_id] for event_id in inserted]), org_id=scope.org_id)
     return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
 
 

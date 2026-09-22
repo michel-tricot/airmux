@@ -227,9 +227,16 @@ class DeniedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(description="Timestamp when the request was denied", title="Occurred At"),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
@@ -242,11 +249,49 @@ class DeniedUsageEventV1(BaseModel):
             title="Key Id",
         ),
     ]
+    authentication_source: Annotated[
+        Literal["inference_key", "playground", "local"],
+        Field(
+            description="Credential kind authenticated by the data plane",
+            title="Authentication Source",
+        ),
+    ]
+    authentication_label: Annotated[
+        str,
+        Field(
+            description="Credential label at execution time",
+            max_length=200,
+            min_length=1,
+            title="Authentication Label",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
             description="Principal that owned the inference key when the request was made",
             title="User Id",
+        ),
+    ]
+    principal_label: Annotated[
+        str,
+        Field(
+            description="Principal label at execution time",
+            max_length=320,
+            min_length=1,
+            title="Principal Label",
+        ),
+    ]
+    principal_type: Annotated[
+        Literal["human", "service_account", "local"],
+        Field(description="Principal kind at execution time", title="Principal Type"),
+    ]
+    workspace_label: Annotated[
+        str,
+        Field(
+            description="Workspace label at execution time",
+            max_length=200,
+            min_length=1,
+            title="Workspace Label",
         ),
     ]
     requested_model_id: Annotated[
@@ -344,7 +389,7 @@ class DeniedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Request evaluation latency in milliseconds",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -375,6 +420,44 @@ class DeniedUsageEventV1(BaseModel):
             description="No upstream token usage for a request denied before routing",
             title="Token Usage Source",
         ),
+    ]
+    attempt_index: Annotated[None, Field(description="No provider attempt was made", title="Attempt Index")] = None
+    attempt_started_at: Annotated[
+        None,
+        Field(description="No provider attempt was made", title="Attempt Started At"),
+    ] = None
+    credential_name: Annotated[
+        None,
+        Field(
+            description="No provider credential was selected before denial",
+            title="Credential Name",
+        ),
+    ] = None
+    input_price_per_mtok: Annotated[
+        None,
+        Field(description="No provider model was priced", title="Input Price Per Mtok"),
+    ] = None
+    output_price_per_mtok: Annotated[
+        None,
+        Field(description="No provider model was priced", title="Output Price Per Mtok"),
+    ] = None
+    cache_read_price_per_mtok: Annotated[
+        None,
+        Field(
+            description="No provider model was priced",
+            title="Cache Read Price Per Mtok",
+        ),
+    ] = None
+    cache_write_price_per_mtok: Annotated[
+        None,
+        Field(
+            description="No provider model was priced",
+            title="Cache Write Price Per Mtok",
+        ),
+    ] = None
+    cost_source: Annotated[
+        Literal["not_applicable"],
+        Field(description="No catalog cost was calculated", title="Cost Source"),
     ]
 
 
@@ -600,6 +683,14 @@ class KeyEntry(BaseModel):
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     token_hash: Annotated[str, Field(title="Token Hash")]
+    authentication_source: Annotated[
+        Literal["inference_key", "playground", "local"],
+        Field(title="Authentication Source"),
+    ]
+    authentication_label: Annotated[str, Field(max_length=200, min_length=1, title="Authentication Label")]
+    principal_label: Annotated[str, Field(max_length=320, min_length=1, title="Principal Label")]
+    principal_type: Annotated[Literal["human", "service_account", "local"], Field(title="Principal Type")]
+    workspace_label: Annotated[str, Field(max_length=200, min_length=1, title="Workspace Label")]
     expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")] = None
 
 
@@ -1486,9 +1577,19 @@ class RoutedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(
+            description="Timestamp when this provider attempt completed",
+            title="Occurred At",
+        ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
@@ -1501,11 +1602,49 @@ class RoutedUsageEventV1(BaseModel):
             title="Key Id",
         ),
     ]
+    authentication_source: Annotated[
+        Literal["inference_key", "playground", "local"],
+        Field(
+            description="Credential kind authenticated by the data plane",
+            title="Authentication Source",
+        ),
+    ]
+    authentication_label: Annotated[
+        str,
+        Field(
+            description="Credential label at execution time",
+            max_length=200,
+            min_length=1,
+            title="Authentication Label",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
             description="Principal that owned the inference key when the request was made",
             title="User Id",
+        ),
+    ]
+    principal_label: Annotated[
+        str,
+        Field(
+            description="Principal label at execution time",
+            max_length=320,
+            min_length=1,
+            title="Principal Label",
+        ),
+    ]
+    principal_type: Annotated[
+        Literal["human", "service_account", "local"],
+        Field(description="Principal kind at execution time", title="Principal Type"),
+    ]
+    workspace_label: Annotated[
+        str,
+        Field(
+            description="Workspace label at execution time",
+            max_length=200,
+            min_length=1,
+            title="Workspace Label",
         ),
     ]
     requested_model_id: Annotated[
@@ -1608,7 +1747,7 @@ class RoutedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Provider attempt latency in milliseconds",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -1640,11 +1779,75 @@ class RoutedUsageEventV1(BaseModel):
             title="Credential Scope",
         ),
     ]
+    attempt_index: Annotated[
+        int,
+        Field(
+            description="One-based provider attempt order within the logical request",
+            ge=1,
+            le=2147483647,
+            title="Attempt Index",
+        ),
+    ]
+    attempt_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when this provider attempt began",
+            title="Attempt Started At",
+        ),
+    ]
     token_usage_source: Annotated[
         Literal["provider", "estimated"],
         Field(
             description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates",
             title="Token Usage Source",
+        ),
+    ]
+    credential_name: Annotated[
+        str,
+        Field(
+            description="Provider credential name at execution time",
+            max_length=80,
+            min_length=1,
+            title="Credential Name",
+        ),
+    ]
+    input_price_per_mtok: Annotated[
+        str,
+        Field(
+            description="Fresh input catalog rate used for this attempt",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Input Price Per Mtok",
+        ),
+    ]
+    output_price_per_mtok: Annotated[
+        str,
+        Field(
+            description="Output catalog rate used for this attempt",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Output Price Per Mtok",
+        ),
+    ]
+    cache_read_price_per_mtok: Annotated[
+        str,
+        Field(
+            description="Cache-read catalog rate used for this attempt",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cache Read Price Per Mtok",
+        ),
+    ]
+    cache_write_price_per_mtok: Annotated[
+        str,
+        Field(
+            description="Cache-write catalog rate used for this attempt",
+            pattern="^\\d+(?:\\.\\d+)?$",
+            title="Cache Write Price Per Mtok",
+        ),
+    ]
+    cost_source: Annotated[
+        Literal["catalog_estimate"],
+        Field(
+            description="Cost derived from catalog rates at execution time",
+            title="Cost Source",
         ),
     ]
 
@@ -1820,14 +2023,40 @@ class TokenUsageSource(RootModel[Literal["provider", "estimated", "not_applicabl
     ]
 
 
+class InputPricePerMtok(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Input Price Per Mtok")]
+
+
+class OutputPricePerMtok(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Output Price Per Mtok")]
+
+
+class CacheReadPricePerMtok(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Read Price Per Mtok")]
+
+
+class CacheWritePricePerMtok(RootModel[str]):
+    root: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cache Write Price Per Mtok")]
+
+
 class UsageEventOut(BaseModel):
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
+    request_started_at: Annotated[AwareDatetime, Field(title="Request Started At")]
+    attempt_started_at: Annotated[AwareDatetime | None, Field(title="Attempt Started At")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
+    authentication_source: Annotated[
+        Literal["inference_key", "playground", "local"],
+        Field(title="Authentication Source"),
+    ]
+    authentication_label: Annotated[str, Field(title="Authentication Label")]
     user_id: Annotated[UUID, Field(title="User Id")]
+    principal_label: Annotated[str, Field(title="Principal Label")]
+    principal_type: Annotated[Literal["human", "service_account", "local"], Field(title="Principal Type")]
+    workspace_label: Annotated[str, Field(title="Workspace Label")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     requested_capabilities: Annotated[
         list[Literal["tools", "reasoning", "structured_output"]],
@@ -1844,7 +2073,13 @@ class UsageEventOut(BaseModel):
             description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates"
         ),
     ]
+    attempt_index: Annotated[int | None, Field(title="Attempt Index")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
+    input_price_per_mtok: Annotated[InputPricePerMtok | None, Field(title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[OutputPricePerMtok | None, Field(title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[CacheReadPricePerMtok | None, Field(title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[CacheWritePricePerMtok | None, Field(title="Cache Write Price Per Mtok")]
+    cost_source: Annotated[Literal["catalog_estimate", "not_applicable"], Field(title="Cost Source")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
     cost_output_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Output Usd")]
@@ -1866,6 +2101,7 @@ class UsageEventOut(BaseModel):
     stream: Annotated[bool, Field(title="Stream")]
     credential_id: Annotated[UUID | None, Field(title="Credential Id")]
     credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")]
+    credential_name: Annotated[str | None, Field(title="Credential Name")]
 
 
 class UserOut(BaseModel):

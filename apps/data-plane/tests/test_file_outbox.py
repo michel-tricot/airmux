@@ -21,14 +21,22 @@ if TYPE_CHECKING:
 
 
 def event_of(index: int) -> RoutedUsageEventV1:
+    started_at = datetime.now(tz=UTC)
     return RoutedUsageEventV1(
         event_id=uuid7(),
         request_id=uuid7(),
-        occurred_at=datetime.now(tz=UTC),
+        request_started_at=started_at,
+        attempt_started_at=started_at,
+        occurred_at=started_at,
         org_id=uuid7(),
         workspace_id=uuid7(),
         key_id="local-0",
+        authentication_source="local",
+        authentication_label="Local key 1",
         user_id=uuid7(),
+        principal_label="Local principal",
+        principal_type="local",
+        workspace_label="Local",
         requested_model_id=f"model-{index}",
         requested_capabilities=frozenset(),
         model_id=f"model-{index}",
@@ -36,8 +44,14 @@ def event_of(index: int) -> RoutedUsageEventV1:
         bundle_id=uuid7(),
         input_tokens=11,
         token_usage_source=TokenUsageSource.PROVIDER,
+        attempt_index=1,
         output_tokens=3,
         max_output_tokens=128,
+        input_price_per_mtok="1",
+        output_price_per_mtok="2",
+        cache_read_price_per_mtok="0.1",
+        cache_write_price_per_mtok="1.25",
+        cost_source="catalog_estimate",
         cost_usd="0.000037",
         cost_input_usd="0.000037",
         latency_ms=1,
@@ -45,6 +59,7 @@ def event_of(index: int) -> RoutedUsageEventV1:
         stream=False,
         credential_id=uuid7(),
         credential_scope="platform",
+        credential_name="default",
     )
 
 

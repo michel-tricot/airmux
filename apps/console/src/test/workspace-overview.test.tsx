@@ -8,11 +8,18 @@ import { ORG, WORKSPACES, server } from './msw';
 const attempt: Api.UsageEventOut = {
   event_id: 'event-1',
   request_id: 'request-1',
+  request_started_at: '2026-01-01T00:00:00Z',
+  attempt_started_at: '2026-01-01T00:00:00Z',
   occurred_at: '2026-01-01T00:00:00Z',
   org_id: ORG.id,
   workspace_id: WORKSPACES[0].id,
   key_id: 'key-1',
+  authentication_source: 'inference_key',
+  authentication_label: 'Production',
   user_id: '00000000-0000-0000-0000-000000000001',
+  principal_label: 'Checkout service',
+  principal_type: 'service_account',
+  workspace_label: WORKSPACES[0].name,
   requested_model_id: 'primary-model',
   requested_capabilities: [],
   model_id: 'primary-model',
@@ -21,7 +28,13 @@ const attempt: Api.UsageEventOut = {
   input_tokens: 2,
   output_tokens: 3,
   token_usage_source: 'provider',
+  attempt_index: 1,
   max_output_tokens: null,
+  input_price_per_mtok: '1',
+  output_price_per_mtok: '2',
+  cache_read_price_per_mtok: '0',
+  cache_write_price_per_mtok: '0',
+  cost_source: 'catalog_estimate',
   cost_usd: '0.1',
   cost_input_usd: '0.04',
   cost_output_usd: '0.06',
@@ -30,8 +43,9 @@ const attempt: Api.UsageEventOut = {
   latency_ms: 10,
   status: 'ok',
   stream: false,
-  credential_id: null,
-  credential_scope: null,
+  credential_id: '00000000-0000-0000-0000-000000000002',
+  credential_scope: 'workspace',
+  credential_name: 'default',
 };
 
 it('labels a multi-attempt request and per-model totals as attempts within the event window', async () => {
@@ -39,8 +53,8 @@ it('labels a multi-attempt request and per-model totals as attempts within the e
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () =>
       HttpResponse.json({
         data: [
-          { ...attempt, event_id: 'event-3', model_id: 'fallback-model' },
-          { ...attempt, event_id: 'event-2', status: 'upstream_error' },
+          { ...attempt, event_id: 'event-3', model_id: 'fallback-model', attempt_index: 3 },
+          { ...attempt, event_id: 'event-2', status: 'upstream_error', attempt_index: 2 },
           { ...attempt, status: 'upstream_error' },
         ],
         page: { next_cursor: null },

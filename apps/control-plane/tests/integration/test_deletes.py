@@ -11,18 +11,26 @@ from control_plane.authz import Permission
 from control_plane.models import DataPlaneInstance, InferenceKey, ManagementKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
 
 
-def _record_usage(tmp_path, org_id, workspace_id):
+def _record_usage(tmp_path, org_id, workspace_id, workspace_label):
     """A usage event for the org, the history a delete must leave behind."""
 
     async def write():
+        occurred_at = datetime.now(tz=UTC)
         await UsageEvent(
             event_id=uuid7(),
             request_id=uuid7(),
-            occurred_at=datetime.now(tz=UTC),
+            request_started_at=occurred_at,
+            attempt_started_at=occurred_at,
+            occurred_at=occurred_at,
             org_id=org_id,
             workspace_id=workspace_id,
             key_id="k",
+            authentication_source="inference_key",
+            authentication_label="Deleted key",
             user_id=org_id,
+            principal_label="Deleted principal",
+            principal_type="human",
+            workspace_label=workspace_label,
             requested_model_id="gpt-test",
             requested_capabilities=[],
             model_id="gpt-test",
@@ -30,11 +38,20 @@ def _record_usage(tmp_path, org_id, workspace_id):
             bundle_id=uuid7(),
             input_tokens=1,
             token_usage_source="provider",
+            attempt_index=1,
             output_tokens=1,
+            input_price_per_mtok=Decimal(0),
+            output_price_per_mtok=Decimal(0),
+            cache_read_price_per_mtok=Decimal(0),
+            cache_write_price_per_mtok=Decimal(0),
+            cost_source="catalog_estimate",
             cost_usd=Decimal(0),
             latency_ms=1,
             status="ok",
             stream=False,
+            credential_id=uuid7(),
+            credential_scope="workspace",
+            credential_name="deleted",
         ).save()
 
     run_in_db(tmp_path, write)
@@ -70,14 +87,20 @@ def test_deleting_a_workspace_keeps_the_usage_it_recorded(tmp_path):
         org = make_org(c, root, "o1")
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
-        _record_usage(tmp_path, org, workspace)
+        _record_usage(tmp_path, org, workspace, "staging")
+
+        renamed = c.patch(f"/api/v1/organizations/{org}/workspaces/{workspace}", json={"name": "production"}, headers=headers)
+        assert renamed.status_code == 200, renamed.text
 
         deleted = c.delete(f"/api/v1/organizations/{org}/workspaces/{workspace}", headers=headers)
         assert deleted.status_code == 200, deleted.text
         assert run_in_db(tmp_path, lambda: Workspace.find_by_id(workspace)) is None
 
         events = c.get(f"/api/v1/organizations/{org}/events", headers=headers).json()["data"]
-        assert [e["workspace_id"] for e in events] == [str(workspace)]
+        assert [(event["workspace_id"], event["workspace_label"]) for event in events] == [(str(workspace), "staging")]
+        assert events[0]["authentication_label"] == "Deleted key"
+        assert events[0]["principal_label"] == "Deleted principal"
+        assert events[0]["credential_name"] == "deleted"
 
 
 def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
@@ -113,7 +136,7 @@ def test_deleting_an_org_keeps_the_usage_it_recorded(tmp_path):
     with TestClient(cp.app) as c:
         org = make_org(c, root, "o1")
         workspace = make_workspace(c, cp.headers(org), "staging")
-        _record_usage(tmp_path, org, workspace)
+        _record_usage(tmp_path, org, workspace, "staging")
 
         deleted = c.delete(f"/api/v1/organizations/{org}", headers=root)
         assert deleted.status_code == 200, deleted.text

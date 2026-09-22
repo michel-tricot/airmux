@@ -64,12 +64,19 @@ def _usage_event(metered, status, occurred_at):
     return {
         "event_id": str(uuid7()),
         "request_id": str(uuid7()),
+        "request_started_at": occurred_at.isoformat(),
+        "attempt_started_at": occurred_at.isoformat(),
         "occurred_at": occurred_at.isoformat(),
         "org_id": str(metered.org_id),
         "workspace_id": str(metered.workspace_id),
         "key_id": "k1",
+        "authentication_source": "inference_key",
+        "authentication_label": "Production key",
         "model_id": "gpt-test",
         "user_id": str(metered.org_id),
+        "principal_label": "Credential owner",
+        "principal_type": "human",
+        "workspace_label": "Production",
         "requested_model_id": "gpt-test",
         "requested_capabilities": [],
         "provider_id": "openai",
@@ -77,13 +84,20 @@ def _usage_event(metered, status, occurred_at):
         "input_tokens": 1,
         "token_usage_source": "provider",
         "output_tokens": 1,
+        "attempt_index": 1,
         "max_output_tokens": 128,
+        "input_price_per_mtok": "0",
+        "output_price_per_mtok": "0",
+        "cache_read_price_per_mtok": "0",
+        "cache_write_price_per_mtok": "0",
+        "cost_source": "catalog_estimate",
         "cost_usd": "0.0",
         "latency_ms": 1,
         "status": status,
         "stream": False,
         "credential_id": metered.credential["id"],
         "credential_scope": "workspace",
+        "credential_name": metered.credential["name"],
     }
 
 
@@ -458,6 +472,24 @@ def test_a_working_key_shows_up_as_live(tmp_path):
         event = _usage_event(m, "ok", datetime.now(tz=UTC))
         c.post("/api/v1/events", json=[event], headers=m.root)
         assert _status_of(c, m) == "live"
+
+
+def test_a_duplicate_attempt_cannot_change_credential_health(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        metered = _with_credential(cp, client)
+        occurred_at = datetime.now(tz=UTC)
+        accepted = _usage_event(metered, "ok", occurred_at)
+        duplicate = {
+            **accepted,
+            "event_id": str(uuid7()),
+            "status": "credential_rejected",
+            "occurred_at": (occurred_at + timedelta(seconds=1)).isoformat(),
+        }
+
+        assert client.post("/api/v1/events", json=[accepted], headers=metered.root).json()["data"]["ingested"] == 1
+        assert client.post("/api/v1/events", json=[duplicate], headers=metered.root).status_code == 409
+        assert _status_of(client, metered) == "live"
 
 
 def test_a_replayed_event_cannot_undo_a_newer_one(tmp_path):

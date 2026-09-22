@@ -41,6 +41,11 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
         assert len(bundle.keys) == 1
         assert bundle.keys[0].key_id == session["id"]
         assert bundle.keys[0].expires_at == expires_at
+        assert bundle.keys[0].authentication_source == "playground"
+        assert bundle.keys[0].authentication_label == "Playground"
+        assert bundle.keys[0].principal_type == "human"
+        assert bundle.keys[0].principal_label
+        assert bundle.keys[0].workspace_label == "ws-test"
 
 
 def test_ending_a_playground_session_clears_the_cookie_and_bundle_entry(tmp_path):

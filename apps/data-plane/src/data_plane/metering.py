@@ -36,7 +36,8 @@ REJECTS_CREDENTIAL = frozenset({httpx2.codes.UNAUTHORIZED, httpx2.codes.FORBIDDE
 @dataclass(frozen=True)
 class RequestStart:
     request_id: UUID
-    started_at: float
+    started_at: datetime
+    started_monotonic: float
 
 
 def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[UsdAmount, UsdAmount]:
@@ -103,11 +104,17 @@ def denied_event(
     return DeniedUsageEventV1(
         event_id=uuid7(),
         request_id=start.request_id,
-        occurred_at=datetime.now(tz=UTC),
+        request_started_at=start.started_at,
+        occurred_at=max(datetime.now(tz=UTC), start.started_at),
         org_id=key.org_id,
         workspace_id=key.workspace_id,
         key_id=key.key_id,
+        authentication_source=key.authentication_source,
+        authentication_label=key.authentication_label,
         user_id=key.user_id,
+        principal_label=key.principal_label,
+        principal_type=key.principal_type,
+        workspace_label=key.workspace_label,
         requested_model_id=request.model,
         requested_capabilities=requested_capabilities(request),
         model_id=request.model,
@@ -117,8 +124,9 @@ def denied_event(
         output_tokens=0,
         token_usage_source=TokenUsageSource.NOT_APPLICABLE,
         cost_usd=ZERO_USD,
+        cost_source="not_applicable",
         max_output_tokens=None,
-        latency_ms=int((time.monotonic() - start.started_at) * 1000),
+        latency_ms=int((time.monotonic() - start.started_monotonic) * 1000),
         status="denied",
         stream=request.stream,
     )
@@ -140,15 +148,23 @@ def usage_event(
             estimated=True,
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
-    latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
+    occurred_at = max(datetime.now(tz=UTC), ctx.attempt_started_at)
+    latency_ms = int((time.monotonic() - ctx.attempt_started_monotonic) * 1000)
     event = RoutedUsageEventV1(
         event_id=uuid7(),
         request_id=ctx.request_id,
-        occurred_at=datetime.now(tz=UTC),
+        request_started_at=ctx.request_started_at,
+        attempt_started_at=ctx.attempt_started_at,
+        occurred_at=occurred_at,
         org_id=ctx.org_id,
         workspace_id=ctx.workspace_id,
         key_id=ctx.key_id,
+        authentication_source=ctx.authentication_source,
+        authentication_label=ctx.authentication_label,
         user_id=ctx.user_id,
+        principal_label=ctx.principal_label,
+        principal_type=ctx.principal_type,
+        workspace_label=ctx.workspace_label,
         requested_model_id=ctx.requested_model_id,
         requested_capabilities=ctx.requested_capabilities,
         model_id=ctx.model.model_id,
@@ -157,7 +173,13 @@ def usage_event(
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
         token_usage_source=TokenUsageSource.ESTIMATED if usage.estimated else TokenUsageSource.PROVIDER,
+        attempt_index=ctx.attempt_index,
         max_output_tokens=request.max_output_tokens,
+        input_price_per_mtok=ctx.model.input_price_per_mtok,
+        output_price_per_mtok=ctx.model.output_price_per_mtok,
+        cache_read_price_per_mtok=ctx.model.cache_read_price_per_mtok,
+        cache_write_price_per_mtok=ctx.model.cache_write_price_per_mtok,
+        cost_source="catalog_estimate",
         cache_read_tokens=usage.cache_read_tokens,
         cache_write_tokens=usage.cache_write_tokens,
         cost_usd=cost_in + cost_out,
@@ -168,6 +190,7 @@ def usage_event(
         stream=ctx.stream,
         credential_id=ctx.credential_id,
         credential_scope=ctx.credential_scope,
+        credential_name=ctx.credential_name,
     )
     log_event(
         logger,

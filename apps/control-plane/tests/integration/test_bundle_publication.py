@@ -37,6 +37,11 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
+        assert bundle.keys[0].authentication_source == "inference_key"
+        assert bundle.keys[0].authentication_label == "k"
+        assert bundle.keys[0].principal_label
+        assert bundle.keys[0].principal_type == "human"
+        assert bundle.keys[0].workspace_label == "ws-test"
         (model,) = bundle.catalog.models
         assert model.upstream_model == "gpt-real"
         assert model.input_price_per_mtok == Decimal(1)
@@ -90,6 +95,31 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
         revoked = BundleV1.model_validate(wait_for_publication(c, org_id, org, created.bundle_id))
         assert revoked.bundle_id != created.bundle_id
         assert revoked.keys == ()
+
+
+def test_workspace_rename_publishes_updated_attribution_label(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "workspace-label")
+        headers = cp.headers(org_id)
+        workspace_id = make_workspace(client, headers, "Staging")
+        client.post(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+            json=inference_key_body(client, headers, "Deployment"),
+            headers=headers,
+        ).raise_for_status()
+        before = BundleV1.model_validate(wait_for_publication(client, org_id, headers))
+        assert before.keys[0].workspace_label == "Staging"
+
+        renamed = client.patch(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}",
+            json={"name": "Production"},
+            headers=headers,
+        )
+        assert renamed.status_code == 200, renamed.text
+        after = BundleV1.model_validate(wait_for_publication(client, org_id, headers, before.bundle_id))
+
+        assert after.keys[0].workspace_label == "Production"
 
 
 def test_bundle_manifest_follows_the_management_key_scope(tmp_path):
@@ -497,3 +527,5 @@ def test_principal_identity_changes_publish_updated_bundle(tmp_path, credential_
         assert after.bundle_id != before.bundle_id
         assert after.keys[0].key_id == credential_id
         assert after.keys[0].user_id == user_id
+        assert after.keys[0].principal_label == "Replacement"
+        assert after.keys[0].principal_type == "service_account"

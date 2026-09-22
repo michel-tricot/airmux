@@ -226,7 +226,7 @@ def policy_rule(*, match: AllRequests | RequestMatch, action: PolicyAction) -> R
     return RuleDefinition.model_validate({"match": match, "action": action})
 
 
-async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
+async def record_usage(workspace: Workspace, key: InferenceKey, principal: User, count: int, now: datetime) -> None:
     """Recorded traffic for one workspace: random numbers spread over the last USAGE_DAYS.
 
     Nothing here reconciles. The costs are not the token counts times any price, because the
@@ -237,14 +237,23 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
         model_id, provider_id = rng.choice(MODELS)
         cost_input_usd = Decimal(rng.randint(1000, 200000)) / 1_000_000
         cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
+        occurred_at = now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400))
+        latency_ms = rng.randint(180, 4000)
         await UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
             request_id=fixture_id(f"request:{workspace.id}:{index}"),
-            occurred_at=now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400)),
+            request_started_at=occurred_at - timedelta(milliseconds=latency_ms),
+            attempt_started_at=occurred_at - timedelta(milliseconds=latency_ms),
+            occurred_at=occurred_at,
             org_id=workspace.org_id,
             workspace_id=workspace.id,
             key_id=str(key.id),
+            authentication_source="inference_key",
+            authentication_label=key.label,
             user_id=key.user_id,
+            principal_label=principal.name,
+            principal_type="service_account" if principal.service_account else "human",
+            workspace_label=workspace.name,
             requested_model_id=model_id,
             requested_capabilities=[],
             model_id=model_id,
@@ -253,14 +262,23 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             input_tokens=rng.randint(300, 6000),
             output_tokens=rng.randint(80, 1500),
             token_usage_source="estimated" if index % 3 == 0 else "provider",
+            attempt_index=1,
+            input_price_per_mtok=Decimal(1),
+            output_price_per_mtok=Decimal(1),
+            cache_read_price_per_mtok=Decimal(0),
+            cache_write_price_per_mtok=Decimal(0),
+            cost_source="catalog_estimate",
             cost_usd=cost_input_usd + cost_output_usd,
             cost_input_usd=cost_input_usd,
             cost_output_usd=cost_output_usd,
             cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
             cache_write_tokens=0,
-            latency_ms=rng.randint(180, 4000),
+            latency_ms=latency_ms,
             status=rng.choice(STATUSES),
             stream=rng.choice([True, False]),
+            credential_id=fixture_id(f"credential:{workspace.id}:{index}"),
+            credential_scope="workspace",
+            credential_name="fixture",
         ).save()
 
 
@@ -511,9 +529,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         await provider_credential(store, openai, solo, workspace=default),
     ]
 
-    await record_usage(production, checkout, 1200, now)
-    await record_usage(staging, ci, 360, now)
-    await record_usage(default, solo_key, 84, now)
+    await record_usage(production, checkout, michel, 1200, now)
+    await record_usage(staging, ci, michel, 360, now)
+    await record_usage(default, solo_key, dana, 84, now)
 
     return Fixtures(
         password=FIXTURE_PASSWORD,

@@ -22,14 +22,22 @@ from data_plane.outbox.sqlite import BATCH_SIZE
 
 
 def make_event(request_id) -> RoutedUsageEventV1:
+    started_at = datetime.now(tz=UTC)
     return RoutedUsageEventV1(
         event_id=uuid4(),
         request_id=request_id,
-        occurred_at=datetime.now(tz=UTC),
+        request_started_at=started_at,
+        attempt_started_at=started_at,
+        occurred_at=started_at,
         org_id=uuid7(),
         workspace_id=uuid7(),
         key_id=str(uuid7()),
+        authentication_source="inference_key",
+        authentication_label="Test key",
         user_id=uuid7(),
+        principal_label="Test principal",
+        principal_type="human",
+        workspace_label="Test workspace",
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),
         model_id="gpt-test",
@@ -38,7 +46,13 @@ def make_event(request_id) -> RoutedUsageEventV1:
         input_tokens=10,
         output_tokens=5,
         token_usage_source=TokenUsageSource.PROVIDER,
+        attempt_index=1,
         max_output_tokens=128,
+        input_price_per_mtok="1",
+        output_price_per_mtok="2",
+        cache_read_price_per_mtok="0.1",
+        cache_write_price_per_mtok="1.25",
+        cost_source="catalog_estimate",
         cost_usd="0.000004",
         cost_input_usd="0.000004",
         latency_ms=100,
@@ -46,6 +60,7 @@ def make_event(request_id) -> RoutedUsageEventV1:
         stream=False,
         credential_id=uuid7(),
         credential_scope="workspace",
+        credential_name="default",
     )
 
 

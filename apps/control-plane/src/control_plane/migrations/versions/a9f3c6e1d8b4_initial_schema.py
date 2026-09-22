@@ -86,6 +86,7 @@ BUNDLE_INPUTS = (
     ("policy", "org", ()),
     ("provider", "global", ()),
     ("provider_credential", "nullable_org", ("status", "status_at")),
+    ("workspace", "org", ()),
 )
 
 
@@ -176,13 +177,41 @@ def upgrade() -> None:
             "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
             name="usage_event_token_usage_source_valid",
         ),
+        sa.CheckConstraint(
+            "(authentication_source = 'local' AND principal_type = 'local') OR "
+            "(authentication_source IN ('inference_key', 'playground') AND principal_type IN ('human', 'service_account'))",
+            name="usage_event_attribution_valid",
+        ),
+        sa.CheckConstraint(
+            "(status = 'denied' AND attempt_index IS NULL AND attempt_started_at IS NULL "
+            "AND credential_id IS NULL AND credential_scope IS NULL AND credential_name IS NULL "
+            "AND input_price_per_mtok IS NULL AND output_price_per_mtok IS NULL "
+            "AND cache_read_price_per_mtok IS NULL AND cache_write_price_per_mtok IS NULL AND cost_source = 'not_applicable') OR "
+            "(status <> 'denied' AND attempt_index > 0 AND attempt_started_at IS NOT NULL "
+            "AND credential_id IS NOT NULL AND credential_scope IS NOT NULL AND credential_name IS NOT NULL "
+            "AND input_price_per_mtok IS NOT NULL AND output_price_per_mtok IS NOT NULL "
+            "AND cache_read_price_per_mtok IS NOT NULL AND cache_write_price_per_mtok IS NOT NULL AND cost_source = 'catalog_estimate')",
+            name="usage_event_attempt_evidence_valid",
+        ),
+        sa.CheckConstraint(
+            "request_started_at <= occurred_at AND (attempt_started_at IS NULL OR "
+            "(request_started_at <= attempt_started_at AND attempt_started_at <= occurred_at))",
+            name="usage_event_timestamps_ordered",
+        ),
         sa.Column("event_id", sa.Uuid(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
+        sa.Column("request_started_at", UTCDateTime(), nullable=False),
+        sa.Column("attempt_started_at", UTCDateTime(), nullable=True),
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("authentication_source", sa.String(), nullable=False),
+        sa.Column("authentication_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("principal_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("principal_type", sa.String(), nullable=False),
+        sa.Column("workspace_label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("requested_model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("requested_capabilities", sa.ARRAY(sa.String()), nullable=False),
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -191,7 +220,13 @@ def upgrade() -> None:
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
         sa.Column("token_usage_source", sa.String(), nullable=False),
+        sa.Column("attempt_index", sa.Integer(), nullable=True),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
+        sa.Column("input_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
+        sa.Column("output_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
+        sa.Column("cache_read_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
+        sa.Column("cache_write_price_per_mtok", sa.Numeric(precision=16, scale=6), nullable=True),
+        sa.Column("cost_source", sa.String(), nullable=False),
         sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_output_usd", sa.Numeric(precision=28, scale=12), nullable=False),
@@ -202,11 +237,26 @@ def upgrade() -> None:
         sa.Column("stream", sa.Boolean(), nullable=False),
         sa.Column("credential_id", sa.Uuid(), nullable=True),
         sa.Column("credential_scope", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("credential_name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.PrimaryKeyConstraint("event_id"),
     )
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
     op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
     op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
+    op.create_index(
+        "usage_event_org_request_attempt_key",
+        "usage_event",
+        ["org_id", "request_id", "attempt_index"],
+        unique=True,
+        postgresql_where=sa.text("attempt_index IS NOT NULL"),
+    )
+    op.create_index(
+        "usage_event_org_request_denial_key",
+        "usage_event",
+        ["org_id", "request_id"],
+        unique=True,
+        postgresql_where=sa.text("attempt_index IS NULL"),
+    )
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -626,6 +676,8 @@ def downgrade() -> None:
     op.drop_table("bundle")
     op.drop_table("auth_session")
     op.drop_table("auth_identity")
+    op.drop_index("usage_event_org_request_denial_key", table_name="usage_event")
+    op.drop_index("usage_event_org_request_attempt_key", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")

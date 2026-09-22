@@ -5,9 +5,20 @@ from types import MappingProxyType
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, WrapSerializer
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, WrapSerializer, model_validator
 
-from contract.model_types import MODALITIES, AdapterKind, Capability, Modality, ModelName, ParameterSupport, ProviderName, TokenLimit
+from contract.model_types import (
+    MODALITIES,
+    AdapterKind,
+    AuthenticationSource,
+    Capability,
+    Modality,
+    ModelName,
+    ParameterSupport,
+    PrincipalType,
+    ProviderName,
+    TokenLimit,
+)
 from contract.money import UsdRate
 from contract.policies import PolicyEntry
 from contract.secrets import SecretRef
@@ -33,7 +44,20 @@ class KeyEntry(_BundleModel):
     workspace_id: UUID  # the workspace the key was created in, stamped onto usage events
     user_id: UUID
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
+    authentication_source: AuthenticationSource
+    authentication_label: str = Field(min_length=1, max_length=200)
+    principal_label: str = Field(min_length=1, max_length=320)
+    principal_type: PrincipalType
+    workspace_label: str = Field(min_length=1, max_length=200)
     expires_at: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def valid_principal_type(self) -> KeyEntry:
+        valid = self.principal_type == "local" if self.authentication_source == "local" else self.principal_type in {"human", "service_account"}
+        if not valid:
+            message = "principal_type must match authentication_source"
+            raise ValueError(message)
+        return self
 
 
 class ProviderEntry(_BundleModel):

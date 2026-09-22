@@ -50,8 +50,88 @@ def test_model_capabilities_use_the_policy_vocabulary():
 
 
 def test_inference_key_ids_are_opaque_strings():
-    key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), user_id=uuid7(), token_hash="hash")
+    key = KeyEntry(
+        key_id="external-key",
+        org_id=uuid7(),
+        workspace_id=uuid7(),
+        user_id=uuid7(),
+        token_hash="hash",
+        authentication_source="inference_key",
+        authentication_label="Production",
+        principal_label="Checkout service",
+        principal_type="service_account",
+        workspace_label="Production",
+    )
     assert key.key_id == "external-key"
+
+
+@pytest.mark.parametrize("field", ["authentication_source", "authentication_label", "principal_label", "principal_type", "workspace_label"])
+def test_bundle_keys_require_execution_time_attribution(field):
+    key = {
+        "key_id": "external-key",
+        "org_id": uuid7(),
+        "workspace_id": uuid7(),
+        "user_id": uuid7(),
+        "token_hash": "hash",
+        "authentication_source": "inference_key",
+        "authentication_label": "Production",
+        "principal_label": "Checkout service",
+        "principal_type": "service_account",
+        "workspace_label": "Production",
+    }
+    del key[field]
+
+    with pytest.raises(ValidationError):
+        KeyEntry.model_validate(key)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("authentication_label", ""),
+        ("authentication_label", "a" * 201),
+        ("principal_label", ""),
+        ("principal_label", "p" * 321),
+        ("workspace_label", ""),
+        ("workspace_label", "w" * 201),
+    ],
+)
+def test_bundle_key_attribution_labels_are_bounded(field, value):
+    payload = {
+        "key_id": "external-key",
+        "org_id": uuid7(),
+        "workspace_id": uuid7(),
+        "user_id": uuid7(),
+        "token_hash": "hash",
+        "authentication_source": "inference_key",
+        "authentication_label": "Production",
+        "principal_label": "Checkout service",
+        "principal_type": "service_account",
+        "workspace_label": "Production",
+        field: value,
+    }
+    with pytest.raises(ValidationError):
+        KeyEntry.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("authentication_source", "principal_type"),
+    [("local", "human"), ("local", "service_account"), ("inference_key", "local"), ("playground", "local")],
+)
+def test_bundle_key_principal_kind_matches_authentication_source(authentication_source, principal_type):
+    with pytest.raises(ValidationError, match="principal_type must match"):
+        KeyEntry(
+            key_id="external-key",
+            org_id=uuid7(),
+            workspace_id=uuid7(),
+            user_id=uuid7(),
+            token_hash="hash",
+            authentication_source=authentication_source,
+            authentication_label="Authentication",
+            principal_label="Principal",
+            principal_type=principal_type,
+            workspace_label="Workspace",
+        )
 
 
 def test_empty_manifest_contains_only_bundle_references():
@@ -70,7 +150,20 @@ def bundle_payload():
         "bundle_id": str(uuid7()),
         "org_id": org,
         "issued_at": "2026-09-18T00:00:00Z",
-        "keys": [{"key_id": "external", "org_id": org, "workspace_id": str(uuid7()), "user_id": str(uuid7()), "token_hash": "hash"}],
+        "keys": [
+            {
+                "key_id": "external",
+                "org_id": org,
+                "workspace_id": str(uuid7()),
+                "user_id": str(uuid7()),
+                "token_hash": "hash",
+                "authentication_source": "inference_key",
+                "authentication_label": "Production",
+                "principal_label": "Checkout service",
+                "principal_type": "service_account",
+                "workspace_label": "Production",
+            }
+        ],
         "catalog": {
             "providers": [{"provider_id": "provider", "kind": "openai_compatible", "base_url": "https://example.com", "accepted_params": ["seed"]}],
             "models": [model_entry(parameter_support={"temperature": "supported"})],

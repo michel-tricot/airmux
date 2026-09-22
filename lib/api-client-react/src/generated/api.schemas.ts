@@ -225,6 +225,24 @@ export interface BundleManifest {
   bundles: BundleManifestEntry[];
 }
 
+export type KeyEntryAuthenticationSource = typeof KeyEntryAuthenticationSource[keyof typeof KeyEntryAuthenticationSource];
+
+
+export const KeyEntryAuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+export type KeyEntryPrincipalType = typeof KeyEntryPrincipalType[keyof typeof KeyEntryPrincipalType];
+
+
+export const KeyEntryPrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
 /**
  * An active inference key included in a policy bundle.
  *
@@ -241,6 +259,23 @@ export interface KeyEntry {
   workspace_id: string;
   user_id: string;
   token_hash: string;
+  authentication_source: KeyEntryAuthenticationSource;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  authentication_label: string;
+  /**
+     * @minLength 1
+     * @maxLength 320
+     */
+  principal_label: string;
+  principal_type: KeyEntryPrincipalType;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  workspace_label: string;
   expires_at?: string | null;
 }
 
@@ -652,6 +687,30 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+/**
+ * Credential kind authenticated by the data plane
+ */
+export type DeniedUsageEventV1AuthenticationSource = typeof DeniedUsageEventV1AuthenticationSource[keyof typeof DeniedUsageEventV1AuthenticationSource];
+
+
+export const DeniedUsageEventV1AuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+/**
+ * Principal kind at execution time
+ */
+export type DeniedUsageEventV1PrincipalType = typeof DeniedUsageEventV1PrincipalType[keyof typeof DeniedUsageEventV1PrincipalType];
+
+
+export const DeniedUsageEventV1PrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
 export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -668,7 +727,9 @@ export interface DeniedUsageEventV1 {
   event_id: string;
   /** Data-plane request ID */
   request_id: string;
-  /** Timestamp when the request completed */
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /** Timestamp when the request was denied */
   occurred_at: string;
   /** Organization that made the request */
   org_id: string;
@@ -680,8 +741,30 @@ export interface DeniedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Credential kind authenticated by the data plane */
+  authentication_source: DeniedUsageEventV1AuthenticationSource;
+  /**
+     * Credential label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  authentication_label: string;
   /** Principal that owned the inference key when the request was made */
   user_id: string;
+  /**
+     * Principal label at execution time
+     * @minLength 1
+     * @maxLength 320
+     */
+  principal_label: string;
+  /** Principal kind at execution time */
+  principal_type: DeniedUsageEventV1PrincipalType;
+  /**
+     * Workspace label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  workspace_label: string;
   /**
      * Original caller-requested model before routing and fallback
      * @minLength 1
@@ -742,7 +825,7 @@ export interface DeniedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Request evaluation latency in milliseconds
      * @minimum 0
      * @maximum 2147483647
      */
@@ -763,6 +846,43 @@ export interface DeniedUsageEventV1 {
   credential_scope?: null;
   /** No upstream token usage for a request denied before routing */
   token_usage_source: 'not_applicable';
+  /**
+     * No provider attempt was made
+     * @nullable
+     */
+  attempt_index?: null;
+  /**
+     * No provider attempt was made
+     * @nullable
+     */
+  attempt_started_at?: null;
+  /**
+     * No provider credential was selected before denial
+     * @nullable
+     */
+  credential_name?: null;
+  /**
+     * No provider model was priced
+     * @nullable
+     */
+  input_price_per_mtok?: null;
+  /**
+     * No provider model was priced
+     * @nullable
+     */
+  output_price_per_mtok?: null;
+  /**
+     * No provider model was priced
+     * @nullable
+     */
+  cache_read_price_per_mtok?: null;
+  /**
+     * No provider model was priced
+     * @nullable
+     */
+  cache_write_price_per_mtok?: null;
+  /** No catalog cost was calculated */
+  cost_source: 'not_applicable';
 }
 
 export interface OrgOut {
@@ -1665,6 +1785,30 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+/**
+ * Credential kind authenticated by the data plane
+ */
+export type RoutedUsageEventV1AuthenticationSource = typeof RoutedUsageEventV1AuthenticationSource[keyof typeof RoutedUsageEventV1AuthenticationSource];
+
+
+export const RoutedUsageEventV1AuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+/**
+ * Principal kind at execution time
+ */
+export type RoutedUsageEventV1PrincipalType = typeof RoutedUsageEventV1PrincipalType[keyof typeof RoutedUsageEventV1PrincipalType];
+
+
+export const RoutedUsageEventV1PrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
 export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -1719,7 +1863,9 @@ export interface RoutedUsageEventV1 {
   event_id: string;
   /** Data-plane request ID */
   request_id: string;
-  /** Timestamp when the request completed */
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /** Timestamp when this provider attempt completed */
   occurred_at: string;
   /** Organization that made the request */
   org_id: string;
@@ -1731,8 +1877,30 @@ export interface RoutedUsageEventV1 {
      * @maxLength 255
      */
   key_id: string;
+  /** Credential kind authenticated by the data plane */
+  authentication_source: RoutedUsageEventV1AuthenticationSource;
+  /**
+     * Credential label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  authentication_label: string;
   /** Principal that owned the inference key when the request was made */
   user_id: string;
+  /**
+     * Principal label at execution time
+     * @minLength 1
+     * @maxLength 320
+     */
+  principal_label: string;
+  /** Principal kind at execution time */
+  principal_type: RoutedUsageEventV1PrincipalType;
+  /**
+     * Workspace label at execution time
+     * @minLength 1
+     * @maxLength 200
+     */
+  workspace_label: string;
   /**
      * Original caller-requested model before routing and fallback
      * @minLength 1
@@ -1797,7 +1965,7 @@ export interface RoutedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Provider attempt latency in milliseconds
      * @minimum 0
      * @maximum 2147483647
      */
@@ -1810,8 +1978,44 @@ export interface RoutedUsageEventV1 {
   credential_id: string;
   /** Scope of the provider credential used for the request */
   credential_scope: RoutedUsageEventV1CredentialScope;
+  /**
+     * One-based provider attempt order within the logical request
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  attempt_index: number;
+  /** Timestamp when this provider attempt began */
+  attempt_started_at: string;
   /** provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates */
   token_usage_source: RoutedUsageEventV1TokenUsageSource;
+  /**
+     * Provider credential name at execution time
+     * @minLength 1
+     * @maxLength 80
+     */
+  credential_name: string;
+  /**
+     * Fresh input catalog rate used for this attempt
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  input_price_per_mtok: string;
+  /**
+     * Output catalog rate used for this attempt
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  output_price_per_mtok: string;
+  /**
+     * Cache-read catalog rate used for this attempt
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cache_read_price_per_mtok: string;
+  /**
+     * Cache-write catalog rate used for this attempt
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cache_write_price_per_mtok: string;
+  /** Cost derived from catalog rates at execution time */
+  cost_source: 'catalog_estimate';
 }
 
 export interface ServiceAccountIn {
@@ -1886,6 +2090,24 @@ export const TokenUsageSource = {
   not_applicable: 'not_applicable',
 } as const;
 
+export type UsageEventOutAuthenticationSource = typeof UsageEventOutAuthenticationSource[keyof typeof UsageEventOutAuthenticationSource];
+
+
+export const UsageEventOutAuthenticationSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+  local: 'local',
+} as const;
+
+export type UsageEventOutPrincipalType = typeof UsageEventOutPrincipalType[keyof typeof UsageEventOutPrincipalType];
+
+
+export const UsageEventOutPrincipalType = {
+  human: 'human',
+  service_account: 'service_account',
+  local: 'local',
+} as const;
+
 export type UsageEventOutRequestedCapabilitiesItem = typeof UsageEventOutRequestedCapabilitiesItem[keyof typeof UsageEventOutRequestedCapabilitiesItem];
 
 
@@ -1893,6 +2115,14 @@ export const UsageEventOutRequestedCapabilitiesItem = {
   tools: 'tools',
   reasoning: 'reasoning',
   structured_output: 'structured_output',
+} as const;
+
+export type UsageEventOutCostSource = typeof UsageEventOutCostSource[keyof typeof UsageEventOutCostSource];
+
+
+export const UsageEventOutCostSource = {
+  catalog_estimate: 'catalog_estimate',
+  not_applicable: 'not_applicable',
 } as const;
 
 export type UsageEventOutStatus = typeof UsageEventOutStatus[keyof typeof UsageEventOutStatus];
@@ -1920,11 +2150,18 @@ export const UsageEventOutCredentialScope = {
 export interface UsageEventOut {
   event_id: string;
   request_id: string;
+  request_started_at: string;
+  attempt_started_at: string | null;
   occurred_at: string;
   org_id: string;
   workspace_id: string;
   key_id: string;
+  authentication_source: UsageEventOutAuthenticationSource;
+  authentication_label: string;
   user_id: string;
+  principal_label: string;
+  principal_type: UsageEventOutPrincipalType;
+  workspace_label: string;
   requested_model_id: string;
   requested_capabilities: UsageEventOutRequestedCapabilitiesItem[];
   model_id: string;
@@ -1934,7 +2171,13 @@ export interface UsageEventOut {
   output_tokens: number;
   /** Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates */
   token_usage_source: TokenUsageSource;
+  attempt_index: number | null;
   max_output_tokens: number | null;
+  input_price_per_mtok: string | null;
+  output_price_per_mtok: string | null;
+  cache_read_price_per_mtok: string | null;
+  cache_write_price_per_mtok: string | null;
+  cost_source: UsageEventOutCostSource;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
   /** @pattern ^\d+(?:\.\d+)?$ */
@@ -1948,6 +2191,7 @@ export interface UsageEventOut {
   stream: boolean;
   credential_id: string | null;
   credential_scope: UsageEventOutCredentialScope;
+  credential_name: string | null;
 }
 
 export interface WorkspaceCreate {

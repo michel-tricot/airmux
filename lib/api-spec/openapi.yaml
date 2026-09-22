@@ -3958,7 +3958,7 @@ paths:
       tags:
       - Data Plane API
       summary: Ingest Usage Events
-      description: 'Ingest up to 1,000 usage events; repeated event IDs are ignored.
+      description: 'Ingest up to 1,000 usage events; repeated events and request attempts are ignored.
 
 
         Required permission: `usage.ingest`.'
@@ -5049,11 +5049,16 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when the request was denied
         org_id:
           type: string
           format: uuid
@@ -5070,11 +5075,45 @@ components:
           minLength: 1
           title: Key Id
           description: Inference key ID used for the request
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+          description: Credential kind authenticated by the data plane
+        authentication_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Authentication Label
+          description: Credential label at execution time
         user_id:
           type: string
           format: uuid
           title: User Id
           description: Principal that owned the inference key when the request was made
+        principal_label:
+          type: string
+          maxLength: 320
+          minLength: 1
+          title: Principal Label
+          description: Principal label at execution time
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+          description: Principal kind at execution time
+        workspace_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Workspace Label
+          description: Workspace label at execution time
         requested_model_id:
           type: string
           maxLength: 255
@@ -5165,7 +5204,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: Request evaluation latency in milliseconds
         status:
           type: string
           const: denied
@@ -5189,16 +5228,55 @@ components:
           const: not_applicable
           title: Token Usage Source
           description: No upstream token usage for a request denied before routing
+        attempt_index:
+          type: 'null'
+          title: Attempt Index
+          description: No provider attempt was made
+        attempt_started_at:
+          type: 'null'
+          title: Attempt Started At
+          description: No provider attempt was made
+        credential_name:
+          type: 'null'
+          title: Credential Name
+          description: No provider credential was selected before denial
+        input_price_per_mtok:
+          type: 'null'
+          title: Input Price Per Mtok
+          description: No provider model was priced
+        output_price_per_mtok:
+          type: 'null'
+          title: Output Price Per Mtok
+          description: No provider model was priced
+        cache_read_price_per_mtok:
+          type: 'null'
+          title: Cache Read Price Per Mtok
+          description: No provider model was priced
+        cache_write_price_per_mtok:
+          type: 'null'
+          title: Cache Write Price Per Mtok
+          description: No provider model was priced
+        cost_source:
+          type: string
+          const: not_applicable
+          title: Cost Source
+          description: No catalog cost was calculated
       additionalProperties: false
       type: object
       required:
       - event_id
       - request_id
+      - request_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - authentication_source
+      - authentication_label
       - user_id
+      - principal_label
+      - principal_type
+      - workspace_label
       - requested_model_id
       - requested_capabilities
       - model_id
@@ -5210,6 +5288,7 @@ components:
       - latency_ms
       - stream
       - token_usage_source
+      - cost_source
       title: DeniedUsageEventV1
     DenyRequest:
       properties:
@@ -6078,6 +6157,35 @@ components:
         token_hash:
           type: string
           title: Token Hash
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+        authentication_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Authentication Label
+        principal_label:
+          type: string
+          maxLength: 320
+          minLength: 1
+          title: Principal Label
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+        workspace_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Workspace Label
         expires_at:
           anyOf:
           - type: string
@@ -6092,6 +6200,11 @@ components:
       - workspace_id
       - user_id
       - token_hash
+      - authentication_source
+      - authentication_label
+      - principal_label
+      - principal_type
+      - workspace_label
       title: KeyEntry
       description: 'An active inference key included in a policy bundle.
 
@@ -7974,11 +8087,16 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when this provider attempt completed
         org_id:
           type: string
           format: uuid
@@ -7995,11 +8113,45 @@ components:
           minLength: 1
           title: Key Id
           description: Inference key ID used for the request
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+          description: Credential kind authenticated by the data plane
+        authentication_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Authentication Label
+          description: Credential label at execution time
         user_id:
           type: string
           format: uuid
           title: User Id
           description: Principal that owned the inference key when the request was made
+        principal_label:
+          type: string
+          maxLength: 320
+          minLength: 1
+          title: Principal Label
+          description: Principal label at execution time
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+          description: Principal kind at execution time
+        workspace_label:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Workspace Label
+          description: Workspace label at execution time
         requested_model_id:
           type: string
           maxLength: 255
@@ -8090,7 +8242,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: Provider attempt latency in milliseconds
         status:
           type: string
           enum:
@@ -8119,6 +8271,17 @@ components:
           - workspace
           title: Credential Scope
           description: Scope of the provider credential used for the request
+        attempt_index:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 1.0
+          title: Attempt Index
+          description: One-based provider attempt order within the logical request
+        attempt_started_at:
+          type: string
+          format: date-time
+          title: Attempt Started At
+          description: Timestamp when this provider attempt began
         token_usage_source:
           type: string
           enum:
@@ -8127,16 +8290,53 @@ components:
           title: Token Usage Source
           description: 'provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining
             partial provider counts. Independent of catalog-priced cost estimates'
+        credential_name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Credential Name
+          description: Provider credential name at execution time
+        input_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Input Price Per Mtok
+          description: Fresh input catalog rate used for this attempt
+        output_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Output Price Per Mtok
+          description: Output catalog rate used for this attempt
+        cache_read_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Read Price Per Mtok
+          description: Cache-read catalog rate used for this attempt
+        cache_write_price_per_mtok:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cache Write Price Per Mtok
+          description: Cache-write catalog rate used for this attempt
+        cost_source:
+          type: string
+          const: catalog_estimate
+          title: Cost Source
+          description: Cost derived from catalog rates at execution time
       additionalProperties: false
       type: object
       required:
       - event_id
       - request_id
+      - request_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - authentication_source
+      - authentication_label
       - user_id
+      - principal_label
+      - principal_type
+      - workspace_label
       - requested_model_id
       - requested_capabilities
       - model_id
@@ -8151,7 +8351,15 @@ components:
       - stream
       - credential_id
       - credential_scope
+      - attempt_index
+      - attempt_started_at
       - token_usage_source
+      - credential_name
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
+      - cost_source
       title: RoutedUsageEventV1
     RuleDefinition-Input:
       properties:
@@ -8505,6 +8713,16 @@ components:
           type: string
           format: uuid
           title: Request Id
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+        attempt_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Attempt Started At
         occurred_at:
           type: string
           format: date-time
@@ -8520,10 +8738,33 @@ components:
         key_id:
           type: string
           title: Key Id
+        authentication_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          - local
+          title: Authentication Source
+        authentication_label:
+          type: string
+          title: Authentication Label
         user_id:
           type: string
           format: uuid
           title: User Id
+        principal_label:
+          type: string
+          title: Principal Label
+        principal_type:
+          type: string
+          enum:
+          - human
+          - service_account
+          - local
+          title: Principal Type
+        workspace_label:
+          type: string
+          title: Workspace Label
         requested_model_id:
           type: string
           title: Requested Model Id
@@ -8556,11 +8797,46 @@ components:
           $ref: '#/components/schemas/TokenUsageSource'
           description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
             for denials; independent of cost estimates'
+        attempt_index:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Attempt Index
         max_output_tokens:
           anyOf:
           - type: integer
           - type: 'null'
           title: Max Output Tokens
+        input_price_per_mtok:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Input Price Per Mtok
+        output_price_per_mtok:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Output Price Per Mtok
+        cache_read_price_per_mtok:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Cache Read Price Per Mtok
+        cache_write_price_per_mtok:
+          anyOf:
+          - type: string
+            pattern: ^\d+(?:\.\d+)?$
+          - type: 'null'
+          title: Cache Write Price Per Mtok
+        cost_source:
+          type: string
+          enum:
+          - catalog_estimate
+          - not_applicable
+          title: Cost Source
         cost_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -8611,15 +8887,27 @@ components:
             - workspace
           - type: 'null'
           title: Credential Scope
+        credential_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Credential Name
       type: object
       required:
       - event_id
       - request_id
+      - request_started_at
+      - attempt_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - authentication_source
+      - authentication_label
       - user_id
+      - principal_label
+      - principal_type
+      - workspace_label
       - requested_model_id
       - requested_capabilities
       - model_id
@@ -8628,7 +8916,13 @@ components:
       - input_tokens
       - output_tokens
       - token_usage_source
+      - attempt_index
       - max_output_tokens
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
+      - cost_source
       - cost_usd
       - cost_input_usd
       - cost_output_usd
@@ -8639,6 +8933,7 @@ components:
       - stream
       - credential_id
       - credential_scope
+      - credential_name
       title: UsageEventOut
     UserOut:
       properties:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -62,12 +63,22 @@ def test_usage_has_request_attribution_and_token_source(estimated):
         org_id=ORG,
         workspace_id=WORKSPACE,
         key_id=str(uuid7()),
+        authentication_source="inference_key",
+        authentication_label="Production key",
         user_id=ORG,
+        principal_label="Checkout service",
+        principal_type="service_account",
+        workspace_label="Production",
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),
         credential_id=credential_id,
         credential_scope="workspace",
+        credential_name="default",
         bundle_id=bundle_id,
+        attempt_index=2,
+        request_started_at=datetime.now(tz=UTC) - timedelta(seconds=2),
+        attempt_started_at=datetime.now(tz=UTC) - timedelta(seconds=1),
+        attempt_started_monotonic=time.monotonic() - 1,
     )
     request = CanonicalRequest(
         model=MODEL.model_id,
@@ -89,6 +100,13 @@ def test_usage_has_request_attribution_and_token_source(estimated):
     assert event.bundle_id == bundle_id
     assert event.credential_id == credential_id
     assert event.credential_scope == "workspace"
+    assert event.credential_name == "default"
+    assert event.attempt_index == 2
+    assert event.authentication_label == "Production key"
+    assert event.principal_type == "service_account"
+    assert event.input_price_per_mtok == Decimal(2)
+    assert event.cost_source == "catalog_estimate"
+    assert 900 <= event.latency_ms <= 1500
     assert event.status == "cancelled"
     assert event.token_usage_source == ("estimated" if estimated else "provider")
     assert (event.input_tokens > 0) == estimated
@@ -106,12 +124,22 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content():
         org_id=ORG,
         workspace_id=WORKSPACE,
         key_id=str(uuid7()),
+        authentication_source="inference_key",
+        authentication_label="Production key",
         user_id=ORG,
+        principal_label="Checkout service",
+        principal_type="service_account",
+        workspace_label="Production",
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),
         credential_id=uuid7(),
         credential_scope="workspace",
+        credential_name="default",
         bundle_id=uuid7(),
+        attempt_index=1,
+        request_started_at=datetime.now(tz=UTC) - timedelta(seconds=1),
+        attempt_started_at=datetime.now(tz=UTC),
+        attempt_started_monotonic=time.monotonic(),
     )
     request = CanonicalRequest(
         model=MODEL.model_id,
@@ -139,7 +167,11 @@ def test_denial_uses_the_request_identity_and_elapsed_latency():
     key = make_key("denied")[1]
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
-    start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1)
+    start = RequestStart(
+        request_id=request_id,
+        started_at=datetime.now(tz=UTC) - timedelta(seconds=1),
+        started_monotonic=time.monotonic() - 1,
+    )
     event = denied_event(key, uuid7(), request, start)
 
     assert event.request_id == request_id

@@ -72,6 +72,11 @@ def test_the_compiled_bundle_authenticates_the_plaintext_key(tmp_path):
     bundle = load_local(_write(tmp_path), NOW)
     key = authenticate("sk-inf-local-dev", index_keys(bundle), NOW)
     assert key is not None
+    assert key.authentication_source == "local"
+    assert key.authentication_label == "Local key 1"
+    assert key.principal_label == "00000000-0000-0000-0000-000000000001"
+    assert key.principal_type == "local"
+    assert key.workspace_label == "Local"
     assert authenticate("sk-inf-wrong", index_keys(bundle), NOW) is None
 
 

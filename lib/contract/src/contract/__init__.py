@@ -12,6 +12,7 @@ from contract.bundle import (
 )
 from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import (
+    CostSource,
     CredentialScope,
     DeniedUsageEventV1,
     HeartbeatV1,
@@ -22,7 +23,7 @@ from contract.events import (
     UsageStatus,
 )
 from contract.ids import uuid7
-from contract.model_types import MODALITIES, Capability, Modality, ParameterSupport
+from contract.model_types import MODALITIES, AuthenticationSource, Capability, Modality, ParameterSupport, PrincipalType
 from contract.money import UsdAmount, UsdRate
 from contract.secrets import SecretPurpose, SecretRef
 
@@ -30,11 +31,13 @@ __all__ = [
     "INFERENCE_TOKEN_PREFIX",
     "MODALITIES",
     "PLAYGROUND_COOKIE",
+    "AuthenticationSource",
     "BundleManifest",
     "BundleManifestEntry",
     "BundleV1",
     "Capability",
     "Catalog",
+    "CostSource",
     "CredentialEntry",
     "CredentialScope",
     "DeniedUsageEventV1",
@@ -43,6 +46,7 @@ __all__ = [
     "Modality",
     "ModelEntry",
     "ParameterSupport",
+    "PrincipalType",
     "ProviderEntry",
     "RoutedUsageEventV1",
     "RoutedUsageStatus",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from http import HTTPStatus
 from typing import TYPE_CHECKING, cast
 
@@ -69,7 +70,7 @@ class ResponseHeadersMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
+        start = RequestStart(request_id=uuid7(), started_at=datetime.now(tz=UTC), started_monotonic=time.monotonic())
         route = self._route(scope)
         stream = False
         scope["state"] = {
@@ -108,7 +109,7 @@ class ResponseHeadersMiddleware:
             self.metrics.observe_http(
                 (route, scope["method"], str(state["metrics_dialect"]), actual_stream),
                 status,
-                time.monotonic() - start.started_at,
+                time.monotonic() - start.started_monotonic,
             )
 
     def _route(self, scope: Scope) -> str:

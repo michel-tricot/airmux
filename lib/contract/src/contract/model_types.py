@@ -5,6 +5,8 @@ from typing import Annotated, Literal, cast, get_args
 from pydantic import Field
 
 ParameterSupport = Literal["supported", "unsupported"]
+AuthenticationSource = Literal["inference_key", "playground", "local"]
+PrincipalType = Literal["human", "service_account", "local"]
 Modality = Literal["text", "image", "audio", "video", "pdf"]
 MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
 Capability = Literal["streaming", "tools", "reasoning", "structured_output"]

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, final
@@ -13,10 +12,11 @@ from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from datetime import datetime
     from uuid import UUID
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialScope, ModelEntry, ProviderEntry
+    from contract import AuthenticationSource, CredentialScope, ModelEntry, PrincipalType, ProviderEntry
     from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
@@ -132,13 +132,22 @@ class Ctx:
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    authentication_source: AuthenticationSource
+    authentication_label: str
     user_id: UUID
+    principal_label: str
+    principal_type: PrincipalType
+    workspace_label: str
     requested_model_id: str
     requested_capabilities: frozenset[RequestCapability]
     credential_id: UUID
     credential_scope: CredentialScope
+    credential_name: str
     bundle_id: UUID
-    started_at: float = field(default_factory=time.monotonic)
+    attempt_index: int
+    request_started_at: datetime
+    attempt_started_at: datetime
+    attempt_started_monotonic: float
 
 
 class EgressAdapter[StateT: StreamState](ABC):

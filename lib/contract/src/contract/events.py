@@ -7,12 +7,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from contract.model_types import RequestCapability
-from contract.money import ZERO_USD, UsdAmount
+from contract.model_types import AuthenticationSource, PrincipalType, RequestCapability
+from contract.money import ZERO_USD, UsdAmount, UsdRate
 
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 RoutedUsageStatus = Literal["ok", "upstream_error", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 CredentialScope = Literal["platform", "org", "workspace"]
+CostSource = Literal["catalog_estimate", "not_applicable"]
 """How a metered request ended.
 
 credential_rejected and rate_limited are split out of upstream_error because they are facts
@@ -39,11 +40,17 @@ class _UsageEventV1(BaseModel):
     schema_version: Literal[1] = Field(1, description="Usage event schema version")
     event_id: UUID = Field(description="Idempotency key for event ingestion")
     request_id: UUID = Field(description="Data-plane request ID")
-    occurred_at: datetime = Field(description="Timestamp when the request completed")
+    request_started_at: datetime = Field(description="Timestamp when the logical request began")
+    occurred_at: datetime = Field(description="Timestamp when metering for the outcome completed")
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
     key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
+    authentication_source: AuthenticationSource = Field(description="Credential kind authenticated by the data plane")
+    authentication_label: str = Field(description="Credential label at execution time", min_length=1, max_length=200)
     user_id: UUID = Field(description="Principal that owned the inference key when the request was made")
+    principal_label: str = Field(description="Principal label at execution time", min_length=1, max_length=320)
+    principal_type: PrincipalType = Field(description="Principal kind at execution time")
+    workspace_label: str = Field(description="Workspace label at execution time", min_length=1, max_length=200)
     requested_model_id: str = Field(min_length=1, max_length=255, description="Original caller-requested model before routing and fallback")
     requested_capabilities: frozenset[RequestCapability] = Field(description="Original request capabilities before reconciliation")
     model_id: str = Field(description="Caller-facing model ID", min_length=1, max_length=255)
@@ -57,7 +64,7 @@ class _UsageEventV1(BaseModel):
     max_output_tokens: int | None = Field(description="Effective upstream output-token limit", ge=1, le=MAX_EVENT_INTEGER)
     cache_read_tokens: int = Field(default=0, description="Input tokens read from a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     cache_write_tokens: int = Field(default=0, description="Input tokens written to a provider cache", ge=0, le=MAX_EVENT_INTEGER)
-    latency_ms: int = Field(description="End-to-end request latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)
+    latency_ms: int = Field(ge=0, le=MAX_EVENT_INTEGER)
     status: UsageStatus = Field(description="How the request ended; cancelled events may contain partial token counts")
     stream: bool = Field(description="Whether the response was streamed")
     credential_id: UUID | None = Field(default=None, description="Provider credential used for the request")
@@ -66,7 +73,7 @@ class _UsageEventV1(BaseModel):
         description="Scope of the provider credential used for the request",
     )
 
-    @field_validator("occurred_at")
+    @field_validator("request_started_at", "occurred_at")
     @classmethod
     def require_aware_timestamp(cls, occurred_at: datetime) -> datetime:
         if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
@@ -76,6 +83,15 @@ class _UsageEventV1(BaseModel):
 
     @model_validator(mode="after")
     def exact_total(self) -> Self:
+        valid_principal = (
+            self.principal_type == "local" if self.authentication_source == "local" else self.principal_type in {"human", "service_account"}
+        )
+        if not valid_principal:
+            msg = "principal_type must match authentication_source"
+            raise ValueError(msg)
+        if self.request_started_at > self.occurred_at:
+            msg = "request_started_at must not follow occurred_at"
+            raise ValueError(msg)
         if self.cost_usd != self.cost_input_usd + self.cost_output_usd:
             msg = "cost_usd must equal cost_input_usd plus cost_output_usd"
             raise ValueError(msg)
@@ -86,14 +102,28 @@ class _UsageEventV1(BaseModel):
 
 
 class DeniedUsageEventV1(_UsageEventV1):
+    occurred_at: datetime = Field(description="Timestamp when the request was denied")
+    latency_ms: int = Field(description="Request evaluation latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)
     token_usage_source: Literal[TokenUsageSource.NOT_APPLICABLE] = Field(description="No upstream token usage for a request denied before routing")
+    attempt_index: None = Field(None, description="No provider attempt was made")
+    attempt_started_at: None = Field(None, description="No provider attempt was made")
     provider_id: Literal[""] = Field("", description="No provider was selected before denial")
     status: Literal["denied"] = Field("denied", description="The request was denied before routing")
     credential_id: None = Field(None, description="No provider credential was selected before denial")
     credential_scope: None = Field(None, description="No provider credential scope was selected before denial")
+    credential_name: None = Field(None, description="No provider credential was selected before denial")
+    input_price_per_mtok: None = Field(None, description="No provider model was priced")
+    output_price_per_mtok: None = Field(None, description="No provider model was priced")
+    cache_read_price_per_mtok: None = Field(None, description="No provider model was priced")
+    cache_write_price_per_mtok: None = Field(None, description="No provider model was priced")
+    cost_source: Literal["not_applicable"] = Field(description="No catalog cost was calculated")
 
 
 class RoutedUsageEventV1(_UsageEventV1):
+    attempt_index: int = Field(description="One-based provider attempt order within the logical request", ge=1, le=MAX_EVENT_INTEGER)
+    attempt_started_at: datetime = Field(description="Timestamp when this provider attempt began")
+    occurred_at: datetime = Field(description="Timestamp when this provider attempt completed")
+    latency_ms: int = Field(description="Provider attempt latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)
     token_usage_source: Literal[TokenUsageSource.PROVIDER, TokenUsageSource.ESTIMATED] = Field(
         description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. "
         "Independent of catalog-priced cost estimates"
@@ -102,6 +132,27 @@ class RoutedUsageEventV1(_UsageEventV1):
     status: RoutedUsageStatus = Field(description="How the routed request ended")
     credential_id: UUID = Field(description="Provider credential used for the request")
     credential_scope: CredentialScope = Field(description="Scope of the provider credential used for the request")
+    credential_name: str = Field(description="Provider credential name at execution time", min_length=1, max_length=80)
+    input_price_per_mtok: UsdRate = Field(description="Fresh input catalog rate used for this attempt")
+    output_price_per_mtok: UsdRate = Field(description="Output catalog rate used for this attempt")
+    cache_read_price_per_mtok: UsdRate = Field(description="Cache-read catalog rate used for this attempt")
+    cache_write_price_per_mtok: UsdRate = Field(description="Cache-write catalog rate used for this attempt")
+    cost_source: Literal["catalog_estimate"] = Field(description="Cost derived from catalog rates at execution time")
+
+    @field_validator("attempt_started_at")
+    @classmethod
+    def require_aware_attempt_timestamp(cls, attempt_started_at: datetime) -> datetime:
+        if attempt_started_at.tzinfo is None or attempt_started_at.utcoffset() is None:
+            msg = "attempt_started_at must include a timezone"
+            raise ValueError(msg)
+        return attempt_started_at
+
+    @model_validator(mode="after")
+    def ordered_timestamps(self) -> Self:
+        if not self.request_started_at <= self.attempt_started_at <= self.occurred_at:
+            msg = "request and attempt timestamps must be ordered"
+            raise ValueError(msg)
+        return self
 
 
 UsageEvent = Annotated[DeniedUsageEventV1 | RoutedUsageEventV1, Field(discriminator="status")]

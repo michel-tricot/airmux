@@ -161,7 +161,7 @@ class RequestExecution:
                     continue
                 attempts += 1
                 with self.runtime.outbox.reserve() as reservation:
-                    outcome = await self._attempt(decision, entry, credential, reservation)
+                    outcome = await self._attempt(decision, entry, credential, attempts, reservation)
                 if isinstance(outcome, Response):
                     return outcome
                 failure = outcome
@@ -188,10 +188,12 @@ class RequestExecution:
         decision: Allow,
         entry: CredentialEntry,
         credential: Secret,
+        attempt_index: int,
         reservation: OutboxReservation,
     ) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
-        attempt_started_at = time.monotonic()
+        attempt_started_at = max(datetime.now(tz=UTC), self.start.started_at)
+        attempt_started_monotonic = time.monotonic()
         routed_request = self.request.model_copy(update={"model": decision.model.model_id})
         request, reconcile_adjustments = reconcile(
             routed_request,
@@ -201,7 +203,7 @@ class RequestExecution:
         )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
-        ctx = self._ctx(decision, entry)
+        ctx = self._ctx(decision, entry, attempt_index, attempt_started_at, attempt_started_monotonic)
         upstream = _transform(adapter, request, decision.model)
         try:
             if request.stream:
@@ -215,14 +217,14 @@ class RequestExecution:
                     http_client=self.runtime.http_client,
                     metrics=self.runtime.metrics,
                     egress_kind=egress_kind,
-                    attempt_started_at=attempt_started_at,
+                    attempt_started_at=attempt_started_monotonic,
                 )
                 return await session.open(upstream)
             response = await self.runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
             _check_upstream(response)
             final = adapter.transform_response(response.content, ctx)
         except UpstreamResponseError as error:
-            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_monotonic)
             status = status_for_upstream(error.status)
             if status == "credential_rejected":
                 self.runtime.credentials.forget(entry)
@@ -243,22 +245,29 @@ class RequestExecution:
             }
             return AttemptFailure(rendered, reason, rejects_credential)
         except httpx2.HTTPError as error:
-            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_monotonic)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
             return AttemptFailure(rendered, "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_unavailable", False)
         except UpstreamProtocolError as error:
-            self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_monotonic)
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
         except asyncio.CancelledError:
-            self.runtime.metrics.observe_upstream(egress_kind, "cancelled", attempt_started_at)
+            self.runtime.metrics.observe_upstream(egress_kind, "cancelled", attempt_started_monotonic)
             reservation.record(usage_event(ctx, _empty_response(ctx), status="cancelled", request=request))
             raise
         final = final.model_copy(update={"gateway": CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
         reservation.record(usage_event(ctx, final, status="ok", request=request))
-        self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_at)
+        self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_monotonic)
         return self.ingress.render_response(final)
 
-    def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
+    def _ctx(
+        self,
+        decision: Allow,
+        entry: CredentialEntry,
+        attempt_index: int,
+        attempt_started_at: datetime,
+        attempt_started_monotonic: float,
+    ) -> Ctx:
         return Ctx(
             request_id=self.start.request_id,
             model=decision.model,
@@ -267,13 +276,22 @@ class RequestExecution:
             org_id=self.key.org_id,
             workspace_id=self.key.workspace_id,
             key_id=self.key.key_id,
+            authentication_source=self.key.authentication_source,
+            authentication_label=self.key.authentication_label,
             user_id=self.key.user_id,
+            principal_label=self.key.principal_label,
+            principal_type=self.key.principal_type,
+            workspace_label=self.key.workspace_label,
             requested_model_id=self.request.model,
             requested_capabilities=requested_capabilities(self.request),
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
+            credential_name=entry.ref.name,
             bundle_id=self.snapshot.bundle.bundle_id,
-            started_at=self.start.started_at,
+            attempt_index=attempt_index,
+            request_started_at=self.start.started_at,
+            attempt_started_at=attempt_started_at,
+            attempt_started_monotonic=attempt_started_monotonic,
         )
 
 

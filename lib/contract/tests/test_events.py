@@ -12,15 +12,24 @@ USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
 
 def usage_event(**overrides: object) -> dict[str, object]:
     credential_id = uuid7()
+    request_started_at = datetime(2026, 9, 22, 12, tzinfo=UTC)
+    attempt_started_at = datetime(2026, 9, 22, 12, 0, 1, tzinfo=UTC)
     return {
         "event_id": uuid7(),
         "request_id": uuid7(),
-        "occurred_at": datetime.now(tz=UTC),
+        "request_started_at": request_started_at,
+        "attempt_started_at": attempt_started_at,
+        "occurred_at": datetime(2026, 9, 22, 12, 0, 2, tzinfo=UTC),
         "org_id": uuid7(),
         "workspace_id": uuid7(),
         "key_id": "external-key",
+        "authentication_source": "inference_key",
+        "authentication_label": "Production key",
         "model_id": "model",
         "user_id": uuid7(),
+        "principal_label": "Checkout service",
+        "principal_type": "service_account",
+        "workspace_label": "Production",
         "requested_model_id": "model",
         "requested_capabilities": [],
         "provider_id": "provider",
@@ -28,13 +37,20 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "input_tokens": 1,
         "output_tokens": 1,
         "token_usage_source": "provider",
+        "attempt_index": 1,
         "max_output_tokens": 128,
+        "input_price_per_mtok": "1",
+        "output_price_per_mtok": "2",
+        "cache_read_price_per_mtok": "0.1",
+        "cache_write_price_per_mtok": "1.25",
+        "cost_source": "catalog_estimate",
         "cost_usd": "0",
         "latency_ms": 1,
         "status": "ok",
         "stream": False,
         "credential_id": credential_id,
         "credential_scope": "workspace",
+        "credential_name": "default",
         **overrides,
     }
 
@@ -58,6 +74,87 @@ def test_usage_events_accept_opaque_key_ids():
     assert event.key_id == "external-key"
 
 
+def test_routed_usage_requires_ordered_immutable_execution_evidence():
+    event = USAGE_EVENT_ADAPTER.validate_python(usage_event())
+
+    assert event.attempt_index == 1
+    assert event.request_started_at < event.attempt_started_at < event.occurred_at
+    assert event.authentication_source == "inference_key"
+    assert event.authentication_label == "Production key"
+    assert event.principal_label == "Checkout service"
+    assert event.principal_type == "service_account"
+    assert event.workspace_label == "Production"
+    assert event.credential_name == "default"
+    assert event.cost_source == "catalog_estimate"
+    assert event.input_price_per_mtok == 1
+
+
+@pytest.mark.parametrize("field", ["attempt_index", "attempt_started_at", "credential_name", "input_price_per_mtok", "cost_source"])
+def test_routed_usage_rejects_missing_attempt_evidence(field):
+    payload = usage_event()
+    del payload[field]
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("authentication_label", ""),
+        ("authentication_label", "a" * 201),
+        ("principal_label", ""),
+        ("principal_label", "p" * 321),
+        ("workspace_label", ""),
+        ("workspace_label", "w" * 201),
+        ("credential_name", ""),
+        ("credential_name", "c" * 81),
+    ],
+)
+def test_usage_execution_labels_are_bounded(field, value):
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(**{field: value}))
+
+
+def test_routed_usage_rejects_nonpositive_attempt_order():
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(attempt_index=0))
+
+
+@pytest.mark.parametrize(
+    ("authentication_source", "principal_type"),
+    [("local", "human"), ("local", "service_account"), ("inference_key", "local"), ("playground", "local")],
+)
+def test_usage_principal_kind_matches_authentication_source(authentication_source, principal_type):
+    with pytest.raises(ValidationError, match="principal_type must match"):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(authentication_source=authentication_source, principal_type=principal_type))
+
+
+@pytest.mark.parametrize(
+    ("request_started_at", "attempt_started_at", "occurred_at"),
+    [
+        (
+            datetime(2026, 9, 22, 12, 0, 2, tzinfo=UTC),
+            datetime(2026, 9, 22, 12, 0, 1, tzinfo=UTC),
+            datetime(2026, 9, 22, 12, 0, 3, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 9, 22, 12, tzinfo=UTC),
+            datetime(2026, 9, 22, 12, 0, 3, tzinfo=UTC),
+            datetime(2026, 9, 22, 12, 0, 2, tzinfo=UTC),
+        ),
+    ],
+)
+def test_routed_usage_rejects_unordered_timestamps(request_started_at, attempt_started_at, occurred_at):
+    with pytest.raises(ValidationError, match="timestamps must be ordered"):
+        USAGE_EVENT_ADAPTER.validate_python(
+            usage_event(
+                request_started_at=request_started_at,
+                attempt_started_at=attempt_started_at,
+                occurred_at=occurred_at,
+            )
+        )
+
+
 def test_usage_event_cost_must_equal_its_exact_components() -> None:
     with pytest.raises(ValidationError, match="cost_usd must equal"):
         USAGE_EVENT_ADAPTER.validate_python(usage_event(cost_usd="0.3", cost_input_usd="0.1", cost_output_usd="0.200000000001"))
@@ -74,6 +171,14 @@ def test_denied_usage_event_cost_must_be_zero() -> None:
                 input_tokens=0,
                 output_tokens=0,
                 token_usage_source="not_applicable",
+                attempt_started_at=None,
+                attempt_index=None,
+                input_price_per_mtok=None,
+                output_price_per_mtok=None,
+                cache_read_price_per_mtok=None,
+                cache_write_price_per_mtok=None,
+                cost_source="not_applicable",
+                credential_name=None,
                 cost_usd="0.1",
                 cost_input_usd="0.1",
             )
@@ -103,5 +208,45 @@ def test_token_usage_source_is_required():
 def test_denied_usage_rejects_routed_token_sources(source):
     with pytest.raises(ValidationError):
         USAGE_EVENT_ADAPTER.validate_python(
-            usage_event(status="denied", provider_id="", credential_id=None, credential_scope=None, token_usage_source=source)
+            usage_event(
+                status="denied",
+                provider_id="",
+                credential_id=None,
+                credential_scope=None,
+                credential_name=None,
+                attempt_index=None,
+                attempt_started_at=None,
+                input_price_per_mtok=None,
+                output_price_per_mtok=None,
+                cache_read_price_per_mtok=None,
+                cache_write_price_per_mtok=None,
+                cost_source="not_applicable",
+                token_usage_source=source,
+            )
         )
+
+
+def test_denied_usage_rejects_attempt_and_pricing_evidence():
+    denied = usage_event(
+        status="denied",
+        provider_id="",
+        credential_id=None,
+        credential_scope=None,
+        credential_name=None,
+        attempt_index=None,
+        attempt_started_at=None,
+        input_price_per_mtok=None,
+        output_price_per_mtok=None,
+        cache_read_price_per_mtok=None,
+        cache_write_price_per_mtok=None,
+        cost_source="not_applicable",
+        token_usage_source="not_applicable",
+        input_tokens=0,
+        output_tokens=0,
+        cost_usd="0",
+        cost_input_usd="0",
+    )
+
+    assert USAGE_EVENT_ADAPTER.validate_python(denied).attempt_index is None
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python({**denied, "attempt_index": 1})

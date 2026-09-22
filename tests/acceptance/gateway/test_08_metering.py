@@ -373,6 +373,12 @@ def test_denied_requests_have_no_metered_cost(gateway: Gateway, dialect: Dialect
     (event,) = gateway.events(1)
     assert event.status == "denied"
     assert event.token_usage_source == "not_applicable"
+    assert event.cost_source == "not_applicable"
+    assert event.attempt_index is None
+    assert event.attempt_started_at is None
+    assert event.credential_id is None
+    assert event.credential_name is None
+    assert event.input_price_per_mtok is None
     assert (event.input_tokens, event.output_tokens, event.cache_read_tokens, event.cache_write_tokens) == (0, 0, 0, 0)
     assert_cost(event, "0", "0")
 
@@ -398,6 +404,12 @@ def test_fallback_prices_each_attempt_using_its_own_model(gateway: Gateway, dial
     assert (second.status, second.model_id, second.provider_id) == ("ok", "model-c", "backup")
     assert first.request_id == second.request_id
     assert first.bundle_id == second.bundle_id
+    assert (first.attempt_index, second.attempt_index) == (1, 2)
+    assert first.cost_source == second.cost_source == "catalog_estimate"
+    assert first.input_price_per_mtok == Decimal(2)
+    assert second.input_price_per_mtok == Decimal(10)
+    assert first.credential_name == "default"
+    assert second.credential_name == "default"
     assert first.credential_id != second.credential_id
     assert_cost(first, "0.000006", "0")
     assert_metering(second, RELOADED_EXPECTATIONS[backup_family])

@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
+from control_plane.models.bundle_input import bundle_input
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.org_owned import NotOwnedError
@@ -38,6 +39,7 @@ def _as_uuid(value: str) -> UUID | None:
 
 
 @audited
+@bundle_input(scope="org")
 class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
     """The scope inference keys live in; membership is drawn from the owning org.
 

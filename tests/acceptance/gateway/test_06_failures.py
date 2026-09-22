@@ -122,6 +122,11 @@ def test_fallback_crosses_provider_families_and_preserves_attempt_accounting(
     first, second = gateway.events(2)
     assert first.request_id == second.request_id
     assert first.bundle_id == second.bundle_id
+    assert (first.attempt_index, second.attempt_index) == (1, 2)
+    assert first.attempt_started_at is not None
+    assert second.attempt_started_at is not None
+    assert first.request_started_at <= first.attempt_started_at <= first.occurred_at
+    assert second.request_started_at <= second.attempt_started_at <= second.occurred_at
     assert first.status == ("rate_limited" if status == 429 else "upstream_error")
     assert (second.status, second.model_id, second.provider_id) == ("ok", "model-c", "backup")
     assert first.credential_id != second.credential_id

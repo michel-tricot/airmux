@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
@@ -102,7 +103,18 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
 def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE, user: UUID = USER):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token))
+    return token, KeyEntry(
+        key_id=str(key_id),
+        org_id=org,
+        workspace_id=workspace,
+        user_id=user,
+        token_hash=token_hash(token),
+        authentication_source="inference_key",
+        authentication_label="Test key",
+        principal_label="Test principal",
+        principal_type="human",
+        workspace_label="Test workspace",
+    )
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -168,12 +180,22 @@ CTX = Ctx(
     org_id=ORG,
     workspace_id=WORKSPACE,
     key_id="k-dev",
+    authentication_source="inference_key",
+    authentication_label="Test key",
     user_id=ORG,
+    principal_label="Test principal",
+    principal_type="human",
+    workspace_label="Test workspace",
     requested_model_id="gpt-test",
     requested_capabilities=frozenset(),
     credential_id=uuid7(),
     credential_scope="workspace",
+    credential_name="default",
     bundle_id=uuid7(),
+    attempt_index=1,
+    request_started_at=NOW,
+    attempt_started_at=NOW,
+    attempt_started_monotonic=time.monotonic(),
 )
 
 

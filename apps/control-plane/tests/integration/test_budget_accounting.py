@@ -89,7 +89,13 @@ def test_filtered_history_per_key_pages_and_permissions(tmp_path):
             for key, amount in zip(keys, ("70", "20"), strict=True)
         ]
         excluded = [
-            {**events[0], "event_id": str(uuid4()), **change}
+            {
+                **events[0],
+                "event_id": str(uuid4()),
+                "request_id": str(uuid4()),
+                **({"request_started_at": change["occurred_at"], "attempt_started_at": change["occurred_at"]} if "occurred_at" in change else {}),
+                **change,
+            }
             for change in (
                 {"workspace_id": str(other_workspace)},
                 {"stream": False},

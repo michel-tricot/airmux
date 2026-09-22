@@ -14,6 +14,8 @@ from control_plane.models import (
     PlaygroundSession,
     Provider,
     ProviderCredential,
+    User,
+    Workspace,
 )
 from control_plane.models.policy import Policy
 
@@ -68,6 +70,10 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
         raise UnknownOrgError(org_id)
     key_rows = await InferenceKey.find(InferenceKey.org_id == org_id, order_by=col(InferenceKey.id))
     playground_sessions = await PlaygroundSession.find(PlaygroundSession.org_id == org_id, order_by=col(PlaygroundSession.id))
+    user_ids = {key.user_id for key in key_rows} | {session.user_id for session in playground_sessions}
+    workspace_ids = {key.workspace_id for key in key_rows} | {session.workspace_id for session in playground_sessions}
+    users = {user.id: user for user in await User.find(col(User.id).in_(user_ids))}
+    workspaces = {workspace.id: workspace for workspace in await Workspace.find(col(Workspace.id).in_(workspace_ids))}
     provider_rows = await Provider.find(order_by=col(Provider.name))
     model_rows = await Model.find(order_by=col(Model.name))
     provider_names = {p.id: p.name for p in provider_rows}
@@ -83,7 +89,18 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
         policies=tuple(policy.entry() for policy in policies),
         keys=(
             *(
-                KeyEntry(key_id=str(key.id), org_id=key.org_id, workspace_id=key.workspace_id, user_id=key.user_id, token_hash=key.token_hash)
+                KeyEntry(
+                    key_id=str(key.id),
+                    org_id=key.org_id,
+                    workspace_id=key.workspace_id,
+                    user_id=key.user_id,
+                    token_hash=key.token_hash,
+                    authentication_source="inference_key",
+                    authentication_label=key.label,
+                    principal_label=users[key.user_id].name,
+                    principal_type="service_account" if users[key.user_id].service_account else "human",
+                    workspace_label=workspaces[key.workspace_id].name,
+                )
                 for key in key_rows
                 if not key.revoked
             ),
@@ -94,6 +111,11 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     workspace_id=playground_session.workspace_id,
                     user_id=playground_session.user_id,
                     token_hash=playground_session.token_hash,
+                    authentication_source="playground",
+                    authentication_label="Playground",
+                    principal_label=users[playground_session.user_id].name,
+                    principal_type="service_account" if users[playground_session.user_id].service_account else "human",
+                    workspace_label=workspaces[playground_session.workspace_id].name,
                     expires_at=playground_session.expires_at,
                 )
                 for playground_session in playground_sessions
