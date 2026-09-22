@@ -80,7 +80,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     configure_logger(logger, dev=settings.dev)
     engine = make_engine(settings.database.url)
-    try:
+    async with contextlib.AsyncExitStack() as cleanup:
+        cleanup.callback(flush_logger, logger)
+        cleanup.push_async_callback(asyncio.to_thread, app.state.metrics.shutdown)
+        cleanup.push_async_callback(engine.dispose)
+        cleanup.callback(app.state.password_workers.close)
         await _require_migrated_schema(engine)
         app.state.session_factory = make_session_factory(engine)
         if settings.bootstrap is not None:
@@ -95,15 +99,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 publisher.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await publisher
-    finally:
-        app.state.password_workers.close()
-        try:
-            await engine.dispose()
-        finally:
-            try:
-                await asyncio.to_thread(app.state.metrics.shutdown)
-            finally:
-                flush_logger(logger)
 
 
 async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:
