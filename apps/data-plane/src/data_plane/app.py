@@ -11,7 +11,7 @@ import aiohttp
 from starlette.applications import Starlette
 from starlette.routing import Route
 
-from airmux_runtime.observability import configure_logger, log_event
+from airmux_runtime.observability import configure_logger, flush_logger, log_event
 from data_plane.budgets import build_budget_backend
 from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, HttpConfig, load_config
@@ -110,7 +110,10 @@ def create_app(config: Config) -> ASGIApp:
                 try:
                     await outbox.close()
                 finally:
-                    await asyncio.to_thread(metrics.shutdown)
+                    try:
+                        await asyncio.to_thread(metrics.shutdown)
+                    finally:
+                        flush_logger(logger)
 
     app = Starlette(
         routes=[

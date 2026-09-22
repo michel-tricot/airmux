@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from gateway_harness import DIALECTS, PROTOCOLS, error_of, request_body, text_of
+from gateway_harness import DIALECTS, PROTOCOLS, error_of, eventually, request_body, text_of
 from upstream import TEXT
 
 if TYPE_CHECKING:
@@ -86,3 +87,31 @@ def test_malformed_request_does_not_reach_the_provider_and_service_recovers(gate
     assert gateway.events(0) == []
     assert gateway.request().status_code == 200
     assert gateway.events(1)[0].status == "ok"
+
+
+def test_production_usage_logs_flush_while_idle_and_match_accounting(gateway: Gateway):
+    gateway.add_provider()
+    gateway.start()
+    responses = [gateway.request(stream=stream) for stream in (False, True)]
+    assert all(response.status_code == 200 for response in responses)
+    events = gateway.events(2)
+
+    def logs_match_events():
+        payloads = [json.loads(line) for line in (gateway.directory / "gateway.log").read_text().splitlines() if line.startswith("{")]
+        usage = [payload for payload in payloads if payload.get("event") == "usage_recorded"]
+        if len(usage) < len(events):
+            return False
+        assert len(usage) == len(events)
+        assert {payload["request_id"] for payload in usage} == {response.headers["x-request-id"] for response in responses}
+        for payload, event in zip(usage, events, strict=True):
+            assert (payload["request_id"], payload["input_tokens"], payload["output_tokens"], payload["stream"]) == (
+                str(event.request_id),
+                event.input_tokens,
+                event.output_tokens,
+                event.stream,
+            )
+        return True
+
+    eventually(logs_match_events)
+    gateway.stop()
+    assert logs_match_events()
