@@ -17,6 +17,7 @@ dependencies = [
   "opentelemetry-exporter-prometheus",
   "opentelemetry-sdk",
   "pydantic>=2",
+  "uuid-utils>=1.0,<2",
   "prometheus-client",
   "python-dotenv",
   "pyyaml",
