@@ -13,7 +13,7 @@ from data_plane.responses import JSONResponse
 if TYPE_CHECKING:
     from starlette.responses import Response
 
-    from data_plane.canonical import CanonicalError, CanonicalResponse
+    from data_plane.canonical import CanonicalDelta, CanonicalError, CanonicalResponse
     from data_plane.egress.base import Ctx
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
@@ -68,10 +68,16 @@ class AnthropicResponseStream:
             events.append(fmt.ContentBlockDelta(index=block.index, delta=fmt.SignatureDeltaOut(signature=signature)).sse())
         return [*events, fmt.ContentBlockStop(index=block.index).sse()]
 
-    def _switch(self, key: str, opening: fmt.BlockOut) -> tuple[list[bytes], int]:
+    def _switch(self, key: str, delta: CanonicalDelta) -> tuple[list[bytes], int]:
         """The one boundary rule: same key keeps the open block, a new key ends it and starts the next."""
         if self.open is not None and self.open.key == key:
             return [], self.open.index
+        if delta.type == "text":
+            opening = fmt.TextOut(text="")
+        elif delta.type == "reasoning":
+            opening = fmt.ThinkingOut(thinking="")
+        else:
+            opening = fmt.ToolUseOut(id=delta.id or "", name=delta.name or "", input={})
         events = self._close()
         self.open = _OpenBlock(index=self.opened, key=key)
         self.opened += 1
@@ -82,10 +88,10 @@ class AnthropicResponseStream:
         if delta is None:
             return []
         if delta.type == "text":
-            events, index = self._switch("text", fmt.TextOut(text=""))
+            events, index = self._switch("text", delta)
             return [*events, fmt.ContentBlockDelta(index=index, delta=fmt.TextDeltaOut(text=delta.text)).sse()]
         if delta.type == "reasoning":
-            events, index = self._switch("thinking", fmt.ThinkingOut(thinking=""))
+            events, index = self._switch("thinking", delta)
             if self.open is not None:
                 self.open.reasoning_id = delta.id or self.open.reasoning_id
                 if delta.signature:
@@ -93,8 +99,7 @@ class AnthropicResponseStream:
             if delta.text:
                 events.append(fmt.ContentBlockDelta(index=index, delta=fmt.ThinkingDeltaOut(thinking=delta.text)).sse())
             return events
-        opening = fmt.ToolUseOut(id=delta.id or "", name=delta.name or "", input={})
-        events, index = self._switch(f"tool:{delta.index}", opening)
+        events, index = self._switch(f"tool:{delta.index}", delta)
         if delta.arguments:
             events.append(fmt.ContentBlockDelta(index=index, delta=fmt.InputJsonDeltaOut(partial_json=delta.arguments)).sse())
         return events
