@@ -279,6 +279,7 @@ type CheckboxDropdownOption = { value: string; label: React.ReactNode };
 type CheckboxDropdownEmptyState = { allLabel: string; emptyLabel?: never } | { allLabel?: never; emptyLabel: string };
 
 export const CheckboxDropdown = ({
+  id,
   label,
   allLabel,
   emptyLabel,
@@ -289,6 +290,7 @@ export const CheckboxDropdown = ({
   className,
   'aria-label': ariaLabel,
 }: {
+  id?: string;
   label: string;
   values: readonly string[];
   onValuesChange: (values: string[]) => void;
@@ -300,6 +302,7 @@ export const CheckboxDropdown = ({
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button
+        id={id}
         variant="outline"
         size="sm"
         aria-label={ariaLabel}

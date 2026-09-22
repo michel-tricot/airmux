@@ -1,13 +1,15 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { OverviewAttributionOut, OverviewMetricsOut, OverviewReportOut } from '@workspace/api-client-react';
 import { Activity, Coins, Gauge, ReceiptText, TimerReset } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle, Dropdown, Input, Label } from '@/components/ui/elements';
+import { Link } from 'wouter';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { formatKnownMoney, formatKnownTokens, OverviewTimeSeries } from '@/components/shared/overview-time-series';
 import { SearchPicker } from '@/components/shared/search-picker';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import type { OverviewFilters } from '@/features/reporting/filters';
+import { overviewRequestsHref } from '@/features/reporting/request-filters';
 import { formatSignedExactUsd } from '@/lib/money';
 
 type FilterName =
@@ -32,6 +34,7 @@ interface SpendingOverviewProps {
   onFilterChange: (name: FilterName, value: string | string[] | null) => void;
   query: UseQueryResult<OverviewReportOut>;
   authorized: boolean;
+  requestsPath: string;
 }
 
 const labels = (value: string) => value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase());
@@ -309,9 +312,11 @@ function Summary({ report }: { report: OverviewReportOut }) {
 function formatShare(value: string | null) {
   if (value === null) return 'Unavailable';
   const match = /^(\d+)(?:\.(\d+))?$/.exec(value);
-  if (!match || (match[2]?.length ?? 0) > 12) return 'Unavailable';
-  const ratio = BigInt(match[1]) * 1_000_000_000_000n + BigInt((match[2] ?? '').padEnd(12, '0'));
-  const basisPoints = (ratio * 10_000n + 500_000_000_000n) / 1_000_000_000_000n;
+  if (!match) return 'Unavailable';
+  const fraction = match[2] ?? '';
+  const scale = 10n ** BigInt(fraction.length);
+  const ratio = BigInt(match[1]) * scale + BigInt(fraction || '0');
+  const basisPoints = (ratio * 10_000n + scale / 2n) / scale;
   return `${basisPoints / 100n}.${(basisPoints % 100n).toString().padStart(2, '0')}%`;
 }
 
@@ -322,8 +327,22 @@ function formatAttributionChange(row: OverviewAttributionOut) {
   return `${formatSignedExactUsd(delta.known_cost_usd)}${suffix}`;
 }
 
-const attributionColumns = [
-  { key: 'group', header: 'Group', cell: (row: OverviewAttributionOut) => row.label },
+const attributionColumns = (report: OverviewReportOut, filters: OverviewFilters, requestsPath: string, scope: SpendingOverviewProps['scope']) => [
+  {
+    key: 'group',
+    header: 'Group',
+    cell: (row: OverviewAttributionOut) => {
+      const linkable = (row.id !== null || report.group === 'provider_credential') && !(scope === 'workspace' && report.group === 'workspace');
+      if (!linkable) return row.label;
+      return (
+        <Button asChild variant="ghost" size="sm" className="normal-case tracking-normal">
+          <Link href={overviewRequestsHref(requestsPath, filters, report.freshness.as_of, { group: report.group, id: row.id }, scope)}>
+            {row.label}
+          </Link>
+        </Button>
+      );
+    },
+  },
   {
     key: 'spend',
     header: 'Known spend',
@@ -371,7 +390,7 @@ const attributionColumns = [
   },
 ];
 
-export function SpendingOverview({ title, description, scope, filters, onFilterChange, query, authorized }: SpendingOverviewProps) {
+export function SpendingOverview({ title, description, scope, filters, onFilterChange, query, authorized, requestsPath }: SpendingOverviewProps) {
   return (
     <PageShell>
       <PageHeader title={title} description={description} />
@@ -385,6 +404,11 @@ export function SpendingOverview({ title, description, scope, filters, onFilterC
       ) : (
         <>
           <Summary report={query.data} />
+          <div className="flex justify-end">
+            <Button asChild variant="outline">
+              <Link href={overviewRequestsHref(requestsPath, filters, query.data.freshness.as_of, undefined, scope)}>View matching requests</Link>
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Freshness and completeness</CardTitle>
@@ -440,7 +464,7 @@ export function SpendingOverview({ title, description, scope, filters, onFilterC
                 rows={query.data.attribution}
                 rowKey={(row) => row.id ?? row.label}
                 empty="No attribution rows in this period."
-                columns={attributionColumns}
+                columns={attributionColumns(query.data, filters, requestsPath, scope)}
               />
             </section>
           )}

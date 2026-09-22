@@ -53,9 +53,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
   const switchWorkspace = (slug: string) => {
-    const preserveFilters = location === '/org' || (activeSuffix === '' && routedWorkspaceRef !== '');
-    const query = preserveFilters && search ? `?${search}` : '';
-    setLocation(slug === ALL_WORKSPACES ? `/org${query}` : `/org/workspaces/${slug}${activeSuffix}${query}`);
+    const overviewRoute = location === '/org' || (activeSuffix === '' && routedWorkspaceRef !== '');
+    const requestsRoute = location === '/org/requests' || activeSuffix === '/requests';
+    const preserveFilters = overviewRoute || requestsRoute;
+    const nextSearch = new URLSearchParams(preserveFilters ? search : '');
+    nextSearch.delete('request');
+    nextSearch.delete('as_of');
+    if (slug !== ALL_WORKSPACES) nextSearch.delete('workspace');
+    const query = nextSearch.size ? `?${nextSearch}` : '';
+    const suffix = requestsRoute ? '/requests' : activeSuffix;
+    setLocation(slug === ALL_WORKSPACES ? `/org${requestsRoute ? '/requests' : ''}${query}` : `/org/workspaces/${slug}${suffix}${query}`);
   };
 
   const sidebar = (close: () => void) => (

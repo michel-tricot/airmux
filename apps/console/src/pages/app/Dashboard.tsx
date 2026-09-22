@@ -23,6 +23,7 @@ export default function AppDashboard() {
       onFilterChange={(name, value) => setSearch(setOverviewFilter(search, name, value), { replace: true })}
       query={report}
       authorized={authorized}
+      requestsPath="/org/requests"
     />
   );
 }

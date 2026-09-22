@@ -74,6 +74,13 @@ const emptyReport: Api.OverviewReportOut = {
   attribution: [],
 };
 
+const emptyRequestPage: Api.GatewayRequestPageOut = {
+  freshness: emptyReport.freshness,
+  period: emptyReport.periods.current,
+  items: [],
+  page: { next_cursor: null },
+};
+
 export function paged<T>(data: T[]) {
   return HttpResponse.json({ data, page: { next_cursor: null } });
 }
@@ -125,4 +132,6 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () => paged<Api.UsageEventOut>([])),
   http.get('/api/v1/organizations/:orgId/reports/overview', () => HttpResponse.json({ data: emptyReport })),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/reports/overview', () => HttpResponse.json({ data: emptyReport })),
+  http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: emptyRequestPage })),
+  http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/reports/requests', () => HttpResponse.json({ data: emptyRequestPage })),
 );

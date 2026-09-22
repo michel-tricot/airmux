@@ -1,38 +1,36 @@
 import { useSearchParams } from 'wouter';
-import { SpendingOverview } from '@/components/shared/spending-overview';
+import { RequestsExplorer } from '@/components/shared/requests-explorer';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { useAuthorization } from '@/features/permissions/hooks';
-import { parseOverviewFilters, setOverviewFilter, workspaceOverviewParams } from '@/features/reporting/filters';
-import { useWorkspaceOverviewReport } from '@/features/reporting/hooks';
+import { parseRequestFilters, setRequestFilter } from '@/features/reporting/request-filters';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { useWorkspace } from '@/features/workspaces/hooks';
 import { useRequiredParam } from '@/lib/route';
 import { useRequiredOrgId } from '@/lib/session';
 
-export default function WorkspaceOverview() {
+export default function Requests() {
   const orgId = useRequiredOrgId();
   const workspaceRef = useRequiredParam('workspaceRef');
   const workspace = useWorkspace(orgId, workspaceRef);
   const authorization = useAuthorization('workspace');
-  const authorized = authorization.can(telemetryAccess.workspaceOverview);
+  const authorized = authorization.can(telemetryAccess.workspaceRequests);
   const [search, setSearch] = useSearchParams();
-  const filters = parseOverviewFilters(search, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
-  const report = useWorkspaceOverviewReport(orgId, workspaceRef, workspaceOverviewParams(filters), { enabled: authorized });
+  const filters = parseRequestFilters(search, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
 
   if (workspace.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspace.isError) return <ErrorState error={workspace.error} resource="workspace" onRetry={() => workspace.refetch()} />;
   if (!workspace.data) return <ErrorState message="Workspace not found" />;
 
   return (
-    <SpendingOverview
-      title={workspace.data.name}
-      description="Gateway-observed estimated spending and usage for this workspace."
+    <RequestsExplorer
+      orgId={orgId}
+      workspaceRef={workspaceRef}
       scope="workspace"
+      title={`${workspace.data.name} Requests`}
+      description="Logical gateway requests, retries, accounting evidence, and exact export for this workspace."
       filters={filters}
-      onFilterChange={(name, value) => setSearch(setOverviewFilter(search, name, value), { replace: true })}
-      query={report}
       authorized={authorized}
-      requestsPath={`/org/workspaces/${workspaceRef}/requests`}
+      onFilterChange={(name, value) => setSearch(setRequestFilter(search, name, value), { replace: true })}
     />
   );
 }

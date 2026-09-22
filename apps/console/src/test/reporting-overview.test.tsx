@@ -176,6 +176,21 @@ describe('shared spending overview', () => {
     expect(events).not.toHaveBeenCalled();
   });
 
+  it('formats high-precision attribution shares without discarding valid data', async () => {
+    const base = report();
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/overview', () =>
+        HttpResponse.json({
+          data: report({ attribution: [{ ...base.attribution[0], share_of_known_cost: '0.748741234567890123' }] }),
+        }),
+      ),
+    );
+
+    renderAt('/org');
+
+    expect(await screen.findByText('74.87%')).toBeInTheDocument();
+  });
+
   it('uses the workspace report with the same rendering', async () => {
     const workspaceReport = vi.fn(() => HttpResponse.json({ data: report() }));
     server.use(http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/reports/overview', workspaceReport));
@@ -288,6 +303,54 @@ describe('shared spending overview', () => {
     expect(params.getAll('model')).toEqual(['gpt-4o', 'claude']);
     expect(params.getAll('provider')).toEqual(['openai']);
     expect(screen.getByRole('combobox', { name: 'Attribution group' })).toHaveTextContent('Provider credential');
+  });
+
+  it('builds snapshot-pinned total and provider credential drilldowns from active analytical filters', async () => {
+    const base = report();
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/overview', () =>
+        HttpResponse.json({
+          data: report({
+            group: 'provider_credential',
+            attribution: [{ ...base.attribution[0], id: null, label: 'Unattributed' }],
+          }),
+        }),
+      ),
+    );
+    renderAt(
+      '/org?range=custom&timezone=UTC&start_date=2026-09-01&end_date=2026-09-22&bucket=hour&split=provider&group=provider_credential' +
+        '&workspace=ws-1&principal=user-1&model=model-1&provider=openai',
+    );
+
+    const total = await screen.findByRole('link', { name: 'View matching requests' });
+    const totalParams = new URL(total.getAttribute('href')!, 'http://console.test').searchParams;
+    expect(totalParams.get('as_of')).toBe('snapshot-1');
+    expect(totalParams.getAll('workspace')).toEqual(['ws-1']);
+    expect(totalParams.get('principal')).toBe('user-1');
+    expect(totalParams.get('model')).toBe('model-1');
+    expect(totalParams.get('provider')).toBe('openai');
+    expect(totalParams.has('bucket')).toBe(false);
+    expect(totalParams.has('split')).toBe(false);
+    expect(totalParams.has('group')).toBe(false);
+
+    const unattributed = screen.getByRole('link', { name: 'Unattributed' });
+    const attributionParams = new URL(unattributed.getAttribute('href')!, 'http://console.test').searchParams;
+    expect(attributionParams.getAll('provider_credential')).toEqual(['unattributed']);
+  });
+
+  it('does not invent unattributed model or provider drilldowns', async () => {
+    const base = report();
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/overview', () =>
+        HttpResponse.json({
+          data: report({ group: 'model', attribution: [{ ...base.attribution[0], id: null, label: 'Unknown model' }] }),
+        }),
+      ),
+    );
+    renderAt('/org?group=model');
+
+    expect(await screen.findByText('Unknown model')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Unknown model' })).not.toBeInTheDocument();
   });
 
   it('does not request reporting without usage.read', async () => {

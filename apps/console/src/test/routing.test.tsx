@@ -17,6 +17,7 @@ const WS = WORKSPACES[0];
 
 const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name },
+  { suffix: '/requests', heading: `${WS.name} Requests` },
   { suffix: '/inference-keys', heading: 'Inference Keys' },
   { suffix: '/byok', heading: 'Provider Keys' },
   { suffix: '/settings', heading: 'Workspace Settings' },
@@ -119,13 +120,39 @@ describe('workspace switching keeps the active section', () => {
       expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[1].slug}${suffix}`);
     });
 
-    const expectedHeading = suffix === '' ? WORKSPACES[1].name : heading;
+    const expectedHeading = suffix === '' ? WORKSPACES[1].name : suffix === '/requests' ? `${WORKSPACES[1].name} Requests` : heading;
     expect(await screen.findByRole('heading', { level: 1, name: expectedHeading })).toBeInTheDocument();
 
     const active = document.querySelector(`a[href="/org/workspaces/${WORKSPACES[1].slug}${suffix}"]`);
     expect(active).not.toBeNull();
     expect(active).toHaveAttribute('aria-current', 'page');
     expect(active).toHaveTextContent(sectionLabel(suffix));
+  });
+
+  it('preserves request filters while dropping scope-invalid values', async () => {
+    const user = userEvent.setup();
+    renderAt('/org/requests?range=30d&timezone=UTC&workspace=ws-1&provider=openai&as_of=org-snapshot');
+    await screen.findByRole('heading', { level: 1, name: 'Organization Requests' });
+
+    await user.click(screen.getByRole('combobox', { name: 'Workspace' }));
+    await user.click(await screen.findByRole('option', { name: WORKSPACES[0].name }));
+
+    await waitFor(() => expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[0].slug}/requests`));
+    let search = new URLSearchParams(window.location.search);
+    expect(search.get('range')).toBe('30d');
+    expect(search.get('timezone')).toBe('UTC');
+    expect(search.get('provider')).toBe('openai');
+    expect(search.has('workspace')).toBe(false);
+    expect(search.has('request')).toBe(false);
+    expect(search.has('as_of')).toBe(false);
+
+    await user.click(screen.getByRole('combobox', { name: 'Workspace' }));
+    await user.click(await screen.findByRole('option', { name: 'All workspaces' }));
+
+    await waitFor(() => expect(window.location.pathname).toBe('/org/requests'));
+    search = new URLSearchParams(window.location.search);
+    expect(search.get('range')).toBe('30d');
+    expect(search.get('provider')).toBe('openai');
   });
 });
 
@@ -151,6 +178,7 @@ describe('workspace route state', () => {
 function sectionLabel(suffix: string): string {
   return {
     '': 'Overview',
+    '/requests': 'Requests',
     '/inference-keys': 'Inference Keys',
     '/byok': 'BYOK',
     '/settings': 'Settings',

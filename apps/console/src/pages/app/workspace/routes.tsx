@@ -1,5 +1,5 @@
 import { lazy, type ComponentType } from 'react';
-import { Database, FlaskConical, KeyRound, LayoutGrid, Settings, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { Database, FlaskConical, KeyRound, LayoutGrid, ListTree, Settings, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { policyAccess } from '@/features/policies/policy';
 import { allOf, anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { catalogAccess } from '@/features/catalog/policy';
@@ -8,8 +8,10 @@ import { inferenceKeyAccess, managementKeyAccess } from '@/features/keys/policy'
 import { workspaceMemberAccess } from '@/features/members/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 import { playgroundAccess } from '@/features/playground/policy';
+import { telemetryAccess } from '@/features/telemetry/policy';
 
 const Overview = lazy(() => import('./Overview'));
+const Requests = lazy(() => import('./Requests'));
 const Playground = lazy(() => import('./Playground'));
 const InferenceKeys = lazy(() => import('./InferenceKeys'));
 const Byok = lazy(() => import('./Byok'));
@@ -26,6 +28,7 @@ interface WorkspaceRouteDefinition {
 
 export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
   { suffix: '', label: 'Overview', icon: LayoutGrid, access: workspaceAccess.read, component: Overview },
+  { suffix: '/requests', label: 'Requests', icon: ListTree, access: telemetryAccess.workspaceRequests, component: Requests },
   {
     suffix: '/playground',
     label: 'Playground',

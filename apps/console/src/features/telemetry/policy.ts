@@ -7,5 +7,7 @@ export const telemetryAccess = {
   workspaceUsage: operationAuthority.listWorkspaceEvents,
   orgOverview: operationAuthority.getOrgOverviewReport,
   workspaceOverview: operationAuthority.getWorkspaceOverviewReport,
+  orgRequests: operationAuthority.listOrgGatewayRequests,
+  workspaceRequests: operationAuthority.listWorkspaceGatewayRequests,
   dataPlanes: operationAuthority.listDataPlanes,
 } as const;
