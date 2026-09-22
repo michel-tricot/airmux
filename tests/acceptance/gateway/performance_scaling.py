@@ -26,7 +26,7 @@ class ScalingCase(BaseModel):
 
 CASES = tuple(
     ScalingCase(workers=workers, max_connections=connections, concurrency=concurrency, protocol=protocol)
-    for workers, connections, concurrency, protocol in product((1, 2, 4), (100, 256), (32, 128), ("http1", "http2"))
+    for workers, connections, concurrency, protocol in product((1, 2, 4), (100, 256), (32, 128), ("http1", "https"))
 )
 
 
@@ -125,13 +125,13 @@ def benchmark(  # noqa: PLR0913 CLI flags define the scaling experiment
                         "cpu_count": os.cpu_count(),
                         "duration_s": duration_s,
                         "warmup": warmup,
-                        "keepalive_connections_per_worker": 20,
+                        "keepalive_timeout_s": 15,
                         "overhead_methodology": OVERHEAD_METHOD,
                         "resource_methodology": (
                             "CPU seconds are process-time deltas over warmup and load, divided by that window's wall time. "
                             "Gateway CPU includes its worker processes; client CPU excludes children. "
                             "Provider connections count distinct client addresses used for inference during warmup and load, including churn. "
-                            "HTTP/2 direct controls multiplex over one connection; proxied traffic can use one per gateway worker. "
+                            "Direct and proxied traffic use HTTP/1.1, including TLS workloads. "
                             "CPU and connection observations run outside request timing; the provider tracks addresses only, not payloads."
                         ),
                         "measurements": [measurement.model_dump(mode="json") for measurement in measurements],

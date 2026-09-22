@@ -7,7 +7,7 @@ import os
 import signal
 from typing import TYPE_CHECKING
 
-import httpx2
+import aiohttp
 from starlette.applications import Starlette
 from starlette.routing import Route
 
@@ -49,11 +49,12 @@ async def readyz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ready"})
 
 
-def _build_http_client(config: HttpConfig) -> httpx2.AsyncClient:
-    return httpx2.AsyncClient(
-        http2=True,
-        limits=httpx2.Limits(max_connections=config.max_connections, max_keepalive_connections=config.max_keepalive_connections),
-        timeout=httpx2.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
+def _build_http_client(config: HttpConfig) -> aiohttp.ClientSession:
+    return aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(limit=config.max_connections),
+        timeout=aiohttp.ClientTimeout(total=None, connect=5, sock_read=120),
+        cookie_jar=aiohttp.DummyCookieJar(),
+        trust_env=any(os.environ.get(name) for name in ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy")),
     )
 
 

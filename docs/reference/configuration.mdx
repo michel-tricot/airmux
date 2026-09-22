@@ -82,20 +82,23 @@ The data plane creates one outbound HTTP client per worker. Configure its connec
 data_plane:
   http:
     max_connections: 100
-    max_keepalive_connections: 20
 ```
 
-These are the defaults. Both values must be integers from 1 through 65,535, and the keepalive limit must not exceed
-the total limit. Whole-value environment or file references can supply integer strings. Booleans, fractional values,
-null, and unbounded limits are rejected during configuration validation.
+The default is 100 active connections. The limit must be an integer from 1 through 65,535. Whole-value environment
+or file references can supply integer strings. Booleans, fractional values, null, and unbounded limits are rejected.
 
-Limits cover all destinations used by the worker's shared client, including providers, remote bundle fetching,
-heartbeats, and usage export. Four workers with `max_connections: 256` can therefore allocate up to 1,024 outbound
-connections across their independent pools. HTTP/2 can multiplex many requests over one connection; the connection
-limit is not a request-concurrency limit.
+Each worker shares one native aiohttp session across providers, remote bundle fetching, heartbeats, and usage export.
+Connections are reused by destination, with a 15-second idle keepalive timeout. The limit bounds active connections;
+idle connections to other destinations can remain cached until they expire. Four workers with `max_connections: 256`
+can have up to 1,024 active outbound connections.
 
-Connect, read, write, and pool timeouts remain 5, 120, 30, and 5 seconds respectively. Idle keepalive expiry remains
-5 seconds. Changing these settings requires restarting the gateway.
+Outbound requests use HTTP/1.1, including over TLS. Connect and pool acquisition share a 5-second timeout; response
+reads have a 120-second idle timeout. There is no overall inference deadline. Budget refreshes have a 5-second total
+timeout. Responses stream with backpressure, and closing a stream releases its connection slot immediately.
+
+Provider cookies are never stored, and redirects are not followed. aiohttp honors `HTTP_PROXY`, `HTTPS_PROXY`, and
+`NO_PROXY` when a proxy is configured at startup. Without a configured proxy, environment and netrc lookups are disabled
+to avoid thread-pool work on each request. Changing these settings requires restarting the gateway.
 
 ## Event outboxes
 

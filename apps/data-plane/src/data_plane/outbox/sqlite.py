@@ -7,10 +7,11 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import httpx2
+import aiohttp
 from pydantic import TypeAdapter
 
 from contract import UsageEvent
+from data_plane.control_plane_link import complete_response
 from data_plane.outbox.queued import QueuedOutbox
 from data_plane.tasks import run_periodic
 
@@ -63,7 +64,7 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 
 
 class SqliteOutbox(QueuedOutbox):
-    def __init__(self, config: SqliteOutboxConfig, http_client: httpx2.AsyncClient, metrics: DataPlaneMetrics) -> None:
+    def __init__(self, config: SqliteOutboxConfig, http_client: aiohttp.ClientSession, metrics: DataPlaneMetrics) -> None:
         self._config = config
         self._http_client = http_client
         self._owner = str(os.getpid())
@@ -134,14 +135,15 @@ class SqliteOutbox(QueuedOutbox):
             return 0
         started_at = time.monotonic()
         try:
-            response = await self._http_client.post(
+            async with self._http_client.post(
                 f"{self._config.control_plane.url}/api/v1/events",
                 headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
                 json=[event.model_dump(mode="json") for event in events],
-            )
-            response.raise_for_status()
+                allow_redirects=False,
+            ) as response:
+                await complete_response(response)
             await self.acknowledge([str(event.event_id) for event in events])
-        except (httpx2.HTTPError, OSError, sqlite3.Error):
+        except (aiohttp.ClientError, TimeoutError, OSError, sqlite3.Error):
             self._metrics.observe_metering_export("failed", started_at)
             raise
         self._metrics.observe_metering_export("success", started_at)
@@ -167,7 +169,7 @@ class SqliteOutbox(QueuedOutbox):
         await run_periodic(
             self._export_and_log,
             self._config.flush_interval_s,
-            (httpx2.HTTPError, OSError, sqlite3.Error),
+            (aiohttp.ClientError, TimeoutError, OSError, sqlite3.Error),
             "event export",
         )
 

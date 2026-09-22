@@ -7,9 +7,9 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from http import HTTPStatus
 from typing import TYPE_CHECKING
 
-import httpx2
 import tiktoken
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("data_plane")
 
-REJECTS_CREDENTIAL = frozenset({httpx2.codes.UNAUTHORIZED, httpx2.codes.FORBIDDEN})
+REJECTS_CREDENTIAL = frozenset({HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN})
 
 
 @dataclass(frozen=True)
@@ -66,13 +66,13 @@ def estimate_tokens(text: str, model: ModelEntry) -> int:
 
 
 def status_for_error(error: Exception) -> RoutedUsageStatus:
-    return "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_error"
+    return "timeout" if isinstance(error, TimeoutError) else "upstream_error"
 
 
 def status_for_upstream(status_code: int) -> RoutedUsageStatus:
     if status_code in REJECTS_CREDENTIAL:
         return "credential_rejected"
-    return "rate_limited" if status_code == httpx2.codes.TOO_MANY_REQUESTS else "upstream_error"
+    return "rate_limited" if status_code == HTTPStatus.TOO_MANY_REQUESTS else "upstream_error"
 
 
 def _text_of(parts: Sequence[object]) -> str:

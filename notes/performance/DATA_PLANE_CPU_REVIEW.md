@@ -1,5 +1,7 @@
 # Data-plane CPU review
 
+This report covers the credential-cache and stream-accumulation changes before the transport migration. See [native aiohttp results](NATIVE_AIOHTTP.md) for the current transport and its additional CPU savings.
+
 The fresh request-path review found two application costs that grow unnecessarily: credential-cache cleanup scans unrelated credentials on each request, and several streaming adapters repeatedly copy the entire accumulated response. The implementation bounds cleanup frequency and accumulates stream fragments in lists. HTTPX2, validation, policy evaluation, accounting, logs, and metrics remain enabled.
 
 Three alternating rounds against the unchanged gateway produced these medians on the same laptop and Docker image:

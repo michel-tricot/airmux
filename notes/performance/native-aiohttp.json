@@ -1,0 +1,1110 @@
+{
+  "baseline_commit": "6d56c2a1ea015f5bd7d66de15a6ce5e64462521c",
+  "image_id": "sha256:949b35ffa05699e3e7d0e7f45b9d47c339a379ed99e263da8cf4056cd1387995",
+  "container_limits": {
+    "cpus": 4,
+    "memory_gib": 8,
+    "network": "none"
+  },
+  "workers": 1,
+  "runtime": {
+    "python": "3.13.15",
+    "aiohttp": "3.14.3",
+    "httpx2": "2.13.0",
+    "platform": "Linux ARM64"
+  },
+  "medians": {
+    "baseline": {
+      "rps": 1407.7499603983042,
+      "p99_c64_headers_ms": 73.909492,
+      "p99_c16_body_ms": 39.585,
+      "difference_of_p99_ms": 6.524999999999999,
+      "cpu_us_per_request": 641.5,
+      "cpu_percent_one_core": 90.14900629192705,
+      "idle_rss_mb": 82.239488,
+      "peak_rss_mb": 86.573056,
+      "dense": {
+        "cpu_ms_per_request": 36.0,
+        "completion_p50_ms": 53.42819549878186,
+        "first_content_p50_ms": 4.758202998345951,
+        "peak_rss_mb": 84.66432
+      },
+      "large": {
+        "cpu_ms_per_request": 93.0,
+        "completion_p50_ms": 129.60531850148982,
+        "first_content_p50_ms": 4.802744499102118,
+        "peak_rss_mb": 101.625856
+      }
+    },
+    "aiohttp": {
+      "rps": 1945.2089662231388,
+      "p99_c64_headers_ms": 53.536038,
+      "p99_c16_body_ms": 33.672,
+      "difference_of_p99_ms": 0.44700000000000273,
+      "cpu_us_per_request": 294.0,
+      "cpu_percent_one_core": 59.17714180281242,
+      "idle_rss_mb": 86.945792,
+      "peak_rss_mb": 89.591808,
+      "dense": {
+        "cpu_ms_per_request": 35.999999999999986,
+        "completion_p50_ms": 51.97627400048077,
+        "first_content_p50_ms": 5.100391999803833,
+        "peak_rss_mb": 90.19392
+      },
+      "large": {
+        "cpu_ms_per_request": 87.0,
+        "completion_p50_ms": 131.7078885022056,
+        "first_content_p50_ms": 3.9655130003666272,
+        "peak_rss_mb": 107.728896
+      }
+    }
+  },
+  "buffered": [
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 14.481259569,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 44.549254000000005,
+      "latency_p99_ms": 74.108099,
+      "rps": 1381.0953325368157,
+      "url": "http://127.0.0.1:41657/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 14.510220722000668,
+        "cpu_s": 13.150000000000002,
+        "cpu_percent_one_core": 90.62577511354962,
+        "peak_rss_mb": 86.523904
+      },
+      "idle_rss_mb": 82.231296,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:41657/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 28.303,
+        "latency_p99_ms": 41.463,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 11.164929160997417,
+          "cpu_s": 3.56,
+          "cpu_percent_one_core": 31.88555832880867,
+          "peak_rss_mb": 86.392832
+        }
+      },
+      "variant": "baseline",
+      "keepalive": 20,
+      "round": 1,
+      "usage_records": 26002,
+      "cpu_us_per_request": 657.5000000000001,
+      "p99_added_ms": 9.406500000000001
+    },
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 9.829964902,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 30.418115999999998,
+      "latency_p99_ms": 54.950751,
+      "rps": 2034.5952604500967,
+      "url": "http://127.0.0.1:34147/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 9.865606620001927,
+        "cpu_s": 5.870000000000001,
+        "cpu_percent_one_core": 59.49963571524256,
+        "peak_rss_mb": 89.57952
+      },
+      "idle_rss_mb": 86.945792,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:34147/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 25.087,
+        "latency_p99_ms": 34.526,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 9.963985997001146,
+          "cpu_s": 2.14,
+          "cpu_percent_one_core": 21.47734852943465,
+          "peak_rss_mb": 89.4976
+        }
+      },
+      "variant": "aiohttp",
+      "keepalive": 0,
+      "round": 1,
+      "usage_records": 26002,
+      "cpu_us_per_request": 293.50000000000006,
+      "p99_added_ms": 2.4695000000000036
+    },
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 10.281671711,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 32.264956999999995,
+      "latency_p99_ms": 53.536038,
+      "rps": 1945.2089662231388,
+      "url": "http://127.0.0.1:34143/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 10.287544192000496,
+        "cpu_s": 5.88,
+        "cpu_percent_one_core": 57.156498093803926,
+        "peak_rss_mb": 89.591808
+      },
+      "idle_rss_mb": 86.949888,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:34143/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 25.238,
+        "latency_p99_ms": 33.672,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 10.075169004998315,
+          "cpu_s": 2.1,
+          "cpu_percent_one_core": 20.843322816303974,
+          "peak_rss_mb": 89.591808
+        }
+      },
+      "variant": "aiohttp",
+      "keepalive": 0,
+      "round": 2,
+      "usage_records": 26002,
+      "cpu_us_per_request": 294.0,
+      "p99_added_ms": 0.44700000000000273
+    },
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 14.143965138,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 43.287290999999996,
+      "latency_p99_ms": 72.485277,
+      "rps": 1414.0306346108584,
+      "url": "http://127.0.0.1:33321/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 14.16139128800205,
+        "cpu_s": 12.739999999999998,
+        "cpu_percent_one_core": 89.96291212427484,
+        "peak_rss_mb": 86.646784
+      },
+      "idle_rss_mb": 82.239488,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:33321/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 27.275,
+        "latency_p99_ms": 38.59,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 10.857844662998104,
+          "cpu_s": 3.38,
+          "cpu_percent_one_core": 31.129566731770716,
+          "peak_rss_mb": 86.597632
+        }
+      },
+      "variant": "baseline",
+      "keepalive": 20,
+      "round": 2,
+      "usage_records": 26002,
+      "cpu_us_per_request": 636.9999999999999,
+      "p99_added_ms": 5.365000000000009
+    },
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 14.207068416,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 43.338891,
+      "latency_p99_ms": 73.909492,
+      "rps": 1407.7499603983042,
+      "url": "http://127.0.0.1:36501/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 14.23199270600162,
+        "cpu_s": 12.83,
+        "cpu_percent_one_core": 90.14900629192705,
+        "peak_rss_mb": 86.573056
+      },
+      "idle_rss_mb": 82.24768,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:36501/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 28.18,
+        "latency_p99_ms": 39.585,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 10.861341412000911,
+          "cpu_s": 3.3200000000000003,
+          "cpu_percent_one_core": 30.56712678538644,
+          "peak_rss_mb": 86.327296
+        }
+      },
+      "variant": "baseline",
+      "keepalive": 20,
+      "round": 3,
+      "usage_records": 26002,
+      "cpu_us_per_request": 641.5,
+      "p99_added_ms": 6.524999999999999
+    },
+    {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 10.364066331,
+      "errors": [],
+      "label": "throughput",
+      "latency_p50_ms": 32.729898,
+      "latency_p99_ms": 52.779339,
+      "rps": 1929.7445000113441,
+      "url": "http://127.0.0.1:42037/inf/v1/messages",
+      "resources": {
+        "elapsed_s": 10.392526257001009,
+        "cpu_s": 6.150000000000001,
+        "cpu_percent_one_core": 59.17714180281242,
+        "peak_rss_mb": 89.62048
+      },
+      "idle_rss_mb": 86.945792,
+      "latency_c16": {
+        "chunk_fidelity": null,
+        "concurrency": 16,
+        "count": 5000,
+        "endpoint": "http://127.0.0.1:42037/inf/v1/messages",
+        "errors": [],
+        "inter_chunk_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "label": "latency",
+        "latency_p50_ms": 25.027,
+        "latency_p99_ms": 32.867,
+        "peak_rss_mb": null,
+        "streaming": false,
+        "ttft_ms": {
+          "p50": null,
+          "p99": null
+        },
+        "resources": {
+          "elapsed_s": 9.84666901699893,
+          "cpu_s": 2.0999999999999996,
+          "cpu_percent_one_core": 21.327009127397663,
+          "peak_rss_mb": 89.53856
+        }
+      },
+      "variant": "aiohttp",
+      "keepalive": 0,
+      "round": 3,
+      "usage_records": 26002,
+      "cpu_us_per_request": 307.50000000000006,
+      "p99_added_ms": -0.19300000000000495
+    }
+  ],
+  "streams": [
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.48429918585997,
+      "latency_ms": [
+        56.34472500241827,
+        54.16734399841516,
+        55.01442999957362,
+        48.170032001507934,
+        49.8059959973034,
+        49.276118999841856,
+        51.20558400085429,
+        46.826110999973025,
+        51.25870899792062,
+        52.35538000124507
+      ],
+      "latency_p50_ms": 51.232146499387454,
+      "first_content_p50_ms": 4.778598999109818,
+      "resources": {
+        "elapsed_s": 0.912957729997288,
+        "cpu_s": 0.33999999999999997,
+        "cpu_percent_one_core": 37.24159277352414,
+        "peak_rss_mb": 84.656128
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 33.99999999999999
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 17.420075283536253,
+      "latency_ms": [
+        57.509729002049426,
+        59.364568998717004,
+        55.95593299949542,
+        55.21151300126803,
+        56.5517680006451,
+        48.349365999456495,
+        53.66705000051297,
+        55.51743199976045,
+        51.82625299858046,
+        51.971127999422606
+      ],
+      "latency_p50_ms": 55.36447250051424,
+      "first_content_p50_ms": 5.387621999034309,
+      "resources": {
+        "elapsed_s": 0.9179826220024552,
+        "cpu_s": 0.3599999999999999,
+        "cpu_percent_one_core": 39.216428652506345,
+        "peak_rss_mb": 90.19392
+      },
+      "variant": "aiohttp",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 35.999999999999986
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.660411109584434,
+      "latency_ms": [
+        50.50453999865567,
+        48.76653400060604,
+        52.857339000183856,
+        48.174282997933915,
+        52.72600500029512,
+        51.06691699984367,
+        46.369985000637826,
+        52.391088000149466,
+        52.15525400126353,
+        52.4008380016312
+      ],
+      "latency_p50_ms": 51.6110855005536,
+      "first_content_p50_ms": 5.0791619996743975,
+      "resources": {
+        "elapsed_s": 0.8698763389984379,
+        "cpu_s": 0.3400000000000001,
+        "cpu_percent_one_core": 39.08601542047583,
+        "peak_rss_mb": 90.189824
+      },
+      "variant": "aiohttp",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 34.00000000000001
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 17.833435374747534,
+      "latency_ms": [
+        53.00842299766373,
+        53.009839000878856,
+        54.965095998340985,
+        54.345386000932194,
+        50.7991239974217,
+        50.68653999842354,
+        52.91071399915381,
+        55.1920970028732,
+        55.45393099964713,
+        54.979595999611774
+      ],
+      "latency_p50_ms": 53.677612500905525,
+      "first_content_p50_ms": 4.537806000371347,
+      "resources": {
+        "elapsed_s": 0.9271101929989527,
+        "cpu_s": 0.36,
+        "cpu_percent_one_core": 38.83033567299013,
+        "peak_rss_mb": 84.6848
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 36.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.15276254002227,
+      "latency_ms": [
+        48.87257600057637,
+        51.18191799920169,
+        55.97318199943402,
+        53.65325899765594,
+        56.62581000069622,
+        55.545639002957614,
+        53.20313199990778,
+        50.63637299826951,
+        54.47996899965801,
+        45.442606999131385
+      ],
+      "latency_p50_ms": 53.42819549878186,
+      "first_content_p50_ms": 4.758202998345951,
+      "resources": {
+        "elapsed_s": 0.9104944309983694,
+        "cpu_s": 0.36,
+        "cpu_percent_one_core": 39.5389568286821,
+        "peak_rss_mb": 84.66432
+      },
+      "variant": "baseline",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 36.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 18.148744602660628,
+      "latency_ms": [
+        55.01555500086397,
+        50.83629100045073,
+        51.06708300081664,
+        51.71387700102059,
+        52.23867099994095,
+        55.58018100055051,
+        51.6022099982365,
+        48.89249299958465,
+        55.059262998838676,
+        52.58779699943261
+      ],
+      "latency_p50_ms": 51.97627400048077,
+      "first_content_p50_ms": 5.100391999803833,
+      "resources": {
+        "elapsed_s": 0.9300417859994923,
+        "cpu_s": 0.36,
+        "cpu_percent_one_core": 38.7079382259279,
+        "peak_rss_mb": 90.406912
+      },
+      "variant": "aiohttp",
+      "workload": "dense",
+      "fragment_bytes": 64,
+      "fragments": 4096,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 36.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.400010625392947,
+      "latency_ms": [
+        145.63072500095586,
+        121.99581499953638,
+        124.09061300058966,
+        129.55613200028893,
+        123.89611300022807,
+        133.49101999847335,
+        131.18059399857884,
+        123.46844499916187,
+        140.0264160001825,
+        129.91971600058605
+      ],
+      "latency_p50_ms": 129.7379240004375,
+      "first_content_p50_ms": 5.189371499000117,
+      "resources": {
+        "elapsed_s": 1.6895943069976056,
+        "cpu_s": 0.9400000000000001,
+        "cpu_percent_one_core": 55.63465715449597,
+        "peak_rss_mb": 101.654528
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 94.00000000000001
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.399772880838383,
+      "latency_ms": [
+        136.41061200178228,
+        141.06916899982025,
+        132.00318100280128,
+        118.14746899835882,
+        131.79626400233246,
+        134.19839600101113,
+        131.61951300207875,
+        122.7065670027514,
+        129.9622160004219,
+        129.1511300005368
+      ],
+      "latency_p50_ms": 131.7078885022056,
+      "first_content_p50_ms": 3.9655130003666272,
+      "resources": {
+        "elapsed_s": 1.708811660999345,
+        "cpu_s": 0.87,
+        "cpu_percent_one_core": 50.91257391649632,
+        "peak_rss_mb": 107.679744
+      },
+      "variant": "aiohttp",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 1,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 87.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.141288676131225,
+      "latency_ms": [
+        137.86315800098237,
+        139.00345399815706,
+        131.22242800091044,
+        139.8099150028429,
+        134.03172899779747,
+        131.2008450004214,
+        141.21216900093714,
+        136.9308630019077,
+        130.41880099990522,
+        136.44127799852868
+      ],
+      "latency_p50_ms": 136.6860705002182,
+      "first_content_p50_ms": 3.8711170018359553,
+      "resources": {
+        "elapsed_s": 1.7783764300002076,
+        "cpu_s": 0.89,
+        "cpu_percent_one_core": 50.04564753480769,
+        "peak_rss_mb": 107.728896
+      },
+      "variant": "aiohttp",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 89.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.484823894567815,
+      "latency_ms": [
+        123.8051539985463,
+        129.59213200156228,
+        137.7074910014926,
+        128.40854399837554,
+        125.83378500130493,
+        130.27250799859758,
+        126.34687100216979,
+        124.92678300259286,
+        131.4622629979567,
+        134.33206400077324
+      ],
+      "latency_p50_ms": 129.0003379999689,
+      "first_content_p50_ms": 4.125304998524371,
+      "resources": {
+        "elapsed_s": 1.649947677997261,
+        "cpu_s": 0.93,
+        "cpu_percent_one_core": 56.365423728396784,
+        "peak_rss_mb": 101.552128
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 2,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 93.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.381286734094791,
+      "latency_ms": [
+        140.54062599825556,
+        132.6490580031532,
+        135.28260800012504,
+        130.75288500112947,
+        124.39711400293163,
+        128.02441799794906,
+        126.82362200212083,
+        143.21121700049844,
+        128.45775200185017,
+        122.32244099868694
+      ],
+      "latency_p50_ms": 129.60531850148982,
+      "first_content_p50_ms": 4.802744499102118,
+      "resources": {
+        "elapsed_s": 1.692498025000532,
+        "cpu_s": 0.9,
+        "cpu_percent_one_core": 53.17583753161054,
+        "peak_rss_mb": 101.625856
+      },
+      "variant": "baseline",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 90.0
+    },
+    {
+      "count": 10,
+      "errors": [],
+      "rps": 7.4124881793892206,
+      "latency_ms": [
+        135.79011000183527,
+        128.44319100258872,
+        130.40567500138422,
+        127.71400299970992,
+        128.98729700100375,
+        139.90132299659308,
+        128.87625499934074,
+        124.23999400198227,
+        125.58228900161339,
+        133.76251600129763
+      ],
+      "latency_p50_ms": 128.93177600017225,
+      "first_content_p50_ms": 4.3171969991817605,
+      "resources": {
+        "elapsed_s": 1.6846292730006098,
+        "cpu_s": 0.83,
+        "cpu_percent_one_core": 49.269000206890006,
+        "peak_rss_mb": 107.76576
+      },
+      "variant": "aiohttp",
+      "workload": "large",
+      "fragment_bytes": 1024,
+      "fragments": 8192,
+      "round": 3,
+      "verified_usage_records": 12,
+      "cpu_ms_per_request": 83.0
+    }
+  ],
+  "controls": {
+    "r1-direct-after.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.731998467,
+      "errors": [],
+      "label": "r1-direct-after",
+      "latency_p50_ms": 24.263718,
+      "latency_p99_ms": 31.374953999999995,
+      "rps": 2586.6533840325446,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r1-direct-before.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.7578284570000005,
+      "errors": [],
+      "label": "r1-direct-before",
+      "latency_p50_ms": 24.281462,
+      "latency_p99_ms": 31.849531,
+      "rps": 2578.0410215121105,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r1-latency-after.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r1-latency-after",
+      "latency_p50_ms": 24.036,
+      "latency_p99_ms": 31.866,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    },
+    "r1-latency-before.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r1-latency-before",
+      "latency_p50_ms": 24.187,
+      "latency_p99_ms": 32.247,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    },
+    "r2-direct-after.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.797989469,
+      "errors": [],
+      "label": "r2-direct-after",
+      "latency_p50_ms": 24.518176999999998,
+      "latency_p99_ms": 31.422410999999997,
+      "rps": 2564.7636585696446,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r2-direct-before.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.81688525,
+      "errors": [],
+      "label": "r2-direct-before",
+      "latency_p50_ms": 24.655469,
+      "latency_p99_ms": 32.309207,
+      "rps": 2558.5638474096827,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r2-latency-after.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r2-latency-after",
+      "latency_p50_ms": 24.066,
+      "latency_p99_ms": 33.794,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    },
+    "r2-latency-before.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r2-latency-before",
+      "latency_p50_ms": 23.952,
+      "latency_p99_ms": 32.656,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    },
+    "r3-direct-after.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.782254528,
+      "errors": [],
+      "label": "r3-direct-after",
+      "latency_p50_ms": 24.361455,
+      "latency_p99_ms": 34.837989,
+      "rps": 2569.949354398705,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r3-direct-before.json": {
+      "concurrency": 64,
+      "count": 20000,
+      "elapsed_s": 7.679423692,
+      "errors": [],
+      "label": "r3-direct-before",
+      "latency_p50_ms": 24.076411999999998,
+      "latency_p99_ms": 32.16398,
+      "rps": 2604.3620982698085,
+      "url": "http://127.0.0.1:19000/v1/messages"
+    },
+    "r3-latency-after.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r3-latency-after",
+      "latency_p50_ms": 23.916,
+      "latency_p99_ms": 33.367,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    },
+    "r3-latency-before.json": {
+      "chunk_fidelity": null,
+      "concurrency": 16,
+      "count": 5000,
+      "endpoint": "http://127.0.0.1:19000/v1/messages",
+      "errors": [],
+      "inter_chunk_ms": {
+        "p50": null,
+        "p99": null
+      },
+      "label": "r3-latency-before",
+      "latency_p50_ms": 24.091,
+      "latency_p99_ms": 32.753,
+      "peak_rss_mb": null,
+      "streaming": false,
+      "ttft_ms": {
+        "p50": null,
+        "p99": null
+      }
+    }
+  },
+  "candidate_source_sha256": {
+    "apps/data-plane/src/data_plane/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "apps/data-plane/src/data_plane/app.py": "aa6d613ceead25bd6632b6835027e69b75fefb226d720615ad7379c2be703ed2",
+    "apps/data-plane/src/data_plane/auth.py": "5fd20f60a7c854fe4e84d69032738da83813631daf5eeb2ae0146172bb7e6df0",
+    "apps/data-plane/src/data_plane/budgets.py": "a1131fec781ee69a1bd451e34ae1105726bc4189bac26c47197af78f6f7b94fd",
+    "apps/data-plane/src/data_plane/bundle/__init__.py": "f1642ff633397436fc18ef97b4e159b5cf96cf340ba666c398ef69663dbb465f",
+    "apps/data-plane/src/data_plane/bundle/base.py": "136bace294af2dea9a9891dccd04037640f9afc14587566a4dcf879019834b50",
+    "apps/data-plane/src/data_plane/bundle/config.py": "3121aac23702aa314949b7c9f42569cc9e8ba36aac41667350e0c32349838ae9",
+    "apps/data-plane/src/data_plane/bundle/holder.py": "2b541d51f2b2db4759355c1b677d121390f4a7588cfafe7c246bfcf2580d99bf",
+    "apps/data-plane/src/data_plane/bundle/local.py": "6c5777f8fa42f724111d34392e690f492c1600e44e72bda541321c0eed69ce27",
+    "apps/data-plane/src/data_plane/bundle/remote.py": "543b440ea41f1e28c280f4bb0e055ebdfc24406896175824e4e9be158e2292b3",
+    "apps/data-plane/src/data_plane/cache.py": "31d0dcfde7cc7c531ccf5761a569cde2e40a0cc2b671cd9eba29316136f51df0",
+    "apps/data-plane/src/data_plane/canonical/__init__.py": "0d98c86f32075c079061769b76938d5bef88aba4b903704fdcb0d31632763a41",
+    "apps/data-plane/src/data_plane/canonical/completion.py": "5948b903c4092f21c4294fdc43f13a50afa59335db5e386473e7d99436d93c07",
+    "apps/data-plane/src/data_plane/canonical/error.py": "c07f161bb0a224fb6a1e851e7d402df2991f7615ac1755e61fed740dd8514021",
+    "apps/data-plane/src/data_plane/config.py": "8b83b734a735dd6bac8658de9cebfe911c03203ea20e877213e732626377aac5",
+    "apps/data-plane/src/data_plane/control_plane_link.py": "beb6791474be0da30ac86c87450c974725caafa7711dcf3e113ab07fd88a9528",
+    "apps/data-plane/src/data_plane/credentials.py": "378420ef0bc4555b1c075fd56dfa909a3f0c26c4175e499647135b0dd56ecdcc",
+    "apps/data-plane/src/data_plane/discovery.py": "27ac9f57729f83bad95f2d41f503938e2c7021192e6a84ef8b73818d513b1938",
+    "apps/data-plane/src/data_plane/egress/__init__.py": "567248102d946e5581121cd5d1ed9bdb65ce479e6b64cef74d9f370f3d670e25",
+    "apps/data-plane/src/data_plane/egress/anthropic.py": "63a4fa154393ca71484e246339ea5fa656fed7984f8b6b5ac2bd476798986851",
+    "apps/data-plane/src/data_plane/egress/base.py": "f13f6016ac30d9909b484f15ac2372aa113a76f2957a035a812549d378327bab",
+    "apps/data-plane/src/data_plane/egress/openai_compatible.py": "2aeb917c464ff7118242269d8fbbfe447e10725f40d05eac8e8855406944a6b8",
+    "apps/data-plane/src/data_plane/egress/openai_responses.py": "658f295086a2fd7d73e25d6c5d46e6fdca48123add78e603b36d62b26c36a70d",
+    "apps/data-plane/src/data_plane/errors.py": "f842df3e9be3e1c1bf81bad377a588f4d016417b3db566b92aed109b1b7aa65d",
+    "apps/data-plane/src/data_plane/formats/__init__.py": "72e8311241a803b39030140b0cbb67976254f031bbeb7c8cf4c5b1f00d0a4bfd",
+    "apps/data-plane/src/data_plane/formats/anthropic.py": "05ce7303ccce862ce5627f20ab04358b4801ab237eb3d50542fc203a59218877",
+    "apps/data-plane/src/data_plane/formats/openai.py": "f30d55fb2dc44d50857a7ef1bbc11fa3e97e7139bfb7ea9b7d3d5ad80833ba44",
+    "apps/data-plane/src/data_plane/formats/openai_responses.py": "a35362ea68e2ceb16c5a0121aa7e20b8ab6596f929e690a6616c44ce6588aa74",
+    "apps/data-plane/src/data_plane/heartbeat.py": "8bdb340950953ce35e1278abb502b9b3bb07eb56fd365b3305eafcbff167a8f6",
+    "apps/data-plane/src/data_plane/http.py": "a3e97b1a492e38d7b5b7bcfa2d5a412e3b499f9d53fd1d7cc85e78fd014c56d7",
+    "apps/data-plane/src/data_plane/ingress/__init__.py": "994e6778f11eb88790b517a94ce65cb4ae945387059124b943529406583a13ac",
+    "apps/data-plane/src/data_plane/ingress/anthropic.py": "7ddc45c58e5fdd9621c26a7142c55c3df466de6b9673ac96edc7c18f344dc742",
+    "apps/data-plane/src/data_plane/ingress/base.py": "d6dbe3864edce4316d4d8a90c3512ca7512141f2b52e616620337b121ad22044",
+    "apps/data-plane/src/data_plane/ingress/openai_chat_completions.py": "80b09977a5d6b3340e634641ae77a074b7b16489b5462d52af027ff4b712d553",
+    "apps/data-plane/src/data_plane/ingress/openai_responses.py": "21539502da34873aa7f44dd76bf6729f96df84c167afbff7b309cc7f7fd88e9e",
+    "apps/data-plane/src/data_plane/metering.py": "4ee9b21828593e511fadf51103447bf02d7a6c43b68e6f8edb848026a4165662",
+    "apps/data-plane/src/data_plane/metrics.py": "8d82172c81922d092cfc25cd0507022856f3860f57542a79be1a3c28b48a61c9",
+    "apps/data-plane/src/data_plane/operations.py": "4def57884a0c9f56908807839d16e673eb39548cad017bda2844e480bd1ec1ed",
+    "apps/data-plane/src/data_plane/outbox/__init__.py": "d1adc136e3e0ee7f7e8d6e0e59588a91b50b7117459bddce2e0deadd1e1f1c1d",
+    "apps/data-plane/src/data_plane/outbox/base.py": "8b846e776d1bab9f0a72424f00080b6882311439179f9812adef1e67d80316ba",
+    "apps/data-plane/src/data_plane/outbox/devnull.py": "92cb259a2411a975d23915f2d4fa5ef20ba423229e912a83cf16cc90d4bb84bb",
+    "apps/data-plane/src/data_plane/outbox/file.py": "20e5607d793473d31c6da9d29b62e979ca8c4568333d6508c8d107fb3d38a858",
+    "apps/data-plane/src/data_plane/outbox/queued.py": "dca00f76f51c819bda00547e24c4b94043d1c44ea44b7f98f1ea76a8cf4f9356",
+    "apps/data-plane/src/data_plane/outbox/sqlite.py": "e063c28053d4ed978f51020893818a3df9da0e8b784d0a533fb9634966d32e1b",
+    "apps/data-plane/src/data_plane/policies.py": "e00361eb86405716a0bca3c543e4d096a5594d87ae0f959a6d8c8055298add48",
+    "apps/data-plane/src/data_plane/policy.py": "efb88cd1ec1c03448436c4cfdff56cb68181da09b6ce68c447fb889b5d596344",
+    "apps/data-plane/src/data_plane/policy_actions/__init__.py": "e56fac9343c599114d54545789b503146706cfe0d9cc70b6d666f67dd3bf864f",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_models.py": "10fa6c9869ef149e5db9627099c7d3399bd02adb01ac60df14702b7008e08200",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_providers.py": "f8324e512203fc3cbf3294381c40a77f17f7e7e443410104c6fdab47dfa7f0f4",
+    "apps/data-plane/src/data_plane/policy_actions/base.py": "c04cef0ea8e9dbe658564244404518908d34008876b9c0418494a86da6097745",
+    "apps/data-plane/src/data_plane/policy_actions/budget.py": "09412a4cecb22a6abe11ba29359a6078f471d33327604d89b4ddbe2886fc0b6b",
+    "apps/data-plane/src/data_plane/policy_actions/credential_access.py": "e11693702dcbd5f010579857a5976b77d1dfe32281e1710ceee53e2b0903c885",
+    "apps/data-plane/src/data_plane/policy_actions/deny.py": "15c3334b9fed763a41bc10f3fd8d0837874814930ed1b33b4b67733de700230c",
+    "apps/data-plane/src/data_plane/policy_actions/fallback.py": "d72d3394050ec742441df74538aa978920aa3d2dff90e079f19cca1fd5628cb0",
+    "apps/data-plane/src/data_plane/policy_actions/price_limit.py": "c183f07a3130f763dfac20d3d2bc3bc180eb19c3a33707376f8ce3e3ae259c91",
+    "apps/data-plane/src/data_plane/policy_actions/request_limits.py": "e637ec59b3c7e3604de9adf3478ff47a8477b7126288b274d917db0cebf2b5c2",
+    "apps/data-plane/src/data_plane/policy_actions/strict_parameters.py": "e85ad56a16a014c30f03e7ce4e800477ee8a83b98a17af8a7274a9dd49435d4d",
+    "apps/data-plane/src/data_plane/profiles.py": "1b208d051a44d653bca5f0c3c2e4ca65c4af1336b21eb8487936c2fe81a453ba",
+    "apps/data-plane/src/data_plane/proxy.py": "52f1ca45084951376f60c7261ad6785e42686436016efeed6d820d6a7c00f79f",
+    "apps/data-plane/src/data_plane/reconcile.py": "f258edbb394bb49712ce10bab40ab7a9f0c7a183fdacf144df6ce7ffe857548a",
+    "apps/data-plane/src/data_plane/requirements.py": "4657f8b75dd9aeefbf1f6aae7995734f10bcec2df392e94f0172b21d021d4aee",
+    "apps/data-plane/src/data_plane/responses.py": "3f89ee93fa8b6dd696ac8fec4ea2b749c54fb431dbab14f00556e3f3f6c7eb46",
+    "apps/data-plane/src/data_plane/routing.py": "e7dff207519db6a57db535f38cf31c5144069fac43b5a9c10f65d55ce342c054",
+    "apps/data-plane/src/data_plane/runtime.py": "ec47afea1a11b9de47e1461af45af92194a3cdeff7f68db686eb56208670b49c",
+    "apps/data-plane/src/data_plane/setup.py": "957667fdb500f7c7674622de21cb102572dd18e65cd72685967fb9cb7636f492",
+    "apps/data-plane/src/data_plane/streaming.py": "62869390813a6c6b78c238952c2452d8042bb06a7286686245bb57545c24bdcd",
+    "apps/data-plane/src/data_plane/tasks.py": "62832b44200669111a9f6aae185511e4a59fe83ced11a33ed5b2a0f9772b651d",
+    "lib/runtime/src/airmux_runtime/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "lib/runtime/src/airmux_runtime/config.py": "e1380ce569676503e78aaa71ff4177d1c859a784b245d383872f45174bedeb27",
+    "lib/runtime/src/airmux_runtime/files.py": "2a9eb0cc4c389044be1fbfef09c8f4694f799af7f787f77dde6f3dc6ba42bb5e",
+    "lib/runtime/src/airmux_runtime/observability.py": "1106021a3c4c3353b39f44adbf8bef426f7972667f3c96dcfb3b7b3c5261ecc5",
+    "lib/runtime/src/airmux_runtime/secrets/__init__.py": "310f2b66a1ac6310094a80475467ce2e1bd508c539d6116dccfbc7c259d83c64",
+    "lib/runtime/src/airmux_runtime/secrets/base.py": "575a5fbea0b16e3729113a685ec15f7b90da893929aee01810ada272e466051a",
+    "lib/runtime/src/airmux_runtime/secrets/env.py": "c25b9b321e51c82e0023bcea6e4063d0211ea5227d44dd7edbee4338cf44fba9",
+    "lib/runtime/src/airmux_runtime/secrets/file.py": "c6bc503f077f87f7feef7c28aee04a1a8013b15073f42e924308642d0af52bd1",
+    "lib/runtime/src/airmux_runtime/secrets/insecure_database.py": "2c631bffa2bf2a4555620b7f3843ecd596d4ba29f3edc43c681cd56c5ef73957",
+    "lib/runtime/src/airmux_runtime/secrets/memory.py": "29db8bf45827983f3b45627412ad41b911745eb36a37ecff02b89bd1b82aa22b",
+    "lib/runtime/src/airmux_runtime/taxonomy.py": "2f94236ee0ac9bc5e47697356fb6d2ad9d7e08766d76c5518c4aa01506a4c5cd",
+    "lib/runtime/src/airmux_runtime/telemetry.py": "55ca2f56dd5268c5ac292876057504925f78ae5f4a8ec3e729d2db1696043449"
+  },
+  "baseline_source_sha256": {
+    "apps/data-plane/src/data_plane/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "apps/data-plane/src/data_plane/app.py": "6007f61d83fafe45e43678a978d43f4fa96c0e4fc89aa82f5407e4ecdf15542b",
+    "apps/data-plane/src/data_plane/auth.py": "5fd20f60a7c854fe4e84d69032738da83813631daf5eeb2ae0146172bb7e6df0",
+    "apps/data-plane/src/data_plane/budgets.py": "09782de4542f7862bf9bba98d8f2ab1e981adf037e06d7cf7fc959f607b3e79a",
+    "apps/data-plane/src/data_plane/bundle/__init__.py": "0f33667b17e572a9e5a5fcc12910bcb33bb4848ec72fbb319166ab0e624e466a",
+    "apps/data-plane/src/data_plane/bundle/base.py": "136bace294af2dea9a9891dccd04037640f9afc14587566a4dcf879019834b50",
+    "apps/data-plane/src/data_plane/bundle/config.py": "3121aac23702aa314949b7c9f42569cc9e8ba36aac41667350e0c32349838ae9",
+    "apps/data-plane/src/data_plane/bundle/holder.py": "2b541d51f2b2db4759355c1b677d121390f4a7588cfafe7c246bfcf2580d99bf",
+    "apps/data-plane/src/data_plane/bundle/local.py": "6c5777f8fa42f724111d34392e690f492c1600e44e72bda541321c0eed69ce27",
+    "apps/data-plane/src/data_plane/bundle/remote.py": "8b4978a2b65c34b2d4ae94949693a183ba72abf3028b808078d8e6e14895dff0",
+    "apps/data-plane/src/data_plane/cache.py": "31d0dcfde7cc7c531ccf5761a569cde2e40a0cc2b671cd9eba29316136f51df0",
+    "apps/data-plane/src/data_plane/canonical/__init__.py": "0d98c86f32075c079061769b76938d5bef88aba4b903704fdcb0d31632763a41",
+    "apps/data-plane/src/data_plane/canonical/completion.py": "5948b903c4092f21c4294fdc43f13a50afa59335db5e386473e7d99436d93c07",
+    "apps/data-plane/src/data_plane/canonical/error.py": "c07f161bb0a224fb6a1e851e7d402df2991f7615ac1755e61fed740dd8514021",
+    "apps/data-plane/src/data_plane/config.py": "e1b5cca7f65f73a43d930dc1df3250dd3d5f34d67e8ef54b4cf82354fc1e1bb6",
+    "apps/data-plane/src/data_plane/control_plane_link.py": "c01962bda5f8396c5f174a80dfa9d09e30dc286fe8ae60710ff0e0291dba1bbb",
+    "apps/data-plane/src/data_plane/credentials.py": "378420ef0bc4555b1c075fd56dfa909a3f0c26c4175e499647135b0dd56ecdcc",
+    "apps/data-plane/src/data_plane/discovery.py": "27ac9f57729f83bad95f2d41f503938e2c7021192e6a84ef8b73818d513b1938",
+    "apps/data-plane/src/data_plane/egress/__init__.py": "567248102d946e5581121cd5d1ed9bdb65ce479e6b64cef74d9f370f3d670e25",
+    "apps/data-plane/src/data_plane/egress/anthropic.py": "63a4fa154393ca71484e246339ea5fa656fed7984f8b6b5ac2bd476798986851",
+    "apps/data-plane/src/data_plane/egress/base.py": "78f8028bc9b1ec399841a868a25567444ec19a967f66d8f0520ac9dbbd811e3d",
+    "apps/data-plane/src/data_plane/egress/openai_compatible.py": "2aeb917c464ff7118242269d8fbbfe447e10725f40d05eac8e8855406944a6b8",
+    "apps/data-plane/src/data_plane/egress/openai_responses.py": "658f295086a2fd7d73e25d6c5d46e6fdca48123add78e603b36d62b26c36a70d",
+    "apps/data-plane/src/data_plane/errors.py": "f842df3e9be3e1c1bf81bad377a588f4d016417b3db566b92aed109b1b7aa65d",
+    "apps/data-plane/src/data_plane/formats/__init__.py": "72e8311241a803b39030140b0cbb67976254f031bbeb7c8cf4c5b1f00d0a4bfd",
+    "apps/data-plane/src/data_plane/formats/anthropic.py": "05ce7303ccce862ce5627f20ab04358b4801ab237eb3d50542fc203a59218877",
+    "apps/data-plane/src/data_plane/formats/openai.py": "f30d55fb2dc44d50857a7ef1bbc11fa3e97e7139bfb7ea9b7d3d5ad80833ba44",
+    "apps/data-plane/src/data_plane/formats/openai_responses.py": "a35362ea68e2ceb16c5a0121aa7e20b8ab6596f929e690a6616c44ce6588aa74",
+    "apps/data-plane/src/data_plane/heartbeat.py": "1e079fbce1e19968edcfd718424c8c6b4c9f48dd89cce26c3791c40e867980e1",
+    "apps/data-plane/src/data_plane/http.py": "a3e97b1a492e38d7b5b7bcfa2d5a412e3b499f9d53fd1d7cc85e78fd014c56d7",
+    "apps/data-plane/src/data_plane/ingress/__init__.py": "994e6778f11eb88790b517a94ce65cb4ae945387059124b943529406583a13ac",
+    "apps/data-plane/src/data_plane/ingress/anthropic.py": "7ddc45c58e5fdd9621c26a7142c55c3df466de6b9673ac96edc7c18f344dc742",
+    "apps/data-plane/src/data_plane/ingress/base.py": "d6dbe3864edce4316d4d8a90c3512ca7512141f2b52e616620337b121ad22044",
+    "apps/data-plane/src/data_plane/ingress/openai_chat_completions.py": "80b09977a5d6b3340e634641ae77a074b7b16489b5462d52af027ff4b712d553",
+    "apps/data-plane/src/data_plane/ingress/openai_responses.py": "21539502da34873aa7f44dd76bf6729f96df84c167afbff7b309cc7f7fd88e9e",
+    "apps/data-plane/src/data_plane/metering.py": "a850dba96391ca41874ec5eb2044728a26f88705705acb5c2a4e8667355c4d41",
+    "apps/data-plane/src/data_plane/metrics.py": "b2bb285f37adba217a9cadbd35578f322769d3eaa9217e340efb54ca5f3c2e9a",
+    "apps/data-plane/src/data_plane/operations.py": "4def57884a0c9f56908807839d16e673eb39548cad017bda2844e480bd1ec1ed",
+    "apps/data-plane/src/data_plane/outbox/__init__.py": "faddf3932440db3de0086824dc61247aefb11db8e147dd6e33b70618bcf593cb",
+    "apps/data-plane/src/data_plane/outbox/base.py": "8b846e776d1bab9f0a72424f00080b6882311439179f9812adef1e67d80316ba",
+    "apps/data-plane/src/data_plane/outbox/devnull.py": "92cb259a2411a975d23915f2d4fa5ef20ba423229e912a83cf16cc90d4bb84bb",
+    "apps/data-plane/src/data_plane/outbox/file.py": "20e5607d793473d31c6da9d29b62e979ca8c4568333d6508c8d107fb3d38a858",
+    "apps/data-plane/src/data_plane/outbox/queued.py": "dca00f76f51c819bda00547e24c4b94043d1c44ea44b7f98f1ea76a8cf4f9356",
+    "apps/data-plane/src/data_plane/outbox/sqlite.py": "33c413d56ae4da035b6cc12ab4f65011a58ffe92491949ec756d7e3b27c22fee",
+    "apps/data-plane/src/data_plane/policies.py": "e00361eb86405716a0bca3c543e4d096a5594d87ae0f959a6d8c8055298add48",
+    "apps/data-plane/src/data_plane/policy.py": "efb88cd1ec1c03448436c4cfdff56cb68181da09b6ce68c447fb889b5d596344",
+    "apps/data-plane/src/data_plane/policy_actions/__init__.py": "e56fac9343c599114d54545789b503146706cfe0d9cc70b6d666f67dd3bf864f",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_models.py": "10fa6c9869ef149e5db9627099c7d3399bd02adb01ac60df14702b7008e08200",
+    "apps/data-plane/src/data_plane/policy_actions/allowed_providers.py": "f8324e512203fc3cbf3294381c40a77f17f7e7e443410104c6fdab47dfa7f0f4",
+    "apps/data-plane/src/data_plane/policy_actions/base.py": "c04cef0ea8e9dbe658564244404518908d34008876b9c0418494a86da6097745",
+    "apps/data-plane/src/data_plane/policy_actions/budget.py": "09412a4cecb22a6abe11ba29359a6078f471d33327604d89b4ddbe2886fc0b6b",
+    "apps/data-plane/src/data_plane/policy_actions/credential_access.py": "e11693702dcbd5f010579857a5976b77d1dfe32281e1710ceee53e2b0903c885",
+    "apps/data-plane/src/data_plane/policy_actions/deny.py": "15c3334b9fed763a41bc10f3fd8d0837874814930ed1b33b4b67733de700230c",
+    "apps/data-plane/src/data_plane/policy_actions/fallback.py": "d72d3394050ec742441df74538aa978920aa3d2dff90e079f19cca1fd5628cb0",
+    "apps/data-plane/src/data_plane/policy_actions/price_limit.py": "c183f07a3130f763dfac20d3d2bc3bc180eb19c3a33707376f8ce3e3ae259c91",
+    "apps/data-plane/src/data_plane/policy_actions/request_limits.py": "e637ec59b3c7e3604de9adf3478ff47a8477b7126288b274d917db0cebf2b5c2",
+    "apps/data-plane/src/data_plane/policy_actions/strict_parameters.py": "e85ad56a16a014c30f03e7ce4e800477ee8a83b98a17af8a7274a9dd49435d4d",
+    "apps/data-plane/src/data_plane/profiles.py": "1b208d051a44d653bca5f0c3c2e4ca65c4af1336b21eb8487936c2fe81a453ba",
+    "apps/data-plane/src/data_plane/proxy.py": "91586cce9f71686057b76d4f33e542e9ee78bbf80d0733ab6e69d85526b3f3b3",
+    "apps/data-plane/src/data_plane/reconcile.py": "f258edbb394bb49712ce10bab40ab7a9f0c7a183fdacf144df6ce7ffe857548a",
+    "apps/data-plane/src/data_plane/requirements.py": "4657f8b75dd9aeefbf1f6aae7995734f10bcec2df392e94f0172b21d021d4aee",
+    "apps/data-plane/src/data_plane/responses.py": "3f89ee93fa8b6dd696ac8fec4ea2b749c54fb431dbab14f00556e3f3f6c7eb46",
+    "apps/data-plane/src/data_plane/routing.py": "e7dff207519db6a57db535f38cf31c5144069fac43b5a9c10f65d55ce342c054",
+    "apps/data-plane/src/data_plane/runtime.py": "e99a422d61d011e63f929bedf7ffd2f858cc2ee402ff8043d9997d7632a3b446",
+    "apps/data-plane/src/data_plane/setup.py": "957667fdb500f7c7674622de21cb102572dd18e65cd72685967fb9cb7636f492",
+    "apps/data-plane/src/data_plane/streaming.py": "a0047d7b33b2d0c11cb395694d01d06b22c0a7b602f8bb0cd6a6d04198b4a4d9",
+    "apps/data-plane/src/data_plane/tasks.py": "62832b44200669111a9f6aae185511e4a59fe83ced11a33ed5b2a0f9772b651d",
+    "lib/runtime/src/airmux_runtime/__init__.py": "5384bfdb2df380b6557cc7a71d16891415bccaa87699406e236f752c6415389f",
+    "lib/runtime/src/airmux_runtime/config.py": "e1380ce569676503e78aaa71ff4177d1c859a784b245d383872f45174bedeb27",
+    "lib/runtime/src/airmux_runtime/files.py": "2a9eb0cc4c389044be1fbfef09c8f4694f799af7f787f77dde6f3dc6ba42bb5e",
+    "lib/runtime/src/airmux_runtime/observability.py": "1106021a3c4c3353b39f44adbf8bef426f7972667f3c96dcfb3b7b3c5261ecc5",
+    "lib/runtime/src/airmux_runtime/secrets/__init__.py": "310f2b66a1ac6310094a80475467ce2e1bd508c539d6116dccfbc7c259d83c64",
+    "lib/runtime/src/airmux_runtime/secrets/base.py": "575a5fbea0b16e3729113a685ec15f7b90da893929aee01810ada272e466051a",
+    "lib/runtime/src/airmux_runtime/secrets/env.py": "c25b9b321e51c82e0023bcea6e4063d0211ea5227d44dd7edbee4338cf44fba9",
+    "lib/runtime/src/airmux_runtime/secrets/file.py": "c6bc503f077f87f7feef7c28aee04a1a8013b15073f42e924308642d0af52bd1",
+    "lib/runtime/src/airmux_runtime/secrets/insecure_database.py": "2c631bffa2bf2a4555620b7f3843ecd596d4ba29f3edc43c681cd56c5ef73957",
+    "lib/runtime/src/airmux_runtime/secrets/memory.py": "29db8bf45827983f3b45627412ad41b911745eb36a37ecff02b89bd1b82aa22b",
+    "lib/runtime/src/airmux_runtime/taxonomy.py": "2f94236ee0ac9bc5e47697356fb6d2ad9d7e08766d76c5518c4aa01506a4c5cd",
+    "lib/runtime/src/airmux_runtime/telemetry.py": "55ca2f56dd5268c5ac292876057504925f78ae5f4a8ec3e729d2db1696043449"
+  },
+  "diagnostic_sources": {
+    "gateway": "#!/app/.venv/bin/python\nimport os\nimport sys\nsource = '/baseline' if os.environ['AUDIT_VARIANT'] == 'baseline' else '/candidate'\nsys.path[:0] = [source + '/apps/data-plane/src', source + '/lib/runtime/src', '/audit/aiohttp-deps']\nfrom cli.main import main\nmain()\n",
+    "run.py": "import json\nimport os\nimport signal\nimport subprocess\nimport time\nimport statistics\nfrom pathlib import Path\nfrom contextlib import contextmanager\nfrom typing import Annotated\n\nimport httpx\nimport typer\nimport yaml\nimport comparison as bench\n\napp = typer.Typer()\n\n@contextmanager\ndef gateway(directory, variant, keepalive, profile=False, counts=False):\n    item = bench.PerformanceGateway(directory, directory.name)\n    item.event_store = 'devnull'\n    item.reload_interval_s = 3600\n    item.executable = '/audit/gateway'\n    item.environment.update({'AUDIT_VARIANT': variant, 'AUDIT_OUTPUT': str(directory / 'diagnostic'), 'AUDIT_COUNTS': str(int(counts)), 'AUDIT_PROFILE': str(int(profile))})\n    item.taxonomy = {'providers': [{'provider_id': 'stub', 'kind': 'anthropic', 'base_url': 'http://127.0.0.1:19000/v1'}], 'models': [{'model_id': 'anthropic/mock', 'provider_id': 'stub', 'upstream_model': 'anthropic/mock', 'input_price_per_mtok': '2', 'output_price_per_mtok': '5', 'context_window': 128000, 'max_output_tokens': 4096, 'input_modalities': ['text'], 'output_modalities': ['text'], 'capabilities': ['streaming', 'tools']}]}\n    try:\n        item.write_files()\n        config = yaml.safe_load(item.config_path.read_text())\n        config['data_plane']['http'] = {'max_connections': 100}\n        if variant == 'baseline':\n            config['data_plane']['http']['max_keepalive_connections'] = keepalive\n        item.config_path.write_text(yaml.safe_dump(config))\n        item.launch(1)\n        bench.eventually(item.ready, timeout=60)\n        yield item.process, item.url + '/inf/v1/messages'\n    finally:\n        item.close()\n\n@app.command()\ndef run(output: Annotated[Path, typer.Option()], variants: str = 'baseline:20,aiohttp:0', rounds: int = 1, count: int = 20000, concurrency: int = 64, profile: bool = False, counts: bool = False):\n    output.mkdir(parents=True, exist_ok=False)\n    direct = 'http://127.0.0.1:19000/v1/messages'\n    results = []\n    with (output / 'mock.log').open('w') as log:\n        mock = subprocess.Popen([str(bench.BENCH / 'target/release/mock-upstream')], env={**os.environ, 'MOCK_PORT':'19000', 'MOCK_TTFT_MS':'20', 'MOCK_OUTPUT_TOKENS':'40'}, stdout=log, stderr=subprocess.STDOUT)\n        try:\n            bench.eventually(lambda: httpx.get('http://127.0.0.1:19000/health').status_code == 200)\n            for round_number in range(1, rounds+1):\n                before = bench.rust_probe(direct, output / f'r{round_number}-direct-before.json', count=count, concurrency=concurrency)\n                latency_before = bench.python_probe(direct, output / f'r{round_number}-latency-before.json', count=5000)\n                order = variants.split(',')\n                if round_number % 2 == 0:\n                    order.reverse()\n                for descriptor in order:\n                    variant, keepalive = descriptor.split(':')\n                    directory = output / f'r{round_number}-{variant}-k{keepalive}'\n                    with gateway(directory, variant, int(keepalive), profile, counts) as (process, url):\n                        time.sleep(1)\n                        idle = []\n                        for _ in range(10):\n                            idle.append(bench.snapshot(process.pid))\n                            time.sleep(0.1)\n                        idle_rss = statistics.median(sum(p['rss_bytes'] for p in sample.values()) for sample in idle) / 1e6\n                        bench.verify_response(url)\n                        bench.rust_probe(url, directory / 'warmup.json', count=1000, concurrency=concurrency)\n                        latency = bench.python_probe(url, directory / 'latency.json', process.pid, count=5000)\n                        if counts:\n                            process.send_signal(signal.SIGUSR2)\n                            time.sleep(0.05)\n                            counters_before = json.loads((directory / 'diagnostic.counts.json').read_text())\n                        if profile:\n                            process.send_signal(signal.SIGUSR1)\n                        result = bench.rust_probe(url, directory / 'throughput.json', process.pid, count=count, concurrency=concurrency)\n                        if profile:\n                            process.send_signal(signal.SIGUSR1)\n                            time.sleep(0.1)\n                        if counts:\n                            process.send_signal(signal.SIGUSR2)\n                            time.sleep(0.05)\n                            counters_after = json.loads((directory / 'diagnostic.counts.json').read_text())\n                            result['diagnostics'] = {k: counters_after[k]-v for k,v in counters_before.items()}\n                        bench.verify_response(url)\n                    events = [json.loads(line) for line in (directory / 'gateway.log').read_text().splitlines() if line.startswith('{')]\n                    usage = [event for event in events if event.get('event') == 'usage_recorded']\n                    expected = 0 if variant in {'bare_proxy', 'no_logs', 'no_observability'} else count+6002\n                    assert len(usage) == expected, (len(usage), expected)\n                    assert all(event['outcome']=='ok' and event['input_tokens']==1 and event['output_tokens']==40 for event in usage)\n                    result.update({'idle_rss_mb': idle_rss, 'idle_samples': idle, 'latency_c16': latency, 'variant': variant, 'keepalive':int(keepalive), 'round':round_number,'usage_records':len(usage), 'cpu_us_per_request':result['resources']['cpu_s']*1e6/count})\n                    results.append(result)\n                    print('RESULT', {k:v for k,v in result.items() if k not in ('resources','errors','idle_samples','latency_c16')}, 'cpu_percent', result['resources']['cpu_percent_one_core'], flush=True)\n                    (output / 'summary.json').write_text(json.dumps(results, indent=2)+'\\n')\n                bench.rust_probe(direct, output / f'r{round_number}-direct-after.json', count=count, concurrency=concurrency)\n                latency_after = bench.python_probe(direct, output / f'r{round_number}-latency-after.json', count=5000)\n                for result in results:\n                    if result['round'] == round_number:\n                        result['p99_added_ms'] = result['latency_c16']['latency_p99_ms'] - (latency_before['latency_p99_ms'] + latency_after['latency_p99_ms']) / 2\n                (output / 'summary.json').write_text(json.dumps(results, indent=2)+'\\n')\n        finally:\n            mock.terminate()\n            mock.wait(timeout=15)\n\nif __name__ == '__main__':\n    app()\n",
+    "streams.py": "from pathlib import Path\nfrom typing import Annotated\nimport json\nimport os\nimport subprocess\nimport sys\nimport time\nimport statistics\nimport typer\nimport httpx\nimport uvicorn\nfrom starlette.applications import Starlette\nfrom starlette.responses import Response\nfrom starlette.routing import Route\nsys.path.insert(0, '/app')\nimport comparison as bench\nfrom run import gateway\n\napp = typer.Typer()\n\ndef sse(body):\n    return b'data: ' + json.dumps(body, separators=(',', ':')).encode() + b'\\n\\n'\n\n@app.command()\ndef serve(fragment_bytes: int = 64, fragments: int = 4096):\n    events = [\n        sse({'type':'message_start','message':{'id':'benchmark','usage':{'input_tokens':1,'output_tokens':0}}}),\n        sse({'type':'content_block_start','index':0,'content_block':{'type':'text','text':''}}),\n        *[sse({'type':'content_block_delta','index':0,'delta':{'type':'text_delta','text':'x'*fragment_bytes}})]*fragments,\n        sse({'type':'content_block_stop','index':0}),\n        sse({'type':'message_delta','delta':{'stop_reason':'end_turn'},'usage':{'output_tokens':fragments}}),\n        sse({'type':'message_stop'}),\n    ]\n    content = b''.join(events)\n    async def complete(request):\n        return Response(content, media_type='text/event-stream')\n    async def ready(request):\n        return Response('ok')\n    uvicorn.run(Starlette(routes=[Route('/v1/messages',complete,methods=['POST']),Route('/ready',ready)]),host='127.0.0.1',port=19000,access_log=False)\n\n@app.command()\ndef load(url: Annotated[str,typer.Option()], output: Annotated[Path,typer.Option()], fragment_bytes: int = 64, fragments: int = 4096, count: int = 10):\n    samples = []\n    firsts = []\n    total = time.perf_counter()\n    with httpx.Client(timeout=60) as client:\n        for _ in range(count):\n            started = time.perf_counter()\n            first = None\n            text = []\n            terminal = False\n            usage = None\n            with client.stream('POST',url,headers={'authorization':f'Bearer {bench.INFERENCE_KEY}'},json={**bench.BODY,'stream':True}) as response:\n                response.raise_for_status()\n                for line in response.iter_lines():\n                    if not line.startswith('data: '):\n                        continue\n                    event = json.loads(line[6:])\n                    if event['type'] == 'content_block_delta':\n                        text.append(event['delta']['text'])\n                        if first is None:\n                            first = time.perf_counter()\n                    if event['type'] == 'message_delta':\n                        usage = event['usage']\n                    if event['type'] == 'message_stop':\n                        terminal = True\n            ended = time.perf_counter()\n            assert ''.join(text) == 'x'*(fragment_bytes*fragments)\n            assert terminal and usage['input_tokens'] == 1 and usage['output_tokens'] == fragments\n            samples.append((ended-started)*1000)\n            firsts.append((first-started)*1000)\n    elapsed=time.perf_counter()-total\n    output.write_text(json.dumps({'count':count,'errors':[],'rps':count/elapsed,'latency_ms':samples,'latency_p50_ms':statistics.median(samples),'first_content_p50_ms':statistics.median(firsts)})+'\\n')\n\n@app.command()\ndef run(output: Annotated[Path,typer.Option()], rounds: int = 3):\n    output.mkdir(parents=True,exist_ok=False)\n    results=[]\n    for label,fragment_bytes,fragments in [('dense',64,4096),('large',1024,8192)]:\n        with (output/f'{label}-provider.log').open('w') as log:\n            provider=subprocess.Popen([sys.executable,__file__,'serve','--fragment-bytes',str(fragment_bytes),'--fragments',str(fragments)],stdout=log,stderr=subprocess.STDOUT)\n            try:\n                bench.eventually(lambda:httpx.get('http://127.0.0.1:19000/ready').status_code==200)\n                for round_number in range(1,rounds+1):\n                    for variant in (['baseline','aiohttp'] if round_number%2 else ['aiohttp','baseline']):\n                        directory=output/f'{label}-r{round_number}-{variant}'\n                        with gateway(directory,variant,20) as (process,url):\n                            load(url,directory/'warmup.json',fragment_bytes,fragments,2)\n                            result=bench.measure([sys.executable,__file__,'load','--url',url,'--output',str(directory/'result.json'),'--fragment-bytes',str(fragment_bytes),'--fragments',str(fragments),'--count','10'],directory/'result.json',process.pid)\n                        usage=[json.loads(line) for line in (directory/'gateway.log').read_text().splitlines() if line.startswith('{')]\n                        usage=[event for event in usage if event.get('event')=='usage_recorded']\n                        assert len(usage)==12 and all(event['input_tokens']==1 and event['output_tokens']==fragments and event['outcome']=='ok' for event in usage)\n                        result.update(variant=variant,workload=label,fragment_bytes=fragment_bytes,fragments=fragments,round=round_number,verified_usage_records=len(usage),cpu_ms_per_request=result['resources']['cpu_s']*1000/10)\n                        results.append(result)\n                        print('RESULT',{key:value for key,value in result.items() if key not in ('resources','latency_ms')},flush=True)\n                        (output/'summary.json').write_text(json.dumps(results,indent=2)+'\\n')\n            finally:\n                provider.terminate()\n                provider.wait(timeout=15)\n\nif __name__=='__main__':\n    app()\n",
+    "comparison.py": "from __future__ import annotations\n\nimport json\nimport os\nimport statistics\nimport subprocess\nimport sys\nimport threading\nimport time\nfrom pathlib import Path\nfrom typing import Annotated\n\nimport httpx\nimport typer\n\nsys.path.insert(0, str(Path.cwd() / 'tests/acceptance/gateway'))\nsys.path.append('/benchmark-deps')\nimport psutil\nfrom gateway_harness import INFERENCE_KEY, eventually\nfrom performance import PerformanceGateway\n\napp = typer.Typer()\nBENCH = Path('/benchmark')\nBODY = {'model': 'anthropic/mock', 'max_tokens': 40, 'stream': False, 'messages': [{'role': 'user', 'content': 'token ' * 32}]}\n\n\ndef processes(pid):\n    parent = psutil.Process(pid)\n    return [parent, *parent.children(recursive=True)]\n\n\ndef snapshot(pid):\n    return {process.pid: {'rss_bytes': process.memory_info().rss, 'cpu_s': sum(process.cpu_times()[:2])} for process in processes(pid)}\n\n\ndef measure(command, output, pid=None):\n    samples = []\n    stop = threading.Event()\n    def sample():\n        while not stop.is_set():\n            samples.append({'at': time.monotonic(), 'processes': snapshot(pid)})\n            stop.wait(0.05)\n    before = snapshot(pid) if pid else {}\n    sampler = threading.Thread(target=sample) if pid else None\n    if sampler:\n        sampler.start()\n    started = time.monotonic()\n    try:\n        with output.with_suffix('.log').open('w') as log:\n            subprocess.run(command, check=True, stdout=log, stderr=subprocess.STDOUT, env={**os.environ, 'PYTHONPATH': '/benchmark-deps'}, timeout=180)\n    finally:\n        elapsed = time.monotonic() - started\n        stop.set()\n        if sampler:\n            sampler.join()\n    after = snapshot(pid) if pid else {}\n    result = json.loads(output.read_text())\n    assert result['errors'] == [], result\n    if pid:\n        assert before.keys() == after.keys(), 'Gateway process tree changed during measurement'\n        cpu = sum(after[pid]['cpu_s'] - values['cpu_s'] for pid, values in before.items())\n        result['resources'] = {'elapsed_s': elapsed, 'cpu_s': cpu, 'cpu_percent_one_core': 100 * cpu / elapsed, 'peak_rss_mb': max(sum(item['rss_bytes'] for item in sample['processes'].values()) for sample in samples) / 1e6, 'samples': samples}\n        output.write_text(json.dumps(result, indent=2) + '\\n')\n    print(output.name, {key: result[key] for key in ('latency_p99_ms', 'rps') if key in result}, flush=True)\n    return result\n\n\ndef python_probe(url, output, pid=None, count=5000, concurrency=16):\n    command = [sys.executable, str(BENCH / 'tools/run_http_bench.py'), '--label', output.stem, '--url', url, '--endpoint', 'anthropic', '--model', 'anthropic/mock', '--count', str(count), '--concurrency', str(concurrency), '--header', f'authorization: Bearer {INFERENCE_KEY}', '--output', str(output)]\n    return measure(command, output, pid)\n\n\ndef rust_probe(url, output, pid=None, count=2000, concurrency=64):\n    command = [str(BENCH / 'target/release/load-probe'), '--label', output.stem, '--url', url, '--model', 'anthropic/mock', '--count', str(count), '--concurrency', str(concurrency), '--header', f'authorization: Bearer {INFERENCE_KEY}', '--output', str(output)]\n    return measure(command, output, pid)\n\n\nfrom contextlib import contextmanager\n\n\n@contextmanager\ndef running_gateway(name, directory):\n    if name == 'airmux':\n        gateway = PerformanceGateway(directory, directory.name)\n        gateway.event_store = 'devnull'\n        gateway.reload_interval_s = 3600\n        gateway.executable = '/app/.venv/bin/airmux'\n        gateway.taxonomy = {'providers': [{'provider_id': 'stub', 'kind': 'anthropic', 'base_url': 'http://127.0.0.1:19000/v1'}], 'models': [{'model_id': 'anthropic/mock', 'provider_id': 'stub', 'upstream_model': 'anthropic/mock', 'input_price_per_mtok': '2', 'output_price_per_mtok': '5', 'context_window': 128000, 'max_output_tokens': 4096, 'input_modalities': ['text'], 'output_modalities': ['text'], 'capabilities': ['streaming', 'tools']}]}\n        try:\n            gateway.write_files()\n            gateway.launch(1)\n            eventually(gateway.ready, timeout=60)\n            yield gateway.process, gateway.url + '/inf/v1/messages'\n        finally:\n            gateway.close()\n    else:\n        raise ValueError('Only Airmux is supported')\n\n\ndef verify_response(url, *, auth=True):\n    with httpx.Client() as client:\n        headers = {'authorization': f'Bearer {INFERENCE_KEY}'} if auth else {}\n        response = client.post(url, json=BODY, headers=headers)\n        if not auth:\n            assert response.status_code == 401, (response.status_code, response.text)\n            return\n        response.raise_for_status()\n        content = response.json()\n        assert content['content'] == [{'type': 'text', 'text': 'token ' * 40}], content\n        assert content['usage']['input_tokens'] == 1 and content['usage']['output_tokens'] == 40, content\n\n\n@app.command()\ndef run(output: Annotated[Path, typer.Option()], rounds: int = 3, latency_count: int = 5000, throughput_count: int = 2000, extended_count: int = 20000, smoke: bool = False):\n    output.mkdir(parents=True, exist_ok=False)\n    direct = 'http://127.0.0.1:19000/v1/messages'\n    results = []\n    with (output / 'mock.log').open('w') as log:\n        mock = subprocess.Popen([str(BENCH / 'target/release/mock-upstream')], env={**os.environ, 'MOCK_PORT': '19000', 'MOCK_TTFT_MS': '20', 'MOCK_OUTPUT_TOKENS': '40'}, stdout=log, stderr=subprocess.STDOUT)\n        try:\n            eventually(lambda: httpx.get('http://127.0.0.1:19000/health').status_code == 200)\n            verify_response(direct)\n            if smoke:\n                for name in ['airmux']:\n                    with running_gateway(name, output / name) as (process, url):\n                        time.sleep(2)\n                        verify_response(url, auth=False)\n                        verify_response(url)\n                        print('Smoke passed:', name, snapshot(process.pid), flush=True)\n                return\n            floor = rust_probe(direct, output / 'direct-floor-c1.json', count=2000, concurrency=1)\n            for round_number in range(1, rounds + 1):\n                order = ['airmux']\n                before = python_probe(direct, output / f'r{round_number}-latency-before.json', count=latency_count)\n                round_results = []\n                for name in order:\n                    directory = output / f'r{round_number}-{name}'\n                    print('Round', round_number, name, flush=True)\n                    with running_gateway(name, directory) as (process, url):\n                        time.sleep(2)\n                        idle = []\n                        for _ in range(20):\n                            idle.append(snapshot(process.pid))\n                            time.sleep(0.1)\n                        verify_response(url)\n                        idle_rss = statistics.median(sum(p['rss_bytes'] for p in sample.values()) for sample in idle) / 1e6\n                        print(name, 'idle RSS MB', idle_rss, flush=True)\n                        latency = python_probe(url, directory / 'latency.json', process.pid, count=latency_count)\n                        throughput = rust_probe(url, directory / 'throughput.json', process.pid, count=throughput_count)\n                        extended = rust_probe(url, directory / 'extended.json', process.pid, count=extended_count)\n                        verify_response(url)\n                        round_results.append({'gateway': name, 'round': round_number, 'idle_rss_mb': idle_rss, 'idle_samples': idle, 'process_threads': {p.pid: p.num_threads() for p in processes(process.pid)}, 'gateway_p99_ms': latency['latency_p99_ms'], 'throughput_rps': throughput['rps'], 'throughput_cpu_percent': throughput['resources']['cpu_percent_one_core'], 'extended_rps': extended['rps'], 'extended_cpu_percent': extended['resources']['cpu_percent_one_core']})\n                    if name == 'airmux':\n                        usage = [json.loads(line) for line in (directory / 'gateway.log').read_text().splitlines() if line.startswith('{')]\n                        usage = [event for event in usage if event.get('event') == 'usage_recorded']\n                        expected = latency_count + throughput_count + extended_count + 2\n                        assert len(usage) == expected, (len(usage), expected)\n                        assert all(event['outcome'] == 'ok' and event['input_tokens'] == 1 and event['output_tokens'] == 40 and event['token_usage_source'] == 'provider' for event in usage)\n                        round_results[-1]['verified_usage_records'] = len(usage)\n                after = python_probe(direct, output / f'r{round_number}-latency-after.json', count=latency_count)\n                baseline = rust_probe(direct, output / f'r{round_number}-throughput-direct.json', count=throughput_count)\n                extended_baseline = rust_probe(direct, output / f'r{round_number}-extended-direct.json', count=extended_count)\n                assert baseline['latency_p99_ms'] < 2 * floor['latency_p99_ms']\n                assert extended_baseline['latency_p99_ms'] < 2 * floor['latency_p99_ms']\n                for result in round_results:\n                    result.update({'direct_before_p99_ms': before['latency_p99_ms'], 'direct_after_p99_ms': after['latency_p99_ms'], 'p99_added_ms': result['gateway_p99_ms'] - (before['latency_p99_ms'] + after['latency_p99_ms']) / 2, 'baseline_rps': baseline['rps'], 'extended_baseline_rps': extended_baseline['rps']})\n                    print({k: v for k, v in result.items() if k not in ('idle_samples', 'process_threads')}, flush=True)\n                results.extend(round_results)\n                (output / 'summary.json').write_text(json.dumps({'rounds': results}, indent=2) + '\\n')\n        finally:\n            mock.terminate()\n            mock.wait(timeout=15)\n\n\nif __name__ == '__main__':\n    app()\n",
+    "collect.py": "import hashlib\nimport json\nimport statistics\nimport subprocess\nfrom pathlib import Path\n\nroot = Path.cwd()\naudit = Path('/private/tmp/airmux-native-aiohttp')\n\ndef sha(path):\n    return hashlib.sha256(path.read_bytes()).hexdigest()\n\ndef slim(result):\n    if isinstance(result, dict):\n        return {key: slim(value) for key, value in result.items() if key not in {'samples', 'idle_samples'}}\n    if isinstance(result, list):\n        return [slim(value) for value in result]\n    return result\n\nbuffered = json.loads((audit/'buffered/summary.json').read_text())\nstreams = json.loads((audit/'streams/summary.json').read_text())\nmedians = {}\nfor variant in ('baseline', 'aiohttp'):\n    trials = [trial for trial in buffered if trial['variant'] == variant]\n    medians[variant] = {\n        'rps': statistics.median(t['rps'] for t in trials),\n        'p99_c64_headers_ms': statistics.median(t['latency_p99_ms'] for t in trials),\n        'p99_c16_body_ms': statistics.median(t['latency_c16']['latency_p99_ms'] for t in trials),\n        'difference_of_p99_ms': statistics.median(t['p99_added_ms'] for t in trials),\n        'cpu_us_per_request': statistics.median(t['cpu_us_per_request'] for t in trials),\n        'cpu_percent_one_core': statistics.median(t['resources']['cpu_percent_one_core'] for t in trials),\n        'idle_rss_mb': statistics.median(t['idle_rss_mb'] for t in trials),\n        'peak_rss_mb': statistics.median(t['resources']['peak_rss_mb'] for t in trials),\n    }\n    for workload in ('dense','large'):\n        trials = [t for t in streams if t['variant'] == variant and t['workload'] == workload]\n        medians[variant][workload] = {\n            'cpu_ms_per_request': statistics.median(t['cpu_ms_per_request'] for t in trials),\n            'completion_p50_ms': statistics.median(t['latency_p50_ms'] for t in trials),\n            'first_content_p50_ms': statistics.median(t['first_content_p50_ms'] for t in trials),\n            'peak_rss_mb': statistics.median(t['resources']['peak_rss_mb'] for t in trials),\n        }\nassert len(buffered)==6 and len(streams)==12\nassert sum(t['usage_records'] for t in buffered)==156012\nassert sum(t['verified_usage_records'] for t in streams)==144\nassert all(not t['errors'] for t in buffered+streams)\nfor t in buffered:\n    assert abs(t['cpu_us_per_request']-t['resources']['cpu_s']*1e6/20000)<1e-6\nreport = {\n    'baseline_commit': '6d56c2a1ea015f5bd7d66de15a6ce5e64462521c',\n    'image_id': 'sha256:949b35ffa05699e3e7d0e7f45b9d47c339a379ed99e263da8cf4056cd1387995',\n    'container_limits': {'cpus':4,'memory_gib':8,'network':'none'},\n    'workers':1,\n    'runtime': {'python':'3.13.15','aiohttp':'3.14.3','httpx2':'2.13.0','platform':'Linux ARM64'},\n    'medians': medians,\n    'buffered': slim(buffered),\n    'streams': slim(streams),\n    'controls': {path.name: json.loads(path.read_text()) for path in sorted((audit/'buffered').glob('r*-*-*.json'))},\n    'candidate_source_sha256': {str(path.relative_to(root)):sha(path) for prefix in ('apps/data-plane/src','lib/runtime/src') for path in sorted((root/prefix).rglob('*.py'))},\n    'baseline_source_sha256': {str(path.relative_to(audit/'baseline')):sha(path) for path in sorted((audit/'baseline').rglob('*.py'))},\n    'diagnostic_sources': {name:(audit/name).read_text() for name in ('gateway','run.py','streams.py','comparison.py','collect.py')},\n    'full_raw_artifacts': str(audit),\n    'verified_usage_records':156156,\n}\n(root/'notes/performance/native-aiohttp.json').write_text(json.dumps(report,indent=2)+'\\n')\nprint(json.dumps(medians,indent=2))\n"
+  },
+  "full_raw_artifacts": "/private/tmp/airmux-native-aiohttp",
+  "verified_usage_records": 156156,
+  "diagnostic_source_note": "Embedded scripts contain only Airmux and direct-mock runs. Install diagnostic dependencies in the active Python environment before replaying historical probes. Stored source_sha256 values describe the included scripts; measured_source_sha256 retains the original hashes for edited scripts. Measurement values are unchanged."
+}

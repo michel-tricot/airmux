@@ -7,9 +7,10 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Literal
 
-import httpx2
+import aiohttp
 from pydantic import ValidationError
 from pydantic_core import from_json
 from starlette.responses import Response
@@ -218,9 +219,12 @@ class RequestExecution:
                     attempt_started_at=attempt_started_at,
                 )
                 return await session.open(upstream)
-            response = await self.runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
-            _check_upstream(response)
-            final = adapter.transform_response(response.content, ctx)
+            async with self.runtime.http_client.request(
+                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, allow_redirects=False
+            ) as response:
+                body = await response.read()
+                _check_upstream(response.status, body)
+            final = adapter.transform_response(body, ctx)
         except UpstreamResponseError as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             status = status_for_upstream(error.status)
@@ -231,21 +235,21 @@ class RequestExecution:
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
             reason: FallbackReason | None = (
                 "rate_limited"
-                if error.status == httpx2.codes.TOO_MANY_REQUESTS
+                if error.status == HTTPStatus.TOO_MANY_REQUESTS
                 else "upstream_unavailable"
-                if error.status >= httpx2.codes.INTERNAL_SERVER_ERROR
+                if error.status >= HTTPStatus.INTERNAL_SERVER_ERROR
                 else None
             )
             rejects_credential = error.status in {
-                httpx2.codes.UNAUTHORIZED,
-                httpx2.codes.FORBIDDEN,
-                httpx2.codes.TOO_MANY_REQUESTS,
+                HTTPStatus.UNAUTHORIZED,
+                HTTPStatus.FORBIDDEN,
+                HTTPStatus.TOO_MANY_REQUESTS,
             }
             return AttemptFailure(rendered, reason, rejects_credential)
-        except httpx2.HTTPError as error:
+        except (aiohttp.ClientError, TimeoutError) as error:
             self.runtime.metrics.observe_upstream(egress_kind, upstream_outcome(error), attempt_started_at)
             rendered = self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
-            return AttemptFailure(rendered, "timeout" if isinstance(error, httpx2.TimeoutException) else "upstream_unavailable", False)
+            return AttemptFailure(rendered, "timeout" if isinstance(error, TimeoutError) else "upstream_unavailable", False)
         except UpstreamProtocolError as error:
             self.runtime.metrics.observe_upstream(egress_kind, "protocol_error", attempt_started_at)
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, reservation))
@@ -277,9 +281,9 @@ class RequestExecution:
         )
 
 
-def _check_upstream(response: httpx2.Response) -> None:
-    if response.is_error:
-        raise UpstreamResponseError(response.status_code, response.content)
+def _check_upstream(status: int, body: bytes) -> None:
+    if status >= HTTPStatus.BAD_REQUEST:
+        raise UpstreamResponseError(status, body)
 
 
 async def _resolve_credential(entry: CredentialEntry, resolver: CredentialResolver) -> Secret | None:

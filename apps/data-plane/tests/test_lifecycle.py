@@ -24,6 +24,7 @@ from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import FileOutbox
 
 if TYPE_CHECKING:
+    import aiohttp
     from starlette.types import ASGIApp
 
     from data_plane.bundle import BundleConfig, BundleHolder
@@ -122,7 +123,7 @@ def failing_app() -> ASGIApp:
     def build_source(
         config: BundleConfig,
         holder: BundleHolder,
-        http_client: httpx2.AsyncClient,
+        http_client: aiohttp.ClientSession,
     ) -> BundleSource:
         return source
 

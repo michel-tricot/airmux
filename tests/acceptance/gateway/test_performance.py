@@ -203,7 +203,7 @@ def test_overhead_rejects_unmatched_controls(field: str):
     timings["direct_after"][field] = {
         "revision": "candidate",
         "round": 2,
-        "provider_protocol": "http2",
+        "provider_protocol": "https",
         "scenario": "buffered",
         "concurrency": 8,
     }[field]
@@ -363,13 +363,13 @@ async def test_performance_upstream_preserves_idle_connections_between_controls(
         provider.close()
 
 
-async def test_performance_upstream_negotiates_http2_without_rotating_at_1000_requests(tmp_path: Path):
-    provider = performance.FastProvider(tmp_path, "http2", Settings(1, 1, 0))
+async def test_performance_upstream_negotiates_https_without_rotating_at_1000_requests(tmp_path: Path):
+    provider = performance.FastProvider(tmp_path, "https", Settings(1, 1, 0))
     try:
         provider.start()
-        async with httpx2.AsyncClient(http2=True, verify=provider.ssl_context(), trust_env=False) as client:
+        async with httpx2.AsyncClient(verify=provider.ssl_context(), trust_env=False) as client:
             responses = [await client.get(provider.url + "/readyz") for _ in range(1002)]
-        assert all(response.status_code == 200 and response.http_version == "HTTP/2" for response in responses)
+        assert all(response.status_code == 200 and response.http_version == "HTTP/1.1" for response in responses)
         assert responses[0].extensions["network_stream"] is responses[-1].extensions["network_stream"]
     finally:
         provider.close()
@@ -389,14 +389,14 @@ async def test_performance_upstream_supports_sized_payloads_and_chunked_streams(
         provider.close()
 
 
-def test_workloads_cover_pool_saturation_and_http2():
+def test_workloads_cover_pool_saturation_and_https():
     assert ("buffered_devnull", 128, "http1") in performance.WORKLOADS
-    assert any(provider_protocol == "http2" and scenario != "upstream" for scenario, _concurrency, provider_protocol in performance.WORKLOADS)
+    assert any(provider_protocol == "https" and scenario != "upstream" for scenario, _concurrency, provider_protocol in performance.WORKLOADS)
 
 
 def test_workload_filter_selects_one_scenario():
     settings = Settings(1, 1, 0, scenario="stream")
-    assert performance.workloads(settings) == (("stream", 1, "http1"), ("stream", 32, "http2"))
+    assert performance.workloads(settings) == (("stream", 1, "http1"), ("stream", 32, "https"))
 
 
 def test_devnull_only_result_accepts_zero_durable_events():
@@ -410,7 +410,7 @@ def test_scaling_workloads_cover_workers_pools_concurrency_and_protocols():
     assert {case.workers for case in CASES} == {1, 2, 4}
     assert {case.max_connections for case in CASES} == {100, 256}
     assert {case.concurrency for case in CASES} == {32, 128}
-    assert {case.protocol for case in CASES} == {"http1", "http2"}
+    assert {case.protocol for case in CASES} == {"http1", "https"}
 
 
 def test_stream_fixture_emits_the_requested_content_event_count():
@@ -435,8 +435,8 @@ def test_scaling_report_rejects_mislabeled_cases():
         ScalingMeasurement(case=CASES[0], overhead=overhead("candidate", 1, 10, 20))
 
 
-def test_scaling_records_actual_worker_cpu_and_http2_connections(gateway: Gateway, tmp_path: Path):
-    case = next(case for case in CASES if (case.workers, case.max_connections, case.concurrency, case.protocol) == (2, 256, 32, "http2"))
+def test_scaling_records_actual_worker_cpu_and_https_connections(gateway: Gateway, tmp_path: Path):
+    case = next(case for case in CASES if (case.workers, case.max_connections, case.concurrency, case.protocol) == (2, 256, 32, "https"))
     settings = Settings(
         0.2,
         1,
@@ -454,7 +454,7 @@ def test_scaling_records_actual_worker_cpu_and_http2_connections(gateway: Gatewa
     assert resources is not None
     assert len(resources.gateway_cpu_seconds_by_pid) >= 3
     assert resources.cpu_seconds["gateway"] > 0
-    assert 1 <= resources.provider_connections <= 2
+    assert 1 <= resources.provider_connections <= case.concurrency * case.workers
     measurement = ScalingMeasurement(case=case, overhead=measured)
     (summary,) = summarize([measurement])
     assert summary["workers"] == 2

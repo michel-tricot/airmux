@@ -6,10 +6,8 @@ import time
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
 
-import httpx
-import httpx2
+import aiohttp
 import pytest
-import respx
 from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
@@ -53,10 +51,9 @@ async def _event(outbox: SqliteOutbox):
     return event
 
 
-@respx.mock
-def test_streaming_end_to_end(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
-    mock_control_plane()
+def test_streaming_end_to_end(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=TEXT_LOG, repeat=True)
+    mock_control_plane(http_mock)
     with (
         TestClient(dp_app) as client,
         client.stream(
@@ -82,10 +79,9 @@ def test_streaming_end_to_end(api_key, dp_app):
     assert text_body.rstrip().endswith("data: [DONE]")
 
 
-@respx.mock
-def test_streaming_upstream_error_status_passes_through(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
-    mock_control_plane()
+def test_streaming_upstream_error_status_passes_through(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=429, payload={"error": {"code": "rate_limited"}}, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -104,7 +100,7 @@ async def _open_stream(
     ctx: Ctx,
     request: CanonicalRequest,
     outbox: SqliteOutbox,
-    http_client: httpx2.AsyncClient,
+    http_client: aiohttp.ClientSession,
     metrics: DataPlaneMetrics | None = None,
 ) -> Response:
     with outbox.reserve() as reservation:
@@ -123,10 +119,9 @@ async def _open_stream(
         return await session.open(UPSTREAM)
 
 
-@respx.mock
-async def test_cancellation_estimates_partial_tokens(metering, http_client):
+async def test_cancellation_estimates_partial_tokens(http_mock, metering, http_client):
     ctx, outbox = metering
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=TEXT_LOG, repeat=True)
     req = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "count to three"}], stream=True)
     iterator = _body_gen(await _open_stream(ctx, req, outbox, http_client))
     await anext(iterator)
@@ -144,7 +139,7 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
     ctx, outbox = metering
 
     class FakeResponse:
-        is_error = False
+        status = 200
 
     class FakeStream:
         exited = False
@@ -156,7 +151,7 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
             self.exited = True
 
     stream = FakeStream()
-    monkeypatch.setattr(http_client, "stream", lambda *_args, **_kwargs: stream)
+    monkeypatch.setattr(http_client, "request", lambda *_args, **_kwargs: stream)
     response = await _open_stream(ctx, REQUEST, outbox, http_client)
 
     async def receive():
@@ -173,33 +168,30 @@ async def test_disconnect_before_first_body_releases_stream_resources(monkeypatc
     assert (await _event(outbox)).status == "cancelled"
 
 
-@respx.mock
-async def test_mid_stream_error_event_becomes_sse_error(metering, http_client):
+async def test_mid_stream_error_event_becomes_sse_error(http_mock, metering, http_client):
     ctx, outbox = metering
     metrics = DataPlaneMetrics()
     hi = {"id": "cmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": {"content": "héllo "}, "finish_reason": None}]}
     log = sse(hi) + sse({"error": {"code": "overloaded", "message": "try later"}})
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=log, repeat=True)
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client, metrics))]
     assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "overloaded" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
     assert 'airmux_data_plane_upstream_attempts_total{egress_kind="openai_compatible",outcome="provider_error"} 1.0' in metrics.render().decode()
 
 
-@respx.mock
-async def test_stream_ending_before_the_provider_terminal_becomes_sse_error(metering, http_client):
+async def test_stream_ending_before_the_provider_terminal_becomes_sse_error(http_mock, metering, http_client):
     ctx, outbox = metering
     incomplete = TEXT_LOG.removesuffix(b"data: [DONE]\n\n")
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=incomplete))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=incomplete, repeat=True)
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
     assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
 
 
-@respx.mock
-async def test_malformed_stream_event_becomes_sse_error(metering, http_client):
+async def test_malformed_stream_event_becomes_sse_error(http_mock, metering, http_client):
     ctx, outbox = metering
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=b"data: not-json\n\n"))
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, body=b"data: not-json\n\n", repeat=True)
     chunks = [chunk async for chunk in _body_gen(await _open_stream(ctx, REQUEST, outbox, http_client))]
     assert any(json.loads(chunk[6:]).get("error", {}).get("code") == "invalid_upstream_response" for chunk in chunks if chunk != b"data: [DONE]\n\n")
     assert (await _event(outbox)).status == "upstream_error"
@@ -209,11 +201,11 @@ async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatc
     ctx, outbox = metering
 
     class FakeResp:
-        is_error = True
+        status = 502
 
-        async def aread(self):
+        async def read(self):
             msg = "connection reset while reading error body"
-            raise httpx2.ReadError(msg)
+            raise aiohttp.ClientPayloadError(msg)
 
     class FakeStreamCM:
         def __init__(self):
@@ -228,10 +220,10 @@ async def test_error_body_read_failure_closes_upstream_and_propagates(monkeypatc
     cm = FakeStreamCM()
 
     class FakeClient:
-        def stream(self, *args, **kwargs):
+        def request(self, *args, **kwargs):
             return cm
 
-    monkeypatch.setattr(http_client, "stream", FakeClient().stream)
-    with pytest.raises(httpx2.ReadError, match="connection reset"):
+    monkeypatch.setattr(http_client, "request", FakeClient().request)
+    with pytest.raises(aiohttp.ClientPayloadError, match="connection reset"):
         await _open_stream(ctx, REQUEST, outbox, http_client)
     assert cm.exited
