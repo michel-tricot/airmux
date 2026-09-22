@@ -9,9 +9,10 @@ from conftest import CTX, MODEL, make_credential
 from test_adapter_streaming import CASES, KINDS, _adapter
 
 from airmux_runtime.secrets import MemoryStoreConfig, Secret
-from data_plane.canonical import CanonicalRequest, CanonicalToolDef, CanonicalUserMessage
+from data_plane.canonical import CanonicalChunk, CanonicalReasoningDelta, CanonicalRequest, CanonicalToolDef, CanonicalUserMessage
 from data_plane.credentials import CredentialResolver
 from data_plane.egress.base import RawEvent
+from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics
 
 pytestmark = pytest.mark.performance
@@ -100,3 +101,23 @@ def test_provider_translation_does_not_duplicate_large_tool_schema_trees(kind):
     finally:
         tracemalloc.stop()
     assert peak < len(upstream.body) * 2, (peak, len(upstream.body))
+
+
+@pytest.mark.parametrize("dialect", INGRESS)
+def test_repeated_reasoning_identity_does_not_allocate_discarded_blocks(dialect):
+    stream = INGRESS[dialect].new_stream()
+    stream.start(CTX)
+    chunk = CanonicalChunk(id="response", delta=CanonicalReasoningDelta(id="reasoning"))
+    stream.chunk(chunk)
+    if stream.chunk(chunk):
+        pytest.skip("This dialect emits repeated reasoning identity updates")
+    peaks = []
+    for _ in range(5):
+        tracemalloc.start()
+        try:
+            assert stream.chunk(chunk) == []
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+        peaks.append(peak)
+    assert statistics.median(peaks) < 256, peaks
