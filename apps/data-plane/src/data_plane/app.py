@@ -7,17 +7,17 @@ import os
 import signal
 from typing import TYPE_CHECKING
 
-import aiohttp
 from starlette.applications import Starlette
 from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger, flush_logger, log_event
 from data_plane.budgets import build_budget_backend
 from data_plane.bundle import BundleHolder, build_bundle_source
-from data_plane.config import Config, HttpConfig, load_config
+from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
 from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
+from data_plane.http_client import build_http_client
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics, metrics_endpoint
 from data_plane.outbox import build_outbox
@@ -49,15 +49,6 @@ async def readyz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ready"})
 
 
-def _build_http_client(config: HttpConfig) -> aiohttp.ClientSession:
-    return aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(limit=config.max_connections),
-        timeout=aiohttp.ClientTimeout(total=None, connect=5, sock_read=120),
-        cookie_jar=aiohttp.DummyCookieJar(),
-        trust_env=any(os.environ.get(name) for name in ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy")),
-    )
-
-
 def _terminate_process() -> None:
     os.kill(os.getpid(), signal.SIGTERM)
 
@@ -83,7 +74,7 @@ def create_app(config: Config) -> ASGIApp:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         configure_logger(logger, dev=config.dev)
-        async with config.secrets.build() as secret_store, _build_http_client(config.http) as http_client:
+        async with config.secrets.build() as secret_store, build_http_client(config.http) as http_client:
             outbox = build_outbox(config.events, http_client, metrics)
             async with contextlib.AsyncExitStack() as cleanup:
                 cleanup.callback(flush_logger, logger)
