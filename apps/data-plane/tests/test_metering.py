@@ -10,6 +10,7 @@ from contract import uuid7
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, CanonicalTextPart, CanonicalToolCallPart, CanonicalToolDef, CanonicalUsage
 from data_plane.egress.base import Ctx
 from data_plane.metering import RequestStart, cost_breakdown, denied_event, usage_event
+from data_plane.requirements import RequestRequirements
 
 
 def _model():
@@ -132,7 +133,7 @@ def test_denial_uses_the_request_identity_and_elapsed_latency():
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
     start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1)
-    event = denied_event(key, uuid7(), request, start)
+    event = denied_event(key, uuid7(), request, start, RequestRequirements.of(request))
 
     assert event.request_id == request_id
     assert event.latency_ms >= 1000

@@ -32,6 +32,7 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.policy import Allow, Deny, evaluate, model_allowed
+from data_plane.requirements import RequestRequirements
 from data_plane.routing import RoutePlan, plan_routes
 
 
@@ -211,7 +212,8 @@ def test_price_limit_applies_to_fallback_models():
     ]
     key, snap = snapshot(policies, models=[MODEL, backup])
 
-    plan = plan_routes(request(), key, snap)
+    canonical_request = request()
+    plan = plan_routes(canonical_request, key, snap, RequestRequirements.of(canonical_request))
 
     assert isinstance(plan, RoutePlan)
     assert plan.backups == ()
@@ -295,7 +297,8 @@ def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
     first = policy(action).model_copy(update={"priority": 10})
     later = policy({**action, "on": ["rate_limited"]}).model_copy(update={"priority": 20})
     key, snap = snapshot([later, first])
-    plan = plan_routes(request(), key, snap)
+    canonical_request = request()
+    plan = plan_routes(canonical_request, key, snap, RequestRequirements.of(canonical_request))
     assert isinstance(plan, RoutePlan)
     assert plan.retry_on == ("timeout",)
     assert plan.backups == ()

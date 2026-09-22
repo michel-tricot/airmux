@@ -35,7 +35,7 @@ from data_plane.metrics import upstream_outcome
 from data_plane.outbox import OutboxFullError
 from data_plane.policy import Allow, Deny
 from data_plane.reconcile import reconcile
-from data_plane.requirements import requested_capabilities
+from data_plane.requirements import RequestRequirements
 from data_plane.routing import RoutePlan, plan_routes
 from data_plane.runtime import Runtime, runtime_of
 from data_plane.streaming import StreamSession
@@ -69,6 +69,7 @@ async def complete(request: Request, context: InferenceContext, ingress: Ingress
         canonical_request, adjustments = _parse(body, ingress)
         execution = RequestExecution(
             request=canonical_request,
+            requirements=RequestRequirements.of(canonical_request),
             key=context.key,
             snapshot=context.snapshot,
             ingress=ingress,
@@ -127,6 +128,7 @@ class RequestExecution:
     """Everything fixed after authentication and parsing for one request."""
 
     request: CanonicalRequest
+    requirements: RequestRequirements
     key: KeyEntry
     snapshot: BundleSnapshot
     ingress: IngressAdapter
@@ -137,10 +139,10 @@ class RequestExecution:
     async def run(self) -> Response:
         if self.snapshot.provider_param_aliases.intersection(self.request.extra):
             raise RequestRejectedError(400, GatewayErrorCode.invalid_request, "Provider parameter aliases must use canonical names")
-        plan = plan_routes(self.request, self.key, self.snapshot)
+        plan = plan_routes(self.request, self.key, self.snapshot, self.requirements)
         if isinstance(plan, Deny):
             with self.runtime.outbox.reserve() as reservation:
-                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
+                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start, self.requirements))
             raise RequestRejectedError(plan.status, GatewayErrorCode(plan.code), plan.message)
         try:
             if plan.timeout_ms is None:
@@ -183,7 +185,7 @@ class RequestExecution:
             self.runtime.budgets.check(rules, self.key, datetime.now(UTC))
         except RequestRejectedError:
             with self.runtime.outbox.reserve() as reservation:
-                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start))
+                reservation.record(denied_event(self.key, self.snapshot.bundle.bundle_id, self.request, self.start, self.requirements))
             raise
 
     async def _attempt(
@@ -277,7 +279,7 @@ class RequestExecution:
             key_id=self.key.key_id,
             user_id=self.key.user_id,
             requested_model_id=self.request.model,
-            requested_capabilities=requested_capabilities(self.request),
+            requested_capabilities=self.requirements.requested_capabilities,
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
             bundle_id=self.snapshot.bundle.bundle_id,
