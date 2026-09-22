@@ -171,13 +171,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "usage_event",
-        sa.CheckConstraint(
-            "(status = 'denied' AND token_usage_source = 'not_applicable') OR "
-            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
-            name="usage_event_token_usage_source_valid",
-        ),
         sa.Column("event_id", sa.Uuid(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
+        sa.Column("request_started_at", UTCDateTime(), nullable=False),
+        sa.Column("attempt_started_at", UTCDateTime(), nullable=True),
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
@@ -191,6 +188,7 @@ def upgrade() -> None:
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
         sa.Column("token_usage_source", sa.String(), nullable=False),
+        sa.Column("attempt_index", sa.Integer(), nullable=True),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),
@@ -207,6 +205,7 @@ def upgrade() -> None:
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
     op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
     op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
+    op.create_index("usage_event_org_request_idx", "usage_event", ["org_id", "request_id"], unique=False)
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -628,6 +627,7 @@ def downgrade() -> None:
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_request_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")

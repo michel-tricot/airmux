@@ -64,7 +64,10 @@ def _usage_event(metered, status, occurred_at):
     return {
         "event_id": str(uuid7()),
         "request_id": str(uuid7()),
+        "request_started_at": occurred_at.isoformat(),
+        "attempt_started_at": occurred_at.isoformat(),
         "occurred_at": occurred_at.isoformat(),
+        "attempt_index": 1,
         "org_id": str(metered.org_id),
         "workspace_id": str(metered.workspace_id),
         "key_id": "k1",

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD, UsdAmount
@@ -39,7 +38,10 @@ class _UsageEventV1(BaseModel):
     schema_version: Literal[1] = Field(1, description="Usage event schema version")
     event_id: UUID = Field(description="Idempotency key for event ingestion")
     request_id: UUID = Field(description="Data-plane request ID")
-    occurred_at: datetime = Field(description="Timestamp when the request completed")
+    request_started_at: AwareDatetime = Field(description="Timestamp when the logical request began")
+    attempt_started_at: AwareDatetime | None = Field(default=None, description="Timestamp when the provider attempt began")
+    occurred_at: AwareDatetime = Field(description="Timestamp when the attempt or denial completed")
+    attempt_index: int | None = Field(default=None, description="One-based provider attempt order, absent for a denial")
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
     key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
@@ -66,26 +68,10 @@ class _UsageEventV1(BaseModel):
         description="Scope of the provider credential used for the request",
     )
 
-    @field_validator("occurred_at")
-    @classmethod
-    def require_aware_timestamp(cls, occurred_at: datetime) -> datetime:
-        if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
-            msg = "occurred_at must include a timezone"
-            raise ValueError(msg)
-        return occurred_at
-
-    @model_validator(mode="after")
-    def exact_total(self) -> Self:
-        if self.cost_usd != self.cost_input_usd + self.cost_output_usd:
-            msg = "cost_usd must equal cost_input_usd plus cost_output_usd"
-            raise ValueError(msg)
-        if self.status == "denied" and self.cost_usd != ZERO_USD:
-            msg = "denied events must have zero cost"
-            raise ValueError(msg)
-        return self
-
 
 class DeniedUsageEventV1(_UsageEventV1):
+    attempt_index: None = Field(None, description="No provider attempt was made")
+    attempt_started_at: None = Field(None, description="No provider attempt was made")
     token_usage_source: Literal[TokenUsageSource.NOT_APPLICABLE] = Field(description="No upstream token usage for a request denied before routing")
     provider_id: Literal[""] = Field("", description="No provider was selected before denial")
     status: Literal["denied"] = Field("denied", description="The request was denied before routing")
@@ -94,6 +80,8 @@ class DeniedUsageEventV1(_UsageEventV1):
 
 
 class RoutedUsageEventV1(_UsageEventV1):
+    attempt_index: int = Field(description="One-based provider attempt order within the logical request", ge=1, le=MAX_EVENT_INTEGER)
+    attempt_started_at: AwareDatetime = Field(description="Timestamp when the provider attempt began")
     token_usage_source: Literal[TokenUsageSource.PROVIDER, TokenUsageSource.ESTIMATED] = Field(
         description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. "
         "Independent of catalog-priced cost estimates"

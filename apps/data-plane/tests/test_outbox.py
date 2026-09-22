@@ -25,7 +25,10 @@ def make_event(request_id) -> RoutedUsageEventV1:
     return RoutedUsageEventV1(
         event_id=uuid4(),
         request_id=request_id,
+        request_started_at=datetime.now(tz=UTC),
+        attempt_started_at=datetime.now(tz=UTC),
         occurred_at=datetime.now(tz=UTC),
+        attempt_index=1,
         org_id=uuid7(),
         workspace_id=uuid7(),
         key_id=str(uuid7()),

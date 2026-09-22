@@ -13,6 +13,7 @@ from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from datetime import datetime
     from uuid import UUID
 
     from airmux_runtime.secrets import Secret
@@ -126,6 +127,9 @@ class UpstreamProtocolError(ValueError):
 @dataclass(frozen=True)
 class Ctx:
     request_id: UUID
+    request_started_at: datetime
+    attempt_started_at: datetime
+    attempt_index: int
     model: ModelEntry
     provider: ProviderEntry
     stream: bool

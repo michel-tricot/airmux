@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
@@ -15,7 +16,10 @@ def usage_event(**overrides: object) -> dict[str, object]:
     return {
         "event_id": uuid7(),
         "request_id": uuid7(),
+        "request_started_at": datetime.now(tz=UTC),
+        "attempt_started_at": datetime.now(tz=UTC),
         "occurred_at": datetime.now(tz=UTC),
+        "attempt_index": 1,
         "org_id": uuid7(),
         "workspace_id": uuid7(),
         "key_id": "external-key",
@@ -48,9 +52,13 @@ def test_routed_usage_requires_a_complete_credential_reference():
 
 def test_early_denial_rejects_provider_and_credential_data():
     with pytest.raises(ValidationError):
-        USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="provider"))
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="provider", attempt_index=None, attempt_started_at=None))
     with pytest.raises(ValidationError):
-        USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace"))
+        USAGE_EVENT_ADAPTER.validate_python(
+            usage_event(
+                status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace", attempt_index=None, attempt_started_at=None
+            )
+        )
 
 
 def test_usage_events_accept_opaque_key_ids():
@@ -58,26 +66,28 @@ def test_usage_events_accept_opaque_key_ids():
     assert event.key_id == "external-key"
 
 
-def test_usage_event_cost_must_equal_its_exact_components() -> None:
-    with pytest.raises(ValidationError, match="cost_usd must equal"):
-        USAGE_EVENT_ADAPTER.validate_python(usage_event(cost_usd="0.3", cost_input_usd="0.1", cost_output_usd="0.200000000001"))
+def test_usage_event_keeps_observed_cost_even_when_components_do_not_match() -> None:
+    event = USAGE_EVENT_ADAPTER.validate_python(usage_event(cost_usd="0.3", cost_input_usd="0.1", cost_output_usd="0.200000000001"))
+    assert event.cost_usd == Decimal("0.3")
 
 
-def test_denied_usage_event_cost_must_be_zero() -> None:
-    with pytest.raises(ValidationError, match="denied events must have zero cost"):
-        USAGE_EVENT_ADAPTER.validate_python(
-            usage_event(
-                status="denied",
-                provider_id="",
-                credential_id=None,
-                credential_scope=None,
-                input_tokens=0,
-                output_tokens=0,
-                token_usage_source="not_applicable",
-                cost_usd="0.1",
-                cost_input_usd="0.1",
-            )
+def test_denied_usage_event_keeps_the_observed_cost() -> None:
+    event = USAGE_EVENT_ADAPTER.validate_python(
+        usage_event(
+            status="denied",
+            provider_id="",
+            credential_id=None,
+            credential_scope=None,
+            attempt_index=None,
+            attempt_started_at=None,
+            input_tokens=0,
+            output_tokens=0,
+            token_usage_source="not_applicable",
+            cost_usd="0.1",
+            cost_input_usd="0.1",
         )
+    )
+    assert event.cost_usd == Decimal("0.1")
 
 
 @pytest.mark.parametrize("source", ["provider", "estimated"])
@@ -103,5 +113,13 @@ def test_token_usage_source_is_required():
 def test_denied_usage_rejects_routed_token_sources(source):
     with pytest.raises(ValidationError):
         USAGE_EVENT_ADAPTER.validate_python(
-            usage_event(status="denied", provider_id="", credential_id=None, credential_scope=None, token_usage_source=source)
+            usage_event(
+                status="denied",
+                provider_id="",
+                credential_id=None,
+                credential_scope=None,
+                token_usage_source=source,
+                attempt_index=None,
+                attempt_started_at=None,
+            )
         )

@@ -161,7 +161,7 @@ class RequestExecution:
                     continue
                 attempts += 1
                 with self.runtime.outbox.reserve() as reservation:
-                    outcome = await self._attempt(decision, entry, credential, reservation)
+                    outcome = await self._attempt(decision, entry, credential, reservation, attempts)
                 if isinstance(outcome, Response):
                     return outcome
                 failure = outcome
@@ -189,9 +189,11 @@ class RequestExecution:
         entry: CredentialEntry,
         credential: Secret,
         reservation: OutboxReservation,
+        attempt_index: int,
     ) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         attempt_started_at = time.monotonic()
+        attempt_started_at_utc = datetime.now(UTC)
         routed_request = self.request.model_copy(update={"model": decision.model.model_id})
         request, reconcile_adjustments = reconcile(
             routed_request,
@@ -201,7 +203,7 @@ class RequestExecution:
         )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
-        ctx = self._ctx(decision, entry)
+        ctx = self._ctx(decision, entry, attempt_index, attempt_started_at_utc, attempt_started_at)
         upstream = _transform(adapter, request, decision.model)
         try:
             if request.stream:
@@ -258,9 +260,12 @@ class RequestExecution:
         self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_at)
         return self.ingress.render_response(final)
 
-    def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
+    def _ctx(self, decision: Allow, entry: CredentialEntry, attempt_index: int, attempt_started_at: datetime, started_at: float) -> Ctx:
         return Ctx(
             request_id=self.start.request_id,
+            request_started_at=self.start.request_started_at,
+            attempt_started_at=attempt_started_at,
+            attempt_index=attempt_index,
             model=decision.model,
             provider=decision.provider,
             stream=self.request.stream,
@@ -273,7 +278,7 @@ class RequestExecution:
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
             bundle_id=self.snapshot.bundle.bundle_id,
-            started_at=self.start.started_at,
+            started_at=started_at,
         )
 
 

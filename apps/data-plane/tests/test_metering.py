@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -56,6 +57,9 @@ def test_usage_has_request_attribution_and_token_source(estimated):
     credential_id = uuid7()
     ctx = Ctx(
         request_id=uuid7(),
+        request_started_at=datetime.now(UTC),
+        attempt_started_at=datetime.now(UTC),
+        attempt_index=1,
         model=_model(),
         provider=PROVIDER,
         stream=True,
@@ -100,6 +104,9 @@ def test_usage_has_request_attribution_and_token_source(estimated):
 def test_estimation_preserves_reported_input_and_counts_non_text_content():
     ctx = Ctx(
         request_id=uuid7(),
+        request_started_at=datetime.now(UTC),
+        attempt_started_at=datetime.now(UTC),
+        attempt_index=1,
         model=_model(),
         provider=PROVIDER,
         stream=True,
@@ -139,7 +146,7 @@ def test_denial_uses_the_request_identity_and_elapsed_latency():
     key = make_key("denied")[1]
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
-    start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1)
+    start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1, request_started_at=datetime.now(UTC))
     event = denied_event(key, uuid7(), request, start)
 
     assert event.request_id == request_id

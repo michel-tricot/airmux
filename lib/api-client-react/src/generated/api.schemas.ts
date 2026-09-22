@@ -652,119 +652,6 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
-export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
-
-
-export const DeniedUsageEventV1RequestedCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
-
-export interface DeniedUsageEventV1 {
-  /** Usage event schema version */
-  schema_version?: 1;
-  /** Idempotency key for event ingestion */
-  event_id: string;
-  /** Data-plane request ID */
-  request_id: string;
-  /** Timestamp when the request completed */
-  occurred_at: string;
-  /** Organization that made the request */
-  org_id: string;
-  /** Workspace that made the request */
-  workspace_id: string;
-  /**
-     * Inference key ID used for the request
-     * @minLength 1
-     * @maxLength 255
-     */
-  key_id: string;
-  /** Principal that owned the inference key when the request was made */
-  user_id: string;
-  /**
-     * Original caller-requested model before routing and fallback
-     * @minLength 1
-     * @maxLength 255
-     */
-  requested_model_id: string;
-  /** Original request capabilities before reconciliation */
-  requested_capabilities: DeniedUsageEventV1RequestedCapabilitiesItem[];
-  /**
-     * Caller-facing model ID
-     * @minLength 1
-     * @maxLength 255
-     */
-  model_id: string;
-  /** No provider was selected before denial */
-  provider_id?: '';
-  /** Policy bundle used for the request */
-  bundle_id: string;
-  /**
-     * Total input tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  input_tokens: number;
-  /**
-     * Total output tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  output_tokens: number;
-  /**
-     * Total estimated cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_usd: string;
-  /**
-     * Estimated input cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_input_usd?: string;
-  /**
-     * Estimated output cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_output_usd?: string;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
-  /**
-     * Input tokens read from a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_read_tokens?: number;
-  /**
-     * Input tokens written to a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_write_tokens?: number;
-  /**
-     * End-to-end request latency in milliseconds
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  latency_ms: number;
-  /** The request was denied before routing */
-  status?: 'denied';
-  /** Whether the response was streamed */
-  stream: boolean;
-  /**
-     * No provider credential was selected before denial
-     * @nullable
-     */
-  credential_id?: null;
-  /**
-     * No provider credential scope was selected before denial
-     * @nullable
-     */
-  credential_scope?: null;
-  /** No upstream token usage for a request denied before routing */
-  token_usage_source: 'not_applicable';
-}
-
 export interface OrgOut {
   id: string;
   name: string;
@@ -794,6 +681,7 @@ export interface EnrollOut {
 export interface EventsIngestedOut {
   received: number;
   ingested: number;
+  rejected: number;
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -1665,155 +1553,6 @@ export interface ProviderOut {
   updated_at: string;
 }
 
-export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
-
-
-export const RoutedUsageEventV1RequestedCapabilitiesItem = {
-  tools: 'tools',
-  reasoning: 'reasoning',
-  structured_output: 'structured_output',
-} as const;
-
-/**
- * How the routed request ended
- */
-export type RoutedUsageEventV1Status = typeof RoutedUsageEventV1Status[keyof typeof RoutedUsageEventV1Status];
-
-
-export const RoutedUsageEventV1Status = {
-  ok: 'ok',
-  upstream_error: 'upstream_error',
-  timeout: 'timeout',
-  cancelled: 'cancelled',
-  credential_rejected: 'credential_rejected',
-  rate_limited: 'rate_limited',
-} as const;
-
-/**
- * Scope of the provider credential used for the request
- */
-export type RoutedUsageEventV1CredentialScope = typeof RoutedUsageEventV1CredentialScope[keyof typeof RoutedUsageEventV1CredentialScope];
-
-
-export const RoutedUsageEventV1CredentialScope = {
-  platform: 'platform',
-  org: 'org',
-  workspace: 'workspace',
-} as const;
-
-/**
- * provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates
- */
-export type RoutedUsageEventV1TokenUsageSource = typeof RoutedUsageEventV1TokenUsageSource[keyof typeof RoutedUsageEventV1TokenUsageSource];
-
-
-export const RoutedUsageEventV1TokenUsageSource = {
-  provider: 'provider',
-  estimated: 'estimated',
-} as const;
-
-export interface RoutedUsageEventV1 {
-  /** Usage event schema version */
-  schema_version?: 1;
-  /** Idempotency key for event ingestion */
-  event_id: string;
-  /** Data-plane request ID */
-  request_id: string;
-  /** Timestamp when the request completed */
-  occurred_at: string;
-  /** Organization that made the request */
-  org_id: string;
-  /** Workspace that made the request */
-  workspace_id: string;
-  /**
-     * Inference key ID used for the request
-     * @minLength 1
-     * @maxLength 255
-     */
-  key_id: string;
-  /** Principal that owned the inference key when the request was made */
-  user_id: string;
-  /**
-     * Original caller-requested model before routing and fallback
-     * @minLength 1
-     * @maxLength 255
-     */
-  requested_model_id: string;
-  /** Original request capabilities before reconciliation */
-  requested_capabilities: RoutedUsageEventV1RequestedCapabilitiesItem[];
-  /**
-     * Caller-facing model ID
-     * @minLength 1
-     * @maxLength 255
-     */
-  model_id: string;
-  /**
-     * Provider that served the request
-     * @minLength 1
-     * @maxLength 63
-     */
-  provider_id: string;
-  /** Policy bundle used for the request */
-  bundle_id: string;
-  /**
-     * Total input tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  input_tokens: number;
-  /**
-     * Total output tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  output_tokens: number;
-  /**
-     * Total estimated cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_usd: string;
-  /**
-     * Estimated input cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_input_usd?: string;
-  /**
-     * Estimated output cost in USD
-     * @pattern ^\d+(?:\.\d+)?$
-     */
-  cost_output_usd?: string;
-  /** Effective upstream output-token limit */
-  max_output_tokens: number | null;
-  /**
-     * Input tokens read from a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_read_tokens?: number;
-  /**
-     * Input tokens written to a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_write_tokens?: number;
-  /**
-     * End-to-end request latency in milliseconds
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  latency_ms: number;
-  /** How the routed request ended */
-  status: RoutedUsageEventV1Status;
-  /** Whether the response was streamed */
-  stream: boolean;
-  /** Provider credential used for the request */
-  credential_id: string;
-  /** Scope of the provider credential used for the request */
-  credential_scope: RoutedUsageEventV1CredentialScope;
-  /** provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates */
-  token_usage_source: RoutedUsageEventV1TokenUsageSource;
-}
-
 export interface ServiceAccountIn {
   /**
      * Display name for the service account
@@ -1920,6 +1659,8 @@ export const UsageEventOutCredentialScope = {
 export interface UsageEventOut {
   event_id: string;
   request_id: string;
+  request_started_at: string;
+  attempt_started_at: string | null;
   occurred_at: string;
   org_id: string;
   workspace_id: string;
@@ -1934,6 +1675,7 @@ export interface UsageEventOut {
   output_tokens: number;
   /** Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates */
   token_usage_source: TokenUsageSource;
+  attempt_index: number | null;
   max_output_tokens: number | null;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
@@ -2008,6 +1750,290 @@ export interface WorkspaceOut {
 export interface WorkspaceUpdate {
   /** Replacement workspace name */
   name?: string | null;
+}
+
+export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const DeniedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+export interface DeniedUsageEventV1 {
+  /** Usage event schema version */
+  schema_version?: 1;
+  /** Idempotency key for event ingestion */
+  event_id: string;
+  /** Data-plane request ID */
+  request_id: string;
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /**
+     * No provider attempt was made
+     * @nullable
+     */
+  attempt_started_at?: null;
+  /** Timestamp when the attempt or denial completed */
+  occurred_at: string;
+  /**
+     * No provider attempt was made
+     * @nullable
+     */
+  attempt_index?: null;
+  /** Organization that made the request */
+  org_id: string;
+  /** Workspace that made the request */
+  workspace_id: string;
+  /**
+     * Inference key ID used for the request
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: DeniedUsageEventV1RequestedCapabilitiesItem[];
+  /**
+     * Caller-facing model ID
+     * @minLength 1
+     * @maxLength 255
+     */
+  model_id: string;
+  /** No provider was selected before denial */
+  provider_id?: '';
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /**
+     * Total input tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  input_tokens: number;
+  /**
+     * Total output tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  output_tokens: number;
+  /**
+     * Total estimated cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_usd: string;
+  /**
+     * Estimated input cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_input_usd?: string;
+  /**
+     * Estimated output cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
+  /**
+     * Input tokens read from a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_read_tokens?: number;
+  /**
+     * Input tokens written to a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_write_tokens?: number;
+  /**
+     * End-to-end request latency in milliseconds
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  latency_ms: number;
+  /** The request was denied before routing */
+  status?: 'denied';
+  /** Whether the response was streamed */
+  stream: boolean;
+  /**
+     * No provider credential was selected before denial
+     * @nullable
+     */
+  credential_id?: null;
+  /**
+     * No provider credential scope was selected before denial
+     * @nullable
+     */
+  credential_scope?: null;
+  /** No upstream token usage for a request denied before routing */
+  token_usage_source: 'not_applicable';
+}
+
+export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
+
+
+export const RoutedUsageEventV1RequestedCapabilitiesItem = {
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
+/**
+ * How the routed request ended
+ */
+export type RoutedUsageEventV1Status = typeof RoutedUsageEventV1Status[keyof typeof RoutedUsageEventV1Status];
+
+
+export const RoutedUsageEventV1Status = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+/**
+ * Scope of the provider credential used for the request
+ */
+export type RoutedUsageEventV1CredentialScope = typeof RoutedUsageEventV1CredentialScope[keyof typeof RoutedUsageEventV1CredentialScope];
+
+
+export const RoutedUsageEventV1CredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+/**
+ * provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates
+ */
+export type RoutedUsageEventV1TokenUsageSource = typeof RoutedUsageEventV1TokenUsageSource[keyof typeof RoutedUsageEventV1TokenUsageSource];
+
+
+export const RoutedUsageEventV1TokenUsageSource = {
+  provider: 'provider',
+  estimated: 'estimated',
+} as const;
+
+export interface RoutedUsageEventV1 {
+  /** Usage event schema version */
+  schema_version?: 1;
+  /** Idempotency key for event ingestion */
+  event_id: string;
+  /** Data-plane request ID */
+  request_id: string;
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /** Timestamp when the provider attempt began */
+  attempt_started_at: string;
+  /** Timestamp when the attempt or denial completed */
+  occurred_at: string;
+  /**
+     * One-based provider attempt order within the logical request
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  attempt_index: number;
+  /** Organization that made the request */
+  org_id: string;
+  /** Workspace that made the request */
+  workspace_id: string;
+  /**
+     * Inference key ID used for the request
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /** Principal that owned the inference key when the request was made */
+  user_id: string;
+  /**
+     * Original caller-requested model before routing and fallback
+     * @minLength 1
+     * @maxLength 255
+     */
+  requested_model_id: string;
+  /** Original request capabilities before reconciliation */
+  requested_capabilities: RoutedUsageEventV1RequestedCapabilitiesItem[];
+  /**
+     * Caller-facing model ID
+     * @minLength 1
+     * @maxLength 255
+     */
+  model_id: string;
+  /**
+     * Provider that served the request
+     * @minLength 1
+     * @maxLength 63
+     */
+  provider_id: string;
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /**
+     * Total input tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  input_tokens: number;
+  /**
+     * Total output tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  output_tokens: number;
+  /**
+     * Total estimated cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_usd: string;
+  /**
+     * Estimated input cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_input_usd?: string;
+  /**
+     * Estimated output cost in USD
+     * @pattern ^\d+(?:\.\d+)?$
+     */
+  cost_output_usd?: string;
+  /** Effective upstream output-token limit */
+  max_output_tokens: number | null;
+  /**
+     * Input tokens read from a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_read_tokens?: number;
+  /**
+     * Input tokens written to a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_write_tokens?: number;
+  /**
+     * End-to-end request latency in milliseconds
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  latency_ms: number;
+  /** How the routed request ended */
+  status: RoutedUsageEventV1Status;
+  /** Whether the response was streamed */
+  stream: boolean;
+  /** Provider credential used for the request */
+  credential_id: string;
+  /** Scope of the provider credential used for the request */
+  credential_scope: RoutedUsageEventV1CredentialScope;
+  /** provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. Independent of catalog-priced cost estimates */
+  token_usage_source: RoutedUsageEventV1TokenUsageSource;
 }
 
 export interface PageActivityOut {

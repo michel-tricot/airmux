@@ -37,6 +37,7 @@ REJECTS_CREDENTIAL = frozenset({httpx2.codes.UNAUTHORIZED, httpx2.codes.FORBIDDE
 class RequestStart:
     request_id: UUID
     started_at: float
+    request_started_at: datetime
 
 
 def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[UsdAmount, UsdAmount]:
@@ -103,6 +104,7 @@ def denied_event(
     return DeniedUsageEventV1(
         event_id=uuid7(),
         request_id=start.request_id,
+        request_started_at=start.request_started_at,
         occurred_at=datetime.now(tz=UTC),
         org_id=key.org_id,
         workspace_id=key.workspace_id,
@@ -144,6 +146,8 @@ def usage_event(
     event = RoutedUsageEventV1(
         event_id=uuid7(),
         request_id=ctx.request_id,
+        request_started_at=ctx.request_started_at,
+        attempt_started_at=ctx.attempt_started_at,
         occurred_at=datetime.now(tz=UTC),
         org_id=ctx.org_id,
         workspace_id=ctx.workspace_id,
@@ -168,6 +172,7 @@ def usage_event(
         stream=ctx.stream,
         credential_id=ctx.credential_id,
         credential_scope=ctx.credential_scope,
+        attempt_index=ctx.attempt_index,
     )
     log_event(
         logger,

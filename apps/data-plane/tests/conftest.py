@@ -162,6 +162,9 @@ PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
 CTX = Ctx(
     request_id=uuid7(),
+    request_started_at=datetime.now(UTC),
+    attempt_started_at=datetime.now(UTC),
+    attempt_index=1,
     model=MODEL,
     provider=PROVIDER,
     stream=True,
