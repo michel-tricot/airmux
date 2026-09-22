@@ -23,8 +23,7 @@ app = typer.Typer()
 
 
 def stdlib_encode(body: ChatBody) -> bytes:
-    fields = body.model_dump(mode="json", exclude_none=True)
-    rendered = {"max_tokens" if key == "max_output_tokens" else key: value for key, value in fields.items() if value is not None}
+    rendered = {"max_tokens" if key == "max_output_tokens" else key: value for key, value in body.items() if value is not None}
     return json.dumps(rendered).encode()
 
 

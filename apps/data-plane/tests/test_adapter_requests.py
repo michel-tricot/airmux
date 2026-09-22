@@ -389,3 +389,33 @@ def test_anthropic_maps_reasoning_structured_output_and_tool_options():
     }
     assert sent["tool_choice"] == {"type": "any", "disable_parallel_tool_use": False}
     assert sent["tools"][0]["strict"] is True
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+@pytest.mark.parametrize("alias", [False, True])
+def test_provider_translation_preserves_nested_schema_values_without_mutation(kind, alias):
+    adapter, model = _adapter(kind)
+    if alias:
+        adapter.provider = adapter.provider.model_copy(update={"param_aliases": {"temperature": "provider_temperature"}})
+    parameters = {
+        "type": "object",
+        "properties": {"city": {"type": ["string", "null"], "default": None, "description": "世界"}},
+        "extension": {"integer": 2**80, "float": -0.125, "null": None},
+    }
+    request = request_of(CORPUS[0], temperature=0.125, tools=[CanonicalToolDef(name="weather", parameters=parameters)])
+    before = request.model_dump_json()
+    upstream = adapter.transform_request(request, model)
+    sent = json.loads(upstream.body)
+    tool = sent["tools"][0]
+    schema = tool["input_schema"] if kind == "anthropic" else tool["parameters"] if kind == "openai_responses" else tool["function"]["parameters"]
+    assert schema == parameters
+    assert sent["provider_temperature" if alias else "temperature"] == 0.125
+    assert "top_p" not in sent
+    assert request.model_dump_json() == before
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+def test_provider_translation_retains_nonfinite_extension_encoding(kind):
+    adapter, model = _adapter(kind)
+    request = request_of(CORPUS[0], tools=[CanonicalToolDef(name="test", parameters={"extension": float("inf")})])
+    assert b'"extension":Infinity' in adapter.transform_request(request, model).body

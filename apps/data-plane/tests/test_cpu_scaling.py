@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import statistics
 import time
+import tracemalloc
 
 import pytest
-from conftest import CTX, make_credential
+from conftest import CTX, MODEL, make_credential
 from test_adapter_streaming import CASES, KINDS, _adapter
 
 from airmux_runtime.secrets import MemoryStoreConfig, Secret
+from data_plane.canonical import CanonicalRequest, CanonicalToolDef, CanonicalUserMessage
 from data_plane.credentials import CredentialResolver
 from data_plane.egress.base import RawEvent
 from data_plane.metrics import DataPlaneMetrics
@@ -75,3 +77,26 @@ def test_stream_accumulation_cpu_scales_with_fragment_count(kind, modality):
     small = statistics.median(measure(2048) for _ in range(3))
     large = statistics.median(measure(8192) for _ in range(3))
     assert large < small * 8, (small, large)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_provider_translation_does_not_duplicate_large_tool_schema_trees(kind):
+    parameters = {
+        "type": "object",
+        "properties": {f"field_{index}": {"type": ["string", "null"], "description": "value " * 8, "default": None} for index in range(64)},
+    }
+    request = CanonicalRequest(
+        model=MODEL.model_id,
+        messages=[CanonicalUserMessage(content="hello")],
+        tools=[CanonicalToolDef(name=f"tool_{index}", parameters=parameters) for index in range(32)],
+        max_output_tokens=64,
+    )
+    adapter = _adapter(kind)
+    adapter.transform_request(request, MODEL)
+    tracemalloc.start()
+    try:
+        upstream = adapter.transform_request(request, MODEL)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert peak < len(upstream.body) * 2, (peak, len(upstream.body))
