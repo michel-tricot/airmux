@@ -129,7 +129,6 @@ class Ctx:
     request_id: UUID
     request_started_at: datetime
     attempt_started_at: datetime
-    attempt_index: int
     model: ModelEntry
     provider: ProviderEntry
     stream: bool

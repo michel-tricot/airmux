@@ -44,7 +44,6 @@ class UsageEvent(Record, table=True):
     input_tokens: int
     output_tokens: int
     token_usage_source: TokenUsageSource = Field(sa_type=String)
-    attempt_index: int | None = None
     max_output_tokens: int | None = None
     cost_usd: UsdAmount = Field(sa_column=Column(Numeric(28, 12), nullable=False))
     cost_input_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
@@ -91,7 +90,6 @@ class UsageEventOut(RecordOut[UsageEvent]):
         description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; "
         "independent of cost estimates"
     )
-    attempt_index: int | None
     max_output_tokens: int | None
     cost_usd: UsdAmount
     cost_input_usd: UsdAmount

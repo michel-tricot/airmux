@@ -404,10 +404,6 @@ class InvitationTokenIn(BaseModel):
     ]
 
 
-class JsonValue(RootModel[Any]):
-    root: Any
-
-
 class KeyBudgetBucket(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1493,7 +1489,6 @@ class UsageEventOut(BaseModel):
             description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; independent of cost estimates"
         ),
     ]
-    attempt_index: Annotated[int | None, Field(title="Attempt Index")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
@@ -1648,7 +1643,6 @@ class DeniedUsageEventV1(BaseModel):
             title="Occurred At",
         ),
     ]
-    attempt_index: Annotated[None, Field(description="No provider attempt was made", title="Attempt Index")] = None
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
     key_id: Annotated[
@@ -1825,15 +1819,6 @@ class RoutedUsageEventV1(BaseModel):
         Field(
             description="Timestamp when the attempt or denial completed",
             title="Occurred At",
-        ),
-    ]
-    attempt_index: Annotated[
-        int,
-        Field(
-            description="One-based provider attempt order within the logical request",
-            ge=1,
-            le=2147483647,
-            title="Attempt Index",
         ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]

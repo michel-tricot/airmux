@@ -41,7 +41,6 @@ class _UsageEventV1(BaseModel):
     request_started_at: AwareDatetime = Field(description="Timestamp when the logical request began")
     attempt_started_at: AwareDatetime | None = Field(default=None, description="Timestamp when the provider attempt began")
     occurred_at: AwareDatetime = Field(description="Timestamp when the attempt or denial completed")
-    attempt_index: int | None = Field(default=None, description="One-based provider attempt order, absent for a denial")
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
     key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
@@ -70,7 +69,6 @@ class _UsageEventV1(BaseModel):
 
 
 class DeniedUsageEventV1(_UsageEventV1):
-    attempt_index: None = Field(None, description="No provider attempt was made")
     attempt_started_at: None = Field(None, description="No provider attempt was made")
     token_usage_source: Literal[TokenUsageSource.NOT_APPLICABLE] = Field(description="No upstream token usage for a request denied before routing")
     provider_id: Literal[""] = Field("", description="No provider was selected before denial")
@@ -80,7 +78,6 @@ class DeniedUsageEventV1(_UsageEventV1):
 
 
 class RoutedUsageEventV1(_UsageEventV1):
-    attempt_index: int = Field(description="One-based provider attempt order within the logical request", ge=1, le=MAX_EVENT_INTEGER)
     attempt_started_at: AwareDatetime = Field(description="Timestamp when the provider attempt began")
     token_usage_source: Literal[TokenUsageSource.PROVIDER, TokenUsageSource.ESTIMATED] = Field(
         description="provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining partial provider counts. "

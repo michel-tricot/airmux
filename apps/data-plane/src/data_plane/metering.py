@@ -172,7 +172,6 @@ def usage_event(
         stream=ctx.stream,
         credential_id=ctx.credential_id,
         credential_scope=ctx.credential_scope,
-        attempt_index=ctx.attempt_index,
     )
     log_event(
         logger,

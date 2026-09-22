@@ -381,7 +381,6 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(dp_app, tmp_pa
         [(MODEL.model_id, "upstream_error")] if restricted else [(MODEL.model_id, "upstream_error"), ("backup", "ok")]
     )
     if not restricted:
-        assert [event.attempt_index for event in events] == [1, 2]
         assert events[0].request_started_at == events[1].request_started_at
         assert all(event.request_started_at <= event.attempt_started_at <= event.occurred_at for event in events)
 

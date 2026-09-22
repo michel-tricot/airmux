@@ -19,7 +19,6 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "request_started_at": datetime.now(tz=UTC),
         "attempt_started_at": datetime.now(tz=UTC),
         "occurred_at": datetime.now(tz=UTC),
-        "attempt_index": 1,
         "org_id": uuid7(),
         "workspace_id": uuid7(),
         "key_id": "external-key",
@@ -52,11 +51,11 @@ def test_routed_usage_requires_a_complete_credential_reference():
 
 def test_early_denial_rejects_provider_and_credential_data():
     with pytest.raises(ValidationError):
-        USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="provider", attempt_index=None, attempt_started_at=None))
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="provider", attempt_started_at=None))
     with pytest.raises(ValidationError):
         USAGE_EVENT_ADAPTER.validate_python(
             usage_event(
-                status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace", attempt_index=None, attempt_started_at=None
+                status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace", attempt_started_at=None
             )
         )
 
@@ -78,7 +77,6 @@ def test_denied_usage_event_keeps_the_observed_cost() -> None:
             provider_id="",
             credential_id=None,
             credential_scope=None,
-            attempt_index=None,
             attempt_started_at=None,
             input_tokens=0,
             output_tokens=0,
@@ -119,7 +117,6 @@ def test_denied_usage_rejects_routed_token_sources(source):
                 credential_id=None,
                 credential_scope=None,
                 token_usage_source=source,
-                attempt_index=None,
                 attempt_started_at=None,
             )
         )

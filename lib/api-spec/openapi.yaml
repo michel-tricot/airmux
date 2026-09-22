@@ -8183,11 +8183,6 @@ components:
           $ref: '#/components/schemas/TokenUsageSource'
           description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
             for denials; independent of cost estimates'
-        attempt_index:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Attempt Index
         max_output_tokens:
           anyOf:
           - type: integer
@@ -8262,7 +8257,6 @@ components:
       - input_tokens
       - output_tokens
       - token_usage_source
-      - attempt_index
       - max_output_tokens
       - cost_usd
       - cost_input_usd
@@ -8538,11 +8532,6 @@ components:
           format: date-time
           title: Occurred At
           type: string
-        attempt_index:
-          default: null
-          description: No provider attempt was made
-          title: Attempt Index
-          type: 'null'
         org_id:
           description: Organization that made the request
           format: uuid
@@ -8736,12 +8725,6 @@ components:
           format: date-time
           title: Occurred At
           type: string
-        attempt_index:
-          description: One-based provider attempt order within the logical request
-          maximum: 2147483647
-          minimum: 1
-          title: Attempt Index
-          type: integer
         org_id:
           description: Organization that made the request
           format: uuid
@@ -8896,7 +8879,6 @@ components:
       - request_started_at
       - attempt_started_at
       - occurred_at
-      - attempt_index
       - org_id
       - workspace_id
       - key_id

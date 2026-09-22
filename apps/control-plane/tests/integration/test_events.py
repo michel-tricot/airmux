@@ -19,7 +19,6 @@ def _event(org: UUID) -> dict:
         "request_started_at": started_at.isoformat(),
         "attempt_started_at": started_at.isoformat(),
         "occurred_at": started_at.isoformat(),
-        "attempt_index": 1,
         "org_id": str(org),
         "workspace_id": str(uuid7()),
         "key_id": "k1",
@@ -154,7 +153,6 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
                 {
                     **event,
                     "provider_id": "",
-                    "attempt_index": None,
                     "attempt_started_at": None,
                     "status": "denied",
                     "token_usage_source": "not_applicable",
@@ -182,7 +180,6 @@ def test_token_usage_source_survives_ingestion_and_client_decoding(tmp_path, sou
                 provider_id="",
                 credential_id=None,
                 credential_scope=None,
-                attempt_index=None,
                 attempt_started_at=None,
                 input_tokens=0,
                 output_tokens=0,

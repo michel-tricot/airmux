@@ -188,7 +188,6 @@ def upgrade() -> None:
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
         sa.Column("token_usage_source", sa.String(), nullable=False),
-        sa.Column("attempt_index", sa.Integer(), nullable=True),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),
