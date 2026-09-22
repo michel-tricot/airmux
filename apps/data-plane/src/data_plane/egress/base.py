@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, final
 
 import aiohttp
-from pydantic import BaseModel
 from pydantic_core import to_json
 
 from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderErrorCode
@@ -27,12 +26,11 @@ class ProviderDiagnostic:
     message: str
 
 
-def encode(body: BaseModel | Mapping[str, Any], aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
+def encode(body: Mapping[str, Any], aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
     """The wire body: typed fields spelled per the provider's aliases, then the forwardable
     extras merged after them, typed fields winning any collision. Absent fields are omitted:
     a provider must never see a null it would reject."""
-    fields = body.model_dump(exclude_none=True) if isinstance(body, BaseModel) else body
-    rendered = {aliases.get(key, key): value for key, value in fields.items() if value is not None}
+    rendered = {aliases.get(key, key): value for key, value in body.items() if value is not None}
     return to_json({**extras, **rendered}, by_alias=False)
 
 
