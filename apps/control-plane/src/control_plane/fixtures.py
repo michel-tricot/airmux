@@ -4,9 +4,10 @@ Every entity below is a real model instance, so a renamed or retyped column fail
 fail against a database. That is the whole reason this is Python and not a YAML file parsed into a
 second set of shapes: there is no parallel schema here to drift out of step with models/.
 
-Nothing is minted. Ids come from uuid5 over a fixture namespace and secrets are constants, so a
-bookmarked console URL, a saved login, and a token pasted into a .env survive being reseeded from
-scratch. Seeding only runs before any human account exists: to start over, drop the database and recreate it.
+Nothing is minted. Resource ids come from uuid5 over a fixture namespace and secrets are constants, so
+resource URLs, saved logins, and tokens survive reseeding. Request ids include their sample start time
+to preserve UUIDv7 ordering. Seeding only runs before any human account exists: to start over, drop
+the database and recreate it.
 
 The tokens here are public knowledge, which is what makes them useful and what makes them
 unacceptable outside development. `airmux control-plane fixtures` refuses any database that already holds
@@ -153,11 +154,15 @@ class Fixtures:
 def fixture_id(name: str) -> UUID:
     """A stable id for a fixture entity, derived from its name rather than minted.
 
-    The one deviation from the uuid7 rule the rest of the schema keeps, and it buys the property
-    the seeder exists for: console URLs survive a reseed. Bundle is the existing precedent for a
-    row passing its own id.
+    Stable resource URLs survive a reseed. Bundle is the existing precedent for a row passing its own id.
     """
     return uuid5(FIXTURE_NAMESPACE, name)
+
+
+def fixture_request_id(name: str, started_at: datetime) -> UUID:
+    seed = fixture_id(name).int
+    timestamp_ms = int(started_at.timestamp() * 1000)
+    return UUID(int=(timestamp_ms << 80) | (0x7 << 76) | (((seed >> 64) & 0x0FFF) << 64) | (0b10 << 62) | (seed & 0x3FFF_FFFF_FFFF_FFFF))
 
 
 def inference_key(token: str, workspace: Workspace, user: User, *, label: str, revoked: bool = False) -> InferenceKey:
@@ -243,7 +248,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
         input_tokens = rng.randint(300, 6000)
         event = UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
-            request_id=fixture_id(f"request:{workspace.id}:{index}"),
+            request_id=fixture_request_id(f"request:{workspace.id}:{index}", attempt_started_at),
             request_started_at=attempt_started_at,
             attempt_started_at=attempt_started_at,
             occurred_at=occurred_at,
@@ -277,7 +282,6 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             event.latency_ms = 500
             match index:
                 case 0 | 1:
-                    event.request_id = fixture_id(f"request:{workspace.id}:0")
                     event.model_id, event.provider_id = MODELS[0 if index == 0 else 2]
                     event.status = "upstream_error" if index == 0 else "ok"
                     if workspace.name == "Production":
@@ -304,6 +308,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
                         event.credential_scope = "workspace"
                         event.model_id, event.provider_id = MODELS[0]
                         event.status = "ok"
+            event.request_id = fixture_request_id(f"request:{workspace.id}:{0 if index == 1 else index}", event.request_started_at)
         await event.save()
 
 

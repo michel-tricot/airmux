@@ -132,17 +132,16 @@ it('falls back to valid report URL choices before rendering or querying', async 
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
       query = new URL(request.url).searchParams;
-      return HttpResponse.json({ data: { requests: [], next_offset: null } });
+      return HttpResponse.json({ data: { requests: [], next_cursor: null } });
     }),
   );
-  renderAt('/org/requests?timezone=Invalid%2FZone&period=bad&status=bad&request_sort=bad&offset=NaN');
+  renderAt('/org/requests?timezone=Invalid%2FZone&period=bad&status=bad');
   expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
   await screen.findByText('No requests match these filters.');
   expect(query?.get('timezone')).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
   expect(query?.get('period')).toBe('30d');
   expect(query?.get('status')).toBeNull();
-  expect(query?.get('sort_by')).toBe('newest');
-  expect(query?.get('offset')).toBe('0');
+  expect(query?.get('cursor')).toBeNull();
 });
 
 it('opens organization reporting and drills a model into filtered requests', async () => {
@@ -178,7 +177,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
       HttpResponse.json({
         data: {
           requests: [requestSummary],
-          next_offset: null,
+          next_cursor: null,
         },
       }),
     ),
@@ -278,7 +277,7 @@ it('opens a request detail without reloading the current request page', async ()
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', () => {
       listLoads += 1;
-      return HttpResponse.json({ data: { requests: listLoads === 1 ? [requestSummary] : [], next_offset: null } });
+      return HttpResponse.json({ data: { requests: listLoads === 1 ? [requestSummary] : [], next_cursor: null } });
     }),
     http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', async () => {
       await delay(50);
@@ -287,10 +286,10 @@ it('opens a request detail without reloading the current request page', async ()
   );
 
   const user = userEvent.setup();
-  renderAt('/org/requests?offset=20');
+  renderAt('/org/requests?cursor=page-two');
 
   const requestLink = await screen.findByRole('link', { name: 'View request details for request-1' });
-  expect(requestLink).toHaveAttribute('href', expect.stringContaining('offset=20'));
+  expect(requestLink).toHaveAttribute('href', expect.stringContaining('cursor=page-two'));
   await user.click(requestLink);
   const detail = await screen.findByRole('dialog', { name: 'Request details' });
   expect(await within(detail).findByText('Total cost')).toBeInTheDocument();
@@ -301,10 +300,57 @@ it('opens a request detail without reloading the current request page', async ()
   expect(requestLink).toBeInTheDocument();
 });
 
+it('pages requests with a cursor and keeps Live on the newest page', async () => {
+  const cursors: (string | null)[] = [];
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get('cursor');
+      cursors.push(cursor);
+      return HttpResponse.json({
+        data: {
+          requests: [{ ...requestSummary, request_id: cursor ? 'request-older' : 'request-newer' }],
+          next_cursor: cursor ? null : 'older-page',
+        },
+      });
+    }),
+  );
+
+  const user = userEvent.setup();
+  renderAt('/org/requests');
+  expect(await screen.findByRole('link', { name: 'View request details for request-newer' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Live' }));
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByRole('link', { name: 'View request details for request-older' })).toBeInTheDocument();
+  expect(cursors).toContain('older-page');
+  expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-pressed', 'false');
+  await user.click(screen.getByRole('button', { name: 'Previous' }));
+  expect(await screen.findByRole('link', { name: 'View request details for request-newer' })).toBeInTheDocument();
+});
+
+it('returns to the newest requests from a bookmarked cursor page', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get('cursor');
+      return HttpResponse.json({
+        data: { requests: [{ ...requestSummary, request_id: cursor ? 'request-older' : 'request-newer' }], next_cursor: null },
+      });
+    }),
+  );
+  const user = userEvent.setup();
+  renderAt('/org/requests?cursor=older-page');
+
+  expect(await screen.findByRole('link', { name: 'View request details for request-older' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: 'First' }));
+  expect(await screen.findByRole('link', { name: 'View request details for request-newer' })).toBeInTheDocument();
+  expect(new URLSearchParams(window.location.search).get('cursor')).toBeNull();
+});
+
 it('marks denied requests without a provider as not routed', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', () =>
-      HttpResponse.json({ data: { requests: [{ ...requestSummary, provider_id: '', status: 'denied', attempt_count: 0 }], next_offset: null } }),
+      HttpResponse.json({ data: { requests: [{ ...requestSummary, provider_id: '', status: 'denied', attempt_count: 0 }], next_cursor: null } }),
     ),
   );
 
@@ -323,7 +369,7 @@ it.each([
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
       requestedTimezone = new URL(request.url).searchParams.get('timezone');
-      return HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } });
+      return HttpResponse.json({ data: { requests: [requestSummary], next_cursor: null } });
     }),
   );
 
@@ -362,7 +408,7 @@ it('keeps workspace request rows compact with the full request ID available', as
       HttpResponse.json({
         data: {
           requests: [{ ...requestSummary, request_id: '01a0cbde-afee-7867-a902-e70b75b471ba', model_id: 'anthropic/claude-opus-4-5-20251101' }],
-          next_offset: null,
+          next_cursor: null,
         },
       }),
     ),
@@ -392,7 +438,7 @@ it('keeps workspace request rows compact with the full request ID available', as
 
 it('opens the workspace overview from an organization request row', async () => {
   server.use(
-    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_cursor: null } })),
   );
   const user = userEvent.setup();
   renderAt('/org/requests');
@@ -448,7 +494,7 @@ it.each([
     http.get(endpoint, async () => {
       await delay(300);
       return HttpResponse.json({
-        data: path === '/org' ? { totals, comparison: totals, period, daily: [], updated_at: period.end_at } : { requests: [], next_offset: null },
+        data: path === '/org' ? { totals, comparison: totals, period, daily: [], updated_at: period.end_at } : { requests: [], next_cursor: null },
       });
     }),
   );
@@ -460,7 +506,7 @@ it.each([
 
 it('warns when Live requests stop refreshing while keeping the last loaded rows', async () => {
   server.use(
-    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_cursor: null } })),
   );
   const user = userEvent.setup();
   renderAt('/org/requests');
@@ -502,7 +548,7 @@ it('polls requests in Live mode and briefly highlights new rows', async () => {
   expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('button', { name: 'Live' }).querySelector('span')).toHaveClass('bg-success');
   server.use(
-    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_cursor: null } })),
   );
 
   const requestLink = await screen.findByRole('link', { name: 'View request details for request-1' }, { timeout: 5_000 });
@@ -570,7 +616,7 @@ it('shows the full attempt history while identifying the filtered provider contr
         },
       }),
     ),
-    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [], next_offset: null } })),
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [], next_cursor: null } })),
   );
 
   renderAt('/org/requests?request_id=request-1&provider_id=provider-b&timezone=America%2FLos_Angeles');

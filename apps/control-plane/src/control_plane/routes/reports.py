@@ -18,7 +18,6 @@ from control_plane.models.reporting import (
     FilterOptionsQuery,
     ReportQuery,
     RequestDetailOut,
-    RequestExportOut,
     RequestPageOut,
     RequestQuery,
     UsageReportOut,
@@ -65,11 +64,6 @@ async def get_report_filter_options(org_id: OrgDep, query: Annotated[FilterOptio
 @router.get("/requests", dependencies=[report_access])
 async def list_usage_requests(org_id: OrgDep, query: Annotated[RequestQuery, Query()]) -> Envelope[RequestPageOut]:
     return Envelope(data=await RequestPageOut.for_scope(org_id, query, datetime.now(UTC)))
-
-
-@router.get("/requests/export", dependencies=[report_access])
-async def export_usage_requests(org_id: OrgDep, query: Annotated[RequestQuery, Query()]) -> Envelope[RequestExportOut]:
-    return Envelope(data=await RequestExportOut.for_scope(org_id, query, datetime.now(UTC)))
 
 
 @router.get("/requests/{request_id}", dependencies=[report_access])

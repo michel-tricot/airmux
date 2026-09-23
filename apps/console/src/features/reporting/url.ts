@@ -61,7 +61,7 @@ export function useReportSearch(defaultGroup: ReportDimension = 'workspace') {
         next.delete('start_at');
         next.delete('end_at');
       }
-      if (name !== 'offset' && name !== 'request_id') next.delete('offset');
+      if (name !== 'cursor' && name !== 'request_id') next.delete('cursor');
       if (name !== 'attribution_offset' && name !== 'request_id') next.delete('attribution_offset');
       return next;
     });
@@ -71,7 +71,7 @@ export function useReportSearch(defaultGroup: ReportDimension = 'workspace') {
     setSearch((current) => {
       const next = new URLSearchParams(current);
       reportDimensions.forEach((dimension) => next.delete(dimensionParameter[dimension]));
-      next.delete('offset');
+      next.delete('cursor');
       next.delete('attribution_offset');
       return next;
     });
@@ -89,7 +89,7 @@ export function useReportSearch(defaultGroup: ReportDimension = 'workspace') {
       next.delete('end_at');
       if (!next.has('end_date')) next.set('end_date', dateInTimezone(new Date()));
       if (!next.has('start_date')) next.set('start_date', dateInTimezone(new Date(Date.now() - 29 * 86_400_000)));
-      next.delete('offset');
+      next.delete('cursor');
       return next;
     });
   };
@@ -125,6 +125,6 @@ export function drillDownUrl(search: URLSearchParams, workspaceRef: string | und
   const next = new URLSearchParams(search);
   next.delete(dimensionParameter[dimension]);
   next.set(dimensionParameter[dimension], id);
-  next.delete('offset');
+  next.delete('cursor');
   return `${requestsPath(workspaceRef)}?${next}`;
 }

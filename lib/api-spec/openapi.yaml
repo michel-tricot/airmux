@@ -4599,17 +4599,6 @@ paths:
           default: false
           title: Multiple Attempts
         description: Multiple attempts
-      - name: sort_by
-        in: query
-        required: false
-        schema:
-          enum:
-          - newest
-          - cost
-          type: string
-          default: newest
-          title: Sort By
-        description: Sort by
       - name: limit
         in: query
         required: false
@@ -4620,15 +4609,15 @@ paths:
           default: 50
           title: Limit
         description: Maximum number of results to return
-      - name: offset
+      - name: cursor
         in: query
         required: false
         schema:
-          type: integer
-          minimum: 0
-          default: 0
-          title: Offset
-        description: Offset
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
       responses:
         '200':
           description: Successful Response
@@ -4636,229 +4625,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_RequestPageOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: report_scope
-        anyOf:
-        - usage.read
-      description: 'Required permission: `usage.read`.'
-  /api/v1/organizations/{org_id}/reports/requests/export:
-    get:
-      tags:
-      - Organization Reports
-      summary: Export Usage Requests
-      operationId: export_usage_requests
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      - name: workspace_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-        description: Workspace id
-      - name: period
-        in: query
-        required: false
-        schema:
-          enum:
-          - today
-          - 7d
-          - 30d
-          - month_to_date
-          - custom
-          type: string
-          default: 30d
-          title: Period
-        description: Period
-      - name: timezone
-        in: query
-        required: false
-        schema:
-          type: string
-          default: UTC
-          title: Timezone
-        description: Timezone
-      - name: start_date
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date
-          - type: 'null'
-          title: Start Date
-        description: Start date
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date
-          - type: 'null'
-          title: End Date
-        description: End date
-      - name: start_at
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Start At
-        description: Start at
-      - name: end_at
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: End At
-        description: End at
-      - name: owner_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Owner Id
-        description: Owner id
-      - name: key_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Key Id
-        description: Management key ID
-      - name: model_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Model Id
-        description: Model id
-      - name: provider_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Provider Id
-        description: Provider id
-      - name: credential_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Credential Id
-        description: Provider credential ID
-      - name: request_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Request Id
-        description: Request id
-      - name: status
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - enum:
-            - ok
-            - upstream_error
-            - denied
-            - timeout
-            - cancelled
-            - credential_rejected
-            - rate_limited
-            type: string
-          - type: 'null'
-          title: Status
-        description: Status
-      - name: multiple_attempts
-        in: query
-        required: false
-        schema:
-          type: boolean
-          default: false
-          title: Multiple Attempts
-        description: Multiple attempts
-      - name: sort_by
-        in: query
-        required: false
-        schema:
-          enum:
-          - newest
-          - cost
-          type: string
-          default: newest
-          title: Sort By
-        description: Sort by
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 50
-          title: Limit
-        description: Maximum number of results to return
-      - name: offset
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 0
-          default: 0
-          title: Offset
-        description: Offset
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_RequestExportOut_'
         '422':
           description: Validation Error
           content:
@@ -6798,14 +6564,6 @@ components:
       required:
       - data
       title: Envelope[RequestDetailOut]
-    Envelope_RequestExportOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/RequestExportOut'
-      type: object
-      required:
-      - data
-      title: Envelope[RequestExportOut]
     Envelope_RequestPageOut_:
       properties:
         data:
@@ -9415,19 +9173,6 @@ components:
       - within_period
       - attempts
       title: RequestDetailOut
-    RequestExportOut:
-      properties:
-        filename:
-          type: string
-          title: Filename
-        csv:
-          type: string
-          title: Csv
-      type: object
-      required:
-      - filename
-      - csv
-      title: RequestExportOut
     RequestLimits:
       properties:
         kind:
@@ -9526,15 +9271,14 @@ components:
             $ref: '#/components/schemas/RequestSummaryOut'
           type: array
           title: Requests
-        next_offset:
+        next_cursor:
           anyOf:
-          - type: integer
+          - $ref: '#/components/schemas/CursorToken'
           - type: 'null'
-          title: Next Offset
       type: object
       required:
       - requests
-      - next_offset
+      - next_cursor
       title: RequestPageOut
     RequestSummaryOut:
       properties:

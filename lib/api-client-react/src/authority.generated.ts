@@ -590,14 +590,6 @@ export const operationAuthority = {
       },
     ],
   },
-  exportUsageRequests: {
-    checks: [
-      {
-        scope: "report_scope",
-        anyOf: ["usage.read"],
-      },
-    ],
-  },
   getUsageRequest: {
     checks: [
       {

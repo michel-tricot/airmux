@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { ArrowDownToLine, ArrowUpFromLine, Download, Ellipsis, HardDriveDownload, HardDriveUpload, RouteOff } from 'lucide-react';
+import { useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
+import { ArrowDownToLine, ArrowUpFromLine, Ellipsis, HardDriveDownload, HardDriveUpload, RouteOff } from 'lucide-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
@@ -17,17 +17,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/reporting/hooks';
 import { formatReportCost, formatReportCostExact } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
-import { reportChoice, reportFilterSummary, reportOffset, requestsPath, useReportSearch } from '@/features/reporting/url';
+import { reportFilterSummary, requestsPath, useReportSearch } from '@/features/reporting/url';
 import { useRequiredOrgId } from '@/lib/session';
-
-function downloadCsv(filename: string, csv: string) {
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 const statusNames: Record<UsageEventOutStatus, string> = {
   ok: 'Success',
@@ -103,12 +94,17 @@ export function RequestsReporting({
   const formatReportDate = (startedAt: string | null | undefined) => (startedAt ? dateFormatter.format(new Date(startedAt)) : 'N/A');
   const query = reportQuery(filters, workspaceId);
   const validDates = filters.period !== 'custom' || (!!filters.startDate && !!filters.endDate && filters.startDate <= filters.endDate);
-  const offset = reportOffset(filters.search.get('offset'));
-  const sortBy = reportChoice(filters.search.get('request_sort'), ['newest', 'cost'] as const, 'newest');
+  const cursor = filters.search.get('cursor') || undefined;
   const status = Object.keys(statusNames).find((value) => value === filters.search.get('status')) as UsageEventOutStatus | undefined;
   const multipleAttempts = filters.search.get('multiple_attempts') === 'true' || undefined;
   const requestId = filters.search.get('request_id') ?? '';
-  const params = { ...query, status, multiple_attempts: multipleAttempts, sort_by: sortBy, limit: 20, offset };
+  const params = { ...query, status, multiple_attempts: multipleAttempts, limit: 20, cursor };
+  const pageScope = new URLSearchParams(filters.search);
+  pageScope.delete('cursor');
+  pageScope.delete('request_id');
+  const pageKey = `${orgId}:${workspaceId ?? ''}:${pageScope}`;
+  const [pageHistory, setPageHistory] = useState<{ key: string; cursors: string[] }>({ key: pageKey, cursors: [] });
+  const previousCursors = pageHistory.key === pageKey ? pageHistory.cursors : [];
   const [live, setLive] = useState(false);
   const requests = useUsageRequests(orgId, params, validDates, live);
   const taxonomy = useGetOrgTaxonomy(orgId);
@@ -120,8 +116,6 @@ export function RequestsReporting({
       ? (options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace')
       : 'All workspaces');
   const attemptFilter = !!(query.model_id || query.provider_id || query.credential_id);
-  const [exportError, setExportError] = useState<unknown>();
-  const [isExporting, setIsExporting] = useState(false);
 
   const openRequest = (id: string) => {
     const next = new URLSearchParams(filters.search);
@@ -136,36 +130,17 @@ export function RequestsReporting({
         description={`${scopeName} · recorded inference requests`}
         actions={
           <div className="flex gap-2">
-            <Button variant={live ? 'secondary' : 'outline'} size="sm" aria-pressed={live} disabled={!validDates} onClick={() => setLive(!live)}>
+            <Button
+              variant={live ? 'secondary' : 'outline'}
+              size="sm"
+              aria-pressed={live}
+              disabled={!validDates || !!cursor}
+              onClick={() => setLive(!live)}
+            >
               <span className={`h-1.5 w-1.5 rounded-full ${live && !requests.isError ? 'bg-success' : 'bg-muted-foreground'}`} aria-hidden="true" />
               Live
             </Button>
             <ReportRefreshButton queries={[requests]} />
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isExporting || !validDates}
-              onClick={async () => {
-                setIsExporting(true);
-                setExportError(undefined);
-                try {
-                  const exportResult = await exportUsageRequests(orgId, {
-                    ...query,
-                    status,
-                    multiple_attempts: multipleAttempts,
-                    sort_by: sortBy,
-                  });
-                  downloadCsv(exportResult.filename, exportResult.csv);
-                } catch (error) {
-                  setExportError(error);
-                } finally {
-                  setIsExporting(false);
-                }
-              }}
-            >
-              <Download className="h-3.5 w-3.5" />
-              {isExporting ? 'Exporting...' : 'Export CSV'}
-            </Button>
           </div>
         }
       />
@@ -185,7 +160,7 @@ export function RequestsReporting({
           onChange={filters.change}
           onClear={filters.clearFilters}
         />
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="request-status">Status</Label>
             <Dropdown
@@ -216,18 +191,6 @@ export function RequestsReporting({
               ]}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="request-sort">Sort</Label>
-            <Dropdown
-              id="request-sort"
-              value={sortBy}
-              onValueChange={(value) => filters.setValue('request_sort', value)}
-              options={[
-                { value: 'newest', label: 'Newest first' },
-                { value: 'cost', label: 'Highest cost' },
-              ]}
-            />
-          </div>
         </div>
         <form
           className="flex gap-2"
@@ -245,7 +208,6 @@ export function RequestsReporting({
       </CollapsibleFilterCard>
 
       {!validDates && <ErrorState message="Choose a valid start and end date." />}
-      {exportError !== undefined && <ErrorState error={exportError} resource="CSV export" onRetry={() => setExportError(undefined)} />}
       {validDates && requests.data && requests.isError && (
         <ErrorState message="Refresh failed. Showing the last loaded requests." onRetry={() => requests.refetch()} />
       )}
@@ -339,14 +301,41 @@ export function RequestsReporting({
           ]}
         />
         <div className="mt-4 flex justify-between gap-3">
-          <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => filters.setValue('offset', String(Math.max(0, offset - 20)))}>
-            Previous
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!cursor}
+              onClick={() => {
+                filters.setValue('cursor', undefined);
+                setPageHistory({ key: pageKey, cursors: [] });
+              }}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={previousCursors.length === 0}
+              onClick={() => {
+                filters.setValue('cursor', previousCursors.at(-1) || undefined);
+                setPageHistory({ key: pageKey, cursors: previousCursors.slice(0, -1) });
+              }}
+            >
+              Previous
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            disabled={requests.data?.next_offset == null}
-            onClick={() => filters.setValue('offset', String(requests.data!.next_offset))}
+            disabled={!requests.data?.next_cursor}
+            onClick={() => {
+              const nextCursor = requests.data?.next_cursor;
+              if (!nextCursor) return;
+              setPageHistory({ key: pageKey, cursors: [...previousCursors, cursor ?? ''] });
+              setLive(false);
+              filters.setValue('cursor', nextCursor);
+            }}
           >
             Next
           </Button>

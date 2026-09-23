@@ -1821,11 +1821,6 @@ export interface RequestDetailOut {
   attempts: RequestAttemptOut[];
 }
 
-export interface RequestExportOut {
-  filename: string;
-  csv: string;
-}
-
 export type RequestSummaryOutStatus = typeof RequestSummaryOutStatus[keyof typeof RequestSummaryOutStatus];
 
 
@@ -1872,7 +1867,7 @@ export interface RequestSummaryOut {
 
 export interface RequestPageOut {
   requests: RequestSummaryOut[];
-  next_offset: number | null;
+  next_cursor: CursorToken | null;
 }
 
 /**
@@ -2737,20 +2732,15 @@ status?: ListUsageRequestsStatus;
  */
 multiple_attempts?: boolean;
 /**
- * Sort by
- */
-sort_by?: ListUsageRequestsSortBy;
-/**
  * Maximum number of results to return
  * @minimum 1
  * @maximum 100
  */
 limit?: number;
 /**
- * Offset
- * @minimum 0
+ * Opaque continuation token from the previous page
  */
-offset?: number;
+cursor?: CursorToken | null;
 };
 
 export type ListUsageRequestsPeriod = typeof ListUsageRequestsPeriod[keyof typeof ListUsageRequestsPeriod];
@@ -2775,124 +2765,6 @@ export const ListUsageRequestsStatus = {
   cancelled: 'cancelled',
   credential_rejected: 'credential_rejected',
   rate_limited: 'rate_limited',
-} as const;
-
-export type ListUsageRequestsSortBy = typeof ListUsageRequestsSortBy[keyof typeof ListUsageRequestsSortBy];
-
-
-export const ListUsageRequestsSortBy = {
-  newest: 'newest',
-  cost: 'cost',
-} as const;
-
-export type ExportUsageRequestsParams = {
-/**
- * Workspace id
- */
-workspace_id?: string | null;
-/**
- * Period
- */
-period?: ExportUsageRequestsPeriod;
-/**
- * Timezone
- */
-timezone?: string;
-/**
- * Start date
- */
-start_date?: string | null;
-/**
- * End date
- */
-end_date?: string | null;
-/**
- * Start at
- */
-start_at?: string | null;
-/**
- * End at
- */
-end_at?: string | null;
-/**
- * Owner id
- */
-owner_id?: string | null;
-/**
- * Management key ID
- */
-key_id?: string | null;
-/**
- * Model id
- */
-model_id?: string | null;
-/**
- * Provider id
- */
-provider_id?: string | null;
-/**
- * Provider credential ID
- */
-credential_id?: string | null;
-/**
- * Request id
- */
-request_id?: string | null;
-/**
- * Status
- */
-status?: ExportUsageRequestsStatus;
-/**
- * Multiple attempts
- */
-multiple_attempts?: boolean;
-/**
- * Sort by
- */
-sort_by?: ExportUsageRequestsSortBy;
-/**
- * Maximum number of results to return
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-/**
- * Offset
- * @minimum 0
- */
-offset?: number;
-};
-
-export type ExportUsageRequestsPeriod = typeof ExportUsageRequestsPeriod[keyof typeof ExportUsageRequestsPeriod];
-
-
-export const ExportUsageRequestsPeriod = {
-  today: 'today',
-  '7d': '7d',
-  '30d': '30d',
-  month_to_date: 'month_to_date',
-  custom: 'custom',
-} as const;
-
-export type ExportUsageRequestsStatus = typeof ExportUsageRequestsStatus[keyof typeof ExportUsageRequestsStatus] | null;
-
-
-export const ExportUsageRequestsStatus = {
-  ok: 'ok',
-  upstream_error: 'upstream_error',
-  denied: 'denied',
-  timeout: 'timeout',
-  cancelled: 'cancelled',
-  credential_rejected: 'credential_rejected',
-  rate_limited: 'rate_limited',
-} as const;
-
-export type ExportUsageRequestsSortBy = typeof ExportUsageRequestsSortBy[keyof typeof ExportUsageRequestsSortBy];
-
-
-export const ExportUsageRequestsSortBy = {
-  newest: 'newest',
-  cost: 'cost',
 } as const;
 
 export type GetUsageRequestParams = {

@@ -354,7 +354,7 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
         assert attribution["items"][0]["name"] == "gpt-test"
         assert attribution["items"][0]["requests"] == 1
         assert Decimal(attribution["items"][0]["cost_usd"]) == Decimal("0.000005")
-        assert requests["next_offset"] is None
+        assert requests["next_cursor"] is None
         assert len(requests["requests"]) == 1
         assert requests["requests"][0]["status"] == "ok"
         assert Decimal(requests["requests"][0]["cost_usd"]) == Decimal("0.000005")

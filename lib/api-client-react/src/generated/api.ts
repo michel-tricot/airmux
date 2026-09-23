@@ -54,7 +54,6 @@ import type {
   DeniedUsageEventV1,
   EnrollOut,
   EventsIngestedOut,
-  ExportUsageRequestsParams,
   FilterOptionsOut,
   GetAttributionReportParams,
   GetReportFilterOptionsParams,
@@ -129,7 +128,6 @@ import type {
   ProviderIn,
   ProviderOut,
   RequestDetailOut,
-  RequestExportOut,
   RequestPageOut,
   RoutedUsageEventV1,
   ServiceAccountIn,
@@ -8337,12 +8335,91 @@ export const listUsageRequests = async (orgId: string,
 
 
 
+export const getListUsageRequestsInfiniteQueryKey = (orgId: string,
+    params?: ListUsageRequestsParams,) => {
+    return [
+    'infinite', `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListUsageRequestsQueryKey = (orgId: string,
     params?: ListUsageRequestsParams,) => {
     return [
     `/api/v1/organizations/${orgId}/reports/requests`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getListUsageRequestsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUsageRequestsInfiniteQueryKey(orgId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsageRequests>>, QueryKey, ListUsageRequestsParams['cursor']> = ({ signal, pageParam }) => listUsageRequests(orgId,{...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListUsageRequestsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listUsageRequests>>>
+export type ListUsageRequestsInfiniteQueryError = ErrorType<void | HTTPValidationError>
+
+
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params: undefined |  ListUsageRequestsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsageRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listUsageRequests>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Usage Requests
+ */
+
+export function useListUsageRequestsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listUsageRequests>>, ListUsageRequestsParams['cursor']>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    params?: ListUsageRequestsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listUsageRequests>>, TError, TData, QueryKey, ListUsageRequestsParams['cursor']>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUsageRequestsInfiniteQueryOptions(orgId,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getListUsageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
@@ -8406,123 +8483,6 @@ export function useListUsageRequests<TData = Awaited<ReturnType<typeof listUsage
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListUsageRequestsQueryOptions(orgId,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getExportUsageRequestsUrl = (orgId: string,
-    params?: ExportUsageRequestsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/organizations/${orgId}/reports/requests/export?${stringifiedParams}` : `/api/v1/organizations/${orgId}/reports/requests/export`
-}
-
-/**
- * Required permission: `usage.read`.
- * @summary Export Usage Requests
- */
-export const exportUsageRequests = async (orgId: string,
-    params?: ExportUsageRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<RequestExportOut> => {
-
-  return customFetch<RequestExportOut>(getExportUsageRequestsUrl(orgId,params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getExportUsageRequestsQueryKey = (orgId: string,
-    params?: ExportUsageRequestsParams,) => {
-    return [
-    `/api/v1/organizations/${orgId}/reports/requests/export`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getExportUsageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof exportUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
-    params?: ExportUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getExportUsageRequestsQueryKey(orgId,params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportUsageRequests>>> = ({ signal }) => exportUsageRequests(orgId,params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ExportUsageRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof exportUsageRequests>>>
-export type ExportUsageRequestsQueryError = ErrorType<void | HTTPValidationError>
-
-
-export function useExportUsageRequests<TData = Awaited<ReturnType<typeof exportUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string,
-    params: undefined |  ExportUsageRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof exportUsageRequests>>,
-          TError,
-          Awaited<ReturnType<typeof exportUsageRequests>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useExportUsageRequests<TData = Awaited<ReturnType<typeof exportUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string,
-    params?: ExportUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof exportUsageRequests>>,
-          TError,
-          Awaited<ReturnType<typeof exportUsageRequests>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useExportUsageRequests<TData = Awaited<ReturnType<typeof exportUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string,
-    params?: ExportUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Export Usage Requests
- */
-
-export function useExportUsageRequests<TData = Awaited<ReturnType<typeof exportUsageRequests>>, TError = ErrorType<void | HTTPValidationError>>(
- orgId: string,
-    params?: ExportUsageRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportUsageRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getExportUsageRequestsQueryOptions(orgId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
