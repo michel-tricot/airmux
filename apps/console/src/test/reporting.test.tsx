@@ -241,6 +241,8 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(await within(panel).findByText('This request started outside the selected period.')).toBeInTheDocument();
   expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
+  expect(within(panel).getAllByText('Provider')).toHaveLength(2);
+  expect(within(panel).getAllByText('Model')).toHaveLength(2);
   expect(within(panel).getByText('Matches filters')).toBeInTheDocument();
   expect(within(panel).getByText('Outside filters')).toBeInTheDocument();
   expect(within(panel).getByText('$0.000005')).toBeInTheDocument();
