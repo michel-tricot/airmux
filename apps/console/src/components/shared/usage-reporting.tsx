@@ -195,7 +195,7 @@ export function UsageReporting({
                   Search
                 </Button>
               </form>
-              <div className="w-full space-y-1.5 sm:w-44">
+              <div className="w-full space-y-1.5 sm:w-52 sm:shrink-0">
                 <Label htmlFor="attribution-sort">Sort by</Label>
                 <Dropdown
                   id="attribution-sort"

@@ -257,15 +257,16 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(panel).toHaveClass('p-6');
 });
 
-it('uses a dark native calendar with its icon aligned to the right', async () => {
+it('uses a themed calendar to update the report date', async () => {
+  const user = userEvent.setup();
   renderAt('/org?period=custom&start_date=2026-01-01&end_date=2026-01-31');
 
-  const startDate = await screen.findByLabelText('Start date');
-  const endDate = screen.getByLabelText('End date');
-  for (const date of [startDate, endDate]) {
-    expect(date).toHaveClass('[color-scheme:dark]');
-    expect(date).toHaveClass('[&::-webkit-calendar-picker-indicator]:right-3');
-  }
+  await user.click(await screen.findByRole('button', { name: 'Choose start date, January 1, 2026' }));
+  const calendar = screen.getByRole('dialog', { name: 'Start date' });
+  expect(calendar).toHaveClass('bg-card', 'text-card-foreground');
+  await user.click(within(calendar).getByRole('button', { name: 'January 2, 2026' }));
+
+  expect(new URLSearchParams(window.location.search).get('start_date')).toBe('2026-01-02');
 });
 
 it('shows a denied playground request without a fake provider attempt or inference key', async () => {
