@@ -20,6 +20,8 @@ describe('playground', () => {
           {
             event_id: '01941f29-7c00-7000-8000-000000000002',
             request_id: '01941f29-7c00-7000-8000-000000000003',
+            request_started_at: now,
+            attempt_started_at: now,
             occurred_at: now,
             org_id: ORG.id,
             workspace_id: WORKSPACES[0].id,
@@ -27,6 +29,7 @@ describe('playground', () => {
             requested_model_id: 'test',
             requested_capabilities: [],
             key_id: playgroundSessionId,
+            request_source: 'playground',
             model_id: 'openai/gpt-test',
             provider_id: 'provider-1',
             bundle_id: '01941f29-7c00-7000-8000-000000000004',
