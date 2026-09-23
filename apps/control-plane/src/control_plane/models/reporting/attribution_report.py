@@ -163,7 +163,7 @@ async def _names(org_id: UUID, workspace_id: UUID | None, group_by: Grouping, id
             else sql_select(col(OrgMembership.user_id)).where(col(OrgMembership.org_id) == org_id)
         )
         users = await User.find(col(User.id).in_(uuids), col(User.id).in_(member_ids))
-        return {str(user.id): user.name for user in users}
+        return {str(user.id): user.email for user in users}
     if group_by == "key":
         keys = await InferenceKey.find(col(InferenceKey.org_id) == org_id, col(InferenceKey.id).in_(uuids))
         return {str(key.id): key.label for key in keys}

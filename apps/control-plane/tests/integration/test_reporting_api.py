@@ -225,7 +225,7 @@ def test_attribution_does_not_resolve_an_unrelated_users_name(tmp_path):
         report = client.get(f"/api/v1/organizations/{org_id}/reports/attribution", params={"group_by": "owner"}, headers=cp.headers(org_id))
         names = {item["id"]: item["name"] for item in report.json()["data"]["items"]}
         assert names[str(outsider.id)] == str(outsider.id)
-        assert names[str(other_member.id)] == "Other Workspace"
+        assert names[str(other_member.id)] == "other-workspace@example.com"
         scoped = client.get(
             f"/api/v1/organizations/{org_id}/reports/attribution",
             params={"group_by": "owner", "workspace_id": str(workspace_id)},
