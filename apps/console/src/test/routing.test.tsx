@@ -66,6 +66,15 @@ describe('organization section deep links', () => {
 });
 
 describe('organization reporting landing', () => {
+  it('places Requests immediately above Settings in both navigation groups', async () => {
+    renderAt(`/org/workspaces/${WS.slug}`);
+    await screen.findByRole('heading', { level: 1, name: WS.name });
+    const links = Array.from(document.querySelector('aside')!.querySelectorAll('a[href]'), (link) => link.getAttribute('href'));
+    for (const base of [`/org/workspaces/${WS.slug}`, '/org']) {
+      expect(links.indexOf(`${base}/requests`)).toBe(links.indexOf(`${base}/settings`) - 1);
+    }
+  });
+
   it('keeps /org on organization usage when no workspace was selected', async () => {
     renderAt('/org');
     expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();

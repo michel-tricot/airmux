@@ -20,9 +20,9 @@ interface OrgRouteDefinition {
 }
 
 export const orgRoutes: readonly OrgRouteDefinition[] = [
-  { path: '/org/requests', label: 'Requests', icon: Activity, component: Requests, access: telemetryAccess.orgUsage },
   { path: '/org', label: 'Overview', icon: Building2, component: Dashboard, access: telemetryAccess.orgUsage },
   { path: '/org/models', label: 'Models', icon: Boxes, component: Models, access: catalogAccess.org.read },
+  { path: '/org/requests', label: 'Requests', icon: Activity, component: Requests, access: telemetryAccess.orgUsage },
   {
     path: '/org/settings',
     label: 'Settings',

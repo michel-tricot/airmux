@@ -27,7 +27,6 @@ interface WorkspaceRouteDefinition {
 }
 
 export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
-  { suffix: '/requests', label: 'Requests', icon: Activity, access: telemetryAccess.workspaceUsage, component: Requests },
   { suffix: '', label: 'Overview', icon: LayoutGrid, access: telemetryAccess.workspaceUsage, component: Overview },
   {
     suffix: '/playground',
@@ -39,6 +38,7 @@ export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
   { suffix: '/inference-keys', label: 'Inference Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: InferenceKeys },
   { suffix: '/byok', label: 'BYOK', icon: Database, access: providerCredentialAccess.workspace.read, component: Byok },
   { suffix: '/policies', label: 'Policies', icon: ShieldCheck, access: policyAccess.read, component: Policies },
+  { suffix: '/requests', label: 'Requests', icon: Activity, access: telemetryAccess.workspaceUsage, component: Requests },
   {
     suffix: '/settings',
     label: 'Settings',
