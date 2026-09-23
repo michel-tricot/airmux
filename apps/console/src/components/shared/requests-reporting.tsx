@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
 import { exportUsageRequests, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
 import { Download } from 'lucide-react';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { DetailSheet } from '@/components/shared/detail-sheet';
 import { ModelBadge } from '@/components/shared/model-badge';
+import { TableLink } from '@/components/shared/table-link';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { ReportingFilters } from '@/components/shared/reporting-filters';
 import { ReportRefreshButton } from '@/components/shared/report-refresh-button';
@@ -226,18 +226,14 @@ export function RequestsReporting({
               key: 'request',
               header: 'Request ID',
               cell: (item) => (
-                <Link
-                  href={openRequest(item.request_id)}
-                  title={item.request_id}
-                  className="block max-w-32 truncate font-mono text-xs text-primary hover:underline"
-                >
+                <TableLink href={openRequest(item.request_id)} title={item.request_id} className="block max-w-32 truncate font-mono text-xs">
                   {item.request_id}
-                </Link>
+                </TableLink>
               ),
             },
             {
               key: 'key',
-              header: 'Inference key / source',
+              header: 'Inference Key',
               cell: (item) =>
                 item.request_source === 'playground'
                   ? 'Playground'
@@ -248,11 +244,7 @@ export function RequestsReporting({
               header: 'Model',
               cell: (item) => {
                 const model = item.model_id || item.requested_model_id;
-                return (
-                  <span className="block max-w-48 truncate" title={model}>
-                    {model}
-                  </span>
-                );
+                return <ModelBadge name={model} className="max-w-48 justify-start" />;
               },
             },
             { key: 'provider', header: 'Provider', cell: (item) => item.provider_id || 'No provider attempt' },
@@ -264,8 +256,8 @@ export function RequestsReporting({
             { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
             {
               key: 'tokens',
-              header: 'Input / output',
-              cell: (item) => `${item.input_tokens.toLocaleString()} / ${item.output_tokens.toLocaleString()}`,
+              header: 'Input · Output',
+              cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
             },
             { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
           ]}
@@ -313,9 +305,9 @@ export function RequestsReporting({
                 <dd>{formatReportCostExact(request.data.cost_usd)}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Input / output tokens</dt>
+                <dt className="text-muted-foreground">Input · Output tokens</dt>
                 <dd>
-                  {request.data.input_tokens.toLocaleString()} / {request.data.output_tokens.toLocaleString()}
+                  {request.data.input_tokens.toLocaleString()} · {request.data.output_tokens.toLocaleString()}
                 </dd>
               </div>
               <div>
@@ -348,7 +340,7 @@ export function RequestsReporting({
                     .map((attempt) => (
                       <Card key={attempt.event_id} className="space-y-3 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-mono text-xs">{formatDate(attempt.attempt_started_at)}</span>
+                          <span className="font-mono text-sm">{formatDate(attempt.attempt_started_at)}</span>
                           <div className="flex gap-2">
                             <RequestStatusBadge status={attempt.status} />
                             {attemptFilter && (
@@ -358,7 +350,7 @@ export function RequestsReporting({
                             )}
                           </div>
                         </div>
-                        <dl className="grid grid-cols-2 gap-3 text-xs">
+                        <dl className="grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <dt className="text-muted-foreground">Provider</dt>
                             <dd>{attempt.provider_id || 'None recorded'}</dd>
@@ -370,21 +362,21 @@ export function RequestsReporting({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-muted-foreground">Input / output</dt>
+                            <dt className="text-muted-foreground">Input · Output</dt>
                             <dd>
-                              {attempt.input_tokens.toLocaleString()} / {attempt.output_tokens.toLocaleString()}
+                              {attempt.input_tokens.toLocaleString()} · {attempt.output_tokens.toLocaleString()}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-muted-foreground">Cache read / write</dt>
+                            <dt className="text-muted-foreground">Cache Read · Write</dt>
                             <dd>
-                              {attempt.cache_read_tokens.toLocaleString()} / {attempt.cache_write_tokens.toLocaleString()}
+                              {attempt.cache_read_tokens.toLocaleString()} · {attempt.cache_write_tokens.toLocaleString()}
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-muted-foreground">Input / output cost</dt>
+                            <dt className="text-muted-foreground">Input · Output cost</dt>
                             <dd>
-                              {formatReportCostExact(attempt.cost_input_usd)} / {formatReportCostExact(attempt.cost_output_usd)}
+                              {formatReportCostExact(attempt.cost_input_usd)} · {formatReportCostExact(attempt.cost_output_usd)}
                             </dd>
                           </div>
                           <div>

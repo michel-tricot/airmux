@@ -8,29 +8,47 @@ import { ErrorState, LoadingState } from '@/components/shared/states';
 import { ReportingChart } from '@/components/shared/reporting-chart';
 import { ReportingFilters } from '@/components/shared/reporting-filters';
 import { ReportRefreshButton } from '@/components/shared/report-refresh-button';
+import { ModelBadge } from '@/components/shared/model-badge';
+import { TableLink } from '@/components/shared/table-link';
 import { useAttributionReport, useReportOptions, useUsageReport } from '@/features/reporting/hooks';
 import { formatAverageCost, formatChange, formatReportCost, formatShare } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
 import { drillDownUrl, requestsPath, useReportSearch } from '@/features/reporting/url';
 import { useRequiredOrgId } from '@/lib/session';
 
-function Metric({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  change,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  change?: string;
+}) {
   return (
     <Card className="flex items-start gap-3 p-4">
       <Icon className="h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
         <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold tabular-nums">{value}</div>
+        {change && <div className="mt-1 text-xs text-muted-foreground">{change}</div>}
       </div>
     </Card>
   );
 }
 
 function compactCount(value: number) {
-  return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value || 0);
 }
 
-function TokenMetric({ totals }: { totals: UsageTotalsOut }) {
+function countChange(current: number, previous: number) {
+  const difference = current - previous;
+  return difference === 0 ? 'No change' : `${difference > 0 ? '+' : '−'}${Math.abs(difference).toLocaleString()}`;
+}
+
+function TokenMetric({ totals, change }: { totals: UsageTotalsOut; change: string }) {
   return (
     <Card className="p-4 xl:col-span-2">
       <div className="grid gap-4 xl:grid-cols-2">
@@ -39,6 +57,7 @@ function TokenMetric({ totals }: { totals: UsageTotalsOut }) {
           <div className="min-w-0">
             <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Tokens</div>
             <div className="text-2xl font-bold tabular-nums">{(totals.input_tokens + totals.output_tokens).toLocaleString()}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{change}</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
@@ -125,9 +144,25 @@ export function UsageReporting({
         <>
           {report.isError && <ErrorState message="Refresh failed. Showing the last loaded report." onRetry={() => report.refetch()} />}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            <Metric icon={Coins} label="Spend" value={formatReportCost(totals!.cost_usd)} />
-            <Metric icon={Activity} label="Requests" value={totals!.requests.toLocaleString()} />
-            <TokenMetric totals={totals!} />
+            <Metric
+              icon={Coins}
+              label="Spend"
+              value={formatReportCost(totals!.cost_usd)}
+              change={formatChange(totals!.cost_usd, report.data.comparison.cost_usd)}
+            />
+            <Metric
+              icon={Activity}
+              label="Requests"
+              value={totals!.requests.toLocaleString()}
+              change={countChange(totals!.requests, report.data.comparison.requests)}
+            />
+            <TokenMetric
+              totals={totals!}
+              change={countChange(
+                totals!.input_tokens + totals!.output_tokens,
+                report.data.comparison.input_tokens + report.data.comparison.output_tokens,
+              )}
+            />
             <Metric icon={Sigma} label="Cost per request" value={formatAverageCost(totals!.cost_usd, totals!.requests)} />
           </div>
           <ReportingChart
@@ -145,6 +180,7 @@ export function UsageReporting({
               actions={
                 <Dropdown
                   aria-label="Group by"
+                  className="w-48 shrink-0"
                   value={filters.groupBy}
                   onValueChange={(value) => filters.setValue('group_by', value)}
                   options={[
@@ -208,7 +244,9 @@ export function UsageReporting({
                     header: filters.groupBy === 'owner' ? 'Key owner' : filters.groupBy,
                     cell: (item) =>
                       item.id ? (
-                        <Link href={drillDownUrl(filters.search, workspaceRef, filters.groupBy, item.id)}>{item.name}</Link>
+                        <TableLink href={drillDownUrl(filters.search, workspaceRef, filters.groupBy, item.id)}>
+                          {filters.groupBy === 'model' ? <ModelBadge name={item.name} /> : item.name}
+                        </TableLink>
                       ) : (
                         'None recorded'
                       ),
@@ -219,8 +257,8 @@ export function UsageReporting({
                   { key: 'requests', header: 'Requests', cell: (item) => item.requests.toLocaleString() },
                   {
                     key: 'tokens',
-                    header: 'Input / output',
-                    cell: (item) => `${item.input_tokens.toLocaleString()} / ${item.output_tokens.toLocaleString()}`,
+                    header: 'Input · Output',
+                    cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
                   },
                   { key: 'average', header: 'Cost/request', cell: (item) => formatAverageCost(item.cost_usd, item.requests) },
                 ]}

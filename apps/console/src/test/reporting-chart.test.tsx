@@ -37,5 +37,5 @@ it('labels dates across the trend and shows full daily usage on hover', async ()
   expect(screen.getByText('Requests')).toBeInTheDocument();
   expect(screen.getByText('Input tokens')).toBeInTheDocument();
   expect(screen.getByText('Output tokens')).toBeInTheDocument();
-  expect(screen.getByText('$1.25')).toBeInTheDocument();
+  expect(screen.getAllByText('$1.25').length).toBeGreaterThan(0);
 });

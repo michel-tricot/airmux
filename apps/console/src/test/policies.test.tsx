@@ -228,7 +228,7 @@ describe('workspace policies', () => {
     expect(await screen.findByText('$70')).toBeVisible();
     expect(screen.getByText('Exhausted')).toBeVisible();
     await user.click(screen.getByRole('combobox', { name: 'Budget rule' }));
-    await user.click(screen.getByRole('option', { name: 'Rule 2: $10 / day (per key)' }));
+    await user.click(screen.getByRole('option', { name: 'Rule 2: $10 per day (per key)' }));
     expect(await screen.findByText('Key key-a')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Next page' }));
     expect(await screen.findByText('Key key-b')).toBeVisible();

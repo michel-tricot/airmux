@@ -122,6 +122,13 @@ def test_usage_fixtures_include_reportable_request_cases(tmp_path):
     assert (denial.status, denial.attempt_started_at, denial.provider_id, denial.cost_usd) == ("denied", None, "", 0)
     playground = next(event for event in events if event.event_id == fixture_id(f"event:{production_id}:3"))
     assert playground.request_source == "playground"
+    assert playground.cache_read_tokens == 128
+
+    staging_id = fixture_id("workspace:acme:staging")
+    retry = [event for event in events if event.request_id == fixture_id(f"request:{staging_id}:0")]
+    assert [event.status for event in sorted(retry, key=lambda event: event.occurred_at)] == ["upstream_error", "ok"]
+    assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:2")).status == "denied"
+    assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:3")).status == "upstream_error"
 
 
 def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):

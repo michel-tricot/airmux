@@ -270,7 +270,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
             stream=rng.choice([True, False]),
         )
         if report_examples and index in range(4):
-            start = now - timedelta(days=1)
+            start = now - (timedelta(minutes=5) if workspace.name == "Staging" else timedelta(days=1))
             event.request_started_at = start if index in (0, 1) else start + timedelta(seconds=index)
             event.attempt_started_at = event.request_started_at + timedelta(milliseconds=600 if index == 1 else 0)
             event.occurred_at = event.attempt_started_at + timedelta(milliseconds=500)
@@ -280,10 +280,11 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
                     event.request_id = fixture_id(f"request:{workspace.id}:0")
                     event.model_id, event.provider_id = MODELS[0 if index == 0 else 2]
                     event.status = "upstream_error" if index == 0 else "ok"
-                    event.credential_id = fixture_id(
-                        f"provider-credential:Acme:Production:{event.provider_id}:{'primary' if index == 0 else 'default'}"
-                    )
-                    event.credential_scope = "workspace"
+                    if workspace.name == "Production":
+                        event.credential_id = fixture_id(
+                            f"provider-credential:Acme:Production:{event.provider_id}:{'primary' if index == 0 else 'default'}"
+                        )
+                        event.credential_scope = "workspace"
                 case 2:
                     event.attempt_started_at = None
                     event.occurred_at = event.request_started_at + timedelta(milliseconds=100)
@@ -293,12 +294,16 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
                     event.token_usage_source = TokenUsageSource.NOT_APPLICABLE
                     event.status = "denied"
                 case 3:
-                    event.request_source = "playground"
-                    event.key_id = str(fixture_id("playground-session:acme:production"))
-                    event.credential_id = fixture_id("provider-credential:Acme:Production:openai:primary")
-                    event.credential_scope = "workspace"
-                    event.model_id, event.provider_id = MODELS[0]
-                    event.status = "ok"
+                    event.cache_read_tokens = 128
+                    if workspace.name == "Staging":
+                        event.status = "upstream_error"
+                    else:
+                        event.request_source = "playground"
+                        event.key_id = str(fixture_id("playground-session:acme:production"))
+                        event.credential_id = fixture_id("provider-credential:Acme:Production:openai:primary")
+                        event.credential_scope = "workspace"
+                        event.model_id, event.provider_id = MODELS[0]
+                        event.status = "ok"
         await event.save()
 
 
@@ -550,7 +555,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     ]
 
     await record_usage(production, checkout, 1200, now, report_examples=True)
-    await record_usage(staging, ci, 360, now)
+    await record_usage(staging, ci, 360, now, report_examples=True)
     await record_usage(default, solo_key, 84, now)
 
     return Fixtures(

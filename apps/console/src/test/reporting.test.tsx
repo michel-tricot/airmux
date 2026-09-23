@@ -39,7 +39,15 @@ function renderAt(path: string) {
 it('opens organization reporting and drills a model into filtered requests', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/usage', () =>
-      HttpResponse.json({ data: { totals, comparison: totals, period, daily: [{ date: period.start_at, ...totals }], updated_at: period.end_at } }),
+      HttpResponse.json({
+        data: {
+          totals,
+          comparison: { ...totals, requests: 1, input_tokens: 10, output_tokens: 5, cost_usd: '0' },
+          period,
+          daily: [{ date: period.start_at, ...totals }],
+          updated_at: period.end_at,
+        },
+      }),
     ),
     http.get('/api/v1/organizations/:orgId/reports/attribution', () =>
       HttpResponse.json({
@@ -65,26 +73,48 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
   const spendCard = (await screen.findByText('Spend', { selector: 'div' })).closest('.p-4');
   expect(spendCard?.querySelector('svg')).not.toHaveClass('mt-1');
+  expect(within(spendCard as HTMLElement).getByText('+$0.000005')).toBeInTheDocument();
+  const requestsCard = screen.getByText('Requests', { selector: 'div' }).closest('.p-4') as HTMLElement;
+  expect(within(requestsCard).getByText('+1')).toBeInTheDocument();
   expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
   const tokensCard = screen.getByText('Tokens', { selector: 'div' }).closest('.p-4') as HTMLElement;
   expect(within(tokensCard).getByText('40')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('+25')).toBeInTheDocument();
   expect(within(tokensCard).getByText('Input')).toBeInTheDocument();
   expect(within(tokensCard).getByText('Output')).toBeInTheDocument();
   expect(within(tokensCard).getByText('Cache read')).toBeInTheDocument();
   expect(within(tokensCard).getByText('Cache write')).toBeInTheDocument();
   expect(within(tokensCard).getByText('3')).toBeInTheDocument();
   expect(within(tokensCard).getByText('2')).toBeInTheDocument();
+  const spendAxis = screen.getByRole('group', { name: 'Spend axis' });
+  expect(within(spendAxis).getByText('$0.000005')).toBeInTheDocument();
+  expect(within(spendAxis).getByText('$0')).toBeInTheDocument();
+  expect(spendAxis.parentElement?.lastElementChild).toHaveClass('w-20', 'shrink-0');
   expect(screen.queryByText(/estimated gateway usage/i)).not.toBeInTheDocument();
   expect(window.location.pathname).toBe('/org');
+  expect(screen.getByRole('combobox', { name: 'Group by' })).toHaveClass('w-48', 'shrink-0');
   await user.click(await screen.findByRole('combobox', { name: 'Group by' }));
   await user.click(screen.getByRole('option', { name: 'Model' }));
   const attribution = await screen.findByRole('table', { name: 'Attribution' });
-  await user.click(within(attribution).getByRole('link', { name: 'model-a' }));
+  expect(within(attribution).getByText('Input · Output')).toBeInTheDocument();
+  expect(within(attribution).getByText('30 · 10')).toBeInTheDocument();
+  const modelLink = within(attribution).getByRole('link', { name: 'model-a' });
+  expect(modelLink).toHaveClass('text-primary', 'hover:underline');
+  expect(modelLink.closest('td')).not.toHaveClass('[&_a]:text-primary');
+  expect(within(modelLink).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
+  await user.click(modelLink);
 
   expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
   expect(window.location.pathname).toBe('/org/requests');
   expect(new URLSearchParams(window.location.search).get('model_id')).toBe('model-a');
-  expect(await screen.findByText('request-1')).toBeInTheDocument();
+  const requestLink = await screen.findByRole('link', { name: 'request-1' });
+  const requestsTable = screen.getByRole('table', { name: 'Requests' });
+  expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
+  expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
+  expect(within(requestsTable).getByText('Input · Output')).toBeInTheDocument();
+  expect(within(requestsTable).getByText('30 · 10')).toBeInTheDocument();
+  expect(requestLink).toHaveClass('text-primary', 'hover:underline');
+  expect(within(screen.getByRole('table', { name: 'Requests' })).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
 });
 
 it('opens a listed request without carrying its old page offset', async () => {
@@ -98,10 +128,37 @@ it('opens a listed request without carrying its old page offset', async () => {
   expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
 });
 
+it('shows zero instead of NaN when cache token counts are absent', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/usage', () =>
+      HttpResponse.json({
+        data: {
+          totals: { ...totals, cache_read_tokens: undefined, cache_write_tokens: undefined },
+          comparison: totals,
+          period,
+          daily: [],
+          updated_at: period.end_at,
+        },
+      }),
+    ),
+  );
+
+  renderAt('/org');
+
+  const tokensCard = (await screen.findByText('Tokens', { selector: 'div' })).closest('.p-4') as HTMLElement;
+  expect(within(tokensCard).getAllByText('0')).toHaveLength(2);
+  expect(within(tokensCard).queryByText('NaN')).not.toBeInTheDocument();
+});
+
 it('keeps workspace request rows compact with the full request ID available', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', () =>
-      HttpResponse.json({ data: { requests: [{ ...requestSummary, request_id: '01a0cbde-afee-7867-a902-e70b75b471ba' }], next_offset: null } }),
+      HttpResponse.json({
+        data: {
+          requests: [{ ...requestSummary, request_id: '01a0cbde-afee-7867-a902-e70b75b471ba', model_id: 'anthropic/claude-opus-4-5-20251101' }],
+          next_offset: null,
+        },
+      }),
     ),
   );
 
@@ -113,6 +170,9 @@ it('keeps workspace request rows compact with the full request ID available', as
     'title',
     '01a0cbde-afee-7867-a902-e70b75b471ba',
   );
+  const model = within(table).getByText('anthropic/claude-opus-4-5-20251101');
+  expect(model).toHaveClass('truncate');
+  expect(model.parentElement).toHaveClass('justify-start', 'max-w-48');
 });
 
 it('uses the same report endpoint with a workspace ID for workspace reporting', async () => {
@@ -135,7 +195,7 @@ it('uses the same report endpoint with a workspace ID for workspace reporting', 
   renderAt(`/org/workspaces/${WORKSPACES[0].slug}`);
 
   expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
-  expect(await screen.findByText('$0.000005')).toBeInTheDocument();
+  expect((await screen.findAllByText('$0.000005')).length).toBeGreaterThan(0);
   expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
   expect(
     screen.queryByText('A request can appear in several model or provider groups when it retries. Spending is counted once per attempt.'),
@@ -282,7 +342,14 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(within(panel).getByText('Checkout')).toBeInTheDocument();
   expect(within(panel).getByText('Primary credential')).toBeInTheDocument();
   expect(within(panel).getByText('Backup credential')).toBeInTheDocument();
-  expect(within(panel).getAllByText('model-a')[0]).toHaveClass('font-mono');
+  expect(within(panel).getByText('Input · Output tokens')).toBeInTheDocument();
+  expect(within(panel).getAllByText('Input · Output')).toHaveLength(2);
+  expect(within(panel).getAllByText('Cache Read · Write')).toHaveLength(2);
+  expect(within(panel).getAllByText('Input · Output cost')).toHaveLength(2);
+  expect(within(panel).getAllByText('model-a')[0].parentElement).toHaveClass('font-mono');
+  const attempts = within(panel).getByRole('heading', { name: 'Provider attempts' }).parentElement as HTMLElement;
+  for (const details of attempts.querySelectorAll('dl')) expect(details).toHaveClass('text-sm');
+  expect(attempts.querySelector('span.font-mono')).toHaveClass('text-sm');
   expect(panel).toHaveClass('p-6');
 });
 
