@@ -25,6 +25,8 @@ class UsageTotalsOut(BaseModel):
     requests: int
     input_tokens: int
     output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
     cost_usd: UsdAmount
 
 
@@ -58,6 +60,8 @@ class UsageReportOut(BaseModel):
                 func.count(func.distinct(col(UsageEvent.request_id))),
                 func.coalesce(func.sum(col(UsageEvent.input_tokens)), 0),
                 func.coalesce(func.sum(col(UsageEvent.output_tokens)), 0),
+                func.coalesce(func.sum(col(UsageEvent.cache_read_tokens)), 0),
+                func.coalesce(func.sum(col(UsageEvent.cache_write_tokens)), 0),
                 func.coalesce(func.sum(col(UsageEvent.cost_usd)), ZERO_USD),
             )
             .where(*query.conditions(org_id, window))
@@ -70,12 +74,17 @@ class UsageReportOut(BaseModel):
                 requests=values[1],
                 input_tokens=values[2],
                 output_tokens=values[3],
-                cost_usd=values[4],
+                cache_read_tokens=values[4],
+                cache_write_tokens=values[5],
+                cost_usd=values[6],
             )
             for values in (await current_session().execute(statement)).all()
         }
         days = [
-            daily.get(start_at, UsageDayOut(date=start_at, requests=0, input_tokens=0, output_tokens=0, cost_usd=ZERO_USD))
+            daily.get(
+                start_at,
+                UsageDayOut(date=start_at, requests=0, input_tokens=0, output_tokens=0, cache_read_tokens=0, cache_write_tokens=0, cost_usd=ZERO_USD),
+            )
             for start_at in _buckets(window, granularity)
         ]
         return cls(
@@ -83,6 +92,8 @@ class UsageReportOut(BaseModel):
                 requests=sum(day.requests for day in days),
                 input_tokens=sum(day.input_tokens for day in days),
                 output_tokens=sum(day.output_tokens for day in days),
+                cache_read_tokens=sum(day.cache_read_tokens for day in days),
+                cache_write_tokens=sum(day.cache_write_tokens for day in days),
                 cost_usd=sum((day.cost_usd for day in days), ZERO_USD),
             ),
             comparison=comparison,
@@ -97,10 +108,19 @@ async def _totals(conditions: list[ColumnElement[bool]]) -> UsageTotalsOut:
         func.count(func.distinct(col(UsageEvent.request_id))),
         func.coalesce(func.sum(col(UsageEvent.input_tokens)), 0),
         func.coalesce(func.sum(col(UsageEvent.output_tokens)), 0),
+        func.coalesce(func.sum(col(UsageEvent.cache_read_tokens)), 0),
+        func.coalesce(func.sum(col(UsageEvent.cache_write_tokens)), 0),
         func.coalesce(func.sum(col(UsageEvent.cost_usd)), ZERO_USD),
     ).where(*conditions)
     values = (await current_session().execute(statement)).one()
-    return UsageTotalsOut(requests=values[0], input_tokens=values[1], output_tokens=values[2], cost_usd=values[3])
+    return UsageTotalsOut(
+        requests=values[0],
+        input_tokens=values[1],
+        output_tokens=values[2],
+        cache_read_tokens=values[3],
+        cache_write_tokens=values[4],
+        cost_usd=values[5],
+    )
 
 
 def _buckets(window: ReportWindow, granularity: str) -> list[datetime]:

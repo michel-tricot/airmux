@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import type { UsageTotalsOut } from '@workspace/api-client-react';
 import { Activity, Coins, Hash, Sigma } from 'lucide-react';
 import { Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
@@ -13,24 +14,13 @@ import { reportQuery } from '@/features/reporting/query';
 import { drillDownUrl, requestsPath, useReportSearch } from '@/features/reporting/url';
 import { useRequiredOrgId } from '@/lib/session';
 
-function Metric({
-  icon: Icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  detail?: string;
-}) {
+function Metric({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
   return (
     <Card className="flex items-start gap-3 p-4">
       <Icon className="h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
         <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold tabular-nums">{value}</div>
-        {detail && <div className="whitespace-nowrap text-xs text-muted-foreground">{detail}</div>}
       </div>
     </Card>
   );
@@ -38,6 +28,37 @@ function Metric({
 
 function compactCount(value: number) {
   return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
+function TokenMetric({ totals }: { totals: UsageTotalsOut }) {
+  return (
+    <Card className="p-4 xl:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex items-start gap-3">
+          <Hash className="h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Tokens</div>
+            <div className="text-2xl font-bold tabular-nums">{(totals.input_tokens + totals.output_tokens).toLocaleString()}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-3 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0">
+          {(
+            [
+              ['Input', totals.input_tokens],
+              ['Output', totals.output_tokens],
+              ['Cache read', totals.cache_read_tokens],
+              ['Cache write', totals.cache_write_tokens],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label}>
+              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="font-mono text-sm tabular-nums">{compactCount(value)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export function UsageReporting({
@@ -103,15 +124,10 @@ export function UsageReporting({
       {report.data && (
         <>
           {report.isError && <ErrorState message="Refresh failed. Showing the last loaded report." onRetry={() => report.refetch()} />}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             <Metric icon={Coins} label="Spend" value={formatReportCost(totals!.cost_usd)} />
             <Metric icon={Activity} label="Requests" value={totals!.requests.toLocaleString()} />
-            <Metric
-              icon={Hash}
-              label="Tokens"
-              value={(totals!.input_tokens + totals!.output_tokens).toLocaleString()}
-              detail={`${compactCount(totals!.input_tokens)} in · ${compactCount(totals!.output_tokens)} out`}
-            />
+            <TokenMetric totals={totals!} />
             <Metric icon={Sigma} label="Cost per request" value={formatAverageCost(totals!.cost_usd, totals!.requests)} />
           </div>
           <ReportingChart

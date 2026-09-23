@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
-const totals = { requests: 2, input_tokens: 30, output_tokens: 10, cost_usd: '0.000005' };
+const totals = { requests: 2, input_tokens: 30, output_tokens: 10, cache_read_tokens: 3, cache_write_tokens: 2, cost_usd: '0.000005' };
 const period = {
   start_at: '2026-01-01T00:00:00Z',
   end_at: '2026-01-31T00:00:00Z',
@@ -68,7 +68,12 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
   const tokensCard = screen.getByText('Tokens', { selector: 'div' }).closest('.p-4') as HTMLElement;
   expect(within(tokensCard).getByText('40')).toBeInTheDocument();
-  expect(within(tokensCard).getByText('30 in · 10 out')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('Input')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('Output')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('Cache read')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('Cache write')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('3')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('2')).toBeInTheDocument();
   expect(screen.queryByText(/estimated gateway usage/i)).not.toBeInTheDocument();
   expect(window.location.pathname).toBe('/org');
   await user.click(await screen.findByRole('combobox', { name: 'Group by' }));

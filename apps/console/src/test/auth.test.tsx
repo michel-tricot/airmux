@@ -286,8 +286,8 @@ describe('switching organizations', () => {
         const cost = params.orgId === ORG.id ? '1' : '2';
         return HttpResponse.json({
           data: {
-            totals: { requests: 1, input_tokens: 1, output_tokens: 1, cost_usd: cost },
-            comparison: { requests: 0, input_tokens: 0, output_tokens: 0, cost_usd: '0' },
+            totals: { requests: 1, input_tokens: 1, output_tokens: 1, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: cost },
+            comparison: { requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: '0' },
             daily: [],
             period: { start_at: now, end_at: now, previous_start_at: now, previous_end_at: now, timezone: 'UTC' },
             updated_at: now,

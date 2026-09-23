@@ -309,6 +309,8 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
         first_attempt["status"] = "upstream_error"
         first_attempt["input_tokens"] = 4
         first_attempt["output_tokens"] = 0
+        first_attempt["cache_read_tokens"] = 1
+        first_attempt["cache_write_tokens"] = 2
         first_attempt["cost_usd"] = "0.000002"
         first_attempt["cost_input_usd"] = "0.000002"
         retry = {
@@ -319,6 +321,8 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
             "status": "ok",
             "input_tokens": 6,
             "output_tokens": 3,
+            "cache_read_tokens": 2,
+            "cache_write_tokens": 1,
             "cost_usd": "0.000003",
             "cost_input_usd": "0.000003",
         }
@@ -338,8 +342,14 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
         assert report["totals"]["requests"] == 1
         assert report["totals"]["input_tokens"] == 10
         assert report["totals"]["output_tokens"] == 3
+        assert report["totals"]["cache_read_tokens"] == 3
+        assert report["totals"]["cache_write_tokens"] == 3
+        assert report["comparison"]["cache_read_tokens"] == 0
+        assert report["comparison"]["cache_write_tokens"] == 0
         assert Decimal(report["totals"]["cost_usd"]) == Decimal("0.000005")
         assert report["daily"][-1]["requests"] == 1
+        assert report["daily"][-1]["cache_read_tokens"] == 3
+        assert report["daily"][-1]["cache_write_tokens"] == 3
         assert Decimal(report["daily"][-1]["cost_usd"]) == Decimal("0.000005")
         assert attribution["items"][0]["name"] == "gpt-test"
         assert attribution["items"][0]["requests"] == 1

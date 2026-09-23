@@ -10157,6 +10157,12 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
         cost_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -10170,6 +10176,8 @@ components:
       - requests
       - input_tokens
       - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - cost_usd
       - date
       title: UsageDayOut
@@ -10373,6 +10381,12 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
         cost_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -10382,6 +10396,8 @@ components:
       - requests
       - input_tokens
       - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - cost_usd
       title: UsageTotalsOut
     UserOut:
