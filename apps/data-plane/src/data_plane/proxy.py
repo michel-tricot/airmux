@@ -224,8 +224,8 @@ class RequestExecution:
                     attempt_started_at=attempt_started_at,
                 )
                 return await session.open(upstream)
-            async with self.runtime.http_client.request(
-                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, allow_redirects=False
+            async with self.runtime.provider_http_client.request(
+                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body
             ) as response:
                 body = await response.read()
                 _check_upstream(response.status, body)

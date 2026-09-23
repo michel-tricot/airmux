@@ -36,6 +36,7 @@ from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
+from data_plane.http_client import build_http_client
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
 
@@ -231,6 +232,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", build_http_client)
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), api_key=caller_token)
 

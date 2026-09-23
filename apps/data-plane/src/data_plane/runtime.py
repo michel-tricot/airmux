@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from data_plane.credentials import CredentialResolver
     from data_plane.metrics import DataPlaneMetrics
     from data_plane.outbox import EventOutbox
+    from data_plane.provider_http_client import ProviderHttpClient
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class Runtime:
     outbox: EventOutbox
     credentials: CredentialResolver
     http_client: aiohttp.ClientSession
+    provider_http_client: ProviderHttpClient
     metrics: DataPlaneMetrics
     budgets: BudgetBackend = field(default_factory=NoBudgetBackend)
 

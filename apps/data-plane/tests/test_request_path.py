@@ -31,6 +31,7 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.config import ControlPlaneBudgetConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
+from data_plane.http_client import build_http_client
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, OutboxFullError
 from data_plane.proxy import RequestRejectedError, _transform
@@ -140,6 +141,7 @@ def test_unavailable_budget_state_does_not_reject_inference(http_mock, tmp_path,
     write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle("shared")]))
     control_plane = ControlPlaneLink(url="http://cp.test", management_key="dp-token")
     config = make_config(tmp_path).model_copy(update={"budget": ControlPlaneBudgetConfig(control_plane=control_plane, poll_interval_s=60)})
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", build_http_client)
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")
     http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
     mock_control_plane(http_mock)
