@@ -154,6 +154,35 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         assert {item["id"] for item in options.json()["data"]["items"]} == {"openai", "anthropic"}
 
 
+def test_invalid_event_does_not_block_valid_reporting_or_replay(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        valid = _event(org_id, workspace_id)
+        invalid = {**_event(org_id, workspace_id), "cache_read_tokens": 5}
+        batch = [invalid, valid]
+
+        first = client.post("/api/v1/events", json=batch, headers=root)
+        assert first.status_code == 200, first.text
+        assert first.json()["data"] == {"received": 2, "ingested": 1, "rejected": 1}
+        replay = client.post("/api/v1/events", json=batch, headers=root)
+        assert replay.status_code == 200, replay.text
+        assert replay.json()["data"] == {"received": 2, "ingested": 0, "rejected": 1}
+
+        path = f"/api/v1/organizations/{org_id}/reports"
+        headers = cp.headers(org_id)
+        totals = client.get(f"{path}/usage", headers=headers).json()["data"]["totals"]
+        assert totals["requests"] == 1
+        assert totals["input_tokens"] == valid["input_tokens"]
+        assert Decimal(totals["cost_usd"]) == Decimal(valid["cost_usd"])
+        requests = client.get(f"{path}/requests", headers=headers).json()["data"]["requests"]
+        assert [request["request_id"] for request in requests] == [valid["request_id"]]
+        export = client.get(f"{path}/requests/export", headers=headers).json()["data"]["csv"]
+        assert [request["request_id"] for request in csv.DictReader(StringIO(export))] == [valid["request_id"]]
+
+
 def test_request_export_covers_all_filtered_requests_beyond_first_page(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
