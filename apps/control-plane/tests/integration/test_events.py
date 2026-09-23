@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
@@ -296,3 +297,65 @@ def test_event_cursors_are_stable_when_timestamps_match(tmp_path):
 
         assert [event["event_id"] for event in newest["data"]] == [str(UUID(int=3)), str(UUID(int=2))]
         assert [event["event_id"] for event in older] == [str(UUID(int=1))]
+
+
+def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "usage-report")
+        workspace_id = make_workspace(client, cp.headers(org_id), "usage-report")
+        first_attempt = _event(org_id)
+        first_attempt["workspace_id"] = str(workspace_id)
+        first_attempt["status"] = "upstream_error"
+        first_attempt["input_tokens"] = 4
+        first_attempt["output_tokens"] = 0
+        first_attempt["cache_read_tokens"] = 1
+        first_attempt["cache_write_tokens"] = 2
+        first_attempt["cost_usd"] = "0.000002"
+        first_attempt["cost_input_usd"] = "0.000002"
+        retry = {
+            **first_attempt,
+            "event_id": str(uuid7()),
+            "attempt_started_at": (datetime.fromisoformat(first_attempt["attempt_started_at"]) + timedelta(seconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(first_attempt["occurred_at"]) + timedelta(seconds=1)).isoformat(),
+            "status": "ok",
+            "input_tokens": 6,
+            "output_tokens": 3,
+            "cache_read_tokens": 2,
+            "cache_write_tokens": 1,
+            "cost_usd": "0.000003",
+            "cost_input_usd": "0.000003",
+        }
+        assert client.post("/api/v1/events", json=[retry, first_attempt], headers=cp.headers()).json()["data"]["ingested"] == 2
+
+        report = client.get(f"/api/v1/organizations/{org_id}/reports/usage", headers=cp.headers(org_id)).json()["data"]
+        requests = client.get(f"/api/v1/organizations/{org_id}/reports/requests", headers=cp.headers(org_id)).json()["data"]
+        attribution = client.get(
+            f"/api/v1/organizations/{org_id}/reports/attribution",
+            params={"group_by": "model"},
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        detail = client.get(f"/api/v1/organizations/{org_id}/reports/requests/{first_attempt['request_id']}", headers=cp.headers(org_id)).json()[
+            "data"
+        ]
+
+        assert report["totals"]["requests"] == 1
+        assert report["totals"]["input_tokens"] == 10
+        assert report["totals"]["output_tokens"] == 3
+        assert report["totals"]["cache_read_tokens"] == 3
+        assert report["totals"]["cache_write_tokens"] == 3
+        assert report["comparison"]["cache_read_tokens"] == 0
+        assert report["comparison"]["cache_write_tokens"] == 0
+        assert Decimal(report["totals"]["cost_usd"]) == Decimal("0.000005")
+        assert report["daily"][-1]["requests"] == 1
+        assert report["daily"][-1]["cache_read_tokens"] == 3
+        assert report["daily"][-1]["cache_write_tokens"] == 3
+        assert Decimal(report["daily"][-1]["cost_usd"]) == Decimal("0.000005")
+        assert attribution["items"][0]["name"] == "gpt-test"
+        assert attribution["items"][0]["requests"] == 1
+        assert Decimal(attribution["items"][0]["cost_usd"]) == Decimal("0.000005")
+        assert requests["next_offset"] is None
+        assert len(requests["requests"]) == 1
+        assert requests["requests"][0]["status"] == "ok"
+        assert Decimal(requests["requests"][0]["cost_usd"]) == Decimal("0.000005")
+        assert [attempt["status"] for attempt in detail["attempts"]] == ["upstream_error", "ok"]

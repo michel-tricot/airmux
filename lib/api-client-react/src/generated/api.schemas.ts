@@ -49,6 +49,23 @@ export interface AllowedProviders {
   names: string[];
 }
 
+export interface AttributionItemOut {
+  id: string;
+  name: string;
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  previous_cost_usd: string;
+}
+
+export interface AttributionReportOut {
+  items: AttributionItemOut[];
+  next_offset: number | null;
+}
+
 export type BudgetPeriod = typeof BudgetPeriod[keyof typeof BudgetPeriod];
 
 
@@ -824,6 +841,15 @@ export interface EventsIngestedOut {
   received: number;
   ingested: number;
   rejected: number;
+}
+
+export interface FilterOptionOut {
+  id: string;
+  name: string;
+}
+
+export interface FilterOptionsOut {
+  items: FilterOptionOut[];
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -1695,6 +1721,160 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+export interface ReportWindow {
+  start_at: string;
+  end_at: string;
+  previous_start_at: string;
+  previous_end_at: string;
+  timezone: string;
+}
+
+export type RequestAttemptOutStatus = typeof RequestAttemptOutStatus[keyof typeof RequestAttemptOutStatus];
+
+
+export const RequestAttemptOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type TokenUsageSource = typeof TokenUsageSource[keyof typeof TokenUsageSource];
+
+
+export const TokenUsageSource = {
+  provider: 'provider',
+  estimated: 'estimated',
+  not_applicable: 'not_applicable',
+} as const;
+
+export interface RequestAttemptOut {
+  event_id: string;
+  attempt_started_at: string | null;
+  occurred_at: string;
+  provider_id: string;
+  model_id: string;
+  credential_id: string | null;
+  credential_name: string | null;
+  status: RequestAttemptOutStatus;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_input_usd: string;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_output_usd: string;
+  token_usage_source: TokenUsageSource;
+  latency_ms: number;
+  matches_filter: boolean;
+}
+
+export type RequestDetailOutStatus = typeof RequestDetailOutStatus[keyof typeof RequestDetailOutStatus];
+
+
+export const RequestDetailOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type RequestDetailOutRequestSource = typeof RequestDetailOutRequestSource[keyof typeof RequestDetailOutRequestSource];
+
+
+export const RequestDetailOutRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
+export interface RequestDetailOut {
+  request_id: string;
+  started_at: string;
+  status: RequestDetailOutStatus;
+  workspace_id: string;
+  workspace_name: string;
+  key_id: string;
+  key_name: string;
+  request_source: RequestDetailOutRequestSource;
+  user_id: string;
+  user_email: string;
+  requested_model_id: string;
+  model_id: string;
+  provider_id: string;
+  attempt_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  within_period: boolean;
+  attempts: RequestAttemptOut[];
+}
+
+export interface RequestExportOut {
+  filename: string;
+  csv: string;
+}
+
+export type RequestSummaryOutStatus = typeof RequestSummaryOutStatus[keyof typeof RequestSummaryOutStatus];
+
+
+export const RequestSummaryOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type RequestSummaryOutRequestSource = typeof RequestSummaryOutRequestSource[keyof typeof RequestSummaryOutRequestSource];
+
+
+export const RequestSummaryOutRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
+export interface RequestSummaryOut {
+  request_id: string;
+  started_at: string;
+  status: RequestSummaryOutStatus;
+  workspace_id: string;
+  workspace_name: string;
+  key_id: string;
+  key_name: string;
+  request_source: RequestSummaryOutRequestSource;
+  user_id: string;
+  user_email: string;
+  requested_model_id: string;
+  model_id: string;
+  provider_id: string;
+  attempt_count: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+}
+
+export interface RequestPageOut {
+  requests: RequestSummaryOut[];
+  next_offset: number | null;
+}
+
 /**
  * Whether the request came from an inference key or a Playground session
  */
@@ -1924,14 +2104,16 @@ export interface TaxonomySpec {
   models?: ModelIn[];
 }
 
-export type TokenUsageSource = typeof TokenUsageSource[keyof typeof TokenUsageSource];
-
-
-export const TokenUsageSource = {
-  provider: 'provider',
-  estimated: 'estimated',
-  not_applicable: 'not_applicable',
-} as const;
+export interface UsageDayOut {
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+  date: string;
+}
 
 export type UsageEventOutRequestSource = typeof UsageEventOutRequestSource[keyof typeof UsageEventOutRequestSource];
 
@@ -2006,6 +2188,24 @@ export interface UsageEventOut {
   stream: boolean;
   credential_id: string | null;
   credential_scope: UsageEventOutCredentialScope;
+}
+
+export interface UsageTotalsOut {
+  requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  /** @pattern ^\d+(?:\.\d+)?$ */
+  cost_usd: string;
+}
+
+export interface UsageReportOut {
+  totals: UsageTotalsOut;
+  comparison: UsageTotalsOut;
+  daily: UsageDayOut[];
+  period: ReportWindow;
+  updated_at: string;
 }
 
 export interface WorkspaceCreate {
@@ -2224,6 +2424,538 @@ cursor?: CursorToken | null;
  */
 limit?: number;
 };
+
+export type GetUsageReportParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: GetUsageReportPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+};
+
+export type GetUsageReportPeriod = typeof GetUsageReportPeriod[keyof typeof GetUsageReportPeriod];
+
+
+export const GetUsageReportPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type GetAttributionReportParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: GetAttributionReportPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+/**
+ * Group by
+ */
+group_by?: GetAttributionReportGroupBy;
+/**
+ * Search
+ */
+search?: string | null;
+/**
+ * Sort by
+ */
+sort_by?: GetAttributionReportSortBy;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * Offset
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type GetAttributionReportPeriod = typeof GetAttributionReportPeriod[keyof typeof GetAttributionReportPeriod];
+
+
+export const GetAttributionReportPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type GetAttributionReportGroupBy = typeof GetAttributionReportGroupBy[keyof typeof GetAttributionReportGroupBy];
+
+
+export const GetAttributionReportGroupBy = {
+  workspace: 'workspace',
+  owner: 'owner',
+  key: 'key',
+  model: 'model',
+  provider: 'provider',
+  credential: 'credential',
+} as const;
+
+export type GetAttributionReportSortBy = typeof GetAttributionReportSortBy[keyof typeof GetAttributionReportSortBy];
+
+
+export const GetAttributionReportSortBy = {
+  cost: 'cost',
+  change: 'change',
+  requests: 'requests',
+} as const;
+
+export type GetReportFilterOptionsParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: GetReportFilterOptionsPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+/**
+ * Dimension
+ */
+dimension: GetReportFilterOptionsDimension;
+/**
+ * Search
+ */
+search?: string | null;
+};
+
+export type GetReportFilterOptionsPeriod = typeof GetReportFilterOptionsPeriod[keyof typeof GetReportFilterOptionsPeriod];
+
+
+export const GetReportFilterOptionsPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type GetReportFilterOptionsDimension = typeof GetReportFilterOptionsDimension[keyof typeof GetReportFilterOptionsDimension];
+
+
+export const GetReportFilterOptionsDimension = {
+  workspace: 'workspace',
+  owner: 'owner',
+  key: 'key',
+  model: 'model',
+  provider: 'provider',
+  credential: 'credential',
+} as const;
+
+export type ListUsageRequestsParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: ListUsageRequestsPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+/**
+ * Request id
+ */
+request_id?: string | null;
+/**
+ * Status
+ */
+status?: ListUsageRequestsStatus;
+/**
+ * Multiple attempts
+ */
+multiple_attempts?: boolean;
+/**
+ * Sort by
+ */
+sort_by?: ListUsageRequestsSortBy;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Offset
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type ListUsageRequestsPeriod = typeof ListUsageRequestsPeriod[keyof typeof ListUsageRequestsPeriod];
+
+
+export const ListUsageRequestsPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type ListUsageRequestsStatus = typeof ListUsageRequestsStatus[keyof typeof ListUsageRequestsStatus] | null;
+
+
+export const ListUsageRequestsStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type ListUsageRequestsSortBy = typeof ListUsageRequestsSortBy[keyof typeof ListUsageRequestsSortBy];
+
+
+export const ListUsageRequestsSortBy = {
+  newest: 'newest',
+  cost: 'cost',
+} as const;
+
+export type ExportUsageRequestsParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: ExportUsageRequestsPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+/**
+ * Request id
+ */
+request_id?: string | null;
+/**
+ * Status
+ */
+status?: ExportUsageRequestsStatus;
+/**
+ * Multiple attempts
+ */
+multiple_attempts?: boolean;
+/**
+ * Sort by
+ */
+sort_by?: ExportUsageRequestsSortBy;
+/**
+ * Maximum number of results to return
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Offset
+ * @minimum 0
+ */
+offset?: number;
+};
+
+export type ExportUsageRequestsPeriod = typeof ExportUsageRequestsPeriod[keyof typeof ExportUsageRequestsPeriod];
+
+
+export const ExportUsageRequestsPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
+
+export type ExportUsageRequestsStatus = typeof ExportUsageRequestsStatus[keyof typeof ExportUsageRequestsStatus] | null;
+
+
+export const ExportUsageRequestsStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type ExportUsageRequestsSortBy = typeof ExportUsageRequestsSortBy[keyof typeof ExportUsageRequestsSortBy];
+
+
+export const ExportUsageRequestsSortBy = {
+  newest: 'newest',
+  cost: 'cost',
+} as const;
+
+export type GetUsageRequestParams = {
+/**
+ * Workspace id
+ */
+workspace_id?: string | null;
+/**
+ * Period
+ */
+period?: GetUsageRequestPeriod;
+/**
+ * Timezone
+ */
+timezone?: string;
+/**
+ * Start date
+ */
+start_date?: string | null;
+/**
+ * End date
+ */
+end_date?: string | null;
+/**
+ * Start at
+ */
+start_at?: string | null;
+/**
+ * End at
+ */
+end_at?: string | null;
+/**
+ * Owner id
+ */
+owner_id?: string | null;
+/**
+ * Management key ID
+ */
+key_id?: string | null;
+/**
+ * Model id
+ */
+model_id?: string | null;
+/**
+ * Provider id
+ */
+provider_id?: string | null;
+/**
+ * Provider credential ID
+ */
+credential_id?: string | null;
+};
+
+export type GetUsageRequestPeriod = typeof GetUsageRequestPeriod[keyof typeof GetUsageRequestPeriod];
+
+
+export const GetUsageRequestPeriod = {
+  today: 'today',
+  '7d': '7d',
+  '30d': '30d',
+  month_to_date: 'month_to_date',
+  custom: 'custom',
+} as const;
 
 export type ApplyInstanceTaxonomyParams = {
 /**

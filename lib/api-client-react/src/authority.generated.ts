@@ -558,6 +558,54 @@ export const operationAuthority = {
       },
     ],
   },
+  getUsageReport: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getAttributionReport: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getReportFilterOptions: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  listUsageRequests: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  exportUsageRequests: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getUsageRequest: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
   bundleManifest: {
     checks: [
       {
