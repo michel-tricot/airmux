@@ -26,15 +26,10 @@ from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.errors import RequestRejectedError
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.policies import CompiledRule, matching_rules
-from data_plane.requirements import RequestRequirements
 
 
 def _budget_rules(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot) -> tuple[CompiledRule, ...]:
-    return tuple(
-        rule
-        for rule in matching_rules(request, key, snapshot.policy_index, RequestRequirements.of(request))
-        if isinstance(rule.definition.action, Budget)
-    )
+    return tuple(rule for rule in matching_rules(request, key, snapshot.policy_index) if isinstance(rule.definition.action, Budget))
 
 
 def test_budget_state_is_independent_of_bundle_identity_and_expires():

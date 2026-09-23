@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from contract.policies import Budget
-from data_plane.policy import Allow, Deny, evaluate_policies
+from data_plane.policy import Allow, Deny, evaluate, evaluate_policies
 
 if TYPE_CHECKING:
     from contract import KeyEntry
@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
     from data_plane.policies import CompiledRule
-    from data_plane.requirements import RequestRequirements
 
 
 @dataclass(frozen=True)
@@ -25,8 +24,8 @@ class RoutePlan:
     budget_rules: tuple[CompiledRule, ...]
 
 
-def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot, requirements: RequestRequirements) -> RoutePlan | Deny:
-    evaluation = evaluate_policies(request, key, snapshot, requirements)
+def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapshot) -> RoutePlan | Deny:
+    evaluation = evaluate_policies(request, key, snapshot)
     primary = evaluation.decision
     if isinstance(primary, Deny):
         return primary
@@ -35,9 +34,7 @@ def plan_routes(request: CanonicalRequest, key: KeyEntry, snapshot: BundleSnapsh
     if fallback is None:
         return RoutePlan(primary, (), (), len(primary.candidates), None, budget_rules)
     decisions = (
-        evaluate_policies(request.model_copy(update={"model": model}), key, snapshot, requirements, evaluation.rules).decision
-        for model in fallback.models
-        if model != request.model
+        evaluate(request.model_copy(update={"model": model}), key, snapshot, evaluation.rules) for model in fallback.models if model != request.model
     )
     backups = tuple(decision for decision in decisions if isinstance(decision, Allow))
     return RoutePlan(primary, backups, fallback.on, fallback.max_attempts, fallback.timeout_ms, budget_rules)

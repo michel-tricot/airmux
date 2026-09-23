@@ -28,7 +28,7 @@ dependencies = [
   "tiktoken",
   "tomli-w>=1.2.0",
   "typer",
-  "uvicorn[standard]>=0.52.1",
+  "uvicorn[standard]",
 ]
 
 [project.urls]

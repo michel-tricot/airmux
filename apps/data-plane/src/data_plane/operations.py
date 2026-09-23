@@ -7,7 +7,6 @@ import uvicorn
 import yaml
 
 from data_plane.canonical import json_schemas
-from data_plane.http_server import RequestDispatchProtocol
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +26,6 @@ def serve(config: Path, *, host: str, port: int, dev: bool, workers: int) -> Non
         workers=None if dev else workers,
         factory=True,
         access_log=dev,
-        http=RequestDispatchProtocol,
     )
 
 

@@ -4,7 +4,6 @@ import json
 
 import pytest
 from anthropic.types import Message
-from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalReasoningPart,
@@ -12,8 +11,6 @@ from data_plane.canonical import (
     CanonicalTextPart,
     CanonicalUsage,
 )
-from data_plane.formats.anthropic import response_body as anthropic_body
-from data_plane.formats.openai import response_body as openai_body
 from data_plane.formats.openai_responses import ResponseMetadata, json_response
 from data_plane.ingress import REGISTRY
 from data_plane.ingress.anthropic import AnthropicIngress
@@ -105,30 +102,3 @@ def test_responses_reasoning_response_preserves_the_provider_item_id():
     )
 
     assert response["output"][0]["id"] == "rs_provider"
-
-
-@pytest.mark.parametrize("dialect", ["anthropic", "openai_chat_completions"])
-def test_buffered_wire_body_preserves_empty_values_and_omits_optional_nulls(dialect):
-    final = CanonicalResponse(id="response-1", model="model", content=[CanonicalTextPart(text="")], finish_reason=None, usage=CanonicalUsage())
-    if dialect == "anthropic":
-        body = json.loads(to_json(anthropic_body(final), exclude_none=True))
-        assert body == {
-            "gateway": {"adjustments": []},
-            "id": "response-1",
-            "type": "message",
-            "role": "assistant",
-            "model": "model",
-            "content": [{"type": "text", "text": ""}],
-            "usage": {"input_tokens": 0, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0, "output_tokens": 0},
-        }
-    else:
-        body = json.loads(to_json(openai_body(final, created=10), exclude_none=True))
-        assert body == {
-            "gateway": {"adjustments": []},
-            "id": "response-1",
-            "object": "chat.completion",
-            "created": 10,
-            "model": "model",
-            "choices": [{"index": 0, "message": {"role": "assistant"}}],
-            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "prompt_tokens_details": {"cached_tokens": 0}},
-        }

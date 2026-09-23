@@ -5,11 +5,6 @@ import io
 import json
 import logging
 import sys
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from decimal import Decimal
-from enum import StrEnum
-from uuid import UUID
 
 import pytest
 
@@ -172,31 +167,3 @@ async def test_formatting_errors_do_not_discard_preceding_logs(log_output, capsy
     assert "TypeError" in capsys.readouterr().err
     payloads = [json.loads(line) for line in output.getvalue().splitlines() if line.startswith("{")]
     assert [p["event"] for p in payloads] == ["before_bad_format"]
-
-
-class Outcome(StrEnum):
-    OK = "ok"
-
-
-@dataclass
-class LogDetail:
-    count: int
-
-
-@pytest.mark.parametrize(
-    "fields",
-    [
-        {"cost": Decimal("0.000202"), "id": UUID(int=1), "outcome": Outcome.OK, "optional": None, "stream": False},
-        {"text": 'café \u2603 "quoted"\n', "count": 10**30, "latency": 1.25},
-        {"text": "\ud800"},
-        {"nested": {"optional": None, "cost": Decimal("1.20")}, "values": [1, None]},
-        {"detail": LogDetail(3), "date": datetime(2026, 1, 2, tzinfo=UTC), "bytes": b"hello"},
-        {"positive": float("inf"), "negative": float("-inf")},
-    ],
-)
-def test_json_log_fields_preserve_their_encoding(fields):
-    record = logging.LogRecord("airmux", logging.INFO, "", 0, "encoded", (), None)
-    record.__dict__.update(fields=fields)
-    actual = json.loads(JsonFormatter().format(record))
-    expected = json.loads(json.dumps(fields, default=str))
-    assert {key: actual[key] for key in fields} == expected

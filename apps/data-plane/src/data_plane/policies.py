@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from contract.policies import MAX_WORKSPACE_RULES, Fallback, PolicyEntry, RequestMatch, RuleDefinition, SelectedKeys, SelectedUsers
 from data_plane.policy_actions import require_evaluator
+from data_plane.requirements import required_capabilities
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 
     from contract import Capability, KeyEntry
     from data_plane.canonical import CanonicalRequest
-    from data_plane.requirements import RequestRequirements
 
 
 @dataclass(frozen=True)
@@ -69,11 +69,12 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
     )
 
 
-def matching_rules(request: CanonicalRequest, key: KeyEntry, index: PolicyIndex, requirements: RequestRequirements) -> tuple[CompiledRule, ...]:
+def matching_rules(request: CanonicalRequest, key: KeyEntry, index: PolicyIndex) -> tuple[CompiledRule, ...]:
     candidates = index.get(key.workspace_id, ())
     if not candidates:
         return ()
-    return tuple(entry for entry in candidates if _matches(entry, request, key, requirements.capabilities))
+    capabilities = required_capabilities(request)
+    return tuple(entry for entry in candidates if _matches(entry, request, key, capabilities))
 
 
 def matching_model_rules(model_id: str, key: KeyEntry, index: PolicyIndex) -> tuple[CompiledRule, ...]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_core import to_json
@@ -23,7 +23,6 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalNamedTool,
     CanonicalReasoningPart,
-    CanonicalResponse,
     CanonicalResponseFormat,
     CanonicalSystemMessage,
     CanonicalTextPart,
@@ -567,19 +566,19 @@ def stop_reason(finish: CanonicalFinishReason | None) -> str | None:
     return REVERSE_STOP.get(finish) if finish else None
 
 
-class TextOut(TypedDict):
-    type: Literal["text"]
+class TextOut(BaseModel):
+    type: Literal["text"] = "text"
     text: str
 
 
-class ThinkingOut(TypedDict):
-    type: Literal["thinking"]
+class ThinkingOut(BaseModel):
+    type: Literal["thinking"] = "thinking"
     thinking: str
-    signature: str
+    signature: str = ""
 
 
-class ToolUseOut(TypedDict):
-    type: Literal["tool_use"]
+class ToolUseOut(BaseModel):
+    type: Literal["tool_use"] = "tool_use"
     id: str
     name: str
     input: dict[str, Any]
@@ -602,15 +601,18 @@ def to_response_content(parts: Sequence[CanonicalAssistantPart]) -> list[BlockOu
     blocks: list[BlockOut] = []
     for part in parts:
         if isinstance(part, CanonicalReasoningPart):
-            blocks.append(ThinkingOut(type="thinking", thinking=part.text, signature=reasoning_signature(part.id, part.signature)))
+            blocks.append(ThinkingOut(thinking=part.text, signature=reasoning_signature(part.id, part.signature)))
         elif isinstance(part, CanonicalTextPart):
-            blocks.append(TextOut(type="text", text=part.text))
+            blocks.append(TextOut(text=part.text))
         elif isinstance(part, CanonicalToolCallPart):
-            blocks.append(ToolUseOut(type="tool_use", id=part.id, name=part.name, input=_response_tool_input(part.arguments)))
+            blocks.append(ToolUseOut(id=part.id, name=part.name, input=_response_tool_input(part.arguments)))
     return blocks
 
 
-class UsageOut(TypedDict):
+class UsageOut(BaseModel):
+    """Anthropic reports fresh input separately from cache traffic. The floor guards a provider that
+    reports more cache than total: a negative count would corrupt the caller's cost arithmetic."""
+
     input_tokens: int
     cache_read_input_tokens: int
     cache_creation_input_tokens: int
@@ -634,15 +636,18 @@ def usage_out(usage: CanonicalUsage) -> UsageOut:
     )
 
 
-class MessageOut(TypedDict):
+class MessageOut(BaseModel):
+    """What an Anthropic client deserializes; gateway rides along as an extra field SDKs ignore."""
+
     id: str
-    type: Literal["message"]
-    role: Literal["assistant"]
+    type: Literal["message"] = "message"
+    role: Literal["assistant"] = "assistant"
     model: str
     content: list[BlockOut]
-    stop_reason: NotRequired[str]
+    stop_reason: str | None
+    stop_sequence: str | None = None
     usage: UsageOut
-    gateway: CanonicalGatewayInfo
+    gateway: CanonicalGatewayInfo | None = None
 
 
 class TextDeltaOut(BaseModel):
@@ -745,18 +750,3 @@ class MessageStop(Event):
 class ErrorEvent(Event):
     type: Literal["error"] = "error"
     error: ErrorOut
-
-
-def response_body(final: CanonicalResponse) -> MessageOut:
-    body = MessageOut(
-        id=final.id,
-        type="message",
-        role="assistant",
-        model=final.model,
-        content=to_response_content(final.content),
-        usage=usage_out(final.usage),
-        gateway=final.gateway,
-    )
-    if (finish := stop_reason(final.finish_reason)) is not None:
-        body["stop_reason"] = finish
-    return body

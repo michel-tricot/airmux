@@ -154,7 +154,11 @@ class OpenAIChatCompletionsIngress(IngressAdapter):
         return request, adjustments
 
     def render_response(self, final: CanonicalResponse) -> Response:
-        return JSONResponse(fmt.response_body(final, created=int(time.time())), exclude_none=True)
+        choice = fmt.ChoiceOut(message=fmt.to_message(final.content), finish_reason=final.finish_reason)
+        completion = fmt.ChatCompletionOut(
+            id=final.id, created=int(time.time()), model=final.model, choices=[choice], usage=fmt.usage_out(final.usage), gateway=final.gateway
+        )
+        return JSONResponse(completion, exclude_none=True)
 
     def render_error(self, err: CanonicalError) -> Response:
         return JSONResponse(_error_body(err.status, err.code, err.message), status_code=err.status)

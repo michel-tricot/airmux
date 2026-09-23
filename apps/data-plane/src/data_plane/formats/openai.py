@@ -8,7 +8,7 @@ to a default rather than failing the response."""
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Literal, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import to_json
@@ -26,7 +26,6 @@ from data_plane.canonical import (
     CanonicalPart,
     CanonicalReasoningPart,
     CanonicalRequest,
-    CanonicalResponse,
     CanonicalSystemMessage,
     CanonicalTextPart,
     CanonicalToolCallPart,
@@ -558,44 +557,46 @@ def from_tool_choice(choice: object) -> CanonicalToolChoice | None:
     return CanonicalNamedTool(name=_str(function["name"])) if "name" in function else None
 
 
-class ToolCallOut(TypedDict):
+class ToolCallOut(BaseModel):
     id: str
-    type: Literal["function"]
+    type: Literal["function"] = "function"
     function: dict[str, str]
 
 
-class MessageOut(TypedDict):
-    role: Literal["assistant"]
-    content: NotRequired[str]
-    reasoning_content: NotRequired[str]
-    tool_calls: NotRequired[list[ToolCallOut]]
+class MessageOut(BaseModel):
+    role: Literal["assistant"] = "assistant"
+    content: str | None
+    reasoning_content: str | None = None
+    tool_calls: list[ToolCallOut] | None = None
 
 
-class ChoiceOut(TypedDict):
-    index: int
+class ChoiceOut(BaseModel):
+    index: int = 0
     message: MessageOut
-    finish_reason: NotRequired[str]
+    finish_reason: str | None
 
 
-class PromptTokensDetails(TypedDict):
-    cached_tokens: int
+class PromptTokensDetails(BaseModel):
+    cached_tokens: int = 0
 
 
-class UsageOut(TypedDict):
+class UsageOut(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
     prompt_tokens_details: PromptTokensDetails
 
 
-class ChatCompletionOut(TypedDict):
+class ChatCompletionOut(BaseModel):
+    """What an OpenAI SDK deserializes; gateway rides along as an extra field SDKs ignore."""
+
     id: str
-    object: Literal["chat.completion"]
+    object: Literal["chat.completion"] = "chat.completion"
     created: int
     model: str
     choices: list[ChoiceOut]
     usage: UsageOut
-    gateway: CanonicalGatewayInfo
+    gateway: CanonicalGatewayInfo | None = None
 
 
 class ToolCallDeltaOut(BaseModel):
@@ -641,34 +642,14 @@ def usage_out(usage: CanonicalUsage) -> UsageOut:
 
 
 def to_message(parts: Sequence[CanonicalContentPart]) -> MessageOut:
+    """Canonical response content as one assistant message. content is null rather than empty when the
+    turn is only tool calls, which is the shape OpenAI itself returns."""
     text = _text_of_parts(parts)
     reasoning_parts = [part for part in parts if isinstance(part, CanonicalReasoningPart)]
     reasoning = "".join(part.text for part in reasoning_parts)
     calls = [
-        ToolCallOut(type="function", id=part.id, function={"name": part.name, "arguments": part.arguments})
+        ToolCallOut(id=part.id, function={"name": part.name, "arguments": part.arguments})
         for part in parts
         if isinstance(part, CanonicalToolCallPart)
     ]
-    message = MessageOut(role="assistant")
-    if text:
-        message["content"] = text
-    if reasoning_parts:
-        message["reasoning_content"] = reasoning
-    if calls:
-        message["tool_calls"] = calls
-    return message
-
-
-def response_body(final: CanonicalResponse, *, created: int) -> ChatCompletionOut:
-    choice = ChoiceOut(index=0, message=to_message(final.content))
-    if final.finish_reason is not None:
-        choice["finish_reason"] = final.finish_reason
-    return ChatCompletionOut(
-        id=final.id,
-        object="chat.completion",
-        created=created,
-        model=final.model,
-        choices=[choice],
-        usage=usage_out(final.usage),
-        gateway=final.gateway,
-    )
+    return MessageOut(content=text or None, reasoning_content=reasoning if reasoning_parts else None, tool_calls=calls or None)
