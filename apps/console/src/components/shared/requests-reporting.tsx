@@ -2,20 +2,10 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { exportUsageRequests, type UsageEventOutStatus } from '@workspace/api-client-react';
 import { Download, RefreshCw } from 'lucide-react';
-import {
-  Badge,
-  Button,
-  Card,
-  Dropdown,
-  Input,
-  Label,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/elements';
+import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
+import { DetailSheet } from '@/components/shared/detail-sheet';
+import { ModelBadge } from '@/components/shared/model-badge';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { ReportingFilters } from '@/components/shared/reporting-filters';
 import { ErrorState, LoadingState } from '@/components/shared/states';
@@ -34,6 +24,20 @@ function downloadCsv(filename: string, csv: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+const statusNames: Record<UsageEventOutStatus, string> = {
+  ok: 'Success',
+  upstream_error: 'Upstream error',
+  denied: 'Denied',
+  timeout: 'Timed out',
+  cancelled: 'Cancelled',
+  credential_rejected: 'Credential rejected',
+  rate_limited: 'Rate limited',
+};
+
+function RequestStatusBadge({ status }: { status: UsageEventOutStatus }) {
+  return <Badge variant={status === 'ok' ? 'success' : 'secondary'}>{statusNames[status]}</Badge>;
 }
 
 export function RequestsReporting({
@@ -59,6 +63,8 @@ export function RequestsReporting({
   const requests = useUsageRequests(orgId, params, validDates, live);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
   const options = useReportOptions(orgId, query, workspaceId, validDates);
+  const labelFor = (dimension: 'owner' | 'key' | 'credential', id: string | null | undefined) =>
+    id ? (options[dimension].find((option) => option.value === id)?.label ?? id) : 'None recorded';
   const scopeName =
     workspaceName ??
     (query.workspace_id
@@ -83,7 +89,7 @@ export function RequestsReporting({
         actions={
           <div className="flex gap-2">
             <Button variant={live ? 'secondary' : 'outline'} size="sm" aria-pressed={live} disabled={!validDates} onClick={() => setLive(!live)}>
-              {live && <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />}
+              <span className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-success' : 'bg-muted-foreground'}`} aria-hidden="true" />
               Live
             </Button>
             <Button variant="outline" size="sm" onClick={() => void requests.refetch()}>
@@ -234,7 +240,7 @@ export function RequestsReporting({
             {
               key: 'status',
               header: 'Observed status',
-              cell: (item) => <Badge variant={item.status === 'ok' ? 'success' : 'secondary'}>{item.status}</Badge>,
+              cell: (item) => <RequestStatusBadge status={item.status} />,
             },
             { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
             {
@@ -259,127 +265,133 @@ export function RequestsReporting({
           </Button>
         </div>
       </Card>
-      <Sheet
+      <DetailSheet
         open={!!requestId}
         onOpenChange={(open) => {
           if (!open) filters.setValue('request_id', undefined);
         }}
+        title="Request details"
+        description={<span className="font-mono">{requestId}</span>}
       >
-        <SheetContent className="w-full overflow-y-auto border-border bg-card sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>Request details</SheetTitle>
-            <SheetDescription className="font-mono break-all">{requestId}</SheetDescription>
-          </SheetHeader>
-          {request.isLoading && <LoadingState label="Loading request..." />}
-          {request.isError && <ErrorState error={request.error} resource="request" onRetry={() => request.refetch()} />}
-          {request.data && (
-            <div className="mt-6 space-y-6">
-              {!request.data.within_period && <p className="text-sm text-muted-foreground">This request started outside the selected period.</p>}
-              <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <dt className="text-muted-foreground">Started</dt>
-                  <dd>{formatDate(request.data.started_at)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Observed status</dt>
-                  <dd>{request.data.status}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Estimated total cost</dt>
-                  <dd>{formatReportCostExact(request.data.cost_usd)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Input / output tokens</dt>
-                  <dd>
-                    {request.data.input_tokens.toLocaleString()} / {request.data.output_tokens.toLocaleString()}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Requested model</dt>
-                  <dd>{request.data.requested_model_id}</dd>
-                </div>
+        {request.isLoading && <LoadingState label="Loading request..." />}
+        {request.isError && <ErrorState error={request.error} resource="request" onRetry={() => request.refetch()} />}
+        {request.data && (
+          <div className="space-y-6">
+            {!request.data.within_period && <p className="text-sm text-muted-foreground">This request started outside the selected period.</p>}
+            <dl className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Started</dt>
+                <dd>{formatDate(request.data.started_at)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Observed status</dt>
+                <dd>
+                  <RequestStatusBadge status={request.data.status} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Estimated total cost</dt>
+                <dd>{formatReportCostExact(request.data.cost_usd)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Input / output tokens</dt>
+                <dd>
+                  {request.data.input_tokens.toLocaleString()} / {request.data.output_tokens.toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Requested model</dt>
+                <dd>
+                  <ModelBadge name={request.data.requested_model_id} />
+                </dd>
+              </div>
+              {request.data.request_source === 'inference_key' && (
                 <div>
                   <dt className="text-muted-foreground">Inference key</dt>
-                  <dd className="break-all font-mono text-xs">{request.data.key_id || 'None recorded'}</dd>
+                  <dd>{labelFor('key', request.data.key_id)}</dd>
                 </div>
-                <div>
-                  <dt className="text-muted-foreground">Key owner</dt>
-                  <dd className="break-all font-mono text-xs">{request.data.user_id || 'None recorded'}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Source</dt>
-                  <dd>{request.data.request_source || 'Unknown'}</dd>
-                </div>
-              </dl>
+              )}
+              <div>
+                <dt className="text-muted-foreground">User</dt>
+                <dd>{labelFor('owner', request.data.user_id)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Source</dt>
+                <dd>{request.data.request_source || 'Unknown'}</dd>
+              </div>
+            </dl>
+            {request.data.attempt_count > 0 && (
               <div>
                 <h3 className="mb-3 text-lg font-semibold">Provider attempts</h3>
-                {request.data.attempts.length === 0 && <p className="text-sm text-muted-foreground">No provider attempt was recorded.</p>}
                 <div className="space-y-3">
-                  {request.data.attempts.map((attempt) => (
-                    <Card key={attempt.event_id} className="space-y-3 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-mono text-xs">{formatDate(attempt.attempt_started_at)}</span>
-                        <div className="flex gap-2">
-                          <Badge variant={attempt.status === 'ok' ? 'success' : 'secondary'}>{attempt.status}</Badge>
-                          {attemptFilter && (
-                            <Badge variant={attempt.matches_filter ? 'outline' : 'secondary'}>
-                              {attempt.matches_filter ? 'Matches filters' : 'Outside filters'}
-                            </Badge>
-                          )}
+                  {request.data.attempts
+                    .filter((attempt) => attempt.status !== 'denied')
+                    .map((attempt) => (
+                      <Card key={attempt.event_id} className="space-y-3 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-mono text-xs">{formatDate(attempt.attempt_started_at)}</span>
+                          <div className="flex gap-2">
+                            <RequestStatusBadge status={attempt.status} />
+                            {attemptFilter && (
+                              <Badge variant={attempt.matches_filter ? 'outline' : 'secondary'}>
+                                {attempt.matches_filter ? 'Matches filters' : 'Outside filters'}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-sm font-medium">
-                        {attempt.model_id} · {attempt.provider_id}
-                      </div>
-                      <dl className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <dt className="text-muted-foreground">Input / output</dt>
-                          <dd>
-                            {attempt.input_tokens.toLocaleString()} / {attempt.output_tokens.toLocaleString()}
-                          </dd>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ModelBadge name={attempt.model_id} />
+                          {attempt.provider_id && <span className="text-sm text-muted-foreground">{attempt.provider_id}</span>}
                         </div>
-                        <div>
-                          <dt className="text-muted-foreground">Cache read / write</dt>
-                          <dd>
-                            {attempt.cache_read_tokens.toLocaleString()} / {attempt.cache_write_tokens.toLocaleString()}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Input / output cost</dt>
-                          <dd>
-                            {formatReportCostExact(attempt.cost_input_usd)} / {formatReportCostExact(attempt.cost_output_usd)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Total estimated cost</dt>
-                          <dd>{formatReportCostExact(attempt.cost_usd)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Latency</dt>
-                          <dd>{attempt.latency_ms} ms</dd>
-                        </div>
-                        <div>
-                          <dt className="text-muted-foreground">Token source</dt>
-                          <dd>
-                            <TokenUsageSource source={attempt.token_usage_source} />
-                          </dd>
-                        </div>
-                        <div className="col-span-2">
-                          <dt className="text-muted-foreground">Credential ID</dt>
-                          <dd className="break-all font-mono">{attempt.credential_id || 'None recorded'}</dd>
-                        </div>
-                      </dl>
-                    </Card>
-                  ))}
+                        <dl className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <dt className="text-muted-foreground">Input / output</dt>
+                            <dd>
+                              {attempt.input_tokens.toLocaleString()} / {attempt.output_tokens.toLocaleString()}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Cache read / write</dt>
+                            <dd>
+                              {attempt.cache_read_tokens.toLocaleString()} / {attempt.cache_write_tokens.toLocaleString()}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Input / output cost</dt>
+                            <dd>
+                              {formatReportCostExact(attempt.cost_input_usd)} / {formatReportCostExact(attempt.cost_output_usd)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Total estimated cost</dt>
+                            <dd>{formatReportCostExact(attempt.cost_usd)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Latency</dt>
+                            <dd>{attempt.latency_ms} ms</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Token source</dt>
+                            <dd>
+                              <TokenUsageSource source={attempt.token_usage_source} />
+                            </dd>
+                          </div>
+                          <div className="col-span-2">
+                            <dt className="text-muted-foreground">Credential</dt>
+                            <dd>{labelFor('credential', attempt.credential_id)}</dd>
+                          </div>
+                        </dl>
+                      </Card>
+                    ))}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Attempts are shown in approximate start-time order. Cache tokens are included in input tokens.
                 </p>
               </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+            )}
+          </div>
+        )}
+      </DetailSheet>
     </PageShell>
   );
 }

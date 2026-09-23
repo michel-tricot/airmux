@@ -139,8 +139,10 @@ it('polls requests in Live mode and briefly highlights new rows', async () => {
   renderAt('/org/requests');
 
   await screen.findByText('No requests match these filters.');
+  expect(screen.getByRole('button', { name: 'Live' }).querySelector('span')).toHaveClass('bg-muted-foreground');
   await user.click(screen.getByRole('button', { name: 'Live' }));
   expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Live' }).querySelector('span')).toHaveClass('bg-success');
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
   );
@@ -151,6 +153,18 @@ it('polls requests in Live mode and briefly highlights new rows', async () => {
 
 it('shows the full attempt history while identifying the filtered provider contribution', async () => {
   server.use(
+    http.get('/api/v1/organizations/:orgId/reports/filter-options', ({ request }) => {
+      const dimension = new URL(request.url).searchParams.get('dimension');
+      const items = {
+        owner: [{ id: 'user-a', name: 'owner@example.com' }],
+        key: [{ id: 'key-a', name: 'Checkout' }],
+        credential: [
+          { id: 'credential-a', name: 'Primary credential' },
+          { id: 'credential-b', name: 'Backup credential' },
+        ],
+      };
+      return HttpResponse.json({ data: { items: items[dimension as keyof typeof items] ?? [] } });
+    }),
     http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () =>
       HttpResponse.json({
         data: {
@@ -224,4 +238,59 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(within(panel).getByText('Matches filters')).toBeInTheDocument();
   expect(within(panel).getByText('Outside filters')).toBeInTheDocument();
   expect(within(panel).getByText('$0.000005')).toBeInTheDocument();
+  expect(within(panel).getByText('owner@example.com')).toBeInTheDocument();
+  expect(within(panel).getByText('User')).toBeInTheDocument();
+  expect(within(panel).getAllByText('Success').length).toBeGreaterThan(0);
+  expect(within(panel).getByText('Upstream error')).toBeInTheDocument();
+  expect(within(panel).getByText('Checkout')).toBeInTheDocument();
+  expect(within(panel).getByText('Primary credential')).toBeInTheDocument();
+  expect(within(panel).getByText('Backup credential')).toBeInTheDocument();
+  expect(within(panel).getAllByText('model-a')[0]).toHaveClass('font-mono');
+  expect(panel).toHaveClass('p-6');
+});
+
+it('shows a denied playground request without a fake provider attempt or inference key', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () =>
+      HttpResponse.json({
+        data: {
+          ...requestSummary,
+          status: 'denied',
+          request_source: 'playground',
+          attempt_count: 0,
+          within_period: true,
+          attempts: [
+            {
+              event_id: 'event-denied',
+              attempt_started_at: null,
+              occurred_at: period.start_at,
+              model_id: 'model-a',
+              provider_id: '',
+              credential_id: null,
+              status: 'denied',
+              input_tokens: 0,
+              output_tokens: 0,
+              cache_read_tokens: 0,
+              cache_write_tokens: 0,
+              cost_usd: '0',
+              cost_input_usd: '0',
+              cost_output_usd: '0',
+              token_usage_source: 'not_applicable',
+              latency_ms: 0,
+              matches_filter: false,
+            },
+          ],
+        },
+      }),
+    ),
+  );
+
+  renderAt('/org/requests?request_id=request-1');
+
+  const panel = await screen.findByRole('dialog', { name: 'Request details' });
+  expect(await within(panel).findByText('Denied')).toBeInTheDocument();
+  expect(within(panel).getByText('User')).toBeInTheDocument();
+  expect(within(panel).queryByText('Inference key')).not.toBeInTheDocument();
+  expect(within(panel).queryByText('Provider attempts')).not.toBeInTheDocument();
+  expect(within(panel).queryByText('N/A')).not.toBeInTheDocument();
 });
