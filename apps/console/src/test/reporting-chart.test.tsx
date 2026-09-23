@@ -10,6 +10,8 @@ it('labels dates across the trend and shows full daily usage on hover', async ()
     requests: index + 1,
     input_tokens: 10 + index,
     output_tokens: 3 + index,
+    cache_read_tokens: 2,
+    cache_write_tokens: 1,
     cost_usd: '1.25',
   }));
   render(
