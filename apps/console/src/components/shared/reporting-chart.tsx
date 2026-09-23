@@ -96,19 +96,21 @@ export function ReportingChart({
                 </span>
               ))}
             </div>
-            <svg
-              role="img"
-              aria-label={`${metric} over time`}
-              viewBox="0 0 1000 220"
-              preserveAspectRatio="none"
-              className="h-full min-w-0 flex-1 text-primary"
-            >
-              {[30, 110, 190].map((y) => (
-                <line key={y} x1="20" y1={y} x2="980" y2={y} className="stroke-border" />
-              ))}
-              <line x1="20" y1="30" x2="20" y2="190" className="stroke-border" />
-              <polygon points={`${points} 980,190 20,190`} fill="currentColor" opacity="0.08" />
-              <polyline points={points} fill="none" stroke="currentColor" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+            <div className="relative min-w-0 flex-1">
+              <svg
+                role="img"
+                aria-label={`${metric} over time`}
+                viewBox="0 0 1000 220"
+                preserveAspectRatio="none"
+                className="block h-full w-full text-primary"
+              >
+                {[30, 110, 190].map((y) => (
+                  <line key={y} x1="20" y1={y} x2="980" y2={y} className="stroke-border" />
+                ))}
+                <line x1="20" y1="30" x2="20" y2="190" className="stroke-border" />
+                <polygon points={`${points} 980,190 20,190`} fill="currentColor" opacity="0.08" />
+                <polyline points={points} fill="none" stroke="currentColor" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+              </svg>
               {daily.map((bucket, index) => {
                 const [x, y] = point(bucket, index).split(',').map(Number);
                 const next = new URLSearchParams(search);
@@ -118,9 +120,12 @@ export function ReportingChart({
                 return (
                   <Tooltip key={bucket.date} delayDuration={100}>
                     <TooltipTrigger asChild>
-                      <Link href={`${requestsPath(workspaceRef)}?${next}`}>
-                        <circle cx={x} cy={y} r="8" fill="currentColor" aria-label={`${formatBucket(bucket.date)}: ${label(bucket, metric)}`} />
-                      </Link>
+                      <Link
+                        href={`${requestsPath(workspaceRef)}?${next}`}
+                        aria-label={`${formatBucket(bucket.date)}: ${label(bucket, metric)}`}
+                        className="absolute z-10 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{ left: `${x / 10}%`, top: `${(y / 220) * 100}%` }}
+                      />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="w-max max-w-[calc(100vw-2rem)] border border-border bg-card p-3 text-foreground shadow-xl">
                       <div className="mb-3 flex items-center gap-2 whitespace-nowrap border-b border-border pb-2 text-sm font-semibold">
@@ -154,7 +159,7 @@ export function ReportingChart({
                   </Tooltip>
                 );
               })}
-            </svg>
+            </div>
             <div aria-hidden="true" className="w-20 shrink-0" />
           </div>
           <div className="mx-20 flex justify-between font-mono text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
 import { ReportingChart } from '@/components/shared/reporting-chart';
@@ -31,9 +31,9 @@ it('labels dates across the trend and shows full daily usage on hover', async ()
   expect(screen.getByText('Jan 1')).toBeInTheDocument();
   expect(screen.getByText('Jan 3')).toBeInTheDocument();
   expect(screen.getByText('Jan 5')).toBeInTheDocument();
-  const firstPoint = screen.getByRole('img', { name: 'cost over time' }).querySelector('circle[aria-label]');
-  expect(firstPoint).not.toBeNull();
-  await userEvent.setup().hover(firstPoint!);
+  const chart = screen.getByRole('img', { name: 'cost over time' });
+  const firstPoint = within(chart.parentElement as HTMLElement).getAllByRole('link')[0];
+  await userEvent.setup().hover(firstPoint);
   const date = await screen.findByText('Thursday, January 1, 2026');
   expect(date).toHaveClass('whitespace-nowrap');
   expect(date.closest('[role="tooltip"]')).toHaveClass('w-max');

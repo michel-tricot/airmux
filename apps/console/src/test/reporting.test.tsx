@@ -41,6 +41,38 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
+it('keeps trend markers round when the plot stretches', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/usage', () =>
+      HttpResponse.json({
+        data: {
+          totals,
+          comparison: totals,
+          period,
+          daily: [
+            { date: period.start_at, ...totals },
+            { date: '2026-01-02T00:00:00Z', ...totals },
+          ],
+          updated_at: period.end_at,
+        },
+      }),
+    ),
+  );
+
+  renderAt('/org');
+
+  const chart = await screen.findByRole('img', { name: 'cost over time' });
+  const points = within(chart.parentElement as HTMLElement).getAllByRole('link');
+  expect(points).toHaveLength(2);
+  points.forEach((point) => expect(point).toHaveClass('absolute', 'size-4', 'rounded-full'));
+  expect(chart.querySelector('circle')).toBeNull();
+  const user = userEvent.setup();
+  await user.hover(points[0]);
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Click to view requests');
+  await user.click(points[0]);
+  expect(window.location.pathname).toBe('/org/requests');
+});
+
 it.each(['/org', `/org/workspaces/${WORKSPACES[0].slug}`])('starts with overview filters collapsed at %s and toggles them', async (path) => {
   const user = userEvent.setup();
   renderAt(path);
