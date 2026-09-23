@@ -249,7 +249,7 @@ export function RequestsReporting({
                   {
                     key: 'workspace',
                     header: 'Workspace',
-                    cell: (item: RequestSummaryOut) => item.workspace_name,
+                    cell: (item: RequestSummaryOut) => <TableLink href={`/org/workspaces/${item.workspace_id}`}>{item.workspace_name}</TableLink>,
                   },
                 ]
               : []),

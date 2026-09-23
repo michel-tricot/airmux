@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeSuffix = match?.[2] ?? '';
   const lastWorkspaceKey = `airmux_last_ws_${orgId}`;
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
-  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef);
+  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
   const workspaceAuthorization = useScopedAuthorization(
     { level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug },

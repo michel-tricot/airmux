@@ -310,6 +310,22 @@ it('keeps workspace request rows compact with the full request ID available', as
   expect(model.parentElement).toHaveClass('justify-start', 'max-w-48');
 });
 
+it('opens the workspace overview from an organization request row', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+  );
+  const user = userEvent.setup();
+  renderAt('/org/requests');
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  const workspace = within(table).getByRole('link', { name: WORKSPACES[0].name });
+  expect(workspace).toHaveAttribute('href', `/org/workspaces/${WORKSPACES[0].id}`);
+
+  await user.click(workspace);
+  expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WORKSPACES[0].name);
+});
+
 it('uses the same report endpoint with a workspace ID for workspace reporting', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/usage', ({ request }) => {
