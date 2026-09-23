@@ -81,6 +81,9 @@ def test_reports_use_one_path_for_org_and_authorized_workspace_scope(tmp_path):
         assert allowed.json()["data"]["totals"]["requests"] == 1
         assert client.get(f"{path}/usage", params={"workspace_id": str(second)}, headers=workspace_headers).status_code == 403
         assert client.get(f"{path}/requests", params={"workspace_id": str(second)}, headers=workspace_headers).status_code == 403
+        other_org = make_org(client, root, "other-org")
+        other_workspace = make_workspace(client, cp.headers(other_org), "other-workspace")
+        assert client.get(f"{path}/usage", params={"workspace_id": str(other_workspace)}, headers=org_headers).status_code == 404
 
 
 def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_path):
