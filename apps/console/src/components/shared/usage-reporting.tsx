@@ -18,13 +18,11 @@ function Metric({
   label,
   value,
   detail,
-  change,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
   detail?: string;
-  change?: string;
 }) {
   return (
     <Card className="flex items-start gap-3 p-4">
@@ -33,15 +31,9 @@ function Metric({
         <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold tabular-nums">{value}</div>
         {detail && <div className="whitespace-nowrap text-xs text-muted-foreground">{detail}</div>}
-        {change && <div className="mt-1 text-xs text-muted-foreground">{change} vs previous period</div>}
       </div>
     </Card>
   );
-}
-
-function countChange(current: number, previous: number) {
-  const difference = current - previous;
-  return difference === 0 ? 'No change' : `${difference > 0 ? '+' : '−'}${Math.abs(difference).toLocaleString()}`;
 }
 
 function compactCount(value: number) {
@@ -82,7 +74,6 @@ export function UsageReporting({
       ? (options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace')
       : 'All workspaces');
   const totals = report.data?.totals;
-  const comparison = report.data?.comparison;
 
   return (
     <PageShell>
@@ -113,26 +104,13 @@ export function UsageReporting({
         <>
           {report.isError && <ErrorState message="Refresh failed. Showing the last loaded report." onRetry={() => report.refetch()} />}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric
-              icon={Coins}
-              label="Spend"
-              value={formatReportCost(totals!.cost_usd)}
-              change={comparison ? formatChange(totals!.cost_usd, comparison.cost_usd) : undefined}
-            />
-            <Metric
-              icon={Activity}
-              label="Requests"
-              value={totals!.requests.toLocaleString()}
-              change={comparison ? countChange(totals!.requests, comparison.requests) : undefined}
-            />
+            <Metric icon={Coins} label="Spend" value={formatReportCost(totals!.cost_usd)} />
+            <Metric icon={Activity} label="Requests" value={totals!.requests.toLocaleString()} />
             <Metric
               icon={Hash}
               label="Tokens"
               value={(totals!.input_tokens + totals!.output_tokens).toLocaleString()}
               detail={`${compactCount(totals!.input_tokens)} in · ${compactCount(totals!.output_tokens)} out`}
-              change={
-                comparison ? countChange(totals!.input_tokens + totals!.output_tokens, comparison.input_tokens + comparison.output_tokens) : undefined
-              }
             />
             <Metric icon={Sigma} label="Cost per request" value={formatAverageCost(totals!.cost_usd, totals!.requests)} />
           </div>
