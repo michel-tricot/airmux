@@ -272,7 +272,7 @@ export function RequestsReporting({
             },
             {
               key: 'status',
-              header: 'Observed status',
+              header: 'Status',
               cell: (item) => <RequestStatusBadge status={item.status} />,
             },
             { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
@@ -345,7 +345,7 @@ export function RequestsReporting({
                 <dd>{formatReportDate(request.data.started_at)}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Observed status</dt>
+                <dt className="text-muted-foreground">Status</dt>
                 <dd>
                   <RequestStatusBadge status={request.data.status} />
                 </dd>

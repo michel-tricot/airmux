@@ -200,7 +200,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
       .getAllByRole('columnheader')
       .slice(0, 5)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost in view', 'Total tokens']);
+  ).toEqual(['Date & time', 'Request ID', 'Status', 'Cost in view', 'Total tokens']);
   expect(within(requestsTable).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Provider' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
@@ -255,6 +255,7 @@ it('opens a request detail without reloading the current request page', async ()
   await user.click(requestLink);
   const detail = await screen.findByRole('dialog', { name: 'Request details' });
   expect(await within(detail).findByText('Total cost')).toBeInTheDocument();
+  expect(within(detail).getByText('Status')).toBeInTheDocument();
   expect(requestLink).toBeInTheDocument();
   await user.keyboard('{Escape}');
   await waitFor(() => expect(new URLSearchParams(window.location.search).get('request_id')).toBeNull());
@@ -322,7 +323,7 @@ it('keeps workspace request rows compact with the full request ID available', as
       .getAllByRole('columnheader')
       .slice(0, 5)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost', 'Total tokens']);
+  ).toEqual(['Date & time', 'Request ID', 'Status', 'Cost', 'Total tokens']);
   expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
   expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
