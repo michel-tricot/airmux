@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { exportUsageRequests, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { DetailSheet } from '@/components/shared/detail-sheet';
 import { ModelBadge } from '@/components/shared/model-badge';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { ReportingFilters } from '@/components/shared/reporting-filters';
+import { ReportRefreshButton } from '@/components/shared/report-refresh-button';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { TokenUsageSource } from '@/components/shared/token-usage-source';
 import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/reporting/hooks';
@@ -92,10 +93,7 @@ export function RequestsReporting({
               <span className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-success' : 'bg-muted-foreground'}`} aria-hidden="true" />
               Live
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void requests.refetch()}>
-              <RefreshCw className={requests.isFetching ? 'h-3.5 w-3.5 motion-safe:animate-spin' : 'h-3.5 w-3.5'} />
-              Refresh
-            </Button>
+            <ReportRefreshButton queries={[requests]} />
             <Button
               variant="outline"
               size="sm"

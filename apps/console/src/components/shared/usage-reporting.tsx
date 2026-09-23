@@ -1,11 +1,12 @@
 import { Link } from 'wouter';
-import { Activity, Coins, Hash, RefreshCw, Sigma } from 'lucide-react';
+import { Activity, Coins, Hash, Sigma } from 'lucide-react';
 import { Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { ReportingChart } from '@/components/shared/reporting-chart';
 import { ReportingFilters } from '@/components/shared/reporting-filters';
+import { ReportRefreshButton } from '@/components/shared/report-refresh-button';
 import { useAttributionReport, useReportOptions, useUsageReport } from '@/features/reporting/hooks';
 import { formatAverageCost, formatChange, formatReportCost, formatShare } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
@@ -88,19 +89,7 @@ export function UsageReporting({
       <PageHeader
         title={workspaceName ?? 'Usage'}
         description={`${scopeName} · gateway usage`}
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              void report.refetch();
-              void attribution.refetch();
-            }}
-          >
-            <RefreshCw className={report.isFetching || attribution.isFetching ? 'h-3.5 w-3.5 motion-safe:animate-spin' : 'h-3.5 w-3.5'} />
-            Refresh
-          </Button>
-        }
+        actions={<ReportRefreshButton queries={[report, attribution]} />}
       />
 
       <Card className="p-4">
