@@ -228,6 +228,17 @@
                     "pages": ["GET /api/v1/organizations/{org_id}/events"]
                   },
                   {
+                    "group": "Reports",
+                    "pages": [
+                      "GET /api/v1/organizations/{org_id}/reports/usage",
+                      "GET /api/v1/organizations/{org_id}/reports/attribution",
+                      "GET /api/v1/organizations/{org_id}/reports/filter-options",
+                      "GET /api/v1/organizations/{org_id}/reports/requests",
+                      "GET /api/v1/organizations/{org_id}/reports/requests/export",
+                      "GET /api/v1/organizations/{org_id}/reports/requests/{request_id}"
+                    ]
+                  },
+                  {
                     "group": "Activity",
                     "pages": ["GET /api/v1/organizations/{org_id}/activity"]
                   },
