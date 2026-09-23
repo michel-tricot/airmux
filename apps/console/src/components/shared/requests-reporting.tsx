@@ -13,6 +13,7 @@ import { ReportingFilters } from '@/components/shared/reporting-filters';
 import { ReportRefreshButton } from '@/components/shared/report-refresh-button';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { TokenUsageSource } from '@/components/shared/token-usage-source';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/reporting/hooks';
 import { formatReportCost, formatReportCostExact } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
@@ -40,6 +41,39 @@ const statusNames: Record<UsageEventOutStatus, string> = {
 
 function RequestStatusBadge({ status }: { status: UsageEventOutStatus }) {
   return <Badge variant={status === 'ok' ? 'success' : 'secondary'}>{statusNames[status]}</Badge>;
+}
+
+function RequestTokenTotal({ request }: { request: RequestSummaryOut }) {
+  const total = request.input_tokens + request.output_tokens;
+  const details = [
+    ['Input', request.input_tokens],
+    ['Output', request.output_tokens],
+    ['Cache read', request.cache_read_tokens],
+    ['Cache write', request.cache_write_tokens],
+  ] as const;
+  return (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger
+        type="button"
+        aria-label={`${total.toLocaleString()} total tokens. Show token details`}
+        className="cursor-default rounded-sm border-b border-dotted border-muted-foreground/50 tabular-nums hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {total.toLocaleString()}
+      </TooltipTrigger>
+      <TooltipContent side="top" className="w-44 border border-border bg-card p-3 text-card-foreground shadow-lg">
+        <p className="mb-2 font-semibold">Token details</p>
+        <dl className="space-y-1">
+          {details.map(([label, count]) => (
+            <div key={label} className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="font-mono tabular-nums">{count.toLocaleString()}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-2 border-t border-border pt-2 text-muted-foreground">Cache is included in input.</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function RequestsReporting({
@@ -241,8 +275,8 @@ export function RequestsReporting({
             { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
             {
               key: 'tokens',
-              header: 'Input · Output',
-              cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
+              header: 'Total tokens',
+              cell: (item) => <RequestTokenTotal request={item} />,
             },
             ...(!workspaceId
               ? [

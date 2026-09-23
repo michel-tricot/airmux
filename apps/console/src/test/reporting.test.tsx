@@ -30,6 +30,8 @@ const requestSummary = {
   attempt_count: 1,
   input_tokens: 30,
   output_tokens: 10,
+  cache_read_tokens: 3,
+  cache_write_tokens: 2,
   cost_usd: '0.000005',
 };
 
@@ -198,12 +200,23 @@ it('opens organization reporting and drills a model into filtered requests', asy
       .getAllByRole('columnheader')
       .slice(0, 5)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost in view', 'Input · Output']);
+  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost in view', 'Total tokens']);
   expect(within(requestsTable).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
-  expect(within(requestsTable).getByText('Input · Output')).toBeInTheDocument();
-  expect(within(requestsTable).getByText('30 · 10')).toBeInTheDocument();
+  const totalTokens = within(requestsTable).getByRole('button', { name: '40 total tokens. Show token details' });
+  expect(totalTokens).toHaveTextContent('40');
+  expect(totalTokens).toHaveClass('cursor-default');
+  await user.hover(totalTokens);
+  const tokenDetails = screen.getByRole('tooltip');
+  expect(within(tokenDetails).getByText('Input')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('30')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('Output')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('10')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('Cache read')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('3')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('Cache write')).toBeInTheDocument();
+  expect(within(tokenDetails).getByText('2')).toBeInTheDocument();
   expect(requestLink).toHaveClass('text-primary', 'hover:text-primary/80');
   expect(within(requestsTable).getByText('Checkout')).toBeInTheDocument();
   expect(within(screen.getByRole('table', { name: 'Requests' })).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
@@ -298,7 +311,7 @@ it('keeps workspace request rows compact with the full request ID available', as
       .getAllByRole('columnheader')
       .slice(0, 5)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost', 'Input · Output']);
+  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost', 'Total tokens']);
   expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
   expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
