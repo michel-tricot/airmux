@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload, PanelRightOpen, RouteOff } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Download, Eye, HardDriveDownload, HardDriveUpload, RouteOff } from 'lucide-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
@@ -262,16 +262,16 @@ export function RequestsReporting({
           columns={[
             {
               key: 'request',
-              header: 'Date & time',
+              header: 'Time',
               cell: (item) => (
                 <div className="flex items-center gap-1">
                   <TableLink
                     href={openRequest(item.request_id)}
-                    title={item.request_id}
+                    title="View request details"
                     className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-primary/10"
                   >
-                    <PanelRightOpen className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span className="sr-only">Open request {item.request_id}</span>
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">View request details for {item.request_id}</span>
                   </TableLink>
                   <span className="tabular-nums">{formatReportDate(item.started_at)}</span>
                 </div>
