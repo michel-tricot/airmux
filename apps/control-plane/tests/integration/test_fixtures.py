@@ -111,9 +111,12 @@ def test_usage_fixtures_include_reportable_request_cases(tmp_path):
     assert events
     assert all(event.request_started_at is not None and (event.status == "denied" or event.attempt_started_at is not None) for event in events)
     assert all(event.cache_read_tokens + event.cache_write_tokens <= event.input_tokens for event in events)
+    assert all(event.request_id.version == 7 for event in events)
+    assert all(event.request_id.int >> 80 == int(event.request_started_at.timestamp() * 1000) for event in events)
 
     production_id = fixture_id("workspace:acme:production")
-    fallback = [event for event in events if event.request_id == fixture_id(f"request:{production_id}:0")]
+    fallback_request = next(event.request_id for event in events if event.event_id == fixture_id(f"event:{production_id}:0"))
+    fallback = [event for event in events if event.request_id == fallback_request]
     assert [(event.status, event.provider_id) for event in sorted(fallback, key=lambda event: event.occurred_at)] == [
         ("upstream_error", "openai"),
         ("ok", "anthropic"),
@@ -125,7 +128,8 @@ def test_usage_fixtures_include_reportable_request_cases(tmp_path):
     assert playground.cache_read_tokens == 128
 
     staging_id = fixture_id("workspace:acme:staging")
-    retry = [event for event in events if event.request_id == fixture_id(f"request:{staging_id}:0")]
+    retry_request = next(event.request_id for event in events if event.event_id == fixture_id(f"event:{staging_id}:0"))
+    retry = [event for event in events if event.request_id == retry_request]
     assert [event.status for event in sorted(retry, key=lambda event: event.occurred_at)] == ["upstream_error", "ok"]
     assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:2")).status == "denied"
     assert next(event for event in events if event.event_id == fixture_id(f"event:{staging_id}:3")).status == "upstream_error"

@@ -1,23 +1,26 @@
 from __future__ import annotations
 
-import csv
 from datetime import datetime
-from io import StringIO
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import case, func
 from sqlalchemy import select as sql_select
+from sqlalchemy.orm import aliased
 from sqlmodel import col
 
 from contract import RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.money import ZERO_USD
 from control_plane.db import current_session
+from control_plane.models.common.pagination import CursorToken, decode_cursor, encode_cursor
 from control_plane.models.reporting.names import names_for_dimension
 from control_plane.models.usage_event import UsageEvent
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sqlalchemy.engine import RowMapping
     from sqlalchemy.sql import Select
 
     from control_plane.models.reporting.query import ReportQuery, RequestQuery
@@ -137,12 +140,49 @@ class RequestDetailOut(RequestSummaryOut):
 
 class RequestPageOut(BaseModel):
     requests: list[RequestSummaryOut]
-    next_offset: int | None
+    next_cursor: CursorToken | None
 
     @classmethod
     async def for_scope(cls, org_id: UUID, query: RequestQuery, now: datetime) -> RequestPageOut:
-        statement = _request_statement(org_id, query, now).offset(query.offset).limit(query.limit + 1)
-        requests = (await current_session().execute(statement)).mappings().all()
+        window = None if query.request_id is not None else query.window(now)
+        conditions = query.conditions(org_id, window)
+        if query.request_id is not None:
+            conditions.append(col(UsageEvent.request_id) == query.request_id)
+        cursor = decode_cursor(query.cursor, UUID) if query.cursor is not None else None
+        batch_limit = query.limit + 1 if query.status is None and not query.multiple_attempts else max(100, query.limit + 1)
+        requests: list[RowMapping] = []
+        while len(requests) <= query.limit:
+            candidate_conditions = (
+                [col(UsageEvent.org_id) == org_id, col(UsageEvent.status) != "denied"] if query.multiple_attempts else [*conditions]
+            )
+            if cursor is not None:
+                candidate_conditions.append(col(UsageEvent.request_id) < cursor)
+            if query.status is not None:
+                status_event = aliased(UsageEvent)
+                candidate_conditions.append(
+                    sql_select(1)
+                    .where(
+                        col(status_event.org_id) == org_id,
+                        col(status_event.request_id) == col(UsageEvent.request_id),
+                        col(status_event.status) == query.status,
+                    )
+                    .exists()
+                )
+            if query.multiple_attempts:
+                candidate_statement = (
+                    sql_select(col(UsageEvent.request_id)).where(*candidate_conditions).group_by(col(UsageEvent.request_id)).having(func.count() > 1)
+                )
+            else:
+                candidate_statement = sql_select(col(UsageEvent.request_id)).where(*candidate_conditions).distinct()
+            candidates = (
+                (await current_session().execute(candidate_statement.order_by(col(UsageEvent.request_id).desc()).limit(batch_limit))).scalars().all()
+            )
+            if not candidates:
+                break
+            requests.extend((await current_session().execute(_request_statement(org_id, query, now, candidates))).mappings().all())
+            if len(requests) > query.limit or len(candidates) < batch_limit:
+                break
+            cursor = candidates[-1]
         page = requests[: query.limit]
         workspace_names = await names_for_dimension(org_id, query.workspace_id, "workspace", [str(request["workspace_id"]) for request in page])
         key_names = await names_for_dimension(org_id, query.workspace_id, "key", [request["key_id"] for request in page])
@@ -161,52 +201,13 @@ class RequestPageOut(BaseModel):
                 )
                 for request in page
             ],
-            next_offset=query.offset + query.limit if len(requests) > query.limit else None,
+            next_cursor=encode_cursor(page[-1]["request_id"]) if len(requests) > query.limit else None,
         )
 
 
-class RequestExportOut(BaseModel):
-    filename: str
-    csv: str
-
-    @classmethod
-    async def for_scope(cls, org_id: UUID, query: RequestQuery, now: datetime) -> RequestExportOut:
-        requests = (await current_session().execute(_request_statement(org_id, query, now))).mappings().all()
-        output = StringIO()
-        writer = csv.writer(output)
-        fields = (
-            "request_id",
-            "started_at",
-            "status",
-            "workspace_id",
-            "key_id",
-            "request_source",
-            "user_id",
-            "requested_model_id",
-            "model_id",
-            "provider_id",
-            "attempt_count",
-            "input_tokens",
-            "output_tokens",
-            "cost_usd",
-        )
-        writer.writerow(fields)
-        for request in requests:
-            writer.writerow([_csv_value(request[field]) for field in fields])
-        return cls(filename=f"airmux-requests-{now.date().isoformat()}.csv", csv=output.getvalue())
-
-
-def _csv_value(value: object) -> object:
-    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
-        return f"'{value}"
-    return value
-
-
-def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Select:
+def _request_statement(org_id: UUID, query: RequestQuery, now: datetime, request_ids: Sequence[UUID]) -> Select:
     window = query.window(now)
-    conditions = query.conditions(org_id, None if query.request_id is not None else window)
-    if query.request_id is not None:
-        conditions.append(col(UsageEvent.request_id) == query.request_id)
+    conditions = [*query.conditions(org_id, None if query.request_id is not None else window), col(UsageEvent.request_id).in_(request_ids)]
     matching = (
         sql_select(
             col(UsageEvent.request_id).label("request_id"),
@@ -221,7 +222,7 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
         .group_by(col(UsageEvent.request_id))
         .subquery()
     )
-    full_scope = [col(UsageEvent.org_id) == org_id, col(UsageEvent.request_id).in_(sql_select(matching.c.request_id))]
+    full_scope = [col(UsageEvent.org_id) == org_id, col(UsageEvent.request_id).in_(request_ids)]
     if query.workspace_id is not None:
         full_scope.append(col(UsageEvent.workspace_id) == query.workspace_id)
     latest = (
@@ -284,11 +285,7 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
         statement = statement.where(latest.c.status == query.status)
     if query.multiple_attempts and query.request_id is None:
         statement = statement.where(attempts.c.attempt_count > 1)
-    return (
-        statement.order_by(matching.c.cost_usd.desc(), matching.c.started_at.desc(), matching.c.request_id.desc())
-        if query.sort_by == "cost"
-        else statement.order_by(matching.c.started_at.desc(), matching.c.request_id.desc())
-    )
+    return statement.order_by(matching.c.request_id.desc())
 
 
 def _matches(event: UsageEvent, query: ReportQuery) -> bool:

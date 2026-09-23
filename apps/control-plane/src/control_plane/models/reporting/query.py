@@ -9,6 +9,7 @@ from pydantic import AwareDatetime, BaseModel, Field, field_validator, model_val
 from sqlmodel import col
 
 from contract import UsageStatus
+from control_plane.models.common.pagination import CursorToken
 from control_plane.models.usage_event import UsageEvent
 
 if TYPE_CHECKING:
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
 Period = Literal["today", "7d", "30d", "month_to_date", "custom"]
 Grouping = Literal["workspace", "owner", "key", "model", "provider", "credential"]
 AttributionSort = Literal["cost", "change", "requests"]
-RequestSort = Literal["newest", "cost"]
 FilterDimension = Grouping
 MAX_REPORT_SPAN = timedelta(days=366)
 
@@ -159,6 +159,5 @@ class RequestQuery(ReportQuery):
     request_id: UUID | None = None
     status: UsageStatus | None = None
     multiple_attempts: bool = False
-    sort_by: RequestSort = "newest"
     limit: int = Field(default=50, ge=1, le=100)
-    offset: int = Field(default=0, ge=0)
+    cursor: CursorToken | None = None

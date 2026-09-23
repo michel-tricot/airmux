@@ -44,11 +44,11 @@ class PageSlice[T]:
     next_cursor: CursorToken | None
 
 
-def _encode_cursor(value: CursorAnchor) -> CursorToken:
+def encode_cursor(value: CursorAnchor) -> CursorToken:
     return base64.urlsafe_b64encode(str(value).encode()).decode().rstrip("=")
 
 
-def _decode_cursor(token: str, parse: Callable[[str], CursorAnchor]) -> CursorAnchor:
+def decode_cursor[T: CursorAnchor](token: str, parse: Callable[[str], T]) -> T:
     try:
         raw = base64.b64decode(token + "=" * (-len(token) % 4), altchars=b"-_", validate=True).decode()
         return parse(raw)
@@ -64,11 +64,11 @@ async def keyset_page[T](
     direction: Direction = "desc",
 ) -> PageSlice[T]:
     if request.cursor is not None:
-        anchor = _decode_cursor(request.cursor, parse)
+        anchor = decode_cursor(request.cursor, parse)
         statement = statement.where(column > anchor if direction == "asc" else column < anchor)
     order = column.asc() if direction == "asc" else column.desc()
     items = tuple((await current_session().execute(statement.order_by(order).limit(request.limit + 1))).scalars().all())
     visible = items[: request.limit]
     column_name = cast("InstrumentedAttribute[CursorAnchor]", column).key
-    next_cursor = _encode_cursor(getattr(visible[-1], column_name)) if len(items) > request.limit else None
+    next_cursor = encode_cursor(getattr(visible[-1], column_name)) if len(items) > request.limit else None
     return PageSlice(items=visible, next_cursor=next_cursor)

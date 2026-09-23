@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import csv
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from io import StringIO
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
@@ -142,6 +140,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         assert detail.json()["data"]["cache_write_tokens"] == 1
         lookup = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "anthropic"}, headers=headers)
         assert Decimal(lookup.json()["data"]["requests"][0]["cost_usd"]) == Decimal("0.000003")
+        latest_status = client.get(f"{path}/requests", params={"provider_id": "openai", "status": "ok"}, headers=headers)
+        assert [request["request_id"] for request in latest_status.json()["data"]["requests"]] == [str(request_id)]
         excluded = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "other"}, headers=headers)
         assert excluded.json()["data"]["requests"] == []
 
@@ -152,6 +152,52 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         assert Decimal(by_provider["anthropic"]["cost_usd"]) == Decimal("0.000003")
         options = client.get(f"{path}/filter-options", params={"dimension": "provider", "provider_id": "anthropic"}, headers=headers)
         assert {item["id"] for item in options.json()["data"]["items"]} == {"openai", "anthropic"}
+
+
+def test_requests_page_by_request_id_and_refresh_without_export(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        first = _event(org_id, workspace_id)
+        second = _event(org_id, workspace_id)
+        retry = {
+            **second,
+            "event_id": str(uuid7()),
+            "attempt_started_at": (datetime.fromisoformat(second["attempt_started_at"]) + timedelta(seconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(second["occurred_at"]) + timedelta(seconds=1)).isoformat(),
+            "status": "ok",
+        }
+        third = _event(org_id, workspace_id)
+        assert client.post("/api/v1/events", json=[third, retry, first, second], headers=root).json()["data"]["ingested"] == 4
+
+        path = f"/api/v1/organizations/{org_id}/reports/requests"
+        headers = cp.headers(org_id)
+        expected = sorted((first["request_id"], second["request_id"], third["request_id"]), reverse=True)
+        request_ids = []
+        cursor = None
+        while True:
+            params = {"limit": 1, "cursor": cursor} if cursor is not None else {"limit": 1}
+            response = client.get(path, params=params, headers=headers)
+            assert response.status_code == 200, response.text
+            page = response.json()["data"]
+            request_ids.extend(request["request_id"] for request in page["requests"])
+            cursor = page["next_cursor"]
+            if cursor is None:
+                break
+        assert request_ids == expected
+
+        filtered = client.get(path, params={"limit": 1, "multiple_attempts": True, "status": "ok"}, headers=headers)
+        assert filtered.status_code == 200, filtered.text
+        assert [request["request_id"] for request in filtered.json()["data"]["requests"]] == [second["request_id"]]
+        assert filtered.json()["data"]["next_cursor"] is None
+        assert client.get(f"{path}/export", headers=headers).status_code == 422
+
+        newest = _event(org_id, workspace_id)
+        assert client.post("/api/v1/events", json=[newest], headers=root).json()["data"]["ingested"] == 1
+        refreshed = client.get(path, params={"limit": 1}, headers=headers)
+        assert refreshed.json()["data"]["requests"][0]["request_id"] == newest["request_id"]
 
 
 def test_invalid_event_does_not_block_valid_reporting_or_replay(tmp_path):
@@ -179,34 +225,32 @@ def test_invalid_event_does_not_block_valid_reporting_or_replay(tmp_path):
         assert Decimal(totals["cost_usd"]) == Decimal(valid["cost_usd"])
         requests = client.get(f"{path}/requests", headers=headers).json()["data"]["requests"]
         assert [request["request_id"] for request in requests] == [valid["request_id"]]
-        export = client.get(f"{path}/requests/export", headers=headers).json()["data"]["csv"]
-        assert [request["request_id"] for request in csv.DictReader(StringIO(export))] == [valid["request_id"]]
 
 
-def test_request_export_covers_all_filtered_requests_beyond_first_page(tmp_path):
+def test_request_cursor_covers_all_filtered_requests_beyond_first_page(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         root = cp.headers()
         org_id = make_org(client, root)
         workspace_id = make_workspace(client, cp.headers(org_id))
         matching = [{**_event(org_id, workspace_id), "provider_id": "anthropic"} for _ in range(3)]
-        matching[0]["requested_model_id"] = "=1+1"
         unrelated = _event(org_id, workspace_id)
         assert client.post("/api/v1/events", json=[*matching, unrelated], headers=root).json()["data"]["ingested"] == 4
         path = f"/api/v1/organizations/{org_id}/reports"
         headers = cp.headers(org_id)
 
-        page = client.get(f"{path}/requests", params={"provider_id": "anthropic", "limit": 1}, headers=headers)
-        assert page.status_code == 200, page.text
-        assert len(page.json()["data"]["requests"]) == 1
-        assert page.json()["data"]["next_offset"] is not None
-
-        export = client.get(f"{path}/requests/export", params={"provider_id": "anthropic"}, headers=headers)
-        assert export.status_code == 200, export.text
-        rows = list(csv.DictReader(StringIO(export.json()["data"]["csv"])))
-        assert {row["request_id"] for row in rows} == {event["request_id"] for event in matching}
-        assert next(row for row in rows if row["request_id"] == matching[0]["request_id"])["requested_model_id"] == "'=1+1"
-        assert sum((Decimal(row["cost_usd"]) for row in rows), Decimal(0)) == Decimal("0.000006")
+        request_ids = []
+        cursor = None
+        while True:
+            params = {"provider_id": "anthropic", "limit": 1, "cursor": cursor} if cursor is not None else {"provider_id": "anthropic", "limit": 1}
+            page = client.get(f"{path}/requests", params=params, headers=headers)
+            assert page.status_code == 200, page.text
+            data = page.json()["data"]
+            request_ids.extend(request["request_id"] for request in data["requests"])
+            cursor = data["next_cursor"]
+            if cursor is None:
+                break
+        assert request_ids == sorted((event["request_id"] for event in matching), reverse=True)
 
 
 def test_missing_credential_reconciles_without_an_unusable_filter_option(tmp_path):

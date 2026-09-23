@@ -80,10 +80,9 @@ export const server = setupServer(
     }),
   ),
   http.get('/api/v1/organizations/:orgId/reports/requests', () =>
-    HttpResponse.json<{ data: Api.RequestPageOut }>({ data: { requests: [], next_offset: null } }),
+    HttpResponse.json<{ data: Api.RequestPageOut }>({ data: { requests: [], next_cursor: null } }),
   ),
   http.get('/api/v1/organizations/:orgId/reports/filter-options', () => HttpResponse.json({ data: { items: [] } })),
   http.get('/api/v1/organizations/:orgId/reports/attribution', () => HttpResponse.json({ data: { items: [], next_offset: null } })),
-  http.get('/api/v1/organizations/:orgId/reports/requests/export', () => HttpResponse.json({ data: { filename: 'requests.csv', csv: '' } })),
   http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () => new HttpResponse(null, { status: 404 })),
 );
