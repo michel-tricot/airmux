@@ -9373,6 +9373,12 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
         cost_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -9403,6 +9409,8 @@ components:
       - attempt_count
       - input_tokens
       - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - cost_usd
       - within_period
       - attempts
@@ -9593,6 +9601,12 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
         cost_usd:
           type: string
           pattern: ^\d+(?:\.\d+)?$
@@ -9615,6 +9629,8 @@ components:
       - attempt_count
       - input_tokens
       - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
       - cost_usd
       title: RequestSummaryOut
     RoutedUsageEventV1:

@@ -82,6 +82,7 @@ The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`
 preceding interval of equal duration. Request lists and attribution use `limit` and `offset`.
 Request list and detail responses include current workspace, inference key, and user display names; attempts include
 credential names. When a referenced resource is no longer available, its identifier is shown instead.
+They also include cache read and write counts. Total tokens are input plus output; cache counts are included in input.
 
 ## Inspect events
 

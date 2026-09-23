@@ -40,6 +40,8 @@ class RequestSummaryOut(BaseModel):
     attempt_count: int
     input_tokens: int
     output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
     cost_usd: UsdAmount
 
 
@@ -125,6 +127,8 @@ class RequestDetailOut(RequestSummaryOut):
             attempt_count=sum(event.status != "denied" for event in events),
             input_tokens=sum(event.input_tokens for event in events),
             output_tokens=sum(event.output_tokens for event in events),
+            cache_read_tokens=sum(event.cache_read_tokens for event in events),
+            cache_write_tokens=sum(event.cache_write_tokens for event in events),
             cost_usd=sum((event.cost_usd for event in events), ZERO_USD),
             within_period=window.start_at <= latest.request_started_at < window.end_at,
             attempts=attempts,
@@ -209,6 +213,8 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
             func.min(col(UsageEvent.request_started_at)).label("started_at"),
             func.sum(col(UsageEvent.input_tokens)).label("input_tokens"),
             func.sum(col(UsageEvent.output_tokens)).label("output_tokens"),
+            func.sum(col(UsageEvent.cache_read_tokens)).label("cache_read_tokens"),
+            func.sum(col(UsageEvent.cache_write_tokens)).label("cache_write_tokens"),
             func.sum(col(UsageEvent.cost_usd)).label("cost_usd"),
         )
         .where(*conditions)
@@ -267,6 +273,8 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
             attempts.c.attempt_count,
             matching.c.input_tokens,
             matching.c.output_tokens,
+            matching.c.cache_read_tokens,
+            matching.c.cache_write_tokens,
             matching.c.cost_usd,
         )
         .join(latest, (latest.c.request_id == matching.c.request_id) & (latest.c.position == 1))
