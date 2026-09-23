@@ -257,5 +257,6 @@ async def http_client() -> AsyncIterator[aiohttp.ClientSession]:
 def http_mock(monkeypatch):
     response = partial(aiohttp.ClientResponse, stream_writer=Mock(spec=AbstractStreamWriter, output_size=0))
     monkeypatch.setattr("aioresponses.core.ClientResponse", response)
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", build_http_client)
     with aioresponses() as mocked:
         yield mocked

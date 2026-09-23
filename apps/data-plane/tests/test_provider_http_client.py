@@ -25,7 +25,7 @@ async def test_buffered_provider_response_is_fully_read_and_connection_reused():
     app.router.add_post("/", respond)
     async with TestServer(app) as upstream, build_provider_http_client(HttpConfig()) as client:
         for _ in range(2):
-            async with client.request("POST", upstream.make_url("/"), headers={}, data=b"payload") as response:
+            async with client.request("POST", str(upstream.make_url("/")), headers={}, data=b"payload") as response:
                 assert await response.read() == b"payload"
     assert len(set(ports)) == 1
 
