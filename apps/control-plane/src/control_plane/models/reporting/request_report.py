@@ -11,7 +11,7 @@ from sqlalchemy import case, func
 from sqlalchemy import select as sql_select
 from sqlmodel import col
 
-from contract import TokenUsageSource, UsageStatus, UsdAmount
+from contract import RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.money import ZERO_USD
 from control_plane.db import current_session
 from control_plane.models.usage_event import UsageEvent
@@ -19,7 +19,7 @@ from control_plane.models.usage_event import UsageEvent
 if TYPE_CHECKING:
     from sqlalchemy.sql import Select
 
-    from control_plane.models.reporting.query import ReportQuery, ReportWindow, RequestQuery
+    from control_plane.models.reporting.query import ReportQuery, RequestQuery
 
 
 class RequestSummaryOut(BaseModel):
@@ -28,6 +28,7 @@ class RequestSummaryOut(BaseModel):
     status: UsageStatus
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
     user_id: UUID
     requested_model_id: str
     model_id: str
@@ -44,6 +45,7 @@ class RequestAttemptOut(BaseModel):
     occurred_at: datetime
     provider_id: str
     model_id: str
+    credential_id: UUID | None
     status: UsageStatus
     input_tokens: int
     output_tokens: int
@@ -61,7 +63,7 @@ class RequestDetailOut(RequestSummaryOut):
     attempts: list[RequestAttemptOut]
 
     @classmethod
-    async def for_scope(cls, org_id: UUID, request_id: UUID, query: ReportQuery, now: datetime) -> RequestDetailOut | None:
+    async def for_scope(cls, org_id: UUID, request_id: UUID, query: ReportQuery) -> RequestDetailOut | None:
         conditions = [col(UsageEvent.org_id) == org_id, col(UsageEvent.request_id) == request_id]
         if query.workspace_id is not None:
             conditions.append(col(UsageEvent.workspace_id) == query.workspace_id)
@@ -70,7 +72,6 @@ class RequestDetailOut(RequestSummaryOut):
             return None
         events.sort(key=lambda event: (event.attempt_started_at or event.request_started_at, event.occurred_at, event.event_id))
         latest = events[-1]
-        window = query.window(now)
         attempts = [
             RequestAttemptOut(
                 event_id=event.event_id,
@@ -78,6 +79,7 @@ class RequestDetailOut(RequestSummaryOut):
                 occurred_at=event.occurred_at,
                 provider_id=event.provider_id,
                 model_id=event.model_id,
+                credential_id=event.credential_id,
                 status=event.status,
                 input_tokens=event.input_tokens,
                 output_tokens=event.output_tokens,
@@ -88,7 +90,7 @@ class RequestDetailOut(RequestSummaryOut):
                 cost_output_usd=event.cost_output_usd,
                 token_usage_source=event.token_usage_source,
                 latency_ms=event.latency_ms,
-                matches_filter=_matches(event, query, window),
+                matches_filter=_matches(event, query),
             )
             for event in events
         ]
@@ -98,6 +100,7 @@ class RequestDetailOut(RequestSummaryOut):
             status=latest.status,
             workspace_id=latest.workspace_id,
             key_id=latest.key_id,
+            request_source=latest.request_source,
             user_id=latest.user_id,
             requested_model_id=latest.requested_model_id,
             model_id=latest.model_id,
@@ -136,6 +139,7 @@ class RequestExportOut(BaseModel):
             "status",
             "workspace_id",
             "key_id",
+            "request_source",
             "user_id",
             "requested_model_id",
             "model_id",
@@ -153,13 +157,9 @@ class RequestExportOut(BaseModel):
 
 def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Select:
     window = query.window(now)
-    conditions = (
-        [col(UsageEvent.org_id) == org_id, col(UsageEvent.request_id) == query.request_id]
-        if query.request_id is not None
-        else query.conditions(org_id, window)
-    )
-    if query.request_id is not None and query.workspace_id is not None:
-        conditions.append(col(UsageEvent.workspace_id) == query.workspace_id)
+    conditions = query.conditions(org_id, None if query.request_id is not None else window)
+    if query.request_id is not None:
+        conditions.append(col(UsageEvent.request_id) == query.request_id)
     matching = (
         sql_select(
             col(UsageEvent.request_id).label("request_id"),
@@ -181,6 +181,7 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
             col(UsageEvent.status).label("status"),
             col(UsageEvent.workspace_id).label("workspace_id"),
             col(UsageEvent.key_id).label("key_id"),
+            col(UsageEvent.request_source).label("request_source"),
             col(UsageEvent.user_id).label("user_id"),
             col(UsageEvent.requested_model_id).label("requested_model_id"),
             col(UsageEvent.model_id).label("model_id"),
@@ -215,6 +216,7 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
             latest.c.status,
             latest.c.workspace_id,
             latest.c.key_id,
+            latest.c.request_source,
             latest.c.user_id,
             latest.c.requested_model_id,
             latest.c.model_id,
@@ -238,10 +240,9 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Sele
     )
 
 
-def _matches(event: UsageEvent, query: ReportQuery, window: ReportWindow) -> bool:
+def _matches(event: UsageEvent, query: ReportQuery) -> bool:
     return (
-        window.start_at <= event.request_started_at < window.end_at
-        and (query.owner_id is None or event.user_id == query.owner_id)
+        (query.owner_id is None or event.user_id == query.owner_id)
         and (query.key_id is None or event.key_id == query.key_id)
         and (query.model_id is None or event.model_id == query.model_id)
         and (query.provider_id is None or event.provider_id == query.provider_id)

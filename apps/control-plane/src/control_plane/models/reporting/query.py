@@ -106,12 +106,15 @@ class ReportQuery(BaseModel):
             timezone=self.timezone,
         )
 
-    def conditions(self, org_id: UUID, window: ReportWindow) -> list[ColumnElement[bool]]:
-        conditions = [
-            col(UsageEvent.org_id) == org_id,
-            col(UsageEvent.request_started_at) >= window.start_at,
-            col(UsageEvent.request_started_at) < window.end_at,
-        ]
+    def conditions(self, org_id: UUID, window: ReportWindow | None = None) -> list[ColumnElement[bool]]:
+        conditions = [col(UsageEvent.org_id) == org_id]
+        if window is not None:
+            conditions.extend(
+                [
+                    col(UsageEvent.request_started_at) >= window.start_at,
+                    col(UsageEvent.request_started_at) < window.end_at,
+                ]
+            )
         if self.workspace_id is not None:
             conditions.append(col(UsageEvent.workspace_id) == self.workspace_id)
         if self.owner_id is not None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -314,14 +314,15 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
         retry = {
             **first_attempt,
             "event_id": str(uuid7()),
-            "attempt_index": 2,
+            "attempt_started_at": (datetime.fromisoformat(first_attempt["attempt_started_at"]) + timedelta(seconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(first_attempt["occurred_at"]) + timedelta(seconds=1)).isoformat(),
             "status": "ok",
             "input_tokens": 6,
             "output_tokens": 3,
             "cost_usd": "0.000003",
             "cost_input_usd": "0.000003",
         }
-        client.post("/api/v1/events", json=[first_attempt, retry], headers=cp.headers())
+        assert client.post("/api/v1/events", json=[retry, first_attempt], headers=cp.headers()).json()["data"]["ingested"] == 2
 
         report = client.get(f"/api/v1/organizations/{org_id}/reports/usage", headers=cp.headers(org_id)).json()["data"]
         requests = client.get(f"/api/v1/organizations/{org_id}/reports/requests", headers=cp.headers(org_id)).json()["data"]

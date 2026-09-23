@@ -24,6 +24,7 @@ def _event(org_id: UUID, workspace_id: UUID, *, request_id: UUID | None = None, 
         "org_id": str(org_id),
         "workspace_id": str(workspace_id),
         "key_id": "key",
+        "request_source": "inference_key",
         "user_id": str(uuid7()),
         "requested_model_id": "gpt-test",
         "requested_capabilities": [],
@@ -95,6 +96,7 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
             "event_id": str(uuid7()),
             "provider_id": "anthropic",
             "attempt_started_at": (datetime.fromisoformat(first["attempt_started_at"]) + timedelta(seconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(first["occurred_at"]) + timedelta(seconds=1)).isoformat(),
             "status": "ok",
             "input_tokens": 6,
             "output_tokens": 3,
@@ -124,7 +126,12 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         detail = client.get(f"{path}/requests/{request_id}", params={"provider_id": "anthropic"}, headers=headers)
         assert detail.status_code == 200, detail.text
         assert [attempt["provider_id"] for attempt in detail.json()["data"]["attempts"]] == ["openai", "anthropic"]
+        assert [attempt["matches_filter"] for attempt in detail.json()["data"]["attempts"]] == [False, True]
         assert Decimal(detail.json()["data"]["cost_usd"]) == Decimal("0.000005")
+        lookup = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "anthropic"}, headers=headers)
+        assert Decimal(lookup.json()["data"]["requests"][0]["cost_usd"]) == Decimal("0.000003")
+        excluded = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "other"}, headers=headers)
+        assert excluded.json()["data"]["requests"] == []
 
         attribution = client.get(f"{path}/attribution", params={"group_by": "provider"}, headers=headers)
         assert attribution.status_code == 200, attribution.text
@@ -236,7 +243,7 @@ def test_request_id_lookup_finds_authorized_history_outside_selected_period(tmp_
         detail = client.get(f"{path}/{event['request_id']}", params=params, headers=headers)
         assert detail.status_code == 200, detail.text
         assert detail.json()["data"]["request_id"] == event["request_id"]
-        assert detail.json()["data"]["attempts"][0]["matches_filter"] is False
+        assert detail.json()["data"]["attempts"][0]["matches_filter"] is True
 
 
 def test_report_rejects_invalid_period_queries(tmp_path):
