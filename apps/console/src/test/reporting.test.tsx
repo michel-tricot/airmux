@@ -204,11 +204,14 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Request ID' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByRole('columnheader', { name: 'Inference Key' })).toHaveClass('hidden', 'min-[1440px]:table-cell');
   expect(within(requestsTable).getByRole('columnheader', { name: 'Attempts' })).toHaveClass('hidden', 'xl:table-cell');
+  expect(within(requestsTable).getAllByRole('columnheader').at(-1)?.firstElementChild).toHaveClass('sr-only');
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Provider' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
-  expect(requestLink.querySelector('svg')).toHaveClass('lucide-eye');
+  expect(requestLink.querySelector('svg')).toHaveClass('lucide-ellipsis');
   expect(requestLink).toHaveAttribute('title', 'View request details');
+  expect(requestLink.closest('td')).toBe(requestLink.closest('tr')?.lastElementChild);
+  expect(requestLink.closest('tr')?.firstElementChild).toHaveTextContent(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
   const totalTokens = within(requestsTable).getByRole('button', { name: '40 total tokens. Show token details' });
   expect(totalTokens).toHaveTextContent('40');
   expect(totalTokens).toHaveClass('cursor-default');
@@ -342,11 +345,13 @@ it('keeps workspace request rows compact with the full request ID available', as
       .slice(0, 4)
       .map((header) => header.textContent),
   ).toEqual(['Time', 'Status', 'Cost', 'Total tokens']);
-  expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
+  expect(within(table).getAllByRole('columnheader').at(-2)).toHaveTextContent('Attempts');
+  expect(within(table).getAllByRole('columnheader').at(-1)?.firstElementChild).toHaveClass('sr-only');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
   const requestLink = within(table).getByRole('link', { name: 'View request details for 01a0cbde-afee-7867-a902-e70b75b471ba' });
   expect(requestLink).toHaveAttribute('title', 'View request details');
-  expect(requestLink.querySelector('svg')).toHaveClass('lucide-eye');
+  expect(requestLink.querySelector('svg')).toHaveClass('lucide-ellipsis');
+  expect(requestLink.closest('td')).toBe(requestLink.closest('tr')?.lastElementChild);
   expect(within(table).queryByText('01a0cbde…')).not.toBeInTheDocument();
   const model = within(table).getByText('anthropic/claude-opus-4-5-20251101');
   expect(model).toHaveClass('truncate');
