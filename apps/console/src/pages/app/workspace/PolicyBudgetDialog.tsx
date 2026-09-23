@@ -59,7 +59,7 @@ export function PolicyBudgetDialog({
               ? [
                   {
                     value: String(index),
-                    label: `Rule ${index + 1}: $${rule.action.amount_usd} / ${rule.action.period} (${rule.action.aggregation.replace('_', ' ')})`,
+                    label: `Rule ${index + 1}: $${rule.action.amount_usd} per ${rule.action.period} (${rule.action.aggregation.replace('_', ' ')})`,
                   },
                 ]
               : [],

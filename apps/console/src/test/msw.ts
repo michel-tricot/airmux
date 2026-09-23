@@ -68,4 +68,22 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/invitations', () => enveloped<Api.OrgInvitationOut>([])),
   http.get('/api/v1/organizations/:orgId/events', () => paged<Api.UsageEventOut>([])),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () => paged<Api.UsageEventOut>([])),
+  http.get('/api/v1/organizations/:orgId/reports/usage', () =>
+    HttpResponse.json({
+      data: {
+        totals: { requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: '0' },
+        comparison: { requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: '0' },
+        daily: [],
+        period: { start_at: now, end_at: now, previous_start_at: now, previous_end_at: now, timezone: 'UTC' },
+        updated_at: now,
+      },
+    }),
+  ),
+  http.get('/api/v1/organizations/:orgId/reports/requests', () =>
+    HttpResponse.json<{ data: Api.RequestPageOut }>({ data: { requests: [], next_offset: null } }),
+  ),
+  http.get('/api/v1/organizations/:orgId/reports/filter-options', () => HttpResponse.json({ data: { items: [] } })),
+  http.get('/api/v1/organizations/:orgId/reports/attribution', () => HttpResponse.json({ data: { items: [], next_offset: null } })),
+  http.get('/api/v1/organizations/:orgId/reports/requests/export', () => HttpResponse.json({ data: { filename: 'requests.csv', csv: '' } })),
+  http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () => new HttpResponse(null, { status: 404 })),
 );

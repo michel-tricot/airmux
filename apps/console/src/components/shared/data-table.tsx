@@ -12,6 +12,7 @@ export interface Column<T> {
 }
 
 interface DataTableProps<T> {
+  ariaLabel?: string;
   columns: Array<Column<T>>;
   tableClassName?: string;
   headerGroups?: Array<{
@@ -40,6 +41,7 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T>({
+  ariaLabel,
   columns,
   tableClassName,
   headerGroups,
@@ -67,7 +69,7 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-3">
-      <Table className={tableClassName} clipOverflow={clipOverflow}>
+      <Table aria-label={ariaLabel} className={tableClassName} clipOverflow={clipOverflow}>
         <TableHeader>
           {headerGroups && (
             <TableRow className="bg-muted/20 hover:bg-muted/20">
