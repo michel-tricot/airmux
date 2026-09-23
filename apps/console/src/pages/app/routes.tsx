@@ -4,6 +4,7 @@ import { anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { catalogAccess } from '@/features/catalog/policy';
 import { managementKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
+import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 
 const Dashboard = lazy(() => import('@/pages/app/Dashboard'));
@@ -20,7 +21,7 @@ interface OrgRouteDefinition {
 }
 
 export const orgRoutes: readonly OrgRouteDefinition[] = [
-  { path: '/org', label: 'Overview', icon: Building2, component: Dashboard, access: telemetryAccess.orgUsage },
+  { path: '/org', label: 'Overview', icon: Building2, component: Dashboard, access: anyOf(orgAccess.read, telemetryAccess.orgUsage) },
   { path: '/org/models', label: 'Models', icon: Boxes, component: Models, access: catalogAccess.org.read },
   { path: '/org/requests', label: 'Requests', icon: Activity, component: Requests, access: telemetryAccess.orgUsage },
   {

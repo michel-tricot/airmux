@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Permission } from '@workspace/api-client-react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import App from '@/App';
-import { ORG, WORKSPACES } from './msw';
+import { ORG, WORKSPACES, server } from './msw';
 
 beforeEach(() => {
   window.localStorage.setItem('airmux_org_id', ORG.id);
@@ -66,6 +68,17 @@ describe('organization section deep links', () => {
 });
 
 describe('organization reporting landing', () => {
+  it('keeps the organization landing available without usage permission', async () => {
+    server.use(
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json({ data: { permissions: [Permission.organizationsread, Permission.catalogread] } }),
+      ),
+    );
+    renderAt('/org');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    expect(screen.queryByText('You do not have access to this organization page.')).not.toBeInTheDocument();
+  });
+
   it('places Requests immediately above Settings in both navigation groups', async () => {
     renderAt(`/org/workspaces/${WS.slug}`);
     await screen.findByRole('heading', { level: 1, name: WS.name });

@@ -5,7 +5,7 @@ import { Card, Dropdown } from '@/components/ui/elements';
 import { SectionHeader } from '@/components/shared/page-shell';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatReportCost } from '@/features/reporting/presentation';
-import { requestsPath, type ReportMetric } from '@/features/reporting/url';
+import { requestsPath, type ReportMetric, type ReportPeriod } from '@/features/reporting/url';
 
 function amount(bucket: UsageReportOut['daily'][number], metric: ReportMetric) {
   if (metric === 'cost') return Number(bucket.cost_usd);
@@ -20,6 +20,7 @@ function label(bucket: UsageReportOut['daily'][number], metric: ReportMetric) {
 
 export function ReportingChart({
   daily,
+  period,
   metric,
   search,
   endAt,
@@ -28,6 +29,7 @@ export function ReportingChart({
   onMetricChange,
 }: {
   daily: UsageReportOut['daily'];
+  period: ReportPeriod;
   metric: ReportMetric;
   search: URLSearchParams;
   endAt: string;
@@ -36,7 +38,7 @@ export function ReportingChart({
   onMetricChange: (metric: ReportMetric) => void;
 }) {
   const maximum = Math.max(0, ...daily.map((bucket) => amount(bucket, metric))) || 1;
-  const hourly = daily.length > 0 && new Date(endAt).getTime() - new Date(daily[0].date).getTime() <= 86_400_000;
+  const hourly = period === 'today';
   const formatBucket = (date: string) =>
     new Intl.DateTimeFormat(
       undefined,

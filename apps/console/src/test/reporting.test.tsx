@@ -21,8 +21,11 @@ const requestSummary = {
   model_id: 'model-a',
   provider_id: 'provider-a',
   workspace_id: WORKSPACES[0].id,
+  workspace_name: WORKSPACES[0].name,
   key_id: 'key-a',
+  key_name: 'Checkout',
   user_id: 'user-a',
+  user_email: 'owner@example.com',
   request_source: 'inference_key',
   attempt_count: 1,
   input_tokens: 30,
@@ -42,6 +45,7 @@ it.each(['/org', `/org/workspaces/${WORKSPACES[0].slug}`])('starts with overview
 
   const disclosure = (await screen.findByText('Filters')).closest('details');
   expect(disclosure).not.toHaveAttribute('open');
+  expect(disclosure?.querySelector('summary')).toHaveTextContent('Last 30 days');
   expect(screen.getByRole('combobox', { name: 'Period' })).not.toBeVisible();
 
   await user.click(screen.getByText('Filters'));
@@ -60,6 +64,7 @@ it.each(['/org/requests', `/org/workspaces/${WORKSPACES[0].slug}/requests`])(
 
     const disclosure = (await screen.findByText('Filters')).closest('details');
     expect(disclosure).not.toHaveAttribute('open');
+    expect(disclosure?.querySelector('summary')).toHaveTextContent('Last 30 days');
     expect(screen.getByRole('combobox', { name: 'Status' })).not.toBeVisible();
 
     await user.click(screen.getByText('Filters'));
@@ -70,6 +75,41 @@ it.each(['/org/requests', `/org/workspaces/${WORKSPACES[0].slug}/requests`])(
     expect(disclosure).not.toHaveAttribute('open');
   },
 );
+
+it('shows active request filters while collapsed without fetching filter choices', async () => {
+  let optionLoads = 0;
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/filter-options', () => {
+      optionLoads += 1;
+      return HttpResponse.json({ data: { items: [] } });
+    }),
+  );
+  const user = userEvent.setup();
+  renderAt('/org/requests?status=denied&model_id=model-a');
+  await screen.findByText('No requests match these filters.');
+  expect(screen.getByText('Filters').closest('summary')).toHaveTextContent('2 active filters');
+  expect(optionLoads).toBe(0);
+  await user.click(screen.getByText('Filters'));
+  await waitFor(() => expect(optionLoads).toBe(6));
+});
+
+it('falls back to valid report URL choices before rendering or querying', async () => {
+  let query: URLSearchParams | undefined;
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
+      query = new URL(request.url).searchParams;
+      return HttpResponse.json({ data: { requests: [], next_offset: null } });
+    }),
+  );
+  renderAt('/org/requests?timezone=Invalid%2FZone&period=bad&status=bad&request_sort=bad&offset=NaN');
+  expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+  await screen.findByText('No requests match these filters.');
+  expect(query?.get('timezone')).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  expect(query?.get('period')).toBe('30d');
+  expect(query?.get('status')).toBeNull();
+  expect(query?.get('sort_by')).toBe('newest');
+  expect(query?.get('offset')).toBe('0');
+});
 
 it('opens organization reporting and drills a model into filtered requests', async () => {
   server.use(
@@ -143,7 +183,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(within(attribution).getByText('Input · Output')).toBeInTheDocument();
   expect(within(attribution).getByText('30 · 10')).toBeInTheDocument();
   const modelLink = within(attribution).getByRole('link', { name: 'model-a' });
-  expect(modelLink).toHaveClass('text-primary', 'hover:underline');
+  expect(modelLink).toHaveClass('text-primary', 'hover:text-primary/80');
   expect(modelLink.closest('td')).not.toHaveClass('[&_a]:text-primary');
   expect(within(modelLink).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
   await user.click(modelLink);
@@ -164,7 +204,8 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Input · Output')).toBeInTheDocument();
   expect(within(requestsTable).getByText('30 · 10')).toBeInTheDocument();
-  expect(requestLink).toHaveClass('text-primary', 'hover:underline');
+  expect(requestLink).toHaveClass('text-primary', 'hover:text-primary/80');
+  expect(within(requestsTable).getByText('Checkout')).toBeInTheDocument();
   expect(within(screen.getByRole('table', { name: 'Requests' })).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
   expect(within(requestsTable).getByText('provider-a').closest('td')?.querySelector('svg')).not.toBeNull();
 });
@@ -340,31 +381,15 @@ it('polls requests in Live mode and briefly highlights new rows', async () => {
 
 it('shows the full attempt history while identifying the filtered provider contribution', async () => {
   server.use(
-    http.get('/api/v1/organizations/:orgId/reports/filter-options', ({ request }) => {
-      const dimension = new URL(request.url).searchParams.get('dimension');
-      const items = {
-        owner: [{ id: 'user-a', name: 'owner@example.com' }],
-        key: [{ id: 'key-a', name: 'Checkout' }],
-        credential: [
-          { id: 'credential-a', name: 'Primary credential' },
-          { id: 'credential-b', name: 'Backup credential' },
-        ],
-      };
-      return HttpResponse.json({ data: { items: items[dimension as keyof typeof items] ?? [] } });
-    }),
     http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () =>
       HttpResponse.json({
         data: {
-          request_id: 'request-1',
+          ...requestSummary,
           started_at: period.start_at,
           status: 'ok',
           requested_model_id: 'model-a',
           model_id: 'model-b',
           provider_id: 'provider-b',
-          workspace_id: WORKSPACES[0].id,
-          key_id: 'key-a',
-          user_id: 'user-a',
-          request_source: 'inference_key',
           attempt_count: 2,
           input_tokens: 30,
           output_tokens: 10,
@@ -378,6 +403,7 @@ it('shows the full attempt history while identifying the filtered provider contr
               model_id: 'model-a',
               provider_id: 'provider-a',
               credential_id: 'credential-a',
+              credential_name: 'Primary credential',
               status: 'upstream_error',
               input_tokens: 10,
               output_tokens: 0,
@@ -397,6 +423,7 @@ it('shows the full attempt history while identifying the filtered provider contr
               model_id: 'model-b',
               provider_id: 'provider-b',
               credential_id: 'credential-b',
+              credential_name: 'Backup credential',
               status: 'ok',
               input_tokens: 20,
               output_tokens: 10,

@@ -1,7 +1,7 @@
 import { Button, Dropdown, Label } from '@/components/ui/elements';
 import { ReportingDatePicker } from '@/components/shared/reporting-date-picker';
 import { SearchPicker, type SearchPickerOption } from '@/components/shared/search-picker';
-import { reportDimensions, type ReportDimension, type ReportPeriod } from '@/features/reporting/url';
+import { reportDimensions, reportPeriodLabels, reportPeriods, type ReportDimension, type ReportPeriod } from '@/features/reporting/url';
 
 const labels: Record<ReportDimension, string> = {
   workspace: 'Workspace',
@@ -12,13 +12,7 @@ const labels: Record<ReportDimension, string> = {
   credential: 'Provider credential',
 };
 
-const periods: Array<{ value: ReportPeriod; label: string }> = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: 'month_to_date', label: 'Month to date' },
-  { value: 'custom', label: 'Custom dates' },
-];
+const periods = reportPeriods.map((value) => ({ value, label: reportPeriodLabels[value] }));
 
 export function ReportingFilters({
   workspaceId,

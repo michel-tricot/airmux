@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'wouter';
 import type { UsageTotalsOut } from '@workspace/api-client-react';
 import { Activity, Coins, Hash, Sigma } from 'lucide-react';
@@ -14,7 +15,7 @@ import { TableLink } from '@/components/shared/table-link';
 import { useAttributionReport, useReportOptions, useUsageReport } from '@/features/reporting/hooks';
 import { formatAverageCost, formatChange, formatReportCost, formatShare } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
-import { drillDownUrl, requestsPath, useReportSearch } from '@/features/reporting/url';
+import { drillDownUrl, reportChoice, reportFilterSummary, reportOffset, requestsPath, useReportSearch } from '@/features/reporting/url';
 import { useRequiredOrgId } from '@/lib/session';
 
 function Metric({
@@ -92,23 +93,24 @@ export function UsageReporting({
 }) {
   const orgId = useRequiredOrgId();
   const filters = useReportSearch(workspaceId ? 'key' : 'workspace');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const query = reportQuery(filters, workspaceId);
   const validDates = filters.period !== 'custom' || (!!filters.startDate && !!filters.endDate && filters.startDate <= filters.endDate);
   const report = useUsageReport(orgId, query, validDates);
-  const attributionOffset = Number(filters.search.get('attribution_offset') ?? 0);
+  const attributionOffset = reportOffset(filters.search.get('attribution_offset'));
   const attribution = useAttributionReport(
     orgId,
     {
       ...query,
       group_by: filters.groupBy,
       search: filters.search.get('search') || undefined,
-      sort_by: (filters.search.get('attribution_sort') || 'cost') as 'cost' | 'change' | 'requests',
+      sort_by: reportChoice(filters.search.get('attribution_sort'), ['cost', 'change', 'requests'] as const, 'cost'),
       limit: 20,
       offset: attributionOffset,
     },
     validDates,
   );
-  const options = useReportOptions(orgId, query, workspaceId, validDates);
+  const options = useReportOptions(orgId, query, workspaceId, validDates && filtersOpen);
   const scopeName =
     workspaceName ??
     (query.workspace_id
@@ -124,7 +126,7 @@ export function UsageReporting({
         actions={<ReportRefreshButton queries={[report, attribution]} />}
       />
 
-      <CollapsibleFilterCard>
+      <CollapsibleFilterCard summary={reportFilterSummary(filters, workspaceId)} onOpenChange={setFiltersOpen}>
         <ReportingFilters
           workspaceId={workspaceId}
           period={filters.period}
@@ -168,6 +170,7 @@ export function UsageReporting({
           </div>
           <ReportingChart
             daily={report.data.daily}
+            period={filters.period}
             metric={filters.metric}
             search={filters.search}
             endAt={report.data.period.end_at}

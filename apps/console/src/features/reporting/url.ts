@@ -2,8 +2,37 @@ import { useSearchParams } from 'wouter';
 
 export const reportDimensions = ['workspace', 'owner', 'key', 'model', 'provider', 'credential'] as const;
 export type ReportDimension = (typeof reportDimensions)[number];
-export type ReportPeriod = 'today' | '7d' | '30d' | 'month_to_date' | 'custom';
-export type ReportMetric = 'cost' | 'requests' | 'tokens';
+export const reportPeriods = ['today', '7d', '30d', 'month_to_date', 'custom'] as const;
+export type ReportPeriod = (typeof reportPeriods)[number];
+export const reportPeriodLabels: Record<ReportPeriod, string> = {
+  today: 'Today',
+  '7d': 'Last 7 days',
+  '30d': 'Last 30 days',
+  month_to_date: 'Month to date',
+  custom: 'Custom dates',
+};
+export const reportMetrics = ['cost', 'requests', 'tokens'] as const;
+export type ReportMetric = (typeof reportMetrics)[number];
+
+export function reportChoice<T extends string>(value: string | null, choices: readonly T[], fallback: T): T {
+  return choices.find((choice) => choice === value) ?? fallback;
+}
+
+export function reportOffset(value: string | null): number {
+  const offset = Number(value);
+  return Number.isSafeInteger(offset) && offset >= 0 ? offset : 0;
+}
+
+function reportTimezone(value: string | null): string {
+  const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!value) return fallback;
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: value });
+    return value;
+  } catch {
+    return fallback;
+  }
+}
 
 const dimensionParameter: Record<ReportDimension, string> = {
   workspace: 'workspace_id',
@@ -16,10 +45,10 @@ const dimensionParameter: Record<ReportDimension, string> = {
 
 export function useReportSearch(defaultGroup: ReportDimension = 'workspace') {
   const [search, setSearch] = useSearchParams();
-  const period = (search.get('period') ?? '30d') as ReportPeriod;
-  const timezone = search.get('timezone') ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const groupBy = (search.get('group_by') ?? defaultGroup) as ReportDimension;
-  const metric = (search.get('metric') ?? 'cost') as ReportMetric;
+  const period = reportChoice(search.get('period'), reportPeriods, '30d');
+  const timezone = reportTimezone(search.get('timezone'));
+  const groupBy = reportChoice(search.get('group_by'), reportDimensions, defaultGroup);
+  const metric = reportChoice(search.get('metric'), reportMetrics, 'cost');
   const startDate = search.get('start_date') ?? '';
   const endDate = search.get('end_date') ?? '';
   const value = (dimension: ReportDimension) => search.get(dimensionParameter[dimension]) ?? '';
@@ -72,6 +101,16 @@ export function useReportSearch(defaultGroup: ReportDimension = 'workspace') {
     credential_id: value('credential') || undefined,
   };
   return { search, period, timezone, startDate, endDate, groupBy, metric, value, setValue, setDimension, clearFilters, change, filters };
+}
+
+export function reportFilterSummary(filters: ReturnType<typeof useReportSearch>, workspaceId?: string, extraFilters = 0): string {
+  const period =
+    filters.period === 'custom' ? `${filters.startDate || 'Start date'} to ${filters.endDate || 'End date'}` : reportPeriodLabels[filters.period];
+  const count =
+    reportDimensions.filter((dimension) => (dimension !== 'workspace' || !workspaceId) && filters.value(dimension)).length +
+    Number(filters.search.has('start_at')) +
+    extraFilters;
+  return `${period} · ${filters.timezone}${count ? ` · ${count} active filter${count === 1 ? '' : 's'}` : ''}`;
 }
 
 export function reportPath(workspaceRef?: string) {

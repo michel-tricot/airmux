@@ -38,15 +38,16 @@ export function useReportOptions(orgId: string, params: GetUsageReportParams, fi
     credential: 'credential_id',
   };
   const query = (dimension: ReportDimension) => ({ ...params, dimension, [filterByDimension[dimension]]: undefined });
-  const workspace = useGetReportFilterOptions(orgId, query('workspace'), { query: { enabled: enabled && !fixedWorkspaceId } });
-  const owner = useGetReportFilterOptions(orgId, query('owner'), { query: { enabled } });
-  const key = useGetReportFilterOptions(orgId, query('key'), { query: { enabled } });
-  const model = useGetReportFilterOptions(orgId, query('model'), { query: { enabled } });
-  const provider = useGetReportFilterOptions(orgId, query('provider'), { query: { enabled } });
-  const credential = useGetReportFilterOptions(orgId, query('credential'), { query: { enabled } });
-  const options = { workspace, owner, key, model, provider, credential };
+  const options = { enabled, staleTime: 30_000 };
+  const workspace = useGetReportFilterOptions(orgId, query('workspace'), { query: { ...options, enabled: enabled && !fixedWorkspaceId } });
+  const owner = useGetReportFilterOptions(orgId, query('owner'), { query: options });
+  const key = useGetReportFilterOptions(orgId, query('key'), { query: options });
+  const model = useGetReportFilterOptions(orgId, query('model'), { query: options });
+  const provider = useGetReportFilterOptions(orgId, query('provider'), { query: options });
+  const credential = useGetReportFilterOptions(orgId, query('credential'), { query: options });
+  const results = { workspace, owner, key, model, provider, credential };
   return Object.fromEntries(
-    Object.entries(options).map(([dimension, result]) => [
+    Object.entries(results).map(([dimension, result]) => [
       dimension,
       (result.data?.items ?? []).map((item) => ({ value: item.id, label: item.name, searchText: `${item.name} ${item.id}` })),
     ]),

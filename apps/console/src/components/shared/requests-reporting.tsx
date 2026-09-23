@@ -16,7 +16,7 @@ import { TokenUsageSource } from '@/components/shared/token-usage-source';
 import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/reporting/hooks';
 import { formatReportCost, formatReportCostExact } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
-import { requestsPath, useReportSearch } from '@/features/reporting/url';
+import { reportChoice, reportFilterSummary, reportOffset, requestsPath, useReportSearch } from '@/features/reporting/url';
 import { useRequiredOrgId } from '@/lib/session';
 
 function downloadCsv(filename: string, csv: string) {
@@ -53,6 +53,7 @@ export function RequestsReporting({
 }) {
   const orgId = useRequiredOrgId();
   const filters = useReportSearch(workspaceId ? 'key' : 'workspace');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const dateFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: filters.timezone,
     month: 'short',
@@ -65,9 +66,9 @@ export function RequestsReporting({
   const formatReportDate = (startedAt: string | null | undefined) => (startedAt ? dateFormatter.format(new Date(startedAt)) : 'N/A');
   const query = reportQuery(filters, workspaceId);
   const validDates = filters.period !== 'custom' || (!!filters.startDate && !!filters.endDate && filters.startDate <= filters.endDate);
-  const offset = Number(filters.search.get('offset') ?? 0);
-  const sortBy = (filters.search.get('request_sort') ?? 'newest') as 'newest' | 'cost';
-  const status = (filters.search.get('status') || undefined) as UsageEventOutStatus | undefined;
+  const offset = reportOffset(filters.search.get('offset'));
+  const sortBy = reportChoice(filters.search.get('request_sort'), ['newest', 'cost'] as const, 'newest');
+  const status = Object.keys(statusNames).find((value) => value === filters.search.get('status')) as UsageEventOutStatus | undefined;
   const multipleAttempts = filters.search.get('multiple_attempts') === 'true' || undefined;
   const requestId = filters.search.get('request_id') ?? '';
   const params = { ...query, status, multiple_attempts: multipleAttempts, sort_by: sortBy, limit: 20, offset };
@@ -75,9 +76,7 @@ export function RequestsReporting({
   const requests = useUsageRequests(orgId, params, validDates, live);
   const taxonomy = useGetOrgTaxonomy(orgId);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
-  const options = useReportOptions(orgId, query, workspaceId, validDates);
-  const labelFor = (dimension: 'owner' | 'key' | 'credential', id: string | null | undefined) =>
-    id ? (options[dimension].find((option) => option.value === id)?.label ?? id) : 'None recorded';
+  const options = useReportOptions(orgId, query, workspaceId, validDates && filtersOpen);
   const scopeName =
     workspaceName ??
     (query.workspace_id
@@ -134,7 +133,10 @@ export function RequestsReporting({
         }
       />
 
-      <CollapsibleFilterCard>
+      <CollapsibleFilterCard
+        summary={reportFilterSummary(filters, workspaceId, Number(!!status) + Number(!!multipleAttempts))}
+        onOpenChange={setFiltersOpen}
+      >
         <ReportingFilters
           workspaceId={workspaceId}
           period={filters.period}
@@ -247,18 +249,14 @@ export function RequestsReporting({
                   {
                     key: 'workspace',
                     header: 'Workspace',
-                    cell: (item: RequestSummaryOut) =>
-                      workspaceName ?? options.workspace.find((option) => option.value === item.workspace_id)?.label ?? item.workspace_id,
+                    cell: (item: RequestSummaryOut) => item.workspace_name,
                   },
                 ]
               : []),
             {
               key: 'key',
               header: 'Inference Key',
-              cell: (item) =>
-                item.request_source === 'playground'
-                  ? 'Playground'
-                  : (options.key.find((option) => option.value === item.key_id)?.label ?? item.key_id ?? 'Unknown'),
+              cell: (item) => item.key_name,
             },
             {
               key: 'model',
@@ -341,12 +339,12 @@ export function RequestsReporting({
               {request.data.request_source === 'inference_key' && (
                 <div>
                   <dt className="text-muted-foreground">Inference key</dt>
-                  <dd>{labelFor('key', request.data.key_id)}</dd>
+                  <dd>{request.data.key_name}</dd>
                 </div>
               )}
               <div>
                 <dt className="text-muted-foreground">User</dt>
-                <dd>{labelFor('owner', request.data.user_id)}</dd>
+                <dd>{request.data.user_email}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Source</dt>
@@ -417,7 +415,7 @@ export function RequestsReporting({
                           </div>
                           <div className="col-span-2">
                             <dt className="text-muted-foreground">Credential</dt>
-                            <dd>{labelFor('credential', attempt.credential_id)}</dd>
+                            <dd>{attempt.credential_name ?? 'None recorded'}</dd>
                           </div>
                         </dl>
                       </Card>
