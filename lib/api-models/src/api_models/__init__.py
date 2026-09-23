@@ -227,25 +227,46 @@ class DeniedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
+    attempt_started_at: Annotated[
+        None,
+        Field(description="No provider attempt was made", title="Attempt Started At"),
+    ] = None
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(
+            description="Timestamp when the attempt or denial completed",
+            title="Occurred At",
+        ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -344,7 +365,7 @@ class DeniedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -421,6 +442,7 @@ class EnvelopeListDataPlaneInstanceOut(BaseModel):
 class EventsIngestedOut(BaseModel):
     received: Annotated[int, Field(title="Received")]
     ingested: Annotated[int, Field(title="Ingested")]
+    rejected: Annotated[int, Field(title="Rejected")]
 
 
 class Model(RootModel[str]):
@@ -586,7 +608,7 @@ class KeyBudgetBucket(BaseModel):
 
 class KeyEntry(BaseModel):
     """
-    An active inference key included in a policy bundle.
+    An active caller credential included in a policy bundle.
 
     The bundle contains a token hash for authorization and a key ID for usage attribution, never
     the caller's secret token.
@@ -596,6 +618,7 @@ class KeyEntry(BaseModel):
         extra="forbid",
     )
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
@@ -1486,25 +1509,49 @@ class RoutedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
+    attempt_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the provider attempt began",
+            title="Attempt Started At",
+        ),
+    ]
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(
+            description="Timestamp when the attempt or denial completed",
+            title="Occurred At",
+        ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -1608,7 +1655,7 @@ class RoutedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -1823,10 +1870,13 @@ class TokenUsageSource(RootModel[Literal["provider", "estimated", "not_applicabl
 class UsageEventOut(BaseModel):
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
+    request_started_at: Annotated[AwareDatetime, Field(title="Request Started At")]
+    attempt_started_at: Annotated[AwareDatetime | None, Field(title="Attempt Started At")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     user_id: Annotated[UUID, Field(title="User Id")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     requested_capabilities: Annotated[

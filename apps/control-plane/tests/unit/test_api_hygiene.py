@@ -46,6 +46,17 @@ def test_every_endpoint_declares_an_envelope():
     )
 
 
+def test_event_ingestion_schema_is_a_discriminated_contract_list():
+    schema = make_app().openapi()
+    body = schema["paths"]["/api/v1/events"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+
+    assert body["type"] == "array"
+    assert body["maxItems"] == 1000
+    assert body["items"]["discriminator"]["propertyName"] == "status"
+    for reference in body["items"]["discriminator"]["mapping"].values():
+        assert reference.rsplit("/", 1)[1] in schema["components"]["schemas"]
+
+
 def test_every_endpoint_is_tagged_for_docs():
     """ReDoc renders one sidebar section per tag: every operation carries a resource tag, every tag is declared with a description,
     and x-tagGroups covers every tag so none drop out of the grouped sidebar."""

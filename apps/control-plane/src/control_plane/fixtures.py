@@ -30,7 +30,7 @@ from uuid import UUID, uuid5
 from sqlmodel import col
 
 from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
-from contract import INFERENCE_TOKEN_PREFIX, UsageStatus, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, TokenUsageSource, UsageStatus, token_hash
 from contract.policies import (
     AllowedModels,
     AllowedProviders,
@@ -226,7 +226,7 @@ def policy_rule(*, match: AllRequests | RequestMatch, action: PolicyAction) -> R
     return RuleDefinition.model_validate({"match": match, "action": action})
 
 
-async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
+async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime, *, report_examples: bool = False) -> None:
     """Recorded traffic for one workspace: random numbers spread over the last USAGE_DAYS.
 
     Nothing here reconciles. The costs are not the token counts times any price, because the
@@ -235,33 +235,71 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
     rng = Random(f"usage:{workspace.id}")  # noqa: S311 fixture traffic, not cryptography
     for index in range(count):
         model_id, provider_id = rng.choice(MODELS)
+        occurred_at = now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400))
+        latency_ms = rng.randint(180, 4000)
+        attempt_started_at = occurred_at - timedelta(milliseconds=latency_ms)
         cost_input_usd = Decimal(rng.randint(1000, 200000)) / 1_000_000
         cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
-        await UsageEvent(
+        input_tokens = rng.randint(300, 6000)
+        event = UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
             request_id=fixture_id(f"request:{workspace.id}:{index}"),
-            occurred_at=now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400)),
+            request_started_at=attempt_started_at,
+            attempt_started_at=attempt_started_at,
+            occurred_at=occurred_at,
             org_id=workspace.org_id,
             workspace_id=workspace.id,
             key_id=str(key.id),
+            request_source="inference_key",
             user_id=key.user_id,
             requested_model_id=model_id,
             requested_capabilities=[],
             model_id=model_id,
             provider_id=provider_id,
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
-            input_tokens=rng.randint(300, 6000),
+            input_tokens=input_tokens,
             output_tokens=rng.randint(80, 1500),
             token_usage_source="estimated" if index % 3 == 0 else "provider",
             cost_usd=cost_input_usd + cost_output_usd,
             cost_input_usd=cost_input_usd,
             cost_output_usd=cost_output_usd,
-            cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
+            cache_read_tokens=rng.choice([0, rng.randint(100, min(3000, input_tokens))]),
             cache_write_tokens=0,
-            latency_ms=rng.randint(180, 4000),
+            latency_ms=latency_ms,
             status=rng.choice(STATUSES),
             stream=rng.choice([True, False]),
-        ).save()
+        )
+        if report_examples and index in range(4):
+            start = now - timedelta(days=1)
+            event.request_started_at = start if index in (0, 1) else start + timedelta(seconds=index)
+            event.attempt_started_at = event.request_started_at + timedelta(milliseconds=600 if index == 1 else 0)
+            event.occurred_at = event.attempt_started_at + timedelta(milliseconds=500)
+            event.latency_ms = 500
+            match index:
+                case 0 | 1:
+                    event.request_id = fixture_id(f"request:{workspace.id}:0")
+                    event.model_id, event.provider_id = MODELS[0 if index == 0 else 2]
+                    event.status = "upstream_error" if index == 0 else "ok"
+                    event.credential_id = fixture_id(
+                        f"provider-credential:Acme:Production:{event.provider_id}:{'primary' if index == 0 else 'default'}"
+                    )
+                    event.credential_scope = "workspace"
+                case 2:
+                    event.attempt_started_at = None
+                    event.occurred_at = event.request_started_at + timedelta(milliseconds=100)
+                    event.provider_id = ""
+                    event.input_tokens = event.output_tokens = event.cache_read_tokens = 0
+                    event.cost_usd = event.cost_input_usd = event.cost_output_usd = Decimal(0)
+                    event.token_usage_source = TokenUsageSource.NOT_APPLICABLE
+                    event.status = "denied"
+                case 3:
+                    event.request_source = "playground"
+                    event.key_id = str(fixture_id("playground-session:acme:production"))
+                    event.credential_id = fixture_id("provider-credential:Acme:Production:openai:primary")
+                    event.credential_scope = "workspace"
+                    event.model_id, event.provider_id = MODELS[0]
+                    event.status = "ok"
+        await event.save()
 
 
 async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa: PLR0915 fixture graph stays readable as one declared instance
@@ -511,7 +549,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         await provider_credential(store, openai, solo, workspace=default),
     ]
 
-    await record_usage(production, checkout, 1200, now)
+    await record_usage(production, checkout, 1200, now, report_examples=True)
     await record_usage(staging, ci, 360, now)
     await record_usage(default, solo_key, 84, now)
 

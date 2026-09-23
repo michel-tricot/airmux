@@ -5,11 +5,11 @@ from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import CheckConstraint, Column, Index, Numeric, String
+from sqlalchemy import Column, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
-from contract import CredentialScope, TokenUsageSource, UsageStatus, UsdAmount
+from contract import CredentialScope, RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
@@ -20,23 +20,24 @@ from control_plane.models.common.wire import RecordOut
 
 class UsageEvent(Record, table=True):
     __table_args__: ClassVar = (
-        CheckConstraint(
-            "(status = 'denied' AND token_usage_source = 'not_applicable') OR "
-            "(status <> 'denied' AND token_usage_source IN ('provider', 'estimated'))",
-            name="usage_event_token_usage_source_valid",
-        ),
         Index("usage_event_org_occurred_event_idx", "org_id", "occurred_at", "event_id"),
         Index("usage_event_org_workspace_occurred_event_idx", "org_id", "workspace_id", "occurred_at", "event_id"),
         Index("usage_event_org_event_idx", "org_id", "event_id"),
         Index("usage_event_org_workspace_event_idx", "org_id", "workspace_id", "event_id"),
+        Index("usage_event_org_request_idx", "org_id", "request_id"),
+        Index("usage_event_org_request_started_idx", "org_id", "request_started_at"),
+        Index("usage_event_org_workspace_request_started_idx", "org_id", "workspace_id", "request_started_at"),
     )
 
     event_id: UUID = Field(primary_key=True)
     request_id: UUID
+    request_started_at: datetime = Field(sa_type=UTCDateTime)
+    attempt_started_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
     occurred_at: datetime = Field(sa_type=UTCDateTime)
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource = Field(sa_type=String)
     user_id: UUID
     requested_model_id: str
     requested_capabilities: list[RequestCapability] = Field(sa_column=Column(ARRAY(String), nullable=False))
@@ -74,10 +75,13 @@ class UsageEvent(Record, table=True):
 class UsageEventOut(RecordOut[UsageEvent]):
     event_id: UUID
     request_id: UUID
+    request_started_at: datetime
+    attempt_started_at: datetime | None
     occurred_at: datetime
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
     user_id: UUID
     requested_model_id: str
     requested_capabilities: list[RequestCapability]
@@ -106,3 +110,4 @@ class UsageEventOut(RecordOut[UsageEvent]):
 class EventsIngestedOut(BaseModel):
     received: int
     ingested: int
+    rejected: int

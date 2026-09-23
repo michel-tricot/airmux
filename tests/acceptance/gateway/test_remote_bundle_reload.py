@@ -58,6 +58,7 @@ def remote_bundle(gateway: Gateway):
                 "workspace_id": org,
                 "user_id": str(uuid7()),
                 "token_hash": token_hash(INFERENCE_KEY),
+                "request_source": "inference_key",
                 "expires_at": "2999-01-01T00:00:00Z",
             }
         ],

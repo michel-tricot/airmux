@@ -6,12 +6,17 @@ description: "Inspect model usage, cost, latency, request status, gateway health
 airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
 without waiting for local persistence. SQLite deployments export durable events to the control plane in batches.
 
+The event ingestion endpoint accepts a list of usage events. Structurally malformed events reject the whole request
+with HTTP 422 before any events are stored. Semantically inconsistent or unauthorized events are rejected individually
+and counted in `rejected`; valid events in the same batch are stored.
+
 ## Usage event fields
 
 | Field | Meaning |
 | --- | --- |
 | `request_id` | One caller request; fallback attempts share this ID |
 | `event_id` | Unique event ID for one attempt |
+| `request_source` | `inference_key` or `playground`, captured when the request is authenticated |
 | `model_id`, `provider_id` | Route used for the attempt |
 | `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
 | `token_usage_source` | `provider`, `estimated`, or `not_applicable` for a denial before routing |

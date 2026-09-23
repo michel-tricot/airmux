@@ -8,10 +8,13 @@ import { ORG, WORKSPACES, server } from './msw';
 const attempt: Api.UsageEventOut = {
   event_id: 'event-1',
   request_id: 'request-1',
+  request_started_at: '2026-01-01T00:00:00Z',
+  attempt_started_at: '2026-01-01T00:00:00Z',
   occurred_at: '2026-01-01T00:00:00Z',
   org_id: ORG.id,
   workspace_id: WORKSPACES[0].id,
   key_id: 'key-1',
+  request_source: 'inference_key',
   user_id: '00000000-0000-0000-0000-000000000001',
   requested_model_id: 'primary-model',
   requested_capabilities: [],

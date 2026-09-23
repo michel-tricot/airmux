@@ -192,6 +192,7 @@ class RequestExecution:
     ) -> Response | AttemptFailure:
         egress_kind = decision.model.egress_kind or decision.provider.kind
         attempt_started_at = time.monotonic()
+        attempt_started_at_utc = datetime.now(UTC)
         routed_request = self.request.model_copy(update={"model": decision.model.model_id})
         request, reconcile_adjustments = reconcile(
             routed_request,
@@ -201,7 +202,7 @@ class RequestExecution:
         )
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
         adapter = REGISTRY[egress_kind](decision.provider, credential)
-        ctx = self._ctx(decision, entry)
+        ctx = self._ctx(decision, entry, attempt_started_at_utc, attempt_started_at)
         upstream = _transform(adapter, request, decision.model)
         try:
             if request.stream:
@@ -258,22 +259,25 @@ class RequestExecution:
         self.runtime.metrics.observe_upstream(egress_kind, "success", attempt_started_at)
         return self.ingress.render_response(final)
 
-    def _ctx(self, decision: Allow, entry: CredentialEntry) -> Ctx:
+    def _ctx(self, decision: Allow, entry: CredentialEntry, attempt_started_at: datetime, started_at: float) -> Ctx:
         return Ctx(
             request_id=self.start.request_id,
+            request_started_at=self.start.request_started_at,
+            attempt_started_at=attempt_started_at,
             model=decision.model,
             provider=decision.provider,
             stream=self.request.stream,
             org_id=self.key.org_id,
             workspace_id=self.key.workspace_id,
             key_id=self.key.key_id,
+            request_source=self.key.request_source,
             user_id=self.key.user_id,
             requested_model_id=self.request.model,
             requested_capabilities=requested_capabilities(self.request),
             credential_id=entry.ref.secret_id,
             credential_scope=_scope_of(entry),
             bundle_id=self.snapshot.bundle.bundle_id,
-            started_at=self.start.started_at,
+            started_at=started_at,
         )
 
 

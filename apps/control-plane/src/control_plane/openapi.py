@@ -270,7 +270,8 @@ class ControlPlaneApp(FastAPI):
             return self.openapi_schema
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
-        security_schemes = schema.setdefault("components", {}).setdefault("securitySchemes", {})
+        components = schema.setdefault("components", {})
+        security_schemes = components.setdefault("securitySchemes", {})
         security_schemes["SessionCookie"] = {
             "type": "apiKey",
             "in": "cookie",

@@ -22,6 +22,7 @@ from control_plane.fixtures import (
     MissingModelsError,
     MissingProvidersError,
     apply_fixtures,
+    fixture_id,
 )
 from control_plane.models import (
     DataPlaneInstance,
@@ -33,6 +34,7 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
+    UsageEvent,
     User,
     set_actor,
 )
@@ -97,6 +99,29 @@ def test_apply_allows_the_deployment_service_account(tmp_path):
     users = run_in_db(tmp_path, User.find)
     assert {user.service_account for user in users} == {True, False}
     assert {user.email for user in users if not user.service_account} == {"m@airbyte.com", "b@airbyte.com"}
+
+
+def test_usage_fixtures_include_reportable_request_cases(tmp_path):
+    setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+
+    run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
+
+    events = run_in_db(tmp_path, UsageEvent.find)
+    assert events
+    assert all(event.request_started_at is not None and (event.status == "denied" or event.attempt_started_at is not None) for event in events)
+    assert all(event.cache_read_tokens + event.cache_write_tokens <= event.input_tokens for event in events)
+
+    production_id = fixture_id("workspace:acme:production")
+    fallback = [event for event in events if event.request_id == fixture_id(f"request:{production_id}:0")]
+    assert [(event.status, event.provider_id) for event in sorted(fallback, key=lambda event: event.occurred_at)] == [
+        ("upstream_error", "openai"),
+        ("ok", "anthropic"),
+    ]
+    denial = next(event for event in events if event.event_id == fixture_id(f"event:{production_id}:2"))
+    assert (denial.status, denial.attempt_started_at, denial.provider_id, denial.cost_usd) == ("denied", None, "", 0)
+    playground = next(event for event in events if event.event_id == fixture_id(f"event:{production_id}:3"))
+    assert playground.request_source == "playground"
 
 
 def test_cli_refuses_a_database_that_already_has_a_human_account(tmp_path):

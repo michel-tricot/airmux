@@ -50,8 +50,19 @@ def test_model_capabilities_use_the_policy_vocabulary():
 
 
 def test_inference_key_ids_are_opaque_strings():
-    key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), user_id=uuid7(), token_hash="hash")
+    key = KeyEntry(key_id="external-key", request_source="inference_key", org_id=uuid7(), workspace_id=uuid7(), user_id=uuid7(), token_hash="hash")
     assert key.key_id == "external-key"
+
+
+@pytest.mark.parametrize("source", ["inference_key", "playground"])
+def test_bundle_key_identifies_request_source(source):
+    key = KeyEntry(key_id="external-key", org_id=uuid7(), workspace_id=uuid7(), user_id=uuid7(), token_hash="hash", request_source=source)
+    assert key.request_source == source
+
+
+def test_bundle_key_requires_request_source():
+    with pytest.raises(ValidationError):
+        KeyEntry.model_validate({"key_id": "external-key", "org_id": uuid7(), "workspace_id": uuid7(), "user_id": uuid7(), "token_hash": "hash"})
 
 
 def test_empty_manifest_contains_only_bundle_references():
@@ -61,7 +72,9 @@ def test_empty_manifest_contains_only_bundle_references():
 @pytest.mark.parametrize("identity", [{}, {"user_id": None}, {"user_id": "invalid"}])
 def test_bundle_keys_require_principal_identity(identity):
     with pytest.raises(ValidationError):
-        KeyEntry.model_validate({"key_id": "external", "org_id": uuid7(), "workspace_id": uuid7(), "token_hash": "hash", **identity})
+        KeyEntry.model_validate(
+            {"key_id": "external", "request_source": "inference_key", "org_id": uuid7(), "workspace_id": uuid7(), "token_hash": "hash", **identity}
+        )
 
 
 def bundle_payload():
@@ -70,7 +83,16 @@ def bundle_payload():
         "bundle_id": str(uuid7()),
         "org_id": org,
         "issued_at": "2026-09-18T00:00:00Z",
-        "keys": [{"key_id": "external", "org_id": org, "workspace_id": str(uuid7()), "user_id": str(uuid7()), "token_hash": "hash"}],
+        "keys": [
+            {
+                "key_id": "external",
+                "request_source": "inference_key",
+                "org_id": org,
+                "workspace_id": str(uuid7()),
+                "user_id": str(uuid7()),
+                "token_hash": "hash",
+            }
+        ],
         "catalog": {
             "providers": [{"provider_id": "provider", "kind": "openai_compatible", "base_url": "https://example.com", "accepted_params": ["seed"]}],
             "models": [model_entry(parameter_support={"temperature": "supported"})],

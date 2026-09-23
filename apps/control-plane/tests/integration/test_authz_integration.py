@@ -82,10 +82,13 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
             {
                 "event_id": str(uuid7()),
                 "request_id": str(uuid7()),
+                "request_started_at": datetime.now(tz=UTC).isoformat(),
+                "attempt_started_at": datetime.now(tz=UTC).isoformat(),
                 "occurred_at": datetime.now(tz=UTC).isoformat(),
                 "org_id": str(org_id),
                 "workspace_id": str(workspace_id),
                 "key_id": "key",
+                "request_source": "inference_key",
                 "model_id": "model",
                 "user_id": str(org_id),
                 "requested_model_id": "model",

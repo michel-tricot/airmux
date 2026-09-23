@@ -3958,7 +3958,7 @@ paths:
       tags:
       - Data Plane API
       summary: Ingest Usage Events
-      description: 'Ingest up to 1,000 usage events; repeated event IDs are ignored.
+      description: 'Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events.
 
 
         Required permission: `usage.ingest`.'
@@ -3983,7 +3983,7 @@ paths:
                     rate_limited: '#/components/schemas/RoutedUsageEventV1'
               type: array
               maxItems: 1000
-              title: Events
+              title: Payloads
         required: true
       responses:
         '200':
@@ -5049,11 +5049,20 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
+        attempt_started_at:
+          type: 'null'
+          title: Attempt Started At
+          description: No provider attempt was made
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when the attempt or denial completed
         org_id:
           type: string
           format: uuid
@@ -5069,12 +5078,19 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
         user_id:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Principal that owned the caller credential when the request was made
         requested_model_id:
           type: string
           maxLength: 255
@@ -5165,7 +5181,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           const: denied
@@ -5194,10 +5210,12 @@ components:
       required:
       - event_id
       - request_id
+      - request_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities
@@ -5720,10 +5738,14 @@ components:
         ingested:
           type: integer
           title: Ingested
+        rejected:
+          type: integer
+          title: Rejected
       type: object
       required:
       - received
       - ingested
+      - rejected
       title: EventsIngestedOut
     Fallback:
       properties:
@@ -6063,6 +6085,12 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
         org_id:
           type: string
           format: uuid
@@ -6088,12 +6116,13 @@ components:
       type: object
       required:
       - key_id
+      - request_source
       - org_id
       - workspace_id
       - user_id
       - token_hash
       title: KeyEntry
-      description: 'An active inference key included in a policy bundle.
+      description: 'An active caller credential included in a policy bundle.
 
 
         The bundle contains a token hash for authorization and a key ID for usage attribution, never
@@ -7974,11 +8003,21 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
+        attempt_started_at:
+          type: string
+          format: date-time
+          title: Attempt Started At
+          description: Timestamp when the provider attempt began
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when the attempt or denial completed
         org_id:
           type: string
           format: uuid
@@ -7994,12 +8033,19 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
         user_id:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Principal that owned the caller credential when the request was made
         requested_model_id:
           type: string
           maxLength: 255
@@ -8090,7 +8136,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           enum:
@@ -8132,10 +8178,13 @@ components:
       required:
       - event_id
       - request_id
+      - request_started_at
+      - attempt_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities
@@ -8505,6 +8554,16 @@ components:
           type: string
           format: uuid
           title: Request Id
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+        attempt_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Attempt Started At
         occurred_at:
           type: string
           format: date-time
@@ -8520,6 +8579,12 @@ components:
         key_id:
           type: string
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
         user_id:
           type: string
           format: uuid
@@ -8615,10 +8680,13 @@ components:
       required:
       - event_id
       - request_id
+      - request_started_at
+      - attempt_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities

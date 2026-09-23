@@ -24,10 +24,13 @@ def event_of(index: int) -> RoutedUsageEventV1:
     return RoutedUsageEventV1(
         event_id=uuid7(),
         request_id=uuid7(),
+        request_started_at=datetime.now(tz=UTC),
+        attempt_started_at=datetime.now(tz=UTC),
         occurred_at=datetime.now(tz=UTC),
         org_id=uuid7(),
         workspace_id=uuid7(),
         key_id="local-0",
+        request_source="inference_key",
         user_id=uuid7(),
         requested_model_id=f"model-{index}",
         requested_capabilities=frozenset(),

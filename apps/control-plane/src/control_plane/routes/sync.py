@@ -12,8 +12,8 @@ from sqlmodel import col
 from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, UsageStatus
 from contract import UsageEvent as UsageEventContract
 from contract.budgets import OrgPolicyState, PolicyState, PolicyStateRequest
-from control_plane.authority import ensure_allowed_for_scopes
-from control_plane.authz import Permission, Scope, ScopeLevel
+from control_plane.authority import decisions, ensure_allowed_for_scopes
+from control_plane.authz import Decision, Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, CredentialScopeDep, SessionDep, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.budget import budget_states
@@ -25,8 +25,6 @@ if TYPE_CHECKING:
     from control_plane.models.provider_credential import ProviderCredentialStatus
 
 router = APIRouter(tags=["Data Plane API"])
-
-EventBatch = Annotated[list[UsageEventContract], Field(max_length=1000)]
 
 CREDENTIAL_HEALTH: dict[UsageStatus, ProviderCredentialStatus] = {
     "ok": "live",
@@ -69,20 +67,36 @@ async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
 
 
 @router.post("/events", dependencies=[require("operational", credential_scope, Permission.usage_ingest)])
-async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
-    """Ingest up to 1,000 usage events; repeated event IDs are ignored."""
+async def ingest_events(
+    actor: ActorDep,
+    scope: CredentialScopeDep,
+    payloads: Annotated[list[UsageEventContract], Field(max_length=1000)],
+    session: SessionDep,
+) -> Envelope[EventsIngestedOut]:
+    """Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events."""
+    events = []
+    rejected = 0
+    for event in payloads:
+        try:
+            event.validate_semantics()
+        except ValueError:
+            rejected += 1
+        else:
+            events.append(event)
     if not events:
-        return Envelope(data=EventsIngestedOut(received=0, ingested=0))
-    await ensure_allowed_for_scopes(
-        actor,
-        Permission.usage_ingest,
-        (Scope.workspace(event.org_id, event.workspace_id) for event in events),
-    )
-    values = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
-    stmt = pg_insert(UsageEvent).values(values).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
-    inserted = (await session.execute(stmt)).scalars().all()
-    await ProviderCredential.observe(_credential_health(events), org_id=scope.org_id)
-    return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
+        return Envelope(data=EventsIngestedOut(received=len(payloads), ingested=0, rejected=rejected))
+    permissions = await decisions(actor, Permission.usage_ingest, (Scope.workspace(event.org_id, event.workspace_id) for event in events))
+    allowed = [event for event in events if permissions[Scope.workspace(event.org_id, event.workspace_id)] is Decision.allow]
+    rejected += len(events) - len(allowed)
+    if allowed:
+        values = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in allowed}.values())
+        statement = pg_insert(UsageEvent).values(values).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
+        inserted_ids = (await session.execute(statement)).scalars().all()
+        event_by_id = {event.event_id: event for event in allowed}
+        await ProviderCredential.observe(_credential_health([event_by_id[event_id] for event_id in inserted_ids]), org_id=scope.org_id)
+    else:
+        inserted_ids = []
+    return Envelope(data=EventsIngestedOut(received=len(payloads), ingested=len(inserted_ids), rejected=rejected))
 
 
 def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[datetime, ProviderCredentialStatus]]:

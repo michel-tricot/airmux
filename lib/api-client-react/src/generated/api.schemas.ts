@@ -225,8 +225,16 @@ export interface BundleManifest {
   bundles: BundleManifestEntry[];
 }
 
+export type KeyEntryRequestSource = typeof KeyEntryRequestSource[keyof typeof KeyEntryRequestSource];
+
+
+export const KeyEntryRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 /**
- * An active inference key included in a policy bundle.
+ * An active caller credential included in a policy bundle.
  *
  * The bundle contains a token hash for authorization and a key ID for usage attribution, never
  * the caller's secret token.
@@ -237,6 +245,7 @@ export interface KeyEntry {
      * @maxLength 255
      */
   key_id: string;
+  request_source: KeyEntryRequestSource;
   org_id: string;
   workspace_id: string;
   user_id: string;
@@ -652,6 +661,17 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+/**
+ * Whether the request came from an inference key or a Playground session
+ */
+export type DeniedUsageEventV1RequestSource = typeof DeniedUsageEventV1RequestSource[keyof typeof DeniedUsageEventV1RequestSource];
+
+
+export const DeniedUsageEventV1RequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -668,19 +688,28 @@ export interface DeniedUsageEventV1 {
   event_id: string;
   /** Data-plane request ID */
   request_id: string;
-  /** Timestamp when the request completed */
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /**
+     * No provider attempt was made
+     * @nullable
+     */
+  attempt_started_at?: null;
+  /** Timestamp when the attempt or denial completed */
   occurred_at: string;
   /** Organization that made the request */
   org_id: string;
   /** Workspace that made the request */
   workspace_id: string;
   /**
-     * Inference key ID used for the request
+     * Caller credential ID used for the request
      * @minLength 1
      * @maxLength 255
      */
   key_id: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Whether the request came from an inference key or a Playground session */
+  request_source: DeniedUsageEventV1RequestSource;
+  /** Principal that owned the caller credential when the request was made */
   user_id: string;
   /**
      * Original caller-requested model before routing and fallback
@@ -742,7 +771,7 @@ export interface DeniedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing
      * @minimum 0
      * @maximum 2147483647
      */
@@ -794,6 +823,7 @@ export interface EnrollOut {
 export interface EventsIngestedOut {
   received: number;
   ingested: number;
+  rejected: number;
 }
 
 export type ValidationErrorCtx = { [key: string]: unknown };
@@ -1665,6 +1695,17 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+/**
+ * Whether the request came from an inference key or a Playground session
+ */
+export type RoutedUsageEventV1RequestSource = typeof RoutedUsageEventV1RequestSource[keyof typeof RoutedUsageEventV1RequestSource];
+
+
+export const RoutedUsageEventV1RequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -1719,19 +1760,25 @@ export interface RoutedUsageEventV1 {
   event_id: string;
   /** Data-plane request ID */
   request_id: string;
-  /** Timestamp when the request completed */
+  /** Timestamp when the logical request began */
+  request_started_at: string;
+  /** Timestamp when the provider attempt began */
+  attempt_started_at: string;
+  /** Timestamp when the attempt or denial completed */
   occurred_at: string;
   /** Organization that made the request */
   org_id: string;
   /** Workspace that made the request */
   workspace_id: string;
   /**
-     * Inference key ID used for the request
+     * Caller credential ID used for the request
      * @minLength 1
      * @maxLength 255
      */
   key_id: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Whether the request came from an inference key or a Playground session */
+  request_source: RoutedUsageEventV1RequestSource;
+  /** Principal that owned the caller credential when the request was made */
   user_id: string;
   /**
      * Original caller-requested model before routing and fallback
@@ -1797,7 +1844,7 @@ export interface RoutedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing
      * @minimum 0
      * @maximum 2147483647
      */
@@ -1886,6 +1933,14 @@ export const TokenUsageSource = {
   not_applicable: 'not_applicable',
 } as const;
 
+export type UsageEventOutRequestSource = typeof UsageEventOutRequestSource[keyof typeof UsageEventOutRequestSource];
+
+
+export const UsageEventOutRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type UsageEventOutRequestedCapabilitiesItem = typeof UsageEventOutRequestedCapabilitiesItem[keyof typeof UsageEventOutRequestedCapabilitiesItem];
 
 
@@ -1920,10 +1975,13 @@ export const UsageEventOutCredentialScope = {
 export interface UsageEventOut {
   event_id: string;
   request_id: string;
+  request_started_at: string;
+  attempt_started_at: string | null;
   occurred_at: string;
   org_id: string;
   workspace_id: string;
   key_id: string;
+  request_source: UsageEventOutRequestSource;
   user_id: string;
   requested_model_id: string;
   requested_capabilities: UsageEventOutRequestedCapabilitiesItem[];
