@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, WrapSerializer
 
+from contract.events import RequestSource
 from contract.model_types import MODALITIES, AdapterKind, Capability, Modality, ModelName, ParameterSupport, ProviderName, TokenLimit
 from contract.money import UsdRate
 from contract.policies import PolicyEntry
@@ -22,13 +23,14 @@ class _BundleModel(BaseModel):
 
 
 class KeyEntry(_BundleModel):
-    """An active inference key included in a policy bundle.
+    """An active caller credential included in a policy bundle.
 
     The bundle contains a token hash for authorization and a key ID for usage attribution, never
     the caller's secret token.
     """
 
     key_id: str = Field(min_length=1, max_length=255)
+    request_source: RequestSource
     org_id: UUID
     workspace_id: UUID  # the workspace the key was created in, stamped onto usage events
     user_id: UUID

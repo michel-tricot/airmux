@@ -27,6 +27,7 @@ def test_ready_gateway_completes_and_records_usage(gateway: Gateway):
     assert provider.requests[0].body["model"] == "upstream-model-a"
     (event,) = gateway.events(1)
     assert (event.status, event.model_id, event.provider_id, event.key_id, event.stream) == ("ok", "model-a", "stub", "local-0", False)
+    assert event.request_source == "inference_key"
 
 
 @pytest.mark.parametrize("dev", [False, True])

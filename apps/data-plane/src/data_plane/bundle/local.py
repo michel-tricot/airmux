@@ -69,7 +69,14 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
         message = "a local taxonomy must contain providers and models"
         raise ValueError(message)
     keys = tuple(
-        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, user_id=key.user_id, token_hash=token_hash(key.token))
+        KeyEntry(
+            key_id=f"local-{position}",
+            request_source="inference_key",
+            org_id=LOCAL_ORG,
+            workspace_id=LOCAL_WORKSPACE,
+            user_id=key.user_id,
+            token_hash=token_hash(key.token),
+        )
         for position, key in enumerate(spec.keys)
     )
     credentials = tuple(

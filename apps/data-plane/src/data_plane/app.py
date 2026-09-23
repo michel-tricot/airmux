@@ -9,6 +9,7 @@ import signal
 from typing import TYPE_CHECKING
 
 from starlette.applications import Starlette
+from starlette.routing import Route
 
 from airmux_runtime.observability import configure_logger, flush_logger, log_event
 from data_plane.budgets import build_budget_backend
@@ -16,7 +17,7 @@ from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.discovery import models
-from data_plane.http import InferenceRoute, ObservedRoute, ResponseHeadersMiddleware
+from data_plane.http import InferenceRoute, ResponseHeadersMiddleware
 from data_plane.http_client import build_http_client
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics, metrics_endpoint
@@ -106,9 +107,9 @@ def create_app(config: Config) -> ASGIApp:
             *(InferenceRoute(adapter.path, complete, ingress=adapter, methods=["POST"]) for adapter in INGRESS.values()),
             InferenceRoute("/inf/v1/models", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
             InferenceRoute("/inf/v1/models/{model_id:path}", models, ingress=INGRESS["openai_chat_completions"], methods=["GET"]),
-            ObservedRoute("/healthz", healthz),
-            ObservedRoute("/readyz", readyz),
-            ObservedRoute("/metrics", metrics_endpoint),
+            Route("/healthz", healthz),
+            Route("/readyz", readyz),
+            Route("/metrics", metrics_endpoint),
         ],
         lifespan=lifespan,
     )

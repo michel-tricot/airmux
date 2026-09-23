@@ -92,10 +92,12 @@ def test_storage_worker_failure_stops_the_app(tmp_path, monkeypatch):
                     DeniedUsageEventV1(
                         event_id=uuid7(),
                         request_id=uuid7(),
+                        request_started_at=datetime.now(tz=UTC),
                         occurred_at=datetime.now(tz=UTC),
                         org_id=uuid7(),
                         workspace_id=uuid7(),
                         key_id="test",
+                        request_source="inference_key",
                         user_id=uuid7(),
                         requested_model_id="test",
                         requested_capabilities=frozenset(),

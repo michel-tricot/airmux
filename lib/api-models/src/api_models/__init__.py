@@ -57,6 +57,21 @@ class AllowedProviders(BaseModel):
     names: Annotated[list[Name], Field(max_length=1000, min_length=1, title="Names")]
 
 
+class AttributionItemOut(BaseModel):
+    id: Annotated[str, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+    requests: Annotated[int, Field(title="Requests")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    previous_cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Previous Cost Usd")]
+
+
+class AttributionReportOut(BaseModel):
+    items: Annotated[list[AttributionItemOut], Field(title="Items")]
+    next_offset: Annotated[int | None, Field(title="Next Offset")]
+
+
 class Budget(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -227,25 +242,46 @@ class DeniedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
+    attempt_started_at: Annotated[
+        None,
+        Field(description="No provider attempt was made", title="Attempt Started At"),
+    ] = None
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(
+            description="Timestamp when the attempt or denial completed",
+            title="Occurred At",
+        ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -344,7 +380,7 @@ class DeniedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -386,6 +422,10 @@ class DenyRequest(BaseModel):
     message: Annotated[str, Field(max_length=200, min_length=1, title="Message")]
 
 
+class EnvelopeAttributionReportOut(BaseModel):
+    data: AttributionReportOut
+
+
 class EnvelopeClaimOut(BaseModel):
     data: ClaimOut
 
@@ -421,6 +461,7 @@ class EnvelopeListDataPlaneInstanceOut(BaseModel):
 class EventsIngestedOut(BaseModel):
     received: Annotated[int, Field(title="Received")]
     ingested: Annotated[int, Field(title="Ingested")]
+    rejected: Annotated[int, Field(title="Rejected")]
 
 
 class Model(RootModel[str]):
@@ -439,6 +480,15 @@ class Fallback(BaseModel):
     ]
     max_attempts: Annotated[int, Field(ge=2, le=5, title="Max Attempts")]
     timeout_ms: Annotated[int, Field(ge=100, le=120000, title="Timeout Ms")]
+
+
+class FilterOptionOut(BaseModel):
+    id: Annotated[str, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+
+
+class FilterOptionsOut(BaseModel):
+    items: Annotated[list[FilterOptionOut], Field(title="Items")]
 
 
 class HeartbeatOut(BaseModel):
@@ -586,7 +636,7 @@ class KeyBudgetBucket(BaseModel):
 
 class KeyEntry(BaseModel):
     """
-    An active inference key included in a policy bundle.
+    An active caller credential included in a policy bundle.
 
     The bundle contains a token hash for authorization and a key ID for usage attribution, never
     the caller's secret token.
@@ -596,6 +646,7 @@ class KeyEntry(BaseModel):
         extra="forbid",
     )
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
@@ -1427,6 +1478,14 @@ class ProviderOut(BaseModel):
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
 
+class ReportWindow(BaseModel):
+    start_at: Annotated[AwareDatetime, Field(title="Start At")]
+    end_at: Annotated[AwareDatetime, Field(title="End At")]
+    previous_start_at: Annotated[AwareDatetime, Field(title="Previous Start At")]
+    previous_end_at: Annotated[AwareDatetime, Field(title="Previous End At")]
+    timezone: Annotated[str, Field(title="Timezone")]
+
+
 class RequestLimits(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1464,6 +1523,39 @@ class RequestMatchOutput(BaseModel):
     ]
 
 
+class RequestSummaryOut(BaseModel):
+    request_id: Annotated[UUID, Field(title="Request Id")]
+    started_at: Annotated[AwareDatetime, Field(title="Started At")]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "denied",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(title="Status"),
+    ]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    workspace_name: Annotated[str, Field(title="Workspace Name")]
+    key_id: Annotated[str, Field(title="Key Id")]
+    key_name: Annotated[str, Field(title="Key Name")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    user_email: Annotated[str, Field(title="User Email")]
+    requested_model_id: Annotated[str, Field(title="Requested Model Id")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    attempt_count: Annotated[int, Field(title="Attempt Count")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+
+
 class MaxOutputTokens3(RootModel[int]):
     root: Annotated[
         int,
@@ -1486,25 +1578,49 @@ class RoutedUsageEventV1(BaseModel):
     ] = 1
     event_id: Annotated[UUID, Field(description="Idempotency key for event ingestion", title="Event Id")]
     request_id: Annotated[UUID, Field(description="Data-plane request ID", title="Request Id")]
+    request_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the logical request began",
+            title="Request Started At",
+        ),
+    ]
+    attempt_started_at: Annotated[
+        AwareDatetime,
+        Field(
+            description="Timestamp when the provider attempt began",
+            title="Attempt Started At",
+        ),
+    ]
     occurred_at: Annotated[
         AwareDatetime,
-        Field(description="Timestamp when the request completed", title="Occurred At"),
+        Field(
+            description="Timestamp when the attempt or denial completed",
+            title="Occurred At",
+        ),
     ]
     org_id: Annotated[UUID, Field(description="Organization that made the request", title="Org Id")]
     workspace_id: Annotated[UUID, Field(description="Workspace that made the request", title="Workspace Id")]
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -1608,7 +1724,7 @@ class RoutedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -1820,13 +1936,26 @@ class TokenUsageSource(RootModel[Literal["provider", "estimated", "not_applicabl
     ]
 
 
+class UsageDayOut(BaseModel):
+    requests: Annotated[int, Field(title="Requests")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    date: Annotated[AwareDatetime, Field(title="Date")]
+
+
 class UsageEventOut(BaseModel):
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
+    request_started_at: Annotated[AwareDatetime, Field(title="Request Started At")]
+    attempt_started_at: Annotated[AwareDatetime | None, Field(title="Attempt Started At")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     user_id: Annotated[UUID, Field(title="User Id")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     requested_capabilities: Annotated[
@@ -1866,6 +1995,15 @@ class UsageEventOut(BaseModel):
     stream: Annotated[bool, Field(title="Stream")]
     credential_id: Annotated[UUID | None, Field(title="Credential Id")]
     credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")]
+
+
+class UsageTotalsOut(BaseModel):
+    requests: Annotated[int, Field(title="Requests")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
 
 
 class UserOut(BaseModel):
@@ -2045,6 +2183,10 @@ class EnvelopeEnrollOut(BaseModel):
 
 class EnvelopeEventsIngestedOut(BaseModel):
     data: EventsIngestedOut
+
+
+class EnvelopeFilterOptionsOut(BaseModel):
+    data: FilterOptionsOut
 
 
 class EnvelopeHeartbeatOut(BaseModel):
@@ -2292,6 +2434,78 @@ class PolicyState(BaseModel):
     organizations: Annotated[list[OrgPolicyState], Field(title="Organizations")]
 
 
+class RequestAttemptOut(BaseModel):
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    attempt_started_at: Annotated[AwareDatetime | None, Field(title="Attempt Started At")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    credential_id: Annotated[UUID | None, Field(title="Credential Id")]
+    credential_name: Annotated[str | None, Field(title="Credential Name")]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "denied",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(title="Status"),
+    ]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    cost_input_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Input Usd")]
+    cost_output_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Output Usd")]
+    token_usage_source: TokenUsageSource
+    latency_ms: Annotated[int, Field(title="Latency Ms")]
+    matches_filter: Annotated[bool, Field(title="Matches Filter")]
+
+
+class RequestDetailOut(BaseModel):
+    request_id: Annotated[UUID, Field(title="Request Id")]
+    started_at: Annotated[AwareDatetime, Field(title="Started At")]
+    status: Annotated[
+        Literal[
+            "ok",
+            "upstream_error",
+            "denied",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
+        Field(title="Status"),
+    ]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    workspace_name: Annotated[str, Field(title="Workspace Name")]
+    key_id: Annotated[str, Field(title="Key Id")]
+    key_name: Annotated[str, Field(title="Key Name")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    user_email: Annotated[str, Field(title="User Email")]
+    requested_model_id: Annotated[str, Field(title="Requested Model Id")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    attempt_count: Annotated[int, Field(title="Attempt Count")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    within_period: Annotated[bool, Field(title="Within Period")]
+    attempts: Annotated[list[RequestAttemptOut], Field(title="Attempts")]
+
+
+class RequestPageOut(BaseModel):
+    requests: Annotated[list[RequestSummaryOut], Field(title="Requests")]
+    next_cursor: CursorToken | None
+
+
 class RuleDefinitionInput(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2324,6 +2538,14 @@ class TaxonomyApplyOut(BaseModel):
     dry_run: Annotated[bool, Field(title="Dry Run")]
     providers: TaxonomyChangeCounts
     models: TaxonomyChangeCounts
+
+
+class UsageReportOut(BaseModel):
+    totals: UsageTotalsOut
+    comparison: UsageTotalsOut
+    daily: Annotated[list[UsageDayOut], Field(title="Daily")]
+    period: ReportWindow
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
 
 class WorkspaceMembershipIn(BaseModel):
@@ -2373,8 +2595,20 @@ class EnvelopePolicyState(BaseModel):
     data: PolicyState
 
 
+class EnvelopeRequestDetailOut(BaseModel):
+    data: RequestDetailOut
+
+
+class EnvelopeRequestPageOut(BaseModel):
+    data: RequestPageOut
+
+
 class EnvelopeTaxonomyApplyOut(BaseModel):
     data: TaxonomyApplyOut
+
+
+class EnvelopeUsageReportOut(BaseModel):
+    data: UsageReportOut
 
 
 class EnvelopeWorkspaceMembershipOut(BaseModel):

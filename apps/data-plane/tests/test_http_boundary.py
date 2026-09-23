@@ -13,7 +13,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from data_plane.http import ObservedRoute, ResponseHeadersMiddleware
+from data_plane.http import ResponseHeadersMiddleware
 from data_plane.metrics import DataPlaneMetrics
 
 INFERENCE_ROUTES = (
@@ -206,7 +206,7 @@ def test_route_metrics_preserve_templates_and_unmatched_requests(method, path, s
         assert 'airmux_data_plane_inflight_requests{route="/items/{name}",stream="false"} 1.0' in metrics.render().decode()
         return Response("ok")
 
-    app = Starlette(routes=[ObservedRoute("/items/{name}", endpoint)])
+    app = Starlette(routes=[Route("/items/{name}", endpoint)])
     app.state.metrics = metrics
     try:
         with TestClient(ResponseHeadersMiddleware(app, metrics)) as client:

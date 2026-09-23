@@ -12,10 +12,11 @@ from data_plane.canonical import CanonicalError, GatewayErrorCode, ProviderError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from datetime import datetime
     from uuid import UUID
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialScope, ModelEntry, ProviderEntry
+    from contract import CredentialScope, ModelEntry, ProviderEntry, RequestSource
     from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
@@ -124,12 +125,15 @@ class UpstreamProtocolError(ValueError):
 @dataclass(frozen=True)
 class Ctx:
     request_id: UUID
+    request_started_at: datetime
+    attempt_started_at: datetime
     model: ModelEntry
     provider: ProviderEntry
     stream: bool
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
     user_id: UUID
     requested_model_id: str
     requested_capabilities: frozenset[RequestCapability]

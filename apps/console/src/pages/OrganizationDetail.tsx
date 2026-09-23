@@ -11,6 +11,7 @@ import { useOrgManagementKeys, useRevokeOrgManagementKeyMutation } from '@/featu
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { TableLink } from '@/components/shared/table-link';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
 import { ManagementKeysTable } from '@/components/shared/management-keys-table';
@@ -165,11 +166,7 @@ export default function OrganizationDetail() {
                     key: 'name',
                     header: 'Name',
                     cellClassName: 'font-medium',
-                    cell: (ws) => (
-                      <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">
-                        {ws.name}
-                      </Link>
-                    ),
+                    cell: (ws) => <TableLink href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`}>{ws.name}</TableLink>,
                   },
                   { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
                   { key: 'id', header: 'Technical ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (ws) => ws.id },
@@ -228,11 +225,7 @@ export default function OrganizationDetail() {
               error={membersQuery.error}
               onRetry={() => membersQuery.refetch()}
               emptyText="No members yet."
-              renderName={(member) => (
-                <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">
-                  {member.name}
-                </Link>
-              )}
+              renderName={(member) => <TableLink href={`/instance/users/${member.user_id}`}>{member.name}</TableLink>}
               add={
                 canAddMembers && !usersQuery.isError
                   ? {

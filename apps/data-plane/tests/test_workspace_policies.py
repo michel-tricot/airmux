@@ -383,6 +383,9 @@ def test_fallback_respects_restrictions_and_accounts_each_attempt(http_mock, dp_
     assert [(event.model_id, event.status) for event in events] == (
         [(MODEL.model_id, "upstream_error")] if restricted else [(MODEL.model_id, "upstream_error"), ("backup", "ok")]
     )
+    if not restricted:
+        assert events[0].request_started_at == events[1].request_started_at
+        assert all(event.request_started_at <= event.attempt_started_at <= event.occurred_at for event in events)
 
 
 def test_fallback_stops_before_an_attempt_without_metering_capacity(http_mock, dp_app, tmp_path, monkeypatch):

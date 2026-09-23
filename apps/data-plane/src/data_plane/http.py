@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from http import HTTPStatus
 from typing import TYPE_CHECKING, cast
 
 from starlette.datastructures import MutableHeaders
-from starlette.routing import Route
+from starlette.routing import Match, Route
 
 from airmux_runtime.observability import request_context
 from contract import uuid7
@@ -46,16 +47,7 @@ def render_rejection(ingress: IngressAdapter, error: RequestRejectedError) -> Re
     return response
 
 
-class ObservedRoute(Route):
-    async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if self.methods is None or scope["method"] in self.methods:
-            scope["state"]["metrics_route"] = self.path
-            metrics: DataPlaneMetrics = scope["app"].state.metrics
-            metrics.observe_inflight(self.path, False, 1)
-        await super().handle(scope, receive, send)
-
-
-class InferenceRoute(ObservedRoute):
+class InferenceRoute(Route):
     def __init__(self, path: str, endpoint: InferenceEndpoint, *, ingress: IngressAdapter, methods: list[str]) -> None:
         async def authenticated(request: Request) -> Response:
             request.scope["state"]["metrics_dialect"] = ingress.dialect
@@ -78,15 +70,17 @@ class ResponseHeadersMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        start = RequestStart(request_id=uuid7(), started_at=time.monotonic())
+        start = RequestStart(request_id=uuid7(), started_at=time.monotonic(), request_started_at=datetime.now(UTC))
+        route = self._route(scope)
         stream = False
         scope["state"] = {
             **scope.get("state", {}),
             "request_start": start,
-            "metrics_route": None,
+            "metrics_route": route,
             "metrics_dialect": "none",
             "metrics_stream": stream,
         }
+        self.metrics.observe_inflight(route, stream, 1)
         status = 500
 
         async def send_headers(message: Message) -> None:
@@ -110,10 +104,6 @@ class ResponseHeadersMiddleware:
                 await self.app(scope, receive, send_headers)
         finally:
             state = scope["state"]
-            route = state["metrics_route"]
-            if route is None:
-                route = "unmatched"
-                self.metrics.observe_inflight(route, False, 1)
             actual_stream = bool(state["metrics_stream"])
             self.metrics.observe_inflight(route, actual_stream, -1)
             self.metrics.observe_http(
@@ -121,3 +111,10 @@ class ResponseHeadersMiddleware:
                 status,
                 time.monotonic() - start.started_at,
             )
+
+    def _route(self, scope: Scope) -> str:
+        for route in getattr(self.app, "routes", ()):
+            match, _ = route.matches(scope)
+            if match is Match.FULL:
+                return cast("Route", route).path
+        return "unmatched"

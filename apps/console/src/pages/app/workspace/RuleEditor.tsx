@@ -231,8 +231,8 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
       {kind === 'price_limit' && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField form={form} name="maxInputPrice" label="Maximum input USD / 1M tokens" />
-            <TextField form={form} name="maxOutputPrice" label="Maximum output USD / 1M tokens" />
+            <TextField form={form} name="maxInputPrice" label="Maximum input USD per 1M tokens" />
+            <TextField form={form} name="maxOutputPrice" label="Maximum output USD per 1M tokens" />
           </div>
           <p className="text-sm text-muted-foreground">Every selected primary and fallback model must stay within both catalog rates.</p>
         </>

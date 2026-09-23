@@ -3,9 +3,9 @@ import * as z from 'zod';
 import { Card, Button, Input, Badge } from '@/components/ui/elements';
 import { Building2, Plus } from 'lucide-react';
 import { formatDate } from '@/lib/format';
-import { Link } from 'wouter';
 import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
 import { DataTable } from '@/components/shared/data-table';
+import { TableLink } from '@/components/shared/table-link';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
@@ -66,10 +66,10 @@ export default function Organizations() {
               header: 'Organization Name',
               cellClassName: 'font-medium',
               cell: (org) => (
-                <Link href={`/instance/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                <TableLink href={`/instance/organizations/${org.id}`} className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                   {org.name}
-                </Link>
+                </TableLink>
               ),
             },
             { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
