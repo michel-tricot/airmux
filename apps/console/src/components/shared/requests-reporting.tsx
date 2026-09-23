@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { exportUsageRequests, type UsageEventOutStatus } from '@workspace/api-client-react';
+import { exportUsageRequests, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
 import { Download, RefreshCw } from 'lucide-react';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
@@ -202,6 +202,7 @@ export function RequestsReporting({
       <Card className="p-4">
         <DataTable
           ariaLabel="Requests"
+          tableClassName="min-w-max [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap"
           rows={validDates ? requests.data?.requests : []}
           rowKey={(item) => item.request_id}
           rowClassName="motion-safe:animate-request-arrival"
@@ -213,16 +214,25 @@ export function RequestsReporting({
           empty="No requests match these filters."
           columns={[
             { key: 'time', header: 'Started', cell: (item) => formatDate(item.started_at) },
-            {
-              key: 'workspace',
-              header: 'Workspace',
-              cell: (item) => workspaceName ?? options.workspace.find((option) => option.value === item.workspace_id)?.label ?? item.workspace_id,
-            },
+            ...(!workspaceId
+              ? [
+                  {
+                    key: 'workspace',
+                    header: 'Workspace',
+                    cell: (item: RequestSummaryOut) =>
+                      workspaceName ?? options.workspace.find((option) => option.value === item.workspace_id)?.label ?? item.workspace_id,
+                  },
+                ]
+              : []),
             {
               key: 'request',
               header: 'Request ID',
               cell: (item) => (
-                <Link href={openRequest(item.request_id)} className="font-mono text-xs text-primary hover:underline">
+                <Link
+                  href={openRequest(item.request_id)}
+                  title={item.request_id}
+                  className="block max-w-32 truncate font-mono text-xs text-primary hover:underline"
+                >
                   {item.request_id}
                 </Link>
               ),
@@ -235,7 +245,18 @@ export function RequestsReporting({
                   ? 'Playground'
                   : (options.key.find((option) => option.value === item.key_id)?.label ?? item.key_id ?? 'Unknown'),
             },
-            { key: 'model', header: 'Model', cell: (item) => item.model_id || item.requested_model_id },
+            {
+              key: 'model',
+              header: 'Model',
+              cell: (item) => {
+                const model = item.model_id || item.requested_model_id;
+                return (
+                  <span className="block max-w-48 truncate" title={model}>
+                    {model}
+                  </span>
+                );
+              },
+            },
             { key: 'provider', header: 'Provider', cell: (item) => item.provider_id || 'No provider attempt' },
             {
               key: 'status',
