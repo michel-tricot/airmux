@@ -115,16 +115,8 @@ export function UsageReporting({
         <>
           {report.isError && <ErrorState message="Refresh failed. Showing the last loaded report." onRetry={() => report.refetch()} />}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric
-              icon={Coins}
-              label="Spend"
-              value={formatReportCost(totals!.cost_usd)}
-            />
-            <Metric
-              icon={Activity}
-              label="Requests"
-              value={totals!.requests.toLocaleString()}
-            />
+            <Metric icon={Coins} label="Spend" value={formatReportCost(totals!.cost_usd)} />
+            <Metric icon={Activity} label="Requests" value={totals!.requests.toLocaleString()} />
             <Metric
               icon={Hash}
               label="Tokens"
