@@ -13,6 +13,22 @@ const period = {
   previous_end_at: '2026-01-01T00:00:00Z',
   timezone: 'UTC',
 };
+const requestSummary = {
+  request_id: 'request-1',
+  started_at: period.start_at,
+  status: 'ok',
+  requested_model_id: 'model-a',
+  model_id: 'model-a',
+  provider_id: 'provider-a',
+  workspace_id: WORKSPACES[0].id,
+  key_id: 'key-a',
+  user_id: 'user-a',
+  request_source: 'inference_key',
+  attempt_count: 1,
+  input_tokens: 30,
+  output_tokens: 10,
+  cost_usd: '0.000005',
+};
 
 function renderAt(path: string) {
   window.localStorage.setItem('airmux_org_id', ORG.id);
@@ -36,24 +52,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
     http.get('/api/v1/organizations/:orgId/reports/requests', () =>
       HttpResponse.json({
         data: {
-          requests: [
-            {
-              request_id: 'request-1',
-              started_at: period.start_at,
-              status: 'ok',
-              requested_model_id: 'model-a',
-              model_id: 'model-a',
-              provider_id: 'provider-a',
-              workspace_id: WORKSPACES[0].id,
-              key_id: 'key-a',
-              user_id: 'user-a',
-              request_source: 'inference_key',
-              attempt_count: 1,
-              input_tokens: 30,
-              output_tokens: 10,
-              cost_usd: '0.000005',
-            },
-          ],
+          requests: [requestSummary],
           next_offset: null,
         },
       }),
@@ -74,6 +73,17 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(window.location.pathname).toBe('/org/requests');
   expect(new URLSearchParams(window.location.search).get('model_id')).toBe('model-a');
   expect(await screen.findByText('request-1')).toBeInTheDocument();
+});
+
+it('opens a listed request without carrying its old page offset', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+  );
+
+  renderAt('/org/requests?offset=20');
+
+  const requestLink = await screen.findByRole('link', { name: 'request-1' });
+  expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
 });
 
 it('uses the same report endpoint with a workspace ID for workspace reporting', async () => {

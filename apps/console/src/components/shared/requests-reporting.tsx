@@ -70,6 +70,7 @@ export function RequestsReporting({
   const openRequest = (id: string) => {
     const next = new URLSearchParams(filters.search);
     next.set('request_id', id);
+    next.delete('offset');
     return `${requestsPath(workspaceRef)}?${next}`;
   };
 
