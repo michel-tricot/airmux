@@ -1758,6 +1758,7 @@ export interface RequestAttemptOut {
   provider_id: string;
   model_id: string;
   credential_id: string | null;
+  credential_name: string | null;
   status: RequestAttemptOutStatus;
   input_tokens: number;
   output_tokens: number;
@@ -1800,9 +1801,12 @@ export interface RequestDetailOut {
   started_at: string;
   status: RequestDetailOutStatus;
   workspace_id: string;
+  workspace_name: string;
   key_id: string;
+  key_name: string;
   request_source: RequestDetailOutRequestSource;
   user_id: string;
+  user_email: string;
   requested_model_id: string;
   model_id: string;
   provider_id: string;
@@ -1846,9 +1850,12 @@ export interface RequestSummaryOut {
   started_at: string;
   status: RequestSummaryOutStatus;
   workspace_id: string;
+  workspace_name: string;
   key_id: string;
+  key_name: string;
   request_source: RequestSummaryOutRequestSource;
   user_id: string;
+  user_email: string;
   requested_model_id: string;
   model_id: string;
   provider_id: string;
@@ -2097,6 +2104,8 @@ export interface UsageDayOut {
   requests: number;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
   date: string;
@@ -2181,6 +2190,8 @@ export interface UsageTotalsOut {
   requests: number;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
 }

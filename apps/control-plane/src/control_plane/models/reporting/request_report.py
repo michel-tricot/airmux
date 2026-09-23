@@ -14,6 +14,7 @@ from sqlmodel import col
 from contract import RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.money import ZERO_USD
 from control_plane.db import current_session
+from control_plane.models.reporting.names import names_for_dimension
 from control_plane.models.usage_event import UsageEvent
 
 if TYPE_CHECKING:
@@ -27,9 +28,12 @@ class RequestSummaryOut(BaseModel):
     started_at: datetime
     status: UsageStatus
     workspace_id: UUID
+    workspace_name: str
     key_id: str
+    key_name: str
     request_source: RequestSource
     user_id: UUID
+    user_email: str
     requested_model_id: str
     model_id: str
     provider_id: str
@@ -46,6 +50,7 @@ class RequestAttemptOut(BaseModel):
     provider_id: str
     model_id: str
     credential_id: UUID | None
+    credential_name: str | None
     status: UsageStatus
     input_tokens: int
     output_tokens: int
@@ -74,6 +79,12 @@ class RequestDetailOut(RequestSummaryOut):
         events.sort(key=lambda event: (event.attempt_started_at or event.request_started_at, event.occurred_at, event.event_id))
         latest = events[-1]
         window = query.window(now)
+        workspace_names = await names_for_dimension(org_id, query.workspace_id, "workspace", [str(latest.workspace_id)])
+        key_names = await names_for_dimension(org_id, query.workspace_id, "key", [latest.key_id])
+        user_names = await names_for_dimension(org_id, query.workspace_id, "owner", [str(latest.user_id)])
+        credential_names = await names_for_dimension(
+            org_id, query.workspace_id, "credential", [str(event.credential_id) for event in events if event.credential_id is not None]
+        )
         attempts = [
             RequestAttemptOut(
                 event_id=event.event_id,
@@ -82,6 +93,7 @@ class RequestDetailOut(RequestSummaryOut):
                 provider_id=event.provider_id,
                 model_id=event.model_id,
                 credential_id=event.credential_id,
+                credential_name=credential_names.get(str(event.credential_id), str(event.credential_id)) if event.credential_id else None,
                 status=event.status,
                 input_tokens=event.input_tokens,
                 output_tokens=event.output_tokens,
@@ -101,9 +113,12 @@ class RequestDetailOut(RequestSummaryOut):
             started_at=latest.request_started_at,
             status=latest.status,
             workspace_id=latest.workspace_id,
+            workspace_name=workspace_names.get(str(latest.workspace_id), str(latest.workspace_id)),
             key_id=latest.key_id,
+            key_name="Playground" if latest.request_source == "playground" else key_names.get(latest.key_id, latest.key_id),
             request_source=latest.request_source,
             user_id=latest.user_id,
+            user_email=user_names.get(str(latest.user_id), str(latest.user_id)),
             requested_model_id=latest.requested_model_id,
             model_id=latest.model_id,
             provider_id=latest.provider_id,
@@ -123,8 +138,27 @@ class RequestPageOut(BaseModel):
     @classmethod
     async def for_scope(cls, org_id: UUID, query: RequestQuery, now: datetime) -> RequestPageOut:
         statement = _request_statement(org_id, query, now).offset(query.offset).limit(query.limit + 1)
-        requests = [RequestSummaryOut.model_validate(request) for request in (await current_session().execute(statement)).mappings().all()]
-        return cls(requests=requests[: query.limit], next_offset=query.offset + query.limit if len(requests) > query.limit else None)
+        requests = (await current_session().execute(statement)).mappings().all()
+        page = requests[: query.limit]
+        workspace_names = await names_for_dimension(org_id, query.workspace_id, "workspace", [str(request["workspace_id"]) for request in page])
+        key_names = await names_for_dimension(org_id, query.workspace_id, "key", [request["key_id"] for request in page])
+        user_names = await names_for_dimension(org_id, query.workspace_id, "owner", [str(request["user_id"]) for request in page])
+        return cls(
+            requests=[
+                RequestSummaryOut.model_validate(
+                    {
+                        **request,
+                        "workspace_name": workspace_names.get(str(request["workspace_id"]), str(request["workspace_id"])),
+                        "key_name": "Playground"
+                        if request["request_source"] == "playground"
+                        else key_names.get(request["key_id"], request["key_id"]),
+                        "user_email": user_names.get(str(request["user_id"]), str(request["user_id"])),
+                    }
+                )
+                for request in page
+            ],
+            next_offset=query.offset + query.limit if len(requests) > query.limit else None,
+        )
 
 
 class RequestExportOut(BaseModel):

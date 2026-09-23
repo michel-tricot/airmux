@@ -7,7 +7,7 @@ from io import StringIO
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, setup_control_plane
+from helpers import PROVIDER, make_org, make_user, make_workspace, setup_control_plane
 
 from contract import uuid7
 from control_plane.authz import Permission
@@ -297,12 +297,41 @@ def test_request_id_lookup_finds_authorized_history_outside_selected_period(tmp_
     with TestClient(cp.app) as client:
         root = cp.headers()
         org_id = make_org(client, root)
-        workspace_id = make_workspace(client, cp.headers(org_id))
-        event = _event(org_id, workspace_id, started_at=datetime(2026, 1, 1, 12, 0, tzinfo=UTC))
+        headers = cp.headers(org_id)
+        workspace_id = make_workspace(client, headers, "Reporting workspace")
+        user = make_user(tmp_path, "history-owner@example.com")
+        assert client.put(f"/api/v1/organizations/{org_id}/users/{user.id}", json={"role": "member"}, headers=headers).status_code == 200
+        assert (
+            client.put(
+                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/members/{user.id}",
+                json={"role": "member"},
+                headers=headers,
+            ).status_code
+            == 200
+        )
+        user_headers = cp.headers_for(org_id, user.id, workspace_id)
+        key = client.post(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+            json={"label": "Checkout", "user_id": str(user.id)},
+            headers=user_headers,
+        )
+        assert key.status_code == 200, key.text
+        assert client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        credential = client.post(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/provider-credentials",
+            json={"provider": "openai", "name": "Primary", "value": "sk-test"},
+            headers=headers,
+        )
+        assert credential.status_code == 200, credential.text
+        event = {
+            **_event(org_id, workspace_id, started_at=datetime(2026, 1, 1, 12, 0, tzinfo=UTC)),
+            "key_id": key.json()["data"]["id"],
+            "user_id": str(user.id),
+            "credential_id": credential.json()["data"]["id"],
+        }
         assert client.post("/api/v1/events", json=[event], headers=root).json()["data"]["ingested"] == 1
         path = f"/api/v1/organizations/{org_id}/reports/requests"
         params = {"period": "custom", "start_date": "2026-03-08", "end_date": "2026-03-08"}
-        headers = cp.headers(org_id)
 
         listed = client.get(path, params=params, headers=headers)
         assert listed.status_code == 200, listed.text
@@ -310,10 +339,16 @@ def test_request_id_lookup_finds_authorized_history_outside_selected_period(tmp_
         lookup = client.get(path, params={**params, "request_id": event["request_id"]}, headers=headers)
         assert lookup.status_code == 200, lookup.text
         assert [request["request_id"] for request in lookup.json()["data"]["requests"]] == [event["request_id"]]
+        assert lookup.json()["data"]["requests"][0]["workspace_name"] == "Reporting workspace"
+        assert lookup.json()["data"]["requests"][0]["key_name"] == "Checkout"
         detail = client.get(f"{path}/{event['request_id']}", params=params, headers=headers)
         assert detail.status_code == 200, detail.text
         assert detail.json()["data"]["request_id"] == event["request_id"]
         assert detail.json()["data"]["within_period"] is False
+        assert detail.json()["data"]["workspace_name"] == "Reporting workspace"
+        assert detail.json()["data"]["key_name"] == "Checkout"
+        assert detail.json()["data"]["user_email"] == "history-owner@example.com"
+        assert detail.json()["data"]["attempts"][0]["credential_name"] == "Primary"
         assert detail.json()["data"]["attempts"][0]["matches_filter"] is True
 
 
