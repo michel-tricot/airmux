@@ -248,7 +248,7 @@ export function RequestsReporting({
               header: 'Input / output',
               cell: (item) => `${item.input_tokens.toLocaleString()} / ${item.output_tokens.toLocaleString()}`,
             },
-            { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Estimated cost', cell: (item) => formatReportCost(item.cost_usd) },
+            { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
           ]}
         />
         <div className="mt-4 flex justify-between gap-3">
@@ -290,7 +290,7 @@ export function RequestsReporting({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Estimated total cost</dt>
+                <dt className="text-muted-foreground">Total cost</dt>
                 <dd>{formatReportCostExact(request.data.cost_usd)}</dd>
               </div>
               <div>
@@ -363,7 +363,7 @@ export function RequestsReporting({
                             </dd>
                           </div>
                           <div>
-                            <dt className="text-muted-foreground">Total estimated cost</dt>
+                            <dt className="text-muted-foreground">Total cost</dt>
                             <dd>{formatReportCostExact(attempt.cost_usd)}</dd>
                           </div>
                           <div>

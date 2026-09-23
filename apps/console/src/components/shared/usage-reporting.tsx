@@ -16,19 +16,22 @@ function Metric({
   icon: Icon,
   label,
   value,
+  detail,
   change,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
+  detail?: string;
   change?: string;
 }) {
   return (
     <Card className="flex items-start gap-3 p-4">
-      <Icon className="mt-1 h-4 w-4 shrink-0 text-primary" />
+      <Icon className="h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
         <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
         <div className="text-2xl font-bold tabular-nums">{value}</div>
+        {detail && <div className="whitespace-nowrap text-xs text-muted-foreground">{detail}</div>}
         {change && <div className="mt-1 text-xs text-muted-foreground">{change} vs previous period</div>}
       </div>
     </Card>
@@ -38,6 +41,10 @@ function Metric({
 function countChange(current: number, previous: number) {
   const difference = current - previous;
   return difference === 0 ? 'No change' : `${difference > 0 ? '+' : '−'}${Math.abs(difference).toLocaleString()}`;
+}
+
+function compactCount(value: number) {
+  return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
 
 export function UsageReporting({
@@ -80,7 +87,7 @@ export function UsageReporting({
     <PageShell>
       <PageHeader
         title={workspaceName ?? 'Usage'}
-        description={`${scopeName} · estimated gateway usage`}
+        description={`${scopeName} · gateway usage`}
         actions={
           <Button
             variant="outline"
@@ -119,7 +126,7 @@ export function UsageReporting({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Metric
               icon={Coins}
-              label="Estimated spend"
+              label="Spend"
               value={formatReportCost(totals!.cost_usd)}
               change={comparison ? formatChange(totals!.cost_usd, comparison.cost_usd) : undefined}
             />
@@ -132,7 +139,8 @@ export function UsageReporting({
             <Metric
               icon={Hash}
               label="Tokens"
-              value={`${totals!.input_tokens.toLocaleString()} in · ${totals!.output_tokens.toLocaleString()} out`}
+              value={(totals!.input_tokens + totals!.output_tokens).toLocaleString()}
+              detail={`${compactCount(totals!.input_tokens)} in · ${compactCount(totals!.output_tokens)} out`}
               change={
                 comparison ? countChange(totals!.input_tokens + totals!.output_tokens, comparison.input_tokens + comparison.output_tokens) : undefined
               }
@@ -223,7 +231,7 @@ export function UsageReporting({
                         'None recorded'
                       ),
                   },
-                  { key: 'spend', header: 'Estimated spend', cell: (item) => formatReportCost(item.cost_usd) },
+                  { key: 'spend', header: 'Spend', cell: (item) => formatReportCost(item.cost_usd) },
                   { key: 'share', header: 'Share', cell: (item) => formatShare(item.cost_usd, totals!.cost_usd) },
                   { key: 'change', header: 'Change', cell: (item) => formatChange(item.cost_usd, item.previous_cost_usd) },
                   { key: 'requests', header: 'Requests', cell: (item) => item.requests.toLocaleString() },

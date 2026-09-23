@@ -1,7 +1,9 @@
 import { Link } from 'wouter';
+import { Activity, ArrowDownToLine, ArrowUpFromLine, CalendarDays, Coins } from 'lucide-react';
 import type { UsageReportOut } from '@workspace/api-client-react';
 import { Card, Dropdown } from '@/components/ui/elements';
 import { SectionHeader } from '@/components/shared/page-shell';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatReportCost } from '@/features/reporting/presentation';
 import { requestsPath, type ReportMetric } from '@/features/reporting/url';
 
@@ -40,11 +42,19 @@ export function ReportingChart({
       undefined,
       hourly ? { timeZone: timezone, hour: 'numeric', minute: '2-digit' } : { timeZone: timezone, month: 'short', day: 'numeric' },
     ).format(new Date(date));
+  const formatFullBucket = (date: string) =>
+    new Intl.DateTimeFormat(
+      undefined,
+      hourly
+        ? { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }
+        : { timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' },
+    ).format(new Date(date));
   const point = (bucket: UsageReportOut['daily'][number], index: number) => {
     const x = daily.length === 1 ? 500 : (index / (daily.length - 1)) * 960 + 20;
     return `${x},${190 - (amount(bucket, metric) / maximum) * 160}`;
   };
   const points = daily.map(point).join(' ');
+  const tickIndices = [...new Set([0, 0.25, 0.5, 0.75, 1].map((fraction) => Math.round(fraction * (daily.length - 1))))];
 
   return (
     <Card className="p-4">
@@ -75,7 +85,10 @@ export function ReportingChart({
             preserveAspectRatio="none"
             className="mt-5 h-56 w-full text-primary"
           >
-            <line x1="20" y1="190" x2="980" y2="190" className="stroke-border" />
+            {[30, 110, 190].map((y) => (
+              <line key={y} x1="20" y1={y} x2="980" y2={y} className="stroke-border" />
+            ))}
+            <polygon points={`${points} 980,190 20,190`} fill="currentColor" opacity="0.08" />
             <polyline points={points} fill="none" stroke="currentColor" strokeWidth="3" vectorEffect="non-scaling-stroke" />
             {daily.map((bucket, index) => {
               const [x, y] = point(bucket, index).split(',').map(Number);
@@ -84,17 +97,49 @@ export function ReportingChart({
               next.set('end_at', daily[index + 1]?.date ?? endAt);
               next.delete('offset');
               return (
-                <Link key={bucket.date} href={`${requestsPath(workspaceRef)}?${next}`}>
-                  <circle cx={x} cy={y} r="7" fill="currentColor" aria-label={`${formatBucket(bucket.date)}: ${label(bucket, metric)}`}>
-                    <title>{`${formatBucket(bucket.date)}: ${label(bucket, metric)}`}</title>
-                  </circle>
-                </Link>
+                <Tooltip key={bucket.date} delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <Link href={`${requestsPath(workspaceRef)}?${next}`}>
+                      <circle cx={x} cy={y} r="8" fill="currentColor" aria-label={`${formatBucket(bucket.date)}: ${label(bucket, metric)}`} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="w-64 border border-border bg-card p-3 text-foreground shadow-xl">
+                    <div className="mb-3 flex items-center gap-2 border-b border-border pb-2 text-sm font-semibold">
+                      <CalendarDays className="h-4 w-4 text-primary" />
+                      {formatFullBucket(bucket.date)}
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Coins className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-muted-foreground">Spend</span>
+                        <span className="ml-auto font-mono">{formatReportCost(bucket.cost_usd)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-muted-foreground">Requests</span>
+                        <span className="ml-auto font-mono">{bucket.requests.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-muted-foreground">Input tokens</span>
+                        <span className="ml-auto font-mono">{bucket.input_tokens.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ArrowUpFromLine className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-muted-foreground">Output tokens</span>
+                        <span className="ml-auto font-mono">{bucket.output_tokens.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <p className="mt-3 border-t border-border pt-2 text-[11px] text-muted-foreground">Click to view requests</p>
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </svg>
           <div className="flex justify-between font-mono text-xs text-muted-foreground">
-            <span>{formatBucket(daily[0].date)}</span>
-            <span>{formatBucket(daily[daily.length - 1].date)}</span>
+            {tickIndices.map((index) => (
+              <span key={daily[index].date}>{formatBucket(daily[index].date)}</span>
+            ))}
           </div>
         </>
       )}

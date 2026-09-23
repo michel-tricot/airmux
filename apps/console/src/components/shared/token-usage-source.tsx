@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/elements';
 
 const labels = {
   provider: 'Provider reported',
-  estimated: 'Estimated',
+  estimated: 'Gateway-derived',
   not_applicable: 'Not applicable',
 };
 

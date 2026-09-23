@@ -63,6 +63,12 @@ it('opens organization reporting and drills a model into filtered requests', asy
   renderAt('/org');
 
   expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
+  const spendCard = (await screen.findByText('Spend', { selector: 'div' })).closest('.p-4');
+  expect(spendCard?.querySelector('svg')).not.toHaveClass('mt-1');
+  const tokensCard = screen.getByText('Tokens', { selector: 'div' }).closest('.p-4') as HTMLElement;
+  expect(within(tokensCard).getByText('40')).toBeInTheDocument();
+  expect(within(tokensCard).getByText('30 in · 10 out')).toBeInTheDocument();
+  expect(screen.queryByText(/estimated gateway usage/i)).not.toBeInTheDocument();
   expect(window.location.pathname).toBe('/org');
   await user.click(await screen.findByRole('combobox', { name: 'Group by' }));
   await user.click(screen.getByRole('option', { name: 'Model' }));
@@ -242,11 +248,24 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(within(panel).getByText('User')).toBeInTheDocument();
   expect(within(panel).getAllByText('Success').length).toBeGreaterThan(0);
   expect(within(panel).getByText('Upstream error')).toBeInTheDocument();
+  expect(within(panel).getByText('Gateway-derived')).toBeInTheDocument();
+  expect(within(panel).queryByText(/estimated/i)).not.toBeInTheDocument();
   expect(within(panel).getByText('Checkout')).toBeInTheDocument();
   expect(within(panel).getByText('Primary credential')).toBeInTheDocument();
   expect(within(panel).getByText('Backup credential')).toBeInTheDocument();
   expect(within(panel).getAllByText('model-a')[0]).toHaveClass('font-mono');
   expect(panel).toHaveClass('p-6');
+});
+
+it('uses a dark native calendar with its icon aligned to the right', async () => {
+  renderAt('/org?period=custom&start_date=2026-01-01&end_date=2026-01-31');
+
+  const startDate = await screen.findByLabelText('Start date');
+  const endDate = screen.getByLabelText('End date');
+  for (const date of [startDate, endDate]) {
+    expect(date).toHaveClass('[color-scheme:dark]');
+    expect(date).toHaveClass('[&::-webkit-calendar-picker-indicator]:right-3');
+  }
 });
 
 it('shows a denied playground request without a fake provider attempt or inference key', async () => {

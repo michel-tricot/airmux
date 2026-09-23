@@ -137,6 +137,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, step
       className={cn(
         'rounded bg-background/50 text-sm font-mono placeholder:text-muted-foreground/50 focus-visible:border-primary focus-visible:ring-primary',
         type === 'number' && 'pr-8',
+        type === 'date' &&
+          'relative [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:top-1/2 [&::-webkit-calendar-picker-indicator]:-translate-y-1/2 [&::-webkit-calendar-picker-indicator]:cursor-pointer',
         className,
       )}
       {...props}
