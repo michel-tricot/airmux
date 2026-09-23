@@ -1811,6 +1811,7 @@ export interface RequestDetailOut {
   output_tokens: number;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
+  within_period: boolean;
   attempts: RequestAttemptOut[];
 }
 

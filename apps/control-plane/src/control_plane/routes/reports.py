@@ -74,7 +74,7 @@ async def export_usage_requests(org_id: OrgDep, query: Annotated[RequestQuery, Q
 
 @router.get("/requests/{request_id}", dependencies=[report_access])
 async def get_usage_request(org_id: OrgDep, request_id: UUID, query: Annotated[ReportQuery, Query()]) -> Envelope[RequestDetailOut]:
-    request = await RequestDetailOut.for_scope(org_id, request_id, query)
+    request = await RequestDetailOut.for_scope(org_id, request_id, query, datetime.now(UTC))
     if request is None:
         raise HTTPException(status_code=404, detail="Request not found")
     return Envelope(data=request)

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy import select as sql_select
 from sqlmodel import col
 
@@ -12,6 +12,7 @@ from contract import UsdAmount
 from contract.money import ZERO_USD
 from control_plane.db import current_session
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.reporting.query import AttributionQuery, FilterOptionsQuery, Grouping, ReportQuery, ReportWindow
 from control_plane.models.usage_event import UsageEvent
@@ -52,7 +53,7 @@ class AttributionReportOut(BaseModel):
         items = [
             AttributionItemOut(
                 id=identifier,
-                name=names.get(identifier, identifier or "No provider attempt"),
+                name=names.get(identifier, identifier or ("No credential" if query.group_by == "credential" else "No provider attempt")),
                 requests=values[0],
                 input_tokens=values[1],
                 output_tokens=values[2],
@@ -85,9 +86,17 @@ class FilterOptionsOut(BaseModel):
 
     @classmethod
     async def for_scope(cls, org_id: UUID, query: FilterOptionsQuery, now: datetime) -> FilterOptionsOut:
-        groups = await _grouped(org_id, query, query.window(now), query.dimension)
+        filter_field = {
+            "owner": "owner_id",
+            "key": "key_id",
+            "model": "model_id",
+            "provider": "provider_id",
+            "credential": "credential_id",
+        }.get(query.dimension)
+        scope_query = query.model_copy(update={filter_field: None}) if filter_field is not None else query
+        groups = await _grouped(org_id, scope_query, query.window(now), query.dimension)
         names = await _names(org_id, query.dimension, list(groups))
-        identifiers = list(groups)
+        identifiers = [identifier for identifier in groups if identifier or query.dimension != "credential"]
         if query.search:
             search = query.search.casefold()
             identifiers = [
@@ -147,10 +156,13 @@ async def _names(org_id: UUID, group_by: Grouping, identifiers: list[str]) -> di
         workspaces = await Workspace.find(col(Workspace.org_id) == org_id, col(Workspace.id).in_(uuids))
         return {str(workspace.id): workspace.name for workspace in workspaces}
     if group_by == "owner":
-        users = await User.find(col(User.id).in_(uuids))
+        member_ids = sql_select(col(OrgMembership.user_id)).where(col(OrgMembership.org_id) == org_id)
+        users = await User.find(col(User.id).in_(uuids), col(User.id).in_(member_ids))
         return {str(user.id): user.name for user in users}
     if group_by == "key":
         keys = await InferenceKey.find(col(InferenceKey.org_id) == org_id, col(InferenceKey.id).in_(uuids))
         return {str(key.id): key.label for key in keys}
-    credentials = await ProviderCredential.find(col(ProviderCredential.id).in_(uuids))
+    credentials = await ProviderCredential.find(
+        col(ProviderCredential.id).in_(uuids), or_(col(ProviderCredential.org_id) == org_id, col(ProviderCredential.org_id).is_(None))
+    )
     return {str(credential.id): credential.name for credential in credentials}

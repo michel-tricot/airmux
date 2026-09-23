@@ -126,6 +126,7 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         detail = client.get(f"{path}/requests/{request_id}", params={"provider_id": "anthropic"}, headers=headers)
         assert detail.status_code == 200, detail.text
         assert [attempt["provider_id"] for attempt in detail.json()["data"]["attempts"]] == ["openai", "anthropic"]
+        assert detail.json()["data"]["within_period"] is True
         assert [attempt["matches_filter"] for attempt in detail.json()["data"]["attempts"]] == [False, True]
         assert Decimal(detail.json()["data"]["cost_usd"]) == Decimal("0.000005")
         lookup = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "anthropic"}, headers=headers)
@@ -138,6 +139,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         by_provider = {item["id"]: item for item in attribution.json()["data"]["items"]}
         assert Decimal(by_provider["openai"]["cost_usd"]) == Decimal("0.000002")
         assert Decimal(by_provider["anthropic"]["cost_usd"]) == Decimal("0.000003")
+        options = client.get(f"{path}/filter-options", params={"dimension": "provider", "provider_id": "anthropic"}, headers=headers)
+        assert {item["id"] for item in options.json()["data"]["items"]} == {"openai", "anthropic"}
 
 
 def test_request_export_covers_all_filtered_requests_beyond_first_page(tmp_path):
@@ -147,6 +150,7 @@ def test_request_export_covers_all_filtered_requests_beyond_first_page(tmp_path)
         org_id = make_org(client, root)
         workspace_id = make_workspace(client, cp.headers(org_id))
         matching = [{**_event(org_id, workspace_id), "provider_id": "anthropic"} for _ in range(3)]
+        matching[0]["requested_model_id"] = "=1+1"
         unrelated = _event(org_id, workspace_id)
         assert client.post("/api/v1/events", json=[*matching, unrelated], headers=root).json()["data"]["ingested"] == 4
         path = f"/api/v1/organizations/{org_id}/reports"
@@ -161,7 +165,48 @@ def test_request_export_covers_all_filtered_requests_beyond_first_page(tmp_path)
         assert export.status_code == 200, export.text
         rows = list(csv.DictReader(StringIO(export.json()["data"]["csv"])))
         assert {row["request_id"] for row in rows} == {event["request_id"] for event in matching}
+        assert next(row for row in rows if row["request_id"] == matching[0]["request_id"])["requested_model_id"] == "'=1+1"
         assert sum((Decimal(row["cost_usd"]) for row in rows), Decimal(0)) == Decimal("0.000006")
+
+
+def test_missing_credential_reconciles_without_an_unusable_filter_option(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        denied = {
+            **_event(org_id, workspace_id),
+            "status": "denied",
+            "provider_id": "",
+            "attempt_started_at": None,
+            "token_usage_source": "not_applicable",
+            "input_tokens": 0,
+            "cost_usd": "0",
+            "cost_input_usd": "0",
+            "credential_id": None,
+            "credential_scope": None,
+        }
+        assert client.post("/api/v1/events", json=[denied], headers=root).json()["data"]["ingested"] == 1
+        path = f"/api/v1/organizations/{org_id}/reports"
+        headers = cp.headers(org_id)
+        attribution = client.get(f"{path}/attribution", params={"group_by": "credential"}, headers=headers)
+        assert attribution.json()["data"]["items"][0]["name"] == "No credential"
+        options = client.get(f"{path}/filter-options", params={"dimension": "credential"}, headers=headers)
+        assert options.json()["data"]["items"] == []
+
+
+def test_attribution_does_not_resolve_an_unrelated_users_name(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        outsider = make_user(tmp_path, "outside@example.com", "Outside Organization")
+        event = {**_event(org_id, workspace_id), "user_id": str(outsider.id)}
+        assert client.post("/api/v1/events", json=[event], headers=root).json()["data"]["ingested"] == 1
+        report = client.get(f"/api/v1/organizations/{org_id}/reports/attribution", params={"group_by": "owner"}, headers=cp.headers(org_id))
+        assert report.json()["data"]["items"][0]["name"] == str(outsider.id)
 
 
 def test_custom_day_uses_local_midnights_across_dst_transition(tmp_path):
@@ -243,6 +288,7 @@ def test_request_id_lookup_finds_authorized_history_outside_selected_period(tmp_
         detail = client.get(f"{path}/{event['request_id']}", params=params, headers=headers)
         assert detail.status_code == 200, detail.text
         assert detail.json()["data"]["request_id"] == event["request_id"]
+        assert detail.json()["data"]["within_period"] is False
         assert detail.json()["data"]["attempts"][0]["matches_filter"] is True
 
 

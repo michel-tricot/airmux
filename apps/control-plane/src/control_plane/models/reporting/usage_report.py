@@ -49,7 +49,6 @@ class UsageReportOut(BaseModel):
             previous_end_at=window.previous_end_at,
             timezone=window.timezone,
         )
-        totals = await _totals(query.conditions(org_id, window))
         comparison = await _totals(query.conditions(org_id, previous))
         granularity = "hour" if query.period == "today" else "day"
         bucket = func.date_trunc(granularity, col(UsageEvent.request_started_at), query.timezone).label("date")
@@ -75,13 +74,19 @@ class UsageReportOut(BaseModel):
             )
             for values in (await current_session().execute(statement)).all()
         }
+        days = [
+            daily.get(start_at, UsageDayOut(date=start_at, requests=0, input_tokens=0, output_tokens=0, cost_usd=ZERO_USD))
+            for start_at in _buckets(window, granularity)
+        ]
         return cls(
-            totals=totals,
+            totals=UsageTotalsOut(
+                requests=sum(day.requests for day in days),
+                input_tokens=sum(day.input_tokens for day in days),
+                output_tokens=sum(day.output_tokens for day in days),
+                cost_usd=sum((day.cost_usd for day in days), ZERO_USD),
+            ),
             comparison=comparison,
-            daily=[
-                daily.get(start_at, UsageDayOut(date=start_at, requests=0, input_tokens=0, output_tokens=0, cost_usd=ZERO_USD))
-                for start_at in _buckets(window, granularity)
-            ],
+            daily=days,
             period=window,
             updated_at=now,
         )

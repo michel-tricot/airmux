@@ -60,10 +60,11 @@ class RequestAttemptOut(BaseModel):
 
 
 class RequestDetailOut(RequestSummaryOut):
+    within_period: bool
     attempts: list[RequestAttemptOut]
 
     @classmethod
-    async def for_scope(cls, org_id: UUID, request_id: UUID, query: ReportQuery) -> RequestDetailOut | None:
+    async def for_scope(cls, org_id: UUID, request_id: UUID, query: ReportQuery, now: datetime) -> RequestDetailOut | None:
         conditions = [col(UsageEvent.org_id) == org_id, col(UsageEvent.request_id) == request_id]
         if query.workspace_id is not None:
             conditions.append(col(UsageEvent.workspace_id) == query.workspace_id)
@@ -72,6 +73,7 @@ class RequestDetailOut(RequestSummaryOut):
             return None
         events.sort(key=lambda event: (event.attempt_started_at or event.request_started_at, event.occurred_at, event.event_id))
         latest = events[-1]
+        window = query.window(now)
         attempts = [
             RequestAttemptOut(
                 event_id=event.event_id,
@@ -109,6 +111,7 @@ class RequestDetailOut(RequestSummaryOut):
             input_tokens=sum(event.input_tokens for event in events),
             output_tokens=sum(event.output_tokens for event in events),
             cost_usd=sum((event.cost_usd for event in events), ZERO_USD),
+            within_period=window.start_at <= latest.request_started_at < window.end_at,
             attempts=attempts,
         )
 
@@ -151,8 +154,14 @@ class RequestExportOut(BaseModel):
         )
         writer.writerow(fields)
         for request in requests:
-            writer.writerow([request[field] for field in fields])
+            writer.writerow([_csv_value(request[field]) for field in fields])
         return cls(filename=f"airmux-requests-{now.date().isoformat()}.csv", csv=output.getvalue())
+
+
+def _csv_value(value: object) -> object:
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
+        return f"'{value}"
+    return value
 
 
 def _request_statement(org_id: UUID, query: RequestQuery, now: datetime) -> Select:

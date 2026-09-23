@@ -2491,6 +2491,7 @@ class RequestDetailOut(BaseModel):
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
+    within_period: Annotated[bool, Field(title="Within Period")]
     attempts: Annotated[list[RequestAttemptOut], Field(title="Attempts")]
 
 
