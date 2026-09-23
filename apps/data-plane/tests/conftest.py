@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import partial
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Self
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
@@ -41,10 +42,14 @@ from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Mapping
+    from contextlib import AbstractAsyncContextManager
+    from types import TracebackType
 
     from starlette.testclient import TestClient
     from starlette.types import ASGIApp
+
+    from data_plane.config import HttpConfig
 
 
 class GatewayTransport(httpx.BaseTransport):
@@ -59,6 +64,44 @@ class GatewayTransport(httpx.BaseTransport):
             content=request.read(),
         )
         return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
+
+class _AiohttpProviderResponse:
+    def __init__(self, response: aiohttp.ClientResponse) -> None:
+        self.status = response.status
+        self._response = response
+
+    async def read(self) -> bytes:
+        return await self._response.read()
+
+    async def iter_any(self) -> AsyncIterator[bytes]:
+        async for chunk in self._response.content.iter_any():
+            yield chunk
+
+
+class AiohttpProviderClient:
+    def __init__(self, client: aiohttp.ClientSession) -> None:
+        self._client = client
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
+        await self._client.close()
+
+    def request(
+        self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None = None, stream: bool = False
+    ) -> AbstractAsyncContextManager[_AiohttpProviderResponse]:
+        return self._request(method, url, headers=headers, data=data)
+
+    @contextlib.asynccontextmanager
+    async def _request(self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None) -> AsyncIterator[_AiohttpProviderResponse]:
+        async with self._client.request(method, url, headers=headers, data=data, allow_redirects=False) as response:
+            yield _AiohttpProviderResponse(response)
+
+
+def _build_aiohttp_provider_client(config: HttpConfig) -> AiohttpProviderClient:
+    return AiohttpProviderClient(build_http_client(config))
 
 
 NOW = datetime.now(tz=UTC)
@@ -232,7 +275,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
-    monkeypatch.setattr("data_plane.app.build_provider_http_client", build_http_client)
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", _build_aiohttp_provider_client)
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), api_key=caller_token)
 
@@ -257,6 +300,6 @@ async def http_client() -> AsyncIterator[aiohttp.ClientSession]:
 def http_mock(monkeypatch):
     response = partial(aiohttp.ClientResponse, stream_writer=Mock(spec=AbstractStreamWriter, output_size=0))
     monkeypatch.setattr("aioresponses.core.ClientResponse", response)
-    monkeypatch.setattr("data_plane.app.build_provider_http_client", build_http_client)
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", _build_aiohttp_provider_client)
     with aioresponses() as mocked:
         yield mocked

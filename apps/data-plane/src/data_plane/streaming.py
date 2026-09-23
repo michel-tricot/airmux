@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from data_plane.ingress import IngressAdapter
     from data_plane.metrics import DataPlaneMetrics, UpstreamOutcome
     from data_plane.outbox import OutboxReservation
+    from data_plane.provider_http_client import ProviderHttpClient, ProviderResponse
 
 _MAX_STREAM_BATCH_BYTES = 65_536
 
@@ -37,7 +38,7 @@ class StreamSession:
     request: CanonicalRequest
     adjustments: tuple[CanonicalAdjustment, ...]
     reservation: OutboxReservation
-    http_client: aiohttp.ClientSession
+    http_client: ProviderHttpClient
     metrics: DataPlaneMetrics
     egress_kind: str
     attempt_started_at: float
@@ -45,7 +46,7 @@ class StreamSession:
     async def open(self, upstream: UpstreamRequest) -> Response:
         async with contextlib.AsyncExitStack() as stack:
             response = await stack.enter_async_context(
-                self.http_client.request(upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, allow_redirects=False)
+                self.http_client.request(upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, stream=True)
             )
             if response.status >= HTTPStatus.BAD_REQUEST:
                 body = await response.read()
@@ -60,7 +61,7 @@ class _StreamResponse(StreamingResponse):
     def __init__(
         self,
         session: StreamSession,
-        response: aiohttp.ClientResponse,
+        response: ProviderResponse,
         handoff: contextlib.AsyncExitStack,
         stream_state: StreamState,
     ) -> None:
@@ -87,7 +88,7 @@ class _StreamResponse(StreamingResponse):
         try:
             for frame in self._renderer.start(self._session.ctx):
                 yield frame
-            async for payload in self._response.content.iter_any():
+            async for payload in self._response.iter_any():
                 for batch in self._render_payload(payload):
                     yield batch
             self._session.adapter.validate_stream(self._stream_state)

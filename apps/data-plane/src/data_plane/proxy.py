@@ -218,14 +218,14 @@ class RequestExecution:
                     request=request,
                     adjustments=tuple(adjustments),
                     reservation=reservation,
-                    http_client=self.runtime.http_client,
+                    http_client=self.runtime.provider_http_client,
                     metrics=self.runtime.metrics,
                     egress_kind=egress_kind,
                     attempt_started_at=attempt_started_at,
                 )
                 return await session.open(upstream)
             async with self.runtime.provider_http_client.request(
-                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body
+                upstream.method, upstream.url, headers=upstream.headers, data=upstream.body, stream=request.stream
             ) as response:
                 body = await response.read()
                 _check_upstream(response.status, body)

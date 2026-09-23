@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import os
 from datetime import timedelta
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, NoReturn, Self
 
 import aiohttp
 from pyreqwest.client import Client, ClientBuilder
-from pyreqwest.exceptions import NetworkError
+from pyreqwest.exceptions import NetworkError, RequestTimeoutError
 from pyreqwest.proxy import ProxyBuilder
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import AsyncIterator, Mapping
 
-    from pyreqwest.request import RequestBuilder
+    from pyreqwest.request import RequestBuilder, StreamRequest
     from pyreqwest.response import Response
 
     from data_plane.config import HttpConfig
@@ -26,22 +26,44 @@ class ProviderResponse:
     async def read(self) -> bytes:
         try:
             return bytes(await self._response.bytes())
+        except RequestTimeoutError:
+            raise
         except NetworkError as error:
-            raise aiohttp.ClientConnectionError(str(error)) from error
+            _raise_network_error(error)
+
+    async def iter_any(self) -> AsyncIterator[bytes]:
+        reader = self._response.body_reader
+        try:
+            while chunk := await reader.read_chunk():
+                yield bytes(chunk)
+        except RequestTimeoutError:
+            raise
+        except NetworkError as error:
+            _raise_network_error(error)
 
 
 class ProviderRequest:
-    def __init__(self, builder: RequestBuilder):
+    def __init__(self, builder: RequestBuilder, *, stream: bool):
         self._builder = builder
+        self._stream = stream
+        self._stream_request: StreamRequest | None = None
 
     async def __aenter__(self) -> ProviderResponse:
         try:
-            return ProviderResponse(await self._builder.build().send())
+            if self._stream:
+                self._stream_request = self._builder.streamed_read_buffer_limit(1).build_streamed()
+                response = await self._stream_request.__aenter__()
+            else:
+                response = await self._builder.build().send()
+            return ProviderResponse(response)
+        except RequestTimeoutError:
+            raise
         except NetworkError as error:
-            raise aiohttp.ClientConnectionError(str(error)) from error
+            _raise_network_error(error)
 
     async def __aexit__(self, *_args: object) -> None:
-        return None
+        if self._stream_request is not None:
+            await self._stream_request.__aexit__(*_args)
 
 
 class ProviderHttpClient:
@@ -54,11 +76,15 @@ class ProviderHttpClient:
     async def __aexit__(self, *_args: object) -> None:
         await self._client.close()
 
-    def request(self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None = None) -> ProviderRequest:
+    def request(self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None = None, stream: bool = False) -> ProviderRequest:
         builder = self._client.request(method, url).headers(headers).error_for_status(False)
         if data is not None:
             builder = builder.body_bytes(data)
-        return ProviderRequest(builder)
+        return ProviderRequest(builder, stream=stream)
+
+
+def _raise_network_error(error: NetworkError) -> NoReturn:
+    raise aiohttp.ClientConnectionError(str(error)) from error
 
 
 def _proxy_settings() -> tuple[tuple[str, str], ...]:
