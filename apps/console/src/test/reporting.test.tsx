@@ -202,6 +202,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
       .map((header) => header.textContent),
   ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost in view', 'Total tokens']);
   expect(within(requestsTable).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
+  expect(within(requestsTable).queryByRole('columnheader', { name: 'Provider' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
   const totalTokens = within(requestsTable).getByRole('button', { name: '40 total tokens. Show token details' });
@@ -217,10 +218,20 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(within(tokenDetails).getByText('3')).toBeInTheDocument();
   expect(within(tokenDetails).getByText('Cache write')).toBeInTheDocument();
   expect(within(tokenDetails).getByText('2')).toBeInTheDocument();
+  for (const [label, icon] of [
+    ['Input', 'lucide-arrow-down-to-line'],
+    ['Output', 'lucide-arrow-up-from-line'],
+    ['Cache read', 'lucide-hard-drive-download'],
+    ['Cache write', 'lucide-hard-drive-upload'],
+  ]) {
+    expect(within(tokenDetails).getByText(label).closest('dt')?.querySelector(`.${icon}`)).not.toBeNull();
+  }
   expect(requestLink).toHaveClass('text-primary', 'hover:text-primary/80');
   expect(within(requestsTable).getByText('Checkout')).toBeInTheDocument();
-  expect(within(screen.getByRole('table', { name: 'Requests' })).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
-  expect(within(requestsTable).getByText('provider-a').closest('td')?.querySelector('svg')).not.toBeNull();
+  const modelCell = within(requestsTable).getByText('model-a').closest('td');
+  expect(within(requestsTable).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
+  expect(modelCell?.querySelector('svg circle')).not.toBeNull();
+  expect(within(requestsTable).queryByText('provider-a')).not.toBeInTheDocument();
 });
 
 it('opens a request detail without reloading the current request page', async () => {

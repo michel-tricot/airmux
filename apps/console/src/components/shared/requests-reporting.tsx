@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { Download } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
 import { DataTable } from '@/components/shared/data-table';
-import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { DetailSheet } from '@/components/shared/detail-sheet';
 import { ModelBadge } from '@/components/shared/model-badge';
 import { TableLink } from '@/components/shared/table-link';
@@ -45,11 +45,11 @@ function RequestStatusBadge({ status }: { status: UsageEventOutStatus }) {
 
 function RequestTokenTotal({ request }: { request: RequestSummaryOut }) {
   const total = request.input_tokens + request.output_tokens;
-  const details = [
-    ['Input', request.input_tokens],
-    ['Output', request.output_tokens],
-    ['Cache read', request.cache_read_tokens],
-    ['Cache write', request.cache_write_tokens],
+  const tokenDetails = [
+    { label: 'Input', count: request.input_tokens, Icon: ArrowDownToLine },
+    { label: 'Output', count: request.output_tokens, Icon: ArrowUpFromLine },
+    { label: 'Cache read', count: request.cache_read_tokens, Icon: HardDriveDownload },
+    { label: 'Cache write', count: request.cache_write_tokens, Icon: HardDriveUpload },
   ] as const;
   return (
     <Tooltip delayDuration={0}>
@@ -63,9 +63,12 @@ function RequestTokenTotal({ request }: { request: RequestSummaryOut }) {
       <TooltipContent side="top" className="w-44 border border-border bg-card p-3 text-card-foreground shadow-lg">
         <p className="mb-2 font-semibold">Token details</p>
         <dl className="space-y-1">
-          {details.map(([label, count]) => (
+          {tokenDetails.map(({ label, count, Icon }) => (
             <div key={label} className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">{label}</dt>
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                {label}
+              </dt>
               <dd className="font-mono tabular-nums">{count.toLocaleString()}</dd>
             </div>
           ))}
@@ -297,21 +300,14 @@ export function RequestsReporting({
               header: 'Model',
               cell: (item) => {
                 const model = item.model_id || item.requested_model_id;
-                return <ModelBadge name={model} className="max-w-48 justify-start" />;
+                const providerIcon = taxonomy.data?.providers.find((provider) => provider.name === item.provider_id)?.icon;
+                return (
+                  <span className="flex min-w-0 items-center gap-2">
+                    {providerIcon && <ProviderIcon markup={providerIcon} />}
+                    <ModelBadge name={model} className="max-w-48 justify-start" />
+                  </span>
+                );
               },
-            },
-            {
-              key: 'provider',
-              header: 'Provider',
-              cell: (item) =>
-                item.provider_id ? (
-                  <CatalogOptionLabel
-                    name={item.provider_id}
-                    providerIcon={taxonomy.data?.providers.find((provider) => provider.name === item.provider_id)?.icon}
-                  />
-                ) : (
-                  'No provider attempt'
-                ),
             },
             { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
           ]}

@@ -34,7 +34,9 @@ it('labels dates across the trend and shows full daily usage on hover', async ()
   const firstPoint = screen.getByRole('img', { name: 'cost over time' }).querySelector('circle[aria-label]');
   expect(firstPoint).not.toBeNull();
   await userEvent.setup().hover(firstPoint!);
-  expect(await screen.findByText('Thursday, January 1, 2026')).toBeInTheDocument();
+  const date = await screen.findByText('Thursday, January 1, 2026');
+  expect(date).toHaveClass('whitespace-nowrap');
+  expect(date.closest('[role="tooltip"]')).toHaveClass('w-max');
   expect(screen.getByText('Requests')).toBeInTheDocument();
   expect(screen.getByText('Input tokens')).toBeInTheDocument();
   expect(screen.getByText('Output tokens')).toBeInTheDocument();

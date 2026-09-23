@@ -122,9 +122,9 @@ export function ReportingChart({
                         <circle cx={x} cy={y} r="8" fill="currentColor" aria-label={`${formatBucket(bucket.date)}: ${label(bucket, metric)}`} />
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="w-64 border border-border bg-card p-3 text-foreground shadow-xl">
-                      <div className="mb-3 flex items-center gap-2 border-b border-border pb-2 text-sm font-semibold">
-                        <CalendarDays className="h-4 w-4 text-primary" />
+                    <TooltipContent side="top" className="w-max max-w-[calc(100vw-2rem)] border border-border bg-card p-3 text-foreground shadow-xl">
+                      <div className="mb-3 flex items-center gap-2 whitespace-nowrap border-b border-border pb-2 text-sm font-semibold">
+                        <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
                         {formatFullBucket(bucket.date)}
                       </div>
                       <div className="space-y-2 text-xs">
