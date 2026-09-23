@@ -67,7 +67,8 @@ export function UsageReporting({
     },
     validDates,
   );
-  const options = useReportOptions(orgId, query.workspace_id, workspaceId, validDates);
+  const options = useReportOptions(orgId, query, workspaceId, validDates);
+  const scopeName = workspaceName ?? (query.workspace_id ? options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace' : 'All workspaces');
   const totals = report.data?.totals;
   const comparison = report.data?.comparison;
 
@@ -75,7 +76,7 @@ export function UsageReporting({
     <PageShell>
       <PageHeader
         title={workspaceName ?? 'Usage'}
-        description={workspaceName ? 'Estimated gateway usage for this workspace.' : 'All workspaces · estimated gateway usage'}
+        description={`${scopeName} · estimated gateway usage`}
         actions={
           <Button
             variant="outline"

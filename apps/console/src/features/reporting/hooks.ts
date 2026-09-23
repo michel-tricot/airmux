@@ -28,8 +28,16 @@ export function useUsageRequest(orgId: string, requestId: string, params: GetUsa
   return useGetUsageRequest(orgId, requestId, params, { query: { enabled } });
 }
 
-export function useReportOptions(orgId: string, workspaceId: string | undefined, fixedWorkspaceId: string | undefined, enabled: boolean) {
-  const query = (dimension: ReportDimension) => ({ dimension, workspace_id: dimension === 'workspace' ? undefined : workspaceId });
+export function useReportOptions(orgId: string, params: GetUsageReportParams, fixedWorkspaceId: string | undefined, enabled: boolean) {
+  const filterByDimension: Record<ReportDimension, keyof GetUsageReportParams> = {
+    workspace: 'workspace_id',
+    owner: 'owner_id',
+    key: 'key_id',
+    model: 'model_id',
+    provider: 'provider_id',
+    credential: 'credential_id',
+  };
+  const query = (dimension: ReportDimension) => ({ ...params, dimension, [filterByDimension[dimension]]: undefined });
   const workspace = useGetReportFilterOptions(orgId, query('workspace'), { query: { enabled: enabled && !fixedWorkspaceId } });
   const owner = useGetReportFilterOptions(orgId, query('owner'), { query: { enabled } });
   const key = useGetReportFilterOptions(orgId, query('key'), { query: { enabled } });

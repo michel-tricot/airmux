@@ -57,7 +57,8 @@ export function RequestsReporting({
   const params = { ...query, status, multiple_attempts: multipleAttempts, request_id: requestId || undefined, sort_by: sortBy, limit: 20, offset };
   const requests = useUsageRequests(orgId, params, validDates);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
-  const options = useReportOptions(orgId, query.workspace_id, workspaceId, validDates);
+  const options = useReportOptions(orgId, query, workspaceId, validDates);
+  const scopeName = workspaceName ?? (query.workspace_id ? options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace' : 'All workspaces');
   const attemptFilter = !!(query.model_id || query.provider_id || query.credential_id);
   const [exportError, setExportError] = useState<unknown>();
   const [isExporting, setIsExporting] = useState(false);
@@ -72,7 +73,7 @@ export function RequestsReporting({
     <PageShell>
       <PageHeader
         title="Requests"
-        description={workspaceName ? `${workspaceName} · recorded inference requests` : 'All workspaces · recorded inference requests'}
+        description={`${scopeName} · recorded inference requests`}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => void requests.refetch()}>

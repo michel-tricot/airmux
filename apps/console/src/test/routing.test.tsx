@@ -77,7 +77,7 @@ describe('organization reporting landing', () => {
     renderAt('/org');
     expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/org');
-    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WORKSPACES[1].name);
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WORKSPACES[1].name));
   });
 
   it('remembers the workspace visited via a deep link', async () => {

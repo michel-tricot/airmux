@@ -65,7 +65,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
 
   expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
   expect(window.location.pathname).toBe('/org');
-  await user.click(screen.getByRole('combobox', { name: 'Group by' }));
+  await user.click(await screen.findByRole('combobox', { name: 'Group by' }));
   await user.click(screen.getByRole('option', { name: 'Model' }));
   const attribution = await screen.findByRole('table', { name: 'Attribution' });
   await user.click(within(attribution).getByRole('link', { name: 'model-a' }));
@@ -167,7 +167,7 @@ it('shows the full attempt history while identifying the filtered provider contr
   renderAt('/org/requests?request_id=request-1&provider_id=provider-b');
 
   const panel = await screen.findByRole('dialog', { name: 'Request details' });
-  expect(within(panel).getByText('provider-a', { exact: false })).toBeInTheDocument();
+  expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('Matches filters')).toBeInTheDocument();
   expect(within(panel).getByText('Outside filters')).toBeInTheDocument();
