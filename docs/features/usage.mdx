@@ -80,6 +80,8 @@ events, not proof that no later event will arrive.
 The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`, `/requests/{request_id}`, and
 `/requests/export`. Periods include Today, 7 days, 30 days, month to date, and custom dates. Reports compare with the
 preceding interval of equal duration. Request lists and attribution use `limit` and `offset`.
+Request list and detail responses include current workspace, inference key, and user display names; attempts include
+credential names. When a referenced resource is no longer available, its identifier is shown instead.
 
 ## Inspect events
 
