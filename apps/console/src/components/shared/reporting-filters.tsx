@@ -97,11 +97,13 @@ export function ReportingFilters({
       </div>
       {dimensions.some((dimension) => selected(dimension)) && (
         <div className="flex flex-wrap items-center gap-2">
-          {dimensions.filter((dimension) => selected(dimension)).map((dimension) => (
-            <Button key={dimension} variant="secondary" size="sm" onClick={() => onChange(`${dimension}_id`, '')}>
-              {labels[dimension]}: {options[dimension].find((option) => option.value === selected(dimension))?.label ?? selected(dimension)} ×
-            </Button>
-          ))}
+          {dimensions
+            .filter((dimension) => selected(dimension))
+            .map((dimension) => (
+              <Button key={dimension} variant="secondary" size="sm" onClick={() => onChange(`${dimension}_id`, '')}>
+                {labels[dimension]}: {options[dimension].find((option) => option.value === selected(dimension))?.label ?? selected(dimension)} ×
+              </Button>
+            ))}
           <Button variant="ghost" size="sm" onClick={onClear}>
             Clear selections
           </Button>

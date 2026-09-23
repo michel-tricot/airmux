@@ -58,7 +58,11 @@ export function RequestsReporting({
   const requests = useUsageRequests(orgId, params, validDates);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
   const options = useReportOptions(orgId, query, workspaceId, validDates);
-  const scopeName = workspaceName ?? (query.workspace_id ? options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace' : 'All workspaces');
+  const scopeName =
+    workspaceName ??
+    (query.workspace_id
+      ? (options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace')
+      : 'All workspaces');
   const attemptFilter = !!(query.model_id || query.provider_id || query.credential_id);
   const [exportError, setExportError] = useState<unknown>();
   const [isExporting, setIsExporting] = useState(false);
@@ -214,7 +218,7 @@ export function RequestsReporting({
               key: 'key',
               header: 'Inference key / source',
               cell: (item) =>
-                  item.request_source === 'playground'
+                item.request_source === 'playground'
                   ? 'Playground'
                   : (options.key.find((option) => option.value === item.key_id)?.label ?? item.key_id ?? 'Unknown'),
             },
@@ -267,6 +271,7 @@ export function RequestsReporting({
           {request.isError && <ErrorState error={request.error} resource="request" onRetry={() => request.refetch()} />}
           {request.data && (
             <div className="mt-6 space-y-6">
+              {!request.data.within_period && <p className="text-sm text-muted-foreground">This request started outside the selected period.</p>}
               <dl className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Started</dt>

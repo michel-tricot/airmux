@@ -36,7 +36,10 @@ export function ReportingChart({
   const maximum = Math.max(1, ...daily.map((bucket) => amount(bucket, metric)));
   const hourly = daily.length > 0 && new Date(endAt).getTime() - new Date(daily[0].date).getTime() <= 86_400_000;
   const formatBucket = (date: string) =>
-    new Intl.DateTimeFormat(undefined, hourly ? { timeZone: timezone, hour: 'numeric', minute: '2-digit' } : { timeZone: timezone, month: 'short', day: 'numeric' }).format(new Date(date));
+    new Intl.DateTimeFormat(
+      undefined,
+      hourly ? { timeZone: timezone, hour: 'numeric', minute: '2-digit' } : { timeZone: timezone, month: 'short', day: 'numeric' },
+    ).format(new Date(date));
   const point = (bucket: UsageReportOut['daily'][number], index: number) => {
     const x = daily.length === 1 ? 500 : (index / (daily.length - 1)) * 960 + 20;
     return `${x},${190 - (amount(bucket, metric) / maximum) * 160}`;

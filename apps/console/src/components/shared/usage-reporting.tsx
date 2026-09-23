@@ -68,7 +68,11 @@ export function UsageReporting({
     validDates,
   );
   const options = useReportOptions(orgId, query, workspaceId, validDates);
-  const scopeName = workspaceName ?? (query.workspace_id ? options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace' : 'All workspaces');
+  const scopeName =
+    workspaceName ??
+    (query.workspace_id
+      ? (options.workspace.find((option) => option.value === query.workspace_id)?.label ?? 'Selected workspace')
+      : 'All workspaces');
   const totals = report.data?.totals;
   const comparison = report.data?.comparison;
 
@@ -212,7 +216,12 @@ export function UsageReporting({
                   {
                     key: 'name',
                     header: filters.groupBy === 'owner' ? 'Key owner' : filters.groupBy,
-                    cell: (item) => item.id ? <Link href={drillDownUrl(filters.search, workspaceRef, filters.groupBy, item.id)}>{item.name}</Link> : 'None recorded',
+                    cell: (item) =>
+                      item.id ? (
+                        <Link href={drillDownUrl(filters.search, workspaceRef, filters.groupBy, item.id)}>{item.name}</Link>
+                      ) : (
+                        'None recorded'
+                      ),
                   },
                   { key: 'spend', header: 'Estimated spend', cell: (item) => formatReportCost(item.cost_usd) },
                   { key: 'share', header: 'Share', cell: (item) => formatShare(item.cost_usd, totals!.cost_usd) },

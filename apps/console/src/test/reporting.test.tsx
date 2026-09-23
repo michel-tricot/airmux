@@ -118,6 +118,7 @@ it('shows the full attempt history while identifying the filtered provider contr
           input_tokens: 30,
           output_tokens: 10,
           cost_usd: '0.000005',
+          within_period: false,
           attempts: [
             {
               event_id: 'event-a',
@@ -167,6 +168,7 @@ it('shows the full attempt history while identifying the filtered provider contr
   renderAt('/org/requests?request_id=request-1&provider_id=provider-b');
 
   const panel = await screen.findByRole('dialog', { name: 'Request details' });
+  expect(await within(panel).findByText('This request started outside the selected period.')).toBeInTheDocument();
   expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('Matches filters')).toBeInTheDocument();
