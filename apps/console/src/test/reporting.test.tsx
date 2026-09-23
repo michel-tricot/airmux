@@ -65,6 +65,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(await screen.findByRole('heading', { name: 'Usage' })).toBeInTheDocument();
   const spendCard = (await screen.findByText('Spend', { selector: 'div' })).closest('.p-4');
   expect(spendCard?.querySelector('svg')).not.toHaveClass('mt-1');
+  expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
   const tokensCard = screen.getByText('Tokens', { selector: 'div' }).closest('.p-4') as HTMLElement;
   expect(within(tokensCard).getByText('40')).toBeInTheDocument();
   expect(within(tokensCard).getByText('30 in · 10 out')).toBeInTheDocument();
@@ -113,6 +114,7 @@ it('uses the same report endpoint with a workspace ID for workspace reporting', 
 
   expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
   expect(await screen.findByText('$0.000005')).toBeInTheDocument();
+  expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
 });
 
 it.each([
