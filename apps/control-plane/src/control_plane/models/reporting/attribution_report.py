@@ -18,6 +18,7 @@ from control_plane.models.reporting.query import AttributionQuery, FilterOptions
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
 from control_plane.models.workspace import Workspace
+from control_plane.models.workspace_membership import WorkspaceMembership
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -49,7 +50,7 @@ class AttributionReportOut(BaseModel):
             timezone=window.timezone,
         )
         previous = await _grouped(org_id, query, previous_window, query.group_by)
-        names = await _names(org_id, query.group_by, [*current, *previous])
+        names = await _names(org_id, query.workspace_id, query.group_by, [*current, *previous])
         items = [
             AttributionItemOut(
                 id=identifier,
@@ -95,7 +96,7 @@ class FilterOptionsOut(BaseModel):
         }.get(query.dimension)
         scope_query = query.model_copy(update={filter_field: None}) if filter_field is not None else query
         groups = await _grouped(org_id, scope_query, query.window(now), query.dimension)
-        names = await _names(org_id, query.dimension, list(groups))
+        names = await _names(org_id, query.workspace_id, query.dimension, list(groups))
         identifiers = [identifier for identifier in groups if identifier or query.dimension != "credential"]
         if query.search:
             search = query.search.casefold()
@@ -141,7 +142,7 @@ async def _grouped(
     }
 
 
-async def _names(org_id: UUID, group_by: Grouping, identifiers: list[str]) -> dict[str, str]:
+async def _names(org_id: UUID, workspace_id: UUID | None, group_by: Grouping, identifiers: list[str]) -> dict[str, str]:
     if group_by in {"model", "provider"}:
         return {}
     uuids = []
@@ -156,13 +157,18 @@ async def _names(org_id: UUID, group_by: Grouping, identifiers: list[str]) -> di
         workspaces = await Workspace.find(col(Workspace.org_id) == org_id, col(Workspace.id).in_(uuids))
         return {str(workspace.id): workspace.name for workspace in workspaces}
     if group_by == "owner":
-        member_ids = sql_select(col(OrgMembership.user_id)).where(col(OrgMembership.org_id) == org_id)
+        member_ids = (
+            sql_select(col(WorkspaceMembership.user_id)).where(col(WorkspaceMembership.workspace_id) == workspace_id)
+            if workspace_id is not None
+            else sql_select(col(OrgMembership.user_id)).where(col(OrgMembership.org_id) == org_id)
+        )
         users = await User.find(col(User.id).in_(uuids), col(User.id).in_(member_ids))
         return {str(user.id): user.name for user in users}
     if group_by == "key":
         keys = await InferenceKey.find(col(InferenceKey.org_id) == org_id, col(InferenceKey.id).in_(uuids))
         return {str(key.id): key.label for key in keys}
-    credentials = await ProviderCredential.find(
-        col(ProviderCredential.id).in_(uuids), or_(col(ProviderCredential.org_id) == org_id, col(ProviderCredential.org_id).is_(None))
-    )
+    conditions = [col(ProviderCredential.id).in_(uuids), or_(col(ProviderCredential.org_id) == org_id, col(ProviderCredential.org_id).is_(None))]
+    if workspace_id is not None:
+        conditions.append(or_(col(ProviderCredential.workspace_id) == workspace_id, col(ProviderCredential.workspace_id).is_(None)))
+    credentials = await ProviderCredential.find(*conditions)
     return {str(credential.id): credential.name for credential in credentials}

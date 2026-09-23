@@ -202,11 +202,33 @@ def test_attribution_does_not_resolve_an_unrelated_users_name(tmp_path):
         root = cp.headers()
         org_id = make_org(client, root)
         workspace_id = make_workspace(client, cp.headers(org_id))
+        other_workspace_id = make_workspace(client, cp.headers(org_id), "other")
         outsider = make_user(tmp_path, "outside@example.com", "Outside Organization")
-        event = {**_event(org_id, workspace_id), "user_id": str(outsider.id)}
-        assert client.post("/api/v1/events", json=[event], headers=root).json()["data"]["ingested"] == 1
+        other_member = make_user(tmp_path, "other-workspace@example.com", "Other Workspace")
+        assert (
+            client.put(f"/api/v1/organizations/{org_id}/users/{other_member.id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code
+            == 200
+        )
+        assert (
+            client.put(
+                f"/api/v1/organizations/{org_id}/workspaces/{other_workspace_id}/members/{other_member.id}",
+                json={"role": "viewer"},
+                headers=cp.headers(org_id),
+            ).status_code
+            == 200
+        )
+        events = [{**_event(org_id, workspace_id), "user_id": str(user.id)} for user in (outsider, other_member)]
+        assert client.post("/api/v1/events", json=events, headers=root).json()["data"]["ingested"] == 2
         report = client.get(f"/api/v1/organizations/{org_id}/reports/attribution", params={"group_by": "owner"}, headers=cp.headers(org_id))
-        assert report.json()["data"]["items"][0]["name"] == str(outsider.id)
+        names = {item["id"]: item["name"] for item in report.json()["data"]["items"]}
+        assert names[str(outsider.id)] == str(outsider.id)
+        assert names[str(other_member.id)] == "Other Workspace"
+        scoped = client.get(
+            f"/api/v1/organizations/{org_id}/reports/attribution",
+            params={"group_by": "owner", "workspace_id": str(workspace_id)},
+            headers=cp.headers(org_id),
+        )
+        assert {item["name"] for item in scoped.json()["data"]["items"]} == {str(outsider.id), str(other_member.id)}
 
 
 def test_custom_day_uses_local_midnights_across_dst_transition(tmp_path):
