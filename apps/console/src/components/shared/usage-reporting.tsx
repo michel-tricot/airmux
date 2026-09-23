@@ -159,7 +159,6 @@ export function UsageReporting({
           <Card className="p-4">
             <SectionHeader
               title="Attribution"
-              description="A request can appear in several model or provider groups when it retries. Spending is counted once per attempt."
               actions={
                 <Dropdown
                   aria-label="Group by"

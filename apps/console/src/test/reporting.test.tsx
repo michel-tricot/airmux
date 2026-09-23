@@ -113,6 +113,9 @@ it('uses the same report endpoint with a workspace ID for workspace reporting', 
 
   expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
   expect(await screen.findByText('$0.000005')).toBeInTheDocument();
+  expect(
+    screen.queryByText('A request can appear in several model or provider groups when it retries. Spending is counted once per attempt.'),
+  ).not.toBeInTheDocument();
 });
 
 it.each([
