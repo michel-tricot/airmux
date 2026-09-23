@@ -325,6 +325,14 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
 
         report = client.get(f"/api/v1/organizations/{org_id}/reports/usage", headers=cp.headers(org_id)).json()["data"]
         requests = client.get(f"/api/v1/organizations/{org_id}/reports/requests", headers=cp.headers(org_id)).json()["data"]
+        attribution = client.get(
+            f"/api/v1/organizations/{org_id}/reports/attribution",
+            params={"group_by": "model"},
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        detail = client.get(f"/api/v1/organizations/{org_id}/reports/requests/{first_attempt['request_id']}", headers=cp.headers(org_id)).json()[
+            "data"
+        ]
 
         assert report["totals"]["requests"] == 1
         assert report["totals"]["input_tokens"] == 10
@@ -332,11 +340,11 @@ def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
         assert Decimal(report["totals"]["cost_usd"]) == Decimal("0.000005")
         assert report["daily"][-1]["requests"] == 1
         assert Decimal(report["daily"][-1]["cost_usd"]) == Decimal("0.000005")
-        assert report["models"][0]["name"] == "gpt-test"
-        assert report["models"][0]["requests"] == 1
-        assert Decimal(report["models"][0]["cost_usd"]) == Decimal("0.000005")
+        assert attribution["items"][0]["name"] == "gpt-test"
+        assert attribution["items"][0]["requests"] == 1
+        assert Decimal(attribution["items"][0]["cost_usd"]) == Decimal("0.000005")
         assert requests["next_offset"] is None
         assert len(requests["requests"]) == 1
         assert requests["requests"][0]["status"] == "ok"
         assert Decimal(requests["requests"][0]["cost_usd"]) == Decimal("0.000005")
-        assert [attempt["attempt_index"] for attempt in requests["requests"][0]["attempts"]] == [1, 2]
+        assert [attempt["status"] for attempt in detail["attempts"]] == ["upstream_error", "ok"]
