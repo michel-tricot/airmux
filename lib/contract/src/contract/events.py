@@ -67,6 +67,22 @@ class _UsageEventV1(BaseModel):
         description="Scope of the provider credential used for the request",
     )
 
+    def validate_semantics(self) -> None:
+        if self.request_started_at > self.occurred_at or (
+            self.attempt_started_at is not None and not self.request_started_at <= self.attempt_started_at <= self.occurred_at
+        ):
+            message = "request and attempt timestamps must be ordered"
+            raise ValueError(message)
+        if self.cost_usd != self.cost_input_usd + self.cost_output_usd:
+            message = "cost_usd must equal cost_input_usd plus cost_output_usd"
+            raise ValueError(message)
+        if self.cache_read_tokens + self.cache_write_tokens > self.input_tokens:
+            message = "input tokens must include cache-read and cache-write tokens"
+            raise ValueError(message)
+        if self.status == "denied" and (self.input_tokens != 0 or self.output_tokens != 0 or self.cost_usd != ZERO_USD):
+            message = "denied events must have zero tokens and cost"
+            raise ValueError(message)
+
 
 class DeniedUsageEventV1(_UsageEventV1):
     attempt_started_at: None = Field(None, description="No provider attempt was made")

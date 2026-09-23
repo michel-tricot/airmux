@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import Field, TypeAdapter, ValidationError
+from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
@@ -25,22 +25,6 @@ if TYPE_CHECKING:
     from control_plane.models.provider_credential import ProviderCredentialStatus
 
 router = APIRouter(tags=["Data Plane API"])
-
-EventBatch = Annotated[
-    list[object],
-    Field(
-        max_length=1000,
-        json_schema_extra={
-            "items": {
-                "oneOf": [
-                    {"$ref": "#/components/schemas/DeniedUsageEventV1"},
-                    {"$ref": "#/components/schemas/RoutedUsageEventV1"},
-                ]
-            }
-        },
-    ),
-]
-USAGE_EVENT_ADAPTER = TypeAdapter(UsageEventContract)
 
 CREDENTIAL_HEALTH: dict[UsageStatus, ProviderCredentialStatus] = {
     "ok": "live",
@@ -83,9 +67,22 @@ async def get_bundle(bundle: BundleDep) -> Envelope[BundleV1]:
 
 
 @router.post("/events", dependencies=[require("operational", credential_scope, Permission.usage_ingest)])
-async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, payloads: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
-    """Ingest up to 1,000 usage events; invalid items are skipped and event IDs make retries idempotent."""
-    events, rejected = _parse_usage_events(payloads)
+async def ingest_events(
+    actor: ActorDep,
+    scope: CredentialScopeDep,
+    payloads: Annotated[list[UsageEventContract], Field(max_length=1000)],
+    session: SessionDep,
+) -> Envelope[EventsIngestedOut]:
+    """Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events."""
+    events = []
+    rejected = 0
+    for event in payloads:
+        try:
+            event.validate_semantics()
+        except ValueError:
+            rejected += 1
+        else:
+            events.append(event)
     if not events:
         return Envelope(data=EventsIngestedOut(received=len(payloads), ingested=0, rejected=rejected))
     permissions = await decisions(actor, Permission.usage_ingest, (Scope.workspace(event.org_id, event.workspace_id) for event in events))
@@ -100,17 +97,6 @@ async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, payloads: Ev
     else:
         inserted_ids = []
     return Envelope(data=EventsIngestedOut(received=len(payloads), ingested=len(inserted_ids), rejected=rejected))
-
-
-def _parse_usage_events(payloads: list[object]) -> tuple[list[UsageEventContract], int]:
-    events = []
-    rejected = 0
-    for payload in payloads:
-        try:
-            events.append(USAGE_EVENT_ADAPTER.validate_python(payload))
-        except ValidationError:
-            rejected += 1
-    return events, rejected
 
 
 def _credential_health(events: list[UsageEventContract]) -> dict[UUID, tuple[datetime, ProviderCredentialStatus]]:

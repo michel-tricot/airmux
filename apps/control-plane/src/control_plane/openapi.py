@@ -4,9 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-from pydantic import TypeAdapter
 
-from contract import UsageEvent as UsageEventContract
 from control_plane.sessions import SESSION_COOKIE
 
 if TYPE_CHECKING:
@@ -273,7 +271,6 @@ class ControlPlaneApp(FastAPI):
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
         components = schema.setdefault("components", {})
-        components.setdefault("schemas", {}).update(TypeAdapter(UsageEventContract).json_schema()["$defs"])
         security_schemes = components.setdefault("securitySchemes", {})
         security_schemes["SessionCookie"] = {
             "type": "apiKey",

@@ -101,17 +101,47 @@ def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
         assert replay == {"received": 3, "ingested": 0, "rejected": 0}
 
 
-def test_event_ingest_skips_invalid_items_without_losing_valid_events(tmp_path):
+@pytest.mark.parametrize("invalid", [42, {}, {"input_tokens": "not a number"}])
+def test_event_ingest_rejects_structurally_invalid_batch(tmp_path, invalid):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         org_id = make_org(client, cp.headers(), "invalid-event")
         valid = _event(org_id)
-        invalid = {**_event(org_id), "input_tokens": -1}
+        response = client.post("/api/v1/events", json=[invalid, valid], headers=cp.headers())
 
-        response = client.post("/api/v1/events", json=[invalid, 42, valid], headers=cp.headers())
+        assert response.status_code == 422, response.text
+        stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
+        assert stored == []
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"cost_usd": "1"},
+        {"attempt_started_at": "2000-01-01T00:00:00+00:00"},
+        {"occurred_at": "2000-01-01T00:00:00+00:00"},
+        {"cache_read_tokens": 11},
+        {
+            "status": "denied",
+            "provider_id": "",
+            "attempt_started_at": None,
+            "token_usage_source": "not_applicable",
+            "credential_id": None,
+            "credential_scope": None,
+        },
+    ],
+)
+def test_event_ingest_skips_semantically_invalid_events(tmp_path, changes):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "semantic-event")
+        valid = _event(org_id)
+        invalid = {**_event(org_id), **changes}
+
+        response = client.post("/api/v1/events", json=[invalid, valid], headers=cp.headers())
 
         assert response.status_code == 200, response.text
-        assert response.json()["data"] == {"received": 3, "ingested": 1, "rejected": 2}
+        assert response.json()["data"] == {"received": 2, "ingested": 1, "rejected": 1}
         stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
         assert [event["event_id"] for event in stored] == [valid["event_id"]]
 
@@ -143,8 +173,7 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
             {**event, "provider_id": "p" * 64},
         ):
             response = c.post("/api/v1/events", json=[invalid], headers=root)
-            assert response.status_code == 200, response.text
-            assert response.json()["data"]["rejected"] == 1
+            assert response.status_code == 422, response.text
         assert c.post("/api/v1/events", json=[event] * 1001, headers=root).status_code == 422
 
         denied = c.post(
@@ -158,6 +187,8 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
                     "token_usage_source": "not_applicable",
                     "credential_id": None,
                     "credential_scope": None,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
                     "cost_usd": "0",
                     "cost_input_usd": "0",
                 }
@@ -165,6 +196,7 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
             headers=root,
         )
         assert denied.status_code == 200, denied.text
+        assert denied.json()["data"]["ingested"] == 1
 
 
 @pytest.mark.parametrize("source", ["provider", "estimated", "not_applicable"])
@@ -200,7 +232,16 @@ def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
     with TestClient(cp.app) as c:
         root = cp.headers()
         org_id = make_org(c, root, "o1")
-        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": f"2026-08-15T12:00:0{index}+00:00"} for index in range(1, 4)]
+        events = [
+            {
+                **_event(org_id),
+                "event_id": str(UUID(int=index)),
+                "request_started_at": f"2026-08-15T12:00:0{index}+00:00",
+                "attempt_started_at": f"2026-08-15T12:00:0{index}+00:00",
+                "occurred_at": f"2026-08-15T12:00:0{index}+00:00",
+            }
+            for index in range(1, 4)
+        ]
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
@@ -221,7 +262,16 @@ def test_event_cursors_are_stable_when_timestamps_match(tmp_path):
         root = cp.headers()
         org_id = make_org(c, root, "o1")
         occurred_at = "2026-08-15T12:00:00+00:00"
-        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": occurred_at} for index in range(1, 4)]
+        events = [
+            {
+                **_event(org_id),
+                "event_id": str(UUID(int=index)),
+                "request_started_at": occurred_at,
+                "attempt_started_at": occurred_at,
+                "occurred_at": occurred_at,
+            }
+            for index in range(1, 4)
+        ]
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 

@@ -8155,7 +8155,7 @@ export const getIngestEventsUrl = () => {
 }
 
 /**
- * Ingest up to 1,000 usage events; invalid items are skipped and event IDs make retries idempotent.
+ * Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events.
  *
  * Required permission: `usage.ingest`.
  * @summary Ingest Usage Events
