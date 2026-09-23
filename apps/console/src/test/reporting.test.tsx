@@ -93,6 +93,23 @@ it('opens a listed request without carrying its old page offset', async () => {
   expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
 });
 
+it('keeps workspace request rows compact with the full request ID available', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () =>
+      HttpResponse.json({ data: { requests: [{ ...requestSummary, request_id: '01a0cbde-afee-7867-a902-e70b75b471ba' }], next_offset: null } }),
+    ),
+  );
+
+  renderAt(`/org/workspaces/${WORKSPACES[0].slug}/requests`);
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
+  expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
+    'title',
+    '01a0cbde-afee-7867-a902-e70b75b471ba',
+  );
+});
+
 it('uses the same report endpoint with a workspace ID for workspace reporting', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/usage', ({ request }) => {
@@ -115,6 +132,9 @@ it('uses the same report endpoint with a workspace ID for workspace reporting', 
   expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
   expect(await screen.findByText('$0.000005')).toBeInTheDocument();
   expect(screen.queryAllByText(/vs previous period/)).toHaveLength(0);
+  expect(
+    screen.queryByText('A request can appear in several model or provider groups when it retries. Spending is counted once per attempt.'),
+  ).not.toBeInTheDocument();
 });
 
 it.each([
@@ -243,6 +263,8 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(await within(panel).findByText('This request started outside the selected period.')).toBeInTheDocument();
   expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
+  expect(within(panel).getAllByText('Provider')).toHaveLength(2);
+  expect(within(panel).getAllByText('Model')).toHaveLength(2);
   expect(within(panel).getByText('Matches filters')).toBeInTheDocument();
   expect(within(panel).getByText('Outside filters')).toBeInTheDocument();
   expect(within(panel).getByText('$0.000005')).toBeInTheDocument();
@@ -259,15 +281,16 @@ it('shows the full attempt history while identifying the filtered provider contr
   expect(panel).toHaveClass('p-6');
 });
 
-it('uses a dark native calendar with its icon aligned to the right', async () => {
+it('uses a themed calendar to update the report date', async () => {
+  const user = userEvent.setup();
   renderAt('/org?period=custom&start_date=2026-01-01&end_date=2026-01-31');
 
-  const startDate = await screen.findByLabelText('Start date');
-  const endDate = screen.getByLabelText('End date');
-  for (const date of [startDate, endDate]) {
-    expect(date).toHaveClass('[color-scheme:dark]');
-    expect(date).toHaveClass('[&::-webkit-calendar-picker-indicator]:right-3');
-  }
+  await user.click(await screen.findByRole('button', { name: 'Choose start date, January 1, 2026' }));
+  const calendar = screen.getByRole('dialog', { name: 'Start date' });
+  expect(calendar).toHaveClass('bg-card', 'text-card-foreground');
+  await user.click(within(calendar).getByRole('button', { name: 'January 2, 2026' }));
+
+  expect(new URLSearchParams(window.location.search).get('start_date')).toBe('2026-01-02');
 });
 
 it('shows a denied playground request without a fake provider attempt or inference key', async () => {

@@ -64,6 +64,7 @@ export function ReportingChart({
         actions={
           <Dropdown
             aria-label="Chart metric"
+            className="w-32 shrink-0"
             value={metric}
             onValueChange={(value) => onMetricChange(value as ReportMetric)}
             options={[

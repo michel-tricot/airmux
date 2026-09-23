@@ -1,4 +1,5 @@
-import { Button, Dropdown, Input, Label } from '@/components/ui/elements';
+import { Button, Dropdown, Label } from '@/components/ui/elements';
+import { ReportingDatePicker } from '@/components/shared/reporting-date-picker';
 import { SearchPicker, type SearchPickerOption } from '@/components/shared/search-picker';
 import { reportDimensions, type ReportDimension, type ReportPeriod } from '@/features/reporting/url';
 
@@ -68,11 +69,16 @@ export function ReportingFilters({
           <>
             <div className="space-y-1.5">
               <Label htmlFor="report-start-date">Start date</Label>
-              <Input id="report-start-date" type="date" value={startDate} onChange={(event) => onChange('start_date', event.target.value)} />
+              <ReportingDatePicker
+                id="report-start-date"
+                label="Start date"
+                value={startDate}
+                onValueChange={(value) => onChange('start_date', value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="report-end-date">End date</Label>
-              <Input id="report-end-date" type="date" value={endDate} onChange={(event) => onChange('end_date', event.target.value)} />
+              <ReportingDatePicker id="report-end-date" label="End date" value={endDate} onValueChange={(value) => onChange('end_date', value)} />
             </div>
           </>
         )}
