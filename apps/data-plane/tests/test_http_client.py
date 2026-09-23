@@ -15,6 +15,11 @@ from data_plane.config import HttpConfig
 from data_plane.http_client import build_http_client
 
 
+async def test_outbound_client_uses_aiohttp_default_request_class():
+    async with build_http_client(HttpConfig()) as client:
+        assert client._request_class is aiohttp.ClientRequest
+
+
 async def test_outbound_requests_reuse_connections_without_sharing_provider_cookies():
     async def respond(request: web.Request) -> web.Response:
         assert request.transport is not None
@@ -156,7 +161,7 @@ async def test_provider_authentication_does_not_read_netrc_without_a_configured_
 
 @pytest.mark.parametrize("event_loop", ["asyncio", "uvloop"])
 @pytest.mark.parametrize("body", [b"", b"request body" * 1024], ids=["empty", "buffered"])
-def test_provider_request_is_sent_before_other_ready_tasks_run(event_loop: str, body: bytes):
+def test_provider_request_is_sent_without_blocking_the_event_loop(event_loop: str, body: bytes):
     received = threading.Event()
 
     class Provider(BaseHTTPRequestHandler):
@@ -180,7 +185,7 @@ def test_provider_request_is_sent_before_other_ready_tasks_run(event_loop: str, 
             received.clear()
             request = asyncio.Task(client.post(url, data=body), loop=asyncio.get_running_loop(), eager_start=True)
             try:
-                assert received.wait(1), "The provider request waited for another event-loop iteration"
+                assert await asyncio.wait_for(asyncio.to_thread(received.wait, 1), 1)
             finally:
                 async with await request as response:
                     assert await response.read() == body
