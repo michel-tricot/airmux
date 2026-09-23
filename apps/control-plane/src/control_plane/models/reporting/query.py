@@ -19,6 +19,7 @@ Grouping = Literal["workspace", "owner", "key", "model", "provider", "credential
 AttributionSort = Literal["cost", "change", "requests"]
 RequestSort = Literal["newest", "cost"]
 FilterDimension = Grouping
+MAX_REPORT_SPAN = timedelta(days=366)
 
 
 class ReportWindow(BaseModel):
@@ -61,10 +62,21 @@ class ReportQuery(BaseModel):
         if self.period != "custom" and (self.start_date is not None or self.end_date is not None):
             message = "Dates require period=custom"
             raise ValueError(message)
+        if (
+            self.period == "custom"
+            and self.start_date is not None
+            and self.end_date is not None
+            and self.end_date - self.start_date >= MAX_REPORT_SPAN
+        ):
+            message = "Custom period cannot exceed 366 days"
+            raise ValueError(message)
         if (self.start_at is None) != (self.end_at is None) or (
             self.start_at is not None and self.end_at is not None and self.start_at >= self.end_at
         ):
             message = "Bucket start_at and end_at must form an ordered pair"
+            raise ValueError(message)
+        if self.start_at is not None and self.end_at is not None and self.end_at - self.start_at > MAX_REPORT_SPAN:
+            message = "Bucket window cannot exceed 366 days"
             raise ValueError(message)
         return self
 

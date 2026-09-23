@@ -402,6 +402,8 @@ def test_report_rejects_invalid_period_queries(tmp_path):
             {"period": "custom", "start_date": "2026-03-08", "end_date": "2026-03-08", "timezone": "No/Such_Zone"},
             {"start_at": "2026-03-08T08:00:00Z"},
             {"start_at": "2026-03-09T08:00:00Z", "end_at": "2026-03-08T08:00:00Z"},
+            {"period": "custom", "start_date": "2025-01-01", "end_date": "2026-01-02"},
+            {"start_at": "2025-01-01T00:00:00Z", "end_at": "2026-01-03T00:00:00Z"},
         )
         for params in invalid_queries:
             response = client.get(path, params=params, headers=headers)
