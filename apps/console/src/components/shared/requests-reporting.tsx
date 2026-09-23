@@ -55,7 +55,8 @@ export function RequestsReporting({
   const multipleAttempts = filters.search.get('multiple_attempts') === 'true' || undefined;
   const requestId = filters.search.get('request_id') ?? '';
   const params = { ...query, status, multiple_attempts: multipleAttempts, request_id: requestId || undefined, sort_by: sortBy, limit: 20, offset };
-  const requests = useUsageRequests(orgId, params, validDates);
+  const [live, setLive] = useState(false);
+  const requests = useUsageRequests(orgId, params, validDates, live);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
   const options = useReportOptions(orgId, query, workspaceId, validDates);
   const scopeName =
@@ -81,8 +82,12 @@ export function RequestsReporting({
         description={`${scopeName} · recorded inference requests`}
         actions={
           <div className="flex gap-2">
+            <Button variant={live ? 'secondary' : 'outline'} size="sm" aria-pressed={live} disabled={!validDates} onClick={() => setLive(!live)}>
+              {live && <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />}
+              Live
+            </Button>
             <Button variant="outline" size="sm" onClick={() => void requests.refetch()}>
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={requests.isFetching ? 'h-3.5 w-3.5 motion-safe:animate-spin' : 'h-3.5 w-3.5'} />
               Refresh
             </Button>
             <Button
@@ -193,6 +198,7 @@ export function RequestsReporting({
           ariaLabel="Requests"
           rows={validDates ? requests.data?.requests : []}
           rowKey={(item) => item.request_id}
+          rowClassName="motion-safe:animate-request-arrival"
           isLoading={validDates && requests.isLoading}
           isError={validDates && requests.isError && !requests.data}
           error={requests.error}
@@ -253,10 +259,6 @@ export function RequestsReporting({
           </Button>
         </div>
       </Card>
-      <p className="text-xs text-muted-foreground">
-        Events arrive asynchronously. A request’s observed status and cost may change when later events arrive.
-      </p>
-
       <Sheet
         open={!!requestId}
         onOpenChange={(open) => {

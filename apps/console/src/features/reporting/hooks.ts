@@ -20,8 +20,8 @@ export function useAttributionReport(orgId: string, params: GetAttributionReport
   return useGetAttributionReport(orgId, params, { query: { enabled } });
 }
 
-export function useUsageRequests(orgId: string, params: ListUsageRequestsParams, enabled: boolean) {
-  return useListUsageRequests(orgId, params, { query: { enabled } });
+export function useUsageRequests(orgId: string, params: ListUsageRequestsParams, enabled: boolean, live: boolean) {
+  return useListUsageRequests(orgId, params, { query: { enabled, refetchInterval: live ? 3_000 : false } });
 }
 
 export function useUsageRequest(orgId: string, requestId: string, params: GetUsageRequestParams, enabled: boolean) {

@@ -90,7 +90,7 @@ export function UsageReporting({
               void attribution.refetch();
             }}
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className={report.isFetching || attribution.isFetching ? 'h-3.5 w-3.5 motion-safe:animate-spin' : 'h-3.5 w-3.5'} />
             Refresh
           </Button>
         }
@@ -255,10 +255,6 @@ export function UsageReporting({
               </Button>
             </div>
           </Card>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Events arrive asynchronously. Historical totals may change.</span>
-            <span>Updated {new Date(report.data.updated_at).toLocaleString()}</span>
-          </div>
           <Button asChild variant="outline">
             <Link href={`${requestsPath(workspaceRef)}?${filters.search}`}>View requests</Link>
           </Button>

@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { expect, it } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
@@ -107,6 +107,46 @@ it('uses the same report endpoint with a workspace ID for workspace reporting', 
 
   expect(await screen.findByRole('heading', { name: WORKSPACES[0].name })).toBeInTheDocument();
   expect(await screen.findByText('$0.000005')).toBeInTheDocument();
+});
+
+it.each([
+  ['/org', '/api/v1/organizations/:orgId/reports/usage'],
+  ['/org/requests', '/api/v1/organizations/:orgId/reports/requests'],
+])('spins the refresh icon while %s reloads', async (path, endpoint) => {
+  const user = userEvent.setup();
+  renderAt(path);
+
+  const refresh = await screen.findByRole('button', { name: 'Refresh' });
+  if (path === '/org') await screen.findAllByText('No usage in this period.');
+  else await screen.findByText('No requests match these filters.');
+  expect(screen.queryByText(/Events arrive asynchronously/)).not.toBeInTheDocument();
+  server.use(
+    http.get(endpoint, async () => {
+      await delay(300);
+      return HttpResponse.json({
+        data: path === '/org' ? { totals, comparison: totals, period, daily: [], updated_at: period.end_at } : { requests: [], next_offset: null },
+      });
+    }),
+  );
+
+  await user.click(refresh);
+  expect(refresh.querySelector('svg')).toHaveClass('motion-safe:animate-spin');
+  await waitFor(() => expect(refresh.querySelector('svg')).not.toHaveClass('motion-safe:animate-spin'));
+});
+
+it('polls requests in Live mode and briefly highlights new rows', async () => {
+  const user = userEvent.setup();
+  renderAt('/org/requests');
+
+  await screen.findByText('No requests match these filters.');
+  await user.click(screen.getByRole('button', { name: 'Live' }));
+  expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-pressed', 'true');
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+  );
+
+  const requestLink = await screen.findByRole('link', { name: 'request-1' }, { timeout: 5_000 });
+  expect(requestLink.closest('tr')).toHaveClass('motion-safe:animate-request-arrival');
 });
 
 it('shows the full attempt history while identifying the filtered provider contribution', async () => {
