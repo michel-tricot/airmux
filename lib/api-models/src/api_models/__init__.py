@@ -1544,15 +1544,20 @@ class RequestSummaryOut(BaseModel):
         Field(title="Status"),
     ]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    workspace_name: Annotated[str, Field(title="Workspace Name")]
     key_id: Annotated[str, Field(title="Key Id")]
+    key_name: Annotated[str, Field(title="Key Name")]
     request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     user_id: Annotated[UUID, Field(title="User Id")]
+    user_email: Annotated[str, Field(title="User Email")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
     attempt_count: Annotated[int, Field(title="Attempt Count")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
 
 
@@ -1940,6 +1945,8 @@ class UsageDayOut(BaseModel):
     requests: Annotated[int, Field(title="Requests")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     date: Annotated[AwareDatetime, Field(title="Date")]
 
@@ -1999,6 +2006,8 @@ class UsageTotalsOut(BaseModel):
     requests: Annotated[int, Field(title="Requests")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
 
 
@@ -2441,6 +2450,7 @@ class RequestAttemptOut(BaseModel):
     provider_id: Annotated[str, Field(title="Provider Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     credential_id: Annotated[UUID | None, Field(title="Credential Id")]
+    credential_name: Annotated[str | None, Field(title="Credential Name")]
     status: Annotated[
         Literal[
             "ok",
@@ -2481,15 +2491,20 @@ class RequestDetailOut(BaseModel):
         Field(title="Status"),
     ]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    workspace_name: Annotated[str, Field(title="Workspace Name")]
     key_id: Annotated[str, Field(title="Key Id")]
+    key_name: Annotated[str, Field(title="Key Name")]
     request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     user_id: Annotated[UUID, Field(title="User Id")]
+    user_email: Annotated[str, Field(title="User Email")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
     attempt_count: Annotated[int, Field(title="Attempt Count")]
     input_tokens: Annotated[int, Field(title="Input Tokens")]
     output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
     cost_usd: Annotated[str, Field(pattern="^\\d+(?:\\.\\d+)?$", title="Cost Usd")]
     within_period: Annotated[bool, Field(title="Within Period")]
     attempts: Annotated[list[RequestAttemptOut], Field(title="Attempts")]
