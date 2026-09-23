@@ -70,6 +70,7 @@ def _usage_event(metered, status, occurred_at):
         "org_id": str(metered.org_id),
         "workspace_id": str(metered.workspace_id),
         "key_id": "k1",
+        "request_source": "inference_key",
         "model_id": "gpt-test",
         "user_id": str(metered.org_id),
         "requested_model_id": "gpt-test",

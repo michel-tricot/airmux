@@ -120,16 +120,21 @@ async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_clien
 
 @respx.mock
 async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
-    route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
+    response = httpx.Response(200, json={"data": {"received": 2, "ingested": 1, "rejected": 1}})
+    route = respx.post("http://cp.test/api/v1/events").mock(return_value=response)
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     record(outbox, make_event(first))
-    record(outbox, make_event(second).model_copy(update={"token_usage_source": TokenUsageSource.ESTIMATED}))
+    invalid = make_event(second).model_copy(update={"token_usage_source": TokenUsageSource.ESTIMATED, "input_tokens": 0, "cache_read_tokens": 1})
+    with pytest.raises(ValueError, match="cache-read"):
+        invalid.validate_semantics()
+    record(outbox, invalid)
     assert await outbox.export_once() == 2
     assert await outbox.next_batch(10) == []
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
     assert [e["token_usage_source"] for e in sent] == ["provider", "estimated"]
+    assert sent[1]["cache_read_tokens"] == 1
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
 
 

@@ -6397,7 +6397,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           const: denied
@@ -9784,7 +9784,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           enum:

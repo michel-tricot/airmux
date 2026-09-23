@@ -60,7 +60,11 @@ class _UsageEventV1(BaseModel):
     max_output_tokens: int | None = Field(description="Effective upstream output-token limit", ge=1, le=MAX_EVENT_INTEGER)
     cache_read_tokens: int = Field(default=0, description="Input tokens read from a provider cache", ge=0, le=MAX_EVENT_INTEGER)
     cache_write_tokens: int = Field(default=0, description="Input tokens written to a provider cache", ge=0, le=MAX_EVENT_INTEGER)
-    latency_ms: int = Field(description="End-to-end request latency in milliseconds", ge=0, le=MAX_EVENT_INTEGER)
+    latency_ms: int = Field(
+        description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
+        ge=0,
+        le=MAX_EVENT_INTEGER,
+    )
     status: UsageStatus = Field(description="How the request ended; cancelled events may contain partial token counts")
     stream: bool = Field(description="Whether the response was streamed")
     credential_id: UUID | None = Field(default=None, description="Provider credential used for the request")
