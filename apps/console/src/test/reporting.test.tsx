@@ -221,8 +221,8 @@ it('opens organization reporting and drills a model into filtered requests', asy
   for (const [label, icon] of [
     ['Input', 'lucide-arrow-down-to-line'],
     ['Output', 'lucide-arrow-up-from-line'],
-    ['Cache read', 'lucide-hard-drive-download'],
-    ['Cache write', 'lucide-hard-drive-upload'],
+    ['Cache read', 'lucide-hard-drive-upload'],
+    ['Cache write', 'lucide-hard-drive-download'],
   ]) {
     expect(within(tokenDetails).getByText(label).closest('dt')?.querySelector(`.${icon}`)).not.toBeNull();
   }

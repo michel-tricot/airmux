@@ -48,8 +48,8 @@ function RequestTokenTotal({ request }: { request: RequestSummaryOut }) {
   const tokenDetails = [
     { label: 'Input', count: request.input_tokens, Icon: ArrowDownToLine },
     { label: 'Output', count: request.output_tokens, Icon: ArrowUpFromLine },
-    { label: 'Cache read', count: request.cache_read_tokens, Icon: HardDriveDownload },
-    { label: 'Cache write', count: request.cache_write_tokens, Icon: HardDriveUpload },
+    { label: 'Cache read', count: request.cache_read_tokens, Icon: HardDriveUpload },
+    { label: 'Cache write', count: request.cache_write_tokens, Icon: HardDriveDownload },
   ] as const;
   return (
     <Tooltip delayDuration={0}>
