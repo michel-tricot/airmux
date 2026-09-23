@@ -360,11 +360,17 @@ export function RequestsReporting({
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ModelBadge name={attempt.model_id} />
-                          {attempt.provider_id && <span className="text-sm text-muted-foreground">{attempt.provider_id}</span>}
-                        </div>
                         <dl className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <dt className="text-muted-foreground">Provider</dt>
+                            <dd>{attempt.provider_id || 'None recorded'}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Model</dt>
+                            <dd>
+                              <ModelBadge name={attempt.model_id} />
+                            </dd>
+                          </div>
                           <div>
                             <dt className="text-muted-foreground">Input / output</dt>
                             <dd>
