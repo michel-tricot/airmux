@@ -36,6 +36,7 @@ describe('shared controls', () => {
 
     expect(screen.getByRole('dialog', { name: 'Policy' })).toHaveClass('grid-cols-1');
     expect(screen.getByRole('combobox', { name: 'Applies to' })).toHaveTextContent(label);
+    expect(screen.getByRole('combobox', { name: 'Applies to' })).toHaveClass('leading-normal');
   });
 
   it('composes button styling onto navigation without nesting interactive controls', () => {
