@@ -198,13 +198,16 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(
     within(requestsTable)
       .getAllByRole('columnheader')
-      .slice(0, 5)
+      .slice(0, 4)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Status', 'Cost in view', 'Total tokens']);
-  expect(within(requestsTable).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
+  ).toEqual(['Request', 'Status', 'Cost in view', 'Total tokens']);
+  expect(within(requestsTable).queryByRole('columnheader', { name: 'Request ID' })).not.toBeInTheDocument();
+  expect(within(requestsTable).getByRole('columnheader', { name: 'Inference Key' })).toHaveClass('hidden', 'min-[1440px]:table-cell');
+  expect(within(requestsTable).getByRole('columnheader', { name: 'Attempts' })).toHaveClass('hidden', 'xl:table-cell');
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Provider' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
+  expect(within(requestLink).getByText('request-…')).toHaveAttribute('aria-hidden', 'true');
   const totalTokens = within(requestsTable).getByRole('button', { name: '40 total tokens. Show token details' });
   expect(totalTokens).toHaveTextContent('40');
   expect(totalTokens).toHaveClass('cursor-default');
@@ -260,6 +263,20 @@ it('opens a request detail without reloading the current request page', async ()
   await user.keyboard('{Escape}');
   await waitFor(() => expect(new URLSearchParams(window.location.search).get('request_id')).toBeNull());
   expect(requestLink).toBeInTheDocument();
+});
+
+it('marks denied requests without a provider as not routed', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () =>
+      HttpResponse.json({ data: { requests: [{ ...requestSummary, provider_id: '', status: 'denied', attempt_count: 0 }], next_offset: null } }),
+    ),
+  );
+
+  renderAt('/org/requests');
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  const modelCell = within(table).getByText('model-a').closest('td');
+  expect(within(modelCell!).getByRole('img', { name: 'No provider attempt' })).toHaveClass('lucide-route-off');
 });
 
 it.each([
@@ -321,15 +338,14 @@ it('keeps workspace request rows compact with the full request ID available', as
   expect(
     within(table)
       .getAllByRole('columnheader')
-      .slice(0, 5)
+      .slice(0, 4)
       .map((header) => header.textContent),
-  ).toEqual(['Date & time', 'Request ID', 'Status', 'Cost', 'Total tokens']);
+  ).toEqual(['Request', 'Status', 'Cost', 'Total tokens']);
   expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
-  expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
-    'title',
-    '01a0cbde-afee-7867-a902-e70b75b471ba',
-  );
+  const requestLink = within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' });
+  expect(requestLink).toHaveAttribute('title', '01a0cbde-afee-7867-a902-e70b75b471ba');
+  expect(within(requestLink).getByText('01a0cbde…')).toHaveAttribute('aria-hidden', 'true');
   const model = within(table).getByText('anthropic/claude-opus-4-5-20251101');
   expect(model).toHaveClass('truncate');
   expect(model.parentElement).toHaveClass('justify-start', 'max-w-48');

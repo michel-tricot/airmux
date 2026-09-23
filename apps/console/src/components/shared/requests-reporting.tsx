@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload, RouteOff } from 'lucide-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
@@ -260,14 +260,17 @@ export function RequestsReporting({
           onRetry={() => requests.refetch()}
           empty="No requests match these filters."
           columns={[
-            { key: 'time', header: 'Date & time', cell: (item) => formatReportDate(item.started_at) },
             {
               key: 'request',
-              header: 'Request ID',
+              header: 'Request',
               cell: (item) => (
-                <TableLink href={openRequest(item.request_id)} title={item.request_id} className="block max-w-32 truncate font-mono text-xs">
-                  {item.request_id}
-                </TableLink>
+                <div className="flex flex-col items-start gap-0.5">
+                  <span>{formatReportDate(item.started_at)}</span>
+                  <TableLink href={openRequest(item.request_id)} title={item.request_id} className="font-mono text-xs">
+                    <span aria-hidden="true">{item.request_id.slice(0, 8)}…</span>
+                    <span className="sr-only">{item.request_id}</span>
+                  </TableLink>
+                </div>
               ),
             },
             {
@@ -293,6 +296,8 @@ export function RequestsReporting({
             {
               key: 'key',
               header: 'Inference Key',
+              headClassName: workspaceId ? undefined : 'hidden min-[1440px]:table-cell',
+              cellClassName: workspaceId ? undefined : 'hidden min-[1440px]:table-cell',
               cell: (item) => item.key_name,
             },
             {
@@ -303,13 +308,23 @@ export function RequestsReporting({
                 const providerIcon = taxonomy.data?.providers.find((provider) => provider.name === item.provider_id)?.icon;
                 return (
                   <span className="flex min-w-0 items-center gap-2">
-                    {providerIcon && <ProviderIcon markup={providerIcon} />}
+                    {item.provider_id ? (
+                      providerIcon && <ProviderIcon markup={providerIcon} />
+                    ) : (
+                      <RouteOff role="img" aria-label="No provider attempt" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
                     <ModelBadge name={model} className="max-w-48 justify-start" />
                   </span>
                 );
               },
             },
-            { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
+            {
+              key: 'attempts',
+              header: 'Attempts',
+              headClassName: workspaceId ? undefined : 'hidden xl:table-cell',
+              cellClassName: workspaceId ? undefined : 'hidden xl:table-cell',
+              cell: (item) => item.attempt_count,
+            },
           ]}
         />
         <div className="mt-4 flex justify-between gap-3">
