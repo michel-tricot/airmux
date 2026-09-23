@@ -92,6 +92,23 @@ it('opens a listed request without carrying its old page offset', async () => {
   expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
 });
 
+it('keeps workspace request rows compact with the full request ID available', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () =>
+      HttpResponse.json({ data: { requests: [{ ...requestSummary, request_id: '01a0cbde-afee-7867-a902-e70b75b471ba' }], next_offset: null } }),
+    ),
+  );
+
+  renderAt(`/org/workspaces/${WORKSPACES[0].slug}/requests`);
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
+  expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
+    'title',
+    '01a0cbde-afee-7867-a902-e70b75b471ba',
+  );
+});
+
 it('uses the same report endpoint with a workspace ID for workspace reporting', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/usage', ({ request }) => {
