@@ -328,6 +328,25 @@ it('pages requests with a cursor and keeps Live on the newest page', async () =>
   expect(await screen.findByRole('link', { name: 'View request details for request-newer' })).toBeInTheDocument();
 });
 
+it('returns to the newest requests from a bookmarked cursor page', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get('cursor');
+      return HttpResponse.json({
+        data: { requests: [{ ...requestSummary, request_id: cursor ? 'request-older' : 'request-newer' }], next_cursor: null },
+      });
+    }),
+  );
+  const user = userEvent.setup();
+  renderAt('/org/requests?cursor=older-page');
+
+  expect(await screen.findByRole('link', { name: 'View request details for request-older' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: 'First' }));
+  expect(await screen.findByRole('link', { name: 'View request details for request-newer' })).toBeInTheDocument();
+  expect(new URLSearchParams(window.location.search).get('cursor')).toBeNull();
+});
+
 it('marks denied requests without a provider as not routed', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/reports/requests', () =>

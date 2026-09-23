@@ -174,7 +174,10 @@ def test_requests_page_by_request_id_and_refresh_without_export(tmp_path):
 
         path = f"/api/v1/organizations/{org_id}/reports/requests"
         headers = cp.headers(org_id)
-        expected = sorted((first["request_id"], second["request_id"], third["request_id"]), reverse=True)
+        expected = [
+            event["request_id"]
+            for event in sorted((first, second, third), key=lambda event: (event["request_started_at"], event["request_id"]), reverse=True)
+        ]
         request_ids = []
         cursor = None
         while True:
@@ -198,6 +201,44 @@ def test_requests_page_by_request_id_and_refresh_without_export(tmp_path):
         assert client.post("/api/v1/events", json=[newest], headers=root).json()["data"]["ingested"] == 1
         refreshed = client.get(path, params={"limit": 1}, headers=headers)
         assert refreshed.json()["data"]["requests"][0]["request_id"] == newest["request_id"]
+
+
+def test_request_cursor_orders_non_v7_ids_by_request_time(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        root = cp.headers()
+        org_id = make_org(client, root)
+        workspace_id = make_workspace(client, cp.headers(org_id))
+        started_at = datetime.now(UTC) - timedelta(minutes=3)
+        older = _event(org_id, workspace_id, request_id=UUID("ffffffff-ffff-4fff-8fff-ffffffffffff"), started_at=started_at)
+        newer = _event(
+            org_id,
+            workspace_id,
+            request_id=UUID("00000000-0000-4000-8000-000000000001"),
+            started_at=started_at + timedelta(minutes=1),
+        )
+        tied = _event(
+            org_id,
+            workspace_id,
+            request_id=UUID("00000000-0000-4000-8000-000000000002"),
+            started_at=started_at + timedelta(minutes=1),
+        )
+        assert client.post("/api/v1/events", json=[older, newer, tied], headers=root).json()["data"]["ingested"] == 3
+
+        path = f"/api/v1/organizations/{org_id}/reports/requests"
+        headers = cp.headers(org_id)
+        first = client.get(path, params={"limit": 1}, headers=headers)
+        assert first.status_code == 200, first.text
+        assert [request["request_id"] for request in first.json()["data"]["requests"]] == [tied["request_id"]]
+        cursor = first.json()["data"]["next_cursor"]
+        assert cursor is not None
+        second = client.get(path, params={"limit": 1, "cursor": cursor}, headers=headers)
+        assert second.status_code == 200, second.text
+        assert [request["request_id"] for request in second.json()["data"]["requests"]] == [newer["request_id"]]
+        last = client.get(path, params={"limit": 1, "cursor": second.json()["data"]["next_cursor"]}, headers=headers)
+        assert last.status_code == 200, last.text
+        assert [request["request_id"] for request in last.json()["data"]["requests"]] == [older["request_id"]]
+        assert last.json()["data"]["next_cursor"] is None
 
 
 def test_invalid_event_does_not_block_valid_reporting_or_replay(tmp_path):
@@ -250,7 +291,9 @@ def test_request_cursor_covers_all_filtered_requests_beyond_first_page(tmp_path)
             cursor = data["next_cursor"]
             if cursor is None:
                 break
-        assert request_ids == sorted((event["request_id"] for event in matching), reverse=True)
+        assert request_ids == [
+            event["request_id"] for event in sorted(matching, key=lambda event: (event["request_started_at"], event["request_id"]), reverse=True)
+        ]
 
 
 def test_missing_credential_reconciles_without_an_unusable_filter_option(tmp_path):

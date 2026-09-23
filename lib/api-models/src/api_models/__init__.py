@@ -1486,11 +1486,6 @@ class ReportWindow(BaseModel):
     timezone: Annotated[str, Field(title="Timezone")]
 
 
-class RequestExportOut(BaseModel):
-    filename: Annotated[str, Field(title="Filename")]
-    csv: Annotated[str, Field(title="Csv")]
-
-
 class RequestLimits(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2258,10 +2253,6 @@ class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
 
 
-class EnvelopeRequestExportOut(BaseModel):
-    data: RequestExportOut
-
-
 class EnvelopeTaxonomyOut(BaseModel):
     data: TaxonomyOut
 
@@ -2512,7 +2503,7 @@ class RequestDetailOut(BaseModel):
 
 class RequestPageOut(BaseModel):
     requests: Annotated[list[RequestSummaryOut], Field(title="Requests")]
-    next_offset: Annotated[int | None, Field(title="Next Offset")]
+    next_cursor: CursorToken | None
 
 
 class RuleDefinitionInput(BaseModel):

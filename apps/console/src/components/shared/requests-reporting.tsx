@@ -301,17 +301,30 @@ export function RequestsReporting({
           ]}
         />
         <div className="mt-4 flex justify-between gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={previousCursors.length === 0}
-            onClick={() => {
-              filters.setValue('cursor', previousCursors.at(-1) || undefined);
-              setPageHistory({ key: pageKey, cursors: previousCursors.slice(0, -1) });
-            }}
-          >
-            Previous
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!cursor}
+              onClick={() => {
+                filters.setValue('cursor', undefined);
+                setPageHistory({ key: pageKey, cursors: [] });
+              }}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={previousCursors.length === 0}
+              onClick={() => {
+                filters.setValue('cursor', previousCursors.at(-1) || undefined);
+                setPageHistory({ key: pageKey, cursors: previousCursors.slice(0, -1) });
+              }}
+            >
+              Previous
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="sm"

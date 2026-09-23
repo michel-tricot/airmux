@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import csv
 from decimal import Decimal
-from io import StringIO
 from typing import TYPE_CHECKING
 
 import httpx
@@ -61,7 +59,10 @@ def test_delivered_gateway_events_reconcile_across_reports(stack: Stack) -> None
         assert sum(item["requests"] for item in attribution) == 2
         assert sum((Decimal(item["cost_usd"]) for item in attribution), Decimal(0)) == expected_cost
 
-        export = _payload(client.get(f"{report_path}/requests/export"))["csv"]
-        rows = list(csv.DictReader(StringIO(export)))
-        assert {request["request_id"] for request in rows} == request_ids
-        assert sum((Decimal(request["cost_usd"]) for request in rows), Decimal(0)) == expected_cost
+        first_page = _payload(client.get(f"{report_path}/requests", params={"limit": 1}))
+        second_page = _payload(client.get(f"{report_path}/requests", params={"limit": 1, "cursor": first_page["next_cursor"]}))
+        assert first_page["next_cursor"] is not None
+        assert second_page["next_cursor"] is None
+        paged_requests = first_page["requests"] + second_page["requests"]
+        assert {request["request_id"] for request in paged_requests} == request_ids
+        assert sum((Decimal(request["cost_usd"]) for request in paged_requests), Decimal(0)) == expected_cost

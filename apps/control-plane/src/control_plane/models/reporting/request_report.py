@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import case, func
+from sqlalchemy import case, func, tuple_
 from sqlalchemy import select as sql_select
 from sqlalchemy.orm import aliased
 from sqlmodel import col
@@ -13,7 +13,7 @@ from sqlmodel import col
 from contract import RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.money import ZERO_USD
 from control_plane.db import current_session
-from control_plane.models.common.pagination import CursorToken, decode_cursor, encode_cursor
+from control_plane.models.common.pagination import CursorToken, InvalidCursorError, decode_cursor, encode_cursor
 from control_plane.models.reporting.names import names_for_dimension
 from control_plane.models.usage_event import UsageEvent
 
@@ -148,15 +148,14 @@ class RequestPageOut(BaseModel):
         conditions = query.conditions(org_id, window)
         if query.request_id is not None:
             conditions.append(col(UsageEvent.request_id) == query.request_id)
-        cursor = decode_cursor(query.cursor, UUID) if query.cursor is not None else None
+        cursor = _decode_request_cursor(query.cursor) if query.cursor is not None else None
         batch_limit = query.limit + 1 if query.status is None and not query.multiple_attempts else max(100, query.limit + 1)
         requests: list[RowMapping] = []
+        candidate_starts: dict[UUID, datetime] = {}
         while len(requests) <= query.limit:
             candidate_conditions = (
                 [col(UsageEvent.org_id) == org_id, col(UsageEvent.status) != "denied"] if query.multiple_attempts else [*conditions]
             )
-            if cursor is not None:
-                candidate_conditions.append(col(UsageEvent.request_id) < cursor)
             if query.status is not None:
                 status_event = aliased(UsageEvent)
                 candidate_conditions.append(
@@ -170,16 +169,42 @@ class RequestPageOut(BaseModel):
                 )
             if query.multiple_attempts:
                 candidate_statement = (
-                    sql_select(col(UsageEvent.request_id)).where(*candidate_conditions).group_by(col(UsageEvent.request_id)).having(func.count() > 1)
+                    sql_select(
+                        col(UsageEvent.request_id).label("request_id"),
+                        func.min(col(UsageEvent.request_started_at)).label("started_at"),
+                    )
+                    .where(*candidate_conditions)
+                    .group_by(col(UsageEvent.request_id))
+                    .having(func.count() > 1)
                 )
             else:
-                candidate_statement = sql_select(col(UsageEvent.request_id)).where(*candidate_conditions).distinct()
+                candidate_statement = (
+                    sql_select(
+                        col(UsageEvent.request_id).label("request_id"),
+                        col(UsageEvent.request_started_at).label("started_at"),
+                    )
+                    .where(*candidate_conditions)
+                    .distinct()
+                )
+            candidate = candidate_statement.subquery()
+            page_statement = sql_select(candidate.c.request_id, candidate.c.started_at)
+            if cursor is not None:
+                page_statement = page_statement.where(tuple_(candidate.c.started_at, candidate.c.request_id) < cursor)
             candidates = (
-                (await current_session().execute(candidate_statement.order_by(col(UsageEvent.request_id).desc()).limit(batch_limit))).scalars().all()
-            )
+                await current_session().execute(
+                    page_statement.order_by(candidate.c.started_at.desc(), candidate.c.request_id.desc()).limit(batch_limit)
+                )
+            ).all()
             if not candidates:
                 break
-            requests.extend((await current_session().execute(_request_statement(org_id, query, now, candidates))).mappings().all())
+            matches = (
+                (await current_session().execute(_request_statement(org_id, query, now, [request_id for request_id, _ in candidates])))
+                .mappings()
+                .all()
+            )
+            matches_by_id = {request["request_id"]: request for request in matches}
+            candidate_starts.update((request_id, started_at) for request_id, started_at in candidates if request_id in matches_by_id)
+            requests.extend(matches_by_id[request_id] for request_id, _ in candidates if request_id in matches_by_id)
             if len(requests) > query.limit or len(candidates) < batch_limit:
                 break
             cursor = candidates[-1]
@@ -201,8 +226,22 @@ class RequestPageOut(BaseModel):
                 )
                 for request in page
             ],
-            next_cursor=encode_cursor(page[-1]["request_id"]) if len(requests) > query.limit else None,
+            next_cursor=encode_cursor(f"{candidate_starts[page[-1]['request_id']].isoformat()}|{page[-1]['request_id']}")
+            if len(requests) > query.limit
+            else None,
         )
+
+
+def _decode_request_cursor(token: str) -> tuple[datetime, UUID]:
+    try:
+        started_at, request_id = decode_cursor(token, str).rsplit("|", 1)
+        started = datetime.fromisoformat(started_at)
+        request = UUID(request_id)
+    except ValueError as error:
+        raise InvalidCursorError from error
+    if started.tzinfo is None:
+        raise InvalidCursorError
+    return started, request
 
 
 def _request_statement(org_id: UUID, query: RequestQuery, now: datetime, request_ids: Sequence[UUID]) -> Select:
@@ -285,7 +324,7 @@ def _request_statement(org_id: UUID, query: RequestQuery, now: datetime, request
         statement = statement.where(latest.c.status == query.status)
     if query.multiple_attempts and query.request_id is None:
         statement = statement.where(attempts.c.attempt_count > 1)
-    return statement.order_by(matching.c.request_id.desc())
+    return statement
 
 
 def _matches(event: UsageEvent, query: ReportQuery) -> bool:

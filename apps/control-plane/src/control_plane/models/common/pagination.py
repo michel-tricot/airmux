@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 MAX_CURSOR_LENGTH = 512
 
 type CursorToken = Annotated[str, StringConstraints(min_length=1, max_length=MAX_CURSOR_LENGTH, pattern=r"^[A-Za-z0-9_-]+$")]
-type CursorAnchor = UUID | int
+type CursorAnchor = UUID | int | str
 type Direction = Literal["asc", "desc"]
 
 

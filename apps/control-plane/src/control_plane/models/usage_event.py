@@ -26,8 +26,8 @@ class UsageEvent(Record, table=True):
         Index("usage_event_org_workspace_event_idx", "org_id", "workspace_id", "event_id"),
         Index("usage_event_org_request_idx", "org_id", "request_id"),
         Index("usage_event_org_status_request_idx", "org_id", "status", "request_id"),
-        Index("usage_event_org_request_started_idx", "org_id", "request_started_at"),
-        Index("usage_event_org_workspace_request_started_idx", "org_id", "workspace_id", "request_started_at"),
+        Index("usage_event_org_request_started_idx", "org_id", "request_started_at", "request_id"),
+        Index("usage_event_org_workspace_request_started_idx", "org_id", "workspace_id", "request_started_at", "request_id"),
     )
 
     event_id: UUID = Field(primary_key=True)
