@@ -231,6 +231,13 @@ export function UsageReporting({
                 />
               </div>
             </div>
+            {attribution.data && attribution.isError && (
+              <ErrorState
+                className="px-0"
+                message="Attribution refresh failed. Showing the last loaded attribution."
+                onRetry={() => attribution.refetch()}
+              />
+            )}
             <div className="mt-4">
               <DataTable
                 ariaLabel="Attribution"

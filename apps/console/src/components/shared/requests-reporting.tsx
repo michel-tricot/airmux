@@ -137,7 +137,7 @@ export function RequestsReporting({
         actions={
           <div className="flex gap-2">
             <Button variant={live ? 'secondary' : 'outline'} size="sm" aria-pressed={live} disabled={!validDates} onClick={() => setLive(!live)}>
-              <span className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-success' : 'bg-muted-foreground'}`} aria-hidden="true" />
+              <span className={`h-1.5 w-1.5 rounded-full ${live && !requests.isError ? 'bg-success' : 'bg-muted-foreground'}`} aria-hidden="true" />
               Live
             </Button>
             <ReportRefreshButton queries={[requests]} />
@@ -246,6 +246,9 @@ export function RequestsReporting({
 
       {!validDates && <ErrorState message="Choose a valid start and end date." />}
       {exportError !== undefined && <ErrorState error={exportError} resource="CSV export" onRetry={() => setExportError(undefined)} />}
+      {validDates && requests.data && requests.isError && (
+        <ErrorState message="Refresh failed. Showing the last loaded requests." onRetry={() => requests.refetch()} />
+      )}
       <Card className="p-4">
         <DataTable
           ariaLabel="Requests"

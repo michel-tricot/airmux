@@ -426,6 +426,40 @@ it.each([
   await waitFor(() => expect(refresh.querySelector('svg')).not.toHaveClass('motion-safe:animate-spin'));
 });
 
+it('warns when Live requests stop refreshing while keeping the last loaded rows', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+  );
+  const user = userEvent.setup();
+  renderAt('/org/requests');
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  await user.click(screen.getByRole('button', { name: 'Live' }));
+  server.use(http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ detail: 'offline' }, { status: 503 })));
+  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+  expect(await screen.findByText('Refresh failed. Showing the last loaded requests.', {}, { timeout: 5_000 })).toBeInTheDocument();
+  expect(within(table).getByRole('link', { name: 'View request details for request-1' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Live' }).querySelector('span')).toHaveClass('bg-muted-foreground');
+});
+
+it('warns when attribution fails to refresh without hiding its last loaded rows', async () => {
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/attribution', () =>
+      HttpResponse.json({ data: { items: [{ id: 'model-a', name: 'model-a', ...totals, previous_cost_usd: '0' }], next_offset: null } }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderAt('/org?group_by=model');
+
+  const table = await screen.findByRole('table', { name: 'Attribution' });
+  server.use(http.get('/api/v1/organizations/:orgId/reports/attribution', () => HttpResponse.json({ detail: 'offline' }, { status: 503 })));
+  await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+  expect(await screen.findByText('Attribution refresh failed. Showing the last loaded attribution.', {}, { timeout: 5_000 })).toBeInTheDocument();
+  expect(within(table).getByRole('link', { name: 'model-a' })).toBeInTheDocument();
+});
+
 it('polls requests in Live mode and briefly highlights new rows', async () => {
   const user = userEvent.setup();
   renderAt('/org/requests');
