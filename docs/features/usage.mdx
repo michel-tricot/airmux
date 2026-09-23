@@ -53,7 +53,7 @@ The console's Usage and Requests pages are available at organization and workspa
 endpoints under `/api/v1/organizations/{org_id}/reports`; workspace pages pass `workspace_id` as a filter. Organization
 reports require organization `usage.read` permission. A workspace report requires `usage.read` for that workspace;
 workspace permission does not grant access to the all-workspaces report. The same scope check applies to request
-details, filter choices, and exports.
+details and filter choices.
 
 Usage defaults to the last 30 days. The selected period, timezone, and filters are kept in the page URL. The summary
 shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and
@@ -67,7 +67,7 @@ provider, and credential filters select matching attempt contributions; a reques
 groups. Its detail view shows all authorized attempts and identifies the matching contributions. Group request counts
 may overlap, while spend and tokens reconcile with the report total.
 
-The Requests page supports exact request ID lookup, pagination, and CSV export of the complete filtered result. Detail
+The Requests page supports exact request ID lookup and pagination. Detail
 shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end
 customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
 Prompt and response content are not part of usage reporting.
@@ -79,7 +79,8 @@ events, not proof that no later event will arrive.
 
 The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`, and `/requests/{request_id}`.
 Periods include Today, 7 days, 30 days, month to date, and custom dates. Reports compare with the
-preceding interval of equal duration. Request lists use a UUIDv7 cursor; attribution uses `limit` and `offset`.
+preceding interval of equal duration. Request lists use an opaque cursor ordered by request start time and request ID;
+attribution uses `limit` and `offset`.
 Request list and detail responses include current workspace, inference key, and user display names; attempts include
 credential names. When a referenced resource is no longer available, its identifier is shown instead.
 They also include cache read and write counts. Total tokens are input plus output; cache counts are included in input.
