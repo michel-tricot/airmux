@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from airmux_runtime.secrets import Secret
-    from contract import CredentialScope, ModelEntry, ProviderEntry
+    from contract import CredentialScope, ModelEntry, ProviderEntry, RequestSource
     from contract.model_types import RequestCapability
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
@@ -135,6 +135,7 @@ class Ctx:
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
     user_id: UUID
     requested_model_id: str
     requested_capabilities: frozenset[RequestCapability]

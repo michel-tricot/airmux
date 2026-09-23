@@ -52,7 +52,8 @@ def test_smallest_rate_one_token_cost_is_exact():
 
 
 @pytest.mark.parametrize("estimated", [False, True])
-def test_usage_has_request_attribution_and_token_source(estimated):
+@pytest.mark.parametrize("source", ["inference_key", "playground"])
+def test_usage_has_request_attribution_and_token_source(estimated, source):
     bundle_id = uuid7()
     credential_id = uuid7()
     ctx = Ctx(
@@ -65,6 +66,7 @@ def test_usage_has_request_attribution_and_token_source(estimated):
         org_id=ORG,
         workspace_id=WORKSPACE,
         key_id=str(uuid7()),
+        request_source=source,
         user_id=ORG,
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),
@@ -89,6 +91,7 @@ def test_usage_has_request_attribution_and_token_source(estimated):
     event = usage_event(ctx, response, "cancelled", request)
 
     assert event.request_id == ctx.request_id
+    assert event.request_source == source
     assert event.bundle_id == bundle_id
     assert event.credential_id == credential_id
     assert event.credential_scope == "workspace"
@@ -111,6 +114,7 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content():
         org_id=ORG,
         workspace_id=WORKSPACE,
         key_id=str(uuid7()),
+        request_source="inference_key",
         user_id=ORG,
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),
@@ -139,14 +143,16 @@ def test_estimation_preserves_reported_input_and_counts_non_text_content():
     assert event.token_usage_source == "estimated"
 
 
-def test_denial_uses_the_request_identity_and_elapsed_latency():
+@pytest.mark.parametrize("source", ["inference_key", "playground"])
+def test_denial_uses_the_request_identity_and_elapsed_latency(source):
     request_id = uuid7()
-    key = make_key("denied")[1]
+    key = make_key("denied")[1].model_copy(update={"request_source": source})
 
     request = CanonicalRequest(model="missing", messages=[{"role": "user", "content": "hi"}])
     start = RequestStart(request_id=request_id, started_at=time.monotonic() - 1, request_started_at=datetime.now(UTC))
     event = denied_event(key, uuid7(), request, start)
 
     assert event.request_id == request_id
+    assert event.request_source == source
     assert event.latency_ms >= 1000
     assert event.token_usage_source == "not_applicable"

@@ -270,6 +270,7 @@ class RequestExecution:
             org_id=self.key.org_id,
             workspace_id=self.key.workspace_id,
             key_id=self.key.key_id,
+            request_source=self.key.request_source,
             user_id=self.key.user_id,
             requested_model_id=self.request.model,
             requested_capabilities=requested_capabilities(self.request),

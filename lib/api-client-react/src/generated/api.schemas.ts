@@ -225,8 +225,16 @@ export interface BundleManifest {
   bundles: BundleManifestEntry[];
 }
 
+export type KeyEntryRequestSource = typeof KeyEntryRequestSource[keyof typeof KeyEntryRequestSource];
+
+
+export const KeyEntryRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 /**
- * An active inference key included in a policy bundle.
+ * An active caller credential included in a policy bundle.
  *
  * The bundle contains a token hash for authorization and a key ID for usage attribution, never
  * the caller's secret token.
@@ -237,6 +245,7 @@ export interface KeyEntry {
      * @maxLength 255
      */
   key_id: string;
+  request_source: KeyEntryRequestSource;
   org_id: string;
   workspace_id: string;
   user_id: string;
@@ -652,6 +661,17 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+/**
+ * Whether the request came from an inference key or a Playground session
+ */
+export type DeniedUsageEventV1RequestSource = typeof DeniedUsageEventV1RequestSource[keyof typeof DeniedUsageEventV1RequestSource];
+
+
+export const DeniedUsageEventV1RequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type DeniedUsageEventV1RequestedCapabilitiesItem = typeof DeniedUsageEventV1RequestedCapabilitiesItem[keyof typeof DeniedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -682,12 +702,14 @@ export interface DeniedUsageEventV1 {
   /** Workspace that made the request */
   workspace_id: string;
   /**
-     * Inference key ID used for the request
+     * Caller credential ID used for the request
      * @minLength 1
      * @maxLength 255
      */
   key_id: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Whether the request came from an inference key or a Playground session */
+  request_source: DeniedUsageEventV1RequestSource;
+  /** Principal that owned the caller credential when the request was made */
   user_id: string;
   /**
      * Original caller-requested model before routing and fallback
@@ -1673,6 +1695,17 @@ export interface ProviderOut {
   updated_at: string;
 }
 
+/**
+ * Whether the request came from an inference key or a Playground session
+ */
+export type RoutedUsageEventV1RequestSource = typeof RoutedUsageEventV1RequestSource[keyof typeof RoutedUsageEventV1RequestSource];
+
+
+export const RoutedUsageEventV1RequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type RoutedUsageEventV1RequestedCapabilitiesItem = typeof RoutedUsageEventV1RequestedCapabilitiesItem[keyof typeof RoutedUsageEventV1RequestedCapabilitiesItem];
 
 
@@ -1738,12 +1771,14 @@ export interface RoutedUsageEventV1 {
   /** Workspace that made the request */
   workspace_id: string;
   /**
-     * Inference key ID used for the request
+     * Caller credential ID used for the request
      * @minLength 1
      * @maxLength 255
      */
   key_id: string;
-  /** Principal that owned the inference key when the request was made */
+  /** Whether the request came from an inference key or a Playground session */
+  request_source: RoutedUsageEventV1RequestSource;
+  /** Principal that owned the caller credential when the request was made */
   user_id: string;
   /**
      * Original caller-requested model before routing and fallback
@@ -1898,6 +1933,14 @@ export const TokenUsageSource = {
   not_applicable: 'not_applicable',
 } as const;
 
+export type UsageEventOutRequestSource = typeof UsageEventOutRequestSource[keyof typeof UsageEventOutRequestSource];
+
+
+export const UsageEventOutRequestSource = {
+  inference_key: 'inference_key',
+  playground: 'playground',
+} as const;
+
 export type UsageEventOutRequestedCapabilitiesItem = typeof UsageEventOutRequestedCapabilitiesItem[keyof typeof UsageEventOutRequestedCapabilitiesItem];
 
 
@@ -1938,6 +1981,7 @@ export interface UsageEventOut {
   org_id: string;
   workspace_id: string;
   key_id: string;
+  request_source: UsageEventOutRequestSource;
   user_id: string;
   requested_model_id: string;
   requested_capabilities: UsageEventOutRequestedCapabilitiesItem[];

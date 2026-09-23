@@ -22,6 +22,7 @@ def usage_event(**overrides: object) -> dict[str, object]:
         "org_id": uuid7(),
         "workspace_id": uuid7(),
         "key_id": "external-key",
+        "request_source": "inference_key",
         "model_id": "model",
         "user_id": uuid7(),
         "requested_model_id": "model",
@@ -54,15 +55,25 @@ def test_early_denial_rejects_provider_and_credential_data():
         USAGE_EVENT_ADAPTER.validate_python(usage_event(status="denied", provider_id="provider", attempt_started_at=None))
     with pytest.raises(ValidationError):
         USAGE_EVENT_ADAPTER.validate_python(
-            usage_event(
-                status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace", attempt_started_at=None
-            )
+            usage_event(status="denied", provider_id="", credential_id=uuid7(), credential_scope="workspace", attempt_started_at=None)
         )
 
 
 def test_usage_events_accept_opaque_key_ids():
     event = USAGE_EVENT_ADAPTER.validate_python(usage_event())
     assert event.key_id == "external-key"
+
+
+@pytest.mark.parametrize("source", ["inference_key", "playground"])
+def test_request_source_survives_event_serialization(source):
+    event = USAGE_EVENT_ADAPTER.validate_python(usage_event(request_source=source))
+    assert USAGE_EVENT_ADAPTER.validate_json(event.model_dump_json()).request_source == source
+
+
+@pytest.mark.parametrize("source", [None, "unknown"])
+def test_request_source_rejects_unknown_values(source):
+    with pytest.raises(ValidationError):
+        USAGE_EVENT_ADAPTER.validate_python(usage_event(request_source=source))
 
 
 def test_usage_event_keeps_observed_cost_even_when_components_do_not_match() -> None:

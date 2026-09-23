@@ -5078,12 +5078,19 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
         user_id:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Principal that owned the caller credential when the request was made
         requested_model_id:
           type: string
           maxLength: 255
@@ -5208,6 +5215,7 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities
@@ -6077,6 +6085,12 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
         org_id:
           type: string
           format: uuid
@@ -6102,12 +6116,13 @@ components:
       type: object
       required:
       - key_id
+      - request_source
       - org_id
       - workspace_id
       - user_id
       - token_hash
       title: KeyEntry
-      description: 'An active inference key included in a policy bundle.
+      description: 'An active caller credential included in a policy bundle.
 
 
         The bundle contains a token hash for authorization and a key ID for usage attribution, never
@@ -8018,12 +8033,19 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
         user_id:
           type: string
           format: uuid
           title: User Id
-          description: Principal that owned the inference key when the request was made
+          description: Principal that owned the caller credential when the request was made
         requested_model_id:
           type: string
           maxLength: 255
@@ -8162,6 +8184,7 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities
@@ -8556,6 +8579,12 @@ components:
         key_id:
           type: string
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
         user_id:
           type: string
           format: uuid
@@ -8657,6 +8686,7 @@ components:
       - org_id
       - workspace_id
       - key_id
+      - request_source
       - user_id
       - requested_model_id
       - requested_capabilities

@@ -22,6 +22,7 @@ def _event(org: UUID) -> dict:
         "org_id": str(org),
         "workspace_id": str(uuid7()),
         "key_id": "k1",
+        "request_source": "inference_key",
         "user_id": str(uuid7()),
         "requested_model_id": "gpt-test",
         "requested_capabilities": [],
@@ -79,6 +80,17 @@ def test_event_list_filters_by_workspace(tmp_path):
 
         assert response.status_code == 200, response.text
         assert [event["event_id"] for event in response.json()["data"]] == [first["event_id"]]
+
+
+def test_event_ingest_preserves_explicit_request_source(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "request-source")
+        event = {**_event(org_id), "request_source": "playground"}
+        response = client.post("/api/v1/events", json=[event], headers=cp.headers())
+        assert response.status_code == 200, response.text
+        stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
+        assert stored[0]["request_source"] == "playground"
 
 
 def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):

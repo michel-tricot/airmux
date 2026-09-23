@@ -250,16 +250,23 @@ class DeniedUsageEventV1(BaseModel):
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -601,7 +608,7 @@ class KeyBudgetBucket(BaseModel):
 
 class KeyEntry(BaseModel):
     """
-    An active inference key included in a policy bundle.
+    An active caller credential included in a policy bundle.
 
     The bundle contains a token hash for authorization and a key ID for usage attribution, never
     the caller's secret token.
@@ -611,6 +618,7 @@ class KeyEntry(BaseModel):
         extra="forbid",
     )
     key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
@@ -1527,16 +1535,23 @@ class RoutedUsageEventV1(BaseModel):
     key_id: Annotated[
         str,
         Field(
-            description="Inference key ID used for the request",
+            description="Caller credential ID used for the request",
             max_length=255,
             min_length=1,
             title="Key Id",
         ),
     ]
+    request_source: Annotated[
+        Literal["inference_key", "playground"],
+        Field(
+            description="Whether the request came from an inference key or a Playground session",
+            title="Request Source",
+        ),
+    ]
     user_id: Annotated[
         UUID,
         Field(
-            description="Principal that owned the inference key when the request was made",
+            description="Principal that owned the caller credential when the request was made",
             title="User Id",
         ),
     ]
@@ -1861,6 +1876,7 @@ class UsageEventOut(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
+    request_source: Annotated[Literal["inference_key", "playground"], Field(title="Request Source")]
     user_id: Annotated[UUID, Field(title="User Id")]
     requested_model_id: Annotated[str, Field(title="Requested Model Id")]
     requested_capabilities: Annotated[

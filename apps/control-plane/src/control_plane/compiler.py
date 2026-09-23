@@ -83,13 +83,21 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
         policies=tuple(policy.entry() for policy in policies),
         keys=(
             *(
-                KeyEntry(key_id=str(key.id), org_id=key.org_id, workspace_id=key.workspace_id, user_id=key.user_id, token_hash=key.token_hash)
+                KeyEntry(
+                    key_id=str(key.id),
+                    request_source="inference_key",
+                    org_id=key.org_id,
+                    workspace_id=key.workspace_id,
+                    user_id=key.user_id,
+                    token_hash=key.token_hash,
+                )
                 for key in key_rows
                 if not key.revoked
             ),
             *(
                 KeyEntry(
                     key_id=str(playground_session.id),
+                    request_source="playground",
                     org_id=playground_session.org_id,
                     workspace_id=playground_session.workspace_id,
                     user_id=playground_session.user_id,

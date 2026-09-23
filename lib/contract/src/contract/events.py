@@ -12,6 +12,7 @@ from contract.money import ZERO_USD, UsdAmount
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 RoutedUsageStatus = Literal["ok", "upstream_error", "timeout", "cancelled", "credential_rejected", "rate_limited"]
 CredentialScope = Literal["platform", "org", "workspace"]
+RequestSource = Literal["inference_key", "playground"]
 """How a metered request ended.
 
 credential_rejected and rate_limited are split out of upstream_error because they are facts
@@ -43,8 +44,9 @@ class _UsageEventV1(BaseModel):
     occurred_at: AwareDatetime = Field(description="Timestamp when the attempt or denial completed")
     org_id: UUID = Field(description="Organization that made the request")
     workspace_id: UUID = Field(description="Workspace that made the request")
-    key_id: str = Field(description="Inference key ID used for the request", min_length=1, max_length=255)
-    user_id: UUID = Field(description="Principal that owned the inference key when the request was made")
+    key_id: str = Field(description="Caller credential ID used for the request", min_length=1, max_length=255)
+    request_source: RequestSource = Field(description="Whether the request came from an inference key or a Playground session")
+    user_id: UUID = Field(description="Principal that owned the caller credential when the request was made")
     requested_model_id: str = Field(min_length=1, max_length=255, description="Original caller-requested model before routing and fallback")
     requested_capabilities: frozenset[RequestCapability] = Field(description="Original request capabilities before reconciliation")
     model_id: str = Field(description="Caller-facing model ID", min_length=1, max_length=255)

@@ -35,6 +35,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert len(bundles) == 1
         assert bundle.bundle_id == bundles[-1].id
         assert [k.key_id for k in bundle.keys] == [key["id"]]
+        assert [k.request_source for k in bundle.keys] == ["inference_key"]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
         (model,) = bundle.catalog.models

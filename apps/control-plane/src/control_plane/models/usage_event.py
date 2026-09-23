@@ -9,7 +9,7 @@ from sqlalchemy import Column, Index, Numeric, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
-from contract import CredentialScope, TokenUsageSource, UsageStatus, UsdAmount
+from contract import CredentialScope, RequestSource, TokenUsageSource, UsageStatus, UsdAmount
 from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
@@ -25,6 +25,8 @@ class UsageEvent(Record, table=True):
         Index("usage_event_org_event_idx", "org_id", "event_id"),
         Index("usage_event_org_workspace_event_idx", "org_id", "workspace_id", "event_id"),
         Index("usage_event_org_request_idx", "org_id", "request_id"),
+        Index("usage_event_org_request_started_idx", "org_id", "request_started_at"),
+        Index("usage_event_org_workspace_request_started_idx", "org_id", "workspace_id", "request_started_at"),
     )
 
     event_id: UUID = Field(primary_key=True)
@@ -35,6 +37,7 @@ class UsageEvent(Record, table=True):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource = Field(sa_type=String)
     user_id: UUID
     requested_model_id: str
     requested_capabilities: list[RequestCapability] = Field(sa_column=Column(ARRAY(String), nullable=False))
@@ -78,6 +81,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
     user_id: UUID
     requested_model_id: str
     requested_capabilities: list[RequestCapability]

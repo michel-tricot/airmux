@@ -102,7 +102,9 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
 def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE, user: UUID = USER):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token))
+    return token, KeyEntry(
+        key_id=str(key_id), request_source="inference_key", org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token)
+    )
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -170,6 +172,7 @@ CTX = Ctx(
     org_id=ORG,
     workspace_id=WORKSPACE,
     key_id="k-dev",
+    request_source="inference_key",
     user_id=ORG,
     requested_model_id="gpt-test",
     requested_capabilities=frozenset(),

@@ -179,6 +179,7 @@ def upgrade() -> None:
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("request_source", sa.String(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("requested_model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("requested_capabilities", sa.ARRAY(sa.String()), nullable=False),
@@ -205,6 +206,8 @@ def upgrade() -> None:
     op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
     op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
     op.create_index("usage_event_org_request_idx", "usage_event", ["org_id", "request_id"], unique=False)
+    op.create_index("usage_event_org_request_started_idx", "usage_event", ["org_id", "request_started_at"], unique=False)
+    op.create_index("usage_event_org_workspace_request_started_idx", "usage_event", ["org_id", "workspace_id", "request_started_at"], unique=False)
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -627,6 +630,8 @@ def downgrade() -> None:
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_request_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_workspace_request_started_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_request_started_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")

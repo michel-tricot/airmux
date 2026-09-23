@@ -40,6 +40,7 @@ def test_playground_session_is_cookie_only_short_lived_and_reused(tmp_path):
         bundle = BundleV1.model_validate(wait_for_publication(client, org_id, org))
         assert len(bundle.keys) == 1
         assert bundle.keys[0].key_id == session["id"]
+        assert bundle.keys[0].request_source == "playground"
         assert bundle.keys[0].expires_at == expires_at
 
 

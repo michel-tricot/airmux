@@ -16,6 +16,7 @@ and counted in `rejected`; valid events in the same batch are stored.
 | --- | --- |
 | `request_id` | One caller request; fallback attempts share this ID |
 | `event_id` | Unique event ID for one attempt |
+| `request_source` | `inference_key` or `playground`, captured when the request is authenticated |
 | `model_id`, `provider_id` | Route used for the attempt |
 | `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
 | `token_usage_source` | `provider`, `estimated`, or `not_applicable` for a denial before routing |

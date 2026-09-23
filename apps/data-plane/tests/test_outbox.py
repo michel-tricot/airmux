@@ -31,6 +31,7 @@ def make_event(request_id) -> RoutedUsageEventV1:
         org_id=uuid7(),
         workspace_id=uuid7(),
         key_id=str(uuid7()),
+        request_source="inference_key",
         user_id=uuid7(),
         requested_model_id="gpt-test",
         requested_capabilities=frozenset(),

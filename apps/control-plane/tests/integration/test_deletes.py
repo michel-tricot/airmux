@@ -18,10 +18,13 @@ def _record_usage(tmp_path, org_id, workspace_id):
         await UsageEvent(
             event_id=uuid7(),
             request_id=uuid7(),
+            request_started_at=datetime.now(tz=UTC),
+            attempt_started_at=datetime.now(tz=UTC),
             occurred_at=datetime.now(tz=UTC),
             org_id=org_id,
             workspace_id=workspace_id,
             key_id="k",
+            request_source="inference_key",
             user_id=org_id,
             requested_model_id="gpt-test",
             requested_capabilities=[],
