@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
@@ -49,16 +49,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
   }, [activeWorkspaceSlug, lastWorkspaceKey]);
-
-  const autoPickedOrg = useRef<string | null>(null);
-  useEffect(() => {
-    if (autoPickedOrg.current === orgId || !workspaces) return;
-    autoPickedOrg.current = orgId;
-    if (location !== '/org' || workspaces.length === 0) return;
-    const lastWorkspace = window.localStorage.getItem(lastWorkspaceKey);
-    const workspace = workspaces.find((candidate) => candidate.slug === lastWorkspace) ?? workspaces[0];
-    setLocation(`/org/workspaces/${workspace.slug}`, { replace: true });
-  }, [lastWorkspaceKey, location, orgId, setLocation, workspaces]);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
   const switchWorkspace = (slug: string) => setLocation(`/org/workspaces/${slug}${activeSuffix}`);

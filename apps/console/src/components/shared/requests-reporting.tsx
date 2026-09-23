@@ -1,0 +1,376 @@
+import { useState } from 'react';
+import { Link } from 'wouter';
+import { exportUsageRequests, type UsageEventOutStatus } from '@workspace/api-client-react';
+import { Download, RefreshCw } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  Card,
+  Dropdown,
+  Input,
+  Label,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/elements';
+import { DataTable } from '@/components/shared/data-table';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { ReportingFilters } from '@/components/shared/reporting-filters';
+import { ErrorState, LoadingState } from '@/components/shared/states';
+import { TokenUsageSource } from '@/components/shared/token-usage-source';
+import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/reporting/hooks';
+import { formatReportCost, formatReportCostExact } from '@/features/reporting/presentation';
+import { reportQuery } from '@/features/reporting/query';
+import { requestsPath, useReportSearch } from '@/features/reporting/url';
+import { formatDate } from '@/lib/format';
+import { useRequiredOrgId } from '@/lib/session';
+
+function downloadCsv(filename: string, csv: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function RequestsReporting({
+  workspaceId,
+  workspaceName,
+  workspaceRef,
+}: {
+  workspaceId?: string;
+  workspaceName?: string;
+  workspaceRef?: string;
+}) {
+  const orgId = useRequiredOrgId();
+  const filters = useReportSearch(workspaceId ? 'key' : 'workspace');
+  const query = reportQuery(filters, workspaceId);
+  const validDates = filters.period !== 'custom' || (!!filters.startDate && !!filters.endDate && filters.startDate <= filters.endDate);
+  const offset = Number(filters.search.get('offset') ?? 0);
+  const sortBy = (filters.search.get('request_sort') ?? 'newest') as 'newest' | 'cost';
+  const status = (filters.search.get('status') || undefined) as UsageEventOutStatus | undefined;
+  const multipleAttempts = filters.search.get('multiple_attempts') === 'true' || undefined;
+  const requestId = filters.search.get('request_id') ?? '';
+  const params = { ...query, status, multiple_attempts: multipleAttempts, request_id: requestId || undefined, sort_by: sortBy, limit: 20, offset };
+  const requests = useUsageRequests(orgId, params, validDates);
+  const request = useUsageRequest(orgId, requestId, query, !!requestId);
+  const options = useReportOptions(orgId, query.workspace_id, workspaceId, validDates);
+  const attemptFilter = !!(query.model_id || query.provider_id || query.credential_id);
+  const [exportError, setExportError] = useState<unknown>();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const openRequest = (id: string) => {
+    const next = new URLSearchParams(filters.search);
+    next.set('request_id', id);
+    return `${requestsPath(workspaceRef)}?${next}`;
+  };
+
+  return (
+    <PageShell>
+      <PageHeader
+        title="Requests"
+        description={workspaceName ? `${workspaceName} · recorded inference requests` : 'All workspaces · recorded inference requests'}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => void requests.refetch()}>
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || !validDates}
+              onClick={async () => {
+                setIsExporting(true);
+                setExportError(undefined);
+                try {
+                  const exportResult = await exportUsageRequests(orgId, {
+                    ...query,
+                    status,
+                    multiple_attempts: multipleAttempts,
+                    request_id: requestId || undefined,
+                    sort_by: sortBy,
+                  });
+                  downloadCsv(exportResult.filename, exportResult.csv);
+                } catch (error) {
+                  setExportError(error);
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isExporting ? 'Exporting...' : 'Export CSV'}
+            </Button>
+          </div>
+        }
+      />
+
+      <Card className="space-y-4 p-4">
+        <ReportingFilters
+          workspaceId={workspaceId}
+          period={filters.period}
+          timezone={filters.timezone}
+          startDate={filters.startDate}
+          endDate={filters.endDate}
+          selected={filters.value}
+          options={options}
+          onChange={filters.change}
+          onClear={filters.clearFilters}
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="request-status">Status</Label>
+            <Dropdown
+              id="request-status"
+              value={status ?? 'all'}
+              onValueChange={(value) => filters.setValue('status', value === 'all' ? undefined : value)}
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'ok', label: 'Succeeded' },
+                { value: 'denied', label: 'Denied' },
+                { value: 'upstream_error', label: 'Upstream error' },
+                { value: 'credential_rejected', label: 'Credential rejected' },
+                { value: 'timeout', label: 'Timeout' },
+                { value: 'rate_limited', label: 'Rate limited' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ]}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="request-attempts">Attempts</Label>
+            <Dropdown
+              id="request-attempts"
+              value={multipleAttempts ? 'multiple' : 'all'}
+              onValueChange={(value) => filters.setValue('multiple_attempts', value === 'multiple' ? 'true' : undefined)}
+              options={[
+                { value: 'all', label: 'All requests' },
+                { value: 'multiple', label: 'Multiple attempts' },
+              ]}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="request-sort">Sort</Label>
+            <Dropdown
+              id="request-sort"
+              value={sortBy}
+              onValueChange={(value) => filters.setValue('request_sort', value)}
+              options={[
+                { value: 'newest', label: 'Newest first' },
+                { value: 'cost', label: 'Highest cost' },
+              ]}
+            />
+          </div>
+        </div>
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const requestId = String(new FormData(event.currentTarget).get('request_id') ?? '').trim();
+            filters.setValue('request_id', requestId);
+          }}
+        >
+          <Input key={requestId} name="request_id" aria-label="Request ID" defaultValue={requestId} placeholder="Find an exact request ID" />
+          <Button variant="secondary" type="submit">
+            Find request
+          </Button>
+        </form>
+      </Card>
+
+      {!validDates && <ErrorState message="Choose a valid start and end date." />}
+      {exportError !== undefined && <ErrorState error={exportError} resource="CSV export" onRetry={() => setExportError(undefined)} />}
+      <Card className="p-4">
+        <DataTable
+          ariaLabel="Requests"
+          rows={validDates ? requests.data?.requests : []}
+          rowKey={(item) => item.request_id}
+          isLoading={validDates && requests.isLoading}
+          isError={validDates && requests.isError && !requests.data}
+          error={requests.error}
+          resource="requests"
+          onRetry={() => requests.refetch()}
+          empty="No requests match these filters."
+          columns={[
+            { key: 'time', header: 'Started', cell: (item) => formatDate(item.started_at) },
+            {
+              key: 'workspace',
+              header: 'Workspace',
+              cell: (item) => workspaceName ?? options.workspace.find((option) => option.value === item.workspace_id)?.label ?? item.workspace_id,
+            },
+            {
+              key: 'request',
+              header: 'Request ID',
+              cell: (item) => (
+                <Link href={openRequest(item.request_id)} className="font-mono text-xs text-primary hover:underline">
+                  {item.request_id}
+                </Link>
+              ),
+            },
+            {
+              key: 'key',
+              header: 'Inference key / source',
+              cell: (item) =>
+                  item.request_source === 'playground'
+                  ? 'Playground'
+                  : (options.key.find((option) => option.value === item.key_id)?.label ?? item.key_id ?? 'Unknown'),
+            },
+            { key: 'model', header: 'Model', cell: (item) => item.model_id || item.requested_model_id },
+            { key: 'provider', header: 'Provider', cell: (item) => item.provider_id || 'No provider attempt' },
+            {
+              key: 'status',
+              header: 'Observed status',
+              cell: (item) => <Badge variant={item.status === 'ok' ? 'success' : 'secondary'}>{item.status}</Badge>,
+            },
+            { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
+            {
+              key: 'tokens',
+              header: 'Input / output',
+              cell: (item) => `${item.input_tokens.toLocaleString()} / ${item.output_tokens.toLocaleString()}`,
+            },
+            { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Estimated cost', cell: (item) => formatReportCost(item.cost_usd) },
+          ]}
+        />
+        <div className="mt-4 flex justify-between gap-3">
+          <Button variant="outline" size="sm" disabled={offset === 0} onClick={() => filters.setValue('offset', String(Math.max(0, offset - 20)))}>
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={requests.data?.next_offset == null}
+            onClick={() => filters.setValue('offset', String(requests.data!.next_offset))}
+          >
+            Next
+          </Button>
+        </div>
+      </Card>
+      <p className="text-xs text-muted-foreground">
+        Events arrive asynchronously. A request’s observed status and cost may change when later events arrive.
+      </p>
+
+      <Sheet
+        open={!!requestId}
+        onOpenChange={(open) => {
+          if (!open) filters.setValue('request_id', undefined);
+        }}
+      >
+        <SheetContent className="w-full overflow-y-auto border-border bg-card sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle>Request details</SheetTitle>
+            <SheetDescription className="font-mono break-all">{requestId}</SheetDescription>
+          </SheetHeader>
+          {request.isLoading && <LoadingState label="Loading request..." />}
+          {request.isError && <ErrorState error={request.error} resource="request" onRetry={() => request.refetch()} />}
+          {request.data && (
+            <div className="mt-6 space-y-6">
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Started</dt>
+                  <dd>{formatDate(request.data.started_at)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Observed status</dt>
+                  <dd>{request.data.status}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Estimated total cost</dt>
+                  <dd>{formatReportCostExact(request.data.cost_usd)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Input / output tokens</dt>
+                  <dd>
+                    {request.data.input_tokens.toLocaleString()} / {request.data.output_tokens.toLocaleString()}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Requested model</dt>
+                  <dd>{request.data.requested_model_id}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Inference key</dt>
+                  <dd className="break-all font-mono text-xs">{request.data.key_id || 'None recorded'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Key owner</dt>
+                  <dd className="break-all font-mono text-xs">{request.data.user_id || 'None recorded'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Source</dt>
+                  <dd>{request.data.request_source || 'Unknown'}</dd>
+                </div>
+              </dl>
+              <div>
+                <h3 className="mb-3 text-lg font-semibold">Provider attempts</h3>
+                {request.data.attempts.length === 0 && <p className="text-sm text-muted-foreground">No provider attempt was recorded.</p>}
+                <div className="space-y-3">
+                  {request.data.attempts.map((attempt) => (
+                    <Card key={attempt.event_id} className="space-y-3 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-mono text-xs">{formatDate(attempt.attempt_started_at)}</span>
+                        <div className="flex gap-2">
+                          <Badge variant={attempt.status === 'ok' ? 'success' : 'secondary'}>{attempt.status}</Badge>
+                          {attemptFilter && (
+                            <Badge variant={attempt.matches_filter ? 'outline' : 'secondary'}>
+                              {attempt.matches_filter ? 'Matches filters' : 'Outside filters'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium">
+                        {attempt.model_id} · {attempt.provider_id}
+                      </div>
+                      <dl className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <dt className="text-muted-foreground">Input / output</dt>
+                          <dd>
+                            {attempt.input_tokens.toLocaleString()} / {attempt.output_tokens.toLocaleString()}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Cache read / write</dt>
+                          <dd>
+                            {attempt.cache_read_tokens.toLocaleString()} / {attempt.cache_write_tokens.toLocaleString()}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Input / output cost</dt>
+                          <dd>
+                            {formatReportCostExact(attempt.cost_input_usd)} / {formatReportCostExact(attempt.cost_output_usd)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Total estimated cost</dt>
+                          <dd>{formatReportCostExact(attempt.cost_usd)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Latency</dt>
+                          <dd>{attempt.latency_ms} ms</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">Token source</dt>
+                          <dd>
+                            <TokenUsageSource source={attempt.token_usage_source} />
+                          </dd>
+                        </div>
+                        <div className="col-span-2">
+                          <dt className="text-muted-foreground">Credential ID</dt>
+                          <dd className="break-all font-mono">{attempt.credential_id || 'None recorded'}</dd>
+                        </div>
+                      </dl>
+                    </Card>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Attempts are shown in approximate start-time order. Cache tokens are included in input tokens.
+                </p>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </PageShell>
+  );
+}

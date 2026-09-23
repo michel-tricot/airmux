@@ -17,6 +17,7 @@ const WS = WORKSPACES[0];
 
 const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name },
+  { suffix: '/requests', heading: 'Requests' },
   { suffix: '/inference-keys', heading: 'Inference Keys' },
   { suffix: '/byok', heading: 'Provider Keys' },
   { suffix: '/settings', heading: 'Workspace Settings' },
@@ -64,22 +65,19 @@ describe('organization section deep links', () => {
   });
 });
 
-describe('default workspace selection', () => {
-  it('redirects /org to the first workspace when none was selected before', async () => {
+describe('organization reporting landing', () => {
+  it('keeps /org on organization usage when no workspace was selected', async () => {
     renderAt('/org');
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[0].slug}`);
-    });
-    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org');
   });
 
-  it('redirects /org to the last-selected workspace', async () => {
+  it('retains the last workspace in the selector without changing the report scope', async () => {
     window.localStorage.setItem(`airmux_last_ws_${ORG.id}`, WORKSPACES[1].slug);
     renderAt('/org');
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[1].slug}`);
-    });
-    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[1].name })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org');
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WORKSPACES[1].name);
   });
 
   it('remembers the workspace visited via a deep link', async () => {
@@ -137,6 +135,7 @@ describe('workspace route state', () => {
 function sectionLabel(suffix: string): string {
   return {
     '': 'Overview',
+    '/requests': 'Requests',
     '/inference-keys': 'Inference Keys',
     '/byok': 'BYOK',
     '/settings': 'Settings',

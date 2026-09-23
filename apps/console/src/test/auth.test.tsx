@@ -94,7 +94,7 @@ describe('sign-in gate', () => {
     );
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.queryByText('Organization Overview')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument();
   });
 
   it('shows a service error when the session endpoint is unavailable', async () => {
@@ -132,7 +132,7 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Password'), 'secret');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
   });
 
   it('creates the first account directly', async () => {
@@ -158,7 +158,7 @@ describe('sign-in gate', () => {
     await user.type(screen.getByLabelText('Password'), 'secure-password');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
   });
 
   it('explains that public signup is closed and directs visitors to an administrator', async () => {
@@ -223,7 +223,7 @@ describe('sign-in landing', () => {
   it('lands in the last-selected org', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
   });
 
   it('lands on the picker when no org was selected before', async () => {
@@ -237,7 +237,7 @@ describe('instance admin gate', () => {
   it('redirects non-admin users from /instance to the org console', async () => {
     window.localStorage.setItem('airmux_org_id', ORG.id);
     renderAt('/instance');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
     expect(window.location.pathname).not.toBe('/instance');
   });
 });
@@ -261,18 +261,19 @@ describe('organization picker', () => {
     expect(screen.getByText(ORG2.name)).toBeInTheDocument();
   });
 
-  it('lands in the org after picking one, defaulting to its first workspace', async () => {
+  it('lands on organization usage after picking an organization', async () => {
     withTwoOrgs();
     const user = userEvent.setup();
     renderAt('/org');
     await user.click(await screen.findByRole('button', { name: new RegExp(ORG.name) }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org');
     expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
   });
 
   it('auto-selects the org when the user belongs to exactly one', async () => {
     renderAt('/org');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Usage' })).toBeInTheDocument();
     expect(window.localStorage.getItem('airmux_org_id')).toBe(ORG.id);
   });
 });
@@ -280,11 +281,25 @@ describe('organization picker', () => {
 describe('switching organizations', () => {
   it("returns to the picker and drops the previous org's data", async () => {
     withTwoOrgs();
+    server.use(
+      http.get('/api/v1/organizations/:orgId/reports/usage', ({ params }) => {
+        const cost = params.orgId === ORG.id ? '1' : '2';
+        return HttpResponse.json({
+          data: {
+            totals: { requests: 1, input_tokens: 1, output_tokens: 1, cost_usd: cost },
+            comparison: { requests: 0, input_tokens: 0, output_tokens: 0, cost_usd: '0' },
+            daily: [],
+            period: { start_at: now, end_at: now, previous_start_at: now, previous_end_at: now, timezone: 'UTC' },
+            updated_at: now,
+          },
+        });
+      }),
+    );
     window.localStorage.setItem('airmux_org_id', ORG.id);
     const user = userEvent.setup();
     renderAt('/org');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
+    expect((await screen.findAllByText('$1.00')).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: 'Switch organization' }));
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
@@ -292,9 +307,9 @@ describe('switching organizations', () => {
 
     await user.click(screen.getByRole('button', { name: new RegExp(ORG2.name) }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Beta Staging' })).toBeInTheDocument();
+    expect((await screen.findAllByText('$2.00')).length).toBeGreaterThan(0);
     await waitFor(() => {
-      expect(screen.queryByText('Acme Production')).not.toBeInTheDocument();
+      expect(screen.queryAllByText('$1.00')).toHaveLength(0);
     });
   });
 });

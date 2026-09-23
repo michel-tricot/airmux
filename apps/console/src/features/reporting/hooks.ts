@@ -1,0 +1,46 @@
+import {
+  useGetUsageReport,
+  useGetAttributionReport,
+  useListUsageRequests,
+  useGetUsageRequest,
+  useGetReportFilterOptions,
+  type GetUsageReportParams,
+  type GetAttributionReportParams,
+  type ListUsageRequestsParams,
+  type GetUsageRequestParams,
+} from '@workspace/api-client-react';
+import type { SearchPickerOption } from '@/components/shared/search-picker';
+import type { ReportDimension } from './url';
+
+export function useUsageReport(orgId: string, params: GetUsageReportParams, enabled: boolean) {
+  return useGetUsageReport(orgId, params, { query: { enabled } });
+}
+
+export function useAttributionReport(orgId: string, params: GetAttributionReportParams, enabled: boolean) {
+  return useGetAttributionReport(orgId, params, { query: { enabled } });
+}
+
+export function useUsageRequests(orgId: string, params: ListUsageRequestsParams, enabled: boolean) {
+  return useListUsageRequests(orgId, params, { query: { enabled } });
+}
+
+export function useUsageRequest(orgId: string, requestId: string, params: GetUsageRequestParams, enabled: boolean) {
+  return useGetUsageRequest(orgId, requestId, params, { query: { enabled } });
+}
+
+export function useReportOptions(orgId: string, workspaceId: string | undefined, fixedWorkspaceId: string | undefined, enabled: boolean) {
+  const query = (dimension: ReportDimension) => ({ dimension, workspace_id: dimension === 'workspace' ? undefined : workspaceId });
+  const workspace = useGetReportFilterOptions(orgId, query('workspace'), { query: { enabled: enabled && !fixedWorkspaceId } });
+  const owner = useGetReportFilterOptions(orgId, query('owner'), { query: { enabled } });
+  const key = useGetReportFilterOptions(orgId, query('key'), { query: { enabled } });
+  const model = useGetReportFilterOptions(orgId, query('model'), { query: { enabled } });
+  const provider = useGetReportFilterOptions(orgId, query('provider'), { query: { enabled } });
+  const credential = useGetReportFilterOptions(orgId, query('credential'), { query: { enabled } });
+  const options = { workspace, owner, key, model, provider, credential };
+  return Object.fromEntries(
+    Object.entries(options).map(([dimension, result]) => [
+      dimension,
+      (result.data?.items ?? []).map((item) => ({ value: item.id, label: item.name, searchText: `${item.name} ${item.id}` })),
+    ]),
+  ) as Record<ReportDimension, SearchPickerOption[]>;
+}

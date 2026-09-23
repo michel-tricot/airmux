@@ -1,6 +1,6 @@
 ---
-title: "Usage and activity"
-description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
+title: 'Usage and activity'
+description: 'Inspect model usage, cost, latency, request status, gateway health, and audited management changes.'
 ---
 
 airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
@@ -47,25 +47,46 @@ All `cost_*_usd` fields are estimates using catalog prices at request time, incl
 in local event files, durable export, management API responses, and generated clients. Console activity lists and CLI
 event tables show the token source; console costs are labeled separately as estimates.
 
-## Inspect usage
+## Reports
+
+The console's Usage and Requests pages are available at organization and workspace scope. They use the same report
+endpoints under `/api/v1/organizations/{org_id}/reports`; workspace pages pass `workspace_id` as a filter. Organization
+reports require organization `usage.read` permission. A workspace report requires `usage.read` for that workspace;
+workspace permission does not grant access to the all-workspaces report. The same scope check applies to request
+details, filter choices, and exports.
+
+Usage defaults to the last 30 days. The selected period, timezone, and filters are kept in the page URL. The summary
+shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and
+attribution table use the same recorded events. Attribution can group by workspace, key owner, inference key, served
+model, provider, or provider credential. Selecting a group opens the matching Requests view.
+
+One `request_id` is one logical request, even when fallback creates several provider attempts. A denial before routing
+is one request with no provider attempt. Recorded cost and tokens add across attempts, including failed attempts with
+recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. Model,
+provider, and credential filters select matching attempt contributions; a request can therefore appear in multiple
+groups. Its detail view shows all authorized attempts and identifies the matching contributions. Group request counts
+may overlap, while spend and tokens reconcile with the report total.
+
+The Requests page supports exact request ID lookup, pagination, and CSV export of the complete filtered result. Detail
+shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end
+customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
+Prompt and response content are not part of usage reporting.
+
+Costs are gateway estimates recorded at request time; current catalog prices are not used to recalculate history.
+Events arrive asynchronously, so a refreshed report can change as late events arrive. The report cannot infer a
+request or attempt that never produced an accepted event. A reported status is the latest status observed in stored
+events, not proof that no later event will arrive.
+
+The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`, `/requests/{request_id}`, and
+`/requests/export`. Periods include Today, 7 days, 30 days, month to date, and custom dates. Reports compare with the
+preceding interval of equal duration. Request lists and attribution use `limit` and `offset`.
+
+## Inspect events
 
 ```bash
 airmux events list
 airmux events tail --interval 2 --keep 30
 ```
-
-The console shows workspace usage and instance or organization activity where the current principal has permission. The
-management API supports opaque cursor pagination.
-
-The workspace overview counts **attempt events**. One caller request has one `request_id`, and credential or model
-fallback can produce several attempt events with that ID. Failed, cancelled, and denied events count too, including
-denials before an upstream call.
-
-Attempt counts, input and output tokens, spend, and the top five models all use the same window: up to the latest 200
-events recorded for the workspace, ordered by descending event ID. Recent Activity shows the first eight events from
-that window. Per-model attempt counts use the model recorded on each event. These are event-window totals, with no
-fixed time interval; a request's other attempts can fall outside the window or arrive later. The overview refreshes
-every three seconds and does not load older pages to calculate its metrics.
 
 The instance overview's organization total counts every organization currently stored on the instance, including
 personal organizations. Deleted organizations no longer count. The total comes from
