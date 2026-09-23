@@ -94,6 +94,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         workspace_id = make_workspace(client, cp.headers(org_id))
         request_id = uuid7()
         first = _event(org_id, workspace_id, request_id=request_id)
+        first["cache_read_tokens"] = 2
+        first["cache_write_tokens"] = 1
         second = {
             **first,
             "event_id": str(uuid7()),
@@ -103,6 +105,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
             "status": "ok",
             "input_tokens": 6,
             "output_tokens": 3,
+            "cache_read_tokens": 3,
+            "cache_write_tokens": 0,
             "cost_usd": "0.000003",
             "cost_input_usd": "0.000003",
         }
@@ -125,6 +129,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         assert [request["request_id"] for request in requests.json()["data"]["requests"]] == [str(request_id)]
         assert requests.json()["data"]["requests"][0]["status"] == "ok"
         assert Decimal(requests.json()["data"]["requests"][0]["cost_usd"]) == Decimal("0.000003")
+        assert requests.json()["data"]["requests"][0]["cache_read_tokens"] == 3
+        assert requests.json()["data"]["requests"][0]["cache_write_tokens"] == 0
 
         detail = client.get(f"{path}/requests/{request_id}", params={"provider_id": "anthropic"}, headers=headers)
         assert detail.status_code == 200, detail.text
@@ -132,6 +138,8 @@ def test_provider_filter_counts_matching_cost_and_detail_keeps_all_attempts(tmp_
         assert detail.json()["data"]["within_period"] is True
         assert [attempt["matches_filter"] for attempt in detail.json()["data"]["attempts"]] == [False, True]
         assert Decimal(detail.json()["data"]["cost_usd"]) == Decimal("0.000005")
+        assert detail.json()["data"]["cache_read_tokens"] == 5
+        assert detail.json()["data"]["cache_write_tokens"] == 1
         lookup = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "anthropic"}, headers=headers)
         assert Decimal(lookup.json()["data"]["requests"][0]["cost_usd"]) == Decimal("0.000003")
         excluded = client.get(f"{path}/requests", params={"request_id": str(request_id), "provider_id": "other"}, headers=headers)

@@ -1813,6 +1813,8 @@ export interface RequestDetailOut {
   attempt_count: number;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
   within_period: boolean;
@@ -1862,6 +1864,8 @@ export interface RequestSummaryOut {
   attempt_count: number;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
   /** @pattern ^\d+(?:\.\d+)?$ */
   cost_usd: string;
 }
