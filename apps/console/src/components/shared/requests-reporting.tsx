@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
 import { Download } from 'lucide-react';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
+import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
 import { DataTable } from '@/components/shared/data-table';
 import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { DetailSheet } from '@/components/shared/detail-sheet';
@@ -69,7 +70,7 @@ export function RequestsReporting({
   const status = (filters.search.get('status') || undefined) as UsageEventOutStatus | undefined;
   const multipleAttempts = filters.search.get('multiple_attempts') === 'true' || undefined;
   const requestId = filters.search.get('request_id') ?? '';
-  const params = { ...query, status, multiple_attempts: multipleAttempts, request_id: requestId || undefined, sort_by: sortBy, limit: 20, offset };
+  const params = { ...query, status, multiple_attempts: multipleAttempts, sort_by: sortBy, limit: 20, offset };
   const [live, setLive] = useState(false);
   const requests = useUsageRequests(orgId, params, validDates, live);
   const taxonomy = useGetOrgTaxonomy(orgId);
@@ -89,7 +90,6 @@ export function RequestsReporting({
   const openRequest = (id: string) => {
     const next = new URLSearchParams(filters.search);
     next.set('request_id', id);
-    next.delete('offset');
     return `${requestsPath(workspaceRef)}?${next}`;
   };
 
@@ -117,7 +117,6 @@ export function RequestsReporting({
                     ...query,
                     status,
                     multiple_attempts: multipleAttempts,
-                    request_id: requestId || undefined,
                     sort_by: sortBy,
                   });
                   downloadCsv(exportResult.filename, exportResult.csv);
@@ -135,7 +134,7 @@ export function RequestsReporting({
         }
       />
 
-      <Card className="space-y-4 p-4">
+      <CollapsibleFilterCard>
         <ReportingFilters
           workspaceId={workspaceId}
           period={filters.period}
@@ -204,7 +203,7 @@ export function RequestsReporting({
             Find request
           </Button>
         </form>
-      </Card>
+      </CollapsibleFilterCard>
 
       {!validDates && <ErrorState message="Choose a valid start and end date." />}
       {exportError !== undefined && <ErrorState error={exportError} resource="CSV export" onRetry={() => setExportError(undefined)} />}

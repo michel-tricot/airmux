@@ -36,6 +36,41 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
+it.each(['/org', `/org/workspaces/${WORKSPACES[0].slug}`])('starts with overview filters collapsed at %s and toggles them', async (path) => {
+  const user = userEvent.setup();
+  renderAt(path);
+
+  const disclosure = (await screen.findByText('Filters')).closest('details');
+  expect(disclosure).not.toHaveAttribute('open');
+  expect(screen.getByRole('combobox', { name: 'Period' })).not.toBeVisible();
+
+  await user.click(screen.getByText('Filters'));
+  expect(disclosure).toHaveAttribute('open');
+  expect(screen.getByRole('combobox', { name: 'Period' })).toBeVisible();
+
+  await user.click(screen.getByText('Filters'));
+  expect(disclosure).not.toHaveAttribute('open');
+});
+
+it.each(['/org/requests', `/org/workspaces/${WORKSPACES[0].slug}/requests`])(
+  'starts with request filters collapsed at %s and toggles them',
+  async (path) => {
+    const user = userEvent.setup();
+    renderAt(path);
+
+    const disclosure = (await screen.findByText('Filters')).closest('details');
+    expect(disclosure).not.toHaveAttribute('open');
+    expect(screen.getByRole('combobox', { name: 'Status' })).not.toBeVisible();
+
+    await user.click(screen.getByText('Filters'));
+    expect(disclosure).toHaveAttribute('open');
+    expect(screen.getByRole('combobox', { name: 'Status' })).toBeVisible();
+
+    await user.click(screen.getByText('Filters'));
+    expect(disclosure).not.toHaveAttribute('open');
+  },
+);
+
 it('opens organization reporting and drills a model into filtered requests', async () => {
   server.use(
     http.get('/api/v1/organizations/:orgId/taxonomy', () =>
@@ -134,15 +169,31 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(within(requestsTable).getByText('provider-a').closest('td')?.querySelector('svg')).not.toBeNull();
 });
 
-it('opens a listed request without carrying its old page offset', async () => {
+it('opens a request detail without reloading the current request page', async () => {
+  let listLoads = 0;
   server.use(
-    http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
+    http.get('/api/v1/organizations/:orgId/reports/requests', () => {
+      listLoads += 1;
+      return HttpResponse.json({ data: { requests: listLoads === 1 ? [requestSummary] : [], next_offset: null } });
+    }),
+    http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', async () => {
+      await delay(50);
+      return HttpResponse.json({ data: { ...requestSummary, within_period: true, attempts: [] } });
+    }),
   );
 
+  const user = userEvent.setup();
   renderAt('/org/requests?offset=20');
 
   const requestLink = await screen.findByRole('link', { name: 'request-1' });
-  expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
+  expect(requestLink).toHaveAttribute('href', expect.stringContaining('offset=20'));
+  await user.click(requestLink);
+  const detail = await screen.findByRole('dialog', { name: 'Request details' });
+  expect(await within(detail).findByText('Total cost')).toBeInTheDocument();
+  expect(requestLink).toBeInTheDocument();
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(new URLSearchParams(window.location.search).get('request_id')).toBeNull());
+  expect(requestLink).toBeInTheDocument();
 });
 
 it.each([
@@ -401,6 +452,7 @@ it('uses a themed calendar to update the report date', async () => {
   const user = userEvent.setup();
   renderAt('/org?period=custom&start_date=2026-01-01&end_date=2026-01-31');
 
+  await user.click(await screen.findByText('Filters'));
   await user.click(await screen.findByRole('button', { name: 'Choose start date, January 1, 2026' }));
   const calendar = screen.getByRole('dialog', { name: 'Start date' });
   expect(calendar).toHaveClass('bg-card', 'text-card-foreground');

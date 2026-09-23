@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import type { UsageTotalsOut } from '@workspace/api-client-react';
 import { Activity, Coins, Hash, Sigma } from 'lucide-react';
 import { Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
+import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
 import { DataTable } from '@/components/shared/data-table';
 import { PageHeader, PageShell, SectionHeader } from '@/components/shared/page-shell';
 import { ErrorState, LoadingState } from '@/components/shared/states';
@@ -123,7 +124,7 @@ export function UsageReporting({
         actions={<ReportRefreshButton queries={[report, attribution]} />}
       />
 
-      <Card className="p-4">
+      <CollapsibleFilterCard>
         <ReportingFilters
           workspaceId={workspaceId}
           period={filters.period}
@@ -135,7 +136,7 @@ export function UsageReporting({
           onChange={filters.change}
           onClear={filters.clearFilters}
         />
-      </Card>
+      </CollapsibleFilterCard>
 
       {!validDates && <ErrorState message="Choose a valid start and end date." />}
       {validDates && !report.data && report.isLoading && <LoadingState label="Loading usage..." />}
