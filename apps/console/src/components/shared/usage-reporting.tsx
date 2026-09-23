@@ -260,7 +260,7 @@ export function UsageReporting({
                     header: 'Input · Output',
                     cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
                   },
-                  { key: 'average', header: 'Cost/request', cell: (item) => formatAverageCost(item.cost_usd, item.requests) },
+                  { key: 'average', header: 'Cost per request', cell: (item) => formatAverageCost(item.cost_usd, item.requests) },
                 ]}
               />
             </div>

@@ -96,6 +96,7 @@ it('opens organization reporting and drills a model into filtered requests', asy
   await user.click(await screen.findByRole('combobox', { name: 'Group by' }));
   await user.click(screen.getByRole('option', { name: 'Model' }));
   const attribution = await screen.findByRole('table', { name: 'Attribution' });
+  expect(within(attribution).getByText('Cost per request')).toBeInTheDocument();
   expect(within(attribution).getByText('Input · Output')).toBeInTheDocument();
   expect(within(attribution).getByText('30 · 10')).toBeInTheDocument();
   const modelLink = within(attribution).getByRole('link', { name: 'model-a' });
