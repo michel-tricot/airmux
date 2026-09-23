@@ -193,21 +193,22 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
   expect(window.location.pathname).toBe('/org/requests');
   expect(new URLSearchParams(window.location.search).get('model_id')).toBe('model-a');
-  const requestLink = await screen.findByRole('link', { name: 'request-1' });
+  const requestLink = await screen.findByRole('link', { name: 'Open request request-1' });
   const requestsTable = screen.getByRole('table', { name: 'Requests' });
   expect(
     within(requestsTable)
       .getAllByRole('columnheader')
       .slice(0, 4)
       .map((header) => header.textContent),
-  ).toEqual(['Request', 'Status', 'Cost in view', 'Total tokens']);
+  ).toEqual(['Date & time', 'Status', 'Cost in view', 'Total tokens']);
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Request ID' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByRole('columnheader', { name: 'Inference Key' })).toHaveClass('hidden', 'min-[1440px]:table-cell');
   expect(within(requestsTable).getByRole('columnheader', { name: 'Attempts' })).toHaveClass('hidden', 'xl:table-cell');
   expect(within(requestsTable).queryByRole('columnheader', { name: 'Provider' })).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
-  expect(within(requestLink).getByText('request-…')).toHaveAttribute('aria-hidden', 'true');
+  expect(requestLink.querySelector('svg')).toHaveClass('lucide-panel-right-open');
+  expect(requestLink).toHaveAttribute('title', 'request-1');
   const totalTokens = within(requestsTable).getByRole('button', { name: '40 total tokens. Show token details' });
   expect(totalTokens).toHaveTextContent('40');
   expect(totalTokens).toHaveClass('cursor-default');
@@ -253,7 +254,7 @@ it('opens a request detail without reloading the current request page', async ()
   const user = userEvent.setup();
   renderAt('/org/requests?offset=20');
 
-  const requestLink = await screen.findByRole('link', { name: 'request-1' });
+  const requestLink = await screen.findByRole('link', { name: 'Open request request-1' });
   expect(requestLink).toHaveAttribute('href', expect.stringContaining('offset=20'));
   await user.click(requestLink);
   const detail = await screen.findByRole('dialog', { name: 'Request details' });
@@ -280,8 +281,8 @@ it('marks denied requests without a provider as not routed', async () => {
 });
 
 it.each([
-  ['UTC', 'Jan 1, 2026, 00:00'],
-  ['America/Los_Angeles', 'Dec 31, 2025, 16:00'],
+  ['UTC', '2026-01-01 00:00'],
+  ['America/Los_Angeles', '2025-12-31 16:00'],
 ])('uses the selected %s timezone for the request filter and Date & time column', async (timezone, startedAt) => {
   let requestedTimezone: string | null = null;
   server.use(
@@ -340,12 +341,13 @@ it('keeps workspace request rows compact with the full request ID available', as
       .getAllByRole('columnheader')
       .slice(0, 4)
       .map((header) => header.textContent),
-  ).toEqual(['Request', 'Status', 'Cost', 'Total tokens']);
+  ).toEqual(['Date & time', 'Status', 'Cost', 'Total tokens']);
   expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
-  const requestLink = within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' });
+  const requestLink = within(table).getByRole('link', { name: 'Open request 01a0cbde-afee-7867-a902-e70b75b471ba' });
   expect(requestLink).toHaveAttribute('title', '01a0cbde-afee-7867-a902-e70b75b471ba');
-  expect(within(requestLink).getByText('01a0cbde…')).toHaveAttribute('aria-hidden', 'true');
+  expect(requestLink.querySelector('svg')).toHaveClass('lucide-panel-right-open');
+  expect(within(table).queryByText('01a0cbde…')).not.toBeInTheDocument();
   const model = within(table).getByText('anthropic/claude-opus-4-5-20251101');
   expect(model).toHaveClass('truncate');
   expect(model.parentElement).toHaveClass('justify-start', 'max-w-48');
@@ -432,7 +434,7 @@ it('polls requests in Live mode and briefly highlights new rows', async () => {
     http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } })),
   );
 
-  const requestLink = await screen.findByRole('link', { name: 'request-1' }, { timeout: 5_000 });
+  const requestLink = await screen.findByRole('link', { name: 'Open request request-1' }, { timeout: 5_000 });
   expect(requestLink.closest('tr')).toHaveClass('motion-safe:animate-request-arrival');
 });
 
@@ -504,7 +506,7 @@ it('shows the full attempt history while identifying the filtered provider contr
 
   const panel = await screen.findByRole('dialog', { name: 'Request details' });
   expect(await within(panel).findByText('This request started outside the selected period.')).toBeInTheDocument();
-  expect(within(panel).getAllByText('Dec 31, 2025, 16:00')).toHaveLength(3);
+  expect(within(panel).getAllByText('2025-12-31 16:00')).toHaveLength(3);
   expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
   expect(within(panel).getAllByText('Provider')).toHaveLength(2);

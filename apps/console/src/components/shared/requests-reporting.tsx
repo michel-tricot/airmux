@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
-import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload, RouteOff } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Download, HardDriveDownload, HardDriveUpload, PanelRightOpen, RouteOff } from 'lucide-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { CollapsibleFilterCard } from '@/components/shared/collapsible-filter-card';
@@ -91,11 +91,11 @@ export function RequestsReporting({
   const orgId = useRequiredOrgId();
   const filters = useReportSearch(workspaceId ? 'key' : 'workspace');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  const dateFormatter = new Intl.DateTimeFormat('sv-SE', {
     timeZone: filters.timezone,
-    month: 'short',
-    day: 'numeric',
     year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
@@ -130,7 +130,7 @@ export function RequestsReporting({
   };
 
   return (
-    <PageShell>
+    <PageShell className={workspaceId ? undefined : 'max-w-7xl'}>
       <PageHeader
         title="Requests"
         description={`${scopeName} · recorded inference requests`}
@@ -262,14 +262,18 @@ export function RequestsReporting({
           columns={[
             {
               key: 'request',
-              header: 'Request',
+              header: 'Date & time',
               cell: (item) => (
-                <div className="flex flex-col items-start gap-0.5">
-                  <span>{formatReportDate(item.started_at)}</span>
-                  <TableLink href={openRequest(item.request_id)} title={item.request_id} className="font-mono text-xs">
-                    <span aria-hidden="true">{item.request_id.slice(0, 8)}…</span>
-                    <span className="sr-only">{item.request_id}</span>
+                <div className="flex items-center gap-1">
+                  <TableLink
+                    href={openRequest(item.request_id)}
+                    title={item.request_id}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-primary/10"
+                  >
+                    <PanelRightOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="sr-only">Open request {item.request_id}</span>
                   </TableLink>
+                  <span className="tabular-nums">{formatReportDate(item.started_at)}</span>
                 </div>
               ),
             },
