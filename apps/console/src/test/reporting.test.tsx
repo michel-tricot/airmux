@@ -38,6 +38,14 @@ function renderAt(path: string) {
 
 it('opens organization reporting and drills a model into filtered requests', async () => {
   server.use(
+    http.get('/api/v1/organizations/:orgId/taxonomy', () =>
+      HttpResponse.json({
+        data: {
+          providers: [{ name: 'provider-a', icon: '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6" /></svg>' }],
+          models: [],
+        },
+      }),
+    ),
     http.get('/api/v1/organizations/:orgId/reports/usage', () =>
       HttpResponse.json({
         data: {
@@ -110,12 +118,20 @@ it('opens organization reporting and drills a model into filtered requests', asy
   expect(new URLSearchParams(window.location.search).get('model_id')).toBe('model-a');
   const requestLink = await screen.findByRole('link', { name: 'request-1' });
   const requestsTable = screen.getByRole('table', { name: 'Requests' });
+  expect(
+    within(requestsTable)
+      .getAllByRole('columnheader')
+      .slice(0, 5)
+      .map((header) => header.textContent),
+  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost in view', 'Input · Output']);
+  expect(within(requestsTable).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(requestsTable).getByText('Inference Key')).toBeInTheDocument();
   expect(within(requestsTable).queryByText('Inference Key · Source')).not.toBeInTheDocument();
   expect(within(requestsTable).getByText('Input · Output')).toBeInTheDocument();
   expect(within(requestsTable).getByText('30 · 10')).toBeInTheDocument();
   expect(requestLink).toHaveClass('text-primary', 'hover:underline');
   expect(within(screen.getByRole('table', { name: 'Requests' })).getByText('model-a').parentElement).toHaveClass('rounded', 'border');
+  expect(within(requestsTable).getByText('provider-a').closest('td')?.querySelector('svg')).not.toBeNull();
 });
 
 it('opens a listed request without carrying its old page offset', async () => {
@@ -127,6 +143,25 @@ it('opens a listed request without carrying its old page offset', async () => {
 
   const requestLink = await screen.findByRole('link', { name: 'request-1' });
   expect(requestLink).not.toHaveAttribute('href', expect.stringContaining('offset='));
+});
+
+it.each([
+  ['UTC', 'Jan 1, 2026, 00:00'],
+  ['America/Los_Angeles', 'Dec 31, 2025, 16:00'],
+])('uses the selected %s timezone for the request filter and Date & time column', async (timezone, startedAt) => {
+  let requestedTimezone: string | null = null;
+  server.use(
+    http.get('/api/v1/organizations/:orgId/reports/requests', ({ request }) => {
+      requestedTimezone = new URL(request.url).searchParams.get('timezone');
+      return HttpResponse.json({ data: { requests: [requestSummary], next_offset: null } });
+    }),
+  );
+
+  renderAt(`/org/requests?timezone=${encodeURIComponent(timezone)}`);
+
+  const table = await screen.findByRole('table', { name: 'Requests' });
+  expect(await within(table).findByText(startedAt)).toBeInTheDocument();
+  expect(requestedTimezone).toBe(timezone);
 });
 
 it('shows zero instead of NaN when cache token counts are absent', async () => {
@@ -166,6 +201,13 @@ it('keeps workspace request rows compact with the full request ID available', as
   renderAt(`/org/workspaces/${WORKSPACES[0].slug}/requests`);
 
   const table = await screen.findByRole('table', { name: 'Requests' });
+  expect(
+    within(table)
+      .getAllByRole('columnheader')
+      .slice(0, 5)
+      .map((header) => header.textContent),
+  ).toEqual(['Date & time', 'Request ID', 'Observed status', 'Cost', 'Input · Output']);
+  expect(within(table).getAllByRole('columnheader').at(-1)).toHaveTextContent('Attempts');
   expect(within(table).queryByRole('columnheader', { name: 'Workspace' })).not.toBeInTheDocument();
   expect(within(table).getByRole('link', { name: '01a0cbde-afee-7867-a902-e70b75b471ba' })).toHaveAttribute(
     'title',
@@ -323,10 +365,11 @@ it('shows the full attempt history while identifying the filtered provider contr
     http.get('/api/v1/organizations/:orgId/reports/requests', () => HttpResponse.json({ data: { requests: [], next_offset: null } })),
   );
 
-  renderAt('/org/requests?request_id=request-1&provider_id=provider-b');
+  renderAt('/org/requests?request_id=request-1&provider_id=provider-b&timezone=America%2FLos_Angeles');
 
   const panel = await screen.findByRole('dialog', { name: 'Request details' });
   expect(await within(panel).findByText('This request started outside the selected period.')).toBeInTheDocument();
+  expect(within(panel).getAllByText('Dec 31, 2025, 16:00')).toHaveLength(3);
   expect(await within(panel).findByText('provider-a', { exact: false })).toBeInTheDocument();
   expect(within(panel).getByText('provider-b', { exact: false })).toBeInTheDocument();
   expect(within(panel).getAllByText('Provider')).toHaveLength(2);

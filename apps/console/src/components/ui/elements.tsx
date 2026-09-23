@@ -245,7 +245,7 @@ export const Dropdown = ({
     <SelectContent
       position="popper"
       sideOffset={6}
-      className="z-50 min-w-[var(--radix-select-trigger-width)] border-border bg-card text-card-foreground shadow-xl shadow-black/50 [&_[data-radix-select-viewport]]:h-auto [&_[data-radix-select-viewport]]:max-h-72"
+      className="z-50 min-w-[var(--radix-select-trigger-width)] border-border bg-card text-card-foreground shadow-xl shadow-black/50 [&_[data-radix-select-viewport]]:h-auto [&_[data-radix-select-viewport]]:max-h-96"
     >
       {options.map((option) => (
         <SelectItem

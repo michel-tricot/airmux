@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { exportUsageRequests, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
+import { exportUsageRequests, useGetOrgTaxonomy, type RequestSummaryOut, type UsageEventOutStatus } from '@workspace/api-client-react';
 import { Download } from 'lucide-react';
 import { Badge, Button, Card, Dropdown, Input, Label } from '@/components/ui/elements';
 import { DataTable } from '@/components/shared/data-table';
+import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
 import { DetailSheet } from '@/components/shared/detail-sheet';
 import { ModelBadge } from '@/components/shared/model-badge';
 import { TableLink } from '@/components/shared/table-link';
@@ -15,7 +16,6 @@ import { useReportOptions, useUsageRequest, useUsageRequests } from '@/features/
 import { formatReportCost, formatReportCostExact } from '@/features/reporting/presentation';
 import { reportQuery } from '@/features/reporting/query';
 import { requestsPath, useReportSearch } from '@/features/reporting/url';
-import { formatDate } from '@/lib/format';
 import { useRequiredOrgId } from '@/lib/session';
 
 function downloadCsv(filename: string, csv: string) {
@@ -52,6 +52,16 @@ export function RequestsReporting({
 }) {
   const orgId = useRequiredOrgId();
   const filters = useReportSearch(workspaceId ? 'key' : 'workspace');
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: filters.timezone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const formatReportDate = (startedAt: string | null | undefined) => (startedAt ? dateFormatter.format(new Date(startedAt)) : 'N/A');
   const query = reportQuery(filters, workspaceId);
   const validDates = filters.period !== 'custom' || (!!filters.startDate && !!filters.endDate && filters.startDate <= filters.endDate);
   const offset = Number(filters.search.get('offset') ?? 0);
@@ -62,6 +72,7 @@ export function RequestsReporting({
   const params = { ...query, status, multiple_attempts: multipleAttempts, request_id: requestId || undefined, sort_by: sortBy, limit: 20, offset };
   const [live, setLive] = useState(false);
   const requests = useUsageRequests(orgId, params, validDates, live);
+  const taxonomy = useGetOrgTaxonomy(orgId);
   const request = useUsageRequest(orgId, requestId, query, !!requestId);
   const options = useReportOptions(orgId, query, workspaceId, validDates);
   const labelFor = (dimension: 'owner' | 'key' | 'credential', id: string | null | undefined) =>
@@ -211,7 +222,27 @@ export function RequestsReporting({
           onRetry={() => requests.refetch()}
           empty="No requests match these filters."
           columns={[
-            { key: 'time', header: 'Started', cell: (item) => formatDate(item.started_at) },
+            { key: 'time', header: 'Date & time', cell: (item) => formatReportDate(item.started_at) },
+            {
+              key: 'request',
+              header: 'Request ID',
+              cell: (item) => (
+                <TableLink href={openRequest(item.request_id)} title={item.request_id} className="block max-w-32 truncate font-mono text-xs">
+                  {item.request_id}
+                </TableLink>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Observed status',
+              cell: (item) => <RequestStatusBadge status={item.status} />,
+            },
+            { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
+            {
+              key: 'tokens',
+              header: 'Input · Output',
+              cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
+            },
             ...(!workspaceId
               ? [
                   {
@@ -222,15 +253,6 @@ export function RequestsReporting({
                   },
                 ]
               : []),
-            {
-              key: 'request',
-              header: 'Request ID',
-              cell: (item) => (
-                <TableLink href={openRequest(item.request_id)} title={item.request_id} className="block max-w-32 truncate font-mono text-xs">
-                  {item.request_id}
-                </TableLink>
-              ),
-            },
             {
               key: 'key',
               header: 'Inference Key',
@@ -247,19 +269,20 @@ export function RequestsReporting({
                 return <ModelBadge name={model} className="max-w-48 justify-start" />;
               },
             },
-            { key: 'provider', header: 'Provider', cell: (item) => item.provider_id || 'No provider attempt' },
             {
-              key: 'status',
-              header: 'Observed status',
-              cell: (item) => <RequestStatusBadge status={item.status} />,
+              key: 'provider',
+              header: 'Provider',
+              cell: (item) =>
+                item.provider_id ? (
+                  <CatalogOptionLabel
+                    name={item.provider_id}
+                    providerIcon={taxonomy.data?.providers.find((provider) => provider.name === item.provider_id)?.icon}
+                  />
+                ) : (
+                  'No provider attempt'
+                ),
             },
             { key: 'attempts', header: 'Attempts', cell: (item) => item.attempt_count },
-            {
-              key: 'tokens',
-              header: 'Input · Output',
-              cell: (item) => `${item.input_tokens.toLocaleString()} · ${item.output_tokens.toLocaleString()}`,
-            },
-            { key: 'cost', header: attemptFilter ? 'Cost in view' : 'Cost', cell: (item) => formatReportCost(item.cost_usd) },
           ]}
         />
         <div className="mt-4 flex justify-between gap-3">
@@ -291,8 +314,8 @@ export function RequestsReporting({
             {!request.data.within_period && <p className="text-sm text-muted-foreground">This request started outside the selected period.</p>}
             <dl className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <dt className="text-muted-foreground">Started</dt>
-                <dd>{formatDate(request.data.started_at)}</dd>
+                <dt className="text-muted-foreground">Date &amp; time</dt>
+                <dd>{formatReportDate(request.data.started_at)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Observed status</dt>
@@ -340,7 +363,7 @@ export function RequestsReporting({
                     .map((attempt) => (
                       <Card key={attempt.event_id} className="space-y-3 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-mono text-sm">{formatDate(attempt.attempt_started_at)}</span>
+                          <span className="font-mono text-sm">{formatReportDate(attempt.attempt_started_at)}</span>
                           <div className="flex gap-2">
                             <RequestStatusBadge status={attempt.status} />
                             {attemptFilter && (
