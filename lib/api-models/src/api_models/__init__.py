@@ -365,7 +365,7 @@ class DeniedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",
@@ -1655,7 +1655,7 @@ class RoutedUsageEventV1(BaseModel):
     latency_ms: Annotated[
         int,
         Field(
-            description="End-to-end request latency in milliseconds",
+            description="Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing",
             ge=0,
             le=2147483647,
             title="Latency Ms",

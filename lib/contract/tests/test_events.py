@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from contract import UsageEvent, uuid7
+from contract import RoutedUsageEventV1, UsageEvent, uuid7
 
 USAGE_EVENT_ADAPTER = TypeAdapter(UsageEvent)
 
@@ -62,6 +62,11 @@ def test_early_denial_rejects_provider_and_credential_data():
 def test_usage_events_accept_opaque_key_ids():
     event = USAGE_EVENT_ADAPTER.validate_python(usage_event())
     assert event.key_id == "external-key"
+
+
+def test_routed_usage_latency_is_described_as_attempt_latency():
+    description = RoutedUsageEventV1.model_json_schema()["properties"]["latency_ms"]["description"]
+    assert description == "Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing"
 
 
 @pytest.mark.parametrize("source", ["inference_key", "playground"])

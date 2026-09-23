@@ -771,7 +771,7 @@ export interface DeniedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing
      * @minimum 0
      * @maximum 2147483647
      */
@@ -1844,7 +1844,7 @@ export interface RoutedUsageEventV1 {
      */
   cache_write_tokens?: number;
   /**
-     * End-to-end request latency in milliseconds
+     * Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing
      * @minimum 0
      * @maximum 2147483647
      */
