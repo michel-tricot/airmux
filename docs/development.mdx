@@ -94,6 +94,13 @@ cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
 cd "$smoke_dir"
 AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
   "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
+)
+```
+
+For a direct local installation, run:
+
+```bash
+uv tool install --reinstall dist/airmux-*.whl
 ```
 
 The `airmux` command is then available outside the repository.
