@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -239,11 +240,7 @@ def test_documentation_navigation_is_organized_around_reader_tasks() -> None:
 def test_full_platform_instructions_pin_one_release() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
-    declared = {
-        version
-        for document in (readme, quickstart)
-        for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)
-    }
+    declared = {version for document in (readme, quickstart) for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)}
 
     assert len(declared) == 1, declared
     version = declared.pop()
@@ -252,7 +249,11 @@ def test_full_platform_instructions_pin_one_release() -> None:
         assert 'uv tool install "airmux==$AIRMUX_VERSION"' in document
         assert 'git clone --branch "v$AIRMUX_VERSION"' in document
 
-    tags = subprocess.run(["git", "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False)
+    git = shutil.which("git")
+    assert git is not None
+    tags = subprocess.run(  # noqa: S603 resolved Git executable only lists local tags
+        [git, "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False
+    )
     assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
 
 
