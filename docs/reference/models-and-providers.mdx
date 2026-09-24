@@ -54,6 +54,11 @@ inference endpoints; current content support is described below.
 The shipped taxonomy currently includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and
 xAI provider entries. The deployed catalog is authoritative and may differ after a taxonomy update.
 
+Custom provider entries can select `aws_bedrock` or `azure_openai` as their `kind`. Bedrock uses the regional
+OpenAI compatible endpoint and a Bedrock API key. Azure OpenAI uses a resource endpoint ending in `/openai/v1`; its
+model's `upstream_model` is the deployment name. Store the corresponding provider key through the normal provider
+credential workflow. See [provider credentials](/docs/features/provider-credentials) for setup and capability limits.
+
 ## Model entries
 
 | Field | Meaning |

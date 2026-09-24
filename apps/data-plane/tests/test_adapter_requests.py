@@ -34,6 +34,8 @@ REFERENCE_SCHEMA = {
     "openai_responses": "oai_responses.openai.request.json",
     "anthropic": "anthropic.anthropic.request.json",
 }
+REFERENCE_SCHEMA["aws_bedrock"] = REFERENCE_SCHEMA["openai_compatible"]
+REFERENCE_SCHEMA["azure_openai"] = REFERENCE_SCHEMA["openai_compatible"]
 ERROR_CASES = (
     ("openai_compatible", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
     ("openai_compatible", {"error": "File content is not supported"}, "429", "File content is not supported"),
@@ -145,7 +147,23 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
     adapter, model = _adapter(kind)
     upstream = adapter.transform_request(request_of(CORPUS[0]), model)
     assert json.loads(upstream.body)["model"] == model.upstream_model
-    assert "sk-test" in upstream.headers.get("authorization", "") or "sk-test" in upstream.headers.get("x-api-key", "")
+    assert any("sk-test" in value for name, value in upstream.headers.items() if name in {"authorization", "x-api-key", "api-key"})
+
+
+def test_bedrock_uses_the_regional_openai_compatible_endpoint_and_bearer_key():
+    provider = PROVIDER.model_copy(update={"kind": "aws_bedrock", "base_url": "https://bedrock-mantle.us-east-1.api.aws/v1"})
+    upstream = REGISTRY["aws_bedrock"](provider, Secret("bedrock-key")).transform_request(request_of(CORPUS[0]), MODEL)
+
+    assert upstream.url == "https://bedrock-mantle.us-east-1.api.aws/v1/chat/completions"
+    assert upstream.headers["authorization"] == "Bearer bedrock-key"
+
+
+def test_azure_openai_uses_deployment_endpoint_and_api_key_header():
+    provider = PROVIDER.model_copy(update={"kind": "azure_openai", "base_url": "https://resource.openai.azure.com/openai/v1"})
+    upstream = REGISTRY["azure_openai"](provider, Secret("azure-key")).transform_request(request_of(CORPUS[0]), MODEL)
+
+    assert upstream.url == "https://resource.openai.azure.com/openai/v1/chat/completions"
+    assert upstream.headers["api-key"] == "azure-key"
 
 
 @pytest.mark.parametrize(("kind", "body", "code", "message"), ERROR_CASES)
