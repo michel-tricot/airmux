@@ -22,13 +22,12 @@
           {
             "group": "Use the platform",
             "pages": [
-              "docs/guides/openai-sdk",
-              "docs/guides/anthropic-sdk",
-              "docs/guides/streaming",
-              "docs/guides/tools",
-              "docs/guides/structured-output",
+              "docs/guides/cli",
+              "docs/guides/user-management",
+              "docs/guides/sdks",
               "docs/policies",
               "docs/guides/policy-workflow",
+              "docs/guides/budgets",
               "docs/features/model-routing",
               "docs/features/provider-credentials",
               "docs/features/usage"
@@ -42,6 +41,7 @@
               "docs/deployment/gateway",
               "docs/deployment/scaling",
               "docs/deployment/security",
+              "docs/deployment/opentelemetry",
               "docs/deployment/operations",
               "docs/deployment/upgrades"
             ]

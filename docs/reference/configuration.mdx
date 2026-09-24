@@ -3,16 +3,16 @@ title: 'Configuration reference'
 description: 'Reference Docker variables, runtime YAML sections, references, bundle sources, event outboxes, budget backends, and secret stores.'
 ---
 
-airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
+`airmux` runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
 `./.airmux/airmux.yml`, falling back to a shared `./airmux.yml` when the standalone file is absent. Control-plane
-commands use `./airmux.yml`. The airmux image uses `deploy/docker/airmux.yml`.
+commands use `./airmux.yml`. The `airmux` image uses `deploy/docker/airmux.yml`.
 
 ## Docker Compose variables
 
 | Variable                  | Default                 | Purpose                                      |
 | ------------------------- | ----------------------- | -------------------------------------------- |
 | `AIRMUX_PORT`             | `8080`                  | Published host port                          |
-| `AIRMUX_PUBLIC_URL`       | `http://localhost:8080` | Compose value mapped to the console origin   |
+| `AIRMUX_PUBLIC_URL`       | `http://localhost:8080` | Compose value mapped to the webapp origin    |
 | `AIRMUX_PUBLIC_SIGNUP`    | `false`                 | Allow account creation after instance claim  |
 | `POSTGRES_PASSWORD`       | `airmux`                | Initial local Postgres password              |
 | `AIRMUX_IMAGE`            | `airmux:local`          | Image used by every role in either topology  |

@@ -3,7 +3,7 @@ title: "Model routing and failover"
 description: "Route catalog model IDs across provider families, select healthy credentials, and define bounded fallback plans."
 ---
 
-Every inference request names one catalog model. airmux resolves that model to a provider profile, validates the
+Every inference request names one catalog model. `airmux` resolves that model to a provider profile, validates the
 request, chooses a credential, and translates the request into the provider's wire format.
 
 ## Model IDs
@@ -25,7 +25,7 @@ Each model declares:
 - Capabilities such as streaming, tools, reasoning, and structured output
 - Parameter support where the provider or model has a known restriction
 
-airmux checks capabilities and modalities before it resolves a provider credential.
+`airmux` checks capabilities and modalities before it resolves a provider credential.
 
 ## Credential selection
 
@@ -35,7 +35,7 @@ Eligible credentials are considered by scope, then priority:
 2. Organization credentials
 3. Instance credentials
 
-airmux uses the first populated scope allowed by policy. Within that scope, lower numeric priority is tried first and
+`airmux` uses the first populated scope allowed by policy. Within that scope, lower numeric priority is tried first and
 name breaks ties. It does not fall through to a broader scope when the selected scope has credentials but they fail.
 
 Authentication failures and rate limits may advance to the next credential in the same scope. A rate-limited credential
@@ -43,7 +43,7 @@ enters a short cooldown so concurrent requests do not immediately reuse it.
 
 ## Parameter reconciliation
 
-Provider profiles define aliases, accepted extra fields, and model-specific parameter support. Before the upstream call, airmux may:
+Provider profiles define aliases, accepted extra fields, and model-specific parameter support. Before the upstream call, `airmux` may:
 
 - Re-spell a parameter for the provider
 - Default an omitted `max_output_tokens` from policy or model metadata
@@ -66,7 +66,7 @@ ceiling, credential rule, capability check, or parameter policy. Its effective o
 backup model's catalog ceiling.
 
 <Info>
-  Fallback is not exactly-once generation. A timed-out provider may continue work after airmux starts another attempt,
+  Fallback is not exactly-once generation. A timed-out provider may continue work after `airmux` starts another attempt,
   and each attempt gets its own usage record.
 </Info>
 

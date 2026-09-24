@@ -29,7 +29,6 @@ dev = [
   "trio",
   "trustme>=1.2.1",
   "import-linter",
-  "pre-commit",
   "datamodel-code-generator",
 ]
 

@@ -1,9 +1,13 @@
 ---
 title: "Separate services and scale gateways"
-description: "Run the console, control plane, and multiple data planes independently with distinct persistent state."
+description: "Run the webapp, control plane, and multiple data planes independently with distinct persistent state."
 ---
 
-The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, and two gateways on one Docker host.
+<Warning>
+  This split deployment example is experimental.
+</Warning>
+
+The `docker-compose.split.yml` example runs Postgres, one control plane, the webapp proxy, and two gateways on one Docker host.
 
 ```bash
 docker build -t airmux:local .
@@ -13,10 +17,10 @@ airmux quickstart --url http://localhost:8080
 
 Every service and short-lived startup job references `AIRMUX_IMAGE`, so pin that variable to one published digest for
 coordinated deployments. The split stack follows the same [database and catalog startup sequence](/docs/deployment/docker#startup-and-database-changes)
-as the default stack. Both gateways start after the control plane becomes healthy. The console proxy distributes `/inf/`
+as the default stack. Both gateways start after the control plane becomes healthy. The webapp proxy distributes `/inf/`
 requests between them.
 
-Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
 ## Volume ownership
 
@@ -47,7 +51,7 @@ bundle publication, and replica behavior are proven.
 Do not use `docker compose --scale` for gateways. Each gateway needs an explicit service and its own identity, bundle
 cache, and usage outbox volume.
 
-## Move from airmux to split
+## Move from `airmux` to split
 
 The default and split Compose files use different named volumes. Migration requires a database dump plus a stopped copy
 of `/state/runtime`, `/state/secrets`, and one gateway's `/state/data-plane`. Restore each into the corresponding split

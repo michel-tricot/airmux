@@ -1,8 +1,8 @@
 <div align="center">
-  <h1>airmux</h1>
+  <h1><code>airmux</code></h1>
   <p><strong>One self-hosted LLM gateway. Any compatible client. Multiple providers.</strong></p>
   <p>
-    Connect through a supported inference API while airmux centralizes provider translation, routing, policy,
+    Connect through a supported inference API while `airmux` centralizes provider translation, routing, policy,
     credentials, failover, and usage accounting behind one endpoint.
   </p>
   <p>
@@ -19,16 +19,16 @@
   </p>
 </div>
 
-airmux gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
+`airmux` gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
 Clients send Chat Completions, Responses, or Messages requests through any SDK or integration that can target the
-corresponding HTTP API. airmux authenticates the workspace, applies policy, selects a model and scoped provider
+corresponding HTTP API. `airmux` authenticates the workspace, applies policy, selects a model and scoped provider
 credential, translates the request, and records the result.
 
 You run the whole platform: a web console, organizations and workspaces, managed provider credentials, live policy, and
 persistent usage history with estimated cost.
 
 > [!NOTE]
-> airmux is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
+> `airmux` is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 
 ## Quickstart
 
@@ -59,7 +59,7 @@ key; and proves the installation with a real model request. Open [localhost:8080
 console, where the request appears with its model, tokens, and estimated cost.
 
 > [!IMPORTANT]
-> Requests through airmux call real providers and are billed by them.
+> Requests through `airmux` call real providers and are billed by them.
 
 The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console and enforcing your
 first workspace policy.
@@ -74,7 +74,7 @@ first workspace policy.
 
 ## Use your existing client
 
-Any client that can target one of airmux's HTTP APIs and send an inference key through `Authorization: Bearer` or
+Any client that can target one of `airmux`'s HTTP APIs and send an inference key through `Authorization: Bearer` or
 `x-api-key` can connect. That includes SDKs, agent frameworks, CLIs, services, and raw HTTP integrations.
 
 | API | Endpoint |
@@ -84,7 +84,7 @@ Any client that can target one of airmux's HTTP APIs and send an inference key t
 | Messages | `POST /inf/v1/messages` |
 | Model discovery | `GET /inf/v1/models` and `GET /inf/v1/models/{model_id}` |
 
-The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with an airmux inference key:
+The OpenAI SDK is one example. Point it at `/inf/v1` and replace the upstream key with an `airmux` inference key:
 
 ```python
 import os
@@ -105,11 +105,10 @@ print(response.choices[0].message.content)
 ```
 
 The client protocol does not constrain the provider route. A Messages request can target an OpenAI-compatible model,
-and a Chat Completions request can target an Anthropic model. airmux translates the request and returns the response
-and errors in the caller's dialect. See the [OpenAI SDK](docs/guides/openai-sdk.mdx) and
-[Anthropic SDK](docs/guides/anthropic-sdk.mdx) guides for complete examples, including streaming.
+and a Chat Completions request can target an Anthropic model. `airmux` translates the request and returns the response
+and errors in the caller's dialect. See the [SDK guide](docs/guides/sdks.mdx) for client examples.
 
-## Why airmux
+## Why `airmux`
 
 - **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration that speaks an exposed API
 - **Policy at the gateway:** compose model and provider allowlists, price ceilings, spending budgets, request limits, credential rules, denials, strict parameters, and fallbacks
@@ -139,7 +138,7 @@ airmux gateway serve
 
 ## Architecture
 
-airmux separates mutable management work from the inference request path.
+`airmux` separates mutable management work from the inference request path.
 
 ```mermaid
 flowchart LR
@@ -166,11 +165,11 @@ shapes.
 
 | I want to... | Start here |
 | --- | --- |
-| Run airmux and see it working | [Quickstart](docs/quickstart.mdx) |
-| Connect an application | [OpenAI SDK](docs/guides/openai-sdk.mdx) or [Anthropic SDK](docs/guides/anthropic-sdk.mdx) |
+| Run `airmux` and see it working | [Quickstart](docs/quickstart.mdx) |
+| Connect an application | [Use an SDK](docs/guides/sdks.mdx) |
 | Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
-| Deploy airmux | [Deployment overview](docs/deployment/index.mdx) |
+| Deploy `airmux` | [Deployment overview](docs/deployment/index.mdx) |
 | Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |
 | Work on the project | [Contributing](CONTRIBUTING.md) and [Development guide](docs/development.mdx) |

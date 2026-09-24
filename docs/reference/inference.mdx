@@ -31,7 +31,7 @@ The generated OpenAPI spec covers the [management API](/docs/reference/managemen
 shared behavior are described in these reference pages.
 
 The caller surface does not constrain the provider route. A Messages request can target an OpenAI-compatible model; a
-Chat Completions request can target an Anthropic model. airmux returns the response and errors in the caller's dialect.
+Chat Completions request can target an Anthropic model. `airmux` returns the response and errors in the caller's dialect.
 Each path binds exactly one caller protocol; headers and body fields cannot change it.
 
 ## Shared behavior
@@ -86,7 +86,7 @@ The management command `airmux models list -f json` lists the organization catal
 
 ## Base URLs
 
-If the public airmux origin is `https://llm.example.com`:
+If the public `airmux` origin is `https://llm.example.com`:
 
 | Client | Base URL |
 | --- | --- |

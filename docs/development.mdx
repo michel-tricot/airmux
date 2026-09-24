@@ -1,164 +1,48 @@
 ---
 title: "Development"
-description: "Run the Python services and console from source, execute checks, regenerate contracts, and verify request-path changes."
+description: "Set up airmux, make and verify a change, open a pull request, and publish a release."
 ---
 
-Run commands from the repository root. Development requires Python 3.13+, uv, Bun, and Docker with Compose.
+## Clone and install
 
-## Contribution workflow
-
-Before changing code, read the [contributor guide](https://github.com/michel-tricot/airmux/blob/main/CONTRIBUTING.md),
-`AGENTS.md`, and the relevant record under `notes/design/`. Add a failing behavior test first, keep the implementation
-focused, and update every affected schema, generated client, example, and document in the same change.
-
-Run focused tests while iterating. Before opening a pull request, run the full checks for the areas touched and describe
-the user impact, design tradeoffs, and verification in the pull request body. Inference request-path changes require both
-the acceptance scenarios and a real request through a running data plane.
-
-## Install and initialize
+Install Python 3.13+, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. The development stack uses ports 5432, 8000, 8080, and 5000; stop any service already using them. Clone the repository and install its dependencies:
 
 ```bash
+git clone https://github.com/michel-tricot/airmux.git
+cd airmux
 uv sync --all-packages --frozen
 bun install --frozen-lockfile
-uv run pre-commit install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up -d --wait
 ```
 
-Apply the development catalog before starting the control plane:
+## Start the development environment
+
+Load the development catalog:
 
 ```bash
 uv run airmux control-plane taxonomy --file taxonomy/taxonomy.yml
 ```
 
-`control-plane serve --dev` applies database migrations before starting. It also creates `.airmux/dataplane.key` when absent.
-Keep the key with the matching local database. This leaves the instance unclaimed so the normal onboarding flow remains available.
+Start each service in its own terminal:
 
-## Start the services
-
-Run each process in a separate terminal:
-
-| Process | Command | Address |
+| Service | Command | Address |
 | --- | --- | --- |
 | Control plane | `uv run airmux control-plane serve --dev` | `http://127.0.0.1:8000` |
-| Data plane | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
-| Console | `bun run dev` | `http://127.0.0.1:5000` |
+| Gateway | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
+| Webapp | `bun run dev` | `http://127.0.0.1:5000` |
 
-Complete setup through Vite's public development origin:
+Finish local setup through the webapp origin:
 
 ```bash
 uv run --package airmux airmux quickstart --url http://127.0.0.1:5000
 ```
 
-Vite forwards `/api` and `/inf` to the Python services. Use the same hostname throughout a browser session.
+The development control plane applies migrations and creates `.airmux/dataplane.key` when needed. Keep that key with its local database.
 
-## Gateway-only development
+## Develop and verify
 
-```bash
-uv run --package airmux airmux gateway init --taxonomy taxonomy/taxonomy.yml --directory .airmux-gateway
-export OPENAI_API_KEY='your-provider-key'
-uv run --package airmux airmux gateway serve --config .airmux-gateway/airmux.yml --dev
-```
-
-The generated bundle references the existing taxonomy file. Both reload after edits. This mode uses environment provider
-keys, a private generated inference key, and a `devnull` usage outbox. See [gateway-only deployment](/docs/deployment/gateway)
-for installation without a source checkout at runtime.
-
-The Docker-free subprocess suite progresses through basics, protocol pairs, features, simple policies, advanced policy
-composition, failures and fallback, runtime changes, and metering prices and costs. It starts real gateways and scripted
-upstream HTTP servers, then validates their JSON Lines usage events against the shared contract:
-
-```bash
-uv run pytest tests/acceptance/gateway -n auto
-```
-
-On ready-for-review pull requests, CI runs the gateway suite across four shards against the rebuilt, installed public
-wheel and uploads JUnit results and failure diagnostics. Draft pull requests build the candidate but defer these
-acceptance checks until they are marked ready. Each scenario is independent.
-For focused runs and contribution conventions, see the [gateway suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/gateway/README.md).
-
-CI builds the candidate distributions once on Linux and validates their metadata. It rebuilds the wheel from the source
-distribution, then reuses that candidate for installation and gateway checks. Nightly portable smoke jobs install their
-own candidate outside the source checkout with Python 3.13 and 3.14 on Linux and macOS. Postgres, Docker, full-stack,
-and gateway acceptance checks remain Linux-only. See [CI design and timing](https://github.com/michel-tricot/airmux/blob/main/notes/design/CI.md)
-for current job selection, cancellation behavior, and measured timings.
-
-To run the portable checks locally without installing the workspace, build the distribution and use a fresh temporary
-directory for the tool, test runner, and copied suite. The runner needs only `pytest`, `httpx`, and `pyyaml`:
-
-```bash
-(
-set -e
-./scripts/build-python-distribution.sh
-smoke_dir="$(mktemp -d)"
-export UV_TOOL_DIR="$smoke_dir/tools"
-export UV_TOOL_BIN_DIR="$smoke_dir/bin"
-uv tool install --python 3.13 dist/airmux-*.whl
-uv venv --python 3.13 "$smoke_dir/runner"
-uv pip install --python "$smoke_dir/runner/bin/python" pytest httpx pyyaml
-mkdir -p "$smoke_dir/tests/installation/portable" "$smoke_dir/tests/acceptance"
-cp tests/installation/portable/*.py "$smoke_dir/tests/installation/portable/"
-cp tests/installation/installation_support.py "$smoke_dir/tests/installation/"
-cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
-cd "$smoke_dir"
-AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
-  "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
-)
-```
-
-Keep the copied `tests/...` layout so the suite can import its support modules. `-o pythonpath=.` adds only the temporary
-test root; `-I` ignores the checkout's Python environment settings. The suite verifies that gateway modules load from
-the installed tool environment and sends buffered and streaming requests through the installed gateway.
-
-## Executable documentation checks
-
-These focused tests read the examples directly from their documents. They run in the existing CI suites and use local
-fixtures or the installed candidate wheel, with no paid provider requests:
-
-| Examples | Tests |
-| --- | --- |
-| CLI inventory, provider source discovery, repository paths, and supported Replit commands | `tests/documentation` |
-| Portable installation recipe and installed CLI inventory | `tests/installation/integration/test_documented_installation.py` |
-| README and gateway initialization, startup, and curl requests | `tests/acceptance/gateway/test_documented_gateway.py` |
-| Pagination with a cursor from a real preceding page | `tests/acceptance/full_stack/scenarios/test_documented_pagination.py` |
-| Standalone container configuration mount and inference | `tests/deployment/test_gateway_container.py` |
-
-The installation recipe test pins its minimal runner dependencies to `uv.lock` and runs offline. CI primes metadata for
-all exported dependencies before the tests; for a local run, prepare the same cache after `uv sync --all-packages --frozen`:
-
-```bash
-uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file /tmp/airmux-doc-constraints.txt
-uv pip compile /tmp/airmux-doc-constraints.txt --quiet > /dev/null
-```
-
-Installation checks require `AIRMUX_INSTALL_BIN` to name the installed candidate executable. Gateway acceptance uses `AIRMUX_GATEWAY_BIN` when set;
-the full-stack harness finds `airmux` on `PATH`. Container checks use `DEPLOYMENT_IMAGE` from the deployment suite.
-
-## Workflow checks
-
-The CI `quality` job runs on both draft and ready pull requests. It runs actionlint 1.7.12 with ShellCheck for embedded
-shell, verifies inputs against each pinned action's upstream metadata, and checks formatting for every workflow. Install
-actionlint and ShellCheck locally, then run:
-
-```bash
-actionlint
-AIRMUX_VALIDATE_ACTION_INPUTS=1 uv run pytest tests/ci tests/documentation tests/workflows -q
-bunx --no-install prettier --check '.github/workflows/*.{yml,yaml}'
-```
-
-The metadata check reads public upstream files at the exact commit pin because actionlint's built-in action input
-checks do not cover full SHA references. The required correctness gate includes the workflow check, so invalid workflow
-changes cannot pass the merge gate. It also proves that unknown inputs fail; the local diagnostics tests prove
-that invalid expressions, malformed YAML, and shell mistakes fail. Dependabot maintains the action SHA pins weekly.
-
-Every workflow defaults to `contents: read`, checkouts discard Git credentials, and only the publishing job gets
-`id-token: write`. Artifact uploads and same-run downloads use the Actions runtime token. Provider credentials stay
-in the release environment, outside PR CI. On ready pull requests, the `required` gate requires every correctness job,
-including Docker deployments, to succeed. Drafts skip this aggregate and the integration and acceptance jobs.
-Dependency security runs at both stages and requires both audits to pass. Timing evidence belongs in
-`notes/design/CI.md`.
-
-## Python checks
+Create a branch for your change. Add a behavior test, make the change, and run the checks for the affected area. For a full local check:
 
 ```bash
 uv run ruff format .
@@ -166,162 +50,37 @@ uv run ruff check .
 uv run ty check .
 uv run lint-imports
 uv run pytest -n auto
-```
-
-Control-plane unit tests do not need Postgres:
-
-```bash
-uv run pytest apps/control-plane/tests/unit
-```
-
-Integration tests start one throwaway Postgres server and clone a migrated template database per test. Docker must be
-running. `AIRMUX_TEST_PG_URL` can point to a disposable long-lived Postgres server whose user may create databases.
-
-Request-path changes also require black-box scenarios and a real request against a running data plane:
-
-```bash
-uv run pytest tests/acceptance/full_stack/scenarios
-```
-
-## Console checks
-
-```bash
 bun run format:check
 bun run lint
 bun run typecheck
-bun run coverage
-bun run --filter '@workspace/gateway-console' build
 ```
 
-## Generated contracts
+Control-plane unit tests can run without Docker using `uv run pytest apps/control-plane/tests/unit`. Integration tests use the Postgres service started above. For inference request-path changes, run `uv run pytest tests/acceptance/full_stack/scenarios` and verify a real request through the local gateway.
 
-After changing a management endpoint or canonical schema:
+## Contribute a change
 
-```bash
-./scripts/export-openapi.sh
-./scripts/generate-api-models.sh
-./scripts/export-completion-schemas.sh
-bun run --cwd lib/api-spec codegen
-```
+Before editing, read [CONTRIBUTING.md](https://github.com/michel-tricot/airmux/blob/main/CONTRIBUTING.md), `AGENTS.md`, and any relevant design record. Update generated contracts when their source changes, and commit generated outputs with the change.
 
-Commit generated files with their source. Do not edit generated API models, clients, or schemas by hand.
+Open a pull request against `main` with a concise summary of user impact and the checks you ran. Draft pull requests run the initial CI checks; mark the PR ready for review to run the full required checks. Address review feedback and merge after the required CI and security checks pass.
 
-## Repository map
+## Publish a release
 
-| Path | Purpose |
-| --- | --- |
-| `apps/control-plane` | Management API, catalog, bundles, usage ingestion |
-| `apps/data-plane` | Inference, adapters, routing, streaming, metering |
-| `apps/console` | React management console |
-| `apps/cli` | Setup and resource-management CLI |
-| `lib/contract` | Pure interchange values and wire schemas shared by the planes |
-| `lib/runtime` | Shared configuration, file, and secret-store process infrastructure |
-| `lib/api-models` | Generated Python management API models |
-| `lib/api-client-react` | Generated console client |
-| `taxonomy`, `model-audit` | Provider catalog and direct API evidence |
-| `tests/acceptance` | Standalone gateway and full-stack behavior |
-| `tests/deployment` | Fresh Docker deployment verification |
+1. On `main`, open **Actions → Prepare release**, select a patch, minor, or major version increment, and run the workflow
+2. Open the pull request link from its summary, review the version change, and merge the release PR after CI passes
+3. After the merged commit passes the `required` and `dependency-security` checks, run **Actions → Publish release** on `main`
+4. Follow the workflow through package verification and publication; it creates the protected version tag and GitHub release
 
-## Reset development state
+The release workflow publishes the tested Python and container artifacts. The `release` environment must have the provider credentials and `RELEASE_GITHUB_TOKEN`, and PyPI must have a trusted publisher configured for `release.yml`. See the [PyPI trusted publisher setup](https://docs.pypi.org/trusted-publishers/) when configuring a new project.
 
-Stop the three source processes, then run:
+If publication succeeds but verification fails, rerun failed jobs on the original Actions run while its candidate artifacts are available. Do not rebuild an already published version; fix the source and prepare a new version.
 
-```bash
-docker compose -f docker-compose.dev.yml down -v
-rm -rf .airmux
-```
+### Install a local build
 
-This permanently deletes the development database, runtime key, provider credentials, bundle cache, and usage outbox. Repeat initialization afterward.
-
-## Install a local build
-
-For an unreleased checkout, build the public distribution and install it into an isolated tool environment:
+To install an unreleased checkout for local use:
 
 ```bash
 ./scripts/build-python-distribution.sh
 uv tool install --reinstall dist/airmux-*.whl
 ```
 
-The installation includes both runtimes. Invoke `airmux` directly from any directory.
-
-## Publish a release
-
-The repository publishes one `airmux` distribution containing the CLI, contract, generated API models, and both
-runtimes. The separate workspace projects keep local dependency and import boundaries explicit, but are not published.
-They remain at version `0.0.0` and use unversioned workspace dependencies. Do not update them for a release.
-
-Run **Prepare release** from the Actions page on `main` and choose a patch, minor, or major increment. The workflow updates
-only the public distribution version and creates a release branch. Open the prefilled pull request link in the workflow
-summary, then create, review, and merge that pull request normally. GitHub runs the required CI and security checks.
-
-After the merged commit passes the `required` and `dependency-security` jobs on `main`, run **Publish release** from the
-Actions page on `main`. It requires no inputs. The workflow reads the public version, downloads the SHA-named Python and
-container candidates produced by `ci.yml`, verifies them, and creates the protected tag after installation and
-live-provider checks pass. It never rebuilds release files.
-
-The PyPI publication job uses OIDC only and uploads attestations alongside the original candidate artifacts. Configure
-`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `RELEASE_GITHUB_TOKEN` as environment secrets in `release`; missing credentials
-fail the gate. `RELEASE_GITHUB_TOKEN` is a fine-grained token owned by the intended release administrator, limited to this
-repository with read and write access to contents. It is used only to create the protected tag and should have an expiry.
-Configure the PyPI trusted publisher for `michel-tricot/airmux`, workflow `release.yml`, and environment
-`release` in the [PyPI project publishing settings](https://pypi.org/manage/project/airmux/settings/publishing/).
-If `airmux` does not exist on PyPI yet, configure a pending publisher with project name `airmux` in your
-[account publishing settings](https://pypi.org/manage/account/publishing/), as described in the
-[PyPI first-upload guide](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).
-Verify the project name and all four publisher fields before dispatching a candidate; no stored PyPI token is used.
-A successful first upload proves that the renamed workflow can obtain the publishing identity.
-
-The [repository policy payloads](https://github.com/michel-tricot/airmux/tree/main/.github/policy) record the
-GitHub settings. `Release Tag Creation` restricts `v*` tag creation to repository administrators. **Publish release** uses
-the environment-protected administrator token for that one operation. `Immutable Release Tags` prohibits updates and
-deletion without any bypass, including for release actors. These are separate rulesets so creation permission cannot
-permit replacement. Adding an administrator grants release-tag creation permission and requires an explicit policy review.
-The `release` environment allows only `v*` tags and `main`, with administrator bypass disabled. Main remains an
-approved source for scheduled and manually dispatched provider checks, which have read-only repository permissions.
-There are no required reviewers while the owner is the only administrator, so scheduled checks need no approval.
-Arbitrary branches and non-release tags cannot access these environment credentials.
-
-After upload, the workflow downloads both Python artifacts for the exact version from PyPI, compares the registry digests
-and downloaded bytes against the tested candidate, and installs the downloaded wheel into a fresh tool environment
-without a cache. It checks CLI help and the exact version outside the checkout, then sends a real request through
-the installed local gateway to a stub upstream and verifies usage accounting. It also pulls the published GHCR image by
-digest and verifies its version. Only after both registry checks succeed does it create and publish GitHub release notes
-identifying the version and source commit. This workflow does not deploy to production.
-
-If either upload succeeds but registry verification fails, the artifact is already public, but the GitHub announcement
-remains unpublished. Use **Re-run failed jobs** on the original Actions run within the 30-day candidate artifact
-retention period. This preserves the exact tested artifacts and skips the successful build and live-provider gates.
-Do not rebuild and overwrite an uploaded version. For a defective package or expired candidate artifact, fix the
-source and choose a new version and tag.
-
-The same live suite runs nightly on main and can be dispatched manually against an immutable source SHA:
-
-```bash
-gh workflow run nightly.yml --ref main -f sha="$(git rev-parse HEAD)"
-```
-
-Manual and scheduled checks build and install a distribution rather than serving the workspace sources.
-The live suite does not run on ordinary PRs.
-See the [live-provider suite README](https://github.com/michel-tricot/airmux/blob/main/tests/acceptance/live_providers/README.md)
-for local execution, request bounds, and model maintenance.
-
-## Run deployment tests
-
-The deployment suite uses a local test provider and a disposable project:
-
-```bash
-docker build -t airmux:local .
-
-AIRMUX_PORT=18080 AIRMUX_PUBLIC_URL=http://localhost:18080 \
-  docker compose -p airmux-test up -d --wait
-
-AIRMUX_PORT=18080 AIRMUX_PUBLIC_URL=http://localhost:18080 \
-  DEPLOYMENT_PROJECT=airmux-test \
-  DEPLOYMENT_FILE=docker-compose.yml \
-  DEPLOYMENT_URL=http://localhost:18080 \
-  DEPLOYMENT_IMAGE=airmux:local \
-  uv run pytest tests/deployment
-```
-
-The suite creates accounts, makes buffered and streaming requests, checks usage export, restarts services, and verifies
-persistent state. Use only a disposable installation.
+The `airmux` command is then available outside the repository.

@@ -49,7 +49,6 @@ Install Python 3.13 or newer, [uv](https://docs.astral.sh/uv/), Bun, and Docker 
 ```bash
 uv sync --all-packages --frozen
 bun install --frozen-lockfile
-uv run pre-commit install
 docker compose -f docker-compose.dev.yml up -d --wait
 ```
 

@@ -1,10 +1,10 @@
 ---
 title: "Quickstart"
-description: "Run the full airmux platform, send a real model request, find its cost in the console, and enforce your first workspace policy."
+description: "Run the full airmux platform, send a real model request, find its cost in the webapp, and enforce your first workspace policy."
 ---
 
-This is the recommended way to start. You run the console, control plane, gateway, and Postgres on one machine, then
-follow one application request from the gateway to the console.
+This is the recommended way to start. You run the webapp, control plane, gateway, and Postgres on one machine, then
+follow one application request from the gateway to the webapp.
 
 At the end you have a working installation, a real request with its recorded cost, and one policy you proved is
 enforced.
@@ -21,32 +21,20 @@ enforced.
 - An API key for at least one provider in the [shipped catalog](/docs/reference/models-and-providers)
 
 <Steps>
-  <Step title="Install the CLI">
-    Pick one release and use it for both the CLI and the deployment files.
+  <Step title="Clone the repository and set a provider key">
+    Pick a release and clone its tag so the CLI and deployment files come from the same version:
 
     ```bash
     export AIRMUX_VERSION=0.1.2
-    uv tool install "airmux==$AIRMUX_VERSION"
-    ```
-
-    `airmux --version` prints the installed version. If the shell cannot find the command, run `uv tool update-shell`
-    and open a new shell.
-
-    <Warning>
-      Keep the CLI and the checkout on the same release. A CLI from one release and an image built from a different
-      commit do not share a management API contract, and commands fail while parsing responses.
-    </Warning>
-  </Step>
-
-  <Step title="Get the deployment files and set a provider key">
-    ```bash
     git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
     cd airmux
+    uv sync --package airmux --frozen
     cp .env.example .env
     ```
 
     Open `.env` and set one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. The CLI reads this file to
-    import credentials. The application container never receives these variables.
+    import credentials. Run CLI commands with `uv run airmux ...`; the application container never receives these
+    variables.
 
     If port 8080 is already in use on your machine, set `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL` to a free port in `.env`
     and use that port everywhere below.
@@ -69,7 +57,7 @@ enforced.
 
   <Step title="Claim the instance">
     ```bash
-    airmux quickstart --url http://localhost:8080
+    uv run airmux quickstart --url http://localhost:8080
     ```
 
     Enter an email and password when prompted. The first account becomes the instance owner. The command creates the
@@ -89,7 +77,7 @@ enforced.
   </Step>
 
   <Step title="Send a request from your own application">
-    Use a model served by the provider you configured. `airmux models list` shows the catalog.
+    Use a model served by the provider you configured. `uv run airmux models list` shows the catalog.
 
     ```bash
     curl --fail-with-body http://localhost:8080/inf/v1/chat/completions \
@@ -99,14 +87,13 @@ enforced.
     ```
 
     **You should see:** HTTP 200 and a `choices[0].message.content` value, plus a `usage` object and a `gateway` object
-    holding any parameter airmux adjusted.
+    holding any parameter `airmux` adjusted.
 
     An existing application needs two changes: point its base URL at `http://localhost:8080/inf/v1` and replace its
-    provider key with the inference key. See [OpenAI SDK](/docs/guides/openai-sdk) and
-    [Anthropic SDK](/docs/guides/anthropic-sdk).
+    provider key with the inference key. See [Use an SDK](/docs/guides/sdks).
   </Step>
 
-  <Step title="Find the request in the console">
+  <Step title="Find the request in the webapp">
     Open [localhost:8080](http://localhost:8080) and sign in with the account you just created.
 
     The organization **Overview** page opens on usage for the last 30 days. **Attribution** breaks the same spending
@@ -119,7 +106,7 @@ enforced.
     detail panel.
 
     <Info>
-      Costs are airmux estimates calculated from catalog prices at request time. They are not provider invoice amounts.
+      Costs are `airmux` estimates calculated from catalog prices at request time. They are not provider invoice amounts.
       Events arrive asynchronously, so a request can take a few seconds to appear.
     </Info>
   </Step>
@@ -145,7 +132,7 @@ enforced.
     ```
 
     ```bash
-    airmux policies create output-limit-policy.json
+    uv run airmux policies create output-limit-policy.json
     ```
 
     Now repeat the request from step 5 with `"max_completion_tokens": 2048`:
@@ -160,7 +147,7 @@ enforced.
     **You should see:** `403` with code `policy_denied` and a message naming the policy that blocked the request. The
     same request with `"max_completion_tokens": 512` still returns 200.
 
-    In the console, the workspace **Policies** page lists the rule as `Output ≤ 1,024 tokens`, and the workspace
+    In the webapp, the workspace **Policies** page lists the rule as `Output ≤ 1,024 tokens`, and the workspace
     **Requests** page records the blocked call with status `DENIED`, zero tokens, and no cost.
 
     A policy reaches the gateway when the next configuration bundle is adopted, normally within seconds. See
@@ -171,7 +158,7 @@ enforced.
 ## Next steps
 
 <Columns cols={2}>
-  <Card title="Move an existing application" icon="code" href="/docs/guides/openai-sdk">
+  <Card title="Move an existing application" icon="code" href="/docs/guides/sdks">
     Change a base URL and an API key, then keep your request shapes.
   </Card>
   <Card title="Control cost and routing" icon="shield-halved" href="/docs/policies">
@@ -198,17 +185,9 @@ This stops the stack and keeps both named volumes, so your account, credentials,
   Do not run it on an installation whose state you need.
 </Warning>
 
-## Other ways to run airmux
+## Other ways to run `airmux`
 
 | Alternative | What you give up | Guide |
 | --- | --- | --- |
-| Gateway only | No console, organizations, managed credentials, or usage history. Keys, catalog, and policies come from local files | [Gateway only](/docs/deployment/gateway) |
+| Gateway only | No webapp, organizations, managed credentials, or usage history. Keys, catalog, and policies come from local files | [Gateway only](/docs/deployment/gateway) |
 | Split services | Same capabilities, more operational work. Use it to scale or restart gateways independently | [Separate services](/docs/deployment/scaling) |
-
-Gateway-only mode needs no Docker, Postgres, or control plane:
-
-```bash
-export OPENAI_API_KEY='your-provider-key'
-airmux gateway init
-airmux gateway serve
-```
