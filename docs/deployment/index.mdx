@@ -7,25 +7,25 @@ One release provides one Python distribution and one container image. Choose how
 
 | Shape | Purpose | Guide |
 | --- | --- | --- |
-| airmux (recommended) | Full platform on one application host plus Postgres | [Docker Compose](/docs/deployment/docker) |
+| `airmux` (recommended) | Full platform on one application host plus Postgres | [Docker Compose](/docs/deployment/docker) |
 | Split | Independent console, control-plane, and gateway processes with separately scalable gateways | [Separate services](/docs/deployment/scaling) |
 | Gateway only | Local-file inference without Postgres, a control plane, or usage history | [Gateway only](/docs/deployment/gateway) |
 
-To evaluate airmux first, follow the [quickstart](/docs/quickstart), which uses the recommended shape.
+To evaluate `airmux` first, follow the [quickstart](/docs/quickstart), which uses the recommended shape.
 
-For the full platform, start with airmux unless you need to size or restart the services independently. Split does
+For the full platform, start with `airmux` unless you need to size or restart the services independently. Split does
 not permit mixed releases: every role must use the same image digest until cross-version bundle compatibility is defined.
 
 <Columns cols={2}>
   <Card title="Docker Compose" icon="container-storage" href="/docs/deployment/docker">
-    Run airmux and Postgres on one host.
+    Run `airmux` and Postgres on one host.
   </Card>
   <Card title="Upgrade and rollback" icon="rotate" href="/docs/deployment/upgrades">
     Plan an upgrade and roll back from a consistent recovery point if verification fails.
   </Card>
 </Columns>
 
-Install the [airmux CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
+Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you use to manage the instance.
 
 ## Full-platform production requirements
 
@@ -57,7 +57,7 @@ disabled after claim unless `AIRMUX_PUBLIC_SIGNUP=true`; invitation links still 
 Back up Postgres and `/state` together. The state directory contains plaintext provider credential files in the default
 secret-store configuration as well as gateway identity, cached bundles, and queued usage.
 
-The airmux layout owns one gateway state directory. Every split gateway must have a distinct persistent directory.
+The `airmux` layout owns one gateway state directory. Every split gateway must have a distinct persistent directory.
 Never clone a live gateway identity or share its SQLite outbox between replicas.
 
 ## Verify a deployment

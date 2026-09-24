@@ -87,7 +87,7 @@ enforced.
     ```
 
     **You should see:** HTTP 200 and a `choices[0].message.content` value, plus a `usage` object and a `gateway` object
-    holding any parameter airmux adjusted.
+    holding any parameter `airmux` adjusted.
 
     An existing application needs two changes: point its base URL at `http://localhost:8080/inf/v1` and replace its
     provider key with the inference key. See [Use an SDK](/docs/guides/sdks).
@@ -106,7 +106,7 @@ enforced.
     detail panel.
 
     <Info>
-      Costs are airmux estimates calculated from catalog prices at request time. They are not provider invoice amounts.
+      Costs are `airmux` estimates calculated from catalog prices at request time. They are not provider invoice amounts.
       Events arrive asynchronously, so a request can take a few seconds to appear.
     </Info>
   </Step>
@@ -185,7 +185,7 @@ This stops the stack and keeps both named volumes, so your account, credentials,
   Do not run it on an installation whose state you need.
 </Warning>
 
-## Other ways to run airmux
+## Other ways to run `airmux`
 
 | Alternative | What you give up | Guide |
 | --- | --- | --- |

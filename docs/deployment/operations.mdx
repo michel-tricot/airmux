@@ -25,7 +25,7 @@ Configure OTLP export, Prometheus scraping, and alerting with the [OpenTelemetry
 
 ## Request correlation and logs
 
-Every control-plane and data-plane response carries an airmux-generated UUIDv7 in `X-Request-ID`. A caller-supplied
+Every control-plane and data-plane response carries an `airmux`-generated UUIDv7 in `X-Request-ID`. A caller-supplied
 value is replaced. Data-plane usage events use the same request ID, including all attempts in a fallback chain.
 
 Production logs are newline-delimited JSON with `timestamp`, `level`, `logger`, `event`, and `message`. Logs emitted in

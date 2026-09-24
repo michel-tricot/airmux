@@ -3,7 +3,7 @@ title: "Use an SDK"
 description: "Connect common LLM SDKs to airmux with an inference key and gateway model ID."
 ---
 
-Point an SDK at your airmux inference endpoint, use a workspace inference key, and choose a model ID from the gateway catalog. OpenAI-compatible SDKs use `/inf/v1`; the Anthropic SDK uses `/inf`. airmux routes each request to the selected provider.
+Point an SDK at your `airmux` inference endpoint, use a workspace inference key, and choose a model ID from the gateway catalog. OpenAI-compatible SDKs use `/inf/v1`; the Anthropic SDK uses `/inf`. `airmux` routes each request to the selected provider.
 
 Set these values for the examples:
 
@@ -138,7 +138,7 @@ console.log(text);
   </Tab>
   <Tab title="LangChain Python">
 
-Install the OpenAI integration with `uv add langchain-openai`, then invoke it with the airmux endpoint:
+Install the OpenAI integration with `uv add langchain-openai`, then invoke it with the `airmux` endpoint:
 
 ```python
 import os
@@ -158,7 +158,7 @@ print(response.content)
   </Tab>
 </Tabs>
 
-Vercel AI SDK uses its [OpenAI-compatible provider](https://ai-sdk.dev/providers/openai-compatible-providers). LangChain uses the [OpenAI integration](https://docs.langchain.com/oss/python/integrations/chat/openai) with airmux's Chat Completions endpoint.
+Vercel AI SDK uses its [OpenAI-compatible provider](https://ai-sdk.dev/providers/openai-compatible-providers). LangChain uses the [OpenAI integration](https://docs.langchain.com/oss/python/integrations/chat/openai) with `airmux`'s Chat Completions endpoint.
 
 List models with the OpenAI SDK using `client.models.list()`. Results reflect the models visible to the key's workspace policies and configured credential scopes. See the [model discovery reference](/docs/reference/models-and-providers#inference-model-discovery).
 

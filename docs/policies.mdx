@@ -93,7 +93,7 @@ Limit primary and fallback routes to the listed providers:
 
 #### Credential access
 
-Allow credentials from the listed scopes. Matching credential rules intersect. airmux chooses the most specific populated allowed scope in workspace, organization, instance order:
+Allow credentials from the listed scopes. Matching credential rules intersect. `airmux` chooses the most specific populated allowed scope in workspace, organization, instance order:
 
 ```json
 {"kind": "credential_access", "scopes": ["workspace", "org"]}
@@ -101,7 +101,7 @@ Allow credentials from the listed scopes. Matching credential rules intersect. a
 
 #### Strict parameter support
 
-Reject a route if airmux would otherwise remove an unsupported caller-supplied parameter:
+Reject a route if `airmux` would otherwise remove an unsupported caller-supplied parameter:
 
 ```json
 {"kind": "strict_parameters"}
@@ -125,7 +125,7 @@ This limits route prices, not the total request cost.
 
 #### Request limits
 
-Reject a request that explicitly asks for more output tokens than the limit. If it omits the limit, airmux does not invent one:
+Reject a request that explicitly asks for more output tokens than the limit. If it omits the limit, `airmux` does not invent one:
 
 ```json
 {"kind": "request_limits", "max_output_tokens": 4096}

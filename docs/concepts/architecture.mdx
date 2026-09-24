@@ -3,7 +3,7 @@ title: "Architecture"
 description: "Understand the console, control plane, data plane, Postgres, secret store, and configuration flow."
 ---
 
-airmux separates management work from the inference request path.
+`airmux` separates management work from the inference request path.
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ new bundle is admitted, so an in-flight request never observes a partially updat
 management state on the request path must add that state to the bundle. Cold provider-secret resolution is the only
 database-capable exception, and resolved values remain outside the bundle.
 
-## Canonical adapter waist
+## Canonical adapter design
 
 Caller dialects and provider families meet at one canonical request and response model, so `N` dialects and `M`
 provider families need `N + M` translators instead of one per pair. Policy, routing, reconciliation, usage, and
@@ -59,7 +59,7 @@ database. The sole cold-path exception is resolving the selected provider secret
 
 ## Shared package boundaries
 
-`contract` is the pure interchange waist between the planes. It contains versioned bundle, event, policy, taxonomy,
+`contract` is the shared interchange layer between the planes. It contains versioned bundle, event, policy, taxonomy,
 identifier, and secret-reference values with validation and serialization, but no configuration loading, filesystem
 access, network access, secret values, or adapters. Importing a wire type therefore cannot load process infrastructure
 or a database driver.
@@ -107,7 +107,7 @@ process owns bootstrap-key creation and schema verification. Production startup 
 catalog; development startup may apply migrations when `--dev` is selected. The default `airmux` role supervises one process
 for each serving role and holds the gateway until the control plane is healthy.
 
-The airmux topology uses one application container and Postgres. The split topology projects the same image digest
+The `airmux` topology uses one application container and Postgres. The split topology projects the same image digest
 into one control plane, one console, and explicit gateway replicas. Each gateway owns a
 distinct persistent cache, identity, and usage outbox. Gateway-only deployments use the same Python distribution or image
 with a local bundle and need neither Postgres nor a control plane.
