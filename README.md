@@ -106,8 +106,7 @@ print(response.choices[0].message.content)
 
 The client protocol does not constrain the provider route. A Messages request can target an OpenAI-compatible model,
 and a Chat Completions request can target an Anthropic model. airmux translates the request and returns the response
-and errors in the caller's dialect. See the [OpenAI SDK](docs/guides/openai-sdk.mdx) and
-[Anthropic SDK](docs/guides/anthropic-sdk.mdx) guides for complete examples, including streaming.
+and errors in the caller's dialect. See the [SDK guide](docs/guides/sdks.mdx) for client examples.
 
 ## Why airmux
 
@@ -167,7 +166,7 @@ shapes.
 | I want to... | Start here |
 | --- | --- |
 | Run airmux and see it working | [Quickstart](docs/quickstart.mdx) |
-| Connect an application | [OpenAI SDK](docs/guides/openai-sdk.mdx) or [Anthropic SDK](docs/guides/anthropic-sdk.mdx) |
+| Connect an application | [Use an SDK](docs/guides/sdks.mdx) |
 | Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
 | Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy airmux | [Deployment overview](docs/deployment/index.mdx) |

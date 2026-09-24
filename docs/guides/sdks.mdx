@@ -1,0 +1,94 @@
+---
+title: "Use an SDK"
+description: "Connect common LLM SDKs to airmux with an inference key and gateway model ID."
+---
+
+Point an SDK at your airmux inference endpoint, use a workspace inference key, and choose a model ID from the gateway catalog. The SDK request shape stays the same; airmux routes and translates it to the selected provider.
+
+Set these values for the examples:
+
+```bash
+export AIRMUX_URL='http://localhost:8080'
+export AIRMUX_INFERENCE_KEY='sk-inf-your-key'
+export AIRMUX_MODEL='openai/gpt-4o-mini'
+```
+
+<Tabs>
+  <Tab title="OpenAI Python">
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf/v1",
+    api_key=os.environ['AIRMUX_INFERENCE_KEY'],
+)
+
+response = client.responses.create(
+    model=os.environ['AIRMUX_MODEL'],
+    input="Explain request routing in one sentence.",
+)
+print(response.output_text)
+```
+
+  </Tab>
+  <Tab title="Anthropic Python">
+
+The Messages endpoint uses a base URL ending in `/inf`; the SDK appends `/v1/messages`.
+
+```python
+import os
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url=f"{os.environ['AIRMUX_URL'].rstrip('/')}/inf",
+    api_key=os.environ['AIRMUX_INFERENCE_KEY'],
+)
+
+message = client.messages.create(
+    model="anthropic/claude-sonnet-4-6",
+    max_tokens=256,
+    messages=[{"role": "user", "content": "Explain request routing in one sentence."}],
+)
+print(message.content[0].text)
+```
+
+  </Tab>
+  <Tab title="OpenAI JavaScript">
+
+```javascript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: `${process.env.AIRMUX_URL}/inf/v1`,
+  apiKey: process.env.AIRMUX_INFERENCE_KEY,
+});
+
+const response = await client.responses.create({
+  model: process.env.AIRMUX_MODEL,
+  input: "Explain request routing in one sentence.",
+});
+console.log(response.output_text);
+```
+
+  </Tab>
+  <Tab title="OpenAI Go">
+
+```go
+client := openai.NewClient(
+    option.WithBaseURL(os.Getenv("AIRMUX_URL") + "/inf/v1"),
+    option.WithAPIKey(os.Getenv("AIRMUX_INFERENCE_KEY")),
+)
+```
+
+Use the SDK's Chat Completions or Responses method with a gateway model ID.
+
+  </Tab>
+</Tabs>
+
+The same setup applies to other SDKs: set the base URL to the matching airmux API path and pass the inference key. For example, use `/inf/v1` with an OpenAI-compatible client such as [LiteLLM](https://docs.litellm.ai/docs/) or the [Vercel AI SDK](https://ai-sdk.dev/providers/openai-compatible), and `/inf` with the Anthropic SDK.
+
+List models with the OpenAI SDK using `client.models.list()`. Results reflect the models visible to the key's workspace policies and configured credential scopes. See the [model discovery reference](/docs/reference/models-and-providers#inference-model-discovery).
+
+Inference keys begin with `sk-inf-`. Management keys (`sk-cp-`) cannot be used for inference. The [Messages reference](/docs/reference/messages), [Chat Completions reference](/docs/reference/chat-completions), and [Responses reference](/docs/reference/responses) describe supported request fields.

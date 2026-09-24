@@ -22,8 +22,7 @@
           {
             "group": "Use the platform",
             "pages": [
-              "docs/guides/openai-sdk",
-              "docs/guides/anthropic-sdk",
+              "docs/guides/sdks",
               "docs/guides/streaming",
               "docs/guides/tools",
               "docs/guides/structured-output",
