@@ -46,11 +46,12 @@ cd airmux
 cp .env.example .env
 ```
 
-Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack and claim it:
+Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack on loopback and
+claim it before exposing the service:
 
 ```bash
 docker build -t airmux:local .
-docker compose up -d --wait
+AIRMUX_PORT=127.0.0.1:8080 docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 
@@ -111,7 +112,7 @@ and errors in the caller's dialect. See the [SDK guide](docs/guides/sdks.mdx) fo
 ## Why `airmux`
 
 - **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration that speaks an exposed API
-- **Policy at the gateway:** compose model and provider allowlists, price ceilings, spending budgets, request limits, credential rules, denials, strict parameters, and fallbacks
+- **Policy at the gateway:** compose model and provider allowlists, price ceilings, best-effort spending budgets, request limits, credential rules, denials, strict parameters, and fallbacks
 - **Scoped provider secrets:** separate instance, organization, and workspace credentials without exposing secret values to configuration bundles
 - **Predictable failover:** retry eligible credentials and route to bounded backup models without escaping workspace policy
 - **Complete request records:** capture tokens, estimated cost, latency, status, credential scope, configuration version, and every fallback attempt

@@ -36,18 +36,18 @@ enforced.
     import credentials. Run CLI commands with `uv run airmux ...`; the application container never receives these
     variables.
 
-    If port 8080 is already in use on your machine, set `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL` to a free port in `.env`
-    and use that port everywhere below.
+    If port 8080 is already in use on your machine, choose a free port and update `AIRMUX_PUBLIC_URL` in `.env` and
+    the loopback port in the next step. Keep this installation local until you have claimed the instance.
   </Step>
 
   <Step title="Start the stack">
     ```bash
     docker build -t airmux:local .
-    docker compose up -d --wait
+    AIRMUX_PORT=127.0.0.1:8080 docker compose up -d --wait
     ```
 
     The first build takes a few minutes. Compose migrates the database and loads the model catalog before the
-    application starts.
+    application starts. The loopback binding keeps the unclaimed instance off external interfaces.
 
     **You should see:** `docker compose ps` reports the `airmux` service as healthy, and
     `curl http://localhost:8080/healthz` returns `{"status":"ok"}`.
