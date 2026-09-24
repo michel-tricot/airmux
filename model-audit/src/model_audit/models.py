@@ -17,7 +17,7 @@ type StabilityVerdict = Literal["stable", "flaky"]
 type VarianceVerdict = Literal["none", "provider", "gateway", "both", "unknown"]
 type ClaimDimension = Literal["capability", "option", "modality", "interaction", "behavior"]
 type EvidenceSource = Literal["live_api", "schema", "provider_catalog", "docs"]
-type EgressKind = Literal["openai_compatible", "openai_responses", "anthropic"]
+type EgressKind = Literal["openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"]
 type ComparisonDimension = Literal[
     "outcome",
     "text",

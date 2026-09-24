@@ -92,11 +92,6 @@ candidates:
   homepage: https://replicate.com
   docs: https://replicate.com/docs
   env_var: REPLICATE_API_TOKEN
-- id: bedrock
-  name: Amazon Bedrock
-  homepage: https://aws.amazon.com/bedrock/
-  docs: https://docs.aws.amazon.com/bedrock/
-  env_var: AWS_BEARER_TOKEN_BEDROCK
 - id: azure-foundry
   name: Azure AI Foundry
   homepage: https://azure.microsoft.com/en-us/products/ai-foundry

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from data_plane.egress.openai_compatible import OpenAICompatibleAdapter
 from data_plane.egress.base import UpstreamRequest, encode
+from data_plane.egress.openai_compatible import OpenAICompatibleAdapter
 from data_plane.formats.openai import body_of
 
 if TYPE_CHECKING:

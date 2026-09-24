@@ -22,7 +22,7 @@ providers:
     max_output_tokens: max_completion_tokens
   schema:
     completion:
-      oai:
+      oai: &id001
         request: schemas/completion/oai.openai.request.json
         response: schemas/completion/oai.openai.response.json
         stream: schemas/completion/oai.openai.stream.json
@@ -198,3 +198,41 @@ providers:
       oai:
         request: schemas/completion/oai.cerebras.request.json
         response: schemas/completion/oai.cerebras.response.json
+- id: bedrock
+  name: Amazon Bedrock
+  icon_mono: bedrock
+  icon_color: bedrock
+  homepage: https://aws.amazon.com/bedrock/
+  docs: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html
+  base_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1
+  openapi: https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml
+  models_url: https://bedrock-mantle.us-east-1.api.aws/openai/v1/models
+  ingress:
+  - oai
+  primary_surface: oai
+  egress_kind: aws_bedrock
+  auth:
+  - bearer
+  env_var: AWS_BEARER_TOKEN_BEDROCK
+  schema:
+    completion:
+      oai: *id001
+- id: azure-openai
+  name: Azure OpenAI
+  icon_mono: azure-openai
+  icon_color: azure-openai
+  homepage: https://azure.microsoft.com/en-us/products/ai-services/openai-service
+  docs: https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat
+  base_url: https://RESOURCE.openai.azure.com/openai/v1
+  openapi: https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml
+  models_url: https://RESOURCE.openai.azure.com/openai/v1/models
+  ingress:
+  - oai
+  primary_surface: oai
+  egress_kind: azure_openai
+  auth:
+  - header_key:api-key
+  env_var: AZURE_OPENAI_API_KEY
+  schema:
+    completion:
+      oai: *id001

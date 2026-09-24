@@ -35,6 +35,7 @@ class ProviderDefinition(BaseModel):
     openapi: str | None = Field(None, pattern=r"^https?://")
     ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...] = Field(min_length=1)
     primary_surface: Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"]
+    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic", "aws_bedrock", "azure_openai"] | None = Field(None)
     auth: tuple[str, ...] = Field(min_length=1)
     env_var: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
     icon_mono: str | None = None
@@ -85,11 +86,19 @@ class ModelDefinition(BaseModel):
     output_modalities: tuple[Modality, ...] = Field(min_length=1)
     context_window: int | None = Field(None, ge=1)
     max_output_tokens: int | None = Field(None, ge=1)
+    input_price_per_mtok: Decimal | None = Field(None, ge=0)
+    output_price_per_mtok: Decimal | None = Field(None, ge=0)
+    cached_input_price_per_mtok: Decimal | None = Field(None, ge=0)
+    cache_write_price_per_mtok: Decimal | None = Field(None, ge=0)
+    supports_tools: bool | None = None
 
     @model_validator(mode="after")
     def complete_limits(self) -> ModelDefinition:
         if (self.context_window is None) != (self.max_output_tokens is None):
             message = "context_window and max_output_tokens must be supplied together"
+            raise ValueError(message)
+        if (self.input_price_per_mtok is None) != (self.output_price_per_mtok is None):
+            message = "input and output prices must be supplied together"
             raise ValueError(message)
         return self
 
@@ -154,6 +163,7 @@ def provider_entry(definition: ProviderDefinition) -> dict[str, object]:
         "models_url": str(definition.models_url),
         "ingress": list(definition.ingress),
         "primary_surface": definition.primary_surface,
+        **({"egress_kind": definition.egress_kind} if definition.egress_kind is not None else {}),
         "auth": list(definition.auth),
         "env_var": definition.env_var,
         "schema": None,
@@ -181,6 +191,14 @@ def add_provider(root: Path, definition: ProviderDefinition, *, replace: bool = 
     entry = provider_entry(definition)
     if existing is not None:
         entry["schema"] = existing.get("schema")
+    if definition.egress_kind in {"aws_bedrock", "azure_openai"}:
+        openai = next((provider for provider in document["providers"] if provider["id"] == "openai"), None)
+        if openai is not None:
+            openai_schema = openai.get("schema")
+            if isinstance(openai_schema, dict):
+                completion = openai_schema.get("completion")
+                if isinstance(completion, dict) and "oai" in completion:
+                    entry["schema"] = {"completion": {"oai": completion["oai"]}}
     providers = [entry if provider["id"] == definition.id else provider for provider in document["providers"]]
     if existing is None:
         providers.append(entry)
@@ -238,6 +256,19 @@ def add_model(root: Path, provider_id: str, definition: ModelDefinition, *, repl
         "input_modalities": list(definition.input_modalities),
         "output_modalities": list(definition.output_modalities),
     }
+    if definition.input_price_per_mtok is not None and definition.output_price_per_mtok is not None:
+        pricing = {
+            "input_per_mtok": str(definition.input_price_per_mtok),
+            "output_per_mtok": str(definition.output_price_per_mtok),
+        }
+        if definition.cached_input_price_per_mtok is not None:
+            pricing["cached_input_per_mtok"] = str(definition.cached_input_price_per_mtok)
+        if definition.cache_write_price_per_mtok is not None:
+            pricing["cache_write_per_mtok"] = str(definition.cache_write_price_per_mtok)
+        model.update({"pricing": pricing, "pricing_source": "vendor-docs"})
+        model["documentation_url"] = definition.source
+    if definition.supports_tools is not None:
+        model["supports_tools"] = definition.supports_tools
     if definition.context_window is not None:
         model.update(
             {

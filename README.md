@@ -118,9 +118,11 @@ and errors in the caller's dialect. See the [OpenAI SDK](docs/guides/openai-sdk.
 - **Complete request records:** capture tokens, estimated cost, latency, status, credential scope, configuration version, and every fallback attempt
 - **A resilient request path:** gateways evaluate immutable local bundles and can keep serving through a control-plane outage
 
-The shipped catalog includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and xAI. Model
-IDs, prices, context windows, modalities, capabilities, and parameter support are explicit, inspectable data in the
-[taxonomy](taxonomy/taxonomy.yml).
+The provider catalog includes Anthropic, AWS Bedrock, Azure OpenAI, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI,
+Together, and xAI. Its model IDs, prices, context windows, modalities, capabilities, and parameter support are explicit,
+inspectable data in the [taxonomy](taxonomy/taxonomy.yml). Bedrock includes GPT-5.6 Terra through the regional Bedrock
+Mantle endpoint. Azure OpenAI is a resource template: replace `RESOURCE` with your Azure resource name and configure
+the upstream model ID to match your deployment name.
 
 ## Gateway-only mode
 
