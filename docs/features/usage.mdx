@@ -44,12 +44,12 @@ and do not establish how many tokens a provider processed after a timeout or dis
 
 All `cost_*_usd` fields are estimates using catalog prices at request time, including when `token_usage_source` is
 `provider`. Token-count provenance does not make the calculated cost a provider invoice amount. The source is preserved
-in local event files, durable export, management API responses, and generated clients. Console activity lists and CLI
-event tables show the token source; console costs are labeled separately as estimates.
+in local event files, durable export, management API responses, and generated clients. Webapp activity lists and CLI
+event tables show the token source; webapp costs are labeled separately as estimates.
 
 ## Reports
 
-The console's Usage and Requests pages are available at organization and workspace scope. They use the same report
+The webapp's Usage and Requests pages are available at organization and workspace scope. They use the same report
 endpoints under `/api/v1/organizations/{org_id}/reports`; workspace pages pass `workspace_id` as a filter. Organization
 reports require organization `usage.read` permission. A workspace report requires `usage.read` for that workspace;
 workspace permission does not grant access to the all-workspaces report. The same scope check applies to request

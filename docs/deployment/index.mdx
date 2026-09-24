@@ -8,7 +8,7 @@ One release provides one Python distribution and one container image. Choose how
 | Shape | Purpose | Guide |
 | --- | --- | --- |
 | `airmux` (recommended) | Full platform on one application host plus Postgres | [Docker Compose](/docs/deployment/docker) |
-| Split | Independent console, control-plane, and gateway processes with separately scalable gateways | [Separate services](/docs/deployment/scaling) |
+| Split | Independent webapp, control-plane, and gateway processes with separately scalable gateways | [Separate services](/docs/deployment/scaling) |
 | Gateway only | Local-file inference without Postgres, a control plane, or usage history | [Gateway only](/docs/deployment/gateway) |
 
 To evaluate `airmux` first, follow the [quickstart](/docs/quickstart), which uses the recommended shape.
@@ -38,7 +38,7 @@ Install the [`airmux` CLI](/docs/reference/cli#installation) on the machine you 
 | HTTPS ingress | Protects sessions, management keys, inference keys, and model traffic |
 | One provider credential | Required before inference can succeed |
 
-The image defaults to the `airmux` role. Its container listens on port `8080` and serves the console, `/api/v1`,
+The image defaults to the `airmux` role. Its container listens on port `8080` and serves the webapp, `/api/v1`,
 `/inf/v1`, `/healthz`, and `/readyz` from one origin.
 
 ## Claim the instance

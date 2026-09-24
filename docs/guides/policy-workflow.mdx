@@ -43,7 +43,7 @@ A policy contains its target and every rule it enforces. This example limits eve
 
 Use `{"kind": "workspace"}` for every current and future credential, including playground sessions. To restrict a principal
 across their credentials in this workspace, replace the target with `{"kind": "selected_users", "user_ids": ["USER_UUID"]}`.
-Use `{"kind": "selected_keys", "key_ids": ["KEY_ID"]}` for specific credentials. The console's **Applies to** selector
+Use `{"kind": "selected_keys", "key_ids": ["KEY_ID"]}` for specific credentials. The webapp's **Applies to** selector
 exposes the same three targets, including service accounts in the user picker. Key inspection lists all applicable policies.
 
 See [workspace policies](/docs/policies) for every match and action type.

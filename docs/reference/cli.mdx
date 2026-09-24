@@ -56,7 +56,7 @@ airmux control-plane serve --config deployment/airmux.yml
 In another terminal, run `airmux gateway serve --config deployment/airmux.yml`. The generated configuration shares a
 private bootstrap key and file secret store between the planes. The same installation can run both services.
 The control plane defaults to `127.0.0.1:8000` and the gateway to `127.0.0.1:8080`; use `--host` and `--port` to change them.
-The console and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start a console.
+The webapp and public reverse proxy are deployed separately. `--console-url` names their public origin; it does not start the webapp.
 
 `serve` runs in the foreground. Control-plane startup creates a missing internal gateway credential, verifies the database is
 at the expected migration revision, and does not change the model catalog. In production, run `migrate` and `taxonomy`

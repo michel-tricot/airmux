@@ -73,7 +73,7 @@ compatibility between planes, deploy one image digest across all components. Fol
 | Data-plane `/readyz` returns `503` | Bundle poll authentication, control-plane reachability, and cached state mount |
 | `bundle_manifest_rejected` is `1` | Gateway logs for an invalid provider, model, credential, or policy reference |
 | `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
-| Usage missing from console | Metering outbox metrics, export failures, and control-plane event-ingest metrics |
+| Usage missing from webapp | Metering outbox metrics, export failures, and control-plane event-ingest metrics |
 | New key returns `invalid_token` | Wait for adoption, then inspect gateway readiness and logs |
 | Streams pause or buffer | Reverse-proxy buffering and read timeout |
 | Migration or catalog job fails | Run `docker compose logs migrate taxonomy` with the same Compose file and project options used to start the stack, then check database reachability and permissions |

@@ -1,10 +1,10 @@
 ---
 title: "Quickstart"
-description: "Run the full airmux platform, send a real model request, find its cost in the console, and enforce your first workspace policy."
+description: "Run the full airmux platform, send a real model request, find its cost in the webapp, and enforce your first workspace policy."
 ---
 
-This is the recommended way to start. You run the console, control plane, gateway, and Postgres on one machine, then
-follow one application request from the gateway to the console.
+This is the recommended way to start. You run the webapp, control plane, gateway, and Postgres on one machine, then
+follow one application request from the gateway to the webapp.
 
 At the end you have a working installation, a real request with its recorded cost, and one policy you proved is
 enforced.
@@ -93,7 +93,7 @@ enforced.
     provider key with the inference key. See [Use an SDK](/docs/guides/sdks).
   </Step>
 
-  <Step title="Find the request in the console">
+  <Step title="Find the request in the webapp">
     Open [localhost:8080](http://localhost:8080) and sign in with the account you just created.
 
     The organization **Overview** page opens on usage for the last 30 days. **Attribution** breaks the same spending
@@ -147,7 +147,7 @@ enforced.
     **You should see:** `403` with code `policy_denied` and a message naming the policy that blocked the request. The
     same request with `"max_completion_tokens": 512` still returns 200.
 
-    In the console, the workspace **Policies** page lists the rule as `Output ≤ 1,024 tokens`, and the workspace
+    In the webapp, the workspace **Policies** page lists the rule as `Output ≤ 1,024 tokens`, and the workspace
     **Requests** page records the blocked call with status `DENIED`, zero tokens, and no cost.
 
     A policy reaches the gateway when the next configuration bundle is adopted, normally within seconds. See
@@ -189,5 +189,5 @@ This stops the stack and keeps both named volumes, so your account, credentials,
 
 | Alternative | What you give up | Guide |
 | --- | --- | --- |
-| Gateway only | No console, organizations, managed credentials, or usage history. Keys, catalog, and policies come from local files | [Gateway only](/docs/deployment/gateway) |
+| Gateway only | No webapp, organizations, managed credentials, or usage history. Keys, catalog, and policies come from local files | [Gateway only](/docs/deployment/gateway) |
 | Split services | Same capabilities, more operational work. Use it to scale or restart gateways independently | [Separate services](/docs/deployment/scaling) |

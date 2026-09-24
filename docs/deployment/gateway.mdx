@@ -4,7 +4,7 @@ description: 'Run the inference gateway from local files without Postgres or a c
 ---
 
 Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and
-provider credentials locally. For the console, workspaces, and managed usage history, use the [full platform](/docs/quickstart).
+provider credentials locally. For the webapp, workspaces, and managed usage history, use the [full platform](/docs/quickstart).
 
 ## Install
 
@@ -60,6 +60,6 @@ other request formats.
 or `--taxonomy` to use your own model catalog. See the [configuration reference](/docs/reference/configuration) for
 advanced settings.
 
-Standalone mode has no management API, console, or managed usage history. Its keys share one local workspace, and
+Standalone mode has no management API, webapp, or managed usage history. Its keys share one local workspace, and
 provider credentials come from environment variables. Usage events are discarded by default; see the
 [event outbox settings](/docs/reference/configuration#event-outboxes) to write them to a local file.

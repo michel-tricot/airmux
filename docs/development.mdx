@@ -30,9 +30,9 @@ Start each service in its own terminal:
 | --- | --- | --- |
 | Control plane | `uv run airmux control-plane serve --dev` | `http://127.0.0.1:8000` |
 | Gateway | `uv run airmux gateway serve --config airmux.yml --dev` | `http://127.0.0.1:8080` |
-| Console | `bun run dev` | `http://127.0.0.1:5000` |
+| Webapp | `bun run dev` | `http://127.0.0.1:5000` |
 
-Finish local setup through the console origin:
+Finish local setup through the webapp origin:
 
 ```bash
 uv run --package airmux airmux quickstart --url http://127.0.0.1:5000

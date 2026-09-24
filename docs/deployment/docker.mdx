@@ -82,7 +82,7 @@ docker compose up -d --wait
 ```
 
 The migration and catalog jobs use the same image as the serving container. The image defaults to the `airmux` role, which
-starts the control plane, gateway, and console. The control plane verifies the migrated schema and creates its internal
+starts the control plane, gateway, and webapp. The control plane verifies the migrated schema and creates its internal
 gateway credential only when absent. Application processes run as UID `10001`.
 Docker initializes fresh named volumes from the image's private state directories. Bind mounts and custom configured
 paths must be writable by the selected container user; overriding the container user does not change the startup path.
