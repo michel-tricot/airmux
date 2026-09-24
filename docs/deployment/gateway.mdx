@@ -1,15 +1,10 @@
 ---
 title: 'Gateway only'
-description: 'Run the inference gateway with a local taxonomy and no Postgres or control plane.'
+description: 'Run the inference gateway from local files without Postgres or a control plane.'
 ---
 
-Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
-You supply the model taxonomy and inference keys through files. Provider credentials resolve from your environment.
-
-<Info>
-  Gateway-only mode is an alternative to the recommended [full platform](/docs/quickstart). It has no console,
-  organizations, workspaces, managed credentials, or usage history. See [Standalone limits](#standalone-limits).
-</Info>
+Run a standalone gateway when you need an inference endpoint without the full platform. You manage its models, keys, and
+provider credentials locally. For the console, workspaces, and managed usage history, use the [full platform](/docs/quickstart).
 
 ## Install
 
@@ -23,48 +18,29 @@ uv sync --package airmux --frozen
 
 Run CLI commands from this checkout with `uv run airmux`.
 
-## Initialize and start
+## Start the gateway
 
-Initialize a directory with the shipped taxonomy:
+Set a provider key, then initialize the gateway. The initializer creates a local configuration and inference key:
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
 uv run airmux gateway init
+```
+
+Validate the setup and start the gateway:
+
+```bash
 uv run airmux gateway validate
 uv run airmux gateway serve
 ```
 
-`init` checks taxonomy and adapter validity, creates configuration and a private random inference key, and refuses to overwrite
-existing files. The default directory is `.airmux`; `--directory` selects another. It copies the shipped taxonomy to
-`taxonomy.yml` and does not print the key. Pass `--taxonomy PATH` to reference an existing taxonomy without copying it. The
-initializer finishes with copyable commands that select the first model backed by a provider variable already in the
-environment, or the taxonomy's first model when none is set. The commands start the gateway, check readiness, load the
-inference key from its private file, and make a real request. You can replace that model with any other `model_id` and set its
-provider variable: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and so on. Providers without credentials fail only when selected by a
-request.
+The gateway runs in the foreground at `http://127.0.0.1:8080`. Keep the provider key available to the process. To use
+another provider, export its key before starting the gateway. The initializer prints ready-to-run commands for your setup.
 
-Initialization writes a `.gitignore` beside the standalone files. It excludes generated `*.key` files plus the `secrets/` and
-`gateway/` runtime directories, so local credentials and state do not appear in Git while configuration and taxonomy changes
-remain visible.
+## Send a request
 
-Configuration resolution follows the [configuration reference](/docs/reference/configuration). File references resolve
-relative to the file containing them, so starting from another directory is safe.
-
-The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
-
-`--workers N` starts independent worker processes, each with its own
-[outbound connection pool](/docs/reference/configuration#outbound-http-connections). The default is one worker.
-Measure representative traffic before changing worker or pool limits.
-
-Uvicorn access logging is disabled during normal serving. `--dev` enables access logs and Python code reload and
-requires one worker. Usage logs, request IDs, metrics, startup logs, and error diagnostics remain available in both modes.
-
-`validate` checks the configuration, taxonomy, inference keys, adapter support, references, and policy compilation.
-It does not contact providers or prove that their credentials work. A real inference request is the final verification.
-
-## Make a request
-
-Use an exact `model_id` from your taxonomy. For the shipped taxonomy:
+In another terminal, copy the inference key created by initialization and send a request using a model ID from the local
+taxonomy:
 
 ```bash
 export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
@@ -75,115 +51,15 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages
-callers use the same gateway. See the [inference reference](/docs/reference/inference).
+Change the `model` value to another ID in your taxonomy. See the [inference reference](/docs/reference/inference) for
+other request formats.
 
-## Configuration and taxonomy
+## Customize local setup
 
-`.airmux/airmux.yml` selects the local bundle, environment secret store, and usage event sink:
+`gateway init` creates the starter configuration and taxonomy in `.airmux`. Use `--directory` to choose another location
+or `--taxonomy` to use your own model catalog. See the [configuration reference](/docs/reference/configuration) for
+advanced settings.
 
-```yaml
-data_plane:
-  bundle:
-    kind: local
-    path: bundle.yml
-    reload_interval_s: 2
-  secrets:
-    kind: env
-  events:
-    kind: devnull
-```
-
-The bundle path is relative to this configuration file. `.airmux/bundle.yml` contains the keys, taxonomy reference, and policies:
-
-```yaml
-keys:
-  - token: ${file:inference.key}
-    user_id: 00000000-0000-0000-0000-000000000001
-taxonomy: taxonomy.yml
-policies: []
-```
-
-The taxonomy path is relative to the bundle file, so starting the service from another directory works. Both planes use
-the same taxonomy schema. The file contains `providers` and `models`; pricing, capabilities, parameter support, adapter
-overrides, and upstream names are used directly from it. Provider icons are accepted as catalog metadata but do not enter
-the inference bundle. Unknown fields and duplicate taxonomy entries are rejected.
-
-With the default setup, edit `.airmux/taxonomy.yml`. When initialized with `--taxonomy PATH`, edit that supplied file instead.
-
-For a small custom catalog, `taxonomy` can instead contain those two lists inline. Choose one source: there is no
-implicit merge or precedence between an external file and inline definitions. Every model in the selected taxonomy is
-available to every local inference key unless restricted by your policies. Use a smaller taxonomy to expose fewer models.
-
-The gateway checks bundle and taxonomy content at the reload interval. A valid edit replaces the active snapshot for new
-requests: added models become routable, removed models stop being routable, and changed provider or model settings take effect.
-Requests already in progress finish against the snapshot they started with. Invalid or missing files are logged while the last
-good snapshot keeps serving. If no valid snapshot has ever loaded, inference and `/readyz` return `503`. Restarting requires
-valid files again; local mode does not persist a separate last-good cache.
-
-Each entry in `keys` requires a `token` and a principal UUID in `user_id`. Use the same UUID for keys belonging to one principal.
-`init` mints the initial principal UUID. Tokens can be plaintext or file or environment references. Tokens must start with `sk-inf-`, contain
-no whitespace, and be unique. Replacing or removing a key takes effect after reload for new requests. Environment variables
-are fixed for a running process; changing an environment-based key or provider credential requires restarting the service.
-Keep plaintext key files private and out of version control.
-
-## Run the same configuration in a container
-
-You need Git and a running Docker engine. Initialization creates configuration, not a Dockerfile or source checkout.
-After initialization above, stop the native gateway if it is running so port 8080 is available. From the directory
-containing `.airmux/`, save the configuration location and clone the image source into a separate temporary directory:
-
-```bash
-AIRMUX_CONFIG_DIR="$PWD"
-AIRMUX_SOURCE_DIR="$(mktemp -d)/airmux"
-git clone https://github.com/michel-tricot/airmux.git "$AIRMUX_SOURCE_DIR"
-docker build -t airmux:local "$AIRMUX_SOURCE_DIR"
-```
-
-The build context is the source checkout at `$AIRMUX_SOURCE_DIR`. The generated configuration stays in
-`$AIRMUX_CONFIG_DIR/.airmux` and is mounted at runtime. To build a particular revision, check it out with
-`git -C "$AIRMUX_SOURCE_DIR" checkout <revision>` before the build.
-
-In the same shell, start the container with the provider key exported during initialization:
-
-```bash
-docker run --rm --user "$(id -u):$(id -g)" \
-  --entrypoint airmux \
-  --mount "type=bind,source=$AIRMUX_CONFIG_DIR,target=/config,readonly" \
-  -e OPENAI_API_KEY -p 8080:8081 \
-  airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
-```
-
-The same image also runs full-platform roles, so standalone administrative commands explicitly override its role entry
-point with `airmux`. Matching the host user allows it to read the private generated key. The read-only mount preserves
-the relative taxonomy reference without changing the key's private permissions. If you used `--taxonomy` with a file
-outside the configuration directory, mount it at the path resolved by `/config/.airmux/bundle.yml` as well. No control plane
-or database is needed for this configuration.
-
-In another terminal, return to the configuration directory and run the [request commands above](#make-a-request).
-The container exposes the same readiness endpoint and public inference path at `http://127.0.0.1:8080/inf/v1/chat/completions`.
-
-## Collect usage events locally
-
-Replace the default event sink to collect usage without a control plane:
-
-```yaml
-data_plane:
-  events:
-    kind: file
-    path: usage/events.jsonl
-```
-
-Keep the existing `bundle` and `secrets` sections. The path resolves against the configuration file's directory.
-Every line is a versioned usage event from the shared contract, including routed attempts, policy denials, and
-cancelled streams. Authentication and request parsing failures do not create usage events.
-Events become readable while the gateway runs and append across restarts. Graceful shutdown writes accepted events to
-the file, while an abrupt process or machine failure can lose events not yet written. Fallback produces one event per attempted
-route, with the same request ID connecting the attempts. See [event outboxes](/docs/reference/configuration#event-outboxes)
-for filesystem and durability semantics.
-
-## Standalone limits
-
-The default `devnull` event sink discards usage events. The optional file sink provides a local usage log.
-Standalone mode has no management API, console, or managed usage history.
-All keys share one local organization and workspace, with one environment credential per provider.
+Standalone mode has no management API, console, or managed usage history. Its keys share one local workspace, and
+provider credentials come from environment variables. Usage events are discarded by default; see the
+[event outbox settings](/docs/reference/configuration#event-outboxes) to write them to a local file.
