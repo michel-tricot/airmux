@@ -5,11 +5,13 @@ description: "Choose an airmux or split deployment and identify the required dat
 
 One release provides one Python distribution and one container image. Choose how to run that release:
 
-| Shape | Purpose |
-| --- | --- |
-| airmux | Default full platform on one application host plus Postgres |
-| Split | Independent console, control-plane, and gateway processes with separately scalable gateways |
-| [Gateway only](/docs/deployment/gateway) | Local-file inference without Postgres or a control plane |
+| Shape | Purpose | Guide |
+| --- | --- | --- |
+| airmux (recommended) | Full platform on one application host plus Postgres | [Docker Compose](/docs/deployment/docker) |
+| Split | Independent console, control-plane, and gateway processes with separately scalable gateways | [Separate services](/docs/deployment/scaling) |
+| Gateway only | Local-file inference without Postgres, a control plane, or usage history | [Gateway only](/docs/deployment/gateway) |
+
+To evaluate airmux first, follow the [quickstart](/docs/quickstart), which uses the recommended shape.
 
 For the full platform, start with airmux unless you need to size or restart the services independently. Split does
 not permit mixed releases: every role must use the same image digest until cross-version bundle compatibility is defined.

@@ -20,54 +20,62 @@
 </div>
 
 airmux gives applications, agents, CLIs, and services one self-hosted origin for calling multiple provider families.
-Clients can send Chat Completions, Responses, or Messages requests through any SDK or integration that can
-target the corresponding HTTP API. airmux authenticates the workspace, applies policy, selects a model and scoped
-provider credential, translates the request, and records the result.
+Clients send Chat Completions, Responses, or Messages requests through any SDK or integration that can target the
+corresponding HTTP API. airmux authenticates the workspace, applies policy, selects a model and scoped provider
+credential, translates the request, and records the result.
+
+You run the whole platform: a web console, organizations and workspaces, managed provider credentials, live policy, and
+persistent usage history with estimated cost.
 
 > [!NOTE]
 > airmux is pre-1.0. Configuration, APIs, and migrations may change before the first stable release.
 
 ## Quickstart
 
-Run a local gateway with no Docker, Postgres, or control plane. You need Python 3.13+, [uv](https://docs.astral.sh/uv/),
-and an OpenAI API key.
+Run the full platform on one machine. You need Docker with Compose 2.24.4+, Python 3.13+, [uv](https://docs.astral.sh/uv/),
+and an API key for at least one provider.
 
-### 1. Install and start the gateway
-
-```bash
-uv tool install airmux
-mkdir airmux-demo
-cd airmux-demo
-export OPENAI_API_KEY='your-provider-key'
-airmux gateway init
-airmux gateway serve
-```
-
-`init` creates a local configuration, a model taxonomy, and a private inference key under `.airmux/`. The gateway
-reads provider credentials from the environment and reloads taxonomy edits while it runs.
-
-### 2. Make a real model request
-
-In another terminal:
+Use one release for both the CLI and the deployment files. A CLI and an image from different commits do not share a
+management API contract.
 
 ```bash
-cd airmux-demo
-export AIRMUX_INFERENCE_KEY="$(cat .airmux/inference.key)"
-curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
-  -H "Authorization: Bearer $AIRMUX_INFERENCE_KEY" \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Say hello in one word."}],"max_completion_tokens":16}'
+export AIRMUX_VERSION=0.1.2
+uv tool install "airmux==$AIRMUX_VERSION"
+git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
+cd airmux
+cp .env.example .env
 ```
 
-The same gateway accepts streaming requests, tool calls, structured output, reasoning, images, and PDF inputs when the
-selected model supports them. Continue with the [gateway-only guide](docs/deployment/gateway.mdx) for configuration and
-operation.
+Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack and claim it:
+
+```bash
+docker build -t airmux:local .
+docker compose up -d --wait
+airmux quickstart --url http://localhost:8080
+```
+
+`quickstart` creates the owner account, organization, and workspace; imports provider credentials; mints an inference
+key; and proves the installation with a real model request. Open [localhost:8080](http://localhost:8080) for the
+console, where the request appears with its model, tokens, and estimated cost.
+
+> [!IMPORTANT]
+> Requests through airmux call real providers and are billed by them.
+
+The [quickstart guide](docs/quickstart.mdx) continues through finding that request in the console and enforcing your
+first workspace policy.
+
+| Goal | Command |
+| --- | --- |
+| List catalog models | `airmux models list` |
+| Inspect the installation | `airmux doctor` |
+| Follow gateway activity | `airmux events tail --interval 2 --keep 30` |
+| Follow service logs | `docker compose logs -f airmux` |
+| Stop while preserving state | `docker compose down` |
 
 ## Use your existing client
 
-Any client that can target one of airmux's exposed HTTP APIs and send an inference key through
-`Authorization: Bearer` or `x-api-key` can connect. That includes SDKs,
-agent frameworks, CLIs, services, and raw HTTP integrations.
+Any client that can target one of airmux's HTTP APIs and send an inference key through `Authorization: Bearer` or
+`x-api-key` can connect. That includes SDKs, agent frameworks, CLIs, services, and raw HTTP integrations.
 
 | API | Endpoint |
 | --- | --- |
@@ -104,48 +112,30 @@ and errors in the caller's dialect. See the [OpenAI SDK](docs/guides/openai-sdk.
 ## Why airmux
 
 - **Protocol-first clients:** connect any SDK, agent framework, CLI, service, or raw HTTP integration that speaks an exposed API
-- **Policy at the gateway:** compose model and provider allowlists, price ceilings, request limits, credential rules, denials, strict parameters, and fallbacks
+- **Policy at the gateway:** compose model and provider allowlists, price ceilings, spending budgets, request limits, credential rules, denials, strict parameters, and fallbacks
 - **Scoped provider secrets:** separate instance, organization, and workspace credentials without exposing secret values to configuration bundles
 - **Predictable failover:** retry eligible credentials and route to bounded backup models without escaping workspace policy
-- **Complete request records:** capture tokens, cost, latency, status, credential scope, configuration version, and every fallback attempt
+- **Complete request records:** capture tokens, estimated cost, latency, status, credential scope, configuration version, and every fallback attempt
 - **A resilient request path:** gateways evaluate immutable local bundles and can keep serving through a control-plane outage
 
 The shipped catalog includes Anthropic, Cerebras, DeepSeek, Fireworks, Groq, Mistral, OpenAI, Together, and xAI. Model
 IDs, prices, context windows, modalities, capabilities, and parameter support are explicit, inspectable data in the
 [taxonomy](taxonomy/taxonomy.yml).
 
-## Full-platform quickstart
+## Gateway-only mode
 
-Use the complete stack when you want the web console, organizations and workspaces, managed credentials, live policy,
-usage history, and audit activity. You need Docker with Compose 2.24.4+, Python 3.13+, uv, and at least one provider API
-key.
-
-```bash
-git clone https://github.com/michel-tricot/airmux.git
-cd airmux
-cp .env.example .env
-```
-
-Add a provider key such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to `.env`, then run:
+A secondary path for one inference endpoint managed through local files, with no Docker, Postgres, console, or usage
+history. You need Python 3.13+, uv, and a provider key:
 
 ```bash
 uv tool install airmux
-docker build -t airmux:local .
-docker compose up -d --wait
-airmux quickstart --url http://localhost:8080
+export OPENAI_API_KEY='your-provider-key'
+airmux gateway init
+airmux gateway serve
 ```
 
-`quickstart` creates or resumes the owner account, organization, and workspace; imports missing provider credentials;
-mints an inference key; and proves the installation with a real model request. Open
-[localhost:8080](http://localhost:8080) for the console.
-
-| Goal | Command |
-| --- | --- |
-| List catalog models | `airmux models list` |
-| Inspect the installation | `airmux doctor` |
-| Follow gateway activity | `airmux events tail --interval 2 --keep 30` |
-| Follow service logs | `docker compose logs -f airmux` |
-| Stop while preserving state | `docker compose down` |
+`init` creates configuration, a model taxonomy, and a private inference key under `.airmux/`. Continue with the
+[gateway-only guide](docs/deployment/gateway.mdx).
 
 ## Architecture
 
@@ -164,19 +154,10 @@ flowchart LR
   G -->|Usage and health| M
 ```
 
-Caller dialects and provider protocols cross through one canonical model. Adding a caller dialect requires one ingress
-adapter; adding a provider family requires one egress adapter. Policy, routing, streaming, and metering stay
-provider-neutral instead of multiplying into a translator for every caller and provider pair.
-
-The control plane compiles complete, versioned organization bundles. Data-plane workers validate them, build immutable
-indexes, and atomically adopt them. Inference therefore avoids management database reads and an in-flight request never
-observes partially updated policy. Cold provider-secret resolution is the only database-capable exception, and secret
-values never enter a bundle.
-
-Each plane records OpenTelemetry metrics and exposes Prometheus text at `/metrics` on its own listener, alongside
-dependency-free liveness at `/healthz` and role readiness at `/readyz`. The public all-in-one listener exposes the probes
-but not `/metrics`. Restrict `/metrics` to the monitoring network when a standalone control plane or data plane is
-directly reachable.
+Caller dialects and provider protocols cross through one canonical model, so adding a caller dialect costs one ingress
+adapter and adding a provider family costs one egress adapter. The control plane compiles complete, versioned
+organization bundles that gateways validate and adopt atomically, so inference never reads the management database and
+an in-flight request never observes partially updated policy.
 
 Read the [architecture guide](docs/concepts/architecture.mdx) for the full data flow, failure boundaries, and deployment
 shapes.
@@ -185,10 +166,10 @@ shapes.
 
 | I want to... | Start here |
 | --- | --- |
-| Try the complete stack | [Quickstart](docs/quickstart.mdx) |
+| Run airmux and see it working | [Quickstart](docs/quickstart.mdx) |
 | Connect an application | [OpenAI SDK](docs/guides/openai-sdk.mdx) or [Anthropic SDK](docs/guides/anthropic-sdk.mdx) |
-| Add routing and access rules | [Policy workflow](docs/guides/policy-workflow.mdx) |
-| Understand supported inference shapes | [Inference reference](docs/reference/inference.mdx) |
+| Control routing, access, and spending | [Workspace policies](docs/policies.mdx) |
+| Understand usage and cost | [Usage and activity](docs/features/usage.mdx) |
 | Deploy airmux | [Deployment overview](docs/deployment/index.mdx) |
 | Upgrade or roll back a deployment | [Upgrade and rollback](docs/deployment/upgrades.mdx) |
 | Call the management API | [Management API](docs/reference/management-api.mdx) |

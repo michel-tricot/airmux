@@ -129,6 +129,8 @@ airmux events tail
 ```
 
 Use `doctor` first to distinguish local profile, control-plane authentication, and gateway readiness failures.
+`gateways list` needs instance-scoped `data-planes.read` permission, so run it with an instance-scoped profile or
+management key.
 
 ## Backups
 

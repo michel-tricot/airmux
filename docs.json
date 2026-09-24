@@ -20,19 +20,31 @@
             "pages": ["docs/index", "docs/quickstart"]
           },
           {
-            "group": "Tutorials",
+            "group": "Use the platform",
             "pages": [
               "docs/guides/openai-sdk",
               "docs/guides/anthropic-sdk",
               "docs/guides/streaming",
               "docs/guides/tools",
               "docs/guides/structured-output",
-              "docs/guides/policy-workflow"
+              "docs/policies",
+              "docs/guides/policy-workflow",
+              "docs/features/model-routing",
+              "docs/features/provider-credentials",
+              "docs/features/usage"
             ]
           },
           {
-            "group": "Features",
-            "pages": ["docs/features/model-routing", "docs/features/provider-credentials", "docs/policies", "docs/features/usage"]
+            "group": "Deploy and operate",
+            "pages": [
+              "docs/deployment/index",
+              "docs/deployment/docker",
+              "docs/deployment/gateway",
+              "docs/deployment/scaling",
+              "docs/deployment/security",
+              "docs/deployment/operations",
+              "docs/deployment/upgrades"
+            ]
           },
           {
             "group": "Concepts",
@@ -42,18 +54,6 @@
               "docs/concepts/authentication",
               "docs/concepts/bundles",
               "docs/concepts/request-lifecycle"
-            ]
-          },
-          {
-            "group": "Deployment",
-            "pages": [
-              "docs/deployment/index",
-              "docs/deployment/gateway",
-              "docs/deployment/docker",
-              "docs/deployment/upgrades",
-              "docs/deployment/scaling",
-              "docs/deployment/operations",
-              "docs/deployment/security"
             ]
           },
           {
