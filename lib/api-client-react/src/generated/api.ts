@@ -115,7 +115,6 @@ import type {
   PlaygroundSessionReadyOut,
   PolicyBudgetStatus,
   PolicyCreate,
-  PolicyOrder,
   PolicyOut,
   PolicyState,
   PolicyStateRequest,
@@ -5598,83 +5597,6 @@ export const useCreatePolicy = <TError = ErrorType<void | HTTPValidationError>,
         TContext
       > => {
       return useMutation(getCreatePolicyMutationOptions(options), queryClient);
-    }
-
-export const getReorderPoliciesUrl = (orgId: string,
-    workspaceRef: string,) => {
-
-
-
-
-  return `/api/v1/organizations/${orgId}/workspaces/${workspaceRef}/policies/order`
-}
-
-/**
- * Replace the workspace policy evaluation order.
- *
- * Required permission: `policies.manage`.
- * @summary Reorder Policies
- */
-export const reorderPolicies = async (orgId: string,
-    workspaceRef: string,
-    policyOrder: PolicyOrder, options?: Parameters<typeof customFetch>[1]): Promise<PolicyOut[]> => {
-
-  return customFetch<PolicyOut[]>(getReorderPoliciesUrl(orgId,workspaceRef),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(policyOrder)
-  }
-);}
-
-
-
-
-
-export const getReorderPoliciesMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext> => {
-
-const mutationKey = ['reorderPolicies'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderPolicies>>, {orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}> = (props) => {
-          const {orgId,workspaceRef,data} = props ?? {};
-
-          return  reorderPolicies(orgId,workspaceRef,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ReorderPoliciesMutationResult = NonNullable<Awaited<ReturnType<typeof reorderPolicies>>>
-    export type ReorderPoliciesMutationBody = BodyType<PolicyOrder>
-    export type ReorderPoliciesMutationError = ErrorType<void | HTTPValidationError>
-
-    /**
- * @summary Reorder Policies
- */
-export const useReorderPolicies = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderPolicies>>, TError,{orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>}, TContext>, request?: SecondParameter<typeof customFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof reorderPolicies>>,
-        TError,
-        {orgId: string;workspaceRef: string;data: BodyType<PolicyOrder>},
-        TContext
-      > => {
-      return useMutation(getReorderPoliciesMutationOptions(options), queryClient);
     }
 
 export const getUpdatePolicyUrl = (orgId: string,

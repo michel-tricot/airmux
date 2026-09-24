@@ -2528,7 +2528,7 @@ paths:
       tags:
       - Workspace Policies
       summary: List Policies
-      description: 'List workspace inference policies in evaluation order.
+      description: 'List workspace inference policies.
 
 
         Required permission: `policies.read`.'
@@ -2612,61 +2612,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_PolicyOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: workspace_scope
-        anyOf:
-        - policies.manage
-  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/order:
-    put:
-      tags:
-      - Workspace Policies
-      summary: Reorder Policies
-      description: 'Replace the workspace policy evaluation order.
-
-
-        Required permission: `policies.manage`.'
-      operationId: reorder_policies
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
-        description: Workspace ID or slug
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PolicyOrder'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_PolicyOut__'
         '422':
           description: Validation Error
           content:
@@ -8372,13 +8317,6 @@ components:
           title: Enabled
           description: Whether gateways apply this policy after receiving the updated configuration
           default: true
-        priority:
-          type: integer
-          maximum: 10000.0
-          minimum: 0.0
-          title: Priority
-          description: Lower numbers run first; policy ID breaks ties. All matching restrictions apply
-          default: 100
         definition:
           $ref: '#/components/schemas/PolicyDefinition-Input'
           description: Workspace, user, or inference key target and inline rules
@@ -8459,11 +8397,6 @@ components:
           maxLength: 200
           minLength: 1
           title: Name
-        priority:
-          type: integer
-          maximum: 10000.0
-          minimum: 0.0
-          title: Priority
         definition:
           $ref: '#/components/schemas/PolicyDefinition-Output'
       additionalProperties: false
@@ -8472,23 +8405,8 @@ components:
       - id
       - workspace_id
       - name
-      - priority
       - definition
       title: PolicyEntry
-    PolicyOrder:
-      properties:
-        policy_ids:
-          items:
-            type: string
-            format: uuid
-          type: array
-          title: Policy Ids
-          description: Every workspace policy ID, from first to last evaluation priority
-      additionalProperties: false
-      type: object
-      required:
-      - policy_ids
-      title: PolicyOrder
     PolicyOut:
       properties:
         id:
@@ -8509,9 +8427,6 @@ components:
         enabled:
           type: boolean
           title: Enabled
-        priority:
-          type: integer
-          title: Priority
         definition:
           $ref: '#/components/schemas/PolicyDefinition-Output'
         created_at:
@@ -8529,7 +8444,6 @@ components:
       - workspace_id
       - name
       - enabled
-      - priority
       - definition
       - created_at
       - updated_at
@@ -8583,14 +8497,6 @@ components:
           - type: 'null'
           title: Enabled
           description: Enable or disable this policy; omit to leave unchanged
-        priority:
-          anyOf:
-          - type: integer
-            maximum: 10000.0
-            minimum: 0.0
-          - type: 'null'
-          title: Priority
-          description: Replacement priority, with lower numbers first; omit to leave unchanged
         definition:
           anyOf:
           - $ref: '#/components/schemas/PolicyDefinition-Input'

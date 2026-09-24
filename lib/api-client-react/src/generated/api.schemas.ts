@@ -525,15 +525,10 @@ export interface PolicyEntry {
   id: string;
   workspace_id: string;
   /**
-     * @minLength 1
-     * @maxLength 200
-     */
+   * @minLength 1
+   * @maxLength 200
+   */
   name: string;
-  /**
-     * @minimum 0
-     * @maximum 10000
-     */
-  priority: number;
   definition: PolicyDefinitionOutput;
 }
 
@@ -1478,7 +1473,6 @@ export interface PolicyOut {
   workspace_id: string;
   name: string;
   enabled: boolean;
-  priority: number;
   definition: PolicyDefinitionOutput;
   created_at: string;
   updated_at: string;
@@ -1529,26 +1523,15 @@ export interface PolicyDefinitionInput {
 
 export interface PolicyCreate {
   /**
-     * Display name for the workspace policy
-     * @minLength 1
-     * @maxLength 200
-     */
+   * Display name for the workspace policy
+   * @minLength 1
+   * @maxLength 200
+   */
   name: string;
   /** Whether gateways apply this policy after receiving the updated configuration */
   enabled?: boolean;
-  /**
-     * Lower numbers run first; policy ID breaks ties. All matching restrictions apply
-     * @minimum 0
-     * @maximum 10000
-     */
-  priority?: number;
   /** Workspace, user, or inference key target and inline rules */
   definition: PolicyDefinitionInput;
-}
-
-export interface PolicyOrder {
-  /** Every workspace policy ID, from first to last evaluation priority */
-  policy_ids: string[];
 }
 
 export interface PolicyState {
@@ -1570,8 +1553,6 @@ export interface PolicyUpdate {
   name?: string | null;
   /** Enable or disable this policy; omit to leave unchanged */
   enabled?: boolean | null;
-  /** Replacement priority, with lower numbers first; omit to leave unchanged */
-  priority?: number | null;
   /** Replace the complete target and inline rules; omit to leave unchanged */
   definition?: PolicyDefinitionInput | null;
 }
@@ -2835,4 +2816,3 @@ export type ApplyInstanceTaxonomyParams = {
  */
 dry_run?: boolean;
 };
-

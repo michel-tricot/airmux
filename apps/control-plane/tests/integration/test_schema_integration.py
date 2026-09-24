@@ -122,7 +122,7 @@ def test_policy_access_paths_are_indexed_in_models_and_migrations(pg_db):
     expected = {
         "policy_active_org_id_idx",
         "policy_active_workspace_id_idx",
-        "policy_workspace_priority_id_idx",
+        "policy_workspace_id_idx",
     }
     assert {index.name for index in SQLModel.metadata.tables["policy"].indexes} >= expected
     url = _migrated_url(pg_db)

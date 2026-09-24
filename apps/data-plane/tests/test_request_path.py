@@ -54,7 +54,6 @@ def _budget_bundle(aggregation: BudgetAggregation) -> BundleV1:
         id=uuid7(),
         workspace_id=WORKSPACE,
         name="Advisory budget",
-        priority=100,
         definition=PolicyDefinition.model_validate(
             {
                 "target": {"kind": "workspace"},

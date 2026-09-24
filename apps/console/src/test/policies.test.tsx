@@ -1,5 +1,5 @@
 import type * as Api from '@workspace/api-client-react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,14 +8,13 @@ import { ORG, WORKSPACES, enveloped, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
 
-function policy(id: string, name: string, priority: number): Api.PolicyOut {
+function policy(id: string, name: string): Api.PolicyOut {
   return {
     id,
     org_id: ORG.id,
     workspace_id: WORKSPACES[0].id,
     name,
     enabled: true,
-    priority,
     definition: {
       target: { kind: 'workspace' },
       rules: [{ match: { kind: 'all_requests' }, action: { kind: 'deny', message: `${name} denied` } }],
@@ -25,35 +24,11 @@ function policy(id: string, name: string, priority: number): Api.PolicyOut {
   };
 }
 
-const initialPolicies = [policy('policy-1', 'First', 0), policy('policy-2', 'Second', 1), policy('policy-3', 'Third', 2)];
+const initialPolicies = [policy('policy-1', 'First'), policy('policy-2', 'Second'), policy('policy-3', 'Third')];
 
 function renderPolicies() {
   window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/policies`);
   return render(<App />);
-}
-
-function policyRows() {
-  return within(screen.getByRole('table'))
-    .getAllByRole('row')
-    .filter((row) => row.parentElement?.tagName === 'TBODY');
-}
-
-function mockPolicyRowLayout() {
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    const row = this.closest('tr');
-    const index = row ? Array.from(row.parentElement?.children ?? []).indexOf(row) : 0;
-    const top = Math.max(index, 0) * 48;
-    return { x: 0, y: top, top, left: 0, right: 800, bottom: top + 48, width: 800, height: 48, toJSON: () => ({}) };
-  });
-}
-
-async function dragBelowNext(handle: HTMLElement) {
-  fireEvent.pointerDown(handle, { button: 0, clientX: 16, clientY: 24, isPrimary: true, pointerId: 1 });
-  fireEvent.pointerMove(document, { clientX: 16, clientY: 32, isPrimary: true, pointerId: 1 });
-  await waitFor(() => expect(handle.closest('tr')).toHaveClass('opacity-70'));
-  fireEvent.pointerMove(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
-  await waitFor(() => expect(policyRows()[1].style.transform).toContain('translate3d'));
-  fireEvent.pointerUp(document, { clientX: 16, clientY: 72, isPrimary: true, pointerId: 1 });
 }
 
 beforeEach(() => window.localStorage.setItem('airmux_org_id', ORG.id));
@@ -78,7 +53,7 @@ describe('workspace policies', () => {
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
       http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', async ({ request }) => {
         submitted = (await request.json()) as Api.PolicyCreate;
-        return HttpResponse.json<{ data: Api.PolicyOut }>({ data: policy('created', submitted.name, 0) });
+        return HttpResponse.json<{ data: Api.PolicyOut }>({ data: policy('created', submitted.name) });
       }),
     );
     renderPolicies();
@@ -105,7 +80,7 @@ describe('workspace policies', () => {
       http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
       http.post('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => {
         mutations += 1;
-        return HttpResponse.json({ data: policy('created', 'Created', 0) });
+        return HttpResponse.json({ data: policy('created', 'Created') });
       }),
     );
     renderPolicies();
@@ -137,27 +112,6 @@ describe('workspace policies', () => {
     await waitFor(() => expect(deleted).toBe(true));
   });
 
-  it('shifts rows while dragging and saves the complete order', async () => {
-    mockPolicyRowLayout();
-    let policies = initialPolicies;
-    let submittedOrder: string[] | undefined;
-    server.use(
-      http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () =>
-        HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies }),
-      ),
-      http.put('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies/order', async ({ request }) => {
-        submittedOrder = ((await request.json()) as Api.PolicyOrder).policy_ids;
-        const policiesById = new Map(policies.map((item) => [item.id, item]));
-        policies = submittedOrder.map((id, priority) => ({ ...policiesById.get(id)!, priority }));
-        return HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: policies });
-      }),
-    );
-    renderPolicies();
-
-    await dragBelowNext(await screen.findByRole('button', { name: 'Reorder First' }));
-    await waitFor(() => expect(submittedOrder).toEqual(['policy-2', 'policy-1', 'policy-3']));
-  });
-
   it('does not show policy mutations to a viewer', async () => {
     server.use(
       http.get('/api/v1/auth/permissions', () =>
@@ -177,7 +131,7 @@ describe('workspace policies', () => {
   it('shows shared spending and pages through per-key budgets', async () => {
     const user = userEvent.setup();
     const budgetPolicy: Api.PolicyOut = {
-      ...policy('budget', 'Spending', 0),
+      ...policy('budget', 'Spending'),
       definition: {
         target: { kind: 'workspace' },
         rules: [
@@ -254,20 +208,20 @@ it('shows workspace, principal, and key policies when inspecting an inference ke
     updated_at: now,
   };
   const policies: Api.PolicyOut[] = [
-    policy('workspace', 'Workspace restriction', 0),
+    policy('workspace', 'Workspace restriction'),
     {
-      ...policy('user', 'Principal restriction', 1),
-      definition: { target: { kind: 'selected_users', user_ids: [key.user_id] }, rules: policy('user', '', 1).definition.rules },
+      ...policy('user', 'Principal restriction'),
+      definition: { target: { kind: 'selected_users', user_ids: [key.user_id] }, rules: policy('user', '').definition.rules },
     },
     {
-      ...policy('key', 'Key restriction', 2),
-      definition: { target: { kind: 'selected_keys', key_ids: [key.id] }, rules: policy('key', '', 2).definition.rules },
+      ...policy('key', 'Key restriction'),
+      definition: { target: { kind: 'selected_keys', key_ids: [key.id] }, rules: policy('key', '').definition.rules },
     },
     {
-      ...policy('other', 'Other principal', 3),
-      definition: { target: { kind: 'selected_users', user_ids: ['other'] }, rules: policy('other', '', 3).definition.rules },
+      ...policy('other', 'Other principal'),
+      definition: { target: { kind: 'selected_users', user_ids: ['other'] }, rules: policy('other', '').definition.rules },
     },
-    { ...policy('disabled', 'Disabled restriction', 4), enabled: false },
+    { ...policy('disabled', 'Disabled restriction'), enabled: false },
   ];
   server.use(
     http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/inference-keys', () => enveloped([key])),

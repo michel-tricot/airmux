@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from decimal import Decimal
+from uuid import UUID
 
 import aiohttp
 import pytest
@@ -49,7 +50,6 @@ def policy(action, *, match=None, workspace=WORKSPACE, target=None):
         id=uuid7(),
         workspace_id=workspace,
         name="test",
-        priority=100,
         definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rules": [policy_rule]}),
     )
 
@@ -60,7 +60,6 @@ def policy_with_rules(rules, *, workspace=WORKSPACE, target=None):
         id=uuid7(),
         workspace_id=workspace,
         name="test",
-        priority=100,
         definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rules": rule_definitions}),
     )
 
@@ -108,16 +107,16 @@ def test_selected_key_targets_are_compiled_for_constant_time_membership():
     assert snap.policy_index[WORKSPACE][0].selected_key_ids == selected_key_ids
 
 
-def test_policy_index_preserves_workspace_evaluation_order():
+def test_policy_index_groups_entries_by_workspace():
     other_workspace = uuid7()
     action = {"kind": "credential_access", "scopes": ["workspace", "org"]}
-    later = policy(action).model_copy(update={"priority": 20})
-    first = policy(action).model_copy(update={"priority": 10})
+    later = policy(action)
+    first = policy(action)
     other = policy(action, workspace=other_workspace)
 
     _, snap = snapshot([later, other, first])
 
-    assert tuple(compiled.policy.id for compiled in snap.policy_index[WORKSPACE]) == (first.id, later.id)
+    assert {compiled.policy.id for compiled in snap.policy_index[WORKSPACE]} == {first.id, later.id}
     assert tuple(compiled.policy.id for compiled in snap.policy_index[other_workspace]) == (other.id,)
 
 
@@ -237,7 +236,7 @@ def test_request_match_combines_model_stream_and_capabilities():
     assert isinstance(evaluate(request().model_copy(update={"tools": [{"name": "lookup", "input_schema": {"type": "object"}}]}), key, snap), Deny)
 
 
-def test_restrictions_intersect_regardless_of_priority():
+def test_restrictions_intersect_across_policies():
     key, snap = snapshot([policy({"kind": "models", "names": [MODEL.model_id]}), policy({"kind": "models", "names": ["other"]})])
     assert isinstance(evaluate(request(), key, snap), Deny)
 
@@ -261,14 +260,12 @@ def test_inline_rule_values_can_be_repeated_across_policy_targets():
         id=uuid7(),
         workspace_id=WORKSPACE,
         name="All traffic",
-        priority=10,
         definition=PolicyDefinition(target={"kind": "workspace"}, rules=(shared,)),
     )
     second = PolicyEntry(
         id=uuid7(),
         workspace_id=WORKSPACE,
         name="Selected traffic",
-        priority=20,
         definition=PolicyDefinition(target={"kind": "selected_keys", "key_ids": ["k-dev"]}, rules=(shared,)),
     )
 
@@ -290,10 +287,11 @@ def test_each_rule_matches_the_original_request_independently():
     assert isinstance(evaluate(request().model_copy(update={"max_output_tokens": 501}), key, snap), Deny)
 
 
-def test_fallback_priority_is_deterministic_and_unknown_backups_are_skipped():
+def test_fallback_uses_first_policy_by_id_and_skips_unknown_backups():
     action = {"kind": "fallback", "models": ["backup"], "on": ["timeout"], "max_attempts": 2, "timeout_ms": 1000}
-    first = policy(action).model_copy(update={"priority": 10})
-    later = policy({**action, "on": ["rate_limited"]}).model_copy(update={"priority": 20})
+    first = policy(action).model_copy(update={"id": UUID(int=1)})
+    later = policy({**action, "on": ["rate_limited"]}).model_copy(update={"id": UUID(int=2)})
+    assert first.id < later.id
     key, snap = snapshot([later, first])
     plan = plan_routes(request(), key, snap)
     assert isinstance(plan, RoutePlan)

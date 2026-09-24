@@ -35,7 +35,7 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
     if len({policy.id for policy in policies}) != len(policies):
         msg = "Duplicate policy id"
         raise ValueError(msg)
-    ordered = sorted(policies, key=lambda policy: (policy.workspace_id, policy.priority, policy.id))
+    ordered = sorted(policies, key=lambda policy: (policy.workspace_id, policy.id))
     grouped = tuple((workspace_id, tuple(entries)) for workspace_id, entries in groupby(ordered, key=lambda policy: policy.workspace_id))
     if any(sum(len(policy.definition.rules) for policy in entries) > MAX_WORKSPACE_RULES for _, entries in grouped):
         msg = f"A workspace may contain at most {MAX_WORKSPACE_RULES} active policy rules"

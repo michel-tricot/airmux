@@ -55,7 +55,6 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
         id=state.policy_id,
         workspace_id=WORKSPACE,
         name="Budget",
-        priority=100,
         definition=PolicyDefinition(
             target=state.target,
             rules=(
@@ -87,7 +86,6 @@ def test_budget_state_is_independent_of_bundle_identity_and_expires():
 
 
 def test_per_key_filters_use_original_request_and_all_matching_budgets():
-
     now = datetime.now(UTC)
     start, end = budget_window("day", now)
     _, key = make_key("first")
@@ -113,7 +111,6 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
         id=budget.policy_id,
         workspace_id=WORKSPACE,
         name="Budget",
-        priority=100,
         definition=PolicyDefinition(
             target=budget.target,
             rules=(
@@ -139,13 +136,11 @@ def test_per_key_filters_use_original_request_and_all_matching_budgets():
 
 
 def test_uninitialized_budget_state_allows_matching_requests():
-
     _, key = make_key()
     policy = PolicyEntry(
         id=uuid7(),
         workspace_id=WORKSPACE,
         name="Budget",
-        priority=100,
         definition=PolicyDefinition(
             target=WorkspaceTarget(kind="workspace"),
             rules=(
@@ -188,7 +183,6 @@ def test_control_plane_budget_backend_uses_its_own_configuration(http_client):
 
 
 async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot(http_mock, http_client):
-
     now = datetime.now(UTC)
     start, end = budget_window("day", now)
     _, key = make_key()
@@ -218,7 +212,6 @@ async def test_failed_or_incomplete_refresh_keeps_the_last_complete_snapshot(htt
         id=state.policy_id,
         workspace_id=WORKSPACE,
         name="Budget",
-        priority=100,
         definition=PolicyDefinition(
             target=state.target,
             rules=(

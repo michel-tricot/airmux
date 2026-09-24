@@ -152,8 +152,8 @@ def test_omitted_caller_limit_stays_unspecified_without_any_ceiling(gateway: Gat
 def test_multiple_matching_policies_send_the_tightest_ceiling(gateway: Gateway):
     provider = gateway.add_provider()
     gateway.taxonomy["models"][0]["max_output_tokens"] = 32
-    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 16}], priority=100)
-    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 8}], priority=200)
+    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 16}])
+    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 8}])
     gateway.start()
 
     response = gateway.request()

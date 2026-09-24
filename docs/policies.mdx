@@ -13,8 +13,8 @@ its workspace, selected users, or selected inference keys.
 - Every matching restriction must pass
 - Rules within one policy are unordered
 - All matching policies compose
-- Lower policy priority numbers are evaluated first
-- The first matching fallback policy supplies the fallback plan
+- Policies are traversed by ID for deterministic evaluation
+- The first matching fallback policy in that order supplies the fallback plan
 - Exact duplicate rule definitions are invalid
 - Editing one policy cannot change another policy
 
@@ -44,7 +44,7 @@ the human or service account that created it. A shared application key identifie
 application's end user. The same user's policy in Production has no effect in Development.
 
 Workspace, user, and key restrictions all apply together. With output limits of 4,096, 1,024, and 512 respectively, a request
-above 512 tokens is denied regardless of priority. Priority still determines the first matching fallback configuration.
+above 512 tokens is denied regardless of policy order. Policy ID order determines which matching fallback configuration is selected.
 
 Removing workspace membership revokes that owner's inference keys and playground sessions in the workspace. Removing
 organization membership revokes them across the organization. Re-adding membership does not reactivate those credentials,
@@ -213,7 +213,6 @@ Create one self-contained resource at `/api/v1/organizations/{org_id}/workspaces
 {
   "name": "Approved production routing",
   "enabled": true,
-  "priority": 20,
   "definition": {
     "target": {"kind": "workspace"},
     "rules": [

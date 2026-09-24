@@ -1178,19 +1178,6 @@ class PlaygroundSessionReadyOut(BaseModel):
     status: Annotated[Literal["ready"], Field(title="Status")]
 
 
-class PolicyOrder(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    policy_ids: Annotated[
-        list[UUID],
-        Field(
-            description="Every workspace policy ID, from first to last evaluation priority",
-            title="Policy Ids",
-        ),
-    ]
-
-
 class PolicyStateRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -2709,7 +2696,6 @@ class PolicyEntry(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
-    priority: Annotated[int, Field(ge=0, le=10000, title="Priority")]
     definition: PolicyDefinitionOutput
 
 
@@ -2719,7 +2705,6 @@ class PolicyOut(BaseModel):
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     name: Annotated[str, Field(title="Name")]
     enabled: Annotated[bool, Field(title="Enabled")]
-    priority: Annotated[int, Field(title="Priority")]
     definition: PolicyDefinitionOutput
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
@@ -2741,13 +2726,6 @@ class PolicyUpdate(BaseModel):
         Field(
             description="Enable or disable this policy; omit to leave unchanged",
             title="Enabled",
-        ),
-    ] = None
-    priority: Annotated[
-        Priority | None,
-        Field(
-            description="Replacement priority, with lower numbers first; omit to leave unchanged",
-            title="Priority",
         ),
     ] = None
     definition: Annotated[
@@ -2827,15 +2805,6 @@ class PolicyCreate(BaseModel):
             title="Enabled",
         ),
     ] = True
-    priority: Annotated[
-        int | None,
-        Field(
-            description="Lower numbers run first; policy ID breaks ties. All matching restrictions apply",
-            ge=0,
-            le=10000,
-            title="Priority",
-        ),
-    ] = 100
     definition: Annotated[
         PolicyDefinitionInput,
         Field(description="Workspace, user, or inference key target and inline rules"),

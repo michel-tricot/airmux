@@ -362,14 +362,6 @@ export const operationAuthority = {
       },
     ],
   },
-  reorderPolicies: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
   updatePolicy: {
     checks: [
       {
