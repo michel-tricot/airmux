@@ -14,7 +14,7 @@ from data_plane.bundle.local import LocalBundleSource
 from data_plane.bundle.remote import RemoteBundleSource
 
 if TYPE_CHECKING:
-    import httpx2
+    import aiohttp
 
 __all__ = ["BundleConfig", "BundleHolder", "BundleSnapshot", "BundleSource", "LocalBundleConfig", "RemoteBundleConfig", "build_bundle_source"]
 
@@ -22,7 +22,7 @@ __all__ = ["BundleConfig", "BundleHolder", "BundleSnapshot", "BundleSource", "Lo
 def build_bundle_source(
     config: BundleConfig,
     holder: BundleHolder,
-    http_client: httpx2.AsyncClient,
+    http_client: aiohttp.ClientSession,
 ) -> BundleSource:
     if isinstance(config, LocalBundleConfig):
         return LocalBundleSource(config, holder)

@@ -47,6 +47,13 @@ relative to the file containing them, so starting from another directory is safe
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
 
+`--workers N` starts independent worker processes, each with its own
+[outbound connection pool](/docs/reference/configuration#outbound-http-connections). The default is one worker.
+Measure representative traffic before changing worker or pool limits.
+
+Uvicorn access logging is disabled during normal serving. `--dev` enables access logs and Python code reload and
+requires one worker. Usage logs, request IDs, metrics, startup logs, and error diagnostics remain available in both modes.
+
 `validate` checks the configuration, taxonomy, inference keys, adapter support, references, and policy compilation.
 It does not contact providers or prove that their credentials work. A real inference request is the final verification.
 

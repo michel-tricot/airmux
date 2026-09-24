@@ -242,6 +242,30 @@ def test_surviving_extras_merge_after_the_typed_body(kind):
     assert json.loads(upstream.body)["frequency_penalty"] == 0.5
 
 
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+def test_provider_encoding_preserves_alias_collisions_unicode_numbers_and_nulls(kind):
+    adapter, model = _adapter(kind)
+    adapter.provider = adapter.provider.model_copy(update={"param_aliases": {"temperature": "provider_temperature"}})
+    request = request_of(
+        CORPUS[0],
+        temperature=0.125,
+        max_output_tokens=64,
+        messages=[CanonicalUserMessage(content=[CanonicalTextPart(text="héllo 世界")])],
+    )
+    request = CanonicalRequest.model_validate(
+        {**request.model_dump(), "provider_temperature": 999, "extension": {"integer": 2**80, "float": -0.125, "null": None}, "nullable": None}
+    )
+    upstream = adapter.transform_request(request, model)
+    assert isinstance(upstream.body, bytes)
+    sent = json.loads(upstream.body)
+    assert sent["provider_temperature"] == 0.125
+    assert "temperature" not in sent
+    assert "top_p" not in sent
+    assert sent["extension"] == {"integer": 2**80, "float": -0.125, "null": None}
+    assert sent["nullable"] is None
+    assert "héllo 世界" in json.dumps(sent, ensure_ascii=False)
+
+
 def test_responses_applies_provider_aliases_after_the_explicit_field_mapping():
     provider = PROVIDER.model_copy(update={"kind": "openai_responses", "param_aliases": {"max_output_tokens": "max_tokens"}})
     adapter = REGISTRY["openai_responses"](provider, Secret("sk-test"))
@@ -365,3 +389,33 @@ def test_anthropic_maps_reasoning_structured_output_and_tool_options():
     }
     assert sent["tool_choice"] == {"type": "any", "disable_parallel_tool_use": False}
     assert sent["tools"][0]["strict"] is True
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+@pytest.mark.parametrize("alias", [False, True])
+def test_provider_translation_preserves_nested_schema_values_without_mutation(kind, alias):
+    adapter, model = _adapter(kind)
+    if alias:
+        adapter.provider = adapter.provider.model_copy(update={"param_aliases": {"temperature": "provider_temperature"}})
+    parameters = {
+        "type": "object",
+        "properties": {"city": {"type": ["string", "null"], "default": None, "description": "世界"}},
+        "extension": {"integer": 2**80, "float": -0.125, "null": None},
+    }
+    request = request_of(CORPUS[0], temperature=0.125, tools=[CanonicalToolDef(name="weather", parameters=parameters)])
+    before = request.model_dump_json()
+    upstream = adapter.transform_request(request, model)
+    sent = json.loads(upstream.body)
+    tool = sent["tools"][0]
+    schema = tool["input_schema"] if kind == "anthropic" else tool["parameters"] if kind == "openai_responses" else tool["function"]["parameters"]
+    assert schema == parameters
+    assert sent["provider_temperature" if alias else "temperature"] == 0.125
+    assert "top_p" not in sent
+    assert request.model_dump_json() == before
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+def test_provider_translation_retains_nonfinite_extension_encoding(kind):
+    adapter, model = _adapter(kind)
+    request = request_of(CORPUS[0], tools=[CanonicalToolDef(name="test", parameters={"extension": float("inf")})])
+    assert b'"extension":Infinity' in adapter.transform_request(request, model).body

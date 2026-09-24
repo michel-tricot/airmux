@@ -3,10 +3,7 @@ from __future__ import annotations
 import json
 import time
 
-import httpx
-import httpx2
 import pytest
-import respx
 from conftest import (
     MODEL,
     ORG,
@@ -22,6 +19,7 @@ from conftest import (
 )
 from prometheus_client.parser import text_string_to_metric_families
 from starlette.testclient import TestClient
+from yarl import URL
 
 import data_plane.app as app_module
 from airmux_runtime.secrets import Secret
@@ -73,10 +71,9 @@ def _budget_bundle(aggregation: BudgetAggregation) -> BundleV1:
     return make_bundle(keys=[key], catalog=catalog).model_copy(update={"policies": (policy,)})
 
 
-@respx.mock
 @pytest.mark.parametrize("path", ["chat/completions", "responses", "messages"])
-def test_inference_routes_use_the_inference_prefix(dp_app, path):
-    mock_control_plane()
+def test_inference_routes_use_the_inference_prefix(http_mock, dp_app, path):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         assert client.post(f"/inf/v1/{path}").status_code == 401
         assert client.post(f"/v1/{path}").status_code == 404
@@ -93,10 +90,9 @@ def test_unrepresentable_egress_request_is_a_declared_rejection():
     assert error.value.code == "unsupported_feature"
 
 
-@respx.mock
-def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
-    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+def test_chat_completion_end_to_end(http_mock, api_key, dp_app, tmp_path, http_client):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -114,17 +110,19 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
     }
     events = _recorded(tmp_path, http_client)
     assert [(e.status, e.org_id, e.workspace_id) for e in events] == [("ok", ORG, WORKSPACE)]
-    sent = json.loads(route.calls.last.request.content)
+    sent = json.loads(http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])[-1].kwargs["data"])
     assert sent["model"] == "gpt-real"
-    assert route.calls.last.request.headers["authorization"] == "Bearer sk-test-not-real"
+    assert (
+        http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])[-1].kwargs["headers"]["authorization"]
+        == "Bearer sk-test-not-real"
+    )
 
 
-@respx.mock
 @pytest.mark.parametrize("aggregation", ["shared", "per_key"])
-def test_no_budget_backend_accepts_budget_policies(api_key, dp_app, tmp_path, aggregation):
+def test_no_budget_backend_accepts_budget_policies(http_mock, api_key, dp_app, tmp_path, aggregation):
     write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle(aggregation)]))
-    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
 
     with TestClient(dp_app) as client:
         response = client.post(
@@ -134,18 +132,17 @@ def test_no_budget_backend_accepts_budget_policies(api_key, dp_app, tmp_path, ag
         )
 
     assert response.status_code == 200
-    assert upstream.call_count == 1
+    assert len(http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])) == 1
 
 
-@respx.mock
-def test_unavailable_budget_state_does_not_reject_inference(tmp_path, monkeypatch):
+def test_unavailable_budget_state_does_not_reject_inference(http_mock, tmp_path, monkeypatch):
     api_key, _ = make_key()
     write_cached_bundles(tmp_path, CachedBundles(bundles=[_budget_bundle("shared")]))
     control_plane = ControlPlaneLink(url="http://cp.test", management_key="dp-token")
     config = make_config(tmp_path).model_copy(update={"budget": ControlPlaneBudgetConfig(control_plane=control_plane, poll_interval_s=60)})
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")
-    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
 
     with TestClient(create_app(config)) as client:
         response = client.post(
@@ -156,14 +153,13 @@ def test_unavailable_budget_state_does_not_reject_inference(tmp_path, monkeypatc
         metrics = client.get("/metrics").text
 
     assert response.status_code == 200
-    assert upstream.call_count == 1
+    assert len(http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])) == 1
     assert 'airmux_data_plane_budget_state_fallbacks_total{reason="missing"} 1.0' in metrics
 
 
-@respx.mock
-def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+def test_metrics_report_the_pending_event_backlog(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -186,9 +182,8 @@ def test_metrics_report_the_pending_event_backlog(api_key, dp_app):
     assert 'airmux_data_plane_metering_admission_total{outcome="accepted"} 1.0' in metrics.text
 
 
-@respx.mock
 @pytest.mark.parametrize("model", ["gpt-test", "ghost"])
-def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app, monkeypatch, model):
+def test_metering_capacity_is_rejected_before_the_provider_call(http_mock, api_key, dp_app, monkeypatch, model):
     outbox = DevNullOutbox(DataPlaneMetrics())
 
     def reject_reservation():
@@ -196,8 +191,8 @@ def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app,
 
     monkeypatch.setattr(outbox, "reserve", reject_reservation)
     monkeypatch.setattr(app_module, "build_outbox", lambda *_args: outbox)
-    upstream = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
 
     with TestClient(dp_app) as client:
         response = client.post(
@@ -208,13 +203,12 @@ def test_metering_capacity_is_rejected_before_the_provider_call(api_key, dp_app,
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "metering_capacity_exhausted"
-    assert upstream.call_count == 0
+    assert len(http_mock.requests.get(("POST", URL("https://api.openai.com/v1/chat/completions")), [])) == 0
 
 
-@respx.mock
-def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_path, http_client):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json={}))
-    mock_control_plane()
+def test_malformed_buffered_provider_response_is_rejected(http_mock, api_key, dp_app, tmp_path, http_client):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload={}, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -226,18 +220,16 @@ def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_p
     assert [event.status for event in _recorded(tmp_path, http_client)] == ["upstream_error"]
 
 
-@respx.mock
-def test_missing_token_rejected(api_key, dp_app):
-    mock_control_plane()
+def test_missing_token_rejected(http_mock, api_key, dp_app):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post("/inf/v1/chat/completions", json={"model": "gpt-test", "messages": []})
     assert r.status_code == 401
 
 
-@respx.mock
-def test_bearer_authentication_scheme_is_case_insensitive(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+def test_bearer_authentication_scheme_is_case_insensitive(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -247,10 +239,9 @@ def test_bearer_authentication_scheme_is_case_insensitive(api_key, dp_app):
     assert response.status_code == 200
 
 
-@respx.mock
-def test_dialect_header_has_no_special_behavior(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+def test_dialect_header_has_no_special_behavior(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -261,9 +252,8 @@ def test_dialect_header_has_no_special_behavior(api_key, dp_app):
     assert response.json()["object"] == "chat.completion"
 
 
-@respx.mock
-def test_chat_completion_path_does_not_route_by_request_shape(api_key, dp_app):
-    mock_control_plane()
+def test_chat_completion_path_does_not_route_by_request_shape(http_mock, api_key, dp_app):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         response = client.post(
             "/inf/v1/chat/completions",
@@ -275,10 +265,9 @@ def test_chat_completion_path_does_not_route_by_request_shape(api_key, dp_app):
     assert response.json()["error"]["code"] == "invalid_request"
 
 
-@respx.mock
-def test_same_origin_playground_cookie_authenticates(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    mock_control_plane()
+def test_same_origin_playground_cookie_authenticates(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=200, payload=OPENAI_RESPONSE, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         client.cookies.set("airmux_playground", api_key)
         response = client.post(
@@ -289,9 +278,8 @@ def test_same_origin_playground_cookie_authenticates(api_key, dp_app):
     assert response.status_code == 200
 
 
-@respx.mock
-def test_playground_cookie_rejects_cross_site_requests(api_key, dp_app):
-    mock_control_plane()
+def test_playground_cookie_rejects_cross_site_requests(http_mock, api_key, dp_app):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         client.cookies.set("airmux_playground", api_key)
         response = client.post(
@@ -302,10 +290,9 @@ def test_playground_cookie_rejects_cross_site_requests(api_key, dp_app):
     assert response.status_code == 403
 
 
-@respx.mock
-def test_upstream_error_passed_through(api_key, dp_app):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
-    mock_control_plane()
+def test_upstream_error_passed_through(http_mock, api_key, dp_app):
+    http_mock.post("https://api.openai.com/v1/chat/completions", status=429, payload={"error": {"code": "rate_limited"}}, repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -315,9 +302,8 @@ def test_upstream_error_passed_through(api_key, dp_app):
     assert r.status_code == 429
 
 
-@respx.mock
-def test_policy_denial_is_metered(api_key, dp_app, tmp_path, http_client):
-    mock_control_plane()
+def test_policy_denial_is_metered(http_mock, api_key, dp_app, tmp_path, http_client):
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -329,10 +315,9 @@ def test_policy_denial_is_metered(api_key, dp_app, tmp_path, http_client):
     assert [(e.status, e.model_id, e.key_id, e.workspace_id) for e in events] == [("denied", "ghost", make_key()[1].key_id, WORKSPACE)]
 
 
-@respx.mock
-def test_upstream_timeout_is_metered_as_timeout(api_key, dp_app, tmp_path, http_client):
-    respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=httpx2.ReadTimeout("timed out"))
-    mock_control_plane()
+def test_upstream_timeout_is_metered_as_timeout(http_mock, api_key, dp_app, tmp_path, http_client):
+    http_mock.post("https://api.openai.com/v1/chat/completions", exception=TimeoutError("timed out"), repeat=True)
+    mock_control_plane(http_mock)
     with TestClient(dp_app) as client:
         r = client.post(
             "/inf/v1/chat/completions",
@@ -342,3 +327,19 @@ def test_upstream_timeout_is_metered_as_timeout(api_key, dp_app, tmp_path, http_
     assert r.status_code == 504
     events = _recorded(tmp_path, http_client)
     assert [e.status for e in events] == ["timeout"]
+
+
+def test_credential_timeout_without_fallback_preserves_gateway_error(http_mock, api_key, dp_app, monkeypatch):
+    async def credential_timeout(entry, resolver):
+        raise TimeoutError
+
+    monkeypatch.setattr("data_plane.proxy._resolve_credential", credential_timeout)
+    mock_control_plane(http_mock)
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert response.status_code == 504
+    assert response.json()["error"]["code"] == "fallback_deadline_exceeded"

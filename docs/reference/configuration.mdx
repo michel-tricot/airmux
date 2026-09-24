@@ -74,6 +74,47 @@ configuration file. A local bundle resolves its taxonomy and key references agai
 
 Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle reload defaults to 2 seconds.
 
+## Outbound HTTP connections
+
+The data plane creates one outbound HTTP client per worker. Configure its connection limits under `data_plane.http`:
+
+```yaml
+data_plane:
+  http:
+    max_connections: 100
+```
+
+The default is 100 active connections. The limit must be an integer from 1 through 65,535. Whole-value environment
+or file references can supply integer strings. Booleans, fractional values, null, and unbounded limits are rejected.
+
+Each worker shares one native aiohttp session across providers, remote bundle fetching, heartbeats, and usage export.
+Connections are reused by destination, with a 15-second idle keepalive timeout. The limit bounds active connections;
+idle connections to other destinations can remain cached until they expire. Four workers with `max_connections: 256`
+can have up to 1,024 active outbound connections.
+
+Outbound requests use HTTP/1.1, including over TLS. Connect and pool acquisition share a 5-second timeout; response
+reads have a 120-second idle timeout. There is no overall inference deadline. Budget refreshes have a 5-second total
+timeout. Responses stream with backpressure, and closing a stream releases its connection slot immediately.
+
+Provider cookies are never stored, and redirects are not followed. aiohttp honors `HTTP_PROXY`, `HTTPS_PROXY`, and
+`NO_PROXY` when a proxy is configured at startup. Without a configured proxy, environment and netrc lookups are disabled
+to avoid thread-pool work on each request. Changing these settings requires restarting the gateway.
+
+## Application logs
+
+Both planes write application logs to stderr. Outside dev mode, each log record is JSON. Writes are batched until
+100 records or 65,536 characters accumulate, or a 100 ms timer expires, whichever happens first. A single large record
+is written intact. Timer delivery depends on the event loop being able to run; a blocked output stream can still block
+that loop. Error and critical records flush the pending batch immediately. Application shutdown and normal process
+exit flush remaining records. Logging outside an active event loop is immediate.
+
+Formatting happens when the event is logged, so timestamps and request IDs retain the original request context.
+Abrupt termination can lose buffered lines. Failed writes use Python logging's error handling and discard the failed
+batch rather than retrying potentially partial output. These diagnostic logs are separate from the usage-event
+outbox and do not change its accounting or persistence behavior.
+
+Dev mode keeps immediate plain-text application logs. Gateway HTTP access logs remain enabled only in dev mode.
+
 ## Event outboxes
 
 | Kind      | Use                                                                            |

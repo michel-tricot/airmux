@@ -4,7 +4,7 @@ import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Literal
 
-import httpx2
+import aiohttp
 from starlette.responses import Response
 
 from airmux_runtime.telemetry import MetricsTelemetry
@@ -179,11 +179,11 @@ class DataPlaneMetrics:
 
 
 def upstream_outcome(
-    error: UpstreamResponseError | UpstreamProtocolError | UpstreamStreamError | httpx2.HTTPError,
+    error: UpstreamResponseError | UpstreamProtocolError | UpstreamStreamError | aiohttp.ClientError | TimeoutError,
 ) -> UpstreamOutcome:
-    if isinstance(error, httpx2.TimeoutException):
+    if isinstance(error, TimeoutError):
         return "timeout"
-    if isinstance(error, httpx2.HTTPError):
+    if isinstance(error, aiohttp.ClientError):
         return "unreachable"
     if isinstance(error, UpstreamProtocolError):
         return "protocol_error"

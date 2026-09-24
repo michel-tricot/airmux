@@ -86,6 +86,22 @@ def test_defaults_apply_to_a_standalone_data_plane(clean_env):
     assert isinstance(config.events, DevNullOutboxConfig)
     assert isinstance(config.budget, NoBudgetConfig)
     assert config.bundle.reload_interval_s == 2.0
+    assert config.http.max_connections == 100
+
+
+def test_http_limits_accept_environment_references(clean_env, monkeypatch):
+    monkeypatch.setenv("PROVIDER_CONNECTIONS", "256")
+    (clean_env / "airmux.yml").write_text(
+        "data_plane:\n  bundle: {kind: local, path: bundle.yml}\n  http:\n    max_connections: ${env:PROVIDER_CONNECTIONS}\n"
+    )
+    config = load_config()
+    assert config.http.max_connections == 256
+
+
+@pytest.mark.parametrize("value", [0, -1, 65536, None, True, 1.5, 100.0, "unlimited", "1.5"])
+def test_http_limits_reject_invalid_configuration(value):
+    with pytest.raises(ValidationError, match="max_connections"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {"max_connections": value}})
 
 
 def test_dev_uses_environment_then_config_then_default(clean_env, monkeypatch):
@@ -248,3 +264,8 @@ def test_loader_resolves_paths_from_config_directory(tmp_path, monkeypatch):
     assert config.bundle.path == directory / "bundle.yml"
     assert config.events.cache_dir == directory / ".airmux"
     assert config.secrets.path == directory / ".airmux/secrets"
+
+
+def test_http_configuration_rejects_the_removed_idle_connection_limit():
+    with pytest.raises(ValidationError, match="max_keepalive_connections"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml"}, "http": {"max_keepalive_connections": 20}})

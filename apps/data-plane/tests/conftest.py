@@ -4,14 +4,16 @@ import asyncio
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import partial
 from typing import TYPE_CHECKING, Literal
+from unittest.mock import Mock
 from uuid import UUID, uuid4
 
+import aiohttp
 import httpx
-import httpx2
 import pytest
-import respx
-import respx.mocks
+from aiohttp.abc import AbstractStreamWriter
+from aioresponses import aioresponses
 
 from airmux_runtime.secrets import Secret
 from contract import (
@@ -42,11 +44,6 @@ if TYPE_CHECKING:
 
     from starlette.testclient import TestClient
     from starlette.types import ASGIApp
-
-
-@pytest.fixture(autouse=True)
-def use_httpcore2_respx(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(respx.mocks, "DEFAULT_MOCKER", "httpcore2")
 
 
 class GatewayTransport(httpx.BaseTransport):
@@ -132,7 +129,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
     )
 
 
-def make_outbox(tmp_path, http_client: httpx2.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+def make_outbox(tmp_path, http_client: aiohttp.ClientSession, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         SqliteOutboxConfig(
             control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token"),
@@ -153,11 +150,11 @@ def read_and_close_outbox(outbox: SqliteOutbox, limit: int = 10):
     return asyncio.run(read_and_close())
 
 
-def mock_control_plane() -> None:
-    respx.post(f"{CONTROL_PLANE_URL}/api/v1/policy-state/sync").mock(return_value=httpx.Response(503))
-    respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest").mock(return_value=httpx.Response(503))
-    respx.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat").mock(return_value=httpx.Response(200))
-    respx.post(f"{CONTROL_PLANE_URL}/api/v1/events").mock(return_value=httpx.Response(503))
+def mock_control_plane(http_mock: aioresponses) -> None:
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/policy-state/sync", status=503, repeat=True)
+    http_mock.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest", status=503, repeat=True)
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat", status=200, repeat=True)
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/events", status=503, repeat=True)
 
 
 PLATFORM_CREDENTIAL = make_credential(org=None)
@@ -249,6 +246,14 @@ def dp_app(booted: BootedApp) -> ASGIApp:
 
 
 @pytest.fixture
-async def http_client() -> AsyncIterator[httpx2.AsyncClient]:
-    async with httpx2.AsyncClient() as client:
+async def http_client() -> AsyncIterator[aiohttp.ClientSession]:
+    async with aiohttp.ClientSession() as client:
         yield client
+
+
+@pytest.fixture
+def http_mock(monkeypatch):
+    response = partial(aiohttp.ClientResponse, stream_writer=Mock(spec=AbstractStreamWriter, output_size=0))
+    monkeypatch.setattr("aioresponses.core.ClientResponse", response)
+    with aioresponses() as mocked:
+        yield mocked

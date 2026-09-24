@@ -6,11 +6,11 @@ accumulates a stream for finalize."""
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
+from pydantic_core import from_json
 
 from data_plane.canonical import (
     CanonicalAssistantPart,
@@ -63,7 +63,7 @@ class ToolCallDraft:
 
     id: str = ""
     name: str = ""
-    arguments: str = ""
+    arguments: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -103,7 +103,7 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
             draft.id = tc.id
         if tc.function.name:
             draft.name = tc.function.name
-        draft.arguments += tc.function.arguments
+        draft.arguments.append(tc.function.arguments)
         deltas.append(CanonicalToolCallDelta(index=tc.index, id=tc.id, name=tc.function.name or None, arguments=tc.function.arguments))
     return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
@@ -164,8 +164,8 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
 
     def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[CanonicalChunk]:
         try:
-            data = json.loads(ev.data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            data = from_json(ev.data)
+        except ValueError as error:
             raise UpstreamProtocolError.stream_event() from error
         if not isinstance(data, dict):
             raise UpstreamProtocolError.stream_event()
@@ -195,7 +195,9 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             parts.append(CanonicalReasoningPart(text=reasoning))
         if text := "".join(state.text):
             parts.append(CanonicalTextPart(text=text))
-        parts.extend(CanonicalToolCallPart(id=draft.id, name=draft.name, arguments=draft.arguments) for _, draft in sorted(state.tool_drafts.items()))
+        parts.extend(
+            CanonicalToolCallPart(id=draft.id, name=draft.name, arguments="".join(draft.arguments)) for _, draft in sorted(state.tool_drafts.items())
+        )
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,

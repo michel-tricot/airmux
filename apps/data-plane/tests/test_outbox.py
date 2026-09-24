@@ -1,20 +1,21 @@
 from __future__ import annotations
 
 import contextlib
-import json
 import sqlite3
 import time
 from datetime import UTC, datetime
 from uuid import uuid4
 
-import httpx
-import httpx2
+import aiohttp
 import pytest
-import respx
+from aiohttp import web
+from aiohttp.test_utils import TestServer
 from conftest import make_config, make_outbox
+from yarl import URL
 
 from contract import RoutedUsageEventV1, TokenUsageSource, uuid7
 from data_plane.config import SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import DevNullOutbox, EventOutbox, OutboxFullError, SqliteOutbox, build_outbox
 from data_plane.outbox.queued import CAPACITY
@@ -118,10 +119,8 @@ async def test_record_does_not_wait_for_a_sqlite_write_lock(tmp_path, http_clien
     await outbox.close()
 
 
-@respx.mock
-async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
-    response = httpx.Response(200, json={"data": {"received": 2, "ingested": 1, "rejected": 1}})
-    route = respx.post("http://cp.test/api/v1/events").mock(return_value=response)
+async def test_flush_sends_batch_and_deletes(http_mock, tmp_path, http_client):
+    http_mock.post("http://cp.test/api/v1/events", status=200, payload={"data": {"received": 2, "ingested": 1, "rejected": 1}}, repeat=True)
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     record(outbox, make_event(first))
@@ -131,20 +130,20 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     record(outbox, invalid)
     assert await outbox.export_once() == 2
     assert await outbox.next_batch(10) == []
-    sent = json.loads(route.calls.last.request.content)
+    sent = http_mock.requests.get(("POST", URL("http://cp.test/api/v1/events")), [])[-1].kwargs["json"]
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
     assert [e["token_usage_source"] for e in sent] == ["provider", "estimated"]
     assert sent[1]["cache_read_tokens"] == 1
-    assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
+    assert http_mock.requests.get(("POST", URL("http://cp.test/api/v1/events")), [])[-1].kwargs["headers"]["authorization"] == "Bearer dp-token"
 
 
-@respx.mock
-async def test_failed_flush_keeps_the_events(tmp_path, http_client):
-    respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(503))
+@pytest.mark.parametrize("status", [302, 503])
+async def test_failed_flush_keeps_the_events(http_mock, tmp_path, http_client, status):
+    http_mock.post("http://cp.test/api/v1/events", status=status, repeat=True)
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     record(outbox, event)
-    with pytest.raises(httpx2.HTTPStatusError):
+    with pytest.raises(aiohttp.ClientResponseError):
         await outbox.export_once()
     assert await outbox.next_batch(10) == [event]
 
@@ -198,16 +197,15 @@ async def test_devnull_has_no_queue_capacity_or_stats():
     await outbox.close()
 
 
-@respx.mock
-async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
-    route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": BATCH_SIZE, "ingested": BATCH_SIZE}))
+async def test_a_flush_cycle_drains_more_than_one_batch(http_mock, tmp_path, http_client):
+    http_mock.post("http://cp.test/api/v1/events", status=200, payload={"received": BATCH_SIZE, "ingested": BATCH_SIZE}, repeat=True)
     outbox = make_outbox(tmp_path, http_client)
     for _ in range(BATCH_SIZE + 1):
         record(outbox, make_event(uuid7()))
 
     assert await outbox.export_available() == BATCH_SIZE + 1
     assert await outbox.next_batch(1) == []
-    assert route.call_count == 2
+    assert len(http_mock.requests.get(("POST", URL("http://cp.test/api/v1/events")), [])) == 2
 
 
 async def test_outbox_stats_distinguish_memory_and_durable_backlog(tmp_path, http_client):
@@ -249,3 +247,33 @@ def test_default_outbox_capacity_is_ten_thousand():
 def test_metrics_do_not_expose_shutdown_only_state():
     metrics = DataPlaneMetrics().render().decode()
     assert "airmux_data_plane_metering_shutdown_drains" not in metrics
+
+
+async def test_incomplete_export_response_keeps_the_events(tmp_path, http_client):
+    async def incomplete(request: web.Request) -> web.StreamResponse:
+        await request.read()
+        response = web.StreamResponse(headers={"Content-Length": "100"})
+        await response.prepare(request)
+        await response.write(b"incomplete")
+        assert request.transport is not None
+        request.transport.close()
+        return response
+
+    app = web.Application()
+    app.router.add_post("/api/v1/events", incomplete)
+    async with TestServer(app) as upstream:
+        metrics = DataPlaneMetrics()
+        outbox = SqliteOutbox(
+            SqliteOutboxConfig(control_plane=ControlPlaneLink(url=str(upstream.make_url("/"))[:-1], management_key="test"), cache_dir=tmp_path),
+            http_client,
+            metrics,
+        )
+        try:
+            event = make_event(uuid7())
+            record(outbox, event)
+            with pytest.raises(aiohttp.ClientPayloadError):
+                await outbox.export_once()
+            assert await outbox.next_batch(10) == [event]
+        finally:
+            await outbox.close()
+            metrics.shutdown()
