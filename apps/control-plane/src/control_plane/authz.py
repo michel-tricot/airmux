@@ -38,8 +38,8 @@ class Permission(StrEnum):
     policies_read = "policies.read"
     policies_manage = "policies.manage"
     playground_execute = "playground.execute"
+    policy_state_sync = "policy-state.sync"
     bundles_read = "bundles.read"
-    bundles_publish = "bundles.publish"
     usage_read = "usage.read"
     usage_ingest = "usage.ingest"
     data_planes_read = "data-planes.read"
@@ -91,6 +91,7 @@ DATA_PLANE_PERMISSIONS = frozenset(
     {
         Permission.bundles_read,
         Permission.usage_ingest,
+        Permission.policy_state_sync,
         Permission.data_planes_heartbeat,
     }
 )
@@ -121,7 +122,6 @@ ORG_ROLE_PERMISSIONS = {
             Permission.policies_manage,
             Permission.playground_execute,
             Permission.bundles_read,
-            Permission.bundles_publish,
             Permission.usage_read,
             Permission.audit_read,
             Permission.management_keys_read,
@@ -148,7 +148,6 @@ ORG_ROLE_PERMISSIONS = {
             Permission.policies_manage,
             Permission.playground_execute,
             Permission.bundles_read,
-            Permission.bundles_publish,
             Permission.usage_read,
             Permission.audit_read,
             Permission.management_keys_read,

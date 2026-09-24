@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
   "anthropic",
   "airmux-contract",
+  "airmux-runtime",
   "httpx",
   "jsonschema",
   "openai",

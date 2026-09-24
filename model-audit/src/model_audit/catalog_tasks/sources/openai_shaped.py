@@ -9,6 +9,7 @@ All five are readable without a credential, which is why the catalog has them to
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from model_audit.catalog_tasks.types import boolean, integer, number, object_list, object_or_empty, required_string, string, strings
@@ -33,8 +34,8 @@ class Novita(ModelSource):
     def normalize(self, item: CatalogObject) -> CatalogObject:
         features = strings(item.get("features"))
 
-        def scale(value: CatalogValue) -> float | None:
-            return round(value / 10000, 4) if isinstance(value, (int, float)) else None
+        def scale(value: CatalogValue) -> Decimal | None:
+            return value / Decimal(10000) if isinstance(value, (int, Decimal)) and not isinstance(value, bool) else None
 
         return self.record(
             required_string(item.get("id"), "Novita model id"),
@@ -114,7 +115,10 @@ class HuggingFace(ModelSource):
         routes = [route for route in object_list(item.get("providers")) if route.get("status") == "live"]
         if not routes:
             return None
-        cheapest = min(routes, key=lambda route: number(object_or_empty(route.get("pricing")).get("input")) or float("inf"))
+        cheapest = min(
+            routes,
+            key=lambda route: price if (price := number(object_or_empty(route.get("pricing")).get("input"))) is not None else Decimal("Infinity"),
+        )
         cost = object_or_empty(cheapest.get("pricing"))
         return self.record(
             required_string(item.get("id"), "Hugging Face model id"),

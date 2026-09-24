@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import type { RuleOut } from '@workspace/api-client-react';
+import type { RuleDefinitionInput, RuleDefinitionOutput } from '@workspace/api-client-react';
 import { ModelBadge } from '@/components/shared/model-badge';
 import { Badge } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -38,9 +38,13 @@ export function ModelBadges({ names, ordered = false, maxVisible = 2 }: { names:
   );
 }
 
-function actionSummary(rule: RuleOut): string {
-  const { action } = rule.definition;
+type RuleDefinition = RuleDefinitionInput | RuleDefinitionOutput;
+
+function actionSummary(definition: RuleDefinition): string {
+  const { action } = definition;
   switch (action.kind) {
+    case 'budget':
+      return `$${action.amount_usd} per ${action.period} (${action.aggregation.replace('_', ' ')})`;
     case 'models':
       return `Models: ${action.names.join(', ')}`;
     case 'providers':
@@ -50,20 +54,18 @@ function actionSummary(rule: RuleOut): string {
     case 'strict_parameters':
       return 'Require parameter support';
     case 'price_limit':
-      return `Price ≤ $${action.max_input_price_per_mtok} input / $${action.max_output_price_per_mtok} output per 1M tokens`;
+      return `Price ≤ $${action.max_input_price_per_mtok} input · $${action.max_output_price_per_mtok} output per 1M tokens`;
     case 'request_limits':
       return `Output ≤ ${action.max_output_tokens.toLocaleString()} tokens`;
     case 'credential_access':
       return `Credentials: ${action.scopes.join(', ')}`;
     case 'fallback':
       return `Fallback: ${action.models.join(' → ')}`;
-    case 'budget':
-      return `$${action.amount_usd} / ${action.period} · not enforced`;
   }
 }
 
-export function RuleActionSummary({ rule, maxVisible }: { rule: RuleOut; maxVisible?: number }) {
-  const { action } = rule.definition;
+export function RuleActionSummary({ definition, maxVisible }: { definition: RuleDefinition; maxVisible?: number }) {
+  const { action } = definition;
   if (action.kind === 'models')
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -78,11 +80,11 @@ export function RuleActionSummary({ rule, maxVisible }: { rule: RuleOut; maxVisi
         <ModelBadges names={action.models} ordered maxVisible={maxVisible} />
       </span>
     );
-  return actionSummary(rule);
+  return actionSummary(definition);
 }
 
-export function RuleMatchSummary({ rule }: { rule: RuleOut }) {
-  const { match } = rule.definition;
+export function RuleMatchSummary({ definition }: { definition: RuleDefinition }) {
+  const { match } = definition;
   if (match.kind === 'all_requests') return 'Every request';
   const details = [
     match.stream === true ? 'Streaming' : match.stream === false ? 'Non-streaming' : '',

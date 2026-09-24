@@ -5,9 +5,10 @@ from __future__ import annotations
 import base64
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalAssistantMessage,
@@ -71,24 +72,19 @@ def reasoning_identity(signature: str) -> tuple[str | None, str | None]:
     return reasoning_id, original
 
 
-class MessagesBody(BaseModel):
-    """Every field the gateway can put on an Anthropic Messages request. max_tokens is required
-    here and optional on OpenAI, which is the asymmetry the adapter's default covers."""
-
-    model_config = ConfigDict(frozen=True)
-
+class MessagesBody(TypedDict):
     model: str
     messages: list[dict[str, Any]]
     max_tokens: int
-    system: str | list[dict[str, Any]] | None = None
-    temperature: float | None = None
-    top_p: float | None = None
-    stop_sequences: list[str] | None = None
-    tools: list[dict[str, Any]] | None = None
-    tool_choice: dict[str, Any] | None = None
-    stream: bool | None = None
-    thinking: dict[str, Any] | None = None
-    output_config: dict[str, Any] | None = None
+    system: str | list[dict[str, Any]] | None
+    temperature: float | None
+    top_p: float | None
+    stop_sequences: list[str] | None
+    tools: list[dict[str, Any]] | None
+    tool_choice: dict[str, Any] | None
+    stream: bool | None
+    thinking: dict[str, Any] | None
+    output_config: dict[str, Any] | None
 
 
 def _with_cache(block: dict[str, Any], cache: Literal["ephemeral"] | None) -> dict[str, Any]:
@@ -693,7 +689,7 @@ class Event(BaseModel):
     type: str
 
     def sse(self) -> bytes:
-        return b"event: " + self.type.encode() + b"\ndata: " + self.model_dump_json().encode() + b"\n\n"
+        return b"event: " + self.type.encode() + b"\ndata: " + to_json(self, by_alias=False) + b"\n\n"
 
 
 class StartUsage(BaseModel):

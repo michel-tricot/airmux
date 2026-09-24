@@ -5,8 +5,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_validator
 
-from contract import EnvStoreConfig, SecretsConfig, load_config_section
-from contract.config import ConfigContext
+from airmux_runtime.config import ConfigContext, load_config_section, load_yaml, resolve_refs
+from airmux_runtime.secrets import EnvStoreConfig, SecretsConfig
 from control_plane.keys import validate_management_key_token
 from control_plane.throttling import ThrottleConfig
 
@@ -55,6 +55,13 @@ class Settings(BaseModel):
 
     console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
     public_signup: bool = False
+    dev: bool = Field(default=False, validate_default=True)
+
+    @field_validator("dev", mode="before")
+    @classmethod
+    def dev_from_environment(cls, value: object) -> object:
+        configured = os.environ.get("AIRMUX_DEV")
+        return configured == "1" if configured is not None else value
 
     @field_validator("console_url")
     @classmethod
@@ -68,8 +75,15 @@ class Settings(BaseModel):
 
 def database_url() -> str:
     """Load the database section alone for migration contexts that do not need full settings."""
-    section = load_config_section("control_plane")
-    return DatabaseConfig.model_validate(section.get("database") or {}).url
+    path = Path(os.environ.get("AIRMUX_CONFIG", "airmux.yml")).resolve()
+    document = load_yaml(path)
+    control_plane = document.get("control_plane") if isinstance(document, dict) else None
+    if not isinstance(control_plane, dict):
+        message = f"{path} must contain a control_plane section"
+        raise TypeError(message)
+    database = control_plane.get("database")
+    resolved = resolve_refs(database or {}, base_dir=path.parent)
+    return DatabaseConfig.model_validate(resolved).url
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:

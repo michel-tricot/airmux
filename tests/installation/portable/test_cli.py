@@ -48,7 +48,7 @@ if len(sys.argv) > 1:
     assert sys.version.startswith(sys.argv[1] + "."), sys.version
 
 airmux = distribution("airmux")
-for name in ("airmux-api-models", "airmux-contract", "airmux-control-plane", "airmux-data-plane"):
+for name in ("airmux-api-models", "airmux-contract", "airmux-control-plane", "airmux-data-plane", "airmux-runtime"):
     try:
         distribution(name)
     except PackageNotFoundError:
@@ -57,6 +57,7 @@ for name in ("airmux-api-models", "airmux-contract", "airmux-control-plane", "ai
         raise AssertionError(f"unexpected internal distribution: {name}")
 
 import api_models
+import airmux_runtime
 import cli
 import contract
 import control_plane
@@ -64,7 +65,7 @@ import data_plane
 from data_plane.heartbeat import VERSION
 
 assert VERSION == airmux.version
-for module in (api_models, cli, contract, control_plane, data_plane):
+for module in (airmux_runtime, api_models, cli, contract, control_plane, data_plane):
     assert Path(module.__file__).resolve().is_relative_to(Path(sys.prefix).resolve()), module.__file__
 """,
             *([os.environ["AIRMUX_INSTALL_PYTHON"]] if "AIRMUX_INSTALL_PYTHON" in os.environ else []),

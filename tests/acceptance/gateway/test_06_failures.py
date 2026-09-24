@@ -43,8 +43,7 @@ def test_provider_errors_keep_the_caller_shape_and_record_a_valid_event(
     error = {"code": "provider_failure", "message": "provider rejected [REDACTED]"}
     error_kind = {401: "invalid_request_error", 429: "invalid_request_error", 503: "api_error"}[status]
     expected = {
-        "canonical": {"error": error},
-        "openai_native": {"error": {"type": error_kind, **error}},
+        "openai_chat_completions": {"error": {"type": error_kind, **error}},
         "openai_responses": {"error": {"type": error_kind, **error}},
         "anthropic": {"type": "error", "error": {"type": "provider_failure", "message": "provider rejected [REDACTED]"}},
     }
@@ -128,6 +127,25 @@ def test_fallback_crosses_provider_families_and_preserves_attempt_accounting(
     assert first.credential_id != second.credential_id
 
 
+def test_each_fallback_attempt_applies_its_models_output_ceiling(gateway: Gateway):
+    provider = gateway.add_provider()
+    backup = gateway.add_provider(name="backup", models=("model-c", "model-d"))
+    gateway.taxonomy["models"][0]["max_output_tokens"] = 100
+    gateway.taxonomy["models"][2]["max_output_tokens"] = 8
+    provider.replies["upstream-model-a"] = Reply(status=503)
+    fallback(gateway)
+    gateway.start()
+
+    response = gateway.request(max_completion_tokens=50)
+
+    assert response.status_code == 200, response.text
+    assert provider.requests[0].body["max_tokens"] == 50
+    assert backup.requests[0].body["max_tokens"] == 8
+    assert response.json()["gateway"]["adjustments"][0]["action"] == "clamped"
+    first, second = gateway.events(2)
+    assert (first.max_output_tokens, second.max_output_tokens) == (50, 8)
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 @pytest.mark.parametrize("restriction", ["model", "provider", "price"])
 def test_fallback_cannot_bypass_a_restriction_matched_on_the_original_request(gateway: Gateway, dialect: Dialect, restriction: str):
@@ -141,8 +159,8 @@ def test_fallback_cannot_bypass_a_restriction_matched_on_the_original_request(ga
     elif restriction == "provider":
         action = {"kind": "providers", "names": ["stub"]}
     else:
-        gateway.taxonomy["models"][2]["input_price_per_mtok"] = 10
-        gateway.taxonomy["models"][3]["input_price_per_mtok"] = 10
+        gateway.taxonomy["models"][2]["input_price_per_mtok"] = "10"
+        gateway.taxonomy["models"][3]["input_price_per_mtok"] = "10"
         action = {"kind": "price_limit", "max_input_price_per_mtok": "2", "max_output_price_per_mtok": "5"}
     gateway.add_policy([action], match={"kind": "request", "models": ["model-a"]}, priority=200)
     gateway.start()
@@ -176,7 +194,7 @@ def test_fallback_deadline_cancels_the_active_attempt_and_gateway_recovers(gatew
     gateway.start()
     response = gateway.request()
     assert response.status_code == 504
-    assert error_of("canonical", response) == "fallback_deadline_exceeded"
+    assert error_of("openai_chat_completions", response) == "fallback_deadline_exceeded"
     assert backup.requests == []
     assert gateway.events(1)[0].status == "cancelled"
     provider.replies["upstream-model-a"] = Reply()

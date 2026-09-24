@@ -14,7 +14,6 @@ import os
 import secrets
 import shutil
 import signal
-import socket
 import subprocess
 import threading
 import time
@@ -28,7 +27,9 @@ import httpx
 import pytest
 import yaml
 from dotenv import dotenv_values
+from prometheus_client.parser import text_string_to_metric_families
 from testcontainers.core.container import DockerContainer
+from tests.acceptance.process_harness import uvicorn_port
 from tests.diagnostics import retain_logs
 
 if TYPE_CHECKING:
@@ -47,6 +48,11 @@ PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_write
 
 _pg: dict[str, DockerContainer | str] = {}
 PG_ADMIN_ENV = "AIRMUX_TEST_PG_URL"
+
+
+def metric(url: str, name: str) -> float:
+    families = text_string_to_metric_families(httpx.get(url, timeout=5.0).text)
+    return next(sample.value for family in families for sample in family.samples if sample.name == name)
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -103,12 +109,6 @@ def _bin(name: str) -> str:
     if path is None:
         pytest.skip(f"{name} console script not on PATH; run `uv sync --all-packages` first")
     return path
-
-
-def _free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
 
 
 def _payload(response: httpx.Response) -> dict:
@@ -261,11 +261,10 @@ class Stack:
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
         self.db_url = _create_database(f"acc_{uuid4().hex[:12]}")
-        self.cp_port = _free_port()
-        self.dp_port = _free_port()
-        self.stub_port = _free_port()
-        self.cp_url = f"http://127.0.0.1:{self.cp_port}"
-        self.dp_url = f"http://127.0.0.1:{self.dp_port}"
+        self.cp_port: int | None = None
+        self.dp_port: int | None = None
+        self.cp_url = "http://127.0.0.1:0"
+        self.dp_url = "http://127.0.0.1:0"
         self.cache_dir = tmp / ".airmux"
         self.config_path = tmp / "config.yml"
         self.caller_api_key = ""
@@ -274,7 +273,8 @@ class Stack:
         self.env: dict[str, str] = {}
         self.sensitive_values: tuple[str, ...] = (ADMIN_PASSWORD, STUB_API_KEY, "sk-stub", self.db_url)
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
-        self._stub = _StubServer(("127.0.0.1", self.stub_port), tmp / "upstream.log")
+        self._stub = _StubServer(("127.0.0.1", 0), tmp / "upstream.log")
+        self.stub_port = self._stub.server_port
         self._stub.start()
 
     # setup ----------------------------------------------------------------
@@ -311,7 +311,10 @@ class Stack:
             _payload(session.put(f"/api/v1/organizations/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
             workspace = _payload(session.post(f"/api/v1/organizations/{self.org_id}/workspaces", json={"name": "acceptance"}))
             caller = _payload(
-                session.post(f"/api/v1/organizations/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"})
+                session.post(
+                    f"/api/v1/organizations/{self.org_id}/workspaces/{workspace['id']}/inference-keys",
+                    json={"label": "caller", "user_id": me["user_id"]},
+                )
             )
             management_key = _payload(
                 session.post(
@@ -331,11 +334,12 @@ class Stack:
         }
         (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
         self.env = {**self.env, **secrets}
+        self.caller_api_key = caller["token"]
         self.provisioned = True
 
     def _write_taxonomy(self) -> None:
         """The stub provider, plus a quirky one that exists to prove onboarding is config: it
-        respells max_tokens, closes its schema, and declares the one extra param it accepts."""
+        respells max_output_tokens, closes its schema, and declares the one extra param it accepts."""
         spec = {
             "providers": [
                 {
@@ -347,7 +351,7 @@ class Stack:
                     "provider_id": "quirk",
                     "kind": "openai_compatible",
                     "base_url": f"http://127.0.0.1:{self.stub_port}",
-                    "param_aliases": {"max_tokens": "max_completion_tokens"},
+                    "param_aliases": {"max_output_tokens": "max_completion_tokens"},
                     "accepted_params": ["top_k"],
                     "params_closed": True,
                 },
@@ -383,15 +387,16 @@ class Stack:
         self,
         *,
         poll_interval_s: int = 1,
+        budget_poll_interval_s: int = 1,
         flush_interval_s: int = 1,
         outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
         secrets_kind: Literal["file", "insecure_database"] = "file",
     ) -> None:
         """Write both planes against one secret store and the selected event outbox."""
         secrets_store = (
-            {"kind": "file", "root": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
+            {"kind": "file", "path": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
         )
-        control_plane_link = {"url": self.cp_url, "token": "env:AIRMUX_DATAPLANE_TOKEN"}
+        control_plane_link = {"url": self.cp_url, "management_key": "${env:AIRMUX_DATAPLANE_TOKEN}"}
         outbox_config = (
             {"kind": "devnull"}
             if outbox_kind == "devnull"
@@ -405,7 +410,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
-                "bootstrap": {"token": "env:AIRMUX_DATAPLANE_TOKEN"},
+                "bootstrap": {"token": "${env:AIRMUX_DATAPLANE_TOKEN}"},
                 "secrets": secrets_store,
             },
             "data_plane": {
@@ -418,6 +423,11 @@ class Stack:
                     "heartbeat_interval_s": 2,
                 },
                 "events": outbox_config,
+                "budget": {
+                    "kind": "control_plane",
+                    "control_plane": dict(control_plane_link),
+                    "poll_interval_s": budget_poll_interval_s,
+                },
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
@@ -438,16 +448,23 @@ class Stack:
         if not self.env:
             self._provision_keys()
         self._run([_bin("airmux"), "control-plane", "migrate", "--config", str(self.config_path)], self.env)
+        previous_url = self.cp_url
         self._spawn(
-            "cp", [_bin("airmux"), "control-plane", "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)]
+            "cp",
+            [_bin("airmux"), "control-plane", "serve", "--host", "127.0.0.1", "--port", str(self.cp_port or 0), "--config", str(self.config_path)],
         )
+        if self.cp_port is None:
+            assert _poll(lambda: self._discover_port("cp"), READY_TIMEOUT), "control plane did not bind a port"
+            self._replace_control_plane_url(previous_url)
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
         if not self.provisioned:
             self._bootstrap()  # a restart keeps the deployment it already provisioned
 
     def start_dp(self, workers: int = 1) -> None:
-        cmd = [_bin("airmux"), "gateway", "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
+        cmd = [_bin("airmux"), "gateway", "serve", "--host", "127.0.0.1", "--port", str(self.dp_port or 0), "--config", str(self.config_path)]
         self._spawn("dp", [*cmd, "--workers", str(workers)])
+        if self.dp_port is None:
+            assert _poll(lambda: self._discover_port("dp"), READY_TIMEOUT), "data plane did not bind a port"
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 
     def stop(self, name: str, sig: int = signal.SIGTERM) -> None:
@@ -479,7 +496,15 @@ class Stack:
     # observation ----------------------------------------------------------
 
     def wait_dp_ready(self) -> None:
-        assert _poll(lambda: self._up(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane never served a bundle"
+        assert _poll(self.model_ready, READY_TIMEOUT), "data plane never served the configured model"
+
+    def model_ready(self, client: httpx.Client | None = None) -> bool:
+        url = "/inf/v1/models" if client else f"{self.dp_url}/inf/v1/models"
+        try:
+            response = (client or httpx).get(url, headers={"Authorization": f"Bearer {self.caller_api_key}"}, timeout=2.0)
+        except httpx.HTTPError:
+            return False
+        return response.status_code == 200 and any(model["id"] == MODEL for model in response.json().get("data", []))
 
     def request(self, content: str = "hi") -> httpx.Response:
         return httpx.post(
@@ -524,6 +549,32 @@ class Stack:
         log = (self.tmp / f"{name}.log").open("a", encoding="utf-8")
         proc = subprocess.Popen(cmd, cwd=self.tmp, env=self.env, stdout=log, stderr=subprocess.STDOUT)  # noqa: S603 trusted local console scripts
         self._procs[name] = (proc, log)
+
+    def _discover_port(self, name: Literal["cp", "dp"]) -> bool:
+        proc, _ = self._procs[name]
+        assert proc.poll() is None, (self.tmp / f"{name}.log").read_text(encoding="utf-8")
+        port = uvicorn_port(self.tmp / f"{name}.log")
+        if port is None:
+            return False
+        if name == "cp":
+            self.cp_port = port
+            self.cp_url = f"http://127.0.0.1:{port}"
+        else:
+            self.dp_port = port
+            self.dp_url = f"http://127.0.0.1:{port}"
+        return True
+
+    def _replace_control_plane_url(self, previous_url: str) -> None:
+        configuration = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
+        for section in (
+            configuration["data_plane"]["bundle"],
+            configuration["data_plane"]["events"],
+            configuration["data_plane"]["budget"],
+        ):
+            control_plane = section.get("control_plane")
+            if control_plane and control_plane["url"] == previous_url:
+                control_plane["url"] = self.cp_url
+        self.config_path.write_text(yaml.safe_dump(configuration), encoding="utf-8")
 
     @staticmethod
     def _up(url: str) -> bool:

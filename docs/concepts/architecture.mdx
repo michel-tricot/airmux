@@ -32,27 +32,14 @@ database-capable exception, and resolved values remain outside the bundle.
 
 ## Canonical adapter waist
 
-```mermaid
-flowchart LR
-  O[OpenAI callers] --> I[Ingress adapters]
-  A[Anthropic callers] --> I
-  C[Canonical callers] --> I
-  I --> W[Canonical request and response]
-  W --> P[Policy, routing, and metering]
-  P --> E[Egress adapters]
-  E --> X[OpenAI-compatible providers]
-  E --> Y[Anthropic providers]
-  E --> Z[Responses providers]
-```
+Caller dialects and provider families meet at one canonical request and response model, so `N` dialects and `M`
+provider families need `N + M` translators instead of one per pair. Policy, routing, reconciliation, usage, and
+cancellation accounting are implemented once against canonical types.
 
-With `N` caller dialects and `M` provider families, the canonical waist needs `N + M` translators rather than a
-translator for every caller-provider pair. Request reconciliation, policy, routing, adjustments, usage, and cancellation
-accounting are implemented once against canonical types.
+Each ingress adapter owns one public path; each egress adapter owns one provider family. Adapter modules are discovered
+automatically, so adding a dialect or provider family does not require editing a central registry or route list.
 
-Ingress adapters decide whether a request belongs to their dialect, parse it into canonical, and render canonical output
-for the caller. Egress adapters translate canonical requests to a provider family and fold buffered or streaming output
-back into canonical. Adapter modules are discovered automatically, so adding a dialect or provider family does not
-require editing a central registry.
+See [canonical model](/docs/concepts/canonical-model) for the typed content parts and translation guarantees.
 
 ## Control plane
 
@@ -70,11 +57,39 @@ reconciliation, routing, streaming, and usage measurement.
 The request path reads immutable indexes built from its current in-memory bundle. It does not query the control-plane
 database. The sole cold-path exception is resolving the selected provider secret through the configured secret store.
 
+## Shared package boundaries
+
+`contract` is the pure interchange waist between the planes. It contains versioned bundle, event, policy, taxonomy,
+identifier, and secret-reference values with validation and serialization, but no configuration loading, filesystem
+access, network access, secret values, or adapters. Importing a wire type therefore cannot load process infrastructure
+or a database driver.
+
+`airmux_runtime` contains the process facilities with multiple consumers: deterministic YAML configuration loading,
+private file creation, secret interfaces, and secret adapters. It is not a general shared-code bucket and cannot contain
+plane-specific domain logic or import either plane.
+
+Postgres secret storage remains available for split deployments, but its driver is an optional
+`airmux-runtime[insecure-database]` dependency. Base runtime and standalone data-plane installations stay independent of
+database drivers. Selecting that adapter without the extra fails during startup, before traffic is accepted.
+
 ## Configuration bundles
 
 The control plane compiles one complete bundle per organization. A bundle contains active inference-key hashes,
-providers, models, provider-credential references, enabled policies, and referenced rules. It never contains inference
+providers, models, provider-credential references, and enabled policies with inline rule definitions. It never contains inference
 tokens or provider secret values.
+
+Management transactions do not compile bundles. Database triggers advance an organization or global generation whenever a
+committed bundle input changes, regardless of whether the write came through the API, ORM, CLI, migration, or raw SQL. A
+background publisher captures the generation pair and compiles the same repeatable-read snapshot. It stores the immutable bundle
+and moves the organization's current-bundle pointer in one transaction.
+
+Global and organization generations are independent equality tokens, not a shared ordering. A concurrent change either appears
+in the publisher's snapshot or leaves one generation different from its published value, so it cannot be lost. Per-organization
+advisory locks prevent duplicate publication across control-plane processes. Failed compilation retains the last good bundle and
+retries with bounded backoff.
+
+Generation and retry state are internal. Management clients update resources normally and can assume committed changes will be
+materialized. Each remote gateway observes a new current bundle on its next manifest poll, validates it, and swaps it into memory.
 
 Remote gateways poll a manifest, validate new bundles, build lookup indexes, swap them atomically, and cache the
 accepted set on disk. A cached bundle lets a gateway start and continue serving while the control plane is temporarily
@@ -82,8 +97,19 @@ unavailable.
 
 ## Deployment shapes
 
-The default image runs the console, control plane, and one data plane behind a single Nginx origin. Postgres runs
-separately. The split image targets let operators scale or restart each service independently and give every gateway its
-own persistent cache and usage outbox.
+Module, process, artifact, and topology boundaries are separate decisions. The control plane and data plane remain
+independent Python modules and processes with `contract` as their only shared import, but one release image contains both
+runtimes, the console assets, Nginx, and the deployment scripts.
+
+The image accepts four serving roles: `control-plane`, `data-plane`, `console`, and `airmux`. The same image also exposes
+explicit `control-plane migrate` and `control-plane taxonomy` operations for deployment orchestration. The control-plane
+process owns bootstrap-key creation and schema verification. Production startup does not migrate the database or mutate the
+catalog; development startup may apply migrations when `--dev` is selected. The default `airmux` role supervises one process
+for each serving role and holds the gateway until the control plane is healthy.
+
+The airmux topology uses one application container and Postgres. The split topology projects the same image digest
+into one control plane, one console, and explicit gateway replicas. Each gateway owns a
+distinct persistent cache, identity, and usage outbox. Gateway-only deployments use the same Python distribution or image
+with a local bundle and need neither Postgres nor a control plane.
 
 See [deployment](/docs/deployment) for infrastructure requirements and [request lifecycle](/docs/concepts/request-lifecycle) for the synchronous path.

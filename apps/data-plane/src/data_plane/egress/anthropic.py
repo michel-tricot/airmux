@@ -7,11 +7,11 @@ block index Anthropic used."""
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
+from pydantic_core import from_json
 
 from data_plane.canonical import (
     CanonicalAssistantPart,
@@ -70,11 +70,11 @@ class _Block:
     """One content block accumulating across the stream; tool blocks carry their ordinal."""
 
     type: str
-    text: str = ""
-    signature: str = ""
+    text: list[str] = field(default_factory=list)
+    signature: list[str] = field(default_factory=list)
     tool_id: str = ""
     name: str = ""
-    arguments: str = ""
+    arguments: list[str] = field(default_factory=list)
     ordinal: int = 0
 
 
@@ -99,11 +99,11 @@ def _final_parts(blocks: dict[int, _Block]) -> list[CanonicalAssistantPart]:
     parts: list[CanonicalAssistantPart] = []
     for block in (blocks[i] for i in sorted(blocks)):
         if block.type == "thinking":
-            parts.append(CanonicalReasoningPart(text=block.text, signature=block.signature or None))
+            parts.append(CanonicalReasoningPart(text="".join(block.text), signature="".join(block.signature) or None))
         elif block.type == "text":
-            parts.append(CanonicalTextPart(text=block.text))
+            parts.append(CanonicalTextPart(text="".join(block.text)))
         elif block.type == "tool_use":
-            parts.append(CanonicalToolCallPart(id=block.tool_id, name=block.name, arguments=block.arguments or "{}"))
+            parts.append(CanonicalToolCallPart(id=block.tool_id, name=block.name, arguments="".join(block.arguments) or "{}"))
     return parts
 
 
@@ -116,7 +116,7 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
         state.tool_count += 1
         state.blocks[event.index] = _Block(type="tool_use", tool_id=opened.id, name=opened.name, ordinal=ordinal)
         return [CanonicalChunk(id=state.chunk_id, delta=CanonicalToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
-    state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking)
+    state.blocks[event.index] = _Block(type=opened.type, text=[opened.text or opened.thinking])
     return []
 
 
@@ -125,16 +125,16 @@ def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
     delta = UpstreamBlockDelta.model_validate(event.delta)
     out: CanonicalDelta | None = None
     if delta.type == "text_delta":
-        block.text += delta.text
+        block.text.append(delta.text)
         out = CanonicalTextDelta(text=delta.text)
     elif delta.type == "thinking_delta":
-        block.text += delta.thinking
+        block.text.append(delta.thinking)
         out = CanonicalReasoningDelta(text=delta.thinking)
     elif delta.type == "signature_delta":
-        block.signature += delta.signature
+        block.signature.append(delta.signature)
         out = CanonicalReasoningDelta(signature=delta.signature)
     elif delta.type == "input_json_delta":
-        block.arguments += delta.partial_json
+        block.arguments.append(delta.partial_json)
         out = CanonicalToolCallDelta(index=block.ordinal, arguments=delta.partial_json)
     return [CanonicalChunk(id=state.chunk_id, delta=out)] if out is not None else []
 
@@ -153,14 +153,13 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         """Transport assembly only; every field mapping lives in formats.anthropic."""
         system, messages = to_request(req.messages)
-        max_tokens = req.max_tokens or m.max_output_tokens
-        if max_tokens is None:
-            message = f"anthropic model {m.model_id} requires max_output_tokens in the bundle"
+        if req.max_output_tokens is None:
+            message = "anthropic egress requires a resolved max_output_tokens"
             raise ValueError(message)
         body = MessagesBody(
             model=m.upstream_model,
             messages=messages,
-            max_tokens=max_tokens,
+            max_tokens=req.max_output_tokens,
             system=system,
             temperature=req.temperature,
             top_p=req.top_p,
@@ -208,8 +207,8 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
 
     def transform_stream_event(self, ev: RawEvent, state: AnthropicStreamState) -> list[CanonicalChunk]:
         try:
-            data = json.loads(ev.data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            data = from_json(ev.data)
+        except ValueError as error:
             raise UpstreamProtocolError.stream_event() from error
         if not isinstance(data, dict):
             raise UpstreamProtocolError.stream_event()

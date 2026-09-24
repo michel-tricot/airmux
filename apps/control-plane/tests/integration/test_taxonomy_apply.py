@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, setup_control_plane
+from helpers import MODEL, PROVIDER, make_org, setup_control_plane, wait_for_publication
 
 from control_plane.authz import Permission
-
-
-def _bundles(client: TestClient, org_id, headers: dict[str, str]) -> list[dict]:
-    return client.get(f"/api/v1/organizations/{org_id}/bundles", headers=headers).json()["data"]
 
 
 def test_instance_admin_applies_a_taxonomy_atomically_and_publishes_once(tmp_path):
@@ -16,7 +12,7 @@ def test_instance_admin_applies_a_taxonomy_atomically_and_publishes_once(tmp_pat
     with TestClient(cp.app) as client:
         org_id = make_org(client, root)
         org = cp.headers(org_id)
-        before = _bundles(client, org_id, org)
+        before = wait_for_publication(client, org_id, org)
 
         response = client.post("/api/v1/instance/taxonomy", json={"providers": [PROVIDER], "models": [MODEL]}, headers=root)
 
@@ -25,9 +21,8 @@ def test_instance_admin_applies_a_taxonomy_atomically_and_publishes_once(tmp_pat
         assert applied["dry_run"] is False
         assert applied["providers"] == {"created": 1, "updated": 0, "unchanged": 0}
         assert applied["models"] == {"created": 1, "updated": 0, "unchanged": 0}
-        after = _bundles(client, org_id, org)
-        assert len(after) == len(before) + 1
-        assert applied["published"] == [{"org_id": str(org_id), "version": after[-1]["version"]}]
+        assert set(applied) == {"dry_run", "providers", "models"}
+        wait_for_publication(client, org_id, org, before["bundle_id"])
         taxonomy = client.get("/api/v1/instance/taxonomy", headers=root).json()["data"]
         assert [provider["name"] for provider in taxonomy["providers"]] == ["openai"]
         assert [model["name"] for model in taxonomy["models"]] == ["gpt-test"]
@@ -39,7 +34,7 @@ def test_taxonomy_dry_run_is_read_only(tmp_path):
     with TestClient(cp.app) as client:
         org_id = make_org(client, root)
         org = cp.headers(org_id)
-        before = _bundles(client, org_id, org)
+        before = wait_for_publication(client, org_id, org)
 
         response = client.post(
             "/api/v1/instance/taxonomy",
@@ -53,10 +48,9 @@ def test_taxonomy_dry_run_is_read_only(tmp_path):
             "dry_run": True,
             "providers": {"created": 1, "updated": 0, "unchanged": 0},
             "models": {"created": 1, "updated": 0, "unchanged": 0},
-            "published": [],
         }
         assert client.get("/api/v1/instance/taxonomy", headers=root).json()["data"] == {"providers": [], "models": []}
-        assert _bundles(client, org_id, org) == before
+        assert wait_for_publication(client, org_id, org)["bundle_id"] == before["bundle_id"]
 
 
 def test_taxonomy_apply_reports_unchanged_and_updated_entries(tmp_path):
@@ -69,7 +63,7 @@ def test_taxonomy_apply_reports_unchanged_and_updated_entries(tmp_path):
         unchanged = client.post("/api/v1/instance/taxonomy", json=body, headers=root).json()["data"]
         assert unchanged["providers"] == {"created": 0, "updated": 0, "unchanged": 1}
         assert unchanged["models"] == {"created": 0, "updated": 0, "unchanged": 1}
-        assert unchanged["published"] == []
+        assert set(unchanged) == {"dry_run", "providers", "models"}
 
         changed = client.post(
             "/api/v1/instance/taxonomy",

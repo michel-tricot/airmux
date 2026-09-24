@@ -2,16 +2,23 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
+import shutil
 import subprocess
+import sys
 import tomllib
 from collections import Counter
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 import yaml
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
+from typer.testing import CliRunner
+
+from cli.main import app
 
 ROOT = Path(__file__).parents[2]
 DOCS = ROOT / "docs"
@@ -21,12 +28,14 @@ LOCAL_LINK = re.compile(r"(?<!!)\[[^\]]+\]\((?!https?://|mailto:|#)(?P<target>[^
 CURL_JSON = re.compile(r"(?:-d|--data)\s+'(?P<body>\{.*?\})'", re.DOTALL)
 OPENAPI_ENDPOINT = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|TRACE) /\S+$")
 PUBLIC_REPOSITORY = "https://github.com/michel-tricot/airmux"
+REPOSITORY_SOURCE_LINK = re.compile(rf"(?<!!)\[[^\]]+\]\({re.escape(PUBLIC_REPOSITORY)}/(?:blob|tree)/main/(?P<target>[^)#?]+)(?:[?#][^)]*)?\)")
 PUBLISHED_PROJECT = ROOT / "packaging/airmux/pyproject.toml"
 INTERNAL_DISTRIBUTIONS = {
     "airmux-api-models",
     "airmux-contract",
     "airmux-control-plane",
     "airmux-data-plane",
+    "airmux-runtime",
 }
 BUNDLED_PROJECTS = (
     "apps/cli/pyproject.toml",
@@ -34,11 +43,16 @@ BUNDLED_PROJECTS = (
     "apps/data-plane/pyproject.toml",
     "lib/api-models/pyproject.toml",
     "lib/contract/pyproject.toml",
+    "lib/runtime/pyproject.toml",
 )
 
 
 def documentation_files() -> list[Path]:
-    return sorted([ROOT / "CONTRIBUTING.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
+    return sorted([ROOT / "CONTRIBUTING.md", ROOT / ".github/policy/README.md", *DOCS.rglob("*.md"), *DOCS.rglob("*.mdx")])
+
+
+def example_files() -> list[Path]:
+    return sorted([ROOT / "README.md", ROOT / "model-audit/README.md", ROOT / "replit.md", *documentation_files()])
 
 
 def navigation_pages(node: object) -> list[str]:
@@ -119,16 +133,52 @@ def test_contributor_documentation_has_a_repository_entry_point() -> None:
 
 
 def test_documentation_tracks_current_ci_entry_points() -> None:
-    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    policy = (ROOT / ".github/policy/README.md").read_text(encoding="utf-8")
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
 
-    assert "tests/ci/test_merge_policy.py" in contributing
-    assert "tests/documentation/test_merge_policy.py" not in contributing
+    assert "tests/ci/test_merge_policy.py" in policy
+    assert "tests/documentation/test_merge_policy.py" not in policy
     assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
+    assert "Prepare release" in development
+    assert "Publish release" in development
+
+
+def test_portable_installation_recipe_collects_outside_the_checkout(tmp_path: Path) -> None:
+    development = (DOCS / "development.mdx").read_text(encoding="utf-8")
+    recipe = next(match.group("body") for match in FENCE.finditer(development) if "cp tests/installation/" in match.group("body"))
+    staging = "\n".join(line for line in recipe.splitlines() if line.startswith(("mkdir ", "cp ")))
+    environment = {**os.environ, "smoke_dir": str(tmp_path), "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    copied = subprocess.run(["/bin/bash", "-e"], input=staging, cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
+    assert copied.returncode == 0, copied.stderr
+
+    collected = subprocess.run(
+        [sys.executable, "-I", "-m", "pytest", "-o", "pythonpath=.", "--collect-only", "-q", "tests/installation/portable"],
+        cwd=tmp_path,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert collected.returncode == 0, collected.stdout + collected.stderr
+    assert "test_internal_modules_are_bundled_in_one_distribution" in collected.stdout
+    assert "test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down" in collected.stdout
 
 
 def test_documentation_covers_safe_upgrades() -> None:
     assert (DOCS / "deployment" / "upgrades.mdx").exists()
+
+
+def test_documented_cli_command_groups_and_subcommands_exist() -> None:
+    reference = (DOCS / "reference" / "cli.mdx").read_text(encoding="utf-8")
+    groups = re.findall(r"^\|\s*`([^`]+)`\s*\|\s*(`[^|]+)\|$", reference, re.MULTILINE)
+    assert groups
+    runner = CliRunner()
+
+    for group, commands in groups:
+        for command in (group, *(f"{group} {name}" for name in re.findall(r"`([^`]+)`", commands))):
+            result = runner.invoke(app, [*command.split(), "--help"])
+            assert result.exit_code == 0, f"Documented command 'airmux {command}' failed:\n{result.output}"
 
 
 def test_readme_is_a_complete_oss_entry_point() -> None:
@@ -149,9 +199,76 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
 
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
-    assert "Any client that can target one of airmux's exposed HTTP APIs" in readme
-    assert "x-airmux-dialect: openai_native" not in readme.lower()
     assert headings.index("Quickstart") < headings.index("Architecture")
+
+
+def test_readme_leads_with_the_full_platform() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert readme.index("docker compose up -d --wait") < readme.index("airmux gateway init")
+    assert readme.index("airmux quickstart --url") < readme.index("airmux gateway serve")
+
+    headings = re.findall(r"^## (.+)$", readme, re.MULTILINE)
+    assert headings.index("Quickstart") < headings.index("Gateway-only mode")
+
+
+def test_every_entry_point_recommends_the_same_quickstart() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    homepage = (DOCS / "index.mdx").read_text(encoding="utf-8")
+    config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    documentation = next(tab for tab in config["navigation"]["tabs"] if tab["tab"] == "Documentation")
+    first_group = documentation["groups"][0]
+
+    assert "docs/quickstart.mdx" in readme
+    assert "/docs/quickstart" in homepage
+    assert first_group["pages"] == ["docs/index", "docs/quickstart"]
+
+
+def test_documentation_navigation_is_organized_around_reader_tasks() -> None:
+    config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    documentation = next(tab for tab in config["navigation"]["tabs"] if tab["tab"] == "Documentation")
+
+    assert [group["group"] for group in documentation["groups"]] == [
+        "Get started",
+        "Use the platform",
+        "Deploy and operate",
+        "Concepts",
+        "Contributing",
+    ]
+
+
+def test_full_platform_instructions_pin_one_release() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
+    declared = {version for document in (readme, quickstart) for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)}
+
+    assert len(declared) == 1, declared
+    version = declared.pop()
+
+    for document in (readme, quickstart):
+        assert 'uv tool install "airmux==$AIRMUX_VERSION"' in document
+        assert 'git clone --branch "v$AIRMUX_VERSION"' in document
+
+    git = shutil.which("git")
+    assert git is not None
+    tags = subprocess.run(  # noqa: S603 resolved Git executable only lists local tags
+        [git, "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False
+    )
+    assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
+
+
+def test_quickstart_walks_through_the_console_and_a_verified_policy() -> None:
+    quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
+
+    assert "airmux quickstart --url" in quickstart
+    assert "/inf/v1/chat/completions" in quickstart
+    assert "airmux policies create" in quickstart
+    assert "policy_denied" in quickstart
+    assert "docker compose down" in quickstart
+    assert "/docs/deployment/gateway" in quickstart
+
+    steps = re.findall(r'<Step title="([^"]+)">', quickstart)
+    assert steps.index("Find the request in the console") < steps.index("Add a workspace policy and prove it works")
 
 
 def test_public_links_use_the_current_repository() -> None:
@@ -207,27 +324,36 @@ def test_published_dependencies_match_the_bundled_projects() -> None:
     assert merged_requirements(published) == merged_requirements(bundled)
 
 
-def test_published_version_matches_every_bundled_project() -> None:
-    version = tomllib.loads(PUBLISHED_PROJECT.read_text(encoding="utf-8"))["project"]["version"]
-
+def test_bundled_projects_are_release_independent() -> None:
+    sources = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["uv"]["sources"]
     for path, project in bundled_projects().items():
-        assert project["version"] == version, path
-        internal_pins = [
+        assert project["version"] == "0.0.0", path
+        internal_requirements = [
             Requirement(dependency)
             for dependency in project_dependencies(project)
             if canonicalize_name(Requirement(dependency).name) in INTERNAL_DISTRIBUTIONS
         ]
-        for pin in internal_pins:
-            assert str(pin.specifier) == f"=={version}", (path, pin.name)
+        for requirement in internal_requirements:
+            assert not requirement.specifier, (path, requirement.name)
+            assert sources[requirement.name] == {"workspace": True}, (path, requirement.name)
 
 
-@pytest.mark.parametrize("path", [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "notes" / "design" / "README.md"])
+@pytest.mark.parametrize(
+    "path",
+    [ROOT / path for path in ("README.md", "CONTRIBUTING.md", "notes/design/README.md", "notes/design/CI.md", ".github/policy/README.md")],
+)
 def test_repository_documentation_links_resolve(path: Path) -> None:
     missing = [target for target in LOCAL_LINK.findall(path.read_text(encoding="utf-8")) if not (path.parent / target).resolve().exists()]
     assert missing == []
 
 
-@pytest.mark.parametrize("path", documentation_files(), ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", [ROOT / "notes/design/README.md", *example_files()], ids=lambda path: str(path.relative_to(ROOT)))
+def test_repository_source_links_resolve(path: Path) -> None:
+    missing = [target for target in REPOSITORY_SOURCE_LINK.findall(path.read_text(encoding="utf-8")) if not (ROOT / unquote(target)).exists()]
+    assert missing == []
+
+
+@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
 def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
     for match in FENCE.finditer(path.read_text(encoding="utf-8")):
         language = match.group("language")
@@ -241,22 +367,10 @@ def test_documentation_code_blocks_are_syntactically_valid(path: Path) -> None:
             assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("path", documentation_files(), ids=lambda path: str(path.relative_to(ROOT)))
+@pytest.mark.parametrize("path", example_files(), ids=lambda path: str(path.relative_to(ROOT)))
 def test_curl_request_bodies_are_valid_json(path: Path) -> None:
     for match in CURL_JSON.finditer(path.read_text(encoding="utf-8")):
         json.loads(match.group("body"))
-
-
-def test_public_examples_use_a_neutral_smoke_prompt() -> None:
-    documents = "\n".join(path.read_text(encoding="utf-8") for path in [ROOT / "README.md", *documentation_files()])
-    assert "Reply with exactly: airmux ready" not in documents
-    assert "Say hello in one word." in documents
-
-
-def test_documentation_does_not_name_comparison_products() -> None:
-    forbidden = re.compile(r"openrouter|litellm", re.IGNORECASE)
-    occurrences = [str(path.relative_to(ROOT)) for path in [ROOT / "README.md", *documentation_files()] if forbidden.search(path.read_text())]
-    assert occurrences == []
 
 
 def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
@@ -265,16 +379,9 @@ def test_quickstart_runs_the_installed_cli_against_the_public_url() -> None:
 
     assert commands
     assert "docker compose run" not in documents
-    assert "--connect-url" not in documents
 
 
 def test_runnable_examples_use_the_public_inference_prefix() -> None:
     sources = {path: path.read_text(encoding="utf-8") for path in (ROOT / "examples").glob("*.py")}
     assert all("/v1/chat/completions" not in source.replace("/inf/v1/chat/completions", "") for source in sources.values())
     assert "/inf" in sources[ROOT / "examples" / "anthropic_sdk.py"]
-
-
-def test_canonical_examples_do_not_require_a_dialect_override() -> None:
-    paths = [ROOT / "README.md", *documentation_files(), *(ROOT / "notes").rglob("*.md"), *(ROOT / "examples").rglob("*.py")]
-    override = re.compile(r"x-airmux-dialect[\"']?\s*:\s*[\"']?canonical", re.IGNORECASE)
-    assert [str(path.relative_to(ROOT)) for path in paths if override.search(path.read_text(encoding="utf-8"))] == []

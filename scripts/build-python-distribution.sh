@@ -15,6 +15,7 @@ mkdir -p "$stage/src"
 cp -R "$root/lib/api-models/src/api_models" "$stage/src/api_models"
 cp -R "$root/apps/cli/src/cli" "$stage/src/cli"
 cp -R "$root/lib/contract/src/contract" "$stage/src/contract"
+cp -R "$root/lib/runtime/src/airmux_runtime" "$stage/src/airmux_runtime"
 cp -R "$root/apps/control-plane/src/control_plane" "$stage/src/control_plane"
 cp -R "$root/apps/data-plane/src/data_plane" "$stage/src/data_plane"
 

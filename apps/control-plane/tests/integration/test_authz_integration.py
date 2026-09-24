@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, setup_control_plane
+from helpers import inference_key_body, make_org, make_user, make_workspace, setup_control_plane
 
 from contract import uuid7
 from control_plane.authz import Permission
@@ -29,7 +29,9 @@ def test_permission_ceiling_restricts_actions_within_a_scope(tmp_path):
         assert client.get(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", headers=reader).status_code == 200
         assert (
             client.post(
-                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys", json={"label": "blocked"}, headers=reader
+                f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+                json=inference_key_body(client, reader, "blocked"),
+                headers=reader,
             ).status_code
             == 403
         )
@@ -80,16 +82,24 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
             {
                 "event_id": str(uuid7()),
                 "request_id": str(uuid7()),
+                "request_started_at": datetime.now(tz=UTC).isoformat(),
+                "attempt_started_at": datetime.now(tz=UTC).isoformat(),
                 "occurred_at": datetime.now(tz=UTC).isoformat(),
                 "org_id": str(org_id),
                 "workspace_id": str(workspace_id),
                 "key_id": "key",
+                "request_source": "inference_key",
                 "model_id": "model",
+                "user_id": str(org_id),
+                "requested_model_id": "model",
+                "requested_capabilities": [],
                 "provider_id": "provider",
                 "bundle_id": str(uuid4()),
                 "input_tokens": 1,
+                "token_usage_source": "provider",
                 "output_tokens": 1,
-                "cost_usd": 0,
+                "max_output_tokens": 128,
+                "cost_usd": "0",
                 "latency_ms": 1,
                 "status": "ok",
                 "stream": False,

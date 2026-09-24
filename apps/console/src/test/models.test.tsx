@@ -19,7 +19,6 @@ const providers = [
     params_closed: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   },
   {
     id: 'provider-openai',
@@ -32,7 +31,6 @@ const providers = [
     params_closed: false,
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   },
 ];
 const models = [
@@ -43,10 +41,10 @@ const models = [
     name: 'anthropic/claude-sonnet-4-5',
     provider_id: providers[0].id,
     upstream_model: 'claude-sonnet-4-5-20250929',
-    input_price_per_mtok: 3,
-    output_price_per_mtok: 15,
-    cache_read_price_per_mtok: 0.3,
-    cache_write_price_per_mtok: 3.75,
+    input_price_per_mtok: '3',
+    output_price_per_mtok: '15',
+    cache_read_price_per_mtok: '0.3',
+    cache_write_price_per_mtok: '3.75',
     context_window: 200000,
     max_output_tokens: 64000,
     input_modalities: ['text'],
@@ -54,7 +52,6 @@ const models = [
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   } satisfies Api.ModelOut,
   {
     egress_kind: null,
@@ -63,10 +60,10 @@ const models = [
     name: 'openai/gpt-5',
     provider_id: providers[1].id,
     upstream_model: 'gpt-5-2025-08-07',
-    input_price_per_mtok: 1.25,
-    output_price_per_mtok: 10,
-    cache_read_price_per_mtok: 0.125,
-    cache_write_price_per_mtok: 1.25,
+    input_price_per_mtok: '1.25',
+    output_price_per_mtok: '10',
+    cache_read_price_per_mtok: '0.125',
+    cache_write_price_per_mtok: '1.25',
     context_window: 400000,
     max_output_tokens: 128000,
     input_modalities: ['text', 'image'],
@@ -74,7 +71,6 @@ const models = [
     capabilities: ['streaming', 'tools', 'structured_output', 'reasoning'],
     created_at: now,
     updated_at: now,
-    deleted_at: null,
   } satisfies Api.ModelOut,
 ];
 
@@ -107,7 +103,7 @@ describe('organization models', () => {
     expect(claude).not.toHaveTextContent('claude-sonnet-4-5-20250929');
     const modelCell = within(claude!).getByText('anthropic/claude-sonnet-4-5').closest('td');
     expect(modelCell).not.toBeNull();
-    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveAttribute('tabindex', '0');
+    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5').parentElement).toHaveAttribute('tabindex', '0');
     expect(within(modelCell!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(modelCell!).queryByText('streaming')).not.toBeInTheDocument();
     expect(claude).toHaveTextContent('$3.00');
@@ -216,7 +212,7 @@ describe('organization models', () => {
 
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
     const modelName = within(gpt!).getByText('openai/gpt-5');
-    expect(modelName).toHaveAttribute('tabindex', '0');
+    expect(modelName.parentElement).toHaveAttribute('tabindex', '0');
     expect(within(gpt!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
 

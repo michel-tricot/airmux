@@ -1,6 +1,6 @@
 import { InferenceKeyDialog } from '@/components/shared/inference-key-dialog';
 import { useState } from 'react';
-import { useRequiredOrgId } from '@/lib/session';
+import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useInferenceKeys, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
 import { Button } from '@/components/ui/elements';
 import { Plus } from 'lucide-react';
@@ -19,6 +19,7 @@ import { Modal, Badge } from '@/components/ui/elements';
 export default function WorkspaceInferenceKeys() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
+  const { user } = useSession();
 
   const authorization = useAuthorization('workspace');
   const canRead = authorization.can(inferenceKeyAccess.read);
@@ -92,7 +93,16 @@ export default function WorkspaceInferenceKeys() {
         revokePending={canRevoke ? revokeKey.isPending : undefined}
       />
 
-      {canCreate && <InferenceKeyDialog orgId={orgId} workspaceRef={workspaceRef} open={keyOpen} onOpenChange={setKeyOpen} onCreated={setToken} />}
+      {canCreate && user && (
+        <InferenceKeyDialog
+          orgId={orgId}
+          workspaceRef={workspaceRef}
+          open={keyOpen}
+          onOpenChange={setKeyOpen}
+          onCreated={setToken}
+          currentUser={user}
+        />
+      )}
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
       <Modal

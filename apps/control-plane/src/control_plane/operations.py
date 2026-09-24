@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -11,18 +12,18 @@ import yaml
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from contract.initialization import GENERATED_STATE_GITIGNORE, write_new_configuration
-from contract.taxonomy import parse_taxonomy
+from airmux_runtime.config import load_yaml
+from airmux_runtime.files import GENERATED_STATE_GITIGNORE, write_new_configuration
+from airmux_runtime.taxonomy import parse_taxonomy
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
 from control_plane.bootstrap import bootstrap_data_plane
-from control_plane.compiler import publish_changes
-from control_plane.config import Settings, load_settings
+from control_plane.config import Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
 from control_plane.keys import new_management_key
 from control_plane.migrate import current_revision, head_revision, run_migrations
-from control_plane.models import Model, Org, User, set_actor
+from control_plane.models import Model, User, set_actor
 from control_plane.taxonomy import apply_taxonomy
 
 if TYPE_CHECKING:
@@ -31,15 +32,8 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class Publication:
-    organization: str
-    version: int
-
-
-@dataclass(frozen=True)
 class FixtureResult:
     fixtures: Fixtures
-    publications: tuple[Publication, ...]
     models: int
 
 
@@ -47,7 +41,6 @@ class FixtureResult:
 class TaxonomyResult:
     providers: int
     models: int
-    publications: tuple[Publication, ...]
 
 
 @dataclass(frozen=True)
@@ -79,7 +72,17 @@ def configuration_environment(config: Path) -> Iterator[None]:
             os.environ["AIRMUX_CONFIG"] = selected
 
 
-def bootstrap_keygen(path: Path) -> None:
+def _ensure_bootstrap_key(config: Path) -> None:
+    document = load_yaml(config)
+    control_plane = document.get("control_plane") if isinstance(document, dict) else None
+    bootstrap = control_plane.get("bootstrap") if isinstance(control_plane, dict) else None
+    token = bootstrap.get("token") if isinstance(bootstrap, dict) else None
+    match = re.fullmatch(r"\$\{file:(.+)\}", token) if isinstance(token, str) else None
+    if match is None or ":-" in match.group(1):
+        return
+    path = config.parent / match.group(1)
+    if path.is_file() and not path.is_symlink():
+        return
     token, _ = new_management_key()
     write_new_configuration(path.parent, {path.name: token})
 
@@ -88,8 +91,8 @@ def initialize(directory: Path, console_url: str) -> None:
     console_url = Settings(console_url=console_url).console_url
     token, _ = new_management_key()
     bootstrap = "${file:.airmux/dataplane.key}"
-    secrets = {"kind": "file", "root": ".airmux/secrets"}
-    link = {"url": "http://127.0.0.1:8000", "token": bootstrap}
+    secrets = {"kind": "file"}
+    link = {"url": "http://127.0.0.1:8000", "management_key": bootstrap}
     config = {
         "control_plane": {
             "database": {"url": "${env:DATABASE_URL}"},
@@ -115,14 +118,18 @@ def initialize(directory: Path, console_url: str) -> None:
 
 def serve(config: Path, *, host: str, port: int, dev: bool) -> None:
     os.environ["AIRMUX_CONFIG"] = str(config)
+    _ensure_bootstrap_key(config)
+    load_settings(config)
     if dev:
-        run_migrations()
+        os.environ["AIRMUX_DEV"] = "1"
+        with database_errors():
+            run_migrations()
     uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
 
 
 def migrate(config: Path) -> MigrationResult:
     with configuration_environment(config):
-        url = load_settings(config).database.url
+        url = database_url()
         with database_errors():
             before = current_revision(url)
             run_migrations()
@@ -155,11 +162,6 @@ async def promote_owner(email: str, config: Path) -> tuple[str, bool]:
     return email, False
 
 
-async def _publish() -> tuple[Publication, ...]:
-    organizations = {organization.id: organization.name for organization in await Org.find()}
-    return tuple(Publication(organizations[bundle.org_id], bundle.version) for bundle in await publish_changes(datetime.now(tz=UTC)))
-
-
 async def seed_fixtures(config: Path) -> FixtureResult:
     settings = load_settings(config)
     with database_errors():
@@ -167,13 +169,13 @@ async def seed_fixtures(config: Path) -> FixtureResult:
             if settings.bootstrap is not None:
                 await bootstrap_data_plane(settings.bootstrap)
             fixtures = await apply_fixtures(datetime.now(tz=UTC), secret_store)
-            return FixtureResult(fixtures, await _publish(), len(await Model.find()))
+            return FixtureResult(fixtures, len(await Model.find()))
 
 
 async def apply_catalog(config: Path, path: Path) -> TaxonomyResult:
     taxonomy = parse_taxonomy(path)
-    with database_errors():
-        async with standalone_transaction(load_settings(config).database.url):
+    with configuration_environment(config), database_errors():
+        async with standalone_transaction(database_url()):
             await set_actor("root")
             providers, models = await apply_taxonomy(taxonomy)
-            return TaxonomyResult(providers, models, await _publish())
+            return TaxonomyResult(providers, models)

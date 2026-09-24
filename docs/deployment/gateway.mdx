@@ -1,10 +1,15 @@
 ---
 title: 'Gateway only'
-description: 'Install the inference gateway as a Python service with a local taxonomy and no Docker, Postgres, or control plane.'
+description: 'Run the inference gateway with a local taxonomy and no Postgres or control plane.'
 ---
 
 Run the gateway by itself when you want one inference endpoint with translation, streaming, routing, and local policies.
 You supply the model taxonomy and inference keys through files. Provider credentials resolve from your environment.
+
+<Info>
+  Gateway-only mode is an alternative to the recommended [full platform](/docs/quickstart). It has no console,
+  organizations, workspaces, managed credentials, or usage history. See [Standalone limits](#standalone-limits).
+</Info>
 
 ## Install
 
@@ -47,6 +52,13 @@ relative to the file containing them, so starting from another directory is safe
 
 The gateway binds to `127.0.0.1:8080` by default. `--host` and `--port` change the listener.
 
+`--workers N` starts independent worker processes, each with its own
+[outbound connection pool](/docs/reference/configuration#outbound-http-connections). The default is one worker.
+Measure representative traffic before changing worker or pool limits.
+
+Uvicorn access logging is disabled during normal serving. `--dev` enables access logs and Python code reload and
+requires one worker. Usage logs, request IDs, metrics, startup logs, and error diagnostics remain available in both modes.
+
 `validate` checks the configuration, taxonomy, inference keys, adapter support, references, and policy compilation.
 It does not contact providers or prove that their credentials work. A real inference request is the final verification.
 
@@ -63,8 +75,8 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
   -d '{"model":"openai/gpt-5.4-mini","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, Anthropic Messages,
-and canonical callers use the same gateway. See the [inference reference](/docs/reference/inference).
+Add `"stream": true` to the request body for streaming. OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages
+callers use the same gateway. See the [inference reference](/docs/reference/inference).
 
 ## Configuration and taxonomy
 
@@ -89,7 +101,6 @@ keys:
   - token: ${file:inference.key}
     user_id: 00000000-0000-0000-0000-000000000001
 taxonomy: taxonomy.yml
-rules: []
 policies: []
 ```
 
@@ -118,20 +129,39 @@ Keep plaintext key files private and out of version control.
 
 ## Run the same configuration in a container
 
-After initialization above, run from the directory containing `.airmux/` and the referenced taxonomy:
+You need Git and a running Docker engine. Initialization creates configuration, not a Dockerfile or source checkout.
+After initialization above, stop the native gateway if it is running so port 8080 is available. From the directory
+containing `.airmux/`, save the configuration location and clone the image source into a separate temporary directory:
 
 ```bash
-docker build --target data-plane -t airmux-gateway:local .
-docker run --rm --user "$(id -u):$(id -g)" \
-  --mount "type=bind,source=$PWD,target=/config,readonly" \
-  -e OPENAI_API_KEY -p 8080:8081 \
-  airmux-gateway:local serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
+AIRMUX_CONFIG_DIR="$PWD"
+AIRMUX_SOURCE_DIR="$(mktemp -d)/airmux"
+git clone https://github.com/michel-tricot/airmux.git "$AIRMUX_SOURCE_DIR"
+docker build -t airmux:local "$AIRMUX_SOURCE_DIR"
 ```
 
-The image entry point is `airmux gateway`, so `validate --config ...` and `serve --help` work as container arguments.
-Matching the host user allows it to read the private generated key. The read-only mount preserves the relative taxonomy
-reference. Mount any taxonomy stored outside the checkout at the corresponding path as well. No control plane or database
-is needed for this configuration.
+The build context is the source checkout at `$AIRMUX_SOURCE_DIR`. The generated configuration stays in
+`$AIRMUX_CONFIG_DIR/.airmux` and is mounted at runtime. To build a particular revision, check it out with
+`git -C "$AIRMUX_SOURCE_DIR" checkout <revision>` before the build.
+
+In the same shell, start the container with the provider key exported during initialization:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" \
+  --entrypoint airmux \
+  --mount "type=bind,source=$AIRMUX_CONFIG_DIR,target=/config,readonly" \
+  -e OPENAI_API_KEY -p 8080:8081 \
+  airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
+```
+
+The same image also runs full-platform roles, so standalone administrative commands explicitly override its role entry
+point with `airmux`. Matching the host user allows it to read the private generated key. The read-only mount preserves
+the relative taxonomy reference without changing the key's private permissions. If you used `--taxonomy` with a file
+outside the configuration directory, mount it at the path resolved by `/config/.airmux/bundle.yml` as well. No control plane
+or database is needed for this configuration.
+
+In another terminal, return to the configuration directory and run the [request commands above](#make-a-request).
+The container exposes the same readiness endpoint and public inference path at `http://127.0.0.1:8080/inf/v1/chat/completions`.
 
 ## Collect usage events locally
 
@@ -147,7 +177,8 @@ data_plane:
 Keep the existing `bundle` and `secrets` sections. The path resolves against the configuration file's directory.
 Every line is a versioned usage event from the shared contract, including routed attempts, policy denials, and
 cancelled streams. Authentication and request parsing failures do not create usage events.
-Events are readable while the gateway runs and append across restarts. Fallback produces one event per attempted
+Events become readable while the gateway runs and append across restarts. Graceful shutdown writes accepted events to
+the file, while an abrupt process or machine failure can lose events not yet written. Fallback produces one event per attempted
 route, with the same request ID connecting the attempts. See [event outboxes](/docs/reference/configuration#event-outboxes)
 for filesystem and durability semantics.
 

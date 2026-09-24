@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 FastAPI resolves path parameter annotations at runtime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from control_plane.authz import Permission
-from control_plane.deps import WorkspaceDep, require, workspace_scope
+from control_plane.deps import WorkspaceDep, require, require_all, workspace_scope
+from control_plane.models.budget import BudgetUsagePage, PolicyBudgetStatus, budget_status
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.policy import Policy, PolicyCreate, PolicyOrder, PolicyOut, PolicyUpdate
 
@@ -20,7 +23,7 @@ async def list_policies(workspace: WorkspaceDep) -> Envelope[list[PolicyOut]]:
 
 @router.post("", dependencies=[require("api", workspace_scope, Permission.policies_manage)])
 async def create_policy(workspace: WorkspaceDep, body: PolicyCreate) -> Envelope[PolicyOut]:
-    """Create a workspace inference policy; budgets are recorded but not yet enforced."""
+    """Create a workspace inference policy."""
     policy = Policy(
         org_id=workspace.org_id, workspace_id=workspace.id, name=body.name, enabled=body.enabled, priority=body.priority, definition=body.definition
     )
@@ -57,3 +60,9 @@ async def delete_policy(workspace: WorkspaceDep, policy_id: UUID) -> Envelope[De
     policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
     await policy.delete()
     return Envelope(data=DeletedOut.of(policy.id))
+
+
+@router.get("/{policy_id}/status", dependencies=[require_all("api", workspace_scope, Permission.policies_read, Permission.usage_read)])
+async def policy_status(workspace: WorkspaceDep, policy_id: UUID, page: Annotated[BudgetUsagePage, Query()]) -> Envelope[PolicyBudgetStatus]:
+    policy = await Policy.in_workspace(workspace.org_id, workspace.id, policy_id)
+    return Envelope(data=await budget_status(policy, datetime.now(UTC), page))

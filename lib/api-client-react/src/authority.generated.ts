@@ -74,6 +74,14 @@ export const operationAuthority = {
       },
     ],
   },
+  getOrgSummary: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
+      },
+    ],
+  },
   listDataPlanes: {
     checks: [
       {
@@ -138,19 +146,19 @@ export const operationAuthority = {
       },
     ],
   },
-  listOrgs: {
-    checks: [
-      {
-        scope: "instance_scope",
-        anyOf: ["organizations.read"],
-      },
-    ],
-  },
   createOrg: {
     checks: [
       {
         scope: "instance_scope",
         anyOf: ["organizations.create"],
+      },
+    ],
+  },
+  listOrgs: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["organizations.read"],
       },
     ],
   },
@@ -322,7 +330,7 @@ export const operationAuthority = {
       },
     ],
   },
-  revokeInferenceKey: {
+  listInferenceKeyOwners: {
     checks: [
       {
         scope: "workspace_scope",
@@ -330,35 +338,11 @@ export const operationAuthority = {
       },
     ],
   },
-  listRules: {
+  revokeInferenceKey: {
     checks: [
       {
         scope: "workspace_scope",
-        anyOf: ["policies.read"],
-      },
-    ],
-  },
-  createRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  updateRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
-      },
-    ],
-  },
-  deleteRule: {
-    checks: [
-      {
-        scope: "workspace_scope",
-        anyOf: ["policies.manage"],
+        anyOf: ["inference-keys.manage"],
       },
     ],
   },
@@ -399,6 +383,18 @@ export const operationAuthority = {
       {
         scope: "workspace_scope",
         anyOf: ["policies.manage"],
+      },
+    ],
+  },
+  policyStatus: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["policies.read"],
+      },
+      {
+        scope: "workspace_scope",
+        anyOf: ["usage.read"],
       },
     ],
   },
@@ -538,22 +534,6 @@ export const operationAuthority = {
       },
     ],
   },
-  republishBundle: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.publish"],
-      },
-    ],
-  },
-  listBundles: {
-    checks: [
-      {
-        scope: "org_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
   listOrgEvents: {
     checks: [
       {
@@ -578,6 +558,46 @@ export const operationAuthority = {
       },
     ],
   },
+  getUsageReport: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getAttributionReport: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getReportFilterOptions: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  listUsageRequests: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
+  getUsageRequest: {
+    checks: [
+      {
+        scope: "report_scope",
+        anyOf: ["usage.read"],
+      },
+    ],
+  },
   bundleManifest: {
     checks: [
       {
@@ -590,14 +610,6 @@ export const operationAuthority = {
     checks: [
       {
         scope: "selected_bundle_scope",
-        anyOf: ["bundles.read"],
-      },
-    ],
-  },
-  bundleLatest: {
-    checks: [
-      {
-        scope: "bundle_scope",
         anyOf: ["bundles.read"],
       },
     ],
@@ -615,6 +627,14 @@ export const operationAuthority = {
       {
         scope: "credential_scope",
         anyOf: ["data-planes.heartbeat"],
+      },
+    ],
+  },
+  syncPolicyState: {
+    checks: [
+      {
+        scope: "credential_scope",
+        anyOf: ["policy-state.sync"],
       },
     ],
   },

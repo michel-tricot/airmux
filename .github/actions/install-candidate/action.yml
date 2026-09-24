@@ -13,9 +13,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+    - uses: ./.github/actions/download-artifact
       with:
-        artifact-ids: ${{ inputs.artifact-id }}
+        artifact-id: ${{ inputs.artifact-id }}
         path: candidate
     - run: |
         uv export --locked --all-packages --all-groups --no-emit-workspace --no-hashes --output-file "$RUNNER_TEMP/constraints.txt"

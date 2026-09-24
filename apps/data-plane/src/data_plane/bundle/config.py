@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract.config import ConfigPath
+from airmux_runtime.config import ConfigPath
 from data_plane.control_plane_link import ControlPlaneLink
 
 

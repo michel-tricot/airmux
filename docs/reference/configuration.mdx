@@ -1,78 +1,69 @@
 ---
 title: 'Configuration reference'
-description: 'Reference Docker variables, runtime YAML sections, interpolation, bundle sources, event outboxes, and secret stores.'
+description: 'Reference Docker variables, runtime YAML sections, references, bundle sources, event outboxes, budget backends, and secret stores.'
 ---
 
 airmux runtime commands read YAML from `--config`, then `AIRMUX_CONFIG`. Gateway commands use
 `./.airmux/airmux.yml`, falling back to a shared `./airmux.yml` when the standalone file is absent. Control-plane
-commands use `./airmux.yml`. The all-in-one image uses `deploy/docker/airmux.yml`.
+commands use `./airmux.yml`. The airmux image uses `deploy/docker/airmux.yml`.
 
 ## Docker Compose variables
 
-| Variable                        | Default                         | Purpose                                     |
-| ------------------------------- | ------------------------------- | ------------------------------------------- |
-| `AIRMUX_PORT`                | `8080`                          | Published host port                         |
-| `AIRMUX_PUBLIC_URL`          | `http://localhost:8080`         | Compose value mapped to the console origin  |
-| `AIRMUX_PUBLIC_SIGNUP`       | `false`                         | Allow account creation after instance claim |
-| `POSTGRES_PASSWORD`             | `airmux`                     | Initial local Postgres password             |
-| `AIRMUX_IMAGE`               | `airmux:local`               | All-in-one image override                   |
-| `AIRMUX_CONTROL_PLANE_IMAGE` | `airmux-control-plane:local` | Split control-plane image override          |
-| `AIRMUX_DATA_PLANE_IMAGE`    | `airmux-data-plane:local`    | Split gateway image override                |
-| `AIRMUX_CONSOLE_IMAGE`       | `airmux-console:local`       | Split console image override                |
-
-Hosted deployments set `DATABASE_URL` directly. `DIRECT_DATABASE_URL`, when present, is used by the container startup
-migration while the application keeps the pooled URL.
+| Variable                  | Default                 | Purpose                                      |
+| ------------------------- | ----------------------- | -------------------------------------------- |
+| `AIRMUX_PORT`             | `8080`                  | Published host port                          |
+| `AIRMUX_PUBLIC_URL`       | `http://localhost:8080` | Compose value mapped to the console origin   |
+| `AIRMUX_PUBLIC_SIGNUP`    | `false`                 | Allow account creation after instance claim  |
+| `POSTGRES_PASSWORD`       | `airmux`                | Initial local Postgres password              |
+| `AIRMUX_IMAGE`            | `airmux:local`          | Image used by every role in either topology  |
 
 ## YAML structure
 
 ```yaml
-vars:
-  cache_dir: .airmux
-
 control_plane:
   database:
     url: ${env:DATABASE_URL:-postgresql+asyncpg://airmux:airmux@127.0.0.1:5432/airmux}
   bootstrap:
-    token: ${file:${var:cache_dir}/dataplane.key}
+    token: ${file:.airmux/dataplane.key}
   console_url: ${env:AIRMUX_CONSOLE_URL:-http://127.0.0.1:5000}
   public_signup: ${env:AIRMUX_PUBLIC_SIGNUP:-false}
   secrets:
     kind: file
-    root: ${var:cache_dir}/secrets
 
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane_link
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:${var:cache_dir}/dataplane.key}
-    cache_dir: ${var:cache_dir}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
     heartbeat_interval_s: 30
   events:
     kind: sqlite
     control_plane: *control_plane_link
-    cache_dir: ${var:cache_dir}
     flush_interval_s: 5
+  budget:
+    kind: control_plane
+    control_plane: *control_plane_link
+    poll_interval_s: 5
   secrets:
     kind: file
-    root: ${var:cache_dir}/secrets
 ```
 
 Both planes must configure the same secret store. A remote data plane uses a management key with bundle-read, usage-ingest, and heartbeat permissions.
 
-## References and variables
+## References
 
-| Syntax                   | Behavior                                                                                                         |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `${env:NAME}`            | Environment value; a missing reference resolves the enclosing scalar to null and required-field validation fails |
-| `${env:NAME:-fallback}`  | Environment value with a fallback                                                                                |
-| `${file:path}`           | Trimmed file contents                                                                                            |
-| `${file:path:-fallback}` | File contents with a fallback when absent                                                                        |
-| `${var:name}`            | Text substitution from the top-level `vars` mapping                                                              |
+| Syntax                   | Behavior                                               |
+| ------------------------ | ------------------------------------------------------ |
+| `${env:NAME}`            | Environment value; a missing value is an error         |
+| `${env:NAME:-fallback}`  | Environment value with a fallback                      |
+| `${file:path}`           | Trimmed file contents; a missing file is an error      |
+| `${file:path:-fallback}` | File contents with a fallback when the file is missing |
 
-Refs can appear inside a larger string. Variables resolve before environment and file refs. Relative file references and runtime
-paths resolve against the containing configuration file; a local bundle resolves its taxonomy and key references against the bundle file.
+References must occupy the whole YAML scalar. The loader does not discover `.env` files or mutate the process environment;
+CLI startup owns optional `.env` loading. Relative file references and runtime paths resolve against the containing
+configuration file. A local bundle resolves its taxonomy and key references against the bundle file.
 
 ## Bundle sources
 
@@ -83,6 +74,47 @@ paths resolve against the containing configuration file; a local bundle resolves
 
 Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle reload defaults to 2 seconds.
 
+## Outbound HTTP connections
+
+The data plane creates one outbound HTTP client per worker. Configure its connection limits under `data_plane.http`:
+
+```yaml
+data_plane:
+  http:
+    max_connections: 100
+```
+
+The default is 100 active connections. The limit must be an integer from 1 through 65,535. Whole-value environment
+or file references can supply integer strings. Booleans, fractional values, null, and unbounded limits are rejected.
+
+Each worker shares one native aiohttp session across providers, remote bundle fetching, heartbeats, and usage export.
+Connections are reused by destination, with a 15-second idle keepalive timeout. The limit bounds active connections;
+idle connections to other destinations can remain cached until they expire. Four workers with `max_connections: 256`
+can have up to 1,024 active outbound connections.
+
+Outbound requests use HTTP/1.1, including over TLS. Connect and pool acquisition share a 5-second timeout; response
+reads have a 120-second idle timeout. There is no overall inference deadline. Budget refreshes have a 5-second total
+timeout. Responses stream with backpressure, and closing a stream releases its connection slot immediately.
+
+Provider cookies are never stored, and redirects are not followed. aiohttp honors `HTTP_PROXY`, `HTTPS_PROXY`, and
+`NO_PROXY` when a proxy is configured at startup. Without a configured proxy, environment and netrc lookups are disabled
+to avoid thread-pool work on each request. Changing these settings requires restarting the gateway.
+
+## Application logs
+
+Both planes write application logs to stderr. Outside dev mode, each log record is JSON. Writes are batched until
+100 records or 65,536 characters accumulate, or a 100 ms timer expires, whichever happens first. A single large record
+is written intact. Timer delivery depends on the event loop being able to run; a blocked output stream can still block
+that loop. Error and critical records flush the pending batch immediately. Application shutdown and normal process
+exit flush remaining records. Logging outside an active event loop is immediate.
+
+Formatting happens when the event is logged, so timestamps and request IDs retain the original request context.
+Abrupt termination can lose buffered lines. Failed writes use Python logging's error handling and discard the failed
+batch rather than retrying potentially partial output. These diagnostic logs are separate from the usage-event
+outbox and do not change its accounting or persistence behavior.
+
+Dev mode keeps immediate plain-text application logs. Gateway HTTP access logs remain enabled only in dev mode.
+
 ## Event outboxes
 
 | Kind      | Use                                                                            |
@@ -91,13 +123,27 @@ Remote defaults are 30 seconds for poll and heartbeat intervals. Local bundle re
 | `file`    | Append-only local JSON Lines usage collection; requires `path`                 |
 | `devnull` | Discard usage; standalone development only                                     |
 
-SQLite flush defaults to 5 seconds. Workers sharing one gateway cache directory coordinate through the same outbox.
+SQLite export defaults to every 5 seconds. Its cache directory defaults to `.airmux` beside the configuration file,
+and the outbox writes `events.db` there. Workers sharing one gateway cache directory coordinate through that outbox.
 
 The file sink resolves `path` relative to the configuration file, creates missing parent directories, and creates new
-files with mode `0600`. It appends one complete usage event per line and flushes each event before `record` returns.
-Threads and processes sharing a local file serialize their writes. Restarting appends to the existing file.
-It has no export queue, deduplication, rotation, or `fsync` guarantee; health reports zero pending events.
-Use it on a local POSIX filesystem. File write failures propagate to the request instead of silently discarding usage.
+files with mode `0600`. It appends one complete usage event per line, and processes sharing a local file serialize their
+writes. Restarting appends to the existing file. It has no export queue, deduplication, rotation, or `fsync` guarantee.
+Use it on a local POSIX filesystem. A file write failure terminates the worker instead of silently discarding usage.
+
+SQLite and file requests do not wait for local persistence. If the outbox cannot accept an event, the gateway returns
+`503 metering_capacity_exhausted` before starting that provider attempt. Graceful shutdown writes accepted events to
+local storage. `SIGKILL`, machine failure, power loss, or storage failure can lose events not yet written.
+
+## Budget backends
+
+| Kind            | Use                                                                    |
+| --------------- | ---------------------------------------------------------------------- |
+| `control_plane` | Poll policy state from a control plane using its own link and interval |
+| `none`          | Disable budget state polling; the default for standalone gateways     |
+
+Budget configuration is independent of the bundle source and event outbox. The `control_plane` backend is best effort;
+missing, mismatched, or expired state allows requests. With `budget.kind` set to `none`, budget rules always allow requests.
 
 ## Secret stores
 
@@ -105,8 +151,7 @@ Use it on a local POSIX filesystem. File write failures propagate to the request
 | ------------------- | ---------------------------------------------------------------------- |
 | `file`              | One private file per credential; default managed deployment            |
 | `env`               | One effective credential per provider; standalone or single-tenant use |
-| `insecure_database` | Postgres-backed prototype store                                        |
-| `memory`            | Tests and ephemeral development                                        |
+| `insecure_database` | Postgres-backed prototype store; requires `airmux-runtime[insecure-database]` |
 
 The environment store checks `AIRMUX_SECRET_PROVIDER_<PROVIDER>` before `<PROVIDER>_API_KEY`. Scope and credential name
 are not part of its lookup, so it cannot isolate tenant-specific values.

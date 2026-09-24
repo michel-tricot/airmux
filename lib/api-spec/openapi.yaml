@@ -892,6 +892,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
+  /api/v1/instance/organizations/summary:
+    get:
+      tags:
+      - Instance Organizations
+      summary: Get Org Summary
+      description: 'Count all organizations on the instance, independent of collection pagination.
+
+
+        Required permission: `organizations.read`.'
+      operationId: get_org_summary
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgSummaryOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
   /api/v1/instance/data-planes:
     get:
       tags:
@@ -949,6 +983,15 @@ paths:
       - ManagementKey: []
       - SessionCookie: []
       parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -965,7 +1008,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+                $ref: '#/components/schemas/PageEnvelope_ActivityOut_'
         '422':
           description: Validation Error
           content:
@@ -1250,39 +1293,6 @@ paths:
         - principals.manage
       description: 'Required permission: `principals.manage`.'
   /api/v1/organizations:
-    get:
-      tags:
-      - Instance Organizations
-      summary: List Organizations
-      description: 'List every organization on the instance.
-
-
-        Required permission: `organizations.read`.'
-      operationId: list_orgs
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_OrgOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      x-airmux-authority:
-      - scope: instance_scope
-        anyOf:
-        - organizations.read
     post:
       tags:
       - Instance Organizations
@@ -1292,12 +1302,15 @@ paths:
 
         Required permission: `organizations.create`.'
       operationId: create_org
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/OrgCreate'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -1315,13 +1328,63 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
       x-airmux-authority:
       - scope: instance_scope
         anyOf:
         - organizations.create
+    get:
+      tags:
+      - Instance Organizations
+      summary: List Organizations
+      description: 'List every organization on the instance.
+
+
+        Required permission: `organizations.read`.'
+      operationId: list_orgs
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageEnvelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
   /api/v1/organizations/{org_id}:
     patch:
       tags:
@@ -2354,6 +2417,55 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.read
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-key-owners:
+    get:
+      tags:
+      - Workspace Inference Keys
+      summary: List Inference Key Owners
+      description: 'List principals the caller may select as an inference-key owner.
+
+
+        Required permission: `inference-keys.manage`.'
+      operationId: list_inference_key_owners
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_InferenceKeyOwnerOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - inference-keys.manage
   /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
@@ -2411,228 +2523,6 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
-  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules:
-    get:
-      tags:
-      - Workspace Rules
-      summary: List Rules
-      description: 'List reusable inference rules in a workspace.
-
-
-        Required permission: `policies.read`.'
-      operationId: list_rules
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
-        description: Workspace ID or slug
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_RuleOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: workspace_scope
-        anyOf:
-        - policies.read
-    post:
-      tags:
-      - Workspace Rules
-      summary: Create Rule
-      description: 'Create a reusable workspace rule.
-
-
-        Required permission: `policies.manage`.'
-      operationId: create_rule
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
-        description: Workspace ID or slug
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RuleCreate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_RuleOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: workspace_scope
-        anyOf:
-        - policies.manage
-  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/rules/{rule_id}:
-    patch:
-      tags:
-      - Workspace Rules
-      summary: Update Rule
-      description: 'Update a rule everywhere it is referenced.
-
-
-        Required permission: `policies.manage`.'
-      operationId: update_rule
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: rule_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Rule Id
-        description: Rule id
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
-        description: Workspace ID or slug
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RuleUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_RuleOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: workspace_scope
-        anyOf:
-        - policies.manage
-    delete:
-      tags:
-      - Workspace Rules
-      summary: Delete Rule
-      description: 'Delete an unused workspace rule.
-
-
-        Required permission: `policies.manage`.'
-      operationId: delete_rule
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: rule_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Rule Id
-        description: Rule id
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
-        description: Workspace ID or slug
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: workspace_scope
-        anyOf:
-        - policies.manage
   /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies:
     get:
       tags:
@@ -2686,7 +2576,7 @@ paths:
       tags:
       - Workspace Policies
       summary: Create Policy
-      description: 'Create a workspace inference policy; budgets are recorded but not yet enforced.
+      description: 'Create a workspace inference policy.
 
 
         Required permission: `policies.manage`.'
@@ -2910,6 +2800,106 @@ paths:
       - scope: workspace_scope
         anyOf:
         - policies.manage
+  /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status:
+    get:
+      tags:
+      - Workspace Policies
+      summary: Policy Status
+      operationId: policy_status
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: policy_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Policy Id
+        description: Policy id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: rule_index
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 0
+            exclusiveMaximum: 100
+          - type: 'null'
+          title: Rule Index
+        description: Rule index
+      - name: bucket_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 255
+          - type: 'null'
+          title: Bucket Id
+        description: Bucket id
+      - name: after_bucket
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            minLength: 1
+            maxLength: 255
+          - type: 'null'
+          title: After Bucket
+        description: After bucket
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PolicyBudgetStatus_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: workspace_scope
+        anyOf:
+        - policies.read
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
+      description: 'Required permissions: `policies.read` and `usage.read`.'
   /api/v1/instance/provider-credentials:
     get:
       tags:
@@ -3696,90 +3686,6 @@ paths:
       - scope: org_scope
         anyOf:
         - management-keys.revoke
-  /api/v1/organizations/{org_id}/bundles/republish:
-    post:
-      tags:
-      - Organization Bundles
-      summary: Republish Policy Bundle
-      description: 'Request a fresh bundle for the organization''s current configuration.
-
-
-        Required permission: `bundles.publish`.'
-      operationId: republish_bundle
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_BundleOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: org_scope
-        anyOf:
-        - bundles.publish
-  /api/v1/organizations/{org_id}/bundles:
-    get:
-      tags:
-      - Organization Bundles
-      summary: List Bundles
-      description: 'List policy bundle metadata for an organization.
-
-
-        Required permission: `bundles.read`.'
-      operationId: list_bundles
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: org_id
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Org Id
-        description: Organization ID or slug
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_BundleOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: org_scope
-        anyOf:
-        - bundles.read
   /api/v1/organizations/{org_id}/events:
     get:
       tags:
@@ -3801,46 +3707,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: before
+      - name: cursor
         in: query
         required: false
         schema:
           anyOf:
-          - type: string
-            format: date-time
+          - $ref: '#/components/schemas/CursorToken'
           - type: 'null'
-          title: Before
-        description: Return events before this timestamp; use with before_event_id
-      - name: before_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Before Event Id
-        description: Event ID that disambiguates the before timestamp
-      - name: after
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: After
-        description: Return events after this timestamp; use with after_event_id
-      - name: after_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: After Event Id
-        description: Event ID that disambiguates the after timestamp
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -3857,7 +3732,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+                $ref: '#/components/schemas/PageEnvelope_UsageEventOut_'
         '422':
           description: Validation Error
           content:
@@ -3900,46 +3775,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
-      - name: before
+      - name: cursor
         in: query
         required: false
         schema:
           anyOf:
-          - type: string
-            format: date-time
+          - $ref: '#/components/schemas/CursorToken'
           - type: 'null'
-          title: Before
-        description: Return events before this timestamp; use with before_event_id
-      - name: before_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Before Event Id
-        description: Event ID that disambiguates the before timestamp
-      - name: after
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: After
-        description: Return events after this timestamp; use with after_event_id
-      - name: after_event_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: After Event Id
-        description: Event ID that disambiguates the after timestamp
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -3956,7 +3800,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+                $ref: '#/components/schemas/PageEnvelope_UsageEventOut_'
         '422':
           description: Validation Error
           content:
@@ -3992,6 +3836,15 @@ paths:
           type: string
           title: Org Id
         description: Organization ID or slug
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
       - name: limit
         in: query
         required: false
@@ -4008,7 +3861,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+                $ref: '#/components/schemas/PageEnvelope_ActivityOut_'
         '422':
           description: Validation Error
           content:
@@ -4023,6 +3876,936 @@ paths:
       - scope: org_scope
         anyOf:
         - audit.read
+  /api/v1/organizations/{org_id}/reports/usage:
+    get:
+      tags:
+      - Organization Reports
+      summary: Get Usage Report
+      operationId: get_usage_report
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        description: Workspace id
+      - name: period
+        in: query
+        required: false
+        schema:
+          enum:
+          - today
+          - 7d
+          - 30d
+          - month_to_date
+          - custom
+          type: string
+          default: 30d
+          title: Period
+        description: Period
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+          title: Timezone
+        description: Timezone
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        description: Start date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        description: End date
+      - name: start_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start At
+        description: Start at
+      - name: end_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End At
+        description: End at
+      - name: owner_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Owner Id
+        description: Owner id
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model Id
+        description: Model id
+      - name: provider_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        description: Provider id
+      - name: credential_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        description: Provider credential ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_UsageReportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: report_scope
+        anyOf:
+        - usage.read
+      description: 'Required permission: `usage.read`.'
+  /api/v1/organizations/{org_id}/reports/attribution:
+    get:
+      tags:
+      - Organization Reports
+      summary: Get Attribution Report
+      operationId: get_attribution_report
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        description: Workspace id
+      - name: period
+        in: query
+        required: false
+        schema:
+          enum:
+          - today
+          - 7d
+          - 30d
+          - month_to_date
+          - custom
+          type: string
+          default: 30d
+          title: Period
+        description: Period
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+          title: Timezone
+        description: Timezone
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        description: Start date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        description: End date
+      - name: start_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start At
+        description: Start at
+      - name: end_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End At
+        description: End at
+      - name: owner_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Owner Id
+        description: Owner id
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model Id
+        description: Model id
+      - name: provider_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        description: Provider id
+      - name: credential_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        description: Provider credential ID
+      - name: group_by
+        in: query
+        required: false
+        schema:
+          enum:
+          - workspace
+          - owner
+          - key
+          - model
+          - provider
+          - credential
+          type: string
+          default: workspace
+          title: Group By
+        description: Group by
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+        description: Search
+      - name: sort_by
+        in: query
+        required: false
+        schema:
+          enum:
+          - cost
+          - change
+          - requests
+          type: string
+          default: cost
+          title: Sort By
+        description: Sort by
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+        description: Offset
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AttributionReportOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: report_scope
+        anyOf:
+        - usage.read
+      description: 'Required permission: `usage.read`.'
+  /api/v1/organizations/{org_id}/reports/filter-options:
+    get:
+      tags:
+      - Organization Reports
+      summary: Get Report Filter Options
+      operationId: get_report_filter_options
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        description: Workspace id
+      - name: period
+        in: query
+        required: false
+        schema:
+          enum:
+          - today
+          - 7d
+          - 30d
+          - month_to_date
+          - custom
+          type: string
+          default: 30d
+          title: Period
+        description: Period
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+          title: Timezone
+        description: Timezone
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        description: Start date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        description: End date
+      - name: start_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start At
+        description: Start at
+      - name: end_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End At
+        description: End at
+      - name: owner_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Owner Id
+        description: Owner id
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model Id
+        description: Model id
+      - name: provider_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        description: Provider id
+      - name: credential_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        description: Provider credential ID
+      - name: dimension
+        in: query
+        required: true
+        schema:
+          enum:
+          - workspace
+          - owner
+          - key
+          - model
+          - provider
+          - credential
+          type: string
+          title: Dimension
+        description: Dimension
+      - name: search
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Search
+        description: Search
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FilterOptionsOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: report_scope
+        anyOf:
+        - usage.read
+      description: 'Required permission: `usage.read`.'
+  /api/v1/organizations/{org_id}/reports/requests:
+    get:
+      tags:
+      - Organization Reports
+      summary: List Usage Requests
+      operationId: list_usage_requests
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        description: Workspace id
+      - name: period
+        in: query
+        required: false
+        schema:
+          enum:
+          - today
+          - 7d
+          - 30d
+          - month_to_date
+          - custom
+          type: string
+          default: 30d
+          title: Period
+        description: Period
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+          title: Timezone
+        description: Timezone
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        description: Start date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        description: End date
+      - name: start_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start At
+        description: Start at
+      - name: end_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End At
+        description: End at
+      - name: owner_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Owner Id
+        description: Owner id
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model Id
+        description: Model id
+      - name: provider_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        description: Provider id
+      - name: credential_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        description: Provider credential ID
+      - name: request_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Request Id
+        description: Request id
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - ok
+            - upstream_error
+            - denied
+            - timeout
+            - cancelled
+            - credential_rejected
+            - rate_limited
+            type: string
+          - type: 'null'
+          title: Status
+        description: Status
+      - name: multiple_attempts
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Multiple Attempts
+        description: Multiple attempts
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+          title: Cursor
+        description: Opaque continuation token from the previous page
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RequestPageOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: report_scope
+        anyOf:
+        - usage.read
+      description: 'Required permission: `usage.read`.'
+  /api/v1/organizations/{org_id}/reports/requests/{request_id}:
+    get:
+      tags:
+      - Organization Reports
+      summary: Get Usage Request
+      operationId: get_usage_request
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Request Id
+        description: Request id
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        description: Workspace id
+      - name: period
+        in: query
+        required: false
+        schema:
+          enum:
+          - today
+          - 7d
+          - 30d
+          - month_to_date
+          - custom
+          type: string
+          default: 30d
+          title: Period
+        description: Period
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+          title: Timezone
+        description: Timezone
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        description: Start date
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        description: End date
+      - name: start_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Start At
+        description: Start at
+      - name: end_at
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: End At
+        description: End at
+      - name: owner_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Owner Id
+        description: Owner id
+      - name: key_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Id
+        description: Management key ID
+      - name: model_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model Id
+        description: Model id
+      - name: provider_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Id
+        description: Provider id
+      - name: credential_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        description: Provider credential ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RequestDetailOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airmux-authority:
+      - scope: report_scope
+        anyOf:
+        - usage.read
+      description: 'Required permission: `usage.read`.'
   /api/v1/bundles/manifest:
     get:
       tags:
@@ -4100,57 +4883,12 @@ paths:
       - scope: selected_bundle_scope
         anyOf:
         - bundles.read
-  /api/v1/bundle/latest:
-    get:
-      tags:
-      - Data Plane API
-      summary: Get Latest Bundle
-      description: 'Return the newest policy bundle available at the requested organization scope.
-
-
-        Required permission: `bundles.read`.'
-      operationId: bundle_latest
-      security:
-      - ManagementKey: []
-      - SessionCookie: []
-      parameters:
-      - name: org_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-        description: Organization whose latest bundle to return; omit to use the credential's scope
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_BundleV1_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-        '401':
-          description: Authentication failed
-        '403':
-          description: The credential does not have the required permission
-      x-airmux-authority:
-      - scope: bundle_scope
-        anyOf:
-        - bundles.read
   /api/v1/events:
     post:
       tags:
       - Data Plane API
       summary: Ingest Usage Events
-      description: 'Ingest up to 1,000 usage events; repeated event IDs are ignored.
+      description: 'Ingest up to 1,000 usage events, skipping unauthorized or semantically invalid events.
 
 
         Required permission: `usage.ingest`.'
@@ -4175,7 +4913,7 @@ paths:
                     rate_limited: '#/components/schemas/RoutedUsageEventV1'
               type: array
               maxItems: 1000
-              title: Events
+              title: Payloads
         required: true
       responses:
         '200':
@@ -4241,6 +4979,43 @@ paths:
       - scope: credential_scope
         anyOf:
         - data-planes.heartbeat
+  /api/v1/policy-state/sync:
+    post:
+      tags:
+      - Data Plane API
+      summary: Sync Policy State
+      operationId: sync_policy_state
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyStateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PolicyState_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - ManagementKey: []
+      - SessionCookie: []
+      x-airmux-authority:
+      - scope: credential_scope
+        anyOf:
+        - policy-state.sync
+      description: 'Required permission: `policy-state.sync`.'
   /api/v1/instance/taxonomy:
     get:
       tags:
@@ -4583,69 +5358,265 @@ components:
       - kind
       - names
       title: AllowedProviders
-    Budget-Input:
+    AttributionItemOut:
       properties:
-        kind:
+        id:
           type: string
-          const: budget
-          title: Kind
-        period:
+          title: Id
+        name:
           type: string
-          enum:
-          - day
-          - month
-          title: Period
-        amount_usd:
+          title: Name
+        requests:
+          type: integer
+          title: Requests
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        previous_cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Previous Cost Usd
+      type: object
+      required:
+      - id
+      - name
+      - requests
+      - input_tokens
+      - output_tokens
+      - cost_usd
+      - previous_cost_usd
+      title: AttributionItemOut
+    AttributionReportOut:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AttributionItemOut'
+          type: array
+          title: Items
+        next_offset:
           anyOf:
-          - type: number
-            exclusiveMinimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Amount Usd
-        sharing:
-          type: string
-          enum:
-          - shared
-          - per_key
-          title: Sharing
-      additionalProperties: false
+          - type: integer
+          - type: 'null'
+          title: Next Offset
       type: object
       required:
-      - kind
-      - period
-      - amount_usd
-      - sharing
-      title: Budget
-    Budget-Output:
+      - items
+      - next_offset
+      title: AttributionReportOut
+    Budget:
       properties:
         kind:
           type: string
           const: budget
           title: Kind
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
         period:
           type: string
           enum:
           - day
           - month
           title: Period
-        amount_usd:
-          type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Amount Usd
-        sharing:
+        aggregation:
           type: string
           enum:
           - shared
           - per_key
-          title: Sharing
+          title: Aggregation
       additionalProperties: false
       type: object
       required:
       - kind
-      - period
       - amount_usd
-      - sharing
+      - period
+      - aggregation
       title: Budget
+    BudgetBucketStatus:
+      properties:
+        bucket:
+          oneOf:
+          - $ref: '#/components/schemas/SharedBudgetBucket'
+          - $ref: '#/components/schemas/KeyBudgetBucket'
+          title: Bucket
+          discriminator:
+            propertyName: kind
+            mapping:
+              key: '#/components/schemas/KeyBudgetBucket'
+              shared: '#/components/schemas/SharedBudgetBucket'
+        spent_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Spent Usd
+        remaining_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Remaining Usd
+        exhausted:
+          type: boolean
+          title: Exhausted
+      type: object
+      required:
+      - bucket
+      - spent_usd
+      - remaining_usd
+      - exhausted
+      title: BudgetBucketStatus
+    BudgetRuleStatus:
+      properties:
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        aggregation:
+          type: string
+          enum:
+          - shared
+          - per_key
+          title: Aggregation
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        buckets:
+          items:
+            $ref: '#/components/schemas/BudgetBucketStatus'
+          type: array
+          title: Buckets
+        next_bucket:
+          anyOf:
+          - oneOf:
+            - $ref: '#/components/schemas/SharedBudgetBucket'
+            - $ref: '#/components/schemas/KeyBudgetBucket'
+            discriminator:
+              propertyName: kind
+              mapping:
+                key: '#/components/schemas/KeyBudgetBucket'
+                shared: '#/components/schemas/SharedBudgetBucket'
+          - type: 'null'
+          title: Next Bucket
+      type: object
+      required:
+      - rule_index
+      - aggregation
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - buckets
+      - next_bucket
+      title: BudgetRuleStatus
+    BudgetState:
+      properties:
+        policy_id:
+          type: string
+          format: uuid
+          title: Policy Id
+        rule_index:
+          type: integer
+          exclusiveMaximum: 100.0
+          minimum: 0.0
+          title: Rule Index
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        target:
+          oneOf:
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
+          - $ref: '#/components/schemas/SelectedKeys'
+          title: Target
+          discriminator:
+            propertyName: kind
+            mapping:
+              selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
+        match:
+          oneOf:
+          - $ref: '#/components/schemas/AllRequests'
+          - $ref: '#/components/schemas/RequestMatch-Output'
+          title: Match
+          discriminator:
+            propertyName: kind
+            mapping:
+              all_requests: '#/components/schemas/AllRequests'
+              request: '#/components/schemas/RequestMatch-Output'
+        aggregation:
+          type: string
+          enum:
+          - shared
+          - per_key
+          title: Aggregation
+        amount_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Amount Usd
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          title: Period
+        window_start:
+          type: string
+          format: date-time
+          title: Window Start
+        window_end:
+          type: string
+          format: date-time
+          title: Window End
+        exhausted_buckets:
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/SharedBudgetBucket'
+            - $ref: '#/components/schemas/KeyBudgetBucket'
+            discriminator:
+              propertyName: kind
+              mapping:
+                key: '#/components/schemas/KeyBudgetBucket'
+                shared: '#/components/schemas/SharedBudgetBucket'
+          type: array
+          title: Exhausted Buckets
+      additionalProperties: false
+      type: object
+      required:
+      - policy_id
+      - rule_index
+      - workspace_id
+      - target
+      - match
+      - aggregation
+      - amount_usd
+      - period
+      - window_start
+      - window_end
+      - exhausted_buckets
+      title: BudgetState
     BundleManifest:
       properties:
         bundles:
@@ -4653,6 +5624,7 @@ components:
             $ref: '#/components/schemas/BundleManifestEntry'
           type: array
           title: Bundles
+      additionalProperties: false
       type: object
       required:
       - bundles
@@ -4668,36 +5640,13 @@ components:
           type: string
           format: uuid
           title: Bundle Id
+      additionalProperties: false
       type: object
       required:
       - org_id
       - bundle_id
       title: BundleManifestEntry
       description: The immutable identity of one organization bundle available to a data plane.
-    BundleOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        version:
-          type: integer
-          title: Version
-        issued_at:
-          type: string
-          format: date-time
-          title: Issued At
-      type: object
-      required:
-      - id
-      - org_id
-      - version
-      - issued_at
-      title: BundleOut
     BundleV1:
       properties:
         schema_version:
@@ -4724,16 +5673,12 @@ components:
           title: Keys
         catalog:
           $ref: '#/components/schemas/Catalog'
-        rules:
-          items:
-            $ref: '#/components/schemas/RuleEntry'
-          type: array
-          title: Rules
         policies:
           items:
             $ref: '#/components/schemas/PolicyEntry'
           type: array
           title: Policies
+      additionalProperties: false
       type: object
       required:
       - bundle_id
@@ -4741,7 +5686,6 @@ components:
       - issued_at
       - keys
       - catalog
-      - rules
       - policies
       title: BundleV1
       description: A complete, versioned policy snapshot for one organization's model traffic.
@@ -4762,6 +5706,8 @@ components:
             $ref: '#/components/schemas/CredentialEntry'
           type: array
           title: Credentials
+          default: []
+      additionalProperties: false
       type: object
       required:
       - providers
@@ -4971,6 +5917,7 @@ components:
         version:
           type: integer
           title: Version
+      additionalProperties: false
       type: object
       required:
       - ref
@@ -4981,6 +5928,11 @@ components:
 
 
         The secret value is not included. A version change tells data planes to refresh their cached value.'
+    CursorToken:
+      type: string
+      maxLength: 512
+      minLength: 1
+      pattern: ^[A-Za-z0-9_-]+$
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -5079,11 +6031,20 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
+        attempt_started_at:
+          type: 'null'
+          title: Attempt Started At
+          description: No provider attempt was made
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when the attempt or denial completed
         org_id:
           type: string
           format: uuid
@@ -5099,7 +6060,36 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Principal that owned the caller credential when the request was made
+        requested_model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Requested Model Id
+          description: Original caller-requested model before routing and fallback
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          uniqueItems: true
+          title: Requested Capabilities
+          description: Original request capabilities before reconciliation
         model_id:
           type: string
           maxLength: 255
@@ -5130,22 +6120,30 @@ components:
           title: Output Tokens
           description: Total output tokens
         cost_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
           description: Total estimated cost in USD
         cost_input_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
           description: Estimated input cost in USD
-          default: 0.0
+          default: '0'
         cost_output_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
           description: Estimated output cost in USD
-          default: 0.0
+          default: '0'
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+          description: Effective upstream output-token limit
         cache_read_tokens:
           type: integer
           maximum: 2147483647.0
@@ -5165,7 +6163,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           const: denied
@@ -5184,22 +6182,34 @@ components:
           type: 'null'
           title: Credential Scope
           description: No provider credential scope was selected before denial
+        token_usage_source:
+          type: string
+          const: not_applicable
+          title: Token Usage Source
+          description: No upstream token usage for a request denied before routing
       additionalProperties: false
       type: object
       required:
       - event_id
       - request_id
+      - request_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - bundle_id
       - input_tokens
       - output_tokens
       - cost_usd
+      - max_output_tokens
       - latency_ms
       - stream
+      - token_usage_source
       title: DeniedUsageEventV1
     DenyRequest:
       properties:
@@ -5242,6 +6252,14 @@ components:
       - personal_org_id
       - pending_invitations
       title: EnrollOut
+    Envelope_AttributionReportOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/AttributionReportOut'
+      type: object
+      required:
+      - data
+      title: Envelope[AttributionReportOut]
     Envelope_BundleManifest_:
       properties:
         data:
@@ -5250,14 +6268,6 @@ components:
       required:
       - data
       title: Envelope[BundleManifest]
-    Envelope_BundleOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/BundleOut'
-      type: object
-      required:
-      - data
-      title: Envelope[BundleOut]
     Envelope_BundleV1_:
       properties:
         data:
@@ -5338,6 +6348,14 @@ components:
       required:
       - data
       title: Envelope[EventsIngestedOut]
+    Envelope_FilterOptionsOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/FilterOptionsOut'
+      type: object
+      required:
+      - data
+      title: Envelope[FilterOptionsOut]
     Envelope_HeartbeatOut_:
       properties:
         data:
@@ -5466,6 +6484,14 @@ components:
       required:
       - data
       title: Envelope[OrgServiceAccountCreatedOut]
+    Envelope_OrgSummaryOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgSummaryOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgSummaryOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -5490,6 +6516,14 @@ components:
       required:
       - data
       title: Envelope[PlaygroundSessionReadyOut]
+    Envelope_PolicyBudgetStatus_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PolicyBudgetStatus'
+      type: object
+      required:
+      - data
+      title: Envelope[PolicyBudgetStatus]
     Envelope_PolicyOut_:
       properties:
         data:
@@ -5498,6 +6532,14 @@ components:
       required:
       - data
       title: Envelope[PolicyOut]
+    Envelope_PolicyState_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PolicyState'
+      type: object
+      required:
+      - data
+      title: Envelope[PolicyState]
     Envelope_ProviderCredentialOut_:
       properties:
         data:
@@ -5514,14 +6556,22 @@ components:
       required:
       - data
       title: Envelope[ProviderOut]
-    Envelope_RuleOut_:
+    Envelope_RequestDetailOut_:
       properties:
         data:
-          $ref: '#/components/schemas/RuleOut'
+          $ref: '#/components/schemas/RequestDetailOut'
       type: object
       required:
       - data
-      title: Envelope[RuleOut]
+      title: Envelope[RequestDetailOut]
+    Envelope_RequestPageOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/RequestPageOut'
+      type: object
+      required:
+      - data
+      title: Envelope[RequestPageOut]
     Envelope_TaxonomyApplyOut_:
       properties:
         data:
@@ -5538,6 +6588,14 @@ components:
       required:
       - data
       title: Envelope[TaxonomyOut]
+    Envelope_UsageReportOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/UsageReportOut'
+      type: object
+      required:
+      - data
+      title: Envelope[UsageReportOut]
     Envelope_UserOut_:
       properties:
         data:
@@ -5562,28 +6620,6 @@ components:
       required:
       - data
       title: Envelope[WorkspaceOut]
-    Envelope_list_ActivityOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ActivityOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[ActivityOut]]
-    Envelope_list_BundleOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/BundleOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[BundleOut]]
     Envelope_list_DataPlaneInstanceOut__:
       properties:
         data:
@@ -5606,6 +6642,17 @@ components:
       required:
       - data
       title: Envelope[list[InferenceKeyOut]]
+    Envelope_list_InferenceKeyOwnerOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InferenceKeyOwnerOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[InferenceKeyOwnerOut]]
     Envelope_list_ManagementKeyOut__:
       properties:
         data:
@@ -5639,17 +6686,6 @@ components:
       required:
       - data
       title: Envelope[list[OrgMemberOut]]
-    Envelope_list_OrgOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/OrgOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[OrgOut]]
     Envelope_list_PolicyOut__:
       properties:
         data:
@@ -5672,28 +6708,6 @@ components:
       required:
       - data
       title: Envelope[list[ProviderCredentialOut]]
-    Envelope_list_RuleOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/RuleOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[RuleOut]]
-    Envelope_list_UsageEventOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/UsageEventOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[UsageEventOut]]
     Envelope_list_UserOut__:
       properties:
         data:
@@ -5746,10 +6760,14 @@ components:
         ingested:
           type: integer
           title: Ingested
+        rejected:
+          type: integer
+          title: Rejected
       type: object
       required:
       - received
       - ingested
+      - rejected
       title: EventsIngestedOut
     Fallback:
       properties:
@@ -5796,6 +6814,30 @@ components:
       - max_attempts
       - timeout_ms
       title: Fallback
+    FilterOptionOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+      type: object
+      required:
+      - id
+      - name
+      title: FilterOptionOut
+    FilterOptionsOut:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/FilterOptionOut'
+          type: array
+          title: Items
+      type: object
+      required:
+      - items
+      title: FilterOptionsOut
     HTTPValidationError:
       properties:
         detail:
@@ -5864,10 +6906,16 @@ components:
           minLength: 1
           title: Label
           description: What this key is for, e.g. staging or the calling app; shown in listings
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Principal whose identity this key carries into policy evaluation
       additionalProperties: false
       type: object
       required:
       - label
+      - user_id
       title: InferenceKeyIn
     InferenceKeyOut:
       properties:
@@ -5904,12 +6952,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -5921,8 +6963,29 @@ components:
       - prefix
       - created_at
       - updated_at
-      - deleted_at
       title: InferenceKeyOut
+    InferenceKeyOwnerOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        service_account:
+          type: boolean
+          title: Service Account
+      type: object
+      required:
+      - user_id
+      - email
+      - name
+      - service_account
+      title: InferenceKeyOwnerOut
     InferenceKeyRevokedOut:
       properties:
         id:
@@ -6043,6 +7106,24 @@ components:
       required:
       - token
       title: InvitationTokenIn
+    KeyBudgetBucket:
+      properties:
+        kind:
+          type: string
+          const: key
+          title: Kind
+          default: key
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      - key_id
+      title: KeyBudgetBucket
     KeyEntry:
       properties:
         key_id:
@@ -6050,6 +7131,12 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
         org_id:
           type: string
           format: uuid
@@ -6071,15 +7158,17 @@ components:
             format: date-time
           - type: 'null'
           title: Expires At
+      additionalProperties: false
       type: object
       required:
       - key_id
+      - request_source
       - org_id
       - workspace_id
       - user_id
       - token_hash
       title: KeyEntry
-      description: 'An active inference key included in a policy bundle.
+      description: 'An active caller credential included in a policy bundle.
 
 
         The bundle contains a token hash for authorization and a key ID for usage attribution, never
@@ -6164,12 +7253,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -6196,7 +7279,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       - token
@@ -6288,12 +7370,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           $ref: '#/components/schemas/Scope'
         status:
@@ -6317,7 +7393,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - scope
       - status
       title: ManagementKeyOut
@@ -6412,31 +7487,46 @@ components:
       properties:
         model_id:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Model Id
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         upstream_model:
           type: string
+          maxLength: 255
+          minLength: 1
           title: Upstream Model
         input_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
         output_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
         cache_read_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
         cache_write_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
+          maximum: 100000000.0
+          minimum: 1.0
           title: Context Window
         max_output_tokens:
           anyOf:
           - type: integer
+            maximum: 100000000.0
+            minimum: 1.0
           - type: 'null'
           title: Max Output Tokens
         input_modalities:
@@ -6474,6 +7564,7 @@ components:
             - reasoning
             - structured_output
           type: array
+          maxItems: 4
           title: Capabilities
         parameter_support:
           additionalProperties:
@@ -6482,12 +7573,17 @@ components:
             - supported
             - unsupported
           type: object
+          maxProperties: 128
           title: Parameter Support
         egress_kind:
           anyOf:
           - type: string
+            maxLength: 63
+            minLength: 1
+            pattern: ^[a-z0-9][a-z0-9_]*$
           - type: 'null'
           title: Egress Kind
+      additionalProperties: false
       type: object
       required:
       - model_id
@@ -6534,29 +7630,29 @@ components:
           title: Egress Kind
           description: Per-model egress adapter override
         input_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
           description: USD per million input tokens
-          default: 0.0
+          default: '0'
         output_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
           description: USD per million output tokens
-          default: 0.0
+          default: '0'
         cache_read_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
           description: USD per million cache-read input tokens
-          default: 0.0
+          default: '0'
         cache_write_price_per_mtok:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
           description: USD per million cache-write input tokens
-          default: 0.0
+          default: '0'
         context_window:
           type: integer
           maximum: 100000000.0
@@ -6652,16 +7748,20 @@ components:
           - type: 'null'
           title: Egress Kind
         input_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Input Price Per Mtok
         output_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Output Price Per Mtok
         cache_read_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Read Price Per Mtok
         cache_write_price_per_mtok:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cache Write Price Per Mtok
         context_window:
           type: integer
@@ -6719,12 +7819,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -6744,7 +7838,6 @@ components:
       - parameter_support
       - created_at
       - updated_at
-      - deleted_at
       title: ModelOut
     MyPermissionsOut:
       properties:
@@ -6886,12 +7979,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         status:
           type: string
           enum:
@@ -6915,7 +8002,6 @@ components:
       - revoked_at
       - created_at
       - updated_at
-      - deleted_at
       - status
       title: OrgInvitationOut
     OrgInvitationRevokedOut:
@@ -7009,12 +8095,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7023,8 +8103,24 @@ components:
       - personal_for
       - created_at
       - updated_at
-      - deleted_at
       title: OrgOut
+    OrgPolicyState:
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        budgets:
+          items:
+            $ref: '#/components/schemas/BudgetState'
+          type: array
+          title: Budgets
+      additionalProperties: false
+      type: object
+      required:
+      - org_id
+      - budgets
+      title: OrgPolicyState
     OrgRole:
       type: string
       enum:
@@ -7064,6 +8160,17 @@ components:
       - name
       - management_key
       title: OrgServiceAccountIn
+    OrgSummaryOut:
+      properties:
+        total:
+          type: integer
+          minimum: 0.0
+          title: Total
+          description: Number of organizations currently on the instance, including personal organizations
+      type: object
+      required:
+      - total
+      title: OrgSummaryOut
     OrgUpdate:
       properties:
         name:
@@ -7077,6 +8184,62 @@ components:
       additionalProperties: false
       type: object
       title: OrgUpdate
+    PageEnvelope_ActivityOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ActivityOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[ActivityOut]
+    PageEnvelope_OrgOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrgOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[OrgOut]
+    PageEnvelope_UsageEventOut_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UsageEventOut'
+          type: array
+          maxItems: 200
+          title: Data
+        page:
+          $ref: '#/components/schemas/PageInfo'
+      type: object
+      required:
+      - data
+      - page
+      title: PageEnvelope[UsageEventOut]
+    PageInfo:
+      properties:
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      type: object
+      required:
+      - next_cursor
+      title: PageInfo
     PasswordChangeIn:
       properties:
         current_password:
@@ -7136,8 +8299,8 @@ components:
       - policies.read
       - policies.manage
       - playground.execute
+      - policy-state.sync
       - bundles.read
-      - bundles.publish
       - usage.read
       - usage.ingest
       - data-planes.read
@@ -7177,6 +8340,25 @@ components:
       - expires_at
       - status
       title: PlaygroundSessionReadyOut
+    PolicyBudgetStatus:
+      properties:
+        policy:
+          $ref: '#/components/schemas/PolicyOut'
+        computed_at:
+          type: string
+          format: date-time
+          title: Computed At
+        budgets:
+          items:
+            $ref: '#/components/schemas/BudgetRuleStatus'
+          type: array
+          title: Budgets
+      type: object
+      required:
+      - policy
+      - computed_at
+      - budgets
+      title: PolicyBudgetStatus
     PolicyCreate:
       properties:
         name:
@@ -7198,15 +8380,15 @@ components:
           description: Lower numbers run first; policy ID breaks ties. All matching restrictions apply
           default: 100
         definition:
-          $ref: '#/components/schemas/PolicyDefinition'
-          description: Workspace, user, or inference key target and reusable rules. Budgets are not yet enforced
+          $ref: '#/components/schemas/PolicyDefinition-Input'
+          description: Workspace, user, or inference key target and inline rules
       additionalProperties: false
       type: object
       required:
       - name
       - definition
       title: PolicyCreate
-    PolicyDefinition:
+    PolicyDefinition-Input:
       properties:
         target:
           oneOf:
@@ -7220,20 +8402,47 @@ components:
               selected_keys: '#/components/schemas/SelectedKeys'
               selected_users: '#/components/schemas/SelectedUsers'
               workspace: '#/components/schemas/WorkspaceTarget'
-        rule_ids:
+        rules:
           items:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/RuleDefinition-Input'
           type: array
           maxItems: 100
           minItems: 1
-          title: Rule Ids
-          description: Unordered reusable rule references; a policy may contain at most one fallback rule
+          title: Rules
+          description: Unordered inline rule definitions; a policy may contain at most one fallback rule
       additionalProperties: false
       type: object
       required:
       - target
-      - rule_ids
+      - rules
+      title: PolicyDefinition
+    PolicyDefinition-Output:
+      properties:
+        target:
+          oneOf:
+          - $ref: '#/components/schemas/WorkspaceTarget'
+          - $ref: '#/components/schemas/SelectedUsers'
+          - $ref: '#/components/schemas/SelectedKeys'
+          title: Target
+          discriminator:
+            propertyName: kind
+            mapping:
+              selected_keys: '#/components/schemas/SelectedKeys'
+              selected_users: '#/components/schemas/SelectedUsers'
+              workspace: '#/components/schemas/WorkspaceTarget'
+        rules:
+          items:
+            $ref: '#/components/schemas/RuleDefinition-Output'
+          type: array
+          maxItems: 100
+          minItems: 1
+          title: Rules
+          description: Unordered inline rule definitions; a policy may contain at most one fallback rule
+      additionalProperties: false
+      type: object
+      required:
+      - target
+      - rules
       title: PolicyDefinition
     PolicyEntry:
       properties:
@@ -7256,7 +8465,7 @@ components:
           minimum: 0.0
           title: Priority
         definition:
-          $ref: '#/components/schemas/PolicyDefinition'
+          $ref: '#/components/schemas/PolicyDefinition-Output'
       additionalProperties: false
       type: object
       required:
@@ -7304,7 +8513,7 @@ components:
           type: integer
           title: Priority
         definition:
-          $ref: '#/components/schemas/PolicyDefinition'
+          $ref: '#/components/schemas/PolicyDefinition-Output'
         created_at:
           type: string
           format: date-time
@@ -7313,12 +8522,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7330,8 +8533,40 @@ components:
       - definition
       - created_at
       - updated_at
-      - deleted_at
       title: PolicyOut
+    PolicyState:
+      properties:
+        computed_at:
+          type: string
+          format: date-time
+          title: Computed At
+        organizations:
+          items:
+            $ref: '#/components/schemas/OrgPolicyState'
+          type: array
+          title: Organizations
+      additionalProperties: false
+      type: object
+      required:
+      - computed_at
+      - organizations
+      title: PolicyState
+    PolicyStateRequest:
+      properties:
+        org_ids:
+          items:
+            type: string
+            format: uuid
+          type: array
+          maxItems: 1000
+          minItems: 1
+          title: Org Ids
+          description: Organizations whose current budget state is requested
+      additionalProperties: false
+      type: object
+      required:
+      - org_ids
+      title: PolicyStateRequest
     PolicyUpdate:
       properties:
         name:
@@ -7358,40 +8593,13 @@ components:
           description: Replacement priority, with lower numbers first; omit to leave unchanged
         definition:
           anyOf:
-          - $ref: '#/components/schemas/PolicyDefinition'
+          - $ref: '#/components/schemas/PolicyDefinition-Input'
           - type: 'null'
-          description: Replace the complete target and reusable rules; omit to leave unchanged
+          description: Replace the complete target and inline rules; omit to leave unchanged
       additionalProperties: false
       type: object
       title: PolicyUpdate
-    PriceLimit-Input:
-      properties:
-        kind:
-          type: string
-          const: price_limit
-          title: Kind
-        max_input_price_per_mtok:
-          anyOf:
-          - type: number
-            minimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Max Input Price Per Mtok
-        max_output_price_per_mtok:
-          anyOf:
-          - type: number
-            minimum: 0.0
-          - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
-          title: Max Output Price Per Mtok
-      additionalProperties: false
-      type: object
-      required:
-      - kind
-      - max_input_price_per_mtok
-      - max_output_price_per_mtok
-      title: PriceLimit
-    PriceLimit-Output:
+    PriceLimit:
       properties:
         kind:
           type: string
@@ -7399,11 +8607,11 @@ components:
           title: Kind
         max_input_price_per_mtok:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          pattern: ^\d+(?:\.\d+)?$
           title: Max Input Price Per Mtok
         max_output_price_per_mtok:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,10}|(?=[\d.]{1,17}0*$)\d{0,10}\.\d{0,6}0*$)
+          pattern: ^\d+(?:\.\d+)?$
           title: Max Output Price Per Mtok
       additionalProperties: false
       type: object
@@ -7513,12 +8721,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         scope:
           type: string
           enum:
@@ -7542,7 +8744,6 @@ components:
       - fingerprint
       - created_at
       - updated_at
-      - deleted_at
       - scope
       title: ProviderCredentialOut
     ProviderCredentialUpdate:
@@ -7584,9 +8785,15 @@ components:
       properties:
         provider_id:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_-]*$
           title: Provider Id
         kind:
           type: string
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_]*$
           title: Kind
         base_url:
           type: string
@@ -7598,18 +8805,21 @@ components:
           additionalProperties:
             type: string
           type: object
+          maxProperties: 256
           title: Param Aliases
         accepted_params:
           anyOf:
           - items:
               type: string
             type: array
+            maxItems: 256
           - type: 'null'
           title: Accepted Params
         params_closed:
           type: boolean
           title: Params Closed
           default: false
+      additionalProperties: false
       type: object
       required:
       - provider_id
@@ -7717,12 +8927,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -7735,8 +8939,240 @@ components:
       - params_closed
       - created_at
       - updated_at
-      - deleted_at
       title: ProviderOut
+    ReportWindow:
+      properties:
+        start_at:
+          type: string
+          format: date-time
+          title: Start At
+        end_at:
+          type: string
+          format: date-time
+          title: End At
+        previous_start_at:
+          type: string
+          format: date-time
+          title: Previous Start At
+        previous_end_at:
+          type: string
+          format: date-time
+          title: Previous End At
+        timezone:
+          type: string
+          title: Timezone
+      type: object
+      required:
+      - start_at
+      - end_at
+      - previous_start_at
+      - previous_end_at
+      - timezone
+      title: ReportWindow
+    RequestAttemptOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        attempt_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Attempt Started At
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        provider_id:
+          type: string
+          title: Provider Id
+        model_id:
+          type: string
+          title: Model Id
+        credential_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        credential_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Credential Name
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - denied
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        cost_input_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Input Usd
+        cost_output_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Output Usd
+        token_usage_source:
+          $ref: '#/components/schemas/TokenUsageSource'
+        latency_ms:
+          type: integer
+          title: Latency Ms
+        matches_filter:
+          type: boolean
+          title: Matches Filter
+      type: object
+      required:
+      - event_id
+      - attempt_started_at
+      - occurred_at
+      - provider_id
+      - model_id
+      - credential_id
+      - credential_name
+      - status
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_usd
+      - cost_input_usd
+      - cost_output_usd
+      - token_usage_source
+      - latency_ms
+      - matches_filter
+      title: RequestAttemptOut
+    RequestDetailOut:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        started_at:
+          type: string
+          format: date-time
+          title: Started At
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - denied
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        workspace_name:
+          type: string
+          title: Workspace Name
+        key_id:
+          type: string
+          title: Key Id
+        key_name:
+          type: string
+          title: Key Name
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        user_email:
+          type: string
+          title: User Email
+        requested_model_id:
+          type: string
+          title: Requested Model Id
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        attempt_count:
+          type: integer
+          title: Attempt Count
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        within_period:
+          type: boolean
+          title: Within Period
+        attempts:
+          items:
+            $ref: '#/components/schemas/RequestAttemptOut'
+          type: array
+          title: Attempts
+      type: object
+      required:
+      - request_id
+      - started_at
+      - status
+      - workspace_id
+      - workspace_name
+      - key_id
+      - key_name
+      - request_source
+      - user_id
+      - user_email
+      - requested_model_id
+      - model_id
+      - provider_id
+      - attempt_count
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_usd
+      - within_period
+      - attempts
+      title: RequestDetailOut
     RequestLimits:
       properties:
         kind:
@@ -7828,6 +9264,119 @@ components:
       - stream
       - capabilities
       title: RequestMatch
+    RequestPageOut:
+      properties:
+        requests:
+          items:
+            $ref: '#/components/schemas/RequestSummaryOut'
+          type: array
+          title: Requests
+        next_cursor:
+          anyOf:
+          - $ref: '#/components/schemas/CursorToken'
+          - type: 'null'
+      type: object
+      required:
+      - requests
+      - next_cursor
+      title: RequestPageOut
+    RequestSummaryOut:
+      properties:
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        started_at:
+          type: string
+          format: date-time
+          title: Started At
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - denied
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        workspace_name:
+          type: string
+          title: Workspace Name
+        key_id:
+          type: string
+          title: Key Id
+        key_name:
+          type: string
+          title: Key Name
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        user_email:
+          type: string
+          title: User Email
+        requested_model_id:
+          type: string
+          title: Requested Model Id
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        attempt_count:
+          type: integer
+          title: Attempt Count
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+      type: object
+      required:
+      - request_id
+      - started_at
+      - status
+      - workspace_id
+      - workspace_name
+      - key_id
+      - key_name
+      - request_source
+      - user_id
+      - user_email
+      - requested_model_id
+      - model_id
+      - provider_id
+      - attempt_count
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_usd
+      title: RequestSummaryOut
     RoutedUsageEventV1:
       properties:
         schema_version:
@@ -7846,11 +9395,21 @@ components:
           format: uuid
           title: Request Id
           description: Data-plane request ID
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+          description: Timestamp when the logical request began
+        attempt_started_at:
+          type: string
+          format: date-time
+          title: Attempt Started At
+          description: Timestamp when the provider attempt began
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
-          description: Timestamp when the request completed
+          description: Timestamp when the attempt or denial completed
         org_id:
           type: string
           format: uuid
@@ -7866,7 +9425,36 @@ components:
           maxLength: 255
           minLength: 1
           title: Key Id
-          description: Inference key ID used for the request
+          description: Caller credential ID used for the request
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+          description: Whether the request came from an inference key or a Playground session
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+          description: Principal that owned the caller credential when the request was made
+        requested_model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Requested Model Id
+          description: Original caller-requested model before routing and fallback
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          uniqueItems: true
+          title: Requested Capabilities
+          description: Original request capabilities before reconciliation
         model_id:
           type: string
           maxLength: 255
@@ -7897,22 +9485,30 @@ components:
           title: Output Tokens
           description: Total output tokens
         cost_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
           description: Total estimated cost in USD
         cost_input_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
           description: Estimated input cost in USD
-          default: 0.0
+          default: '0'
         cost_output_usd:
-          type: number
-          minimum: 0.0
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
           description: Estimated output cost in USD
-          default: 0.0
+          default: '0'
+        max_output_tokens:
+          anyOf:
+          - type: integer
+            maximum: 2147483647.0
+            minimum: 1.0
+          - type: 'null'
+          title: Max Output Tokens
+          description: Effective upstream output-token limit
         cache_read_tokens:
           type: integer
           maximum: 2147483647.0
@@ -7932,7 +9528,7 @@ components:
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
-          description: End-to-end request latency in milliseconds
+          description: 'Gateway latency in milliseconds: per attempt when routed, end-to-end for a denial before routing'
         status:
           type: string
           enum:
@@ -7961,44 +9557,43 @@ components:
           - workspace
           title: Credential Scope
           description: Scope of the provider credential used for the request
+        token_usage_source:
+          type: string
+          enum:
+          - provider
+          - estimated
+          title: Token Usage Source
+          description: 'provider: counts accepted from upstream; estimated: gateway estimation was needed, possibly retaining
+            partial provider counts. Independent of catalog-priced cost estimates'
       additionalProperties: false
       type: object
       required:
       - event_id
       - request_id
+      - request_started_at
+      - attempt_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - provider_id
       - bundle_id
       - input_tokens
       - output_tokens
       - cost_usd
+      - max_output_tokens
       - latency_ms
       - status
       - stream
       - credential_id
       - credential_scope
+      - token_usage_source
       title: RoutedUsageEventV1
-    RuleCreate:
-      properties:
-        name:
-          type: string
-          maxLength: 200
-          minLength: 1
-          title: Name
-          description: Display name for the reusable workspace rule
-        definition:
-          $ref: '#/components/schemas/RuleDefinition-Input'
-          description: Request match and action shared by every policy that references this rule
-      additionalProperties: false
-      type: object
-      required:
-      - name
-      - definition
-      title: RuleCreate
     RuleDefinition-Input:
       properties:
         match:
@@ -8017,21 +9612,21 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Input'
+          - $ref: '#/components/schemas/PriceLimit'
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Input'
+          - $ref: '#/components/schemas/Budget'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/Budget-Input'
+              budget: '#/components/schemas/Budget'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Input'
+              price_limit: '#/components/schemas/PriceLimit'
               providers: '#/components/schemas/AllowedProviders'
               request_limits: '#/components/schemas/RequestLimits'
               strict_parameters: '#/components/schemas/StrictParameters'
@@ -8059,21 +9654,21 @@ components:
           - $ref: '#/components/schemas/AllowedProviders'
           - $ref: '#/components/schemas/DenyRequest'
           - $ref: '#/components/schemas/StrictParameters'
-          - $ref: '#/components/schemas/PriceLimit-Output'
+          - $ref: '#/components/schemas/PriceLimit'
           - $ref: '#/components/schemas/RequestLimits'
           - $ref: '#/components/schemas/CredentialAccess'
           - $ref: '#/components/schemas/Fallback'
-          - $ref: '#/components/schemas/Budget-Output'
+          - $ref: '#/components/schemas/Budget'
           title: Action
           discriminator:
             propertyName: kind
             mapping:
-              budget: '#/components/schemas/Budget-Output'
+              budget: '#/components/schemas/Budget'
               credential_access: '#/components/schemas/CredentialAccess'
               deny: '#/components/schemas/DenyRequest'
               fallback: '#/components/schemas/Fallback'
               models: '#/components/schemas/AllowedModels'
-              price_limit: '#/components/schemas/PriceLimit-Output'
+              price_limit: '#/components/schemas/PriceLimit'
               providers: '#/components/schemas/AllowedProviders'
               request_limits: '#/components/schemas/RequestLimits'
               strict_parameters: '#/components/schemas/StrictParameters'
@@ -8083,93 +9678,6 @@ components:
       - match
       - action
       title: RuleDefinition
-    RuleEntry:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        name:
-          type: string
-          maxLength: 200
-          minLength: 1
-          title: Name
-        definition:
-          $ref: '#/components/schemas/RuleDefinition-Output'
-      additionalProperties: false
-      type: object
-      required:
-      - id
-      - workspace_id
-      - name
-      - definition
-      title: RuleEntry
-    RuleOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        name:
-          type: string
-          title: Name
-        definition:
-          $ref: '#/components/schemas/RuleDefinition-Output'
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
-      type: object
-      required:
-      - id
-      - org_id
-      - workspace_id
-      - name
-      - definition
-      - created_at
-      - updated_at
-      - deleted_at
-      title: RuleOut
-    RuleUpdate:
-      properties:
-        name:
-          anyOf:
-          - type: string
-            maxLength: 200
-            minLength: 1
-          - type: 'null'
-          title: Name
-          description: Replacement display name; omit to leave unchanged
-        definition:
-          anyOf:
-          - $ref: '#/components/schemas/RuleDefinition-Input'
-          - type: 'null'
-          description: Replacement request match and action; omit to leave unchanged
-      additionalProperties: false
-      type: object
-      title: RuleUpdate
     Scope:
       properties:
         level:
@@ -8296,6 +9804,18 @@ components:
       required:
       - name
       title: ServiceAccountIn
+    SharedBudgetBucket:
+      properties:
+        kind:
+          type: string
+          const: shared
+          title: Kind
+          default: shared
+      additionalProperties: false
+      type: object
+      required:
+      - kind
+      title: SharedBudgetBucket
     SignupIn:
       properties:
         email:
@@ -8350,17 +9870,11 @@ components:
           $ref: '#/components/schemas/TaxonomyChangeCounts'
         models:
           $ref: '#/components/schemas/TaxonomyChangeCounts'
-        published:
-          items:
-            $ref: '#/components/schemas/TaxonomyPublicationOut'
-          type: array
-          title: Published
       type: object
       required:
       - dry_run
       - providers
       - models
-      - published
       title: TaxonomyApplyOut
     TaxonomyChangeCounts:
       properties:
@@ -8396,20 +9910,6 @@ components:
       - providers
       - models
       title: TaxonomyOut
-    TaxonomyPublicationOut:
-      properties:
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        version:
-          type: integer
-          title: Version
-      type: object
-      required:
-      - org_id
-      - version
-      title: TaxonomyPublicationOut
     TaxonomySpec:
       properties:
         providers:
@@ -8429,6 +9929,48 @@ components:
       additionalProperties: false
       type: object
       title: TaxonomySpec
+    TokenUsageSource:
+      type: string
+      enum:
+      - provider
+      - estimated
+      - not_applicable
+      title: TokenUsageSource
+    UsageDayOut:
+      properties:
+        requests:
+          type: integer
+          title: Requests
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+        date:
+          type: string
+          format: date-time
+          title: Date
+      type: object
+      required:
+      - requests
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_usd
+      - date
+      title: UsageDayOut
     UsageEventOut:
       properties:
         event_id:
@@ -8439,6 +9981,16 @@ components:
           type: string
           format: uuid
           title: Request Id
+        request_started_at:
+          type: string
+          format: date-time
+          title: Request Started At
+        attempt_started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Attempt Started At
         occurred_at:
           type: string
           format: date-time
@@ -8454,6 +10006,28 @@ components:
         key_id:
           type: string
           title: Key Id
+        request_source:
+          type: string
+          enum:
+          - inference_key
+          - playground
+          title: Request Source
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        requested_model_id:
+          type: string
+          title: Requested Model Id
+        requested_capabilities:
+          items:
+            type: string
+            enum:
+            - tools
+            - reasoning
+            - structured_output
+          type: array
+          title: Requested Capabilities
         model_id:
           type: string
           title: Model Id
@@ -8470,14 +10044,26 @@ components:
         output_tokens:
           type: integer
           title: Output Tokens
+        token_usage_source:
+          $ref: '#/components/schemas/TokenUsageSource'
+          description: 'Token-count provenance: provider, estimated (including partial provider counts), or not_applicable
+            for denials; independent of cost estimates'
+        max_output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Output Tokens
         cost_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Usd
         cost_input_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Input Usd
         cost_output_usd:
-          type: number
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
           title: Cost Output Usd
         cache_read_tokens:
           type: integer
@@ -8521,15 +10107,23 @@ components:
       required:
       - event_id
       - request_id
+      - request_started_at
+      - attempt_started_at
       - occurred_at
       - org_id
       - workspace_id
       - key_id
+      - request_source
+      - user_id
+      - requested_model_id
+      - requested_capabilities
       - model_id
       - provider_id
       - bundle_id
       - input_tokens
       - output_tokens
+      - token_usage_source
+      - max_output_tokens
       - cost_usd
       - cost_input_usd
       - cost_output_usd
@@ -8541,6 +10135,61 @@ components:
       - credential_id
       - credential_scope
       title: UsageEventOut
+    UsageReportOut:
+      properties:
+        totals:
+          $ref: '#/components/schemas/UsageTotalsOut'
+        comparison:
+          $ref: '#/components/schemas/UsageTotalsOut'
+        daily:
+          items:
+            $ref: '#/components/schemas/UsageDayOut'
+          type: array
+          title: Daily
+        period:
+          $ref: '#/components/schemas/ReportWindow'
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - totals
+      - comparison
+      - daily
+      - period
+      - updated_at
+      title: UsageReportOut
+    UsageTotalsOut:
+      properties:
+        requests:
+          type: integer
+          title: Requests
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        cost_usd:
+          type: string
+          pattern: ^\d+(?:\.\d+)?$
+          title: Cost Usd
+      type: object
+      required:
+      - requests
+      - input_tokens
+      - output_tokens
+      - cache_read_tokens
+      - cache_write_tokens
+      - cost_usd
+      title: UsageTotalsOut
     UserOut:
       properties:
         id:
@@ -8575,12 +10224,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
         orgs:
           items:
             type: string
@@ -8597,7 +10240,6 @@ components:
       - managing_org_id
       - created_at
       - updated_at
-      - deleted_at
       - orgs
       title: UserOut
     ValidationError:
@@ -8737,12 +10379,6 @@ components:
           type: string
           format: date-time
           title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
       type: object
       required:
       - id
@@ -8751,7 +10387,6 @@ components:
       - slug
       - created_at
       - updated_at
-      - deleted_at
       title: WorkspaceOut
     WorkspaceRole:
       type: string
@@ -8846,12 +10481,12 @@ tags:
 - name: Organization Provider Credentials
   description: Manage provider API keys available across an organization
   x-displayName: Provider Credentials
-- name: Organization Bundles
-  description: Republish and inspect policy bundles
-  x-displayName: Bundles
 - name: Organization Usage Events
   description: Inspect usage events across an organization
   x-displayName: Usage Events
+- name: Organization Reports
+  description: Explore usage and requests across an organization or one workspace
+  x-displayName: Reports
 - name: Organization Activity
   description: Inspect recent audited changes in an organization
   x-displayName: Activity
@@ -8861,9 +10496,6 @@ tags:
 - name: Workspace Settings
   description: View, update, and delete one workspace
   x-displayName: Settings
-- name: Workspace Rules
-  description: Manage reusable workspace inference rules
-  x-displayName: Rules
 - name: Workspace Policies
   description: Manage workspace inference restrictions and fallbacks
   x-displayName: Policies
@@ -8915,14 +10547,13 @@ x-tagGroups:
   - Organization Workspaces
   - Organization Management Keys
   - Organization Provider Credentials
-  - Organization Bundles
   - Organization Usage Events
+  - Organization Reports
   - Organization Activity
   - Organization Model Catalog
 - name: Workspace
   tags:
   - Workspace Settings
-  - Workspace Rules
   - Workspace Policies
   - Workspace Members
   - Workspace Management Keys

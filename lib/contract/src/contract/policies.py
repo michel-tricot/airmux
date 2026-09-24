@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from contract.events import CredentialScope
+from contract.model_types import RequestCapability
+from contract.money import UsdAmount, UsdRate
 
 PolicyName = Annotated[str, Field(min_length=1, max_length=200)]
 PolicyIdentifier = Annotated[str, Field(min_length=1, max_length=255)]
 FallbackReason = Literal["rate_limited", "upstream_unavailable", "timeout"]
-RequestCapability = Literal["tools", "reasoning", "structured_output"]
+BudgetPeriod = Literal["day", "month"]
+BudgetAggregation = Literal["shared", "per_key"]
 MAX_WORKSPACE_RULES = 100
 
 
@@ -97,8 +99,8 @@ class StrictParameters(_PolicyModel):
 
 class PriceLimit(_PolicyModel):
     kind: Literal["price_limit"]
-    max_input_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
-    max_output_price_per_mtok: Decimal = Field(ge=0, max_digits=16, decimal_places=6)
+    max_input_price_per_mtok: UsdRate
+    max_output_price_per_mtok: UsdRate
 
 
 class RequestLimits(_PolicyModel):
@@ -119,6 +121,13 @@ class CredentialAccess(_PolicyModel):
         return scopes
 
 
+class Budget(_PolicyModel):
+    kind: Literal["budget"]
+    amount_usd: UsdAmount = Field(gt=0)
+    period: BudgetPeriod
+    aggregation: BudgetAggregation
+
+
 class Fallback(_PolicyModel):
     kind: Literal["fallback"]
     models: tuple[PolicyIdentifier, ...] = Field(min_length=1, max_length=4)
@@ -134,13 +143,6 @@ class Fallback(_PolicyModel):
         return self
 
 
-class Budget(_PolicyModel):
-    kind: Literal["budget"]
-    period: Literal["day", "month"]
-    amount_usd: Decimal = Field(gt=0, max_digits=16, decimal_places=6)
-    sharing: Literal["shared", "per_key"]
-
-
 PolicyAction = Annotated[
     AllowedModels | AllowedProviders | DenyRequest | StrictParameters | PriceLimit | RequestLimits | CredentialAccess | Fallback | Budget,
     Field(discriminator="kind"),
@@ -152,28 +154,24 @@ class RuleDefinition(_PolicyModel):
     action: PolicyAction
 
 
-class RuleEntry(_PolicyModel):
-    id: UUID
-    workspace_id: UUID
-    name: PolicyName
-    definition: RuleDefinition
-
-
 class PolicyDefinition(_PolicyModel):
     target: PolicyTarget
-    rule_ids: tuple[UUID, ...] = Field(
+    rules: tuple[RuleDefinition, ...] = Field(
         min_length=1,
         max_length=MAX_WORKSPACE_RULES,
-        description="Unordered reusable rule references; a policy may contain at most one fallback rule",
+        description="Unordered inline rule definitions; a policy may contain at most one fallback rule",
     )
 
-    @field_validator("rule_ids")
+    @field_validator("rules")
     @classmethod
-    def unique_rule_ids(cls, rule_ids: tuple[UUID, ...]) -> tuple[UUID, ...]:
-        if len(set(rule_ids)) != len(rule_ids):
-            msg = "Policy rule references must be unique"
+    def valid_rules(cls, rules: tuple[RuleDefinition, ...]) -> tuple[RuleDefinition, ...]:
+        if len(set(rules)) != len(rules):
+            msg = "Policy rules must be unique"
             raise ValueError(msg)
-        return tuple(sorted(rule_ids))
+        if sum(isinstance(rule.action, Fallback) for rule in rules) > 1:
+            msg = "A policy may contain at most one fallback rule"
+            raise ValueError(msg)
+        return tuple(sorted(rules, key=lambda rule: rule.model_dump_json()))
 
 
 class PolicyEntry(_PolicyModel):

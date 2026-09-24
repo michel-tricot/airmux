@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 from uuid import UUID
 
-from sqlalchemy import text
-from sqlmodel import Field, SQLModel
+from sqlalchemy import inspect, text
+from sqlmodel import Field, SQLModel, select
 
 from contract import uuid7
 from control_plane.db import current_session
+from control_plane.models.common.pagination import PageQuery, PageSlice, keyset_page
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection
+    from sqlalchemy.orm import InstrumentedAttribute
+    from sqlalchemy.orm.mapper import Mapper
+    from sqlalchemy.sql.elements import ColumnElement
 
 UUIDV7_SHIM_DDL_V1 = (
     "CREATE FUNCTION uuidv7() RETURNS uuid LANGUAGE sql VOLATILE AS $$ "
@@ -47,3 +51,18 @@ class Identified(SQLModel):
     @classmethod
     async def find_by_id(cls, ident: UUID) -> Self | None:
         return await current_session().get(cls, ident)
+
+    @classmethod
+    async def page(
+        cls,
+        request: PageQuery,
+        *conditions: ColumnElement[bool] | bool,
+    ) -> PageSlice[Self]:
+        mapper = cast("Mapper[Any]", inspect(cls))
+        id_column = cast("InstrumentedAttribute[UUID]", mapper.all_orm_descriptors["id"])
+        return await keyset_page(
+            select(cls).where(*conditions),
+            request,
+            id_column,
+            UUID,
+        )

@@ -103,15 +103,25 @@ def assert_unprivileged(compose, service, expected):
     assert all(sum(command in server for server in servers) == 1 for command in expected), processes
 
 
-def assert_process_layout(compose, gateways, compact):
+def assert_process_layout(client, compose, gateways, compact):
     assert_installed_packages(compose, gateways[0])
+    lifecycle = ("migrate", "taxonomy")
+    services = (*lifecycle, "airmux") if compact else (*lifecycle, "control-plane", *gateways, "console")
+    containers = [docker(*compose, "ps", "--all", "--quiet", service) for service in services]
+    assert len({docker("inspect", "--format", "{{.Image}}", container) for container in containers}) == 1
+    for service in lifecycle:
+        container = docker(*compose, "ps", "--all", "--quiet", service)
+        assert docker("inspect", "--format", "{{.State.Status}} {{.State.ExitCode}}", container) == "exited 0"
     if compact:
         assert_unprivileged(compose, gateways[0], ("airmux control-plane serve", "airmux gateway serve", "nginx: master"))
-        return
-    assert_unprivileged(compose, "control-plane", ("airmux control-plane serve",))
-    for gateway in gateways:
-        assert_unprivileged(compose, gateway, ("airmux gateway serve",))
-    assert_unprivileged(compose, "console", ("nginx: master",))
+    else:
+        assert_unprivileged(compose, "control-plane", ("airmux control-plane serve",))
+        for gateway in gateways:
+            assert_unprivileged(compose, gateway, ("airmux gateway serve",))
+        assert_unprivileged(compose, "console", ("nginx: master",))
+    body = client.get("/metrics").text
+    assert "airmux_control_plane_" not in body
+    assert "airmux_data_plane_" not in body
 
 
 def assert_quickstart(public_url, config_path):
@@ -169,7 +179,12 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     org = payload(client.post("/api/v1/enroll/org", json={"name": "Deployment"}))
     base = f"/api/v1/organizations/{org['id']}"
     workspace = payload(client.post(f"{base}/workspaces", json={"name": "default"}))
-    key = payload(client.post(f"{base}/workspaces/{workspace['id']}/inference-keys", json={"label": "deployment"}))
+    key = payload(
+        client.post(
+            f"{base}/workspaces/{workspace['id']}/inference-keys",
+            json={"label": "deployment", "user_id": owner["user_id"]},
+        )
+    )
     payload(client.post("/api/v1/instance/taxonomy/providers", json={"provider_id": provider, "base_url": "http://deployment-upstream:9000"}))
     payload(
         client.post(
@@ -178,7 +193,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
         )
     )
     payload(client.post(f"{base}/provider-credentials", json={"provider": provider, "value": "deployment-test-key"}))
-    headers = {"Authorization": f"Bearer {key['token']}", "x-airmux-dialect": "openai_native"}
+    headers = {"Authorization": f"Bearer {key['token']}"}
     request = {"model": "deployment-echo", "messages": [{"role": "user", "content": "hello"}]}
     path = "/inf/v1/chat/completions"
     eventually(lambda: all(client.post(path, headers=headers, json=request).status_code == 200 for _ in range(10)))
@@ -196,7 +211,7 @@ def test_onboarding_inference_streaming_and_persistence(deployment, tmp_path):
     eventually(lambda: len(payload(client.get("/api/v1/instance/data-planes"))) == len(gateways))
     instance_ids = {instance["instance_id"] for instance in payload(client.get("/api/v1/instance/data-planes"))}
     assert len(instance_ids) == len(gateways)
-    assert_process_layout(compose, gateways, compact)
+    assert_process_layout(client, compose, gateways, compact)
 
     assert_quickstart(str(client.base_url).rstrip("/"), tmp_path / "cli.toml")
     if len(gateways) == 2:

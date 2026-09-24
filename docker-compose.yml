@@ -14,13 +14,31 @@ services:
       retries: 20
     restart: unless-stopped
 
+  migrate:
+    image: ${AIRMUX_IMAGE:-airmux:local}
+    entrypoint: ["/usr/bin/tini", "--", "airmux"]
+    command: ["control-plane", "migrate", "--config", "/app/deploy/docker/airmux.yml"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  taxonomy:
+    image: ${AIRMUX_IMAGE:-airmux:local}
+    entrypoint: ["/usr/bin/tini", "--", "airmux"]
+    command: ["control-plane", "taxonomy", "--config", "/app/deploy/docker/airmux.yml", "--file", "/app/taxonomy/taxonomy.yml"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
   airmux:
     image: ${AIRMUX_IMAGE:-airmux:local}
-    build:
-      context: .
-      target: all-in-one
-      args:
-        AIRMUX_PYTHON_BUILD: ${AIRMUX_PYTHON_BUILD:-python-build}
+    command: airmux
     environment:
       DATABASE_URL: postgresql+asyncpg://airmux:${POSTGRES_PASSWORD:-airmux}@postgres:5432/airmux
       AIRMUX_CONSOLE_URL: ${AIRMUX_PUBLIC_URL:-http://localhost:8080}
@@ -30,8 +48,8 @@ services:
     volumes:
       - state:/state
     depends_on:
-      postgres:
-        condition: service_healthy
+      taxonomy:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"]
       interval: 5s

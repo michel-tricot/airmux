@@ -147,7 +147,7 @@ def test_openapi_is_written_for_external_consumers():
     assert problems == []
 
 
-def test_event_page_stays_flat_in_the_openapi_query_contract():
+def test_event_page_uses_the_shared_query_contract():
     operation = make_app().openapi()["paths"]["/api/v1/organizations/{org_id}/events"]["get"]
     query_parameters = {parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "query"}
-    assert query_parameters == {"before", "before_event_id", "after", "after_event_id", "limit"}
+    assert query_parameters == {"cursor", "limit"}

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
+from shlex import quote
 from uuid import uuid4
 
 import httpx
@@ -12,28 +15,40 @@ import yaml
 from test_docker import ROOT, assert_completion, docker, eventually
 
 
-def test_gateway_container_serves_a_native_configuration_without_a_control_plane(tmp_path):
-    image = os.environ.get("DEPLOYMENT_GATEWAY_IMAGE")
+def test_documented_gateway_container_serves_from_a_fresh_configuration_directory(tmp_path):
+    image = os.environ.get("DEPLOYMENT_IMAGE")
     if image is None:
-        pytest.skip("set DEPLOYMENT_GATEWAY_IMAGE to the built data-plane target")
+        pytest.skip("set DEPLOYMENT_IMAGE to the built airmux image")
     network = f"airmux-standalone-{uuid4().hex[:12]}"
     upstream = f"{network}-upstream"
     gateway = f"{network}-gateway"
-    taxonomy = tmp_path / "taxonomy.yml"
-    taxonomy.write_text(
-        yaml.safe_dump(
-            {
-                "providers": [{"provider_id": "deployment", "base_url": "http://upstream:9000"}],
-                "models": [{"model_id": "echo", "provider_id": "deployment", "input_modalities": ["text"], "output_modalities": ["text"]}],
-            }
-        )
-    )
+    directory = tmp_path / "gateway config"
+    directory.mkdir()
     subprocess.run(  # noqa: S603 the test environment supplies the installed project CLI
-        [str(Path(sys.executable).parent / "airmux"), "gateway", "init", "--taxonomy", str(taxonomy), "--directory", str(tmp_path / "gateway")],
+        [str(Path(sys.executable).parent / "airmux"), "gateway", "init"],
+        cwd=directory,
         check=True,
         capture_output=True,
     )
-    key = (tmp_path / "gateway/inference.key").read_text().strip()
+    taxonomy = directory / ".airmux/taxonomy.yml"
+    taxonomy.write_text(
+        yaml.safe_dump(
+            {
+                "providers": [{"provider_id": "openai", "base_url": "http://upstream:9000"}],
+                "models": [{"model_id": "openai/gpt-5.4-mini", "provider_id": "openai", "input_modalities": ["text"], "output_modalities": ["text"]}],
+            }
+        )
+    )
+    inference_key = directory / ".airmux/inference.key"
+    assert stat.S_IMODE(inference_key.stat().st_mode) == 0o600
+    key = inference_key.read_text().strip()
+    guide = (ROOT / "docs/deployment/gateway.mdx").read_text()
+    recipe = next(block for block in re.findall(r"```bash\n(.*?)```", guide, re.DOTALL) if "docker run" in block)
+    command = (
+        recipe.replace("docker run", f"docker run -d --name {gateway} --network {network}")
+        .replace("-p 8080:8081", "-p 127.0.0.1::8081")
+        .replace("airmux:local", quote(image))
+    )
     docker("network", "create", network)
     try:
         docker(
@@ -52,35 +67,20 @@ def test_gateway_container_serves_a_native_configuration_without_a_control_plane
             image,
             "/upstream.py",
         )
-        docker(
-            "run",
-            "-d",
-            "--name",
-            gateway,
-            "--network",
-            network,
-            "--user",
-            f"{os.getuid()}:{os.getgid()}",
-            "--mount",
-            f"type=bind,source={tmp_path},target=/config,readonly",
-            "-e",
-            "DEPLOYMENT_API_KEY=deployment-test-key",
-            "-p",
-            "127.0.0.1::8081",
-            image,
-            "serve",
-            "--config",
-            "/config/gateway/airmux.yml",
-            "--host",
-            "0.0.0.0",  # noqa: S104 listen on the container interface behind a loopback-only published port
-            "--port",
-            "8081",
+        result = subprocess.run(  # noqa: S603 execute the repository's documented shell recipe
+            ["/bin/bash", "-e", "-c", command],
+            cwd=directory,
+            env={**os.environ, "AIRMUX_CONFIG_DIR": str(directory), "OPENAI_API_KEY": "deployment-test-key"},
+            text=True,
+            capture_output=True,
+            check=False,
         )
+        assert result.returncode == 0, result.stderr
         address = docker("port", gateway, "8081/tcp")
         with httpx.Client(base_url=f"http://{address}", timeout=5) as client:
             eventually(lambda: client.get("/readyz").status_code == 200)
-            body = {"model": "echo", "messages": [{"role": "user", "content": "hello"}]}
-            headers = {"Authorization": f"Bearer {key}", "X-airmux-Dialect": "openai_native"}
+            body = {"model": "openai/gpt-5.4-mini", "messages": [{"role": "user", "content": "hello"}]}
+            headers = {"Authorization": f"Bearer {key}"}
             assert client.post("/inf/v1/chat/completions", json=body).status_code == 401
             response = client.post("/inf/v1/chat/completions", headers=headers, json=body)
             assert_completion(response)

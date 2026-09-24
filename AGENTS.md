@@ -2,10 +2,12 @@
 
 ## Boundary rules, non-negotiable
 - data_plane may never import sqlalchemy, sqlmodel, asyncpg, alembic, fastapi, or control_plane.
-  The only exception is `contract/secrets/insecure_database.py`, which may use asyncpg so the
+  The only exception is `airmux_runtime/secrets/insecure_database.py`, which may use asyncpg so the
   `insecure_database` secret store can resolve a cold credential behind the data plane's
-  version-keyed, single-flight TTL cache. No other contract module may import a database driver.
-- The only shared import between planes is contract.
+  version-keyed, single-flight TTL cache. No other runtime module may import a database driver.
+- The only shared imports between planes are contract and airmux_runtime. contract contains pure
+  interchange values and schemas. airmux_runtime contains only reusable process infrastructure and
+  may not import either plane.
 - If a feature seems to need a DB read on the request path, add a field to the bundle instead. Say so before doing it.
   Cold secret resolution through `SecretStore.get(ref)` is the sole exception; secret values and
   store-specific representations never enter the bundle contract.
@@ -16,8 +18,8 @@ Canonical is the waist: N ingress dialects and M egress families all cross throu
 N+M translators, never N times M, and policy, metering and adjustments are written once against it.
 Adding an egress adapter (provider family) is one new module under egress/: subclass EgressAdapter,
 set `kind`, implement the methods. Adding an ingress adapter (caller dialect) is one new module under
-ingress/: subclass IngressAdapter, set `dialect`, implement claims, parse, render_response,
-render_error and new_stream. Either way, edit no existing file. If you think you need to edit a
+ingress/: subclass IngressAdapter, set `dialect` and `path`, implement parse, render_response,
+render_error and new_stream. Discovery adds its route. Either way, edit no existing file. If you think you need to edit a
 registry, the registry is wrong; fix the registry.
 
 - A family's JSON spelling shared by both sides of the gateway lives in formats/<family>.py, pure
@@ -25,8 +27,8 @@ registry, the registry is wrong; fix the registry.
   each other. Canonical to provider body is one body_of per family, every field mapped by hand. Never
   map fields reflectively; a name shared by two schemas is coincidence, not a rule. A spelling with a
   single consumer may stay inline in its adapter until a second consumer exists.
-- resolve() owns dialect discrimination end to end: override header, then claims() in registry order,
-  then canonical as the unclaimed default. An ingress adapter answers only "is this mine".
+- Each public inference path binds exactly one discovered ingress adapter. Headers and request-body shape never select
+  the caller protocol. Canonical models are the internal waist and are not a public HTTP dialect.
 - The transport never parses SSE. Framing lives once in egress/base.frame_sse, the single source
   of truth for the SSE machine; an adapter's frame() adds only its dialect, like OpenAI's [DONE].
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.
@@ -37,7 +39,7 @@ registry, the registry is wrong; fix the registry.
 
 ## Control plane data access
 - All DB access goes through the fat-model API on control_plane.models: Record.get/find/first/save/delete, OrgOwned.owned_by, Identified.find_by_id.
-  The shared `InsecureDatabaseSecretStore` is the sole exception: both planes use its three fixed,
+  The `airmux_runtime` `InsecureDatabaseSecretStore` is the sole exception: both planes use its three fixed,
   parameterized asyncpg statements against `insecure_vault_secret`, outside the ambient management
   transaction. No other control-plane path may use it for database access.
 - The session is ambient (ContextVar in control_plane.db). One transaction per request, committed at request end; save() flushes, never commits.
@@ -68,10 +70,11 @@ registry, the registry is wrong; fix the registry.
   one millisecond; Bundle passes its id explicitly so the stored id matches the bundle_id in its JSON payload.
 - Models list Record first, then capability mixins: Identified, OrgOwned, Tombstonable, future ones. Mixins are plain SQLModel classes
   and never subclass Record; they live in models/common.
-- Tombstonable provides created_at, updated_at, and deleted_at. The database owns the values through touch triggers installed
+- Tombstonable provides created_at and updated_at. The database owns the values through touch triggers installed
   by the migrations; the ORM never maintains them. updated_at is never null: it equals created_at on creation
-  and refreshes on every update. deleted_at stays null for now: deletes are hard until trigger-based soft delete lands
-  (blueprint in notes/IDEAS.md). Never declare those fields on a model; a model without them is one that is
+  and refreshes on every update. Deletes are hard; do not reserve a deleted_at column or resource field for deferred
+  soft deletion (blueprint in notes/IDEAS.md). DeletedOut reports the hard-delete action timestamp. Never declare
+  created_at or updated_at on a model; a model without them is one that is
   deliberately not tombstonable.
 - Trigger DDL functions are versioned (touch_trigger_ddl_v1) and frozen once a migration imports them. To change trigger SQL,
   add the next version, point test_schema's trigger install at it, and write a migration swapping the triggers.
@@ -93,7 +96,7 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Every endpoint returns Envelope: annotate `-> Envelope[XOut]` and return `Envelope(data=XOut.model_validate(row))`.
   Rows never serialize directly. Errors stay FastAPI's `{"detail": ...}`.
 - Action shapes (minted secrets, revocations) are plain BaseModel, exempt from parity by that choice. An action that
-  mints a resource returns that resource's Out (compile returns BundleOut).
+  mints a resource returns that resource's Out.
   Deletions return DeletedOut; revocations are not deletions and keep their own result models.
 - Clients unwrap the envelope in one place each: the console's customFetch, cli client payload helpers, the data plane
   poller. Never unwrap at call sites.
@@ -154,7 +157,7 @@ Line length is 150. Do not reformat unrelated lines to fit; run `ruff format` an
 
 ## CLI
 Anything started from the command line uses typer. Servers expose a typer entry point that wraps uvicorn.
-Commands are resource-first (keys list, bundles compile), grouped in help panels: Setup, Resources, Testing.
+Commands are resource-first (keys list, catalog apply), grouped in help panels: Setup, Resources, Testing.
 Any command that outputs resource data takes -f/--format (table|json|text) via FormatOption and renders
 through _print_rows with a Col spec. Do not print resource data any other way.
 

@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from sqlmodel import col
 
 from control_plane.authz import Permission
 from control_plane.deps import instance_scope, require
-from control_plane.models import AuditLog, DataPlaneInstance
+from control_plane.models import AuditLog, DataPlaneInstance, Org
 from control_plane.models.audit import ActivityOut
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common import PageDep  # noqa: TC001 FastAPI resolves route annotations at runtime
+from control_plane.models.common.wire import Envelope, PageEnvelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
+from control_plane.models.org import OrgSummaryOut
 
 router = APIRouter(prefix="/instance")
+
+
+@router.get("/organizations/summary", tags=["Instance Organizations"], dependencies=[require("api", instance_scope, Permission.organizations_read)])
+async def get_org_summary() -> Envelope[OrgSummaryOut]:
+    """Count all organizations on the instance, independent of collection pagination."""
+    return Envelope[OrgSummaryOut](data=await Org.summary())
 
 
 @router.get("/data-planes", tags=["Data Plane Instances"], dependencies=[require("api", instance_scope, Permission.data_planes_read)])
@@ -21,15 +28,15 @@ async def list_data_planes(include_offline: bool = False) -> Envelope[list[DataP
     """List data-plane instances by most recent heartbeat."""
     now = datetime.now(tz=UTC)
     instances = await DataPlaneInstance.find(order_by=col(DataPlaneInstance.last_seen).desc())
-    out = [
+    data = [
         DataPlaneInstanceOut(**instance.model_dump(), status=status)
         for instance in instances
         if (status := instance.status(now)) == "online" or include_offline
     ]
-    return Envelope(data=out)
+    return Envelope(data=data)
 
 
 @router.get("/activity", tags=["Instance Activity"], dependencies=[require("api", instance_scope, Permission.audit_read)])
-async def list_instance_activity(limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
+async def list_instance_activity(page: PageDep) -> PageEnvelope[ActivityOut]:
     """List the most recent audited changes across the instance."""
-    return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.recent(limit)])
+    return PageEnvelope.from_slice(await AuditLog.recent(page), ActivityOut.model_validate)

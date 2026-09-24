@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 
 from model_audit.provider_docs.base import ModelDocumentation, html_cells, token_count
 
 PRICE_FIELD_COUNT = 3
 
 
-def _rows(document: str, label: str) -> list[list[float]]:
+def _rows(document: str, label: str) -> list[list[Decimal]]:
     rows = re.findall(rf">{label}</td>(.*?)</tr>", document, flags=re.DOTALL | re.IGNORECASE)
-    return [[float(amount) for amount in re.findall(r"\$([\d.]+)", row)] for row in rows]
+    return [[Decimal(amount) for amount in re.findall(r"\$([\d.]+)", row)] for row in rows]
 
 
 def parse_deepseek_pricing(document: str, source: str) -> dict[str, ModelDocumentation]:
@@ -32,7 +33,7 @@ def parse_deepseek_pricing(document: str, source: str) -> dict[str, ModelDocumen
             "cached_input_per_mtok": peak[0][index],
             "output_per_mtok": peak[2][index],
         }
-        off_peak_price: dict[str, float] = {
+        off_peak_price: dict[str, Decimal] = {
             "input_per_mtok": off_peak[1][index],
             "cached_input_per_mtok": off_peak[0][index],
             "output_per_mtok": off_peak[2][index],

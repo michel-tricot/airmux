@@ -243,7 +243,12 @@ def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]
 
 def _inference_key(client: httpx.Client, org_id: str, workspace: WorkspaceOut, bearer: dict[str, str]) -> InferenceKeyCreatedOut:
     path = f"/api/v1/organizations/{org_id}/workspaces/{workspace.id}/inference-keys"
-    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key creation", InferenceKeyCreatedOut)
+    owner = _payload_or_die(client.get("/api/v1/auth/me", headers=bearer), "current principal", MeOut)
+    return _payload_or_die(
+        client.post(path, json={"label": "quickstart", "user_id": str(owner.user_id)}, headers=bearer),
+        "key creation",
+        InferenceKeyCreatedOut,
+    )
 
 
 def _gateway_error(response: httpx.Response) -> str:
@@ -273,10 +278,10 @@ def verify_gateway(gateway_url: str, token: str, model: str) -> str:
             try:
                 response = gateway.post(
                     "/inf/v1/chat/completions",
-                    headers={"authorization": f"Bearer {token}", "x-airmux-dialect": "canonical"},
+                    headers={"authorization": f"Bearer {token}"},
                     json={
                         "model": model,
-                        "messages": [{"role": "user", "content": [{"type": "text", "text": "Say hello in one word."}]}],
+                        "messages": [{"role": "user", "content": "Say hello in one word."}],
                         "stream": False,
                     },
                 )
@@ -296,7 +301,7 @@ def _curl(gateway_url: str, token: str, model: str) -> str:
         f"curl {gateway_url.rstrip('/')}/inf/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {token}' \\\n"
         "  -H 'Content-Type: application/json' \\\n"
-        f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": [{{"type": "text", "text": "hi"}}]}}]}}\''
+        f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
 
 
@@ -457,9 +462,10 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     """List the organizations you belong to."""
     from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    with access_client(control_plane_url) as c:
-        resp = c.get("/api/v1/enroll")
-        ensure_ok(resp)
-        standing = payload(resp, EnrollOut)
-        rows = [{**org.model_dump(mode="json"), "kind": "personal" if org.id == standing.personal_org_id else "member"} for org in standing.orgs]
-        print_rows("orgs", rows, MINE_COLS, fmt)
+    with access_client(control_plane_url) as client:
+        standing = payload(ensure_ok(client.get("/api/v1/enroll")), EnrollOut)
+    rows = [
+        {**organization.model_dump(mode="json"), "kind": "personal" if organization.id == standing.personal_org_id else "member"}
+        for organization in standing.orgs
+    ]
+    print_rows("orgs", rows, MINE_COLS, fmt)

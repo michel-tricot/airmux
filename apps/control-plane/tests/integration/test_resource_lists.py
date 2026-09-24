@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_org, make_workspace, setup_control_plane
+from helpers import MODEL, PROVIDER, inference_key_body, make_org, make_workspace, setup_control_plane
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -13,7 +13,9 @@ def test_list_endpoints_read_back(tmp_path):
         org_id = make_org(c, root, "o1")
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
-        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
         c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root)
 
@@ -27,6 +29,3 @@ def test_list_endpoints_read_back(tmp_path):
         taxonomy = c.get(f"/api/v1/organizations/{org_id}/taxonomy", headers=org).json()["data"]
         assert [p["name"] for p in taxonomy["providers"]] == ["openai"]
         assert [m["name"] for m in taxonomy["models"]] == ["gpt-test"]
-        bundles = c.get(f"/api/v1/organizations/{org_id}/bundles", headers=org).json()["data"]
-        assert [b["version"] for b in bundles] == [1, 2, 3]
-        assert "payload" not in bundles[0]

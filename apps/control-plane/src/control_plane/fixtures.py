@@ -4,9 +4,10 @@ Every entity below is a real model instance, so a renamed or retyped column fail
 fail against a database. That is the whole reason this is Python and not a YAML file parsed into a
 second set of shapes: there is no parallel schema here to drift out of step with models/.
 
-Nothing is minted. Ids come from uuid5 over a fixture namespace and secrets are constants, so a
-bookmarked console URL, a saved login, and a token pasted into a .env survive being reseeded from
-scratch. Seeding only runs before any human account exists: to start over, drop the database and recreate it.
+Nothing is minted. Resource ids come from uuid5 over a fixture namespace and secrets are constants, so
+resource URLs, saved logins, and tokens survive reseeding. Request ids include their sample start time
+to preserve UUIDv7 ordering. Seeding only runs before any human account exists: to start over, drop
+the database and recreate it.
 
 The tokens here are public knowledge, which is what makes them useful and what makes them
 unacceptable outside development. `airmux control-plane fixtures` refuses any database that already holds
@@ -29,12 +30,12 @@ from uuid import UUID, uuid5
 
 from sqlmodel import col
 
-from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
+from airmux_runtime.secrets import Secret, SecretRejectedError, SecretStore
+from contract import INFERENCE_TOKEN_PREFIX, TokenUsageSource, UsageStatus, token_hash
 from contract.policies import (
     AllowedModels,
     AllowedProviders,
     AllRequests,
-    Budget,
     CredentialAccess,
     DenyRequest,
     Fallback,
@@ -63,7 +64,6 @@ from control_plane.models import (
     Policy,
     Provider,
     ProviderCredential,
-    Rule,
     UsageEvent,
     User,
     Workspace,
@@ -154,11 +154,15 @@ class Fixtures:
 def fixture_id(name: str) -> UUID:
     """A stable id for a fixture entity, derived from its name rather than minted.
 
-    The one deviation from the uuid7 rule the rest of the schema keeps, and it buys the property
-    the seeder exists for: console URLs survive a reseed. Bundle is the existing precedent for a
-    row passing its own id.
+    Stable resource URLs survive a reseed. Bundle is the existing precedent for a row passing its own id.
     """
     return uuid5(FIXTURE_NAMESPACE, name)
+
+
+def fixture_request_id(name: str, started_at: datetime) -> UUID:
+    seed = fixture_id(name).int
+    timestamp_ms = int(started_at.timestamp() * 1000)
+    return UUID(int=(timestamp_ms << 80) | (0x7 << 76) | (((seed >> 64) & 0x0FFF) << 64) | (0b10 << 62) | (seed & 0x3FFF_FFFF_FFFF_FFFF))
 
 
 def inference_key(token: str, workspace: Workspace, user: User, *, label: str, revoked: bool = False) -> InferenceKey:
@@ -199,41 +203,35 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
         status=status,
     ).save()
     with contextlib.suppress(SecretRejectedError):
-        credential.fingerprint = (await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))).fingerprint
+        secret = Secret(FIXTURE_PROVIDER_KEY)
+        await store.put(credential.secret_ref(), secret)
+        credential.fingerprint = secret.fingerprint
     return await credential.save()
 
 
-async def workspace_policy(  # noqa: PLR0913 target and rule references stay explicit in fixture call sites
+async def workspace_policy(
     workspace: Workspace,
     *,
     name: str,
     priority: int,
     target: WorkspaceTarget | SelectedUsers | SelectedKeys,
-    rules: tuple[Rule, ...],
-    enabled: bool = True,
+    rules: tuple[RuleDefinition, ...],
 ) -> Policy:
     return await Policy(
         id=fixture_id(f"policy:{workspace.name}:{name}"),
         org_id=workspace.org_id,
         workspace_id=workspace.id,
         name=name,
-        enabled=enabled,
         priority=priority,
-        definition=PolicyDefinition(target=target, rule_ids=tuple(rule.id for rule in rules)),
+        definition=PolicyDefinition(target=target, rules=rules),
     ).save()
 
 
-async def workspace_rule(workspace: Workspace, *, name: str, match: AllRequests | RequestMatch, action: PolicyAction) -> Rule:
-    return await Rule(
-        id=fixture_id(f"rule:{workspace.name}:{name}"),
-        org_id=workspace.org_id,
-        workspace_id=workspace.id,
-        name=name,
-        definition=RuleDefinition.model_validate({"match": match, "action": action}),
-    ).save()
+def policy_rule(*, match: AllRequests | RequestMatch, action: PolicyAction) -> RuleDefinition:
+    return RuleDefinition.model_validate({"match": match, "action": action})
 
 
-async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
+async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime, *, report_examples: bool = False) -> None:
     """Recorded traffic for one workspace: random numbers spread over the last USAGE_DAYS.
 
     Nothing here reconciles. The costs are not the token counts times any price, because the
@@ -242,27 +240,76 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
     rng = Random(f"usage:{workspace.id}")  # noqa: S311 fixture traffic, not cryptography
     for index in range(count):
         model_id, provider_id = rng.choice(MODELS)
-        await UsageEvent(
+        occurred_at = now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400))
+        latency_ms = rng.randint(180, 4000)
+        attempt_started_at = occurred_at - timedelta(milliseconds=latency_ms)
+        cost_input_usd = Decimal(rng.randint(1000, 200000)) / 1_000_000
+        cost_output_usd = Decimal(rng.randint(1000, 300000)) / 1_000_000
+        input_tokens = rng.randint(300, 6000)
+        event = UsageEvent(
             event_id=fixture_id(f"event:{workspace.id}:{index}"),
-            request_id=fixture_id(f"request:{workspace.id}:{index}"),
-            occurred_at=now - timedelta(seconds=rng.randint(0, USAGE_DAYS * 86400)),
+            request_id=fixture_request_id(f"request:{workspace.id}:{index}", attempt_started_at),
+            request_started_at=attempt_started_at,
+            attempt_started_at=attempt_started_at,
+            occurred_at=occurred_at,
             org_id=workspace.org_id,
             workspace_id=workspace.id,
             key_id=str(key.id),
+            request_source="inference_key",
+            user_id=key.user_id,
+            requested_model_id=model_id,
+            requested_capabilities=[],
             model_id=model_id,
             provider_id=provider_id,
             bundle_id=fixture_id(f"bundle:{workspace.org_id}"),
-            input_tokens=rng.randint(300, 6000),
+            input_tokens=input_tokens,
             output_tokens=rng.randint(80, 1500),
-            cost_usd=rng.uniform(0.001, 0.5),
-            cost_input_usd=rng.uniform(0.001, 0.2),
-            cost_output_usd=rng.uniform(0.001, 0.3),
-            cache_read_tokens=rng.choice([0, rng.randint(100, 3000)]),
+            token_usage_source="estimated" if index % 3 == 0 else "provider",
+            cost_usd=cost_input_usd + cost_output_usd,
+            cost_input_usd=cost_input_usd,
+            cost_output_usd=cost_output_usd,
+            cache_read_tokens=rng.choice([0, rng.randint(100, min(3000, input_tokens))]),
             cache_write_tokens=0,
-            latency_ms=rng.randint(180, 4000),
+            latency_ms=latency_ms,
             status=rng.choice(STATUSES),
             stream=rng.choice([True, False]),
-        ).save()
+        )
+        if report_examples and index in range(4):
+            start = now - (timedelta(minutes=5) if workspace.name == "Staging" else timedelta(days=1))
+            event.request_started_at = start if index in (0, 1) else start + timedelta(seconds=index)
+            event.attempt_started_at = event.request_started_at + timedelta(milliseconds=600 if index == 1 else 0)
+            event.occurred_at = event.attempt_started_at + timedelta(milliseconds=500)
+            event.latency_ms = 500
+            match index:
+                case 0 | 1:
+                    event.model_id, event.provider_id = MODELS[0 if index == 0 else 2]
+                    event.status = "upstream_error" if index == 0 else "ok"
+                    if workspace.name == "Production":
+                        event.credential_id = fixture_id(
+                            f"provider-credential:Acme:Production:{event.provider_id}:{'primary' if index == 0 else 'default'}"
+                        )
+                        event.credential_scope = "workspace"
+                case 2:
+                    event.attempt_started_at = None
+                    event.occurred_at = event.request_started_at + timedelta(milliseconds=100)
+                    event.provider_id = ""
+                    event.input_tokens = event.output_tokens = event.cache_read_tokens = 0
+                    event.cost_usd = event.cost_input_usd = event.cost_output_usd = Decimal(0)
+                    event.token_usage_source = TokenUsageSource.NOT_APPLICABLE
+                    event.status = "denied"
+                case 3:
+                    event.cache_read_tokens = 128
+                    if workspace.name == "Staging":
+                        event.status = "upstream_error"
+                    else:
+                        event.request_source = "playground"
+                        event.key_id = str(fixture_id("playground-session:acme:production"))
+                        event.credential_id = fixture_id("provider-credential:Acme:Production:openai:primary")
+                        event.credential_scope = "workspace"
+                        event.model_id, event.provider_id = MODELS[0]
+                        event.status = "ok"
+            event.request_id = fixture_request_id(f"request:{workspace.id}:{0 if index == 1 else index}", event.request_started_at)
+        await event.save()
 
 
 async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa: PLR0915 fixture graph stays readable as one declared instance
@@ -375,9 +422,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
     await inference_key(ACME_RETIRED_TOKEN, production, dana, label="batch-jobs", revoked=True).save()
 
-    team_credentials = await workspace_rule(
-        production,
-        name="Streaming team credentials",
+    team_credentials = policy_rule(
         match=RequestMatch(kind="request", stream=True),
         action=CredentialAccess(kind="credential_access", scopes=("workspace", "org")),
     )
@@ -388,9 +433,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=WorkspaceTarget(kind="workspace"),
         rules=(team_credentials,),
     )
-    approved_models = await workspace_rule(
-        production,
-        name="Approved production models",
+    approved_models = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=AllowedModels(kind="models", names=(OPENAI_GPT_4O_MINI, OPENAI_GPT_4O)),
     )
@@ -401,9 +444,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=WorkspaceTarget(kind="workspace"),
         rules=(approved_models,),
     )
-    fallback = await workspace_rule(
-        production,
-        name="GPT-4o fallback",
+    fallback = policy_rule(
         match=RequestMatch(kind="request", models=(OPENAI_GPT_4O,)),
         action=Fallback(
             kind="fallback",
@@ -431,9 +472,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         ),
         start=31,
     ):
-        configured_rule = await workspace_rule(
-            production,
-            name=name,
+        configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
             action=action,
         )
@@ -451,30 +490,25 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         ),
         start=34,
     ):
-        configured_rule = await workspace_rule(
-            production,
-            name=name,
+        configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
             action=RequestLimits(kind="request_limits", max_output_tokens=limit),
         )
         await workspace_policy(production, name=name, priority=priority, target=target, rules=(configured_rule,))
-    maintenance = await workspace_rule(
-        production,
-        name="Maintenance denial",
+    maintenance = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
     )
-    await workspace_policy(
+    maintenance_policy = await workspace_policy(
         production,
         name="Maintenance window",
         priority=40,
-        enabled=False,
         target=WorkspaceTarget(kind="workspace"),
         rules=(maintenance, team_credentials),
     )
-    ci_provider = await workspace_rule(
-        staging,
-        name="OpenAI provider only",
+    maintenance_policy.enabled = False
+    await maintenance_policy.save()
+    ci_provider = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=AllowedProviders(kind="providers", names=("openai",)),
     )
@@ -485,18 +519,16 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
         rules=(ci_provider,),
     )
-    monthly_budget = await workspace_rule(
-        default,
-        name="Monthly shared budget",
+    default_output_limit = policy_rule(
         match=AllRequests(kind="all_requests"),
-        action=Budget(kind="budget", period="month", amount_usd=Decimal(250), sharing="shared"),
+        action=RequestLimits(kind="request_limits", max_output_tokens=4096),
     )
     await workspace_policy(
         default,
-        name="Monthly shared budget",
+        name="Default output token ceiling",
         priority=10,
         target=WorkspaceTarget(kind="workspace"),
-        rules=(monthly_budget,),
+        rules=(default_output_limit,),
     )
 
     await ManagementKey(
@@ -527,8 +559,8 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         await provider_credential(store, openai, solo, workspace=default),
     ]
 
-    await record_usage(production, checkout, 1200, now)
-    await record_usage(staging, ci, 360, now)
+    await record_usage(production, checkout, 1200, now, report_examples=True)
+    await record_usage(staging, ci, 360, now, report_examples=True)
     await record_usage(default, solo_key, 84, now)
 
     return Fixtures(

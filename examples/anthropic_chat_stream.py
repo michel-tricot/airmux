@@ -3,8 +3,8 @@
     uv run python examples/anthropic_chat_stream.py [prompt ...]
 
 The gateway consumes Anthropic's native named-SSE stream (message_start,
-content_block_delta, message_delta) and re-emits it as the same
-canonical SSE a client sees for any provider. Needs ANTHROPIC_API_KEY in
+content_block_delta, message_delta) and re-emits it as Chat Completions
+SSE because this example calls `/chat/completions`. Needs ANTHROPIC_API_KEY in
 .env and a bundle whose anthropic provider uses the native adapter.
 """
 
@@ -43,11 +43,13 @@ def main() -> int:
             if not line.startswith("data: ") or line == "data: [DONE]":
                 continue
             event = json.loads(line[len("data: ") :])
-            if event.get("delta", {}).get("type") == "text":
-                print(event["delta"]["text"], end="", flush=True)
-            elif "usage" in event:
+            choices = event.get("choices", [])
+            if choices and choices[0]["delta"].get("content"):
+                print(choices[0]["delta"]["content"], end="", flush=True)
+            if "usage" in event:
                 usage = event["usage"]
-                print(f"\n\n[{model} | {usage['input_tokens']} in / {usage['output_tokens']} out | finish: {event['finish_reason']}]")
+                finish_reason = event.get("gateway", {}).get("finish_reason")
+                print(f"\n\n[{model} | {usage['prompt_tokens']} in / {usage['completion_tokens']} out | finish: {finish_reason}]")
             elif "error" in event:
                 print(f"\nstream error: {event['error']}")
                 return 1

@@ -225,7 +225,7 @@ class CanonicalRequest(BaseModel):
     model: str
     messages: list[CanonicalMessage] = Field(min_length=1)
     stream: bool = Field(default=False, strict=True)
-    max_tokens: int | None = Field(default=None, ge=1)
+    max_output_tokens: int | None = Field(default=None, ge=1)
     temperature: float | None = Field(default=None, ge=0)
     top_p: float | None = Field(default=None, gt=0, le=1)
     stop: list[str] | None = None
@@ -251,8 +251,9 @@ class CanonicalAdjustment(BaseModel):
     model_config = _WIRE
 
     param: str
-    action: Literal["clamped", "emulated", "dropped"]
+    action: Literal["clamped", "defaulted", "emulated", "dropped"]
     detail: str
+    source: Literal["policy", "model", "policy_and_model"] | None = None
 
 
 class CanonicalGatewayInfo(BaseModel):
