@@ -1,0 +1,81 @@
+---
+title: "Manage users and access"
+description: "Create accounts, invite organization members, assign roles, and control public signup."
+---
+
+## Create the first account
+
+The first human account claims the instance and becomes its owner. From the webapp, choose **Create account**, or use the
+CLI during setup:
+
+```bash
+airmux quickstart --url https://llm.example.com
+```
+
+After the instance is claimed, public signup is disabled by default. Existing users can still sign in.
+
+## Invite a person
+
+In the webapp, open the organization and go to **Settings → Members → Invite by email**. Enter the person's email, choose
+an organization role, and optionally choose a workspace and workspace role. Create the invitation, copy its link, and send
+it through a trusted channel. `airmux` does not send the email for you.
+
+The invitation is bound to that email address. The recipient opens the link, then creates an account or signs in with the
+matching email. Invitations continue to work while public signup is disabled. From the same Members page, you can review,
+reissue, or revoke pending invitations.
+
+To create an account for automation, create a service account from organization settings or run
+`airmux service-accounts create`. Service accounts are machine identities and do not sign in to the webapp.
+
+## Assign roles
+
+Roles grant access at different scopes:
+
+| Scope | Roles | Use |
+| --- | --- | --- |
+| Instance | `owner`, `auditor`, `data_plane` | `owner` administers the instance; `auditor` has read access; reserve `data_plane` for gateway identities |
+| Organization | `owner`, `admin`, `member`, `data_plane` | `owner` and `admin` manage organization resources; `member` has basic organization access; `data_plane` is for gateway identities |
+| Workspace | `admin`, `member`, `viewer` | `admin` manages workspace access and settings; `member` can use the workspace; `viewer` has read access |
+
+Change roles in the webapp:
+
+- Instance roles: **Instance → Users → select a user**
+- Organization roles: **Organization → Settings → Members**
+- Workspace roles: **Workspace → Settings → Members**
+
+You can also manage existing memberships with the CLI. `airmux users list` provides account IDs; select the organization
+and workspace context first:
+
+```bash
+airmux users list -f table
+airmux orgs members add "$USER_ID" --role admin
+airmux workspaces members add "$USER_ID" --workspace production --role viewer
+airmux orgs members list -f table
+airmux workspaces members list --workspace production -f table
+```
+
+Remove a workspace membership with `airmux workspaces members remove "$USER_ID" --workspace production`. Remove an
+organization membership with `airmux orgs members remove "$USER_ID"`. Removing membership also revokes that person's
+inference keys and sessions in the affected scope.
+
+## Disable public signup
+
+Set `AIRMUX_PUBLIC_SIGNUP=false` for the control plane. Docker Compose defaults this setting to `false`; set it explicitly
+in `.env` if it was previously enabled, then recreate the services:
+
+```bash
+AIRMUX_PUBLIC_SIGNUP=false
+```
+
+Then apply it to the deployment:
+
+```bash
+docker compose up -d --wait
+
+# Split Compose deployment
+docker compose -p airmux-split -f docker-compose.split.yml up -d --wait
+```
+
+For other deployment types, set the same environment variable on the control-plane process. See the
+[configuration reference](/docs/reference/configuration#docker-compose-variables). Disabling public signup does not revoke
+existing accounts or invitations.

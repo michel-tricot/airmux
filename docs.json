@@ -23,6 +23,7 @@
             "group": "Use the platform",
             "pages": [
               "docs/guides/cli",
+              "docs/guides/user-management",
               "docs/guides/sdks",
               "docs/policies",
               "docs/guides/policy-workflow",
