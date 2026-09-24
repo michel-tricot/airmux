@@ -19,6 +19,7 @@ dependencies = [
   "pydantic>=2",
   "uuid-utils>=1.0,<2",
   "prometheus-client",
+  "pyreqwest>=0.13,<0.14",
   "python-dotenv",
   "pyyaml",
   "rich",

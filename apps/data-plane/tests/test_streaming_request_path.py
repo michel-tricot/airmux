@@ -11,7 +11,7 @@ import aiohttp
 import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestServer
-from conftest import CTX, ORG, PROVIDER, TEXT_LOG, WORKSPACE, delta_event, make_outbox, mock_control_plane, sse
+from conftest import CTX, ORG, PROVIDER, TEXT_LOG, WORKSPACE, AiohttpProviderClient, delta_event, make_outbox, mock_control_plane, sse
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from data_plane.outbox import SqliteOutbox
+    from data_plane.provider_http_client import ProviderHttpClient
 
 UPSTREAM = UpstreamRequest(method="POST", url="https://api.openai.com/v1/chat/completions", headers={}, body=b"{}")
 REQUEST = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
@@ -124,7 +125,7 @@ async def _open_stream(
             request=REQUEST,
             adjustments=(),
             reservation=reservation,
-            http_client=http_client,
+            http_client=cast("ProviderHttpClient", AiohttpProviderClient(http_client)),
             metrics=metrics or DataPlaneMetrics(),
             egress_kind=kind,
             attempt_started_at=time.monotonic(),

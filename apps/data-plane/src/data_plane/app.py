@@ -22,6 +22,7 @@ from data_plane.http_client import build_http_client
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metrics import DataPlaneMetrics, metrics_endpoint
 from data_plane.outbox import build_outbox
+from data_plane.provider_http_client import build_provider_http_client
 from data_plane.proxy import complete
 from data_plane.responses import JSONResponse
 from data_plane.runtime import Runtime, runtime_of
@@ -75,7 +76,11 @@ def create_app(config: Config) -> ASGIApp:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         configure_logger(logger, dev=config.dev)
-        async with config.secrets.build() as secret_store, build_http_client(config.http) as http_client:
+        async with (
+            config.secrets.build() as secret_store,
+            build_http_client(config.http) as http_client,
+            build_provider_http_client(config.http) as provider_http_client,
+        ):
             outbox = build_outbox(config.events, http_client, metrics)
             async with contextlib.AsyncExitStack() as cleanup:
                 cleanup.callback(flush_logger, logger)
@@ -89,6 +94,7 @@ def create_app(config: Config) -> ASGIApp:
                     outbox=outbox,
                     credentials=CredentialResolver(secret_store, metrics),
                     http_client=http_client,
+                    provider_http_client=provider_http_client,
                     metrics=metrics,
                     budgets=budget_backend,
                 )
