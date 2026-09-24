@@ -46,12 +46,11 @@ cd airmux
 cp .env.example .env
 ```
 
-Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack on loopback and
-claim it before exposing the service:
+Set one provider key in `.env`, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then start the stack and claim it:
 
 ```bash
 docker build -t airmux:local .
-AIRMUX_PORT=127.0.0.1:8080 docker compose up -d --wait
+docker compose up -d --wait
 airmux quickstart --url http://localhost:8080
 ```
 

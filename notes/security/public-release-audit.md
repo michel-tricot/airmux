@@ -1,6 +1,6 @@
 # Public release security audit
 
-Reviewed base commit: `123a31b336da086212f445b176cefc3f44c74b33` on 2026-09-23
+Reviewed application code at `123a31b336da086212f445b176cefc3f44c74b33` and documentation through `baaa024048fee91bd9119afdc5269edf2721adf9` on 2026-09-23. The intervening main updates changed documentation, CI, and the development lockfile, with no application-source changes.
 
 This review covers the all-in-one and split full-platform deployments, the native and container gateway-only deployments, and the build and release path. It is a point-in-time assessment, not a claim that the project has no other vulnerabilities. No production system or paid provider was tested.
 
@@ -77,7 +77,7 @@ Provider base URLs are set through instance catalog management or local operator
 
 The Compose files default to a development Postgres password while leaving the database off the host port. Production instructions require an operator-set password before database initialization. The audit did not treat this as a remotely reachable default exploit, but public deployment documentation must keep the setup requirement prominent. The packaged proxy provides CSP, response cache controls, and a request-body ceiling; direct processes and replacement proxies need equivalent edge controls. The runtime image uses an unprivileged user, while its base image tags are mutable until the resulting candidate is built and verified by digest.
 
-The full-platform quickstart now binds Compose to loopback while the first owner claims the instance. The general Compose file still publishes its port on all host interfaces by default; operators using it outside the quickstart must restrict access before the owner claim or set an explicit bind address.
+The general Compose file publishes its port on all host interfaces by default. The [security guide](../../docs/deployment/security.mdx) gives the loopback bootstrap command and requires operators to restrict access before the owner claim.
 
 ## Checks performed
 
@@ -86,7 +86,7 @@ The full-platform quickstart now binds Compose to loopback while the first owner
 - Complete control-plane suite on the reviewed base, including Postgres integration: 522 passed
 - CLI and model-audit suites on the reviewed base: 317 passed
 - Console and API client unit suites on the reviewed base: 257 passed; workspace TypeScript typecheck passed
-- Documentation and CI release-policy checks on the reviewed base: 198 passed
+- Documentation and CI release-policy checks after the rebase: 200 passed
 - Python typecheck: `ty check .` passed on the reviewed base
 - `bun audit` on the reviewed base: no known vulnerabilities found
 - Locked `pip-audit --strict --disable-pip --no-deps` on the reviewed base: no known vulnerabilities found
@@ -94,6 +94,6 @@ The full-platform quickstart now binds Compose to loopback while the first owner
 - Temporary native state creation under `022`: directory `0755`, cache and outbox files `0644`
 - Read-only live GitHub policy diff did not confirm the requested CodeQL, secret-scanning, and push-protection settings; plan or repository visibility may affect the API result
 - Selected local full-stack account, invitation, offboarding, outage, and budget scenarios on the reviewed base: 11 passed
-- `docker compose config` confirmed the quickstart override publishes port 8080 only on `127.0.0.1`
+- `docker compose config` confirmed the security guide's bootstrap override publishes port 8080 only on `127.0.0.1`
 
 Dependency advisories and tests cannot establish absence of application vulnerabilities. The remaining release decisions and untested environments above stay open.
