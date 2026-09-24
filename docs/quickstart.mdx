@@ -25,16 +25,13 @@ enforced.
     Pick a release and clone its tag so the CLI and deployment files come from the same version:
 
     ```bash
-    export AIRMUX_VERSION=0.1.2
-    git clone --branch "v$AIRMUX_VERSION" https://github.com/michel-tricot/airmux.git
+    git clone https://github.com/michel-tricot/airmux.git
     cd airmux
     uv sync --package airmux --frozen
     cp .env.example .env
     ```
 
-    Open `.env` and set one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. The CLI reads this file to
-    import credentials. Run CLI commands with `uv run airmux ...`; the application container never receives these
-    variables.
+    Open `.env` and set one provider key, such as `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. The CLI reads this file to import credentials. 
 
     If port 8080 is already in use on your machine, set `AIRMUX_PORT` and `AIRMUX_PUBLIC_URL` to a free port in `.env`
     and use that port everywhere below.
@@ -104,11 +101,6 @@ enforced.
     **You should see:** your requests with spend, request count, and token counts on Overview, and one row per request
     on Requests showing time, status, cost, total tokens, workspace, inference key, and model. Select a row to open its
     detail panel.
-
-    <Info>
-      Costs are `airmux` estimates calculated from catalog prices at request time. They are not provider invoice amounts.
-      Events arrive asynchronously, so a request can take a few seconds to appear.
-    </Info>
   </Step>
 
   <Step title="Add a workspace policy and prove it works">
