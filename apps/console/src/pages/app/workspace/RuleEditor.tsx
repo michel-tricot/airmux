@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react';
 import { useForm, type Resolver, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { RuleCreate, RuleOut, TaxonomyOut } from '@workspace/api-client-react';
+import type { RuleDefinitionInput, RuleDefinitionOutput, TaxonomyOut } from '@workspace/api-client-react';
 import { CatalogOptionLabel } from '@/components/shared/catalog-option-label';
-import { FormDialog } from '@/components/shared/form-dialog';
 import { SearchPicker } from '@/components/shared/search-picker';
-import { Alert, AlertDescription, Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
+import { Button, CheckboxDropdown, Dropdown, Input } from '@/components/ui/elements';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ruleDefaults, ruleForm, ruleFormSchema, rulePayload, type RuleForm } from '@/features/rules/form';
 import { ModelBadges } from '@/features/rules/presentation';
-import { ruleType, type RuleKind } from '@/features/rules/types';
+import type { RuleKind } from '@/features/rules/types';
 const failureOptions = [
   { value: 'rate_limited', label: 'Rate limited (429)' },
   { value: 'upstream_unavailable', label: 'Upstream unavailable (5xx or connection failure)' },
@@ -26,7 +25,7 @@ const credentialScopeOptions = [
   { value: 'platform', label: 'Platform credentials' },
 ];
 
-type TextFieldName = 'name' | 'message' | 'maxAttempts' | 'timeoutMs' | 'amount' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
+type TextFieldName = 'budgetAmount' | 'message' | 'maxAttempts' | 'timeoutMs' | 'maxInputPrice' | 'maxOutputPrice' | 'maxOutputTokens';
 
 function TextField({
   form,
@@ -85,7 +84,6 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
   }));
   return (
     <>
-      <TextField form={form} name="name" label="Rule name" />
       <FormField
         control={form.control}
         name="match"
@@ -182,11 +180,59 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
       {kind === 'strict_parameters' && (
         <p className="text-sm text-muted-foreground">Rejects requests when the selected route would drop an unsupported parameter.</p>
       )}
+      {kind === 'budget' && (
+        <>
+          <TextField form={form} name="budgetAmount" label="Budget amount (USD)" />
+          <FormField
+            control={form.control}
+            name="budgetPeriod"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget period</FormLabel>
+                <FormControl>
+                  <Dropdown
+                    aria-label="Budget period"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={[
+                      { value: 'day', label: 'Calendar day (UTC)' },
+                      { value: 'month', label: 'Calendar month (UTC)' },
+                    ]}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="budgetAggregation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Budget aggregation</FormLabel>
+                <FormControl>
+                  <Dropdown
+                    aria-label="Budget aggregation"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={[
+                      { value: 'shared', label: 'Shared across matching usage' },
+                      { value: 'per_key', label: 'Separate allowance per inference key' },
+                    ]}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <p className="text-sm text-muted-foreground">Includes earlier matching usage in the current period.</p>
+        </>
+      )}
       {kind === 'price_limit' && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField form={form} name="maxInputPrice" label="Maximum input USD / 1M tokens" />
-            <TextField form={form} name="maxOutputPrice" label="Maximum output USD / 1M tokens" />
+            <TextField form={form} name="maxInputPrice" label="Maximum input USD per 1M tokens" />
+            <TextField form={form} name="maxOutputPrice" label="Maximum output USD per 1M tokens" />
           </div>
           <p className="text-sm text-muted-foreground">Every selected primary and fallback model must stay within both catalog rates.</p>
         </>
@@ -294,54 +340,6 @@ function RuleFields({ form, catalog, kind }: { form: UseFormReturn<RuleForm>; ca
           <p className="text-sm text-muted-foreground">Includes the primary call and credential retries. Every backup must pass all restrictions.</p>
         </>
       )}
-      {kind === 'budget' && (
-        <>
-          <Alert>
-            <AlertDescription>Budget enforcement is not available yet. This rule does not track spending or block requests.</AlertDescription>
-          </Alert>
-          <TextField form={form} name="amount" label="Estimated spend limit (USD)" />
-          <FormField
-            control={form.control}
-            name="period"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Period</FormLabel>
-                <FormControl>
-                  <Dropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={[
-                      { value: 'day', label: 'Calendar day (UTC)' },
-                      { value: 'month', label: 'Calendar month (UTC)' },
-                    ]}
-                    aria-label="Budget period"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="sharing"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Allowance sharing</FormLabel>
-                <FormControl>
-                  <Dropdown
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    options={[
-                      { value: 'shared', label: 'Shared across matching keys' },
-                      { value: 'per_key', label: 'Separate allowance per key' },
-                    ]}
-                    aria-label="Allowance sharing"
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </>
-      )}
     </>
   );
 }
@@ -356,12 +354,12 @@ export function RuleFormContent({
   onBack,
   intro,
 }: {
-  rule: RuleOut | null;
+  rule: RuleDefinitionInput | RuleDefinitionOutput | null;
   kind: RuleKind;
   catalog: TaxonomyOut;
   pending: boolean;
   submitLabel: string;
-  onSubmit: (payload: RuleCreate) => Promise<unknown>;
+  onSubmit: (payload: RuleDefinitionInput) => Promise<unknown>;
   onBack: () => void;
   intro?: ReactNode;
 }) {
@@ -392,40 +390,5 @@ export function RuleFormContent({
         </div>
       </form>
     </Form>
-  );
-}
-
-export function RuleEditor({
-  rule,
-  kind,
-  open,
-  onOpenChange,
-  onSubmit,
-  pending,
-  catalog,
-}: {
-  rule: RuleOut | null;
-  kind: RuleKind;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: RuleCreate) => Promise<unknown>;
-  pending: boolean;
-  catalog: TaxonomyOut;
-}) {
-  const type = ruleType(kind);
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={`${rule ? 'Edit' : 'Create'} ${type.formName}`}
-      description={`${type.description} Rules are reusable across policies.`}
-      schema={ruleFormSchema}
-      defaultValues={rule ? ruleForm(rule) : { ...ruleDefaults, kind }}
-      onSubmit={(values) => onSubmit(rulePayload(values))}
-      submitLabel="Save rule"
-      pending={pending}
-    >
-      {(form) => <RuleFields form={form} catalog={catalog} kind={kind} />}
-    </FormDialog>
   );
 }

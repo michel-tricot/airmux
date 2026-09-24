@@ -120,6 +120,15 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
+    async def for_org(cls, org_id: UUID) -> list[Self]:
+        return await cls.find(
+            cls.org_id == org_id,
+            col(cls.accepted_at).is_(None),
+            col(cls.revoked_at).is_(None),
+            order_by=col(cls.email),
+        )
+
+    @classmethod
     async def pending_for_email(cls, email: str, now: datetime, scope: Scope) -> list[tuple[Self, str, str | None]]:
         query = (
             select(cls, Org.name, Workspace.name)
@@ -252,7 +261,6 @@ class OrgInvitationOut(RecordOut[OrgInvitation]):
     revoked_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None
     status: InvitationStatus
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"status"})

@@ -15,16 +15,16 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 import yaml
 
-from .output import emit
+from .outcomes import FieldMatrixWritten
 from .paths import TAXONOMY
 from .types import is_object, object_or_empty, string, value_list
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 
     from .types import CatalogObject, CatalogValue
 
@@ -118,9 +118,7 @@ def paths_for(rel: str, max_depth: int) -> set[str]:
     return acc
 
 
-def main(arguments: Sequence[str] = ()) -> int:
-    ingress = arguments[0] if arguments else "oai"
-    max_depth = int(arguments[1]) if len(arguments) > 1 else DEFAULT_MAX_DEPTH
+def run(ingress: Literal["oai", "anthropic"] = "oai", max_depth: int = DEFAULT_MAX_DEPTH) -> FieldMatrixWritten:
     providers = yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]
 
     airmux_paths = paths_for("schemas/completion/airmux.request.yaml", max_depth)
@@ -162,8 +160,6 @@ def main(arguments: Sequence[str] = ()) -> int:
 
     universal = sum(1 for r in rows if r["total"] == len(columns))
     solo = sum(1 for r in rows if r["total"] == 1)
-    emit(f"ingress {ingress} | depth {max_depth}")
-    emit(f"  {len(columns)} columns ({sum(1 for c in columns if c['standin'])} canonical stand-ins), {len(rows)} paths")
-    emit(f"  universal: {universal} | single-column: {solo}")
-    emit(f"  wrote {csv_path} and {csv_path.with_suffix('.json')}")
-    return 0
+    return FieldMatrixWritten(
+        ingress, max_depth, len(columns), sum(1 for column in columns if column["standin"]), len(rows), universal, solo, csv_path
+    )

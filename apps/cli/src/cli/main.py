@@ -11,7 +11,6 @@ from cli import (  # noqa: F401 importing registers the commands on the shared a
     gateway,
     policies,
     resources,
-    rules,
 )
 from cli.common import app
 from cli.profiles import InvalidConfigError

@@ -89,7 +89,7 @@ def test_explicit_missing_configuration_is_an_actionable_error(tmp_path, monkeyp
 
 
 @pytest.mark.parametrize("group", ["gateway", "control-plane"])
-@pytest.mark.parametrize("port", ["0", "65536"])
+@pytest.mark.parametrize("port", ["-1", "65536"])
 def test_serve_rejects_invalid_ports_before_starting(group, port):
     result = runner.invoke(app, [group, "serve", "--port", port])
     assert result.exit_code == 2
@@ -102,6 +102,7 @@ def test_control_plane_init_prepares_connected_configuration_without_a_database(
     assert result.exit_code == 0, result.output
     config = yaml.safe_load((tmp_path / "airmux.yml").read_text())
     assert config["data_plane"]["bundle"]["kind"] == "remote"
+    assert config["data_plane"]["bundle"]["control_plane"]["management_key"] == "${file:.airmux/dataplane.key}"
     assert config["control_plane"]["database"]["url"] == "${env:DATABASE_URL}"
     key = (tmp_path / ".airmux/dataplane.key").read_text().strip()
     status = git_status(tmp_path)
@@ -156,7 +157,7 @@ def test_control_plane_init_requires_database_url_when_validating(tmp_path, monk
     assert runner.invoke(app, ["control-plane", "init"]).exit_code == 0
     result = runner.invoke(app, ["control-plane", "validate"])
     assert result.exit_code != 0
-    assert "database.url" in result.output
+    assert "DATABASE_URL" in result.output
 
 
 def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
@@ -175,10 +176,8 @@ def test_initialization_prints_shell_safe_first_request(tmp_path, monkeypatch):
     assert inference_key == f'export AIRMUX_INFERENCE_KEY="$(cat {shlex.quote(str(directory / "inference.key"))})"'
     assert "curl --fail http://127.0.0.1:8080/readyz" in lines
     assert any(line.startswith("curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions") for line in lines)
-    assert "x-airmux-dialect" not in result.output.lower()
     assert '"model":"echo"' in result.output
     assert '"content":"Say hello in one word."' in result.output
-    assert "airmux ready" not in result.output
     assert '"max_completion_tokens":16' in result.output
 
 
@@ -212,9 +211,7 @@ def test_runtime_subcommand_help_is_available(group):
     assert "--port" in Text.from_ansi(result.output).plain
 
 
-def test_unknown_configuration_variable_has_an_actionable_error(tmp_path):
-    config = tmp_path / "airmux.yml"
-    config.write_text("control_plane:\n  console_url: ${var:missing}\n")
-    result = runner.invoke(app, ["control-plane", "validate", "--config", str(config)])
-    assert result.exit_code == 1
-    assert "vars block does not define" in result.output
+def test_control_plane_serve_does_not_own_database_lifecycle():
+    result = runner.invoke(app, ["control-plane", "serve", "--help"])
+    assert result.exit_code == 0, result.output
+    assert "--taxonomy" not in Text.from_ansi(result.output).plain

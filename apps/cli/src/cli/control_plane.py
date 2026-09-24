@@ -32,20 +32,6 @@ def init(
 
 @control_plane_app.command()
 @runtime_command
-def bootstrap_keygen(
-    out: Annotated[Path, typer.Option("--out", help="New data-plane bootstrap key file")] = Path(".airmux/dataplane.key"),
-) -> None:
-    """Create a private bootstrap key for an existing configuration."""
-    from control_plane.operations import (  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
-        bootstrap_keygen as generate_bootstrap_key,
-    )
-
-    generate_bootstrap_key(out)
-    typer.echo(f"Wrote {out}")
-
-
-@control_plane_app.command()
-@runtime_command
 def validate(config: ConfigOption = None) -> None:
     """Validate control-plane settings without connecting to the database."""
     from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
@@ -62,14 +48,12 @@ def serve(
     config: ConfigOption = None,
     host: HostOption = "127.0.0.1",
     port: PortOption = 8000,
-    dev: Annotated[bool, typer.Option("--dev", help="Apply migrations and reload Python code during development")] = False,
+    dev: Annotated[bool, typer.Option("--dev", help="Reload Python code during development")] = False,
 ) -> None:
     """Run the management API in the foreground."""
-    from control_plane.config import load_settings  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
     from control_plane.operations import serve as serve_control_plane  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
-    load_settings(path)
     serve_control_plane(path, host=host, port=port, dev=dev)
 
 
@@ -101,13 +85,12 @@ def owner(email: Annotated[str, typer.Option("--email", help="Existing human acc
 def taxonomy(
     file: Annotated[Path, typer.Option("--file", help="Taxonomy path, relative to the configuration file")], config: ConfigOption = None
 ) -> None:
-    """Apply a taxonomy file to the database and publish changed bundles."""
+    """Apply a taxonomy file."""
     from control_plane.operations import apply_catalog  # noqa: PLC0415 defer runtime imports to keep CLI startup fast
 
     path = configuration_path(config, "control-plane")
     result = asyncio.run(apply_catalog(path, path.parent / file))
-    publications = ", ".join(f"{publication.organization} v{publication.version}" for publication in result.publications) or "no bundle changes"
-    typer.echo(f"Applied {file.name}: {result.providers} providers, {result.models} models; published: {publications}")
+    typer.echo(f"Applied {file.name}: {result.providers} providers, {result.models} models")
 
 
 @control_plane_app.command()

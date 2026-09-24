@@ -58,8 +58,25 @@ The token is shown once. Revoking a management key also revokes keys delegated f
 airmux inference-keys create checkout-service --workspace production
 ```
 
-An inference key authenticates one workspace's model requests and model discovery and is the unit targeted by selected-key policies. Revocation
-becomes effective after the gateway adopts a bundle that no longer contains its hash.
+Every inference key has an explicit, immutable owner whose identity is carried into policy evaluation. A caller can create a
+self-owned key. A caller with both inference-key and membership management authority can instead select an
+organization-managed service account in the same organization:
+
+```bash
+airmux inference-keys create checkout-service \
+  --workspace production \
+  --owner "$CHECKOUT_SERVICE_ACCOUNT_ID"
+```
+
+Human users cannot create keys owned by another human, including when the creator is an administrator. The audit log records
+the actual creator separately from the selected owner. Use organization-managed service accounts as the owners of application
+and production credentials. Changing an owner requires minting a replacement key, rotating the application, and revoking the
+old key.
+
+An inference key authenticates one workspace's model requests and model discovery and is the unit targeted by selected-key
+policies. Revocation becomes effective after the gateway adopts a bundle that no longer contains its hash. Removing workspace
+membership revokes the owner's inference keys and playground sessions in that workspace; removing organization membership
+does so throughout the organization. Re-adding membership never reactivates an old credential.
 
 Send the key through `Authorization: Bearer` or `x-api-key`. See the [inference API overview](/docs/reference/inference)
 for credential precedence and playground-cookie requirements.

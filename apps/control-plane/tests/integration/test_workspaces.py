@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, inference_key_body, make_org, make_workspace, run_in_db, setup_control_plane, wait_for_publication
 from sqlmodel import col
 
 from contract import BundleV1, uuid7
@@ -42,7 +42,8 @@ def test_org_member_only_sees_joined_workspaces(tmp_path):
             listed = c.get(f"/api/v1/organizations/{org_id}/workspaces", headers=CSRF)
 
         assert listed.status_code == 200
-        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 7
+        workspace_queries = [statement for statement in statements if "FROM workspace \nWHERE workspace.org_id" in statement]
+        assert len(workspace_queries) == 1
         assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
         assert c.get(f"/api/v1/organizations/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
@@ -106,8 +107,10 @@ def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
 
         assert members.status_code == 200
         assert candidates.status_code == 200
-        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 8
-        assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        member_queries = [statement for statement in member_statements if 'FROM workspace_membership JOIN "user"' in statement]
+        candidate_queries = [statement for statement in candidate_statements if 'WHERE "user".id IN (SELECT org_membership.user_id' in statement]
+        assert len(member_queries) == 1
+        assert len(candidate_queries) == 1
 
 
 def test_slug_is_unique_within_the_org_and_free_across_orgs(tmp_path):
@@ -181,7 +184,9 @@ def test_workspace_routes_resolve_by_slug(tmp_path):
 
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/staging", headers=org).json()["data"]["id"] == str(ws)
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/staging/members", headers=org).status_code == 200
-        key = c.post(f"/api/v1/organizations/{o1}/workspaces/staging/inference-keys", json={"label": "k"}, headers=org).json()["data"]
+        key = c.post(f"/api/v1/organizations/{o1}/workspaces/staging/inference-keys", json=inference_key_body(c, org, "k"), headers=org).json()[
+            "data"
+        ]
         assert [k["id"] for k in c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=org).json()["data"]] == [key["id"]]
 
         assert c.get(f"/api/v1/organizations/{o2}/workspaces/staging", headers=cp.headers(o2)).status_code == 404
@@ -245,10 +250,24 @@ def test_key_operations_require_workspace_membership(tmp_path):
         _, outsider = _member(c, cp, o1, "orgmate@example.com")
         ws = make_workspace(c, creator)
 
-        assert c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=creator).status_code == 200
+        assert (
+            c.post(
+                f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys",
+                json=inference_key_body(c, creator, "k"),
+                headers=creator,
+            ).status_code
+            == 200
+        )
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=creator).status_code == 200
 
-        assert c.post(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=outsider).status_code == 403
+        assert (
+            c.post(
+                f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys",
+                json=inference_key_body(c, outsider, "k"),
+                headers=outsider,
+            ).status_code
+            == 403
+        )
         assert c.get(f"/api/v1/organizations/{o1}/workspaces/{ws}/inference-keys", headers=outsider).status_code == 403
 
         admin = cp.headers(o1)
@@ -304,15 +323,13 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
         org = cp.headers(o1)
         ws1 = make_workspace(c, org, "one")
         ws2 = make_workspace(c, org, "two")
-        k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json={"label": "k1"}, headers=org).json()["data"]
-        k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json={"label": "k2"}, headers=org).json()["data"]
+        k1 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys", json=inference_key_body(c, org, "k1"), headers=org).json()["data"]
+        k2 = c.post(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys", json=inference_key_body(c, org, "k2"), headers=org).json()["data"]
 
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, org))
         assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(k1["id"], str(ws1)), (k2["id"], str(ws2))}
 
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws2}/inference-keys/{k1['id']}", headers=org).status_code == 404
         assert c.delete(f"/api/v1/organizations/{o1}/workspaces/{ws1}/inference-keys/{k1['id']}", headers=org).status_code == 200
-        c.post(f"/api/v1/organizations/{o1}/bundles/republish", headers=org)
-        bundle = BundleV1.model_validate(c.get("/api/v1/bundle/latest", headers=org).json()["data"])
+        bundle = BundleV1.model_validate(wait_for_publication(c, o1, org, bundle.bundle_id))
         assert [k.key_id for k in bundle.keys] == [k2["id"]]

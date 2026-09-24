@@ -3,18 +3,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict
-from starlette.responses import Response
 
 from contract import Capability, Modality, ParameterSupport
+from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 from data_plane.policy import model_allowed
+from data_plane.responses import JSONResponse
 
 if TYPE_CHECKING:
     from starlette.requests import Request
+    from starlette.responses import Response
 
     from contract import KeyEntry, ModelEntry
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.http import InferenceContext
+    from data_plane.ingress import IngressAdapter
 
 
 class ModelInfoOut(BaseModel):
@@ -53,10 +56,10 @@ def _model_out(model: ModelEntry, snapshot: BundleSnapshot) -> ModelOut:
         gateway=ModelInfoOut(
             context_window=model.context_window,
             max_output_tokens=model.max_output_tokens,
-            input_modalities=model.input_modalities,
-            output_modalities=model.output_modalities,
-            capabilities=model.capabilities,
-            parameter_support=model.parameter_support,
+            input_modalities=list(model.input_modalities),
+            output_modalities=list(model.output_modalities),
+            capabilities=list(model.capabilities),
+            parameter_support=dict(model.parameter_support),
         ),
     )
 
@@ -64,11 +67,11 @@ def _model_out(model: ModelEntry, snapshot: BundleSnapshot) -> ModelOut:
 def _retrieve_model(model_id: str, key: KeyEntry, snapshot: BundleSnapshot) -> ModelOut:
     model = snapshot.model_index.get(model_id)
     if model is None or not model_allowed(model, key, snapshot):
-        raise RequestRejectedError(404, "unknown_model")
+        raise RequestRejectedError(404, GatewayErrorCode.unknown_model)
     return _model_out(model, snapshot)
 
 
-async def models(request: Request, context: InferenceContext) -> Response:
+async def models(request: Request, context: InferenceContext, _ingress: IngressAdapter) -> Response:
     if "model_id" in request.path_params:
         result = _retrieve_model(str(request.path_params["model_id"]), context.key, context.snapshot)
     else:
@@ -79,4 +82,4 @@ async def models(request: Request, context: InferenceContext) -> Response:
                 if model_allowed(model, context.key, context.snapshot)
             ]
         )
-    return Response(result.model_dump_json(), media_type="application/json")
+    return JSONResponse(result)

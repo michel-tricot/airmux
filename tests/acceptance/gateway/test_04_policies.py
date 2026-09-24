@@ -11,8 +11,7 @@ if TYPE_CHECKING:
 
 
 INPUT_TOKEN_LIMITS: dict[Dialect, str] = {
-    "canonical": "max_tokens",
-    "openai_native": "max_completion_tokens",
+    "openai_chat_completions": "max_completion_tokens",
     "openai_responses": "max_output_tokens",
     "anthropic": "max_tokens",
 }
@@ -36,6 +35,7 @@ def test_native_token_limits_are_enforced_before_upstream_translation(gateway: G
     assert event.status == ("ok" if expected == 200 else "denied")
     if expected == 200:
         assert provider.requests[0].body[OUTPUT_TOKEN_LIMITS[family]] == limit
+        assert event.max_output_tokens == limit
     else:
         assert error_of(dialect, response) == "policy_denied"
         assert provider.requests == []
@@ -92,8 +92,96 @@ def test_model_caps_clamp_a_permitted_limit_before_sending_it(gateway: Gateway, 
     provider = gateway.add_provider(family)
     gateway.taxonomy["models"][0]["max_output_tokens"] = 8
     gateway.start()
-    response = gateway.request(max_tokens=9)
+    response = gateway.request(max_completion_tokens=9)
     assert response.status_code == 200, response.text
     assert provider.requests[0].body[OUTPUT_TOKEN_LIMITS[family]] == 8
-    assert response.json()["gateway"]["adjustments"][0]["action"] == "clamped"
-    assert gateway.events(1)[0].status == "ok"
+    assert response.json()["gateway"]["adjustments"][0] == {
+        "param": "max_output_tokens",
+        "action": "clamped",
+        "detail": "model caps output at 8 tokens",
+        "source": "model",
+    }
+    event = gateway.events(1)[0]
+    assert (event.status, event.max_output_tokens) == ("ok", 8)
+
+
+@pytest.mark.parametrize(
+    ("policy_limit", "model_limit", "expected", "source"),
+    [
+        (8, 16, 8, "policy"),
+        (16, 8, 8, "model"),
+        (8, 8, 8, "policy_and_model"),
+        (None, 8, 8, "model"),
+    ],
+)
+def test_omitted_caller_limit_sends_the_tightest_available_ceiling(
+    gateway: Gateway,
+    policy_limit: int | None,
+    model_limit: int,
+    expected: int,
+    source: str,
+):
+    provider = gateway.add_provider()
+    gateway.taxonomy["models"][0]["max_output_tokens"] = model_limit
+    if policy_limit is not None:
+        gateway.add_policy([{"kind": "request_limits", "max_output_tokens": policy_limit}])
+    gateway.start()
+
+    response = gateway.request()
+
+    assert response.status_code == 200, response.text
+    assert provider.requests[0].body["max_tokens"] == expected
+    adjustment = response.json()["gateway"]["adjustments"][0]
+    assert (adjustment["action"], adjustment["source"]) == ("defaulted", source)
+    assert gateway.events(1)[0].max_output_tokens == expected
+
+
+def test_omitted_caller_limit_stays_unspecified_without_any_ceiling(gateway: Gateway):
+    provider = gateway.add_provider()
+    gateway.taxonomy["models"][0]["max_output_tokens"] = None
+    gateway.start()
+
+    response = gateway.request()
+
+    assert response.status_code == 200, response.text
+    assert "max_tokens" not in provider.requests[0].body
+    assert response.json()["gateway"]["adjustments"] == []
+    assert gateway.events(1)[0].max_output_tokens is None
+
+
+def test_multiple_matching_policies_send_the_tightest_ceiling(gateway: Gateway):
+    provider = gateway.add_provider()
+    gateway.taxonomy["models"][0]["max_output_tokens"] = 32
+    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 16}], priority=100)
+    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 8}], priority=200)
+    gateway.start()
+
+    response = gateway.request()
+
+    assert response.status_code == 200, response.text
+    assert provider.requests[0].body["max_tokens"] == 8
+
+
+def test_openai_chat_rejects_ambiguous_output_limits_before_upstream(gateway: Gateway):
+    provider = gateway.add_provider()
+    gateway.start()
+
+    response = gateway.request(
+        "openai_chat_completions",
+        body={**request_body("openai_chat_completions"), "max_tokens": 8, "max_completion_tokens": 9},
+    )
+
+    assert response.status_code == 400
+    assert error_of("openai_chat_completions", response) == "invalid_request"
+    assert provider.requests == []
+
+
+def test_anthropic_rejects_a_missing_output_limit_before_upstream(gateway: Gateway):
+    provider = gateway.add_provider()
+    gateway.start()
+
+    response = gateway.request("anthropic", body={"model": "model-a", "messages": [{"role": "user", "content": "hi"}]})
+
+    assert response.status_code == 400
+    assert error_of("anthropic", response) == "invalid_request"
+    assert provider.requests == []

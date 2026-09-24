@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
-from contract.model_types import Capability, Modality, ParameterSupport
+from contract.model_types import AdapterKind, Capability, Modality, ModelName, ParameterSupport, ProviderName, TokenLimit
+from contract.money import ZERO_USD, UsdRate
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
     from typing import Self
 
 
@@ -24,8 +23,8 @@ def _default_capabilities() -> list[Capability]:
 class ProviderSpec(_TaxonomyInput):
     """An upstream provider endpoint and its request-profile settings."""
 
-    provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    kind: str = Field("openai_compatible", description="Adapter kind", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$")
+    provider_id: ProviderName = Field(description="Provider name, e.g. openai")
+    kind: AdapterKind = Field("openai_compatible", description="Adapter kind")
     base_url: HttpUrl = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     icon: str = Field(
         "",
@@ -46,18 +45,16 @@ class ProviderSpec(_TaxonomyInput):
 
 
 class ModelSpec(_TaxonomyInput):
-    model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
-    provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    model_id: ModelName = Field(description="Caller-facing model name")
+    provider_id: ProviderName = Field(description="Provider id the model routes to")
     upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
-    egress_kind: str | None = Field(
-        None, description="Per-model egress adapter override", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$"
-    )
-    input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
-    output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
-    cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")
-    cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
-    context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
-    max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
+    egress_kind: AdapterKind | None = Field(None, description="Per-model egress adapter override")
+    input_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million input tokens")
+    output_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million output tokens")
+    cache_read_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million cache-read input tokens")
+    cache_write_price_per_mtok: UsdRate = Field(ZERO_USD, description="USD per million cache-write input tokens")
+    context_window: TokenLimit = Field(128000, description="Context window in tokens")
+    max_output_tokens: TokenLimit | None = Field(None, description="Max completion tokens; requests are clamped to it")
     input_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Accepted input modalities")
     output_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Produced output modalities")
     capabilities: list[Capability] = Field(default_factory=_default_capabilities, max_length=4, description="Capabilities supported by the model")
@@ -99,7 +96,3 @@ def _duplicates(values: Iterable[str]) -> list[str]:
             duplicates.add(value)
         seen.add(value)
     return sorted(duplicates)
-
-
-def parse_taxonomy(path: Path) -> TaxonomySpec:
-    return TaxonomySpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})

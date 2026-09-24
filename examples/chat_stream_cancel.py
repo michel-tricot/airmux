@@ -40,8 +40,9 @@ def main() -> int:
             if not line.startswith("data: ") or line == "data: [DONE]":
                 continue
             event = json.loads(line[len("data: ") :])
-            if event.get("delta", {}).get("type") == "text":
-                print(event["delta"]["text"], end="", flush=True)
+            choices = event.get("choices", [])
+            if choices and choices[0]["delta"].get("content"):
+                print(choices[0]["delta"]["content"], end="", flush=True)
                 seen += 1
                 if seen >= TAKE:
                     break

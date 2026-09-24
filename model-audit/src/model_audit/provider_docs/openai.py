@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 
 from model_audit.provider_docs.base import ModelDocumentation, markdown_modalities, markdown_price, token_count
 
@@ -48,9 +49,9 @@ def parse_openai_pricing(markdown: str, source: str) -> tuple[ModelDocumentation
             source=source,
             values={
                 "pricing": {
-                    "input_per_mtok": float(input_price),
-                    **({"cached_input_per_mtok": float(cached_price)} if cached_price else {}),
-                    **({"output_per_mtok": float(output_price)} if output_price else {}),
+                    "input_per_mtok": Decimal(input_price),
+                    **({"cached_input_per_mtok": Decimal(cached_price)} if cached_price else {}),
+                    **({"output_per_mtok": Decimal(output_price)} if output_price else {}),
                 }
             },
         )

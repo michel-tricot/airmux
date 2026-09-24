@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil, Trash2 } from 'lucide-react';
-import type { PolicyOut, RuleOut } from '@workspace/api-client-react';
+import type { PolicyOut } from '@workspace/api-client-react';
 import { DataTable } from '@/components/shared/data-table';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ConfirmButton, TableCell, TableRow } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -49,20 +49,19 @@ function SortablePolicyRow({ policy, disabled, children }: { policy: PolicyOut; 
   );
 }
 
-function RulesSummary({ policy, ruleById, dragging }: { policy: PolicyOut; ruleById: Map<string, RuleOut>; dragging: boolean }) {
-  const rules = policy.definition.rule_ids
-    .map((ruleId) => ({ ruleId, rule: ruleById.get(ruleId) }))
-    .sort((left, right) => (left.rule?.name ?? '').localeCompare(right.rule?.name ?? ''));
-  const names = rules.map(({ rule }) => rule?.name ?? 'Unavailable rule');
-  const summary = `${names[0]}${names.length > 1 ? ` +${names.length - 1} more` : ''}`;
+function RulesSummary({ policy, dragging }: { policy: PolicyOut; dragging: boolean }) {
+  const rules = policy.definition.rules;
   const trigger = (
     <Badge
       variant="outline"
       tabIndex={0}
-      aria-label={`${names.length} ${names.length === 1 ? 'rule' : 'rules'}: ${names.join(', ')}`}
+      aria-label={`${rules.length} ${rules.length === 1 ? 'rule' : 'rules'}: ${rules.map((rule) => rule.action.kind).join(', ')}`}
       className="max-w-72 cursor-default normal-case tracking-normal focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <span className="truncate">{summary}</span>
+      <span className="truncate">
+        <RuleActionSummary definition={rules[0]} />
+        {rules.length > 1 ? ` +${rules.length - 1} more` : ''}
+      </span>
     </Badge>
   );
   if (dragging) return trigger;
@@ -72,14 +71,11 @@ function RulesSummary({ policy, ruleById, dragging }: { policy: PolicyOut; ruleB
       <TooltipContent side="bottom" className="pointer-events-none max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
         <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rules</div>
         <ul className="space-y-2">
-          {rules.map(({ ruleId, rule }) => (
-            <li key={ruleId}>
-              <p className="text-sm font-medium">{rule?.name ?? 'Unavailable rule'}</p>
-              {rule && (
-                <div className="text-xs text-muted-foreground">
-                  <RuleActionSummary rule={rule} maxVisible={4} />
-                </div>
-              )}
+          {rules.map((rule, index) => (
+            <li key={`${index}:${rule.action.kind}`}>
+              <div className="text-sm font-medium">
+                <RuleActionSummary definition={rule} maxVisible={4} />
+              </div>
             </li>
           ))}
         </ul>
@@ -103,8 +99,8 @@ export function PolicyTable({
   isError,
   error,
   onRetry,
-  rules,
   canManage,
+  onBudgetStatus,
   editorReady,
   isReordering,
   onReorder,
@@ -117,8 +113,8 @@ export function PolicyTable({
   isError: boolean;
   error: unknown;
   onRetry: () => void;
-  rules: RuleOut[] | undefined;
   canManage: boolean;
+  onBudgetStatus?: (policy: PolicyOut) => void;
   editorReady: boolean;
   isReordering: boolean;
   onReorder: (policyIds: string[]) => Promise<unknown>;
@@ -131,7 +127,6 @@ export function PolicyTable({
   const displayedPolicies = applyOrder(policies, pendingPolicyIds);
   const policyIds = displayedPolicies?.map((policy) => policy.id) ?? [];
   const reorderDisabled = isReordering || policyIds.length < 2;
-  const ruleById = new Map(rules?.map((rule) => [rule.id, rule]));
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
@@ -196,7 +191,7 @@ export function PolicyTable({
                     <div className="min-w-0">
                       <span className="block truncate">{policy.name}</span>
                       <p className="text-xs text-muted-foreground">
-                        {policy.definition.rule_ids.length} {policy.definition.rule_ids.length === 1 ? 'rule' : 'rules'}
+                        {policy.definition.rules.length} {policy.definition.rules.length === 1 ? 'rule' : 'rules'}
                       </p>
                     </div>
                   ),
@@ -205,7 +200,7 @@ export function PolicyTable({
                   key: 'rules',
                   header: 'Rules',
                   cellClassName: 'w-72 max-w-72',
-                  cell: (policy) => <RulesSummary policy={policy} ruleById={ruleById} dragging={draggedPolicyId !== null} />,
+                  cell: (policy) => <RulesSummary policy={policy} dragging={draggedPolicyId !== null} />,
                 },
                 {
                   key: 'target',
@@ -222,21 +217,22 @@ export function PolicyTable({
                 {
                   key: 'status',
                   header: 'Status',
-                  cell: (policy) => {
-                    const attachedRules = policy.definition.rule_ids
-                      .map((id) => ruleById.get(id))
-                      .filter((rule): rule is RuleOut => rule !== undefined);
-                    return (
-                      <Badge variant={policy.enabled ? 'success' : 'secondary'}>
-                        {!policy.enabled
-                          ? 'Disabled'
-                          : attachedRules.length > 0 && attachedRules.every((rule) => rule.definition.action.kind === 'budget')
-                            ? 'Not enforced'
-                            : 'Enabled'}
-                      </Badge>
-                    );
-                  },
+                  cell: (policy) => <Badge variant={policy.enabled ? 'success' : 'secondary'}>{policy.enabled ? 'Enabled' : 'Disabled'}</Badge>,
                 },
+                ...(onBudgetStatus
+                  ? [
+                      {
+                        key: 'budgets',
+                        header: 'Budgets',
+                        cell: (policy: PolicyOut) =>
+                          policy.definition.rules.some((rule) => rule.action.kind === 'budget') ? (
+                            <Button variant="outline" size="sm" onClick={() => onBudgetStatus(policy)}>
+                              View spending
+                            </Button>
+                          ) : null,
+                      },
+                    ]
+                  : []),
                 ...(canManage
                   ? [
                       {

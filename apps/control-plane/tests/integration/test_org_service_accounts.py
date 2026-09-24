@@ -4,10 +4,10 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, run_in_db, setup_control_plane
+from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 
 from control_plane.authz import Permission
-from control_plane.models import ManagementKey, OrgMembership, User
+from control_plane.models import InferenceKey, ManagementKey, OrgMembership, PlaygroundSession, User
 
 CSRF = {"X-Requested-With": "fetch"}
 
@@ -199,10 +199,20 @@ def test_org_admin_deletes_an_org_managed_service_account_and_its_key(tmp_path):
     with _client(cp) as client:
         org_id = make_org(client, root, "acme")
         _org_admin(client, cp, org_id)
-        created = _create(client, org_id).json()["data"]
+        created = _create(client, org_id, [Permission.workspaces_read, Permission.playground_execute]).json()["data"]
         service_account_id = created["service_account"]["id"]
         key_id = created["management_key"]["id"]
         key_headers = {"authorization": f"Bearer {created['management_key']['token']}"}
+        workspace_id = make_workspace(client, cp.headers(org_id), "production")
+        inference_key = client.post(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys",
+            json={"label": "application", "user_id": service_account_id},
+            headers=root,
+        ).json()["data"]
+        playground_session = client.put(
+            f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/playground-session",
+            headers=key_headers,
+        ).json()["data"]
 
         response = client.delete(f"/api/v1/organizations/{org_id}/service-accounts/{service_account_id}", headers=CSRF)
 
@@ -210,6 +220,8 @@ def test_org_admin_deletes_an_org_managed_service_account_and_its_key(tmp_path):
         assert response.json()["data"]["id"] == service_account_id
         assert run_in_db(tmp_path, lambda: User.find_by_id(UUID(service_account_id))) is None
         assert run_in_db(tmp_path, lambda: ManagementKey.find_by_id(UUID(key_id))) is None
+        assert run_in_db(tmp_path, lambda: InferenceKey.find_by_id(UUID(inference_key["id"]))) is None
+        assert run_in_db(tmp_path, lambda: PlaygroundSession.find_by_id(UUID(playground_session["id"]))) is None
         assert client.get(f"/api/v1/organizations/{org_id}/workspaces", headers=key_headers).status_code == 401
 
 

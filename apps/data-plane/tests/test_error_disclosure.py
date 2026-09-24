@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import json
 
-import httpx
 import pytest
-import respx
 from conftest import PROVIDER, mock_control_plane
 from starlette.testclient import TestClient
 
-from contract import Secret
+from airmux_runtime.secrets import Secret
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import ProviderDiagnostic, UpstreamResponseError, UpstreamStreamError
 from data_plane.egress.openai_compatible import OpenAICompatibleAdapter
@@ -55,13 +53,15 @@ def test_new_adapter_error_parsers_inherit_redaction():
     assert rendered.model_dump() == {"status": 422, "code": "[REDACTED]", "message": "future adapter rejected 422: [REDACTED]"}
 
 
-@respx.mock
-def test_provider_echo_of_a_non_header_shaped_credential_is_redacted(api_key, dp_app, monkeypatch, caplog):
+def test_provider_echo_of_a_non_header_shaped_credential_is_redacted(http_mock, api_key, dp_app, monkeypatch, caplog):
     credential = SENTINEL + " value"
     monkeypatch.setenv("P1_API_KEY", credential)
-    mock_control_plane()
-    respx.post("https://api.openai.com/v1/chat/completions").mock(
-        return_value=httpx.Response(400, json={"error": {"code": credential, "message": f"invalid credential {credential}"}})
+    mock_control_plane(http_mock)
+    http_mock.post(
+        "https://api.openai.com/v1/chat/completions",
+        status=400,
+        payload={"error": {"code": credential, "message": f"invalid credential {credential}"}},
+        repeat=True,
     )
     with TestClient(dp_app) as client:
         response = client.post(
@@ -70,6 +70,10 @@ def test_provider_echo_of_a_non_header_shaped_credential_is_redacted(api_key, dp
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert response.status_code == 400
-    assert response.json()["error"] == {"code": "[REDACTED]", "message": "invalid credential [REDACTED]"}
+    assert response.json()["error"] == {
+        "type": "invalid_request_error",
+        "code": "[REDACTED]",
+        "message": "invalid credential [REDACTED]",
+    }
     assert credential not in response.text
     assert credential not in caplog.text

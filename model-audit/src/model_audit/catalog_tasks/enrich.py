@@ -41,18 +41,17 @@ A borrowed price is a good default and a bad guarantee. Do not bill from one.
 from __future__ import annotations
 
 import json
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 from .canonical import write_catalog
 from .http import fetch_bytes
 from .model_kind import classify, text_only
-from .output import emit
+from .outcomes import CatalogEnriched, UnknownProvidersError
 from .paths import TAXONOMY
 from .types import object_list, object_or_empty, string, strings
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from .types import CatalogObject, CatalogValue
 
 UA = {"User-Agent": "airmux-taxonomy/1.0", "Accept": "application/json"}
@@ -70,7 +69,7 @@ MODELS_DEV_ID = {
 
 
 def get(url: str) -> CatalogValue:
-    return json.loads(fetch_bytes(url, UA, timeout=120))
+    return json.loads(fetch_bytes(url, UA, timeout=120), parse_float=Decimal)
 
 
 def norm(model_id: str) -> str:
@@ -80,24 +79,24 @@ def norm(model_id: str) -> str:
     return s.rsplit("/", 1)[-1]
 
 
-def per_mtok(value: CatalogValue) -> float | None:
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+def per_mtok(value: CatalogValue) -> Decimal | None:
+    if isinstance(value, bool) or not isinstance(value, (str, int, Decimal)):
         return None
     try:
-        return round(float(value) * 1_000_000, 4)
-    except (TypeError, ValueError):
+        return Decimal(value) * 1_000_000
+    except InvalidOperation:
         return None
 
 
-def load_models_dev(providers: list[str]) -> dict[tuple[str, str], CatalogObject]:
+def load_models_dev(providers: list[str]) -> tuple[dict[tuple[str, str], CatalogObject], tuple[tuple[str, str], ...]]:
     """Provider-scoped, so the key is (our provider id, normalized model id)."""
     payload = object_or_empty(get(MODELS_DEV))
     table: dict[tuple[str, str], CatalogObject] = {}
+    missing = tuple(
+        (provider, MODELS_DEV_ID.get(provider, provider)) for provider in providers if MODELS_DEV_ID.get(provider, provider) not in payload
+    )
     for ours in providers:
         theirs = MODELS_DEV_ID.get(ours, ours)
-        if theirs not in payload:
-            # say so rather than enrich nothing quietly; the effect is otherwise invisible
-            emit(f"  models.dev has no catalog for {ours} (looked under {theirs!r})")
         models = object_or_empty(object_or_empty(payload.get(theirs)).get("models"))
         for model_id, value in models.items():
             model = object_or_empty(value)
@@ -117,7 +116,7 @@ def load_models_dev(providers: list[str]) -> dict[tuple[str, str], CatalogObject
                 "supports_tools": model.get("tool_call"),
                 "supports_structured_output": model.get("structured_output"),
             }
-    return table
+    return table, missing
 
 
 def load_openrouter() -> dict[str, CatalogObject]:
@@ -200,21 +199,21 @@ def fill_from_aliases(models: list[CatalogObject], counts: dict[str, int]) -> No
                 break
 
 
-def main(arguments: Sequence[str] = ()) -> int:
+def run(providers: tuple[str, ...] = ()) -> CatalogEnriched:
     available = sorted(path.stem for path in (TAXONOMY / "models").glob("*.json"))
-    selected = set(arguments)
+    selected = set(providers)
     unknown = selected - set(available)
     if unknown:
-        emit(f"not in taxonomy/models: {sorted(unknown)}")
-        return 2
+        raise UnknownProvidersError(unknown, "taxonomy/models")
     catalogued = sorted(selected) if selected else available
-    scoped, cross = load_models_dev(catalogued), load_openrouter()
+    scoped, missing_catalogs = load_models_dev(catalogued)
+    cross = load_openrouter()
     counts: dict[str, int] = {}
     totals = {"models": 0, "limits": 0, "priced": 0}
     gaps: list[dict[str, object]] = []
 
     for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
-        doc = json.loads(path.read_text())
+        doc = json.loads(path.read_text(), parse_float=Decimal)
         provider = doc["provider"]
         doc["models"] = text_only(doc["models"])
         for model in doc["models"]:
@@ -258,12 +257,7 @@ def main(arguments: Sequence[str] = ()) -> int:
                 gaps.append({"provider": provider, "model": model["id"], "missing": missing})
         write_catalog(path, doc)
 
-    emit(f"models: {totals['models']}")
-    emit(f"  with both limits : {totals['limits']}")
-    emit(f"  with pricing     : {totals['priced']}")
-    for source, n in sorted(counts.items()):
-        emit(f"    {source:<28} {n}")
-    emit(f"  models with missing metadata: {len(gaps)}")
+    missing_metadata = len(gaps)
     reports = TAXONOMY / "reports"
     reports.mkdir(exist_ok=True)
     missing_path = reports / "missing-metadata.json"
@@ -271,4 +265,4 @@ def main(arguments: Sequence[str] = ()) -> int:
         previous = json.loads(missing_path.read_text())
         gaps = [gap for gap in previous if gap["provider"] not in selected] + gaps
     missing_path.write_text(json.dumps(sorted(gaps, key=lambda gap: (gap["provider"], gap["model"])), indent=2) + "\n")
-    return 0
+    return CatalogEnriched(totals["models"], totals["limits"], totals["priced"], tuple(sorted(counts.items())), missing_metadata, missing_catalogs)

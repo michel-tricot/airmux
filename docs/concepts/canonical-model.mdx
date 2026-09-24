@@ -11,7 +11,6 @@ flowchart LR
   O[Chat Completions] --> C[Canonical]
   R[Responses] --> C
   A[Messages] --> C
-  N[Native canonical] --> C
   C --> E1[OpenAI-compatible provider]
   C --> E2[Responses provider]
   C --> E3[Anthropic provider]
@@ -33,20 +32,19 @@ Canonical messages have `system`, `user`, or `assistant` roles. Their typed part
 | `tool_call` | Tool name, call ID, and JSON argument text |
 | `tool_result` | Result associated with a prior call ID |
 
-Nested shapes are closed and reject unknown fields. The documented top level of a canonical request is open so
+Nested shapes are closed and reject unknown fields. The canonical request top level is open so
 provider-specific parameters can travel to a compatible provider profile.
 
-## Dialect selection
+## Public protocol paths
 
-`/inf/v1/responses` and `/inf/v1/messages` bind their dialect by route. `/inf/v1/chat/completions` resolves the dialect in this order:
+The endpoint path selects the caller protocol:
 
-1. `x-airmux-dialect` override
-2. Unambiguous request shape or SDK user-agent
-3. Canonical as the default
+- `/inf/v1/chat/completions` uses OpenAI Chat Completions
+- `/inf/v1/responses` uses OpenAI Responses
+- `/inf/v1/messages` uses Anthropic Messages
 
-Official SDK requests and unambiguous OpenAI fields such as `max_completion_tokens` are recognized automatically. Only
-raw requests without either signal need `x-airmux-dialect: openai_native` to select Chat Completions rather than the
-canonical default.
+Headers and request-body fields cannot change the response protocol. The canonical model is an implementation boundary,
+not a public HTTP surface.
 
 ## Visible translation
 

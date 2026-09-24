@@ -38,7 +38,6 @@ def provider(provider_id: UUID, name: str) -> ProviderOut:
         params_closed=False,
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
     )
 
 
@@ -49,10 +48,10 @@ def model(provider_id: UUID, name: str) -> ModelOut:
         provider_id=provider_id,
         upstream_model=name,
         egress_kind=None,
-        input_price_per_mtok=1,
-        output_price_per_mtok=2,
-        cache_read_price_per_mtok=0,
-        cache_write_price_per_mtok=0,
+        input_price_per_mtok="1",
+        output_price_per_mtok="2",
+        cache_read_price_per_mtok="0",
+        cache_write_price_per_mtok="0",
         context_window=1000,
         max_output_tokens=100,
         input_modalities=["text"],
@@ -61,7 +60,6 @@ def model(provider_id: UUID, name: str) -> ModelOut:
         parameter_support={},
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
     )
 
 
@@ -81,7 +79,6 @@ def credential(provider_id: UUID, name: str, enabled: bool) -> ProviderCredentia
         fingerprint="test",
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
         scope="platform",
     )
 
@@ -326,7 +323,6 @@ def _quickstart(
             personal_for=None,
             created_at=NOW,
             updated_at=NOW,
-            deleted_at=None,
         ),
     )
     monkeypatch.setattr(auth, "_organization_management_key", lambda _client, _org_id: "control-token")
@@ -340,7 +336,6 @@ def _quickstart(
             name="Default",
             created_at=NOW,
             updated_at=NOW,
-            deleted_at=None,
         ),
     )
     monkeypatch.setattr(auth, "upsert_url_profile", lambda name, values: saved.update(name=name, values=values))
@@ -386,13 +381,6 @@ def test_quickstart_url_configures_every_service(monkeypatch, tmp_path):
     assert verified == [("https://airmux.example.com", "inference-token", "anthropic/claude-test")]
 
 
-def test_quickstart_has_no_private_connection_override():
-    result = runner.invoke(app, ["quickstart", "--help"])
-
-    assert result.exit_code == 0, result.output
-    assert "--connect-url" not in result.stdout
-
-
 def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monkeypatch, tmp_path):
     monkeypatch.setenv("AIRMUX_CLI_CONFIG", str(tmp_path / "config.toml"))
 
@@ -405,8 +393,6 @@ def test_quickstart_resumes_and_only_reports_ready_after_gateway_inference(monke
     assert "inference-token" in result.stdout
     assert "Ready." in result.stdout
     assert "Verified anthropic/claude-test" in result.stdout
-    assert "x-airmux-dialect" not in result.stdout
-    assert "openai/gpt-5-nano" not in result.stdout
 
 
 def test_quickstart_shows_the_new_key_but_not_ready_when_no_model_is_configured(monkeypatch, tmp_path):

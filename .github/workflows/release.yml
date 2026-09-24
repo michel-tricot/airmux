@@ -1,15 +1,10 @@
-name: release
+name: publish release
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing protected tag, such as v0.1.1
-        type: string
-        required: true
+  workflow_dispatch: {}
 
 concurrency:
-  group: release-${{ inputs.tag }}
+  group: release-${{ github.sha }}
   cancel-in-progress: false
 
 permissions:
@@ -26,26 +21,31 @@ jobs:
     outputs:
       sha: ${{ steps.source.outputs.sha }}
       version: ${{ steps.source.outputs.version }}
+      tag: ${{ steps.source.outputs.tag }}
       artifact-id: ${{ steps.candidate.outputs.artifact-id }}
+      container-artifact-id: ${{ steps.container.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Resolve the protected tag to its immutable main commit
+      - name: Resolve the current public version and main commit
         id: source
-        env:
-          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([a-z0-9.]+)?$ ]]
-          RELEASE_SHA="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          RELEASE_SHA="$GITHUB_SHA"
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
-          version="${RELEASE_TAG#v}"
-          test "$(git show "$RELEASE_SHA:packaging/airmux/pyproject.toml" | python -c 'import sys, tomllib; print(tomllib.loads(sys.stdin.read())["project"]["version"])')" = "$version"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA"
+          version="$(python -c 'import tomllib; print(tomllib.load(open("packaging/airmux/pyproject.toml", "rb"))["project"]["version"])')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          RELEASE_TAG="v$version"
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          fi
           {
             echo "sha=$RELEASE_SHA"
             echo "version=$version"
+            echo "tag=$RELEASE_TAG"
             echo "candidate=candidate-${RELEASE_SHA}"
           } >> "$GITHUB_OUTPUT"
       - name: Require successful stable checks for the exact main commit
@@ -93,12 +93,34 @@ jobs:
           sha256sum --check SHA256SUMS
           echo "Source commit: $RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
           cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+      - name: Download the exact container validated by main CI
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: container-${{ steps.source.outputs.sha }}
+          run-id: ${{ steps.checks.outputs.ci-run-id }}
+          github-token: ${{ github.token }}
+          path: container
+      - name: Verify the container candidate digest
+        env:
+          RELEASE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          cd container
+          sha256sum --check SHA256SUMS
+          echo "Container candidate: container-${RELEASE_SHA}" >> "$GITHUB_STEP_SUMMARY"
       - name: Retain the verified release candidate in this run
         id: candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-candidate-${{ steps.source.outputs.sha }}
           path: candidate
+          if-no-files-found: error
+          retention-days: 30
+      - name: Retain the verified container candidate in this run
+        id: container
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-container-${{ steps.source.outputs.sha }}
+          path: container
           if-no-files-found: error
           retention-days: 30
 
@@ -170,19 +192,50 @@ jobs:
             ${{ runner.temp }}/provider-artifacts
           retention-days: 7
 
-  publish:
+  tag:
     needs: [prepare, installation, live-providers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ needs.prepare.outputs.sha }}
+      - name: Create the protected release tag
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          test -n "$GH_TOKEN"
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$RELEASE_TAG" -f sha="$RELEASE_SHA"
+          fi
+
+  publish:
+    needs: [prepare, tag]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release
     permissions:
       contents: read
       id-token: write
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           artifact-ids: ${{ needs.prepare.outputs.artifact-id }}
           path: candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          artifact-ids: ${{ needs.prepare.outputs.container-artifact-id }}
+          path: container
       - name: Verify candidate and isolate publishable distributions
         run: |
           cd candidate
@@ -192,6 +245,22 @@ jobs:
         with:
           packages-dir: candidate
           skip-existing: true
+      - name: Publish the validated container image
+        id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/michel-tricot/airmux
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          cd container
+          sha256sum --check SHA256SUMS
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          candidate="$(cat image)"
+          [[ "$candidate" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" "$candidate"
+          digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
 
   verify-pypi:
     needs: [prepare, publish]
@@ -239,8 +308,30 @@ jobs:
             ${{ runner.temp }}/pypi-artifacts
           retention-days: 7
 
+  verify-container:
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      image: ${{ steps.verify.outputs.image }}
+    steps:
+      - name: Pull and verify the published image
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ needs.publish.outputs.image }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker pull "$IMAGE"
+          test "$(docker run --rm --entrypoint airmux "$IMAGE" --version)" = "airmux $VERSION"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
   announce:
-    needs: [prepare, verify-pypi]
+    needs: [prepare, verify-pypi, verify-container]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: release
@@ -255,11 +346,13 @@ jobs:
       - name: Publish the verified GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag }}
+          IMAGE: ${{ needs.verify-container.outputs.image }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
           notes="Version: $VERSION
-          Source commit: $RELEASE_SHA"
+          Source commit: $RELEASE_SHA
+          Container: $IMAGE"
           gh release create "$RELEASE_TAG" --verify-tag --target "$RELEASE_SHA" --title "airmux $VERSION" --generate-notes --notes "$notes"

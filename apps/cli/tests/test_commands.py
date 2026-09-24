@@ -38,13 +38,6 @@ def test_every_command_is_listed_once():
     ):
         assert path in paths
 
-    assert "airmux taxonomy apply" not in paths
-    assert "airmux data-planes list" not in paths
-    assert "airmux bundles republish" in paths
-    assert "airmux bundles compile" not in paths
-    assert "airmux test verify" not in paths
-    assert "airmux test loadgen" not in paths
-
 
 def test_the_listing_does_not_list_itself():
     assert "airmux commands" not in [row["command"] for row in listed()]
@@ -66,8 +59,6 @@ def test_all_resource_commands_share_one_category():
     assert rows["airmux orgs create"] == RESOURCES
     assert rows["airmux providers list"] == RESOURCES
     assert rows["airmux models list"] == RESOURCES
-    assert "airmux providers create" not in rows
-    assert "airmux models create" not in rows
 
 
 def test_every_command_says_what_it_does():

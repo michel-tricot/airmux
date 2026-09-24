@@ -1,6 +1,7 @@
 import type { ModelOut } from '@workspace/api-client-react';
 import { Badge } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
   if (capability === 'streaming') return 'default';
@@ -8,14 +9,15 @@ function capabilityVariant(capability: string): 'default' | 'warning' | 'success
   return 'secondary';
 }
 
-export function ModelBadge({ name, capabilities }: { name: string; capabilities?: ModelOut['capabilities'] }) {
+export function ModelBadge({ name, capabilities, className }: { name: string; capabilities?: ModelOut['capabilities']; className?: string }) {
   const badge = (
     <Badge
       variant="outline"
       tabIndex={capabilities === undefined ? undefined : 0}
-      className="font-mono focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className={cn('font-mono focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2', className)}
+      title={name}
     >
-      {name}
+      <span className="min-w-0 truncate">{name}</span>
     </Badge>
   );
   if (capabilities === undefined) return badge;

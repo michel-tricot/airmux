@@ -3,6 +3,10 @@
 airmux is pre-1.0, so focused contributions that strengthen the current design are easier to review than broad
 compatibility layers or unrelated cleanup.
 
+Search the [issues](https://github.com/michel-tricot/airmux/issues) and open pull requests before starting. For a
+substantial feature or design change, open an issue to agree on the scope with a maintainer. Bug reports should include
+reproduction steps, the version or commit, expected and actual behavior, and relevant logs with credentials removed.
+
 ## Start with context
 
 Read the documents closest to the change before editing code:
@@ -26,7 +30,21 @@ or failure modes. Keep examples runnable and describe unsupported behavior expli
 
 ## Development setup
 
-Install Python 3.13 or newer, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. Then run:
+Fork [michel-tricot/airmux](https://github.com/michel-tricot/airmux) on GitHub, then clone your fork and create a branch
+from the upstream `main`. Replace `YOUR-USERNAME` with your GitHub username and `describe-your-change` with a branch name:
+
+```bash
+git clone https://github.com/YOUR-USERNAME/airmux.git
+cd airmux
+git remote add upstream https://github.com/michel-tricot/airmux.git
+git fetch upstream
+git switch -c describe-your-change upstream/main
+```
+
+Contributors with repository write access may use a branch in the upstream repository instead. Keep unrelated work on
+separate branches or worktrees.
+
+Install Python 3.13 or newer, [uv](https://docs.astral.sh/uv/), Bun, and Docker with Compose. From the repository root, run:
 
 ```bash
 uv sync --all-packages --frozen
@@ -46,7 +64,8 @@ Continue with the [development guide](docs/development.mdx) to initialize the da
 5. Run focused checks while iterating, then the relevant full suites before opening a pull request
 
 Do not add compatibility behavior for a contract that has not been deployed. Keep the control plane and data plane
-independent, with `contract` as their only shared import.
+independent. Shared imports are limited to pure interchange values in `contract` and process infrastructure in
+`airmux_runtime`.
 
 ## Generated contracts
 
@@ -99,6 +118,17 @@ uv run pytest tests/acceptance/full_stack/scenarios
 
 ## Open the pull request
 
+Commit your change and push the branch to your fork:
+
+```bash
+git add path/to/changed-file
+git commit -m "Describe the change"
+git push --set-upstream origin describe-your-change
+```
+
+Replace `path/to/changed-file` with the paths you changed. On GitHub, open a **draft pull request** from that branch to
+`michel-tricot/airmux:main`. Link the issue it addresses, using `Closes #<issue-number>` when it fully resolves the issue.
+
 Keep each pull request limited to one user-visible outcome. Its description should include:
 
 - The user or operator impact
@@ -106,42 +136,62 @@ Keep each pull request limited to one user-visible outcome. Its description shou
 - The checks and real-world verification performed
 - Any documentation or generated contracts updated
 
-CI must pass before merge. Review feedback should be resolved in code, tests, or documentation rather than only explained in the discussion.
+When the change and local checks are complete, select **Ready for review**. This starts the full correctness checks.
+Read failures in the pull request's Checks tab and use the job logs and uploaded diagnostics to investigate. Workflow
+runs from forks may need [maintainer approval](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/approve-runs-from-forks);
+if GitHub shows that they are awaiting approval, ask a maintainer in the pull request.
+
+Push follow-up commits to the same branch to address review feedback and rerun CI. Resolve feedback in code, tests, or
+documentation, and reply to the review thread so the reviewer can confirm the change. If GitHub reports merge
+conflicts, update the branch and push again:
+
+```bash
+git fetch upstream
+git merge upstream/main
+git push
+```
+
+Resolve any conflicts and rerun affected local checks before pushing. If you cloned the upstream repository directly,
+use `origin` in place of `upstream`. A maintainer merges the pull request once it is ready, there are no merge conflicts,
+the required checks pass, and review conversations are resolved. Being behind `main` alone does not require an update.
+Changes enter `main` through a squash merge.
+
+## What CI runs
+
+The [correctness workflow](.github/workflows/ci.yml) and [security workflow](.github/workflows/security.yml) run when a
+pull request is opened, updated, reopened, or marked ready for review. They do not filter by changed paths, so
+documentation changes receive the same checks as code changes at the same pull-request stage.
+
+| Stage | Checks |
+| --- | --- |
+| Draft pull request | `quality`, `python-unit`, `frontend`, and `package`, plus the security workflow |
+| Ready-for-review pull request | All draft checks plus `python-integration`, `gateway`, `full-stack`, `browser`, `docker`, and the `required` aggregate |
+| Push to `main` | The full correctness graph and security audits |
+
+Drafts deliberately skip the integration and acceptance jobs and the `required` aggregate. Passing draft checks is
+early feedback; mark the pull request ready to obtain the full result needed for merge. On ready pull requests and
+`main`, `required` runs even after an upstream failure and rejects failed, cancelled, missing, or skipped dependencies.
+
+The security workflow runs `pip-audit` and `bun-audit` for both draft and ready pull requests. It also checks whether
+GitHub dependency review is available and runs it when enabled; otherwise the two ecosystem audits remain the fallback.
+Its `dependency-security` aggregate requires both audits to pass. Ordinary pull-request CI does not require provider
+API keys or release credentials. Compatibility, performance, live-provider, soak, and cold-build checks run separately
+in [nightly.yml](.github/workflows/nightly.yml). See the [CI design](notes/design/CI.md) for job contracts and diagnostics.
 
 ## Main branch protection
 
-The active [Protect Main ruleset](https://github.com/michel-tricot/airmux/rules/20767120) requires a pull request and
-allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches must be
-up to date with `main` before merging, and review conversations must be resolved.
+The [versioned Protect Main ruleset](.github/policy/protect-main.json) requires a pull request and
+allows squash merges only. Direct pushes, deletion, force pushes, and merge commits are blocked. Branches may merge
+without being up to date with `main` when there are no merge conflicts, required checks pass, and review conversations
+are resolved.
 
-Two stable checks are required, each bound to the GitHub Actions App (integration ID `15368`):
+Two stable checks are required:
 
 | Required check | Coverage |
 | --- | --- |
 | `required` | Quality, Python, frontend, packaged gateway, full-stack, browser, and Docker correctness |
-| `dependency-security` | Python and JavaScript audits plus pull-request dependency review |
+| `dependency-security` | Python and JavaScript audits plus pull-request dependency review when available |
 
-These gates run even after an upstream failure. Every pull request runs the complete correctness graph without path
-filters or conditional correctness skips. Failed, cancelled, missing, or unexpectedly skipped dependencies fail the
-gate. Compatibility, performance, provider, soak, and cold-build checks run in `nightly.yml`. See
-[continuous integration design](notes/design/CI.md).
-
-Repository administrators may bypass the rules for pull-request merges. This keeps direct pushes, branch deletion,
-force pushes, and merge commits blocked while letting an administrator merge a reviewed exception when required
-checks are unavailable or strict current-base checks cannot settle during concurrent merges. Automation and deploy
-keys have no bypass. Record why an administrator bypass was used in the pull request. The owner is currently the only
-collaborator, so approvals are not required. When an independent collaborator with review permissions is added, set
-`required_approving_review_count` to `1` and `require_last_push_approval` to `true` in the ruleset payload and apply it.
-Keep stale-review dismissal enabled.
-
-The versioned configuration is in [.github/policy](.github/policy). Workflow check names and the policy must change
-together. Inspect live drift before explicitly applying it:
-
-```bash
-scripts/github-policy diff
-scripts/github-policy apply
-```
-
-Use current-base status checks for this personally owned private repository. A merge queue is unavailable here.
-When a required workflow is broken, repair it through a pull request; protection intentionally keeps `main` blocked
-until the required checks pass. Test the gates locally with `uv run pytest tests/ci/test_merge_policy.py`.
+The versioned ruleset currently requires no approving reviews, but contributions still go through maintainer review.
+Contributors do not need repository administration access. Ruleset maintenance, approval-policy changes, and
+exception handling belong in the [maintainer policy guide](.github/policy/README.md).

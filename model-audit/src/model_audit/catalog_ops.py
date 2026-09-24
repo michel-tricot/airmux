@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Literal, Protocol, cast
 
 import yaml
@@ -213,7 +214,7 @@ def add_model(root: Path, provider_id: str, definition: ModelDefinition, *, repl
     path = root / "taxonomy" / "models" / f"{provider_id}.json"
     document: dict[str, object]
     if path.exists():
-        document = cast("dict[str, object]", json.loads(path.read_text(encoding="utf-8")))
+        document = cast("dict[str, object]", json.loads(path.read_text(encoding="utf-8"), parse_float=Decimal))
     else:
         document = {
             "provider": provider_id,

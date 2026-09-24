@@ -14,6 +14,7 @@ import yaml
 ROOT = Path(__file__).parents[2]
 WORKFLOWS = sorted((ROOT / ".github/workflows").glob("*.y*ml"))
 ACTIONS = sorted((ROOT / ".github/actions").glob("*/action.y*ml"))
+ARTIFACT_DOWNLOAD = "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 
 
 @cache
@@ -73,6 +74,25 @@ def test_composite_actions_pin_external_dependencies(path):
             assert re.fullmatch(r"[0-9a-f]{40}", revision), step["uses"]
 
 
+def test_artifact_id_downloads_retry_transient_service_failures():
+    retry_path = ROOT / ".github/actions/download-artifact/action.yml"
+    retry_action = yaml.safe_load(retry_path.read_text())
+    downloads = [step for step in retry_action["runs"]["steps"] if step.get("uses") == ARTIFACT_DOWNLOAD]
+    assert len(downloads) == 3
+    assert [step.get("continue-on-error", False) for step in downloads] == [True, True, False]
+    assert "if" not in downloads[0]
+    assert downloads[1]["if"] == "steps.download-1.outcome == 'failure'"
+    assert downloads[2]["if"] == "steps.download-1.outcome == 'failure' && steps.download-2.outcome == 'failure'"
+
+    protected_paths = (ROOT / ".github/workflows/ci.yml", ROOT / ".github/actions/install-candidate/action.yml")
+    for protected_path in protected_paths:
+        document = yaml.safe_load(protected_path.read_text())
+        step_groups = [job.get("steps", []) for job in document.get("jobs", {}).values()]
+        step_groups.extend([document.get("runs", {}).get("steps", [])])
+        for step in (step for steps in step_groups for step in steps):
+            assert step.get("uses") != ARTIFACT_DOWNLOAD or "artifact-ids" not in step.get("with", {}), protected_path
+
+
 @pytest.mark.parametrize("path", WORKFLOWS, ids=lambda path: path.name)
 def test_workflow_security_boundaries(path):
     workflow = yaml.safe_load(path.read_text())
@@ -81,7 +101,10 @@ def test_workflow_security_boundaries(path):
         permissions = job.get("permissions", workflow["permissions"])
         expected_permissions = {
             "prepare": {"contents": "read", "actions": "read"},
-            "publish": {"contents": "read", "id-token": "write"},
+            "docker": {"contents": "read", "packages": "write"},
+            "release-branch": {"contents": "write"},
+            "publish": {"contents": "read", "id-token": "write", "packages": "write"},
+            "verify-container": {"contents": "read", "packages": "read"},
             "announce": {"contents": "write"},
         }.get(name, {"contents": "read"})
         assert permissions == expected_permissions

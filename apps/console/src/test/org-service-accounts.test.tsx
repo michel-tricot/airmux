@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import App from '@/App';
-import { ORG, server } from './msw';
+import { ORG, enveloped, server } from './msw';
 
 function renderAt(path: string) {
   window.history.replaceState(null, '', path);
@@ -34,7 +34,7 @@ describe('organization service accounts', () => {
           },
         }),
       ),
-      http.get('/api/v1/organizations/:orgId/users', () => HttpResponse.json<{ data: Api.OrgMemberOut[] }>({ data: members })),
+      http.get('/api/v1/organizations/:orgId/users', () => enveloped(members)),
       http.post('/api/v1/organizations/:orgId/service-accounts', async ({ request }) => {
         submitted = await request.json();
         const serviceAccount = {
@@ -46,7 +46,6 @@ describe('organization service accounts', () => {
           managing_org_id: ORG.id,
           created_at: now,
           updated_at: now,
-          deleted_at: null,
           orgs: [ORG.id],
         };
         members = [
@@ -77,7 +76,6 @@ describe('organization service accounts', () => {
               revoked_at: null,
               created_at: now,
               updated_at: now,
-              deleted_at: null,
               scope: { level: 'org', org_id: ORG.id, workspace_id: null },
               status: 'active',
               token: 'sk-cp-show-once-secret',
@@ -106,7 +104,6 @@ describe('organization service accounts', () => {
             revoked_at: null,
             created_at: now,
             updated_at: now,
-            deleted_at: null,
             scope: { level: 'org', org_id: ORG.id, workspace_id: null },
             status: 'active',
             token: 'sk-cp-replacement-secret',

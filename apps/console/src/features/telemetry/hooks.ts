@@ -1,50 +1,35 @@
-import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListOrgEvents,
+  useListOrgEventsInfinite,
   useListWorkspaceEvents,
-  useListActivity,
-  useListBundles,
-  useRepublishBundle,
+  useListActivityInfinite,
   useListDataPlanes,
-  useListInstanceActivity,
-  getListBundlesQueryKey,
+  useListInstanceActivityInfinite,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+import { flattenPages, paginatedQueryOptions } from '@/features/pagination';
 
 export function useOrgEvents(orgId: string, params: ListOrgEventsParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListOrgEvents(orgId, params, { query: { enabled, refetchInterval: 3_000 } });
+  return useListOrgEventsInfinite(orgId, params, {
+    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
+  });
 }
 
 export function useWorkspaceEvents(
   orgId: string,
   workspaceRef: string,
-  params: ListWorkspaceEventsParams,
+  params: Pick<ListWorkspaceEventsParams, 'limit'>,
   { enabled = true }: EnabledQueryOptions = {},
 ) {
   return useListWorkspaceEvents(orgId, workspaceRef, params, {
-    query: { enabled, refetchInterval: 3_000 },
+    query: { enabled, refetchInterval: 3_000, select: (page) => page.items },
   });
 }
 
 export function useOrgActivity(orgId: string, params: ListActivityParams, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListActivity(orgId, params, { query: { enabled } });
-}
-
-export function useBundles(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListBundles(orgId, { query: { enabled } });
-}
-
-export function useRepublishBundleMutation(orgId: string) {
-  const queryClient = useQueryClient();
-  return useRepublishBundle({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
-      meta: { errorMessage: 'We couldn’t republish the configuration. Please try again.' },
-    },
-  });
+  return useListActivityInfinite(orgId, params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }
 
 export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
@@ -52,5 +37,5 @@ export function useDataPlanes({ enabled = true }: EnabledQueryOptions = {}) {
 }
 
 export function useInstanceActivity(params: { limit?: number }, { enabled = true }: EnabledQueryOptions = {}) {
-  return useListInstanceActivity(params, { query: { enabled } });
+  return useListInstanceActivityInfinite(params, { query: { enabled, ...paginatedQueryOptions, select: flattenPages } });
 }

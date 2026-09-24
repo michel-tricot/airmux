@@ -25,12 +25,15 @@ Its hard boundaries are architectural, not conventions:
 - `evaluate()` remains pure and synchronous, with no I/O, clock access, or hidden state
 - Starlette is the HTTP framework; Pydantic validation is applied deliberately at protocol boundaries
 
-The request path performs no control-plane or management-database I/O. It can still perform three kinds of I/O:
+The request path performs no control-plane, management-database, or usage-storage I/O. It performs two kinds of I/O:
 
 - A provider-secret store read on a credential cache miss, including PostgreSQL only when the
   explicitly insecure database store is configured
 - The provider HTTP request
-- A synchronous local SQLite write when the durable event outbox is enabled
+
+Immediately before each provider attempt, the request reserves one slot in the bounded in-memory outbox.
+Usage-event construction and transfer into that slot remain synchronous. SQLite and file persistence run
+on the outbox's dedicated storage thread.
 
 The high-level data flow is:
 
@@ -62,15 +65,18 @@ Both cross the same canonical middle.
 
 | Route | Behavior |
 |---|---|
-| `POST /inf/v1/chat/completions` | Canonical completion surface with OpenAI-compatible ingress detection |
+| `POST /inf/v1/chat/completions` | OpenAI Chat Completions surface |
 | `POST /inf/v1/responses` | OpenAI Responses surface |
 | `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
-| `GET /readyz` | `200` when this worker holds a bundle snapshot, otherwise `503` |
+| `GET /readyz` | `200` when this worker holds a bundle snapshot and can admit metering work, otherwise `503` |
+| `GET /metrics` | Prometheus metrics on a standalone plane's internal listener |
 
-The health routes require no authentication. Readiness means only that a bundle has been admitted.
-It does not prove that the control plane, secret store, event exporter, or any upstream provider is
-currently reachable.
+The health routes require no authentication. Readiness means that a bundle has been admitted and the
+metering writer can accept work. It does not prove that the control plane, secret store, event exporter,
+or any upstream provider is currently reachable. Rejecting a newer manifest does not remove an accepted snapshot from service;
+the rejection is reported through metrics and structured logs instead. Restrict a directly exposed
+standalone plane's `/metrics` endpoint to the monitoring network.
 
 ### Authentication
 
@@ -96,27 +102,18 @@ consumes the stream. Metering uses that same request ID; provider completion IDs
 The bundle contains only token hashes. Revocation is absence from a later bundle, so a request made
 after the new bundle is admitted fails without a database or cache invalidation call.
 
-On `/inf/v1/chat/completions`, authentication and JSON decoding happen before dialect resolution. An
-error at either stage therefore uses the canonical error envelope. `/inf/v1/messages` binds the
-Anthropic ingress before those checks, so every error on that route is Anthropic-shaped.
+Each `InferenceRoute` owns its ingress adapter before authentication or body parsing. Authentication,
+parsing, policy, provider, and response failures therefore use the protocol bound to the request path.
 
-### Canonical request
+### Internal canonical request
 
-The canonical request is `CanonicalRequest` and is published as `airmux.request.yaml`. Its modeled
+The canonical request is `CanonicalRequest`. It is the internal target of every ingress adapter, not a
+public HTTP protocol. Its modeled
 fields are:
 
 - `model`, `messages`, and `stream`
 - `max_tokens`, `temperature`, `top_p`, `stop`, and `seed`
 - `tools`, `tool_choice`, and `response_format`
-
-A minimal canonical call is:
-
-```bash
-curl http://127.0.0.1:8080/inf/v1/chat/completions \
-  -H 'Authorization: Bearer sk-inf-...' \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
-```
 
 Messages contain typed parts rather than provider-specific blocks:
 
@@ -134,9 +131,10 @@ The request top level is open. Unknown top-level fields become canonical extras 
 provider-specific parameters through the gateway. Nested shapes are closed because an unknown field
 inside a message, part, or tool has no faithful generic translation.
 
-### Canonical response
+### Internal canonical response
 
-The canonical response is `CanonicalResponse` and is published as `airmux.response.yaml`. It carries:
+The canonical response is `CanonicalResponse`. Every ingress adapter renders it in the bound caller
+protocol. It carries:
 
 - `id` and the caller-facing `model`
 - Typed assistant `content`
@@ -151,52 +149,30 @@ and whether the counts were estimated. Cache traffic is included in total input 
 entry identifies the parameter, an action of `clamped`, `emulated`, or `dropped`, and a human-readable
 reason. The rest of the response remains completion data and does not expose provider-specific state.
 
-Canonical buffered responses and chunks omit null-valued fields. Compatibility renderers follow
-their dialect's native wire shape.
+Ingress renderers follow their protocol's native wire shape.
 
-### Canonical streaming
+### Internal canonical streaming
 
-A canonical request with `stream: true` receives `text/event-stream`. Each data frame contains one
-`CanonicalChunk` from `airmux.stream.yaml`:
+Provider streams fold into `CanonicalChunk` values before the bound ingress renderer produces SSE:
 
 - Ordinary chunks carry one typed `text`, `reasoning`, or `tool_call` delta
 - Tool-call fragments use an index; the opening fragment carries the id and name, and argument text accumulates across fragments
-- The closing chunk has no delta and carries finish reason, usage, and gateway adjustments
-- The stream terminates with `data: [DONE]`
+- Finalization supplies finish reason, usage, and gateway adjustments to the renderer
+- Each public protocol owns its terminal behavior
 
 If an error occurs after the HTTP stream has opened, the status is already committed. The error is
-rendered as an SSE event in the caller's dialect. Canonical and OpenAI streams then emit `[DONE]`;
-Anthropic streams emit an Anthropic error event.
+rendered as an SSE event in the caller's dialect. Chat Completions emits `[DONE]`; Responses and
+Messages use their native terminal events.
 
 ### OpenAI compatibility on `/inf/v1/chat/completions`
 
-The chat route supports both the canonical shape and unmodified OpenAI SDKs. `resolve()` selects the
-ingress adapter in this order:
-
-1. A recognized `x-airmux-dialect` override
-2. Each non-canonical adapter's `claims()` result in registry-name order
-3. Canonical as the unclaimed default
-
-The recognized override values are `canonical`, `openai_native`, and `anthropic`. Anthropic clients
-normally use `/inf/v1/messages`, which binds that ingress directly. An unrecognized override is ignored,
-after which claims and canonical fallback proceed normally.
-
-The OpenAI ingress claims a request when either condition is true:
-
-- `User-Agent` begins with `OpenAI/`, as the official SDK sends
-- The body has an unambiguous OpenAI marker: a `tool` or `developer` role, `tool_calls`, an
-  `image_url` block, a nested `function` wrapper, or `max_completion_tokens`
-
-The `x-stainless-*` headers are not used for detection because other vendors also ship
-Stainless-generated clients. A text-only request without a fingerprint or override is shape-identical
-to canonical and therefore receives the canonical response.
-
-An OpenAI request is parsed into canonical and rendered back as OpenAI:
+The chat route binds `OpenAIChatCompletionsIngress`. Headers and body fields cannot change its request,
+response, error, or streaming protocol. A Chat Completions request is parsed into canonical and rendered back as OpenAI:
 
 - Buffered responses use `chat.completion` and the `choices` axis
 - Streamed responses use `chat.completion.chunk`, finish with a usage-only chunk, and then `[DONE]`
 - `gateway` is an extra field that official SDK models retain or ignore safely
-- OpenAI-shaped errors are returned after the dialect has been resolved
+- OpenAI-shaped errors are returned for every failure on the route
 
 Pointing the official client at the gateway changes only its base URL and key:
 
@@ -238,8 +214,8 @@ become canonical extras. Provider profiles decide whether those extras are forwa
 
 ### Errors
 
-Before streaming begins, request and transport errors use an HTTP status plus the resolved caller
-dialect's error body. The canonical body is `{"error": {"code": "...", "message": "..."}}`.
+Before streaming begins, request and transport errors use an HTTP status plus the route-bound caller
+protocol's error body.
 
 | Status | Gateway code | Meaning |
 |---|---|---|
@@ -259,15 +235,14 @@ Provider HTTP statuses are preserved. When an adapter recognizes the provider's 
 and message are also preserved and then rendered in the caller's dialect. Error codes are additive;
 clients should branch on status class first and code second.
 
-### Compatibility policy
+### Internal interface policy
 
-The canonical schemas and their surrounding behavior are the gateway's stable consumer contract:
+The canonical models are an internal interface shared by ingress, policy, routing, egress, and metering:
 
 - Existing fields keep their type and meaning; new fields may appear anywhere
 - New content parts, deltas, finish reasons, adjustment actions, gateway members, and error codes may appear
-- Callers must treat unknown fields and enum members as unknown rather than failing
-- Plain-string message content and the open request top level remain supported
-- A canonical response stays provider-neutral; provider identity does not change its top-level shape
+- Public protocol adapters decide which caller fields and variants are accepted
+- The canonical response stays provider-neutral; provider identity does not change its internal shape
 - Canonical schema changes land as committed diffs under `taxonomy/schemas/completion/`
 
 ## Package structure
@@ -278,14 +253,15 @@ The canonical schemas and their surrounding behavior are the gateway's stable co
 | `app.py`, `runtime.py`, `config.py` | Process composition, lifespan, routes, and immutable runtime dependencies |
 | `bundle/`, `cache.py`, `heartbeat.py` | Bundle acquisition, verification, admission, durable cache, and instance heartbeat |
 | `canonical/` | Provider-neutral request, response, content, usage, and stream types |
-| `ingress/` | Caller-dialect detection, parsing, response rendering, and error rendering |
+| `ingress/` | Public path ownership, parsing, response rendering, and error rendering |
 | `formats/` | Pure JSON spelling shared by ingress and egress for one protocol family |
 | `egress/` | Provider-family transport, response parsing, stream folding, and upstream error mapping |
 | `auth.py`, `policy.py` | Hash authentication and pure bundle evaluation |
 | `credentials.py` | Credential-scope indexing and secret-store resolution |
 | `profiles.py`, `reconcile.py` | Precompiled provider facts and request adjustments |
 | `metering.py`, `outbox/` | Usage calculation, durable buffering, and control-plane export |
-| `proxy.py` | The one request orchestration path shared by all caller and provider combinations |
+| `proxy.py` | Request routing, fallback, and buffered provider attempts |
+| `streaming.py` | Streaming provider lifecycle, folding, cancellation, and accounting |
 
 `formats` exists only when a wire spelling has two consumers. OpenAI and Anthropic formats are used
 on both ingress and egress, so their mappings live there. Ingress adapters never import egress
@@ -301,13 +277,14 @@ worker process constructs its own application lifespan and therefore owns:
 - One selected `BundleSource`
 - One `CredentialResolver` and secret-store instance
 - One selected `EventOutbox`
+- One dedicated storage thread when the SQLite or file outbox is selected
 - One frozen `Runtime` exposed through Starlette request state
 
 The HTTP client enables HTTP/2, caps the connection pool, and has explicit connect, read, write, and
 pool timeouts. Components receive it at construction; they do not create per-request clients.
 
 Bundle and outbox implementations start their own workers inside one `asyncio.TaskGroup`. Current
-task names are `bundle poll`, `heartbeat`, `local bundle reload`, and `event export`.
+task names are `bundle poll`, `heartbeat`, `local bundle reload`, `event storage`, and `event export`.
 
 All periodic work uses `run_periodic()`:
 
@@ -315,7 +292,8 @@ All periodic work uses `run_periodic()`:
 - Any undeclared exception escapes the loop
 - A worker that returns or fails unexpectedly logs at critical level and sends `SIGTERM` to its process
 - Task-group cancellation stops sibling workers
-- Normal shutdown cancels workers, closes the outbox, and closes the shared HTTP client
+- Normal shutdown cancels remote export, closes the queue to reservations, drains filled events to local storage,
+  verifies that no reservations remain, closes storage on its owning thread, and closes the shared HTTP client
 
 The process exit is deliberate. A single-process deployment relies on its supervisor to restart it.
 Under Uvicorn multi-worker mode, the parent process replaces the failed worker.
@@ -331,8 +309,8 @@ Workers configured with the same cache directory cooperate through local files:
 | `events.db` | SQLite WAL outbox shared by all workers |
 
 Each worker still polls and heartbeats independently. Atomic bundle writes prevent workers from
-renaming one another's temporary files. SQLite serializes event writes, and a lease ensures only one
-worker exports at a time.
+renaming one another's temporary files. Each worker has its own 10,000-slot memory queue and storage
+thread. SQLite serializes their batched writes, and a lease ensures only one worker exports at a time.
 
 The cache directory is local coordination, not distributed coordination. Replicas on different
 hosts have separate caches, instance ids, and outboxes unless the deployment supplies a filesystem
@@ -340,11 +318,11 @@ with the required SQLite and atomic-rename semantics.
 
 ## Configuration
 
-`Config` is frozen and rejects unknown top-level fields. It contains a discriminated bundle config,
-a secret-store config, a discriminated event-outbox config, and the CLI-derived development flag.
+`Config` is frozen and rejects unknown top-level fields. It contains discriminated bundle, event-outbox,
+and budget-backend configs, a secret-store config, and the CLI-derived development flag.
 
 There is no global control-plane setting. Each component that uses the control plane owns a complete
-`ControlPlaneLink` containing its URL and token. The bundle poller and event exporter may use
+`ControlPlaneLink` containing its URL and management key. The bundle poller and event exporter may use
 different links; the data plane does not validate that they match.
 
 ### Remote mode
@@ -352,28 +330,29 @@ different links; the data plane does not validate that they match.
 The checked-in deployment uses a YAML anchor to avoid repeating a shared link:
 
 ```yaml
-vars:
-  cache_dir: .airmux
-
 data_plane:
   bundle:
     kind: remote
     control_plane: &control_plane
       url: ${env:AIRMUX_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
-      token: ${file:${var:cache_dir}/dataplane.key}
-    cache_dir: ${var:cache_dir}
+      management_key: ${file:.airmux/dataplane.key}
     poll_interval_s: 5
 
   events:
     kind: sqlite
     control_plane: *control_plane
-    cache_dir: ${var:cache_dir}
     flush_interval_s: 5
+
+  budget:
+    kind: control_plane
+    control_plane: *control_plane
+    poll_interval_s: 5
 ```
 
 The anchor is YAML reuse only. Both nested configs validate their own complete link, and no equality
-constraint is applied after parsing. The omitted secret-store setting defaults to environment
-variables.
+constraint is applied after parsing. The omitted bundle and event `cache_dir` fields both default to
+`.airmux` beside the configuration file, so the SQLite outbox writes `.airmux/events.db`. The omitted
+secret-store setting defaults to environment variables.
 
 The control-plane management key defines the bundle set. An instance-scoped key receives the latest
 bundle for every organization, while an organization-scoped key receives only that organization's
@@ -400,11 +379,10 @@ data_plane:
 Bundle source and outbox are independent choices. A local bundle can use the SQLite exporter, and a
 remote bundle can use `devnull`, because neither choice is inferred from the other.
 
-The config loader reads the `data_plane` section from `AIRMUX_CONFIG`, defaulting to `airmux.yml`.
-Configuration references support `env:NAME`, `file:PATH`, `${env:NAME}`, `${file:PATH}`, defaults with
-`:-`, and `${var:NAME}` substitution from the root `vars` block. A missing unresolved reference
-becomes null; required config fields then fail Pydantic validation instead of producing partial
-credentials.
+The command entry point selects an explicit configuration path and the shared loader reads its
+`data_plane` section. Environment and file references must occupy the whole scalar and may use `:-`
+defaults. Missing files, sections, and unresolved references fail startup. The loader does not
+discover `.env` files or mutate the process environment.
 
 `airmux gateway serve --dev` sets `AIRMUX_DEV=1`, enables local logging, and runs Uvicorn reload mode. Use
 `--workers N` outside development for multiple worker processes.
@@ -423,6 +401,12 @@ credentials.
 
 Provider credential values are never in the bundle. The bundle is org-sensitive because it contains
 live inference-key hashes, but reading it does not reveal the original keys.
+
+Bundle validation rejects unknown fields and applies the shared catalog identifier and token-limit
+constraints. Issue times and key expiries must include a timezone, so authentication can compare
+expiries with its UTC clock. In memory, bundle collections are tuples and parameter maps are copied
+into read-only mappings, including compiled provider aliases. Frozen models alone would still allow
+requests to mutate nested lists or dictionaries. JSON continues to use arrays and objects.
 
 ### Remote source
 
@@ -444,6 +428,16 @@ The data-plane management key authenticates and authorizes bundle transport. Pro
 HTTPS or a protected private network between the planes. The control plane stores the immutable
 serialized snapshot and serves it as a typed `BundleV1`; the data plane does not trust an unvalidated
 response or adopt a bundle whose organization and bundle ids differ from its manifest entry.
+
+Bundle availability has three internal stages:
+
+1. A management transaction commits resource changes and database triggers mark the affected compiled configuration stale
+2. A control-plane publisher compiles that committed state and atomically advances its current-bundle pointer
+3. A data-plane poller fetches, validates, and admits the published bundle
+
+Management requests return after the first stage. They do not wait for compilation or gateway polling, and management clients do
+not coordinate with publication state. A published bundle becomes active on a particular gateway only after that gateway's next
+successful manifest poll. Compilation failures and poll failures both preserve the last admitted bundle.
 
 The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
 to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has
@@ -508,13 +502,13 @@ metering, and request orchestration operate once on canonical types.
 
 An ingress adapter owns one caller dialect and implements:
 
-- `claims()` for chat-route discrimination
+- A unique `dialect` and public `path`
 - `parse()` into canonical plus parse-time adjustments
 - `render_response()` and `render_error()`
 - `new_stream()` for rendering canonical chunks in the caller's stream protocol
 
-Concrete classes are discovered by scanning modules under `ingress/`. Duplicate dialect names fail
-startup. Canonical never claims a request; it is the explicit fallback owned by `resolve()`.
+Concrete classes are discovered by scanning modules under `ingress/`. Duplicate dialect names or paths fail
+startup. Discovery also creates each adapter's completion route.
 
 ### Egress adapters
 
@@ -545,10 +539,10 @@ meaning.
 
 ## Request execution
 
-The HTTP boundary and orchestration in `proxy.py` serve every caller/provider combination:
+The HTTP boundary and orchestration in `proxy.py` and `streaming.py` serve every caller/provider combination:
 
 1. Mint the request ID and start time, capture the current bundle snapshot, and authenticate the caller
-2. Read a JSON object and resolve or bind the ingress dialect
+2. Use the route-bound ingress adapter and read a JSON object
 3. Parse the caller body into `CanonicalRequest` and collect translation adjustments
 4. Call pure `evaluate()` with the request, authenticated key, and captured snapshot
 5. Select the first credential candidate from the most specific populated scope
@@ -631,7 +625,7 @@ Each adapter creates its own `StreamState`. `finalize(state)` must return a vali
 what makes cancellation accounting possible.
 
 `StreamSession` opens the upstream response inside an async exit stack, then hands ownership of that
-stack to the `StreamingResponse` iterator. The provider connection therefore remains open for the
+stack to the downstream response lifecycle. The provider connection therefore remains open for the
 life of the downstream stream and closes on completion, error, or disconnect.
 
 On a normal end, the adapter validates the provider's terminal event, finalizes accumulated state,
@@ -662,8 +656,16 @@ before policy, plus missing or unavailable secret values, currently do not produ
 
 ### SQLite outbox
 
-`SqliteOutbox.record()` performs a local transaction and `INSERT OR IGNORE` keyed by `event_id`. It
-does no network work. The export loop:
+An allowed request reserves one slot immediately before each provider attempt, and a denied request
+reserves one slot before recording the denial. If the fixed 10,000-slot capacity is unavailable, the
+request returns `503 metering_capacity_exhausted` before the next provider call. A fallback can therefore
+stop after an earlier failed attempt if capacity fills between attempts. Reserved and filled slots both
+consume capacity. An unused slot returns when its attempt or stream ends.
+
+Recording an event transfers one reserved slot into the in-memory writer queue and never waits for
+SQLite. The storage thread batches `INSERT OR IGNORE` writes keyed by `event_id`, preserving event
+order within the worker. SQLite connections are created, used, and closed only on that thread. The
+export loop crosses the same thread to:
 
 1. Acquires or renews the single-row lease
 2. Reads up to 1,000 events in insertion order
@@ -675,8 +677,14 @@ acknowledgement can replay the batch; the control plane upserts on `event_id`, m
 idempotent. A control-plane outage leaves requests serving and events accumulating on disk until
 export succeeds.
 
-`DevNullOutbox` discards events and starts no worker. It is intended for standalone development,
-load tests, or deployments that meter elsewhere.
+The memory queue is not a billing ledger. Graceful shutdown drains every filled event into local
+storage without waiting for control-plane export. `SIGKILL`, machine failure, power loss, or a storage
+failure can lose events accepted into memory but not yet persisted. A storage-thread failure is fatal
+to the worker because metered traffic cannot continue safely.
+
+The file outbox uses the same reservation queue and storage-thread handoff, then appends each batch in
+one `O_APPEND` write. `DevNullOutbox` completes reserved slots immediately
+and starts no worker. It is intended for standalone development, load tests, or deployments that meter elsewhere.
 
 ## Changing or extending the data plane
 
@@ -687,7 +695,7 @@ conventions:
 
 1. Add the provider and models to taxonomy
 2. Set `kind`, `base_url`, aliases, `accepted_params`, and `params_closed`
-3. Apply taxonomy, which publishes changed bundle revisions automatically
+3. Apply taxonomy, which queues a durable global revision for asynchronous publication
 4. Prove the actual upstream body and response through a running data plane
 
 No data-plane registry or adapter edit is needed for spelling-only differences.
@@ -707,14 +715,12 @@ contract constraint and is the reason a genuinely new family still needs a share
 ### Add an ingress dialect
 
 1. Add one module under `ingress/`
-2. Subclass `IngressAdapter` and set a unique `dialect`
-3. Make `claims()` answer only whether the request is unmistakably that dialect
-4. Parse into canonical and report translation loss as adjustments
-5. Render buffered responses, errors, and streams from canonical
-6. Reuse a format module when the same protocol is already an egress family
+2. Subclass `IngressAdapter` and set a unique `dialect` and `path`
+3. Parse into canonical and report translation loss as adjustments
+4. Render buffered responses, errors, and streams from canonical
+5. Reuse a format module when the same protocol is already an egress family
 
-Do not edit a registry. `resolve()` owns override handling, claims ordering, and canonical fallback.
-A dedicated route requires an explicit route binding in `app.py`; a chat-route dialect does not.
+Do not edit a registry or `app.py`. Discovery creates the route and rejects discriminator collisions.
 
 ### Change the canonical definition
 
@@ -790,7 +796,7 @@ These are properties of the current implementation, not promises that another la
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
 - OpenAI egress does not replay canonical reasoning parts in prior messages
-- `readyz` reports bundle presence only
+- `readyz` reports accepted bundle presence and local worker availability only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk
 - SQLite durability and leasing coordinate processes on one compatible filesystem, not a distributed cluster
 
@@ -814,3 +820,27 @@ Before merging a data-plane change, verify:
 - Component configs contain their own required dependencies
 - Discovery needs no registry edit and rejects discriminator collisions
 - Tests assert behavior, and a real running request proves the change
+
+## Budget state
+
+The control-plane budget backend fetches current budget rules and exhaustion state through
+`/api/v1/policy-state/sync` on its own polling interval and connection. It runs independently from bundle polling
+and event export. It samples the organization IDs in the currently admitted bundle set, so polling begins without
+waiting for inference traffic. A `none` budget backend disables state polling and always accepts requests.
+`BudgetStateHolder` compiles exhausted-bucket lookups off the request path and replaces a
+per-organization snapshot at once. The existing policy index matches requests, then budget admission performs
+indexed memory lookups before each upstream attempt.
+`evaluate()` remains pure; no database driver or control-plane import enters the data plane.
+
+Missing, mismatched, or expired state allows the request because enforcement is best effort. Each fallback increments
+`airmux_data_plane_budget_state_fallbacks_total` with its reason. Usable state is enforced independently for every
+matching rule, so one unavailable rule does not disable another exhausted rule. Failed or incomplete refreshes leave
+the last complete snapshot. Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already
+in flight finish.
+
+No local spending delta is maintained. Overspend includes usage awaiting export, the next state poll, and
+in-flight attempts. There is no strict overspend bound during outages. All deployments contribute to the same history
+when they use the control-plane budget backend.
+
+The metric `airmux_data_plane_budget_state_computed_timestamp_seconds` exposes the calculation timestamp of
+the last accepted budget snapshot. It describes state age, not completeness of exporter delivery.

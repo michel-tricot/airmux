@@ -8,14 +8,20 @@ user-invocable: false
 
 ## Query conventions
 
-- Every query and mutation comes from the generated `@workspace/api-client-react` hooks. Never hand-write
-  a `useQuery` over a raw fetch
-- Query keys come from the generated `get*QueryKey` helpers and are the request path alone. Never spell a
-  key out by hand
-- Because the key is the path, an org-scoped call must carry its org in the key as well, or two orgs share
-  one cache entry. Pass `orgScope(orgId)` as the request option and add the org to the key
-- Mutations invalidate the list key they change, nothing broader: `getListOrgsQueryKey()` after creating an
-  org, not the whole cache
+- Management queries and mutations use generated `@workspace/api-client-react` hooks, preferably through
+  existing `src/features/*/hooks.ts` wrappers that own permissions-aware enabling and invalidation.
+  Never hand-write a management `useQuery` over a raw fetch; the separate playground inference boundary
+  lives in [console](../console/SKILL.md#playground-inference)
+- Let generated hooks build their keys. When a key is needed explicitly, use the matching generated
+  `get*QueryKey` helper with the same scope and filter arguments; never spell it out or append scope manually
+- Generated keys contain the request path with scope arguments substituted and query params where present, so
+  `getListWorkspacesQueryKey(orgId)` and `getGetWorkspaceQueryKey(orgId, workspaceRef)` already isolate scope.
+  Permission queries use `getMyPermissionsQueryKey(params)`, including org and workspace filters in the key
+- Infinite queries use distinct `get*InfiniteQueryKey` helpers, such as `getListOrgsInfiniteQueryKey()`.
+  Reuse `paginatedQueryOptions` and `flattenPages` from `src/features/pagination.ts` for cursor-backed lists
+- Mutations invalidate the affected list, detail, and dependent queries through their generated helpers.
+  Follow the owning feature hook: renaming an org refreshes its list, detail, and enrollment data.
+  Avoid clearing the whole cache for an ordinary resource mutation
 - Cross-resource reads (an org dropdown on a workspace page) reuse the owning resource's query, they do
   not refetch under a new key
 - `QueryClient` defaults live in `App.tsx`. Change behavior for one query on that query, change
@@ -23,17 +29,16 @@ user-invocable: false
 
 ## Polling
 
-Polling is a per-page decision based on how fast the data actually changes:
+`src/features/telemetry/hooks.ts` centralizes the existing polling cadence:
 
 - Live operational data (usage events): `refetchInterval: 3000`
 - Slowly changing operational data (data plane heartbeats): `refetchInterval: 10000`
 - Catalog data (orgs, users, workspaces, keys, providers, models, bundles): no polling; it changes when
   the user acts, and the mutation invalidation covers that
 
-Nothing in the console polls today. Adding the first `refetchInterval` is a decision, not a default.
-
-Do not add polling to a page as a substitute for invalidating after a mutation. When real push is
-needed, the upgrade path is SSE from the control plane, not tighter polling.
+Choose any additional polling based on how fast the data changes. Do not add it to a page as a substitute
+for invalidating after a mutation. When real push is needed, the upgrade path is SSE from the control plane,
+not tighter polling.
 
 ## Loading, error, empty
 

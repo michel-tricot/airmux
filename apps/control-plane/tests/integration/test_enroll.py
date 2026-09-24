@@ -31,7 +31,7 @@ def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
         assert org["personal_for"] == me["user_id"]
 
         standing = c.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert [o["id"] for o in standing["orgs"]] == [org["id"]]
+        assert [organization["id"] for organization in standing["orgs"]] == [org["id"]]
         assert standing["personal_org_id"] == org["id"]
         assert c.get("/api/v1/auth/me", headers=CSRF).json()["data"]["orgs"] == [org["id"]]
         assert c.get(f"/api/v1/organizations/{org['id']}/workspaces", headers=CSRF).status_code == 200
@@ -59,7 +59,7 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
         personal = c.post("/api/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
 
         standing = c.get("/api/v1/enroll", headers=CSRF).json()["data"]
-        assert {o["id"] for o in standing["orgs"]} == {str(granted), personal["id"]}
+        assert {organization["id"] for organization in standing["orgs"]} == {str(granted), personal["id"]}
         assert standing["personal_org_id"] == personal["id"]
 
 

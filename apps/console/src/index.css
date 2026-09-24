@@ -47,6 +47,18 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@theme {
+  --animate-request-arrival: request-arrival 1.8s ease-out;
+  @keyframes request-arrival {
+    from {
+      background-color: hsl(var(--primary) / 0.18);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+}
+
 :root {
   --background: 240 10% 4%;
   --foreground: 240 10% 95%;

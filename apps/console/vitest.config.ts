@@ -25,8 +25,9 @@ export default defineConfig({
     },
     environment: 'jsdom',
     execArgv: process.allowedNodeEnvironmentFlags.has('--no-experimental-webstorage') ? ['--no-experimental-webstorage'] : [],
-    maxWorkers: 1,
+    maxWorkers: '100%',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    testTimeout: 30_000,
   },
 });

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 import yaml
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
+from airmux_runtime.taxonomy import load_taxonomy
 from cli.control_plane import control_plane_app as app
 from contract.taxonomy import TaxonomySpec
-from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
+from control_plane.models import AuditLog, Bundle, BundleState, Model, Org, Provider, set_actor
 from control_plane.taxonomy import UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
@@ -42,7 +45,7 @@ providers:
   - provider_id: stub
     base_url: https://stub.example/v1
     param_aliases:
-      max_tokens: max_completion_tokens
+      max_output_tokens: max_completion_tokens
     accepted_params: [top_k]
     params_closed: true
 """
@@ -62,7 +65,7 @@ def test_apply_taxonomy_upserts(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     assert run_in_db(tmp_path, lambda: apply(TAXONOMY)) == (1, 1)
     assert run_in_db(tmp_path, lambda: apply(TAXONOMY.replace("stub.example", "stub2.example"))) == (1, 1)
@@ -76,7 +79,7 @@ def test_apply_taxonomy_carries_the_provider_icon(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_ICON))
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [STUB_ICON]
@@ -93,11 +96,11 @@ def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
 
     async def apply(doc: str):
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+        return await apply_taxonomy(load_taxonomy(doc))
 
     run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_PROFILE))
     (provider,) = run_in_db(tmp_path, Provider.find)
-    assert provider.param_aliases == {"max_tokens": "max_completion_tokens"}
+    assert provider.param_aliases == {"max_output_tokens": "max_completion_tokens"}
     assert provider.accepted_params == ["top_k"]
     assert provider.params_closed is True
 
@@ -110,9 +113,8 @@ def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
 
 def test_apply_taxonomy_carries_direct_model_prices(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -126,7 +128,6 @@ models:
     cache_read_price_per_mtok: 0.25
     cache_write_price_per_mtok: 2.5
 """
-        )
     )
 
     async def apply():
@@ -140,14 +141,13 @@ models:
         model.output_price_per_mtok,
         model.cache_read_price_per_mtok,
         model.cache_write_price_per_mtok,
-    ) == (2.0, 5.0, 0.25, 2.5)
+    ) == (Decimal("2.0"), Decimal("5.0"), Decimal("0.25"), Decimal("2.5"))
 
 
 def test_apply_taxonomy_carries_model_parameter_support(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -159,7 +159,6 @@ models:
     parameter_support:
       temperature: unsupported
 """
-        )
     )
 
     async def apply():
@@ -173,9 +172,8 @@ models:
 
 def test_apply_taxonomy_carries_model_modalities(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
+    spec = load_taxonomy(
+        """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
@@ -185,7 +183,6 @@ models:
     input_modalities: [text, image]
     output_modalities: [text]
 """
-        )
     )
 
     async def apply():
@@ -203,7 +200,7 @@ def test_a_provider_declaring_no_icon_has_none(tmp_path):
 
     async def apply():
         await set_actor("u-test")
-        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(TAXONOMY)))
+        return await apply_taxonomy(load_taxonomy(TAXONOMY))
 
     run_in_db(tmp_path, apply)
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [""]
@@ -224,7 +221,7 @@ def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
     assert run_in_db(tmp_path, Model.find) == []
 
 
-def test_taxonomy_command_applies_and_compiles(tmp_path):
+def test_taxonomy_command_applies_and_queues_publication(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     _seed_orgs(tmp_path, "org-dev")
@@ -238,23 +235,24 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
     assert result.exit_code == 0, result.output
     models = run_in_db(tmp_path, Model.find)
     assert "echo-2" in {m.name for m in models}
-    assert [b.version for b in run_in_db(tmp_path, Bundle.find)] == [1, 2]
+    assert run_in_db(tmp_path, Bundle.find) == []
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
-def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
+def test_taxonomy_command_records_one_global_revision_for_every_org(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     _seed_orgs(tmp_path, "org-one", "org-two")
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output
-    bundles = run_in_db(tmp_path, Bundle.find)
-    orgs = run_in_db(tmp_path, Org.find)
-    assert {b.org_id for b in bundles} == {o.id for o in orgs}
+    assert run_in_db(tmp_path, Bundle.find) == []
+    assert run_in_db(tmp_path, BundleState.find) == []
+    assert run_in_db(tmp_path, BundleState.global_generation) > 0
 
 
 def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
-    """The docker startup chain seeds before any admin exists; the writes are attributed to root."""
+    """The Docker taxonomy job runs before any admin exists, so its writes are attributed to root."""
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
@@ -267,6 +265,9 @@ def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
 def test_taxonomy_command_applies_without_orgs(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
+    config = yaml.safe_load((tmp_path / "airmux.yml").read_text(encoding="utf-8"))
+    config["control_plane"]["bootstrap"] = {"token": "${file:missing-bootstrap-key}"}
+    (tmp_path / "airmux.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--file", "taxonomy.yml", "--config", cfg])
     assert result.exit_code == 0, result.output

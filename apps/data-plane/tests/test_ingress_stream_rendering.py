@@ -8,6 +8,7 @@ from jsonschema import Draft202012Validator
 
 from data_plane.canonical import (
     CanonicalChunk,
+    CanonicalError,
     CanonicalReasoningDelta,
     CanonicalReasoningPart,
     CanonicalResponse,
@@ -16,10 +17,10 @@ from data_plane.canonical import (
     CanonicalToolCallDelta,
     CanonicalToolCallPart,
     CanonicalUsage,
+    GatewayErrorCode,
 )
-from data_plane.egress.base import CanonicalError
 from data_plane.ingress.anthropic import AnthropicIngress, AnthropicResponseStream
-from data_plane.ingress.openai_native import OpenAIResponseStream
+from data_plane.ingress.openai_chat_completions import OpenAIResponseStream
 from data_plane.ingress.openai_responses import ResponsesStream
 
 
@@ -123,7 +124,7 @@ def test_responses_output_events_match_the_checked_in_openai_schema():
             ),
             [],
         ),
-        *stream.error(CanonicalError(status=502, code="upstream_error", message="failed")),
+        *stream.error(CanonicalError(status=502, code=GatewayErrorCode.upstream_error, message="failed")),
     ]
     payloads = [_payload(frame) for frame in frames]
     schema_path = Path(__file__).parents[3] / "taxonomy/schemas/completion/oai_responses.openai.stream.json"

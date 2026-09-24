@@ -16,10 +16,11 @@ from uuid import UUID, uuid5
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from airmux_runtime.config import resolve_refs
+from airmux_runtime.taxonomy import load_taxonomy_document, parse_taxonomy
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
-from contract.policies import PolicyEntry, RuleEntry
-from contract.refs import resolve_refs
-from contract.taxonomy import TaxonomySpec, parse_taxonomy
+from contract.policies import PolicyEntry
+from contract.taxonomy import TaxonomySpec
 from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
 from data_plane.tasks import run_periodic
@@ -51,7 +52,6 @@ class LocalBundleSpec(BaseModel):
 
     keys: list[LocalKey] = Field(min_length=1)
     taxonomy: Path | TaxonomySpec
-    rules: tuple[RuleEntry, ...] = ()
     policies: tuple[PolicyEntry, ...] = ()
 
     @field_validator("keys")
@@ -68,11 +68,18 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
     if not taxonomy.providers or not taxonomy.models:
         message = "a local taxonomy must contain providers and models"
         raise ValueError(message)
-    keys = [
-        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, user_id=key.user_id, token_hash=token_hash(key.token))
+    keys = tuple(
+        KeyEntry(
+            key_id=f"local-{position}",
+            request_source="inference_key",
+            org_id=LOCAL_ORG,
+            workspace_id=LOCAL_WORKSPACE,
+            user_id=key.user_id,
+            token_hash=token_hash(key.token),
+        )
         for position, key in enumerate(spec.keys)
-    ]
-    credentials = [
+    )
+    credentials = tuple(
         CredentialEntry(
             ref=SecretRef(
                 purpose=SecretPurpose.provider,
@@ -86,27 +93,26 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
             version=1,
         )
         for provider in taxonomy.providers
-    ]
+    )
     return BundleV1(
         bundle_id=uuid5(_NAMESPACE, raw),
         org_id=LOCAL_ORG,
         issued_at=now,
         keys=keys,
-        rules=spec.rules,
         policies=spec.policies,
         catalog=Catalog(
-            providers=[
+            providers=tuple(
                 ProviderEntry(
                     provider_id=provider.provider_id,
                     kind=provider.kind,
                     base_url=provider.base_url,
                     param_aliases=provider.param_aliases,
-                    accepted_params=provider.accepted_params,
+                    accepted_params=tuple(provider.accepted_params) if provider.accepted_params is not None else None,
                     params_closed=provider.params_closed,
                 )
                 for provider in taxonomy.providers
-            ],
-            models=[
+            ),
+            models=tuple(
                 ModelEntry(
                     model_id=model.model_id,
                     provider_id=model.provider_id,
@@ -118,13 +124,13 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
                     cache_write_price_per_mtok=model.cache_write_price_per_mtok,
                     context_window=model.context_window,
                     max_output_tokens=model.max_output_tokens,
-                    input_modalities=model.input_modalities,
-                    output_modalities=model.output_modalities,
-                    capabilities=model.capabilities,
+                    input_modalities=tuple(model.input_modalities),
+                    output_modalities=tuple(model.output_modalities),
+                    capabilities=tuple(model.capabilities),
                     parameter_support=model.parameter_support,
                 )
                 for model in taxonomy.models
-            ],
+            ),
             credentials=credentials,
         ),
     )
@@ -132,7 +138,8 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
 
 def load_local(path: Path, now: datetime) -> BundleV1:
     raw = path.read_text(encoding="utf-8")
-    spec = LocalBundleSpec.model_validate(resolve_refs(yaml.safe_load(raw) or {}, base_dir=path.parent))
+    document = load_taxonomy_document(raw)
+    spec = LocalBundleSpec.model_validate(resolve_refs(document, base_dir=path.parent))
     taxonomy = parse_taxonomy(path.parent / spec.taxonomy) if isinstance(spec.taxonomy, Path) else spec.taxonomy
     identity = spec.model_dump_json() + "\n" + taxonomy.model_dump_json()
     return compile_local(spec, taxonomy, identity, now)

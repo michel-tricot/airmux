@@ -13,7 +13,7 @@ from sqlmodel import col
 
 from control_plane.authz import Permission, Scope
 from control_plane.deps import ActorDep, instance_scope, require
-from control_plane.models import InferenceKey, Org, OrgMembership, User
+from control_plane.models import Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyCreatedOut, ManagementKeyIn  # noqa: TC001 FastAPI resolves route annotations at runtime
 from control_plane.models.user import InstanceRoleIn, ServiceAccountIn, UserOut
@@ -46,8 +46,8 @@ async def create_instance_service_account_management_key(
     return Envelope(data=await issue_management_key(body, actor, Scope.instance(), principal_id=service_account.id))
 
 
-def _user_out(u: User, orgs: list[UUID]) -> UserOut:
-    return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
+def _user_out(user: User, orgs: list[UUID]) -> UserOut:
+    return UserOut.model_validate({**user.model_dump(), "orgs": orgs})
 
 
 @router.get("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
@@ -57,7 +57,7 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
-    return Envelope(data=_user_out(user, [m.org_id for m in memberships]))
+    return Envelope(data=_user_out(user, [membership.org_id for membership in memberships]))
 
 
 @router.delete("/users/{user_id}", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])
@@ -74,8 +74,6 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
         raise HTTPException(status_code=409, detail="user is still a member of an org; remove the memberships first")
     if await Org.personal_of(user_id) is not None:
         raise HTTPException(status_code=409, detail="user owns a personal org; delete the org first")
-    if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
-        raise HTTPException(status_code=409, detail="user created inference keys that outlive them; delete those workspaces first")
     await user.delete_with_contents()
     return Envelope(data=DeletedOut.of(user_id))
 
@@ -83,13 +81,13 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
 @router.get("/users", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_read)])
 async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
     """List human users and service accounts across the instance."""
-    kind = [] if service_account is None else [User.service_account == service_account]
-    users = await User.find(*kind, order_by=col(User.email))
+    conditions = () if service_account is None else (User.service_account == service_account,)
+    users = await User.find(*conditions, order_by=col(User.email))
     memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))
     orgs_by_user: dict[UUID, list[UUID]] = {}
-    for m in memberships:
-        orgs_by_user.setdefault(m.user_id, []).append(m.org_id)
-    return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
+    for membership in memberships:
+        orgs_by_user.setdefault(membership.user_id, []).append(membership.org_id)
+    return Envelope(data=[_user_out(user, orgs_by_user.get(user.id, [])) for user in users])
 
 
 @router.put("/users/{user_id}/instance-role", tags=["Instance Users"], dependencies=[require("api", instance_scope, Permission.principals_manage)])

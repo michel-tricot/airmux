@@ -8,9 +8,10 @@ to a default rather than failing the response."""
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import to_json
 
 from data_plane.canonical import (
     CanonicalAssistantMessage,
@@ -42,26 +43,21 @@ if TYPE_CHECKING:
 DATA_URL = "data:"
 
 
-class ChatBody(BaseModel):
-    """Every field the gateway can put on an OpenAI chat request. Absent means None, so the omission
-    rule is a property of the type rather than a filter at the call site."""
-
-    model_config = ConfigDict(frozen=True)
-
+class ChatBody(TypedDict):
     model: str
     messages: list[dict[str, Any]]
-    max_tokens: int | None = None
-    temperature: float | None = None
-    top_p: float | None = None
-    stop: list[str] | None = None
-    seed: int | None = None
-    reasoning_effort: str | None = None
-    tools: list[dict[str, Any]] | None = None
-    tool_choice: str | dict[str, Any] | None = None
-    parallel_tool_calls: bool | None = None
-    response_format: dict[str, Any] | None = None
-    stream: bool | None = None
-    stream_options: dict[str, Any] | None = None
+    max_output_tokens: int | None
+    temperature: float | None
+    top_p: float | None
+    stop: list[str] | None
+    seed: int | None
+    reasoning_effort: str | None
+    tools: list[dict[str, Any]] | None
+    tool_choice: str | dict[str, Any] | None
+    parallel_tool_calls: bool | None
+    response_format: dict[str, Any] | None
+    stream: bool | None
+    stream_options: dict[str, Any] | None
 
 
 def _image_to_url(part: CanonicalImagePart) -> str:
@@ -171,7 +167,7 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
     return ChatBody(
         model=upstream_model,
         messages=to_messages(req.messages),
-        max_tokens=req.max_tokens,
+        max_output_tokens=req.max_output_tokens,
         temperature=req.temperature,
         top_p=req.top_p,
         stop=req.stop,
@@ -633,7 +629,7 @@ class ChatCompletionChunkOut(BaseModel):
     gateway: CanonicalGatewayInfo | None = None
 
     def sse(self) -> bytes:
-        return b"data: " + self.model_dump_json(exclude_none=True).encode() + b"\n\n"
+        return b"data: " + to_json(self, by_alias=False, exclude_none=True) + b"\n\n"
 
 
 def usage_out(usage: CanonicalUsage) -> UsageOut:

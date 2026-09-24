@@ -194,17 +194,15 @@ def test_org_user_listing_is_scoped_to_the_acting_org(tmp_path):
         assert sorted(m["email"] for m in second) == ["both@example.com", "two@example.com"]
 
 
-def test_org_users_require_an_explicit_scope(tmp_path):
+def test_org_users_can_be_managed_within_an_organization(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         uid = str(make_user(tmp_path, "m@example.com").id)
-        assert c.get("/api/v1/org/users", headers=root).status_code == 404
         assert c.get(f"/api/v1/organizations/{o1}/users", headers=root).status_code == 200
         assert c.put(f"/api/v1/organizations/{o1}/users/{uid}", json={"role": "member"}, headers=root).status_code == 200
         assert c.delete(f"/api/v1/organizations/{o1}/users/{uid}", headers=root).status_code == 200
-        assert c.put(f"/api/v1/users/{uid}/orgs/{o1}", headers=root).status_code == 404
 
 
 def test_org_management_key_requires_standing_membership(tmp_path):

@@ -26,9 +26,10 @@ def test_model_and_provider_upsert_converge(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
-        c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "input_price_per_mtok": 0.0}, headers=root)
-        assert c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "input_price_per_mtok": 0.15}, headers=root).status_code == 200
-        assert c.get("/api/v1/instance/taxonomy", headers=root).json()["data"]["models"][0]["input_price_per_mtok"] == 0.15
+        assert c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "input_price_per_mtok": 0.0}, headers=root).status_code == 422
+        c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "input_price_per_mtok": "0.0"}, headers=root)
+        assert c.post("/api/v1/instance/taxonomy/models", json={**MODEL, "input_price_per_mtok": "0.15"}, headers=root).status_code == 200
+        assert c.get("/api/v1/instance/taxonomy", headers=root).json()["data"]["models"][0]["input_price_per_mtok"] == "0.150000"
         updated = {**PROVIDER, "base_url": "https://other.example/v1"}
         assert c.post("/api/v1/instance/taxonomy/providers", json=updated, headers=root).status_code == 200
         assert c.get("/api/v1/instance/taxonomy", headers=root).json()["data"]["providers"][0]["base_url"] == "https://other.example/v1"

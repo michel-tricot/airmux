@@ -59,6 +59,13 @@ class Console:
         self.page.get_by_role("button", name="Sign in", exact=True).click()
         expect(self.page.get_by_role("heading", name="Sign in", exact=True)).not_to_be_visible()
 
+    def select_workspace(self, name: str) -> None:
+        selector = self.page.get_by_role("combobox", name="Workspace", exact=True)
+        expect(selector).to_be_enabled()
+        selector.click()
+        self.page.get_by_role("option", name=name, exact=True).click()
+        expect(selector).to_contain_text(name)
+
 
 @contextmanager
 def running_console(stack: Stack) -> Iterator[Console]:
