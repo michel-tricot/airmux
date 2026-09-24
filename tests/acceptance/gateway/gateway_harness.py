@@ -154,7 +154,6 @@ class Gateway:
         *,
         match: dict[str, object] | None = None,
         target: dict[str, object] | None = None,
-        priority: int = 100,
     ) -> None:
         rules = [{"match": match or {"kind": "all_requests"}, "action": action} for action in actions]
         self.bundle["policies"] = [
@@ -162,8 +161,7 @@ class Gateway:
             {
                 "id": str(uuid7()),
                 "workspace_id": LOCAL_WORKSPACE,
-                "name": f"Policy {priority}",
-                "priority": priority,
+                "name": f"Policy {len(self.bundle['policies'])}",
                 "definition": {"target": target or {"kind": "workspace"}, "rules": rules},
             },
         ]

@@ -13,7 +13,7 @@ from cli.output import Col, FormatOption, OutputFormat, print_rows
 
 PolicyFile = Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True, help="JSON policy configuration")]
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace slug or ID")]
-POLICY_COLS = [Col("id", "ID"), Col("name", "Name"), Col("enabled", "Enabled"), Col("priority", "Priority"), Col("definition", "Definition")]
+POLICY_COLS = [Col("id", "ID"), Col("name", "Name"), Col("enabled", "Enabled"), Col("definition", "Definition")]
 
 
 @policies_app.command("list")

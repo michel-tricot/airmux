@@ -606,8 +606,8 @@ def run_revision(directory: Path, executable: Path, revision: Revision, round_nu
                 gateway.start(settings.workers)
             if scenario == "policies":
                 gateway.stop()
-                for priority in range(POLICY_COUNT):
-                    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 100}], priority=priority)
+                for _ in range(POLICY_COUNT):
+                    gateway.add_policy([{"kind": "request_limits", "max_output_tokens": 100}])
                 gateway.start(settings.workers)
             body = request_body(scenario, provider_protocol, direct=scenario == "upstream", request_bytes=settings.request_bytes)
 

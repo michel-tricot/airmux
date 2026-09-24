@@ -20,18 +20,13 @@ Run CLI commands from this checkout with `uv run airmux`.
 
 ## Start the gateway
 
-Set a provider key, then initialize the gateway. The initializer creates a local configuration and inference key:
+Set a provider key, then initialize and start the gateway. The initializer creates a local configuration and inference key:
 
 ```bash
 export OPENAI_API_KEY='your-provider-key'
-uv run airmux gateway init
-```
-
-Validate the setup and start the gateway:
-
-```bash
-uv run airmux gateway validate
-uv run airmux gateway serve
+airmux gateway init
+airmux gateway validate
+airmux gateway serve
 ```
 
 The gateway runs in the foreground at `http://127.0.0.1:8080`. Keep the provider key available to the process. To use
@@ -53,6 +48,22 @@ curl --fail-with-body http://127.0.0.1:8080/inf/v1/chat/completions \
 
 Change the `model` value to another ID in your taxonomy. See the [inference reference](/docs/reference/inference) for
 other request formats.
+
+## Run the gateway in a container
+
+Clone the source and build the image, then run the gateway with the local configuration mounted read-only:
+
+```bash
+AIRMUX_CONFIG_DIR="$PWD"
+AIRMUX_SOURCE_DIR="$(mktemp -d)/airmux"
+git clone https://github.com/michel-tricot/airmux.git "$AIRMUX_SOURCE_DIR"
+docker build -t airmux:local "$AIRMUX_SOURCE_DIR"
+docker run --rm --user "$(id -u):$(id -g)" \
+  --entrypoint airmux \
+  --mount "type=bind,source=$PWD,target=/config,readonly" \
+  -e OPENAI_API_KEY -p 8080:8081 \
+  airmux:local gateway serve --config /config/.airmux/airmux.yml --host 0.0.0.0 --port 8081
+```
 
 ## Customize local setup
 

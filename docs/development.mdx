@@ -76,11 +76,27 @@ If publication succeeds but verification fails, rerun failed jobs on the origina
 
 ### Install a local build
 
-To install an unreleased checkout for local use:
+Build and install an unreleased checkout, then run its portable installation smoke test outside the repository:
 
 ```bash
+(
+set -e
 ./scripts/build-python-distribution.sh
 uv tool install --reinstall dist/airmux-*.whl
+smoke_dir="$(mktemp -d)"
+export UV_TOOL_DIR="$smoke_dir/tools"
+export UV_TOOL_BIN_DIR="$smoke_dir/bin"
+uv tool install --python 3.13 dist/airmux-*.whl
+uv venv --python 3.13 "$smoke_dir/runner"
+uv pip install --python "$smoke_dir/runner/bin/python" pytest httpx pyyaml
+mkdir -p "$smoke_dir/tests/installation/portable" "$smoke_dir/tests/acceptance"
+cp tests/installation/portable/*.py "$smoke_dir/tests/installation/portable/"
+cp tests/installation/installation_support.py "$smoke_dir/tests/installation/"
+cp tests/acceptance/process_harness.py "$smoke_dir/tests/acceptance/"
+cd "$smoke_dir"
+AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
+  "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
+)
 ```
 
 The `airmux` command is then available outside the repository.

@@ -213,7 +213,6 @@ async def workspace_policy(
     workspace: Workspace,
     *,
     name: str,
-    priority: int,
     target: WorkspaceTarget | SelectedUsers | SelectedKeys,
     rules: tuple[RuleDefinition, ...],
 ) -> Policy:
@@ -222,7 +221,6 @@ async def workspace_policy(
         org_id=workspace.org_id,
         workspace_id=workspace.id,
         name=name,
-        priority=priority,
         definition=PolicyDefinition(target=target, rules=rules),
     ).save()
 
@@ -429,7 +427,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await workspace_policy(
         production,
         name="Streaming uses team credentials",
-        priority=10,
         target=WorkspaceTarget(kind="workspace"),
         rules=(team_credentials,),
     )
@@ -440,7 +437,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await workspace_policy(
         production,
         name="Approved production models",
-        priority=20,
         target=WorkspaceTarget(kind="workspace"),
         rules=(approved_models,),
     )
@@ -457,20 +453,16 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await workspace_policy(
         production,
         name="GPT-4o fallback",
-        priority=30,
         target=WorkspaceTarget(kind="workspace"),
         rules=(fallback,),
     )
-    for priority, (name, action) in enumerate(
+    for name, action in (
+        ("Honor every request parameter", StrictParameters(kind="strict_parameters")),
         (
-            ("Honor every request parameter", StrictParameters(kind="strict_parameters")),
-            (
-                "Production model price ceiling",
-                PriceLimit(kind="price_limit", max_input_price_per_mtok=Decimal(100), max_output_price_per_mtok=Decimal(100)),
-            ),
-            ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=4096)),
+            "Production model price ceiling",
+            PriceLimit(kind="price_limit", max_input_price_per_mtok=Decimal(100), max_output_price_per_mtok=Decimal(100)),
         ),
-        start=31,
+        ("Output token ceiling", RequestLimits(kind="request_limits", max_output_tokens=4096)),
     ):
         configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
@@ -479,22 +471,18 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
         await workspace_policy(
             production,
             name=name,
-            priority=priority,
             target=WorkspaceTarget(kind="workspace"),
             rules=(configured_rule,),
         )
-    for priority, (name, target, limit) in enumerate(
-        (
-            ("Michel output token ceiling", SelectedUsers(kind="selected_users", user_ids=(michel.id,)), 1024),
-            ("Checkout output token ceiling", SelectedKeys(kind="selected_keys", key_ids=(str(checkout.id),)), 512),
-        ),
-        start=34,
+    for name, target, limit in (
+        ("Michel output token ceiling", SelectedUsers(kind="selected_users", user_ids=(michel.id,)), 1024),
+        ("Checkout output token ceiling", SelectedKeys(kind="selected_keys", key_ids=(str(checkout.id),)), 512),
     ):
         configured_rule = policy_rule(
             match=AllRequests(kind="all_requests"),
             action=RequestLimits(kind="request_limits", max_output_tokens=limit),
         )
-        await workspace_policy(production, name=name, priority=priority, target=target, rules=(configured_rule,))
+        await workspace_policy(production, name=name, target=target, rules=(configured_rule,))
     maintenance = policy_rule(
         match=AllRequests(kind="all_requests"),
         action=DenyRequest(kind="deny", message="Inference is temporarily unavailable"),
@@ -502,7 +490,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     maintenance_policy = await workspace_policy(
         production,
         name="Maintenance window",
-        priority=40,
         target=WorkspaceTarget(kind="workspace"),
         rules=(maintenance, team_credentials),
     )
@@ -515,7 +502,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await workspace_policy(
         staging,
         name="CI provider allowlist",
-        priority=10,
         target=SelectedKeys(kind="selected_keys", key_ids=(str(ci.id),)),
         rules=(ci_provider,),
     )
@@ -526,7 +512,6 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:  # noqa
     await workspace_policy(
         default,
         name="Default output token ceiling",
-        priority=10,
         target=WorkspaceTarget(kind="workspace"),
         rules=(default_output_limit,),
     )

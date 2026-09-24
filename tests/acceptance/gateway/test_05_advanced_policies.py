@@ -26,11 +26,10 @@ def test_selected_key_policy_does_not_restrict_other_keys(gateway: Gateway, dial
 
 
 @pytest.mark.parametrize("dialect", DIALECTS)
-@pytest.mark.parametrize("priorities", [(10, 100), (100, 10)], ids=["allow_first", "deny_first"])
-def test_allow_rule_never_overrides_an_independent_restriction(gateway: Gateway, dialect: Dialect, priorities: tuple[int, int]):
+def test_allow_rule_never_overrides_an_independent_restriction(gateway: Gateway, dialect: Dialect):
     provider = gateway.add_provider()
-    gateway.add_policy([{"kind": "models", "names": ["model-a", "model-b"]}], priority=priorities[0])
-    gateway.add_policy([{"kind": "price_limit", "max_input_price_per_mtok": "1", "max_output_price_per_mtok": "5"}], priority=priorities[1])
+    gateway.add_policy([{"kind": "models", "names": ["model-a", "model-b"]}])
+    gateway.add_policy([{"kind": "price_limit", "max_input_price_per_mtok": "1", "max_output_price_per_mtok": "5"}])
     gateway.start()
     response = gateway.request(dialect)
     assert response.status_code == 403
@@ -59,7 +58,7 @@ def test_model_and_stream_conditions_only_restrict_matching_requests(gateway: Ga
 def test_intersecting_model_allowlists_only_permit_their_common_models(gateway: Gateway, dialect: Dialect):
     provider = gateway.add_provider(models=("model-a", "model-b", "model-c"))
     gateway.add_policy([{"kind": "models", "names": ["model-a", "model-b"]}])
-    gateway.add_policy([{"kind": "models", "names": ["model-b", "model-c"]}], priority=200)
+    gateway.add_policy([{"kind": "models", "names": ["model-b", "model-c"]}])
     gateway.start()
     for model, status in (("model-a", 403), ("model-b", 200), ("model-c", 403)):
         assert gateway.request(dialect, model=model).status_code == status
