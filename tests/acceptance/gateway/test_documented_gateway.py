@@ -24,7 +24,7 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
     initialize, serve = code_block(document, "airmux gateway init").split("airmux gateway serve")
     initialize = initialize.removeprefix("uv tool install airmux\n").replace("'your-provider-key'", shlex.quote(UPSTREAM_KEY))
     subprocess.run(["/bin/bash", "-eu", "-c", initialize], cwd=gateway.directory, env=environment, check=True, capture_output=True)  # noqa: S603 trusted documentation with local fixture credentials
-    directory = gateway.directory / "airmux-demo" if document == "README.md" else gateway.directory
+    directory = gateway.directory
     taxonomy_path = directory / ".airmux/taxonomy.yml"
     taxonomy = yaml.safe_load(taxonomy_path.read_text())
     for provider in taxonomy["providers"]:
@@ -39,7 +39,7 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
         stderr=subprocess.STDOUT,
     )
     eventually(gateway.ready)
-    request = code_block(document, "curl --fail-with-body").replace("http://127.0.0.1:8080", gateway.url)
+    request = code_block("docs/deployment/gateway.mdx", "curl --fail-with-body").replace("http://127.0.0.1:8080", gateway.url)
     result = subprocess.run(  # noqa: S603 execute the documented curl against the local gateway
         ["/bin/bash", "-eu", "-c", request],
         cwd=gateway.directory,
@@ -49,11 +49,8 @@ def test_documented_gateway_initialization_and_curl(gateway, document):
         timeout=15,
         check=True,
     )
-    if document == "README.md":
-        completion = json.loads(result.stdout)
-    else:
-        readiness, end = json.JSONDecoder().raw_decode(result.stdout)
-        assert readiness == {"status": "ready"}
-        completion = json.loads(result.stdout[end:])
+    readiness, end = json.JSONDecoder().raw_decode(result.stdout)
+    assert readiness == {"status": "ready"}
+    completion = json.loads(result.stdout[end:])
     assert completion["choices"][0]["message"]["content"] == TEXT
     assert len(upstream.requests) == 1

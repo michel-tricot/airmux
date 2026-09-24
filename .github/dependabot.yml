@@ -6,6 +6,8 @@ updates:
       - /packaging/airmux
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: airmux
     groups:
       python-dependencies:
         patterns:
