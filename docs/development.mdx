@@ -79,8 +79,10 @@ If publication succeeds but verification fails, rerun failed jobs on the origina
 Build and install an unreleased checkout, then run its portable installation smoke test outside the repository:
 
 ```bash
+(
 set -e
 ./scripts/build-python-distribution.sh
+uv tool install --reinstall dist/airmux-*.whl
 smoke_dir="$(mktemp -d)"
 export UV_TOOL_DIR="$smoke_dir/tools"
 export UV_TOOL_BIN_DIR="$smoke_dir/bin"
@@ -95,12 +97,6 @@ cd "$smoke_dir"
 AIRMUX_INSTALL_BIN="$UV_TOOL_BIN_DIR/airmux" AIRMUX_INSTALL_PYTHON=3.13 \
   "$smoke_dir/runner/bin/python" -I -m pytest -o pythonpath=. tests/installation/portable
 )
-```
-
-For a direct local installation, run:
-
-```bash
-uv tool install --reinstall dist/airmux-*.whl
 ```
 
 The `airmux` command is then available outside the repository.
