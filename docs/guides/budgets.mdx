@@ -1,6 +1,6 @@
 ---
 title: "Create and audit a budget"
-description: "Set a workspace spending limit and inspect recorded spend from the CLI or management API."
+description: "Set a workspace spending limit and inspect recorded spend with the CLI."
 ---
 
 A budget action limits the recorded USD cost of matching requests within a UTC calendar day or month. The rule's target and request match select which usage counts. `shared` combines matching usage into one allowance; `per_key` gives each inference key its own allowance.
@@ -33,10 +33,7 @@ Save this as `budget-policy.json`:
 }
 ```
 
-<Tabs>
-  <Tab title="CLI">
-
-Create the policy in your active workspace context:
+Create the policy in your active organization and workspace context:
 
 ```bash
 airmux policies create budget-policy.json --workspace production -f json
@@ -68,57 +65,12 @@ The CLI prints a JSON array. Copy the returned `id` for the status command:
 ]
 ```
 
-  </Tab>
-  <Tab title="cURL">
-
-Set `AIRMUX_URL`, `AIRMUX_ORG_ID`, and a management key with `policies.manage` for the workspace, then create the policy:
-
-```bash
-curl --fail-with-body "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies" \
-  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY" \
-  -H "Content-Type: application/json" \
-  --data-binary @budget-policy.json
-```
-
-The API wraps the created policy in `data`; copy `data.id` for the status request:
-
-```json
-{
-  "data": {
-    "id": "01990aa3-4b4c-7000-8000-000000000001",
-    "org_id": "01990aa3-4b4c-7000-8000-000000000002",
-    "workspace_id": "01990aa3-4b4c-7000-8000-000000000003",
-    "name": "Production monthly budget",
-    "enabled": true,
-    "priority": 20,
-    "definition": {
-      "target": {"kind": "workspace"},
-      "rules": [
-        {
-          "match": {"kind": "all_requests"},
-          "action": {"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
-        }
-      ]
-    },
-    "created_at": "2026-09-23T18:00:00Z",
-    "updated_at": "2026-09-23T18:00:00Z"
-  }
-}
-```
-
-  </Tab>
-</Tabs>
-
 ## Check spending
 
-The status view reports the UTC window, spend, remaining allowance, exhaustion, and calculation time. A monthly window starts on the first day of the month and ends on the first day of the next month. Shared budgets return one `shared` bucket.
-
-<Tabs>
-  <Tab title="CLI">
+The status output reports the UTC window, spend, remaining allowance, exhaustion, and calculation time. A monthly window starts on the first day of the month and ends on the first day of the next month. Shared budgets return one `shared` bucket.
 
 ```bash
-airmux policies status 01990aa3-4b4c-7000-8000-000000000001 \
-  --workspace production -f json
+airmux policies status "$POLICY_ID" --workspace production -f json
 ```
 
 The CLI prints a JSON array, one row per budget rule:
@@ -146,73 +98,11 @@ The CLI prints a JSON array, one row per budget rule:
 ]
 ```
 
-  </Tab>
-  <Tab title="cURL">
-
-Set `POLICY_ID` to the `id` returned when creating the policy. The status endpoint requires a management key with both `policies.read` and `usage.read`:
-
-```bash
-curl --fail-with-body \
-  "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies/$POLICY_ID/status" \
-  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
-```
-
-The API response uses the standard `data` envelope:
-
-```json
-{
-  "data": {
-    "policy": {
-      "id": "01990aa3-4b4c-7000-8000-000000000001",
-      "org_id": "01990aa3-4b4c-7000-8000-000000000002",
-      "workspace_id": "01990aa3-4b4c-7000-8000-000000000003",
-      "name": "Production monthly budget",
-      "enabled": true,
-      "priority": 20,
-      "definition": {
-        "target": {"kind": "workspace"},
-        "rules": [
-          {
-            "match": {"kind": "all_requests"},
-            "action": {"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
-          }
-        ]
-      },
-      "created_at": "2026-09-23T18:00:00Z",
-      "updated_at": "2026-09-23T18:00:00Z"
-    },
-    "computed_at": "2026-09-23T18:30:00Z",
-    "budgets": [
-      {
-        "rule_index": 0,
-        "aggregation": "shared",
-        "amount_usd": "20.00",
-        "period": "month",
-        "window_start": "2026-09-01T00:00:00Z",
-        "window_end": "2026-10-01T00:00:00Z",
-        "buckets": [
-          {
-            "bucket": {"kind": "shared"},
-            "spent_usd": "12.40",
-            "remaining_usd": "7.60",
-            "exhausted": false
-          }
-        ],
-        "next_bucket": null
-      }
-    ]
-  }
-}
-```
-
-  </Tab>
-</Tabs>
-
-The example amounts and timestamps are illustrative. `computed_at` marks when the status was calculated from recorded usage. Usage from earlier in the current period also counts, including usage recorded before the policy was created.
+Example amounts and timestamps are illustrative. `computed_at` marks when status was calculated from recorded usage. Usage from earlier in the current period also counts, including usage recorded before the policy was created.
 
 ## Audit per-key budgets
 
-For separate allowances per inference key, set `aggregation` to `per_key` in the budget action before creating the policy. Each returned bucket identifies a key and reports its own spend and remaining allowance:
+For separate allowances per inference key, set `aggregation` to `per_key` in the budget action before creating the policy. Each returned bucket identifies a key and reports its spend and remaining allowance:
 
 ```json
 {
@@ -229,23 +119,11 @@ Set `KEY_ID` to a key ID from a bucket. If it has no matching recorded usage in 
 airmux policies status "$POLICY_ID" -w production --rule-index 0 --bucket-id "$KEY_ID" -f json
 ```
 
-```bash
-curl --fail-with-body \
-  "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies/$POLICY_ID/status?rule_index=0&bucket_id=$KEY_ID" \
-  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
-```
-
-To inspect all key buckets, request a page. When more buckets remain, `next_bucket` has the form `{"kind":"key","key_id":"key-id-100"}`. Pass its `key_id` as `after_bucket` for the next page:
+To inspect all key buckets, request a page. When more buckets remain, `next_bucket` has the form `{"kind":"key","key_id":"key-id-100"}`. Pass its `key_id` as `AFTER_BUCKET` for the next page:
 
 ```bash
 airmux policies status "$POLICY_ID" -w production --rule-index 0 --limit 100 -f json
 airmux policies status "$POLICY_ID" -w production --rule-index 0 --after-bucket "$AFTER_BUCKET" --limit 100 -f json
 ```
 
-```bash
-curl --fail-with-body \
-  "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies/$POLICY_ID/status?rule_index=0&limit=100&after_bucket=$AFTER_BUCKET" \
-  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY"
-```
-
-Rule indices start at zero and follow the order in the policy's `definition.rules` array. The status endpoint returns one entry per budget rule. A request blocked by an exhausted budget receives `429 budget_exhausted` with a `Retry-After` header.
+Rule indices start at zero and follow the order in the policy's `definition.rules` array. The status command requires a CLI profile with `policies.read` and `usage.read` permissions in the workspace. A request blocked by an exhausted budget receives `429 budget_exhausted` with a `Retry-After` header.
