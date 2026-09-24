@@ -6,7 +6,7 @@
     "codegen": "orval --config ./orval.config.ts && bun run --cwd ../.. typecheck:libs"
   },
   "devDependencies": {
-    "@types/node": "^25.3.3",
+    "@types/node": "^26.5.1",
     "orval": "^8.23.0"
   }
 }
