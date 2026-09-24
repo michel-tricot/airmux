@@ -32,7 +32,7 @@ Do not publish yet. The owner claim window, budget enforcement, and stale-key be
 | Medium | One inference key can occupy the shared upstream pool without per-key rate or concurrency admission | [#217](https://github.com/michel-tricot/airmux/issues/217) | Fix before shared public service |
 | Medium | Direct gateway requests and upstream buffered and streaming payloads lack application-level byte bounds | [#339](https://github.com/michel-tricot/airmux/issues/339) | Fix before public exposure of direct gateway mode |
 | Medium | Native gateway state files are readable by other local users under a standard `022` umask | [#340](https://github.com/michel-tricot/airmux/issues/340) | Fix before recommending shared-host native deployment |
-| Release gate | Live GitHub security-setting status and a confidential public reporting path are not yet verified | [#343](https://github.com/michel-tricot/airmux/issues/343) | Verify after the repository visibility change |
+| Release gate | A private email contact is documented, but live GitHub security settings and private vulnerability reporting are not yet verified | [#343](https://github.com/michel-tricot/airmux/issues/343) | Verify after the repository visibility change |
 
 ## Evidence and attacker prerequisites
 
@@ -71,7 +71,7 @@ A history-only PEM private-key artifact was found by enumerating paths across Gi
 | Abuse and spending | Reviewed authentication throttling, per-key admission, token limits, retries, budgets, and durable outbox | No disruptive load or paid-provider stress test was run; disk exhaustion was assessed from code only |
 | Internal protocol | Reviewed operational key permissions, scoped bundle reads, event validation and idempotency, heartbeat scope, and cached-bundle outage behavior | No active network attacker or long outage was simulated |
 | Deployment and supply chain | Reviewed Compose listeners, image user, state mounts, CI permissions, pinned actions, release artifact digests, current tracked paths, and historical secret filenames; dependency audits passed | No container image CVE scan or complete historical secret-content scan was run; the live security-policy API did not confirm requested settings |
-| Readiness | Reviewed deployment security and incident guidance | A verified confidential reporting channel is still needed for public launch; [#343](https://github.com/michel-tricot/airmux/issues/343) tracks it |
+| Readiness | Reviewed deployment security and incident guidance; [SECURITY.md](../../SECURITY.md) now gives a private email contact | GitHub private vulnerability reporting and scanner settings still need launch verification; [#343](https://github.com/michel-tricot/airmux/issues/343) tracks it |
 
 Provider base URLs are set through instance catalog management or local operator files, not by inference callers. A catalog administrator can direct provider credentials to an arbitrary HTTP endpoint. This is a privileged configuration capability and should be treated as such when delegating catalog permissions. The provider client does not enable automatic redirects in its construction; keep a regression test if that behavior changes.
 
