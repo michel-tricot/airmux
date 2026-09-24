@@ -14,8 +14,17 @@ description: "Harden a public airmux deployment and protect its management, infe
 - Keep control-plane synchronization traffic on a private or otherwise protected network
 - Disable response buffering on `/inf/` and set an appropriate streaming read timeout
 - Claim the first owner before exposing a new instance to untrusted clients; the first reachable signup can claim it even when public signup is disabled
-- Bind Compose to loopback during bootstrap or firewall its published port; the default Compose mapping listens on all host interfaces
 - Bound request size and concurrency at the edge for both packaged and direct gateway deployments
+
+The default Compose port mapping listens on all host interfaces. For local bootstrap, bind it to loopback and claim the
+first owner before exposing the service:
+
+```bash
+AIRMUX_PORT=127.0.0.1:8080 docker compose up -d --wait
+```
+
+If you choose another port, update `AIRMUX_PUBLIC_URL` and the CLI URL to match. For a remote bootstrap, firewall the
+published port until the owner claim is complete.
 
 ## Credential practices
 
