@@ -28,6 +28,7 @@
               "docs/guides/structured-output",
               "docs/policies",
               "docs/guides/policy-workflow",
+              "docs/guides/budgets",
               "docs/features/model-routing",
               "docs/features/provider-credentials",
               "docs/features/usage"
