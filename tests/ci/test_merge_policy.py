@@ -171,6 +171,7 @@ def test_workflows_separate_pr_nightly_and_release_work():
     assert "pull_request" not in release[True]
     assert set(prepare_release[True]["workflow_dispatch"]["inputs"]) == {"bump"}
     assert release[True]["workflow_dispatch"] == {}
+    assert release[True]["push"] == {"branches": ["main"], "paths": ["VERSION"]}
     nightly_commands = "\n".join(step.get("run", "") for job in nightly["jobs"].values() for step in job.get("steps", []))
     assert "pytest -m performance tests/acceptance/gateway" in nightly_commands
     assert "performance_scaling.py" in nightly_commands

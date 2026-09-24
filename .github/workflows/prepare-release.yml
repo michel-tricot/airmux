@@ -34,10 +34,32 @@ jobs:
         env:
           BUMP: ${{ inputs.bump }}
         run: |
-          uv version --project packaging/airmux --bump "$BUMP" --frozen
-          test "$(git diff --name-only)" = "packaging/airmux/pyproject.toml"
+          version="$(python - "$BUMP" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          version_file = Path("VERSION")
+          match = re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\n?", version_file.read_text())
+          if match is None:
+              raise SystemExit("VERSION must contain a stable major.minor.patch version")
+          major, minor, patch = map(int, match.groups())
+          match sys.argv[1]:
+              case "major":
+                  major, minor, patch = major + 1, 0, 0
+              case "minor":
+                  major, minor, patch = major, minor + 1, 0
+              case "patch":
+                  major, minor, patch = major, minor, patch + 1
+              case _:
+                  raise SystemExit("BUMP must be major, minor, or patch")
+          version = f"{major}.{minor}.{patch}"
+          version_file.write_text(f"{version}\n")
+          print(version)
+          PY
+          )"
+          test "$(git diff --name-only)" = "VERSION"
           test -z "$(git ls-files --others --exclude-standard)"
-          version="$(python -c 'import tomllib; print(tomllib.load(open("packaging/airmux/pyproject.toml", "rb"))["project"]["version"])')"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "branch=release/v$version" >> "$GITHUB_OUTPUT"
@@ -47,11 +69,11 @@ jobs:
           RELEASE_BRANCH: ${{ steps.version.outputs.branch }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          project="packaging/airmux/pyproject.toml"
-          project_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$project?ref=$GITHUB_SHA" --jq .sha)"
-          content="$(base64 -w 0 "$project")"
+          version_file="VERSION"
+          version_sha="$(gh api "repos/$GITHUB_REPOSITORY/contents/$version_file?ref=$GITHUB_SHA" --jq .sha)"
+          content="$(base64 -w 0 "$version_file")"
           gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/heads/$RELEASE_BRANCH" -f sha="$GITHUB_SHA"
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$project" -f message="Prepare airmux $RELEASE_VERSION" -f content="$content" -f branch="$RELEASE_BRANCH" -f sha="$project_sha"
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$version_file" -f message="Prepare airmux $RELEASE_VERSION" -f content="$content" -f branch="$RELEASE_BRANCH" -f sha="$version_sha"
           compare_url="https://github.com/$GITHUB_REPOSITORY/compare/main...$RELEASE_BRANCH?expand=1"
           {
             echo "Release branch \`$RELEASE_BRANCH\` is ready."
