@@ -4,6 +4,7 @@ import ast
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -199,6 +200,75 @@ def test_readme_is_a_complete_oss_entry_point() -> None:
     assert all(badge in readme for badge in expected_badges)
     assert all(command in readme for command in quickstart_commands)
     assert headings.index("Quickstart") < headings.index("Architecture")
+
+
+def test_readme_leads_with_the_full_platform() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert readme.index("docker compose up -d --wait") < readme.index("airmux gateway init")
+    assert readme.index("airmux quickstart --url") < readme.index("airmux gateway serve")
+
+    headings = re.findall(r"^## (.+)$", readme, re.MULTILINE)
+    assert headings.index("Quickstart") < headings.index("Gateway-only mode")
+
+
+def test_every_entry_point_recommends_the_same_quickstart() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    homepage = (DOCS / "index.mdx").read_text(encoding="utf-8")
+    config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    documentation = next(tab for tab in config["navigation"]["tabs"] if tab["tab"] == "Documentation")
+    first_group = documentation["groups"][0]
+
+    assert "docs/quickstart.mdx" in readme
+    assert "/docs/quickstart" in homepage
+    assert first_group["pages"] == ["docs/index", "docs/quickstart"]
+
+
+def test_documentation_navigation_is_organized_around_reader_tasks() -> None:
+    config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    documentation = next(tab for tab in config["navigation"]["tabs"] if tab["tab"] == "Documentation")
+
+    assert [group["group"] for group in documentation["groups"]] == [
+        "Get started",
+        "Use the platform",
+        "Deploy and operate",
+        "Concepts",
+        "Contributing",
+    ]
+
+
+def test_full_platform_instructions_pin_one_release() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
+    declared = {version for document in (readme, quickstart) for version in re.findall(r"^\s*export AIRMUX_VERSION=(\S+)$", document, re.MULTILINE)}
+
+    assert len(declared) == 1, declared
+    version = declared.pop()
+
+    for document in (readme, quickstart):
+        assert 'uv tool install "airmux==$AIRMUX_VERSION"' in document
+        assert 'git clone --branch "v$AIRMUX_VERSION"' in document
+
+    git = shutil.which("git")
+    assert git is not None
+    tags = subprocess.run(  # noqa: S603 resolved Git executable only lists local tags
+        [git, "tag", "--list", f"v{version}"], cwd=ROOT, text=True, capture_output=True, check=False
+    )
+    assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
+
+
+def test_quickstart_walks_through_the_console_and_a_verified_policy() -> None:
+    quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
+
+    assert "airmux quickstart --url" in quickstart
+    assert "/inf/v1/chat/completions" in quickstart
+    assert "airmux policies create" in quickstart
+    assert "policy_denied" in quickstart
+    assert "docker compose down" in quickstart
+    assert "/docs/deployment/gateway" in quickstart
+
+    steps = re.findall(r'<Step title="([^"]+)">', quickstart)
+    assert steps.index("Find the request in the console") < steps.index("Add a workspace policy and prove it works")
 
 
 def test_public_links_use_the_current_repository() -> None:
