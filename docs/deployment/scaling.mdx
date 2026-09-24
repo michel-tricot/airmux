@@ -3,6 +3,10 @@ title: "Separate services and scale gateways"
 description: "Run the console, control plane, and multiple data planes independently with distinct persistent state."
 ---
 
+<Warning>
+  This split deployment example is experimental.
+</Warning>
+
 The `docker-compose.split.yml` example runs Postgres, one control plane, the console proxy, and two gateways on one Docker host.
 
 ```bash
