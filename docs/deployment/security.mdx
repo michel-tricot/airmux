@@ -20,7 +20,7 @@ description: "Harden a public airmux deployment and protect its management, infe
 - Give each application its own workspace inference key owned by an organization-managed service account
 - Give automation a service account and a management key with the minimum scope and permissions
 - Never use a management key for inference or expose a provider credential to an application
-- Store one-time tokens immediately; airmux does not return them again
+- Store one-time tokens immediately; `airmux` does not return them again
 - Rotate provider credentials through the API so their version invalidates gateway caches
 - Revoke unused inference and management keys
 
@@ -35,7 +35,7 @@ responses. Limit access to application logs, database exports, volume snapshots,
 
 ## Browser boundary
 
-The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The airmux proxy
+The data plane sends `X-Content-Type-Options: nosniff` and disables caching on all HTTP responses. The `airmux` proxy
 also sends a restrictive Content Security Policy, `Referrer-Policy: no-referrer`, and `X-Frame-Options: DENY`.
 Preserve equivalent behavior if you replace the checked-in proxy. See the [response headers](/docs/reference/inference#response-headers)
 for streaming cache directives and the authentication challenge.

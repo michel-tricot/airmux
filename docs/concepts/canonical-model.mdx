@@ -3,7 +3,7 @@ title: "Canonical model"
 description: "See how caller dialects and provider families cross one typed request and response model."
 ---
 
-airmux uses a canonical model as the waist between callers and providers. Each ingress dialect translates into canonical
+`airmux` uses a canonical model as the shared format between callers and providers. Each ingress dialect translates into canonical
 once; each provider family translates out once.
 
 ```mermaid
@@ -52,4 +52,4 @@ Translation loss is never silent. The response `gateway.adjustments` array names
 emulated, or dropped and explains why. A strict-parameter policy can turn a would-be drop into a denial.
 
 The selected ingress adapter also owns the response and error shape. A Messages caller receives Messages events and
-errors even when airmux routed the request to a different provider family.
+errors even when `airmux` routed the request to a different provider family.

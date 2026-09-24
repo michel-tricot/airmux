@@ -1,0 +1,74 @@
+---
+title: "Use the CLI"
+description: "Sign in to airmux and manage workspaces, credentials, inference keys, and usage from the command line."
+---
+
+Use the `airmux` CLI to sign in to a deployment and manage its resources. Install it with `uv`:
+
+```bash
+uv tool install airmux
+```
+
+## Sign in
+
+Start the browser sign-in flow for your deployment:
+
+```bash
+airmux login --url https://llm.example.com
+```
+
+The CLI prints a code and opens a browser. Complete sign-in there, then return to the terminal. If the machine has no
+browser, add `--no-browser` and open the printed URL yourself.
+
+Check the saved context and connection:
+
+```bash
+airmux profiles list
+airmux status
+airmux doctor
+```
+
+`status` shows the active organization and workspace. Select a different saved organization profile with
+`airmux profiles use <profile>`; switch organization with `airmux orgs switch <organization>` and workspace with
+`airmux workspaces use <workspace>`.
+
+## Manage a workspace
+
+Create a workspace, then select it for subsequent commands:
+
+```bash
+airmux workspaces create Staging
+airmux workspaces use staging
+airmux workspaces list
+```
+
+Add a provider credential. The command prompts for the secret, so it does not need to appear in shell history:
+
+```bash
+airmux provider-credentials add openai --name production
+airmux provider-credentials list
+```
+
+Create an inference key for applications. Copy the secret when it is printed; it is shown only once:
+
+```bash
+airmux inference-keys create backend
+airmux inference-keys list
+```
+
+List policies and recent usage events:
+
+```bash
+airmux policies list
+airmux events list --limit 20
+```
+
+Commands that return resources accept `-f json` for scripting and `-f table` for terminal output. For example:
+
+```bash
+airmux inference-keys list -f json
+airmux events list --limit 20 -f json
+```
+
+Run `airmux <group> <command> --help` for command options. See the [CLI reference](/docs/reference/cli) for authentication
+contexts, output formats, and the full command list.

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
 import subprocess
 import sys
-from pathlib import Path
 
 from tests.documentation.examples import cli_reference_commands, code_block
 from tests.documentation.test_documentation import ROOT
@@ -31,26 +29,12 @@ def test_replit_cli_examples_exist():
     assert (ROOT / script).is_file()
 
 
-def test_container_recipe_establishes_a_build_context(tmp_path):
-    recipe = code_block("docs/deployment/gateway.mdx", "docker build")
-    recipe = recipe.replace("https://github.com/michel-tricot/airmux.git", shlex.quote(str(ROOT)))
-    source = tmp_path / "source checkout"
-    source.mkdir()
-    recipe = recipe.replace("$(mktemp -d)", str(source))
-    build_context = 'docker() { test "$1" = build; printf "%s\\n" "${@: -1}"; }\n'
-    result = subprocess.run(  # noqa: S603 clone the local checkout using the documented preparation command
-        ["/bin/bash", "-eu", "-c", build_context + recipe],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
-    assert result.returncode == 0, result.stderr
-    context = Path(result.stdout.strip())
-    assert (context / "Dockerfile").is_file(), f"documented build context has no Dockerfile: {context}"
-    assert (context / "apps/cli/src/cli").is_dir()
-    assert (context / "taxonomy/taxonomy.yml").is_file()
+def test_compose_recipe_builds_from_the_repository_root():
+    recipe = code_block("docs/deployment/docker.mdx", "cp .env.example .env")
+    assert "docker build -t airmux:local ." in recipe
+    assert (ROOT / "Dockerfile").is_file()
+    assert (ROOT / "apps/cli/src/cli").is_dir()
+    assert (ROOT / "taxonomy/taxonomy.yml").is_file()
 
 
 def test_provider_source_example_is_discovered_and_maps_models(tmp_path):

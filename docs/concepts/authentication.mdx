@@ -3,11 +3,11 @@ title: "Authentication and scopes"
 description: "Distinguish browser sessions, management keys, inference keys, principals, roles, and tenancy scopes."
 ---
 
-airmux has separate credentials for management and inference. They are not interchangeable.
+`airmux` has separate credentials for management and inference. They are not interchangeable.
 
 | Credential | Prefix or transport | Purpose |
 | --- | --- | --- |
-| Browser session | Secure cookie | Console and browser-only management flows |
+| Browser session | Secure cookie | Webapp and browser-only management flows |
 | Management key | `sk-cp-` | Permission-limited `/api/v1` automation |
 | Inference key | `sk-inf-` | Model requests and model discovery for one workspace |
 | Provider credential | Provider-specific | Upstream authentication selected by the gateway |
@@ -83,3 +83,5 @@ for credential precedence and playground-cookie requirements.
 
 See the [management API](/docs/reference/management-api) for bearer authentication and the
 [CLI reference](/docs/reference/cli) for context management.
+
+For account creation, invitations, roles, and public signup, see [Manage users and access](/docs/guides/user-management).

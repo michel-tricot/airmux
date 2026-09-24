@@ -19,99 +19,13 @@ The all-in-one listener routes `/healthz` to the control plane and `/readyz` to 
 liveness check independent of Postgres while readiness covers the inference path. A data plane that rejects a newer
 manifest keeps serving its last accepted snapshot and remains ready.
 
-## OpenTelemetry metrics
+## Metrics
 
-airmux records operational metrics through OpenTelemetry. Each process defaults its `service.name` resource attribute to
-`airmux-control-plane` or `airmux-data-plane`; `OTEL_SERVICE_NAME` overrides that default.
-
-To send metrics to an OpenTelemetry Collector or another OTLP-compatible backend, configure the standard environment
-variables on each process:
-
-```bash
-OTEL_METRICS_EXPORTER=otlp
-OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
-OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4318/v1/metrics
-```
-
-The exporter also honors the standard OTLP headers, certificate, timeout, compression, and periodic export interval
-variables. OTLP export is disabled unless `OTEL_METRICS_EXPORTER` includes `otlp`.
-
-### Prometheus scrape endpoint
-
-Each standalone control-plane and data-plane listener exposes unauthenticated Prometheus text at `/metrics`. The
-endpoint remains available when OTLP export is enabled, so deployments can migrate or feed both paths independently.
-The all-in-one public listener does not proxy this path. Scrape the internal listeners from a monitoring network instead:
-
-```yaml
-scrape_configs:
-  - job_name: airmux-control-plane
-    static_configs:
-      - targets: ["control-plane:8000"]
-  - job_name: airmux-data-plane
-    static_configs:
-      - targets: ["data-plane:8081"]
-```
-
-Do not expose either metrics endpoint to the public internet. The series omit organization, workspace, user, request,
-bundle, model, and provider identifiers. Route templates, dialects, stream mode, bounded outcomes, status classes, and
-provider families are the only request-path dimensions.
-
-### Control-plane signals
-
-| Metric | Meaning |
-| --- | --- |
-| `airmux_control_plane_http_requests_total` | Completed requests by route, method, outcome, and status class |
-| `airmux_control_plane_http_request_duration_seconds` | Request latency by route, method, and outcome |
-| `airmux_control_plane_inflight_requests` | Requests currently executing by route |
-| `airmux_control_plane_throttle_decisions_total` | Allowed, quota-rejected, and capacity-rejected throttle decisions |
-| `airmux_control_plane_event_ingest_total` | Usage-event ingest outcomes |
-| `airmux_control_plane_event_ingest_duration_seconds` | Usage-event ingest latency |
-| `airmux_control_plane_bundle_publications_total` | Bundle publisher outcomes |
-| `airmux_control_plane_bundle_publication_pending` | Organizations with unpublished bundle generations |
-| `airmux_control_plane_bundle_publication_oldest_age_seconds` | Time this process has continuously observed pending publication work |
-
-The publication-age gauge starts at zero after a process restart. The pending count is derived from durable state,
-repopulates after restarts, and is the authoritative backlog size.
-
-### Data-plane signals
-
-| Metric | Meaning |
-| --- | --- |
-| `airmux_data_plane_http_requests_total` | Completed requests by route, method, caller dialect, stream mode, outcome, and status class |
-| `airmux_data_plane_http_request_duration_seconds` | Request latency by route, caller dialect, stream mode, and outcome |
-| `airmux_data_plane_inflight_requests` | Requests currently executing by route and stream mode |
-| `airmux_data_plane_upstream_attempts_total` | Provider attempts by egress family and outcome |
-| `airmux_data_plane_upstream_attempt_duration_seconds` | Provider-attempt latency by egress family and outcome |
-| `airmux_data_plane_credential_cache_requests_total` | Credential cache hits, misses, negative hits, and backend failures |
-| `airmux_data_plane_credential_load_duration_seconds` | Secret-backend load latency by outcome |
-| `airmux_data_plane_bundle_poll_total` | Unchanged, adopted, rejected, and failed bundle polls |
-| `airmux_data_plane_bundle_snapshots` | Accepted bundle snapshots currently held by the worker |
-| `airmux_data_plane_bundle_manifest_rejected` | `1` when the newest manifest was rejected |
-| `airmux_data_plane_bundle_last_adopted_timestamp_seconds` | Unix timestamp of the last successful bundle adoption |
-| `airmux_data_plane_metering_writer_queue_depth` | In-memory metering records waiting for durable admission |
-| `airmux_data_plane_metering_writer_queue_capacity` | Configured in-memory metering queue capacity |
-| `airmux_data_plane_metering_admission_total` | Accepted, full, and closed metering admissions |
-| `airmux_data_plane_metering_outbox_pending` | Durable usage events awaiting export |
-| `airmux_data_plane_metering_outbox_oldest_age_seconds` | Age of the oldest durable usage event |
-| `airmux_data_plane_metering_exports_total` | Usage export outcomes |
-| `airmux_data_plane_metering_export_duration_seconds` | Usage export latency by outcome |
-
-Alert on sustained change rather than one failed request. The most useful starting signals are:
-
-- readiness returning `503`
-- growing publication pending count or publication age
-- `bundle_manifest_rejected` remaining `1`, or increasing rejected and failed bundle polls
-- `metering_admission_total` increasing for `full` or `closed`
-- growing metering outbox pending count or oldest-event age
-- failed metering exports
-- credential backend failures
-- sustained increases in failed HTTP or upstream outcomes
-
-Choose thresholds from the deployment's normal traffic and polling intervals.
+Configure OTLP export, Prometheus scraping, and alerting with the [OpenTelemetry guide](/docs/deployment/opentelemetry).
 
 ## Request correlation and logs
 
-Every control-plane and data-plane response carries an airmux-generated UUIDv7 in `X-Request-ID`. A caller-supplied
+Every control-plane and data-plane response carries an `airmux`-generated UUIDv7 in `X-Request-ID`. A caller-supplied
 value is replaced. Data-plane usage events use the same request ID, including all attempts in a fallback chain.
 
 Production logs are newline-delimited JSON with `timestamp`, `level`, `logger`, `event`, and `message`. Logs emitted in
@@ -159,7 +73,7 @@ compatibility between planes, deploy one image digest across all components. Fol
 | Data-plane `/readyz` returns `503` | Bundle poll authentication, control-plane reachability, and cached state mount |
 | `bundle_manifest_rejected` is `1` | Gateway logs for an invalid provider, model, credential, or policy reference |
 | `credential_backend_unavailable` | Secret-store mount, permissions, and availability |
-| Usage missing from console | Metering outbox metrics, export failures, and control-plane event-ingest metrics |
+| Usage missing from webapp | Metering outbox metrics, export failures, and control-plane event-ingest metrics |
 | New key returns `invalid_token` | Wait for adoption, then inspect gateway readiness and logs |
 | Streams pause or buffer | Reverse-proxy buffering and read timeout |
 | Migration or catalog job fails | Run `docker compose logs migrate taxonomy` with the same Compose file and project options used to start the stack, then check database reachability and permissions |

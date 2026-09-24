@@ -1,35 +1,37 @@
 ---
 title: "Workspace policies"
-description: "Match inference requests and compose model, provider, credential, price, budget, parameter, request, denial, and fallback rules."
+description: "Configure who a policy targets, which requests it matches, and the actions airmux applies."
 ---
 
-Workspace policies control which inference requests airmux accepts, which routes and credentials are eligible, and when it may try a fallback model.
+Policies control which requests a workspace accepts, which models and credentials can serve them, and when a fallback can run. Each policy has a target and one or more rules. A rule combines a request match with an action.
 
-## Policy model
-
-A **rule definition** is an inline value containing one request match and one action. A **policy** applies one to 100 rule definitions to
-its workspace, selected users, or selected inference keys.
+## How policies apply
 
 - Every matching restriction must pass
-- Rules within one policy are unordered
+- Rules within a policy are unordered
 - All matching policies compose
 - Policies are traversed by ID for deterministic evaluation
 - The first matching fallback policy in that order supplies the fallback plan
-- Exact duplicate rule definitions are invalid
+- Exact duplicate rules are invalid
 - Editing one policy cannot change another policy
 
-Routing restrictions take effect after a gateway adopts the workspace's newly published bundle. Budget rules use a
-separate background refresh. Saving a policy and observing it at every gateway are not one synchronous operation.
+Routing changes take effect after gateways adopt the updated workspace bundle. Budget state refreshes separately. See the [budget tutorial](/docs/guides/budgets) for spending and status checks.
 
-## Targets
+## Configure a policy
 
-Apply a policy to every current and future inference key, including playground sessions:
+### Choose a target
+
+#### Workspace
+
+Apply the policy to all current and future inference keys and playground sessions in the workspace:
 
 ```json
 {"kind": "workspace"}
 ```
 
-Select principals whose inference keys and playground sessions should be restricted in this workspace:
+#### User
+
+Target a human user or service account to apply the policy to all inference keys associated with them, current and future:
 
 ```json
 {
@@ -38,23 +40,9 @@ Select principals whose inference keys and playground sessions should be restric
 }
 ```
 
-Selected users must be organization members with workspace membership or an organization owner/admin role. Service accounts
-are included. Selections require 1 to 1,000 unique UUIDs. Every inference key identifies its explicit owner, independently of
-the human or service account that created it. A shared application key identifies its service-account owner, not the
-application's end user. The same user's policy in Production has no effect in Development.
+#### Inference keys
 
-Workspace, user, and key restrictions all apply together. With output limits of 4,096, 1,024, and 512 respectively, a request
-above 512 tokens is denied regardless of policy order. Policy ID order determines which matching fallback configuration is selected.
-
-Removing workspace membership revokes that owner's inference keys and playground sessions in the workspace. Removing
-organization membership revokes them across the organization. Re-adding membership does not reactivate those credentials,
-even when an organization role continues to grant control-plane authority for the workspace.
-
-User-targeted policy references remain unchanged because a policy does not grant access. Removed users disappear from the
-picker and cannot be newly selected. To edit a policy containing an ineligible user, select eligible users or change the
-target explicitly. Removing the final user never turns the target into a workspace policy.
-
-Or select specific key IDs:
+Target specific keys. Keys created later are not included:
 
 ```json
 {
@@ -63,17 +51,15 @@ Or select specific key IDs:
 }
 ```
 
-A selected-key policy does not include keys created later.
+### Choose requests to match
 
-## Request matching
-
-Match every request:
+Match all requests:
 
 ```json
 {"kind": "all_requests"}
 ```
 
-Or combine one or more criteria. All supplied criteria must match:
+Or combine model, stream, and capability criteria. Every supplied criterion must match:
 
 ```json
 {
@@ -84,62 +70,49 @@ Or combine one or more criteria. All supplied criteria must match:
 }
 ```
 
-`capabilities` accepts `tools`, `reasoning`, and `structured_output`. Matching always uses the caller's original
-request, so a fallback model cannot escape a restriction by changing the route.
+Capabilities are `tools`, `reasoning`, and `structured_output`. Matching uses the original request, including when a fallback model handles it.
 
-## Actions
+### Choose actions
 
-### Allowed models
+Add one action to each rule. A policy can contain multiple rules, and matching restrictions from all policies apply.
 
-Restrict matching requests to an explicit catalog allowlist:
+#### Allowed models
 
-```json
-{
-  "kind": "models",
-  "names": ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4-6"]
-}
-```
-
-Fallback models must also pass every matching model allowlist.
-
-### Allowed providers
+Limit matching requests and fallbacks to the listed catalog models:
 
 ```json
-{
-  "kind": "providers",
-  "names": ["openai", "anthropic"]
-}
+{"kind": "models", "names": ["openai/gpt-4o-mini", "anthropic/claude-sonnet-4-6"]}
 ```
 
-The restriction applies to both the primary route and fallback routes.
+#### Allowed providers
 
-### Credential access
-
-Allow credentials from one or more scopes:
+Limit primary and fallback routes to the listed providers:
 
 ```json
-{
-  "kind": "credential_access",
-  "scopes": ["workspace", "org"]
-}
+{"kind": "providers", "names": ["openai", "anthropic"]}
 ```
 
-Multiple matching credential rules intersect. After filtering, airmux chooses the most specific populated allowed scope
-in workspace, organization, instance order. If that scope has candidates, airmux does not fall through to a broader
-scope.
+#### Credential access
 
-### Require parameter support
+Allow credentials from the listed scopes. Matching credential rules intersect. `airmux` chooses the most specific populated allowed scope in workspace, organization, instance order:
+
+```json
+{"kind": "credential_access", "scopes": ["workspace", "org"]}
+```
+
+#### Strict parameter support
+
+Reject a route if `airmux` would otherwise remove an unsupported caller-supplied parameter:
 
 ```json
 {"kind": "strict_parameters"}
 ```
 
-This rejects a route when airmux would otherwise remove a caller-supplied parameter because the selected model or
-provider does not support it. Model capability and input-modality checks always run, with or without this action.
+Capability and input-modality checks always run.
 
-### Model price limit
+#### Model price limit
 
-Prices are USD per one million tokens:
+Set maximum catalog prices in USD per million tokens. Both input and output prices must meet the limits:
 
 ```json
 {
@@ -149,149 +122,92 @@ Prices are USD per one million tokens:
 }
 ```
 
-Both catalog prices must pass. This is a static route-price check, not a prediction or cap on the total request cost.
+This limits route prices, not the total request cost.
 
-### Request limits
+#### Request limits
 
-```json
-{
-  "kind": "request_limits",
-  "max_output_tokens": 4096
-}
-```
-
-A larger explicit output limit is rejected. A request that omits its output limit is allowed because the gateway does not invent one.
-
-### Deny matching requests
+Reject a request that explicitly asks for more output tokens than the limit. If it omits the limit, `airmux` does not invent one:
 
 ```json
-{
-  "kind": "deny",
-  "message": "Reasoning models are not approved for this workspace"
-}
+{"kind": "request_limits", "max_output_tokens": 4096}
 ```
 
-The caller receives `403 policy_denied` and the configured message.
+#### Budget
 
-### Model fallbacks
+Limit matching usage to a USD amount per UTC calendar day or month. Use `shared` to combine spend across the target or `per_key` to track each inference key separately:
+
+```json
+{"kind": "budget", "amount_usd": "20.00", "period": "month", "aggregation": "shared"}
+```
+
+See the [budget tutorial](/docs/guides/budgets) to create a budget and inspect spend.
+
+#### Deny requests
+
+Reject matching requests with `403 policy_denied` and the configured message:
+
+```json
+{"kind": "deny", "message": "Reasoning models are not approved for this workspace"}
+```
+
+#### Model fallbacks
+
+Try backup models for rate limits, upstream errors, or timeouts:
 
 ```json
 {
   "kind": "fallback",
-  "models": [
-    "anthropic/claude-sonnet-4-6",
-    "openai/gpt-4o-mini"
-  ],
+  "models": ["anthropic/claude-sonnet-4-6", "openai/gpt-4o-mini"],
   "on": ["rate_limited", "upstream_unavailable", "timeout"],
   "max_attempts": 3,
   "timeout_ms": 30000
 }
 ```
 
-| Reason | Trigger |
-| --- | --- |
-| `rate_limited` | Upstream HTTP 429 |
-| `upstream_unavailable` | Upstream HTTP 5xx or connection failure |
-| `timeout` | The configured request deadline expires |
+A policy may contain one fallback rule with up to four backup models. `max_attempts` is 2–5 and includes the primary call. `timeout_ms` is 100–120,000. Invalid requests, policy denials, and authentication failures do not trigger model fallback. An upstream authentication failure may try another credential in the selected scope.
 
-One policy may contain at most one fallback rule, with up to four backup models. `max_attempts` is between 2 and 5 and
-counts the primary call plus credential and model retries. `timeout_ms` is between 100 and 120,000 milliseconds.
+## Create a policy
 
-Invalid requests, policy denials, and authentication failures do not trigger a model fallback. An upstream
-authentication failure may try another credential in the same selected scope.
+Use either the CLI or the management API. This example creates a workspace-wide output limit. The CLI uses your active organization and workspace context; the API path names both explicitly.
 
-<Info>
-  A provider may continue generation after a timeout. airmux records every attempted route separately, so fallback does
-  not provide exactly-once generation.
-</Info>
-
-## Complete API shapes
-
-Create one self-contained resource at `/api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies`:
+Save this as `policy.json`:
 
 ```json
 {
-  "name": "Approved production routing",
+  "name": "Production output limit",
   "enabled": true,
   "definition": {
     "target": {"kind": "workspace"},
     "rules": [
       {
         "match": {"kind": "all_requests"},
-        "action": {
-          "kind": "price_limit",
-          "max_input_price_per_mtok": "2.50",
-          "max_output_price_per_mtok": "10.00"
-        }
+        "action": {"kind": "request_limits", "max_output_tokens": 1024}
       }
     ]
   }
 }
 ```
 
-Successful control-plane responses wrap the result in `{"data": ...}`. See the
-[policy tutorial](/docs/guides/policy-workflow) for the CLI flow and the generated endpoint reference for exact schemas.
-
-## Cost budgets
-
-A budget limits observed USD spending for matching usage in a UTC calendar day or month.
-Multiple budget rules can share one policy, and every matching budget must have remaining allowance.
-For example, one policy can impose both a daily and monthly shared budget:
-
-```json
-{
-  "name": "Workspace spending",
-  "definition": {
-    "target": { "kind": "workspace" },
-    "rules": [
-      {
-        "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "20.00", "period": "day", "aggregation": "shared" }
-      },
-      {
-        "match": { "kind": "all_requests" },
-        "action": { "kind": "budget", "amount_usd": "300.00", "period": "month", "aggregation": "shared" }
-      }
-    ]
-  }
-}
-```
-
-`amount_usd` is a positive fixed-point decimal string. The policy `target` determines which workspace, users,
-or inference keys the rule applies to. `aggregation: "shared"` combines all matching usage within that target;
-`aggregation: "per_key"` gives each matching inference key its own allowance. Request filters still apply.
-A selected-user target with shared aggregation combines usage across all selected users' keys.
-
-Budgets include matching usage from the whole period, even before the policy existed or while it was disabled.
-Deleting, recreating, moving, or changing a rule does not erase usage. Changing a filter selects different history.
-Historical costs use recorded prices and completion timestamps. All attempts, including fallback and partial
-cancellation usage, count according to their recorded costs. Request filters use the original requested model
-and capabilities, even when a different model serves the request.
-
-The control-plane budget backend is best effort. Data planes export usage and refresh budget state in the
-background, so delayed and in-flight usage can exceed the allowance.
-
-Exhaustion returns `429` with `budget_exhausted` and `Retry-After`. Missing, mismatched, or expired budget state
-allows the request. Bundle and budget polling are independent.
-
-Budget state uses the configured budget backend independently of bundle loading and event export. Keep usage history
-for the full current month even when no budget is configured. Original user, requested-model, and capability facts must
-have been recorded to support historical filters; missing historical facts are not reconstructed.
-
-In the console, add a **Cost budget** rule and use **View spending** on its policy. The view shows
-observed spending, remaining allowance, reset time, and calculation time. Calculation time does not establish
-that every data plane has exported its latest usage.
+<Tabs>
+  <Tab title="CLI">
 
 ```bash
-airmux policies status POLICY_ID -w production -f json
-airmux policies status POLICY_ID -w production --rule-index 0 --bucket-id BUCKET_ID
+airmux policies create policy.json --workspace production -f json
 ```
 
-The management endpoint is `GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status`.
-It requires both `policies.read` and `usage.read`. Optional `rule_index`, `bucket_id`, `after_bucket`, and `limit` parameters
-select a rule or page through bucket spending. Rule indices refer to the canonical rule array returned with the status.
-Buckets with no recorded matching usage are absent from the list; querying a particular unused bucket returns zero spending.
+  </Tab>
+  <Tab title="cURL">
 
-Data planes use `POST /api/v1/policy-state/sync` with `{"org_ids": ["organization-uuid"]}` and the operational
-`policy-state.sync` permission. Data-plane roles include this permission. The response uses the standard envelope
-and contains complete budget definitions and exhaustion state for each requested organization.
+Set `AIRMUX_URL`, `AIRMUX_ORG_ID`, and a management key with `policies.manage` for the workspace, then create the policy:
+
+```bash
+curl --fail-with-body "$AIRMUX_URL/api/v1/organizations/$AIRMUX_ORG_ID/workspaces/production/policies" \
+  -H "Authorization: Bearer $AIRMUX_MANAGEMENT_KEY" \
+  -H "Content-Type: application/json" \
+  --data-binary @policy.json
+```
+
+  </Tab>
+</Tabs>
+
+The response wraps the policy in `{"data": ...}`. The webapp can also create and edit policies with the same target, match, and action options.

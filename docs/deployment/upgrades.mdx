@@ -3,7 +3,7 @@ title: "Upgrade and rollback"
 description: "Replace an airmux release safely, verify the new deployment, and restore a consistent recovery point when rollback is necessary."
 ---
 
-airmux is pre-1.0. It does not promise cross-version compatibility between the control plane, gateways, configuration,
+`airmux` is pre-1.0. It does not promise cross-version compatibility between the control plane, gateways, configuration,
 or database schema. Use the same release for every component unless its release notes explicitly document a
 rolling-compatible path.
 
@@ -52,7 +52,7 @@ airmux doctor --control-plane-url https://llm.example.com --gateway-url https://
 airmux gateways list
 ```
 
-Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/guides/streaming). Confirm that the
+Send one [buffered request](/docs/quickstart) and one [streaming request](/docs/reference/chat-completions#streaming). Confirm that the
 requests appear in `airmux events list`, then verify that `airmux_data_plane_metering_outbox_pending` and
 `airmux_data_plane_metering_outbox_oldest_age_seconds` return to their normal ranges on the internal metrics listener.
 

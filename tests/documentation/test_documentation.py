@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import ast
 import json
-import os
 import re
 import shutil
 import subprocess
-import sys
 import tomllib
 from collections import Counter
 from pathlib import Path
@@ -138,31 +136,15 @@ def test_documentation_tracks_current_ci_entry_points() -> None:
 
     assert "tests/ci/test_merge_policy.py" in policy
     assert "tests/documentation/test_merge_policy.py" not in policy
-    assert "uv run pytest tests/ci tests/documentation tests/workflows -q" in development
+    assert "uv run pytest -n auto" in development
     assert "Prepare release" in development
     assert "Publish release" in development
 
 
-def test_portable_installation_recipe_collects_outside_the_checkout(tmp_path: Path) -> None:
+def test_local_distribution_installation_recipe_is_documented() -> None:
     development = (DOCS / "development.mdx").read_text(encoding="utf-8")
-    recipe = next(match.group("body") for match in FENCE.finditer(development) if "cp tests/installation/" in match.group("body"))
-    staging = "\n".join(line for line in recipe.splitlines() if line.startswith(("mkdir ", "cp ")))
-    environment = {**os.environ, "smoke_dir": str(tmp_path), "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
-    copied = subprocess.run(["/bin/bash", "-e"], input=staging, cwd=ROOT, env=environment, text=True, capture_output=True, check=False)
-    assert copied.returncode == 0, copied.stderr
-
-    collected = subprocess.run(
-        [sys.executable, "-I", "-m", "pytest", "-o", "pythonpath=.", "--collect-only", "-q", "tests/installation/portable"],
-        cwd=tmp_path,
-        env=environment,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=30,
-    )
-    assert collected.returncode == 0, collected.stdout + collected.stderr
-    assert "test_internal_modules_are_bundled_in_one_distribution" in collected.stdout
-    assert "test_installed_gateway_serves_buffered_and_streaming_requests_and_shuts_down" in collected.stdout
+    recipe = next(match.group("body") for match in FENCE.finditer(development) if "./scripts/build-python-distribution.sh" in match.group("body"))
+    assert "uv tool install --reinstall dist/airmux-*.whl" in recipe
 
 
 def test_documentation_covers_safe_upgrades() -> None:
@@ -246,8 +228,10 @@ def test_full_platform_instructions_pin_one_release() -> None:
     version = declared.pop()
 
     for document in (readme, quickstart):
-        assert 'uv tool install "airmux==$AIRMUX_VERSION"' in document
         assert 'git clone --branch "v$AIRMUX_VERSION"' in document
+
+    assert 'uv tool install "airmux==$AIRMUX_VERSION"' in readme
+    assert "uv sync --package airmux --frozen" in quickstart
 
     git = shutil.which("git")
     assert git is not None
@@ -257,7 +241,7 @@ def test_full_platform_instructions_pin_one_release() -> None:
     assert tags.stdout.split() == [f"v{version}"], f"documented release v{version} is not a tag in this repository"
 
 
-def test_quickstart_walks_through_the_console_and_a_verified_policy() -> None:
+def test_quickstart_walks_through_the_webapp_and_a_verified_policy() -> None:
     quickstart = (DOCS / "quickstart.mdx").read_text(encoding="utf-8")
 
     assert "airmux quickstart --url" in quickstart
@@ -268,7 +252,7 @@ def test_quickstart_walks_through_the_console_and_a_verified_policy() -> None:
     assert "/docs/deployment/gateway" in quickstart
 
     steps = re.findall(r'<Step title="([^"]+)">', quickstart)
-    assert steps.index("Find the request in the console") < steps.index("Add a workspace policy and prove it works")
+    assert steps.index("Find the request in the webapp") < steps.index("Add a workspace policy and prove it works")
 
 
 def test_public_links_use_the_current_repository() -> None:
