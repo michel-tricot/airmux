@@ -109,7 +109,8 @@ def test_workflow_security_boundaries(path):
         }.get(name, {"contents": "read"})
         assert permissions == expected_permissions
         assert "uses" not in job
-        assert 0 < job["timeout-minutes"] <= 30
+        max_timeout = 90 if path.name == "release.yml" and name == "prepare" else 30
+        assert 0 < job["timeout-minutes"] <= max_timeout
         for step in job["steps"]:
             if "uses" not in step:
                 continue
@@ -120,6 +121,11 @@ def test_workflow_security_boundaries(path):
             assert re.fullmatch(r"[0-9a-f]{40}", revision), step["uses"]
             if action == "actions/checkout":
                 assert step["with"]["persist-credentials"] is False
+
+
+def test_releases_are_serialized():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": False}
 
 
 @pytest.mark.parametrize(

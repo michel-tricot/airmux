@@ -192,5 +192,15 @@ Two stable checks are required:
 | `dependency-security` | Python and JavaScript audits plus pull-request dependency review when available |
 
 The versioned ruleset currently requires no approving reviews, but contributions still go through maintainer review.
+
+## Releasing
+
+The root `VERSION` file is the source of truth for the public release version. Start a release from the
+`prepare release` workflow, open its generated pull request, and merge it after the normal main checks pass. The
+release workflow waits for the main CI and dependency security workflows for that exact commit, then publishes the
+Python package, container image, and GitHub release. It also updates the container's `latest` tag.
+
+Wait for the automatic release workflow to finish before preparing or merging another version bump. Releases run
+serially so an older image cannot move `latest` after a newer release.
 Contributors do not need repository administration access. Ruleset maintenance, approval-policy changes, and
 exception handling belong in the [maintainer policy guide](.github/policy/README.md).
