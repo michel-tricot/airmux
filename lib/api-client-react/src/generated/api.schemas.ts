@@ -525,9 +525,9 @@ export interface PolicyEntry {
   id: string;
   workspace_id: string;
   /**
-   * @minLength 1
-   * @maxLength 200
-   */
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
   definition: PolicyDefinitionOutput;
 }
@@ -1523,10 +1523,10 @@ export interface PolicyDefinitionInput {
 
 export interface PolicyCreate {
   /**
-   * Display name for the workspace policy
-   * @minLength 1
-   * @maxLength 200
-   */
+     * Display name for the workspace policy
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
   /** Whether gateways apply this policy after receiving the updated configuration */
   enabled?: boolean;
@@ -2816,3 +2816,4 @@ export type ApplyInstanceTaxonomyParams = {
  */
 dry_run?: boolean;
 };
+

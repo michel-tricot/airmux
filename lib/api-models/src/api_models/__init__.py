@@ -1205,18 +1205,6 @@ class Name3(RootModel[str]):
     ]
 
 
-class Priority(RootModel[int]):
-    root: Annotated[
-        int,
-        Field(
-            description="Replacement priority, with lower numbers first; omit to leave unchanged",
-            ge=0,
-            le=10000,
-            title="Priority",
-        ),
-    ]
-
-
 class PriceLimit(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1292,7 +1280,7 @@ class ProviderCredentialOut(BaseModel):
     scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
 
 
-class Priority1(RootModel[int]):
+class Priority(RootModel[int]):
     root: Annotated[
         int,
         Field(
@@ -1309,7 +1297,7 @@ class ProviderCredentialUpdate(BaseModel):
         extra="forbid",
     )
     priority: Annotated[
-        Priority1 | None,
+        Priority | None,
         Field(
             description="Replacement selection priority; lower values are tried first",
             title="Priority",

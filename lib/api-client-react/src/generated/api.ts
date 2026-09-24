@@ -5420,7 +5420,7 @@ export const getListPoliciesUrl = (orgId: string,
 }
 
 /**
- * List workspace inference policies in evaluation order.
+ * List workspace inference policies.
  *
  * Required permission: `policies.read`.
  * @summary List Policies
