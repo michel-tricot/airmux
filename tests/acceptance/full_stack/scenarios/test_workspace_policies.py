@@ -114,6 +114,9 @@ def test_fallback_runs_through_real_gateway_and_stays_inside_restrictions(stack:
             )
 
         assert _poll(lambda: completion().status_code == 200 and any(event["model_id"] == "quirk" for event in stack.events()), 30)
+        backup_events = [event for event in stack.events() if event["model_id"] == "quirk"]
+        assert all(event["requested_model_id"] == MODEL and event["requested_capabilities"] == [] for event in backup_events)
+        assert all(event["user_id"] for event in backup_events)
         provider_rule = _rule(
             {"kind": "request", "models": [MODEL]},
             {"kind": "providers", "names": ["stub"]},

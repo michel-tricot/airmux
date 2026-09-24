@@ -8,6 +8,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_quality_checkout_includes_release_tags_for_documentation_validation():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    checkout = next(step for step in workflow["jobs"]["quality"]["steps"] if step.get("uses", "").startswith("actions/checkout@"))
+    assert checkout.get("with", {}).get("fetch-tags") is True
+
+
 def test_workspace_preparation_is_frozen_and_lock_drift_is_checked_once():
     workflows = [yaml.safe_load(path.read_text()) for path in (ROOT / ".github/workflows").glob("*.yml")]
     actions = [yaml.safe_load(path.read_text()) for path in (ROOT / ".github/actions").glob("*/action.yml")]

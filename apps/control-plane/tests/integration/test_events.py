@@ -1,27 +1,38 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from helpers import make_org, make_workspace, setup_control_plane
 
+from api_models import UsageEventOut
 from contract import uuid7
 
 
 def _event(org: UUID) -> dict:
+    started_at = datetime.now(tz=UTC)
     return {
         "event_id": str(uuid7()),
         "request_id": str(uuid7()),
-        "occurred_at": datetime.now(tz=UTC).isoformat(),
+        "request_started_at": started_at.isoformat(),
+        "attempt_started_at": started_at.isoformat(),
+        "occurred_at": started_at.isoformat(),
         "org_id": str(org),
         "workspace_id": str(uuid7()),
         "key_id": "k1",
+        "request_source": "inference_key",
+        "user_id": str(uuid7()),
+        "requested_model_id": "gpt-test",
+        "requested_capabilities": [],
         "model_id": "gpt-test",
         "provider_id": "openai",
         "bundle_id": str(uuid4()),
         "input_tokens": 10,
         "output_tokens": 5,
+        "token_usage_source": "provider",
         "max_output_tokens": 128,
         "cost_usd": "0.000004",
         "cost_input_usd": "0.000004",
@@ -42,14 +53,16 @@ def test_event_ingest_is_idempotent_and_org_scoped(tmp_path):
         org = cp.headers(o1)
         events = [_event(o1), _event(o1), _event(o2)]
         first = c.post("/api/v1/events", json=events, headers=root).json()["data"]
-        assert first == {"received": 3, "ingested": 3}
+        assert first == {"received": 3, "ingested": 3, "rejected": 0}
         replay = c.post("/api/v1/events", json=events, headers=root).json()["data"]
-        assert replay == {"received": 3, "ingested": 0}
+        assert replay == {"received": 3, "ingested": 0, "rejected": 0}
         rows = c.get(f"/api/v1/organizations/{o1}/events", headers=org).json()["data"]
         assert len(rows) == 2
         assert {r["org_id"] for r in rows} == {str(o1)}
         assert c.post("/api/v1/events", json=[_event(o1)], headers=org).status_code == 200
-        assert c.post("/api/v1/events", json=[_event(o1)], headers=cp.headers(o2)).status_code == 403
+        denied = c.post("/api/v1/events", json=[_event(o1)], headers=cp.headers(o2))
+        assert denied.status_code == 200, denied.text
+        assert denied.json()["data"]["rejected"] == 1
         assert c.post("/api/v1/events", json=events).status_code == 401
 
 
@@ -70,6 +83,17 @@ def test_event_list_filters_by_workspace(tmp_path):
         assert [event["event_id"] for event in response.json()["data"]] == [first["event_id"]]
 
 
+def test_event_ingest_preserves_explicit_request_source(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "request-source")
+        event = {**_event(org_id), "request_source": "playground"}
+        response = client.post("/api/v1/events", json=[event], headers=cp.headers())
+        assert response.status_code == 200, response.text
+        stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
+        assert stored[0]["request_source"] == "playground"
+
+
 def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
     """At-least-once delivery can repeat an event_id within a single flush; the batch still lands."""
     cp = setup_control_plane(tmp_path)
@@ -81,13 +105,58 @@ def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
         batch = [duplicated, other, duplicated]
         landed = c.post("/api/v1/events", json=batch, headers=root)
         assert landed.status_code == 200, landed.text
-        assert landed.json()["data"] == {"received": 3, "ingested": 2}
+        assert landed.json()["data"] == {"received": 3, "ingested": 2, "rejected": 0}
 
         stored = c.get(f"/api/v1/organizations/{o1}/events", headers=cp.headers(o1)).json()["data"]
         assert sorted(e["event_id"] for e in stored) == sorted({duplicated["event_id"], other["event_id"]})
 
         replay = c.post("/api/v1/events", json=batch, headers=root).json()["data"]
-        assert replay == {"received": 3, "ingested": 0}
+        assert replay == {"received": 3, "ingested": 0, "rejected": 0}
+
+
+@pytest.mark.parametrize("invalid", [42, {}, {"input_tokens": "not a number"}])
+def test_event_ingest_rejects_structurally_invalid_batch(tmp_path, invalid):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "invalid-event")
+        valid = _event(org_id)
+        response = client.post("/api/v1/events", json=[invalid, valid], headers=cp.headers())
+
+        assert response.status_code == 422, response.text
+        stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
+        assert stored == []
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"cost_usd": "1"},
+        {"attempt_started_at": "2000-01-01T00:00:00+00:00"},
+        {"occurred_at": "2000-01-01T00:00:00+00:00"},
+        {"cache_read_tokens": 11},
+        {
+            "status": "denied",
+            "provider_id": "",
+            "attempt_started_at": None,
+            "token_usage_source": "not_applicable",
+            "credential_id": None,
+            "credential_scope": None,
+        },
+    ],
+)
+def test_event_ingest_skips_semantically_invalid_events(tmp_path, changes):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "semantic-event")
+        valid = _event(org_id)
+        invalid = {**_event(org_id), **changes}
+
+        response = client.post("/api/v1/events", json=[invalid, valid], headers=cp.headers())
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"] == {"received": 2, "ingested": 1, "rejected": 1}
+        stored = client.get(f"/api/v1/organizations/{org_id}/events", headers=cp.headers(org_id)).json()["data"]
+        assert [event["event_id"] for event in stored] == [valid["event_id"]]
 
 
 def test_event_ingest_accepts_an_empty_batch(tmp_path):
@@ -97,7 +166,7 @@ def test_event_ingest_accepts_an_empty_batch(tmp_path):
     with TestClient(cp.app) as c:
         empty = c.post("/api/v1/events", json=[], headers=root)
         assert empty.status_code == 200, empty.text
-        assert empty.json()["data"] == {"received": 0, "ingested": 0}
+        assert empty.json()["data"] == {"received": 0, "ingested": 0, "rejected": 0}
 
 
 def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
@@ -106,14 +175,18 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
         root = cp.headers()
         org_id = make_org(c, root, "o1")
         event = _event(org_id)
-        assert c.post("/api/v1/events", json=[{**event, "unexpected": True}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "occurred_at": "2026-08-15T12:00:00"}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "input_tokens": -1}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "input_tokens": 2_147_483_648}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "key_id": ""}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "model_id": "m" * 256}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "provider_id": ""}], headers=root).status_code == 422
-        assert c.post("/api/v1/events", json=[{**event, "provider_id": "p" * 64}], headers=root).status_code == 422
+        for invalid in (
+            {**event, "unexpected": True},
+            {**event, "occurred_at": "2026-08-15T12:00:00"},
+            {**event, "input_tokens": -1},
+            {**event, "input_tokens": 2_147_483_648},
+            {**event, "key_id": ""},
+            {**event, "model_id": "m" * 256},
+            {**event, "provider_id": ""},
+            {**event, "provider_id": "p" * 64},
+        ):
+            response = c.post("/api/v1/events", json=[invalid], headers=root)
+            assert response.status_code == 422, response.text
         assert c.post("/api/v1/events", json=[event] * 1001, headers=root).status_code == 422
 
         denied = c.post(
@@ -122,9 +195,13 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
                 {
                     **event,
                     "provider_id": "",
+                    "attempt_started_at": None,
                     "status": "denied",
+                    "token_usage_source": "not_applicable",
                     "credential_id": None,
                     "credential_scope": None,
+                    "input_tokens": 0,
+                    "output_tokens": 0,
                     "cost_usd": "0",
                     "cost_input_usd": "0",
                 }
@@ -132,6 +209,35 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
             headers=root,
         )
         assert denied.status_code == 200, denied.text
+        assert denied.json()["data"]["ingested"] == 1
+
+
+@pytest.mark.parametrize("source", ["provider", "estimated", "not_applicable"])
+def test_token_usage_source_survives_ingestion_and_client_decoding(tmp_path, source):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "usage-source")
+        workspace_id = make_workspace(client, cp.headers(org_id), "workspace")
+        event = {**_event(org_id), "workspace_id": str(workspace_id), "token_usage_source": source}
+        if source == "not_applicable":
+            event.update(
+                status="denied",
+                provider_id="",
+                credential_id=None,
+                credential_scope=None,
+                attempt_started_at=None,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd="0",
+                cost_input_usd="0",
+            )
+        response = client.post("/api/v1/events", json=[event], headers=cp.headers())
+        assert response.status_code == 200, response.text
+        for path in (f"/api/v1/organizations/{org_id}/events", f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/events"):
+            response = client.get(path, headers=cp.headers(org_id))
+            assert response.status_code == 200, response.text
+            stored = UsageEventOut.model_validate(response.json()["data"][0])
+            assert stored.token_usage_source.root == source
 
 
 def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
@@ -139,7 +245,16 @@ def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
     with TestClient(cp.app) as c:
         root = cp.headers()
         org_id = make_org(c, root, "o1")
-        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": f"2026-08-15T12:00:0{index}+00:00"} for index in range(1, 4)]
+        events = [
+            {
+                **_event(org_id),
+                "event_id": str(UUID(int=index)),
+                "request_started_at": f"2026-08-15T12:00:0{index}+00:00",
+                "attempt_started_at": f"2026-08-15T12:00:0{index}+00:00",
+                "occurred_at": f"2026-08-15T12:00:0{index}+00:00",
+            }
+            for index in range(1, 4)
+        ]
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
@@ -160,7 +275,16 @@ def test_event_cursors_are_stable_when_timestamps_match(tmp_path):
         root = cp.headers()
         org_id = make_org(c, root, "o1")
         occurred_at = "2026-08-15T12:00:00+00:00"
-        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": occurred_at} for index in range(1, 4)]
+        events = [
+            {
+                **_event(org_id),
+                "event_id": str(UUID(int=index)),
+                "request_started_at": occurred_at,
+                "attempt_started_at": occurred_at,
+                "occurred_at": occurred_at,
+            }
+            for index in range(1, 4)
+        ]
         assert c.post("/api/v1/events", json=events, headers=root).status_code == 200
         headers = cp.headers(org_id)
 
@@ -173,3 +297,65 @@ def test_event_cursors_are_stable_when_timestamps_match(tmp_path):
 
         assert [event["event_id"] for event in newest["data"]] == [str(UUID(int=3)), str(UUID(int=2))]
         assert [event["event_id"] for event in older] == [str(UUID(int=1))]
+
+
+def test_usage_reports_derive_totals_and_logical_requests_from_events(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        org_id = make_org(client, cp.headers(), "usage-report")
+        workspace_id = make_workspace(client, cp.headers(org_id), "usage-report")
+        first_attempt = _event(org_id)
+        first_attempt["workspace_id"] = str(workspace_id)
+        first_attempt["status"] = "upstream_error"
+        first_attempt["input_tokens"] = 4
+        first_attempt["output_tokens"] = 0
+        first_attempt["cache_read_tokens"] = 1
+        first_attempt["cache_write_tokens"] = 2
+        first_attempt["cost_usd"] = "0.000002"
+        first_attempt["cost_input_usd"] = "0.000002"
+        retry = {
+            **first_attempt,
+            "event_id": str(uuid7()),
+            "attempt_started_at": (datetime.fromisoformat(first_attempt["attempt_started_at"]) + timedelta(seconds=1)).isoformat(),
+            "occurred_at": (datetime.fromisoformat(first_attempt["occurred_at"]) + timedelta(seconds=1)).isoformat(),
+            "status": "ok",
+            "input_tokens": 6,
+            "output_tokens": 3,
+            "cache_read_tokens": 2,
+            "cache_write_tokens": 1,
+            "cost_usd": "0.000003",
+            "cost_input_usd": "0.000003",
+        }
+        assert client.post("/api/v1/events", json=[retry, first_attempt], headers=cp.headers()).json()["data"]["ingested"] == 2
+
+        report = client.get(f"/api/v1/organizations/{org_id}/reports/usage", headers=cp.headers(org_id)).json()["data"]
+        requests = client.get(f"/api/v1/organizations/{org_id}/reports/requests", headers=cp.headers(org_id)).json()["data"]
+        attribution = client.get(
+            f"/api/v1/organizations/{org_id}/reports/attribution",
+            params={"group_by": "model"},
+            headers=cp.headers(org_id),
+        ).json()["data"]
+        detail = client.get(f"/api/v1/organizations/{org_id}/reports/requests/{first_attempt['request_id']}", headers=cp.headers(org_id)).json()[
+            "data"
+        ]
+
+        assert report["totals"]["requests"] == 1
+        assert report["totals"]["input_tokens"] == 10
+        assert report["totals"]["output_tokens"] == 3
+        assert report["totals"]["cache_read_tokens"] == 3
+        assert report["totals"]["cache_write_tokens"] == 3
+        assert report["comparison"]["cache_read_tokens"] == 0
+        assert report["comparison"]["cache_write_tokens"] == 0
+        assert Decimal(report["totals"]["cost_usd"]) == Decimal("0.000005")
+        assert report["daily"][-1]["requests"] == 1
+        assert report["daily"][-1]["cache_read_tokens"] == 3
+        assert report["daily"][-1]["cache_write_tokens"] == 3
+        assert Decimal(report["daily"][-1]["cost_usd"]) == Decimal("0.000005")
+        assert attribution["items"][0]["name"] == "gpt-test"
+        assert attribution["items"][0]["requests"] == 1
+        assert Decimal(attribution["items"][0]["cost_usd"]) == Decimal("0.000005")
+        assert requests["next_cursor"] is None
+        assert len(requests["requests"]) == 1
+        assert requests["requests"][0]["status"] == "ok"
+        assert Decimal(requests["requests"][0]["cost_usd"]) == Decimal("0.000005")
+        assert [attempt["status"] for attempt in detail["attempts"]] == ["upstream_error", "ok"]

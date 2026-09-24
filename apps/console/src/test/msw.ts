@@ -12,12 +12,11 @@ export const ORG: Api.OrgOut = {
   personal_for: null,
   created_at: now,
   updated_at: now,
-  deleted_at: null,
 };
 
 export const WORKSPACES: Api.WorkspaceOut[] = [
-  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now, deleted_at: null },
-  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now, deleted_at: null },
+  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now },
+  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now },
 ];
 
 export function paged<T>(data: T[]) {
@@ -58,6 +57,7 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/policies', () => HttpResponse.json<{ data: Api.PolicyOut[] }>({ data: [] })),
   http.get('/api/v1/auth/permissions', () => HttpResponse.json<{ data: Api.MyPermissionsOut }>({ data: { permissions: Object.values(Permission) } })),
   http.get('/api/v1/instance/management-keys', () => enveloped<Api.ManagementKeyOut>([])),
+  http.get('/api/v1/instance/organizations/summary', () => HttpResponse.json<{ data: Api.OrgSummaryOut }>({ data: { total: 1 } })),
   http.get('/api/v1/organizations/:orgId/management-keys', () => enveloped<Api.ManagementKeyOut>([])),
   http.get('/api/v1/organizations/:orgId/activity', () => paged<Api.ActivityOut>([])),
   http.get('/api/v1/organizations/:orgId/taxonomy', () => HttpResponse.json<{ data: Api.TaxonomyOut }>({ data: { providers: [], models: [] } })),
@@ -68,4 +68,21 @@ export const server = setupServer(
   http.get('/api/v1/organizations/:orgId/invitations', () => enveloped<Api.OrgInvitationOut>([])),
   http.get('/api/v1/organizations/:orgId/events', () => paged<Api.UsageEventOut>([])),
   http.get('/api/v1/organizations/:orgId/workspaces/:workspaceRef/events', () => paged<Api.UsageEventOut>([])),
+  http.get('/api/v1/organizations/:orgId/reports/usage', () =>
+    HttpResponse.json({
+      data: {
+        totals: { requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: '0' },
+        comparison: { requests: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: '0' },
+        daily: [],
+        period: { start_at: now, end_at: now, previous_start_at: now, previous_end_at: now, timezone: 'UTC' },
+        updated_at: now,
+      },
+    }),
+  ),
+  http.get('/api/v1/organizations/:orgId/reports/requests', () =>
+    HttpResponse.json<{ data: Api.RequestPageOut }>({ data: { requests: [], next_cursor: null } }),
+  ),
+  http.get('/api/v1/organizations/:orgId/reports/filter-options', () => HttpResponse.json({ data: { items: [] } })),
+  http.get('/api/v1/organizations/:orgId/reports/attribution', () => HttpResponse.json({ data: { items: [], next_offset: null } })),
+  http.get('/api/v1/organizations/:orgId/reports/requests/:requestId', () => new HttpResponse(null, { status: 404 })),
 );

@@ -12,15 +12,10 @@ silence, and validate.py fails when the two disagree.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import yaml
 
-from .output import emit
+from .outcomes import CatalogCount, SeedWritten
 from .paths import TAXONOMY
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 SEED = TAXONOMY.parent / "model-audit" / "catalog" / "seed.yml"
 # schema is omitted: it is derived by extract_schemas.py and doc_schemas.py from openapi
@@ -55,9 +50,7 @@ def build() -> dict:
     return out
 
 
-def main(_arguments: Sequence[str] = ()) -> int:
+def run() -> SeedWritten:
     seed = build()
     SEED.write_text(HEADER + yaml.safe_dump(seed, sort_keys=False, width=100, allow_unicode=True))
-    counts = ", ".join(f"{len(v)} {k}" for k, v in seed.items())
-    emit(f"wrote {SEED} ({counts})")
-    return 0
+    return SeedWritten(SEED, tuple(CatalogCount(kind, len(seed[kind])) for kind in ("providers", "routers", "candidates") if kind in seed))

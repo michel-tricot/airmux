@@ -20,11 +20,14 @@ backend = ["airmux"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",
-  "pytest", "pytest-asyncio", "pytest-xdist", "respx", "anyio",
+  "pytest", "pytest-asyncio", "httpx2[http2]>=2.13", "aioresponses", "pytest-xdist", "respx", "anyio",
   "jsonschema",
   "openai",
   "anthropic",
+  "hypercorn==0.17.3",
   "testcontainers",
+  "trio",
+  "trustme>=1.2.1",
   "import-linter",
   "pre-commit",
   "datamodel-code-generator",
@@ -33,7 +36,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["lib/contract/tests", "lib/runtime/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests", "tests/ci", "tests/documentation", "tests/workflows"]
 asyncio_mode = "auto"
-pythonpath = [".", "tests/acceptance/gateway"]
+pythonpath = [".", "tests", "tests/acceptance/gateway"]
 markers = ["performance: performance harness coverage owned by nightly CI"]
 
 [tool.ruff]
@@ -122,6 +125,7 @@ exclude = [".agents", ".claude", "**/migrations/versions", "examples/anthropic_s
 
 [tool.ty.environment]
 python-version = "3.13"
+extra-paths = ["tests"]
 
 [tool.ty.terminal]
 error-on-warning = true

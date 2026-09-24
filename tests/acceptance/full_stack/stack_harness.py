@@ -27,6 +27,7 @@ import httpx
 import pytest
 import yaml
 from dotenv import dotenv_values
+from prometheus_client.parser import text_string_to_metric_families
 from testcontainers.core.container import DockerContainer
 from tests.acceptance.process_harness import uvicorn_port
 from tests.diagnostics import retain_logs
@@ -47,6 +48,11 @@ PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_write
 
 _pg: dict[str, DockerContainer | str] = {}
 PG_ADMIN_ENV = "AIRMUX_TEST_PG_URL"
+
+
+def metric(url: str, name: str) -> float:
+    families = text_string_to_metric_families(httpx.get(url, timeout=5.0).text)
+    return next(sample.value for family in families for sample in family.samples if sample.name == name)
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -381,6 +387,7 @@ class Stack:
         self,
         *,
         poll_interval_s: int = 1,
+        budget_poll_interval_s: int = 1,
         flush_interval_s: int = 1,
         outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
         secrets_kind: Literal["file", "insecure_database"] = "file",
@@ -416,6 +423,11 @@ class Stack:
                     "heartbeat_interval_s": 2,
                 },
                 "events": outbox_config,
+                "budget": {
+                    "kind": "control_plane",
+                    "control_plane": dict(control_plane_link),
+                    "poll_interval_s": budget_poll_interval_s,
+                },
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
@@ -554,7 +566,11 @@ class Stack:
 
     def _replace_control_plane_url(self, previous_url: str) -> None:
         configuration = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
-        for section in (configuration["data_plane"]["bundle"], configuration["data_plane"]["events"]):
+        for section in (
+            configuration["data_plane"]["bundle"],
+            configuration["data_plane"]["events"],
+            configuration["data_plane"]["budget"],
+        ):
             control_plane = section.get("control_plane")
             if control_plane and control_plane["url"] == previous_url:
                 control_plane["url"] = self.cp_url

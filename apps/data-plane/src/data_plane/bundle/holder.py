@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Literal, Self
 
+from airmux_runtime.observability import log_event
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
 from data_plane.egress import REGISTRY
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 
     from contract import BundleV1, KeyEntry, ModelEntry, ProviderEntry
     from data_plane.credentials import CredentialIndex
+    from data_plane.metrics import DataPlaneMetrics
     from data_plane.profiles import CompiledProfile
 
 logger = logging.getLogger("data_plane")
@@ -80,28 +82,25 @@ class BundleSet:
 
 
 class BundleHolder:
-    def __init__(self) -> None:
+    def __init__(self, metrics: DataPlaneMetrics) -> None:
         self._current = BundleSet.from_bundles(())
-        self._rejected_manifest: str | None = None
+        self._metrics = metrics
 
     @property
     def current(self) -> BundleSet:
         return self._current
 
-    @property
-    def rejected_manifest(self) -> str | None:
-        return self._rejected_manifest
-
     def swap(self, current: BundleSet, source: str) -> None:
         self._current = current
-        self._rejected_manifest = None
+        self._metrics.observe_bundle_adopted(len(current.snapshots))
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
 
-    def reject_manifest(self, error: str) -> None:
-        self._rejected_manifest = error
+    def reject_manifest(self) -> None:
+        self._metrics.observe_bundle_poll("rejected")
+        log_event(logger, logging.ERROR, "bundle_manifest_rejected", outcome="rejected")
 
-    def accept_manifest(self) -> None:
-        self._rejected_manifest = None
+    def record_poll(self, outcome: Literal["unchanged", "failed"]) -> None:
+        self._metrics.observe_bundle_poll(outcome)
 
 
 def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) -> dict[str, T]:

@@ -160,10 +160,10 @@ from .base import ModelSource
 
 
 class Example(ModelSource):
-    id = "example"
+    provider_id = "example"
     url = "https://api.example.ai/v1/models"
     definition = ProviderDefinition(
-        id=id,
+        id=provider_id,
         name="Example AI",
         homepage="https://example.ai",
         docs="https://docs.example.ai",

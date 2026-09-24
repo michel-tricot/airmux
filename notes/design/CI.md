@@ -6,8 +6,9 @@ executable definition; this record explains why they have their current shape an
 
 ## Goals and invariants
 
-- Every pull request and every commit on `main` runs the complete correctness graph
-- Correctness jobs have no path filters, semantic change map, or conditional skip
+- Every ready-for-review pull request, commit on `main`, and manual correctness run executes the complete correctness graph
+- Draft pull requests run quality, Python unit, frontend, packaging, and security checks for early feedback
+- Correctness jobs have no path filters or semantic change map; only draft status defers integration and acceptance jobs and their aggregate
 - Branch protection depends only on the stable `required` and `dependency-security` aggregate checks
 - The Python distribution is built once per correctness run and every black-box job tests that exact candidate
 - The wheel is rebuilt from the source distribution so the source distribution is the packaging source of truth
@@ -35,12 +36,13 @@ flowchart TB
     main --> nightly[nightly.yml]
     main_ci --> main_candidate[Candidate sdist, wheel, and SHA256SUMS]
 
-    tag[Protected version tag] --> release[release.yml]
+    main --> release[release.yml]
     main_ci -->|exact successful SHA| release
     main_security -->|exact successful SHA| release
     main_candidate -->|same bytes| release
     release --> prepublish[Installation and live-provider checks]
-    prepublish --> pypi[PyPI trusted publishing]
+    prepublish --> tag[Protected version tag]
+    tag --> pypi[PyPI trusted publishing]
     pypi --> registry_check[Hash comparison, isolated install, real gateway request]
     registry_check --> github_release[GitHub release]
 
@@ -51,7 +53,7 @@ flowchart TB
     nightly --> cold_docker[Cold Docker build]
 ```
 
-There are exactly four workflow files:
+There are exactly five workflow files:
 
 - [ci.yml](../../.github/workflows/ci.yml) runs for pull requests, `main` pushes, and manual dispatches; it owns
   correctness, packaging, installed-candidate acceptance, and evidence, with `required` as its stable result
@@ -59,16 +61,24 @@ There are exactly four workflow files:
   manual dispatches; it owns dependency audits and review, with `dependency-security` as its stable result
 - [nightly.yml](../../.github/workflows/nightly.yml) runs daily or for a manually selected full `main` SHA; it owns
   compatibility, performance, live-provider, soak, and cold-build checks
-- [release.yml](../../.github/workflows/release.yml) runs manually for a protected tag from `main`; it verifies,
-  publishes, verifies the registry, and then announces the release
+- [prepare-release.yml](../../.github/workflows/prepare-release.yml) runs manually from `main`; it creates the public
+  version change on a release branch for review
+- [release.yml](../../.github/workflows/release.yml) runs manually from `main`; it verifies the candidate, creates the
+  protected tag, publishes, verifies the registry, and then announces the release
 
 Adding another workflow is an architectural change. Prefer adding a job to the workflow that already owns the trust and
 latency class. `tests/ci/test_merge_policy.py` intentionally asserts that these are the only workflow files.
 
 ## Pull-request and main correctness graph
 
-`ci.yml` uses the same graph for pull requests and `main`. The jobs that do not consume the distribution start
-immediately. Black-box jobs wait only for `package`, so frontend duration does not delay browser acceptance.
+`ci.yml` runs the full graph below for ready-for-review pull requests, pushes to `main`, and manual dispatches. Pull
+request events are `opened`, `synchronize`, `reopened`, and `ready_for_review`; marking a draft ready therefore starts a
+full run without requiring another commit. Drafts run only `quality`, `python-unit`, `frontend`, and `package` in this
+workflow. They skip `python-integration`, the black-box jobs, and `required`; passing draft checks is not a full
+correctness result.
+
+The jobs that do not consume the distribution start immediately. Black-box jobs wait only for `package`, so frontend
+duration does not delay browser acceptance.
 
 ```mermaid
 flowchart LR
@@ -93,7 +103,7 @@ flowchart LR
 | Job | Contract |
 | --- | --- |
 | `quality` | Workflow validation, formatting, lint, typing, import boundaries, generated artifacts, audits, and CI/documentation tests |
-| `python-unit` | Contract, control-plane unit, data-plane, CLI, and model-audit suites with no Docker access |
+| `python-unit` | Contract, runtime, control-plane unit, data-plane, CLI, and model-audit suites with no Docker access |
 | `python-integration` | Postgres-backed control-plane integration tests |
 | `frontend` | Console and generated-client lint, typing, coverage, and console build |
 | `package` | One source distribution, a wheel rebuilt from it, metadata validation, and SHA-256 evidence |
@@ -101,7 +111,7 @@ flowchart LR
 | `full-stack` | Installed-candidate control-plane and data-plane scenarios |
 | `browser` | Real Chromium behavior against the installed candidate |
 | `docker` | Compact and split Compose deployments built from the candidate |
-| `required` | `always()` aggregate that rejects every result other than success |
+| `required` | Aggregate that runs even after upstream failures on full runs and rejects every result other than success; skipped on drafts |
 
 The aggregate job uses runner-provided `jq` against `toJSON(needs)`. Its name is deliberately stable. Branch protection
 does not list matrix-expanded or implementation job names, so the graph can evolve without weakening the merge gate or
@@ -164,21 +174,28 @@ duplicate per-job caches merely to hide that annotation.
 
 ## Security workflow and repository policy
 
-`security.yml` exports the locked Python dependency graph to `pip-audit`, runs `bun audit`, and uses GitHub dependency
-review when Advanced Security is available. Private repositories without that feature retain both ecosystem audits as
-the free-tier fallback. `dependency-security` accepts a skipped dependency-review job on events where it cannot run,
-but it always requires both ecosystem audits to succeed.
+`security.yml` exports the locked Python dependency graph to `pip-audit` and runs `bun audit` on both draft and ready
+pull requests, `main` pushes, schedules, and manual dispatches. On pull requests, the dependency-review job checks
+whether the GitHub API reports Advanced Security enabled and runs the dependency review action only when that check
+succeeds. Otherwise it reports the ecosystem audits as the fallback. `dependency-security` accepts a skipped
+dependency-review job on non-pull-request events, but always requires both ecosystem audits to succeed.
 
 Repository-owned policy is recorded under `.github/policy/`:
 
-- `protect-main.json` requires a current base, linear history, resolved conversations, squash merging, `required`, and `dependency-security`
+- `protect-main.json` requires a pull request, linear history, resolved conversations, squash merging, `required`, and `dependency-security`,
+  without requiring a current base
 - `actions.json` restricts actions and requires full-SHA pins
 - `security.json` records CodeQL default setup, secret scanning, and push protection
 - Release tag files make `v*` creation deliberate and existing tags immutable
 - `release-environment.json` constrains secret-bearing and publishing jobs
 
-`scripts/github-policy diff` is read-only and compares those files with live GitHub settings. `scripts/github-policy
-apply` is the explicit mutation path. Workflow YAML cannot enforce repository settings by itself.
+Required status checks use GitHub's [loose mode](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging).
+A conflict-free branch with passing required checks can merge without updating it after another pull request lands.
+This avoids repeated branch updates and CI runs, but those checks may predate the latest changes to `main`: no textual
+conflicts does not guarantee integration compatibility. CI still runs on every push to `main`.
+
+The [maintainer policy guide](../../.github/policy/README.md) covers drift inspection, deliberate policy application,
+review requirements, and administrator exceptions. Workflow YAML cannot enforce repository settings by itself.
 
 ## Nightly ownership
 
@@ -196,16 +213,18 @@ treating one as a gateway regression. Nightly jobs never execute pull-request re
 
 ## Release chain of custody
 
-Release is manually dispatched from `main` with an existing protected tag. `prepare` validates the tag shape, resolves
-it to an immutable commit, proves that commit belongs to `main`, and checks that the package version matches the tag.
-It then queries GitHub by workflow identity and exact SHA for successful `required` and `dependency-security` jobs from
+Release preparation is manually dispatched from `main`. It increments the public package version on a dedicated
+release branch so the one-file version change passes through the ordinary pull-request gate. After that pull request
+merges, release is manually dispatched from `main`. `prepare` binds the public version and tag to the exact `main` SHA,
+then queries GitHub by workflow identity and exact SHA for successful `required` and `dependency-security` jobs from
 trusted `main` push runs.
 
 The workflow downloads the candidate from that exact CI run and verifies its digests. It does not rebuild. Installation
-and live-provider jobs test those bytes without shared caches. Publishing uses PyPI trusted publishing with OIDC and
-the narrow `id-token: write` permission. After upload, the workflow downloads the registry artifacts, compares their
-hashes with the candidate, installs the verified wheel into an empty tool environment, and sends a real gateway
-request. The GitHub release is created only after all of those checks succeed.
+and live-provider jobs test those bytes without shared caches. The workflow then creates the protected version tag at
+the verified SHA. Publishing uses PyPI trusted publishing with OIDC and the narrow `id-token: write` permission. After
+upload, the workflow downloads the registry artifacts, compares their hashes with the candidate, installs the verified
+wheel into an empty tool environment, and sends a real gateway request. The GitHub release is created only after all of
+those checks succeed.
 
 This ordering prevents a green source checkout from masking a broken distribution, a registry mutation, or a package
 that cannot serve a request after installation.
@@ -225,6 +244,7 @@ Preserve these rules while editing:
 
 - Add suites by directory or marker discovery, not hand-maintained test-file matrices
 - Keep `required` and `dependency-security` stable and update their complete `needs` sets
+- Preserve the draft/full-run distinction and trigger full checks when a pull request becomes ready for review
 - Feed every installed-artifact test from `package`
 - Never rebuild inside a consumer or release job
 - Keep diagnostics in `always()` steps without allowing them to mask the primary result
@@ -257,3 +277,23 @@ missing-test incidents weekly. The targets are:
 - Zero missing-test incidents
 
 Record exceptions in this document after enough runs exist to make the percentiles meaningful.
+
+### 2026-09-18 baseline
+
+The first post-redesign baseline contains 29 successful, first-attempt pull-request runs with a successful `required`
+job, from [run 35063316122](https://github.com/michel-tricot/airmux/actions/runs/35063316122) through
+[run 35376970238](https://github.com/michel-tricot/airmux/actions/runs/35376970238). Draft-only runs, failed or cancelled
+runs, and rerun attempts are excluded. Required-check duration runs from workflow creation through completion of
+`required`; queue time runs from workflow creation through the first non-skipped job start; runner use is the sum of
+non-skipped job durations. Percentiles use linear interpolation.
+
+| Metric | Observed | Target |
+| --- | ---: | ---: |
+| Required-check p50 | 4m 20s | Under 4m |
+| Required-check p95 | 5m 24.6s | Under 6m |
+| Queue p95 | 40.6s | Under 1m |
+| Runner-use p50 | 32m 26s | Not set |
+| Runner-use p95 | 34m 5.4s | Not set |
+
+The p95 and queue targets pass. The p50 target misses by 20 seconds; this baseline records the exception before any
+further path filtering or CI redesign.

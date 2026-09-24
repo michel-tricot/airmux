@@ -1,10 +1,14 @@
 ---
-title: "Usage and activity"
-description: "Inspect model usage, cost, latency, request status, gateway health, and audited management changes."
+title: 'Usage and activity'
+description: 'Inspect model usage, cost, latency, request status, gateway health, and audited management changes.'
 ---
 
 airmux records one usage event for each upstream attempt, including failed and cancelled attempts. Gateways accept events
 without waiting for local persistence. SQLite deployments export durable events to the control plane in batches.
+
+The event ingestion endpoint accepts a list of usage events. Structurally malformed events reject the whole request
+with HTTP 422 before any events are stored. Semantically inconsistent or unauthorized events are rejected individually
+and counted in `rejected`; valid events in the same batch are stored.
 
 ## Usage event fields
 
@@ -12,8 +16,10 @@ without waiting for local persistence. SQLite deployments export durable events 
 | --- | --- |
 | `request_id` | One caller request; fallback attempts share this ID |
 | `event_id` | Unique event ID for one attempt |
+| `request_source` | `inference_key` or `playground`, captured when the request is authenticated |
 | `model_id`, `provider_id` | Route used for the attempt |
 | `input_tokens`, `output_tokens` | Provider-reported or estimated counts |
+| `token_usage_source` | `provider`, `estimated`, or `not_applicable` for a denial before routing |
 | `cache_read_tokens`, `cache_write_tokens` | Cache traffic included in input tokens |
 | `cost_usd` | Cost derived from catalog rates and token counts |
 | `latency_ms` | Attempt latency observed by the gateway |
@@ -21,28 +27,88 @@ without waiting for local persistence. SQLite deployments export durable events 
 | `credential_id`, `credential_scope` | Credential metadata without the secret value |
 | `bundle_id` | Configuration version that governed the request |
 
-Costs use the prices stored in the catalog at request time. When complete provider usage is unavailable, airmux marks the event's usage as estimated.
+`token_usage_source` describes how the gateway obtained the token counts:
 
-## Inspect usage
+- `provider`: the adapter accepted upstream usage counts without gateway estimation
+- `estimated`: usage was absent or the adapter identified it as incomplete, so the gateway estimated missing counts from the request and observed response content
+- `not_applicable`: the request was denied before routing, with zero token counts and cost
+
+The source applies to the whole event. An `estimated` event can retain partial provider counts, such as Anthropic input
+and cache counts received before a stream disconnect, while estimating output. It does not identify the source of each
+individual count. Cache counts are retained when available and are never estimated. A `provider` source does not promise
+that the request finished successfully or that the provider reported every usage detail; check `status` as well.
+
+Adapters determine whether usage is usable. OpenAI Chat Completions and Anthropic currently treat an all-zero usage
+object as absent; OpenAI Responses accepts explicit zero counts as provider usage. Estimates cover observable content
+and do not establish how many tokens a provider processed after a timeout or disconnect.
+
+All `cost_*_usd` fields are estimates using catalog prices at request time, including when `token_usage_source` is
+`provider`. Token-count provenance does not make the calculated cost a provider invoice amount. The source is preserved
+in local event files, durable export, management API responses, and generated clients. Console activity lists and CLI
+event tables show the token source; console costs are labeled separately as estimates.
+
+## Reports
+
+The console's Usage and Requests pages are available at organization and workspace scope. They use the same report
+endpoints under `/api/v1/organizations/{org_id}/reports`; workspace pages pass `workspace_id` as a filter. Organization
+reports require organization `usage.read` permission. A workspace report requires `usage.read` for that workspace;
+workspace permission does not grant access to the all-workspaces report. The same scope check applies to request
+details and filter choices.
+
+Usage defaults to the last 30 days. The selected period, timezone, and filters are kept in the page URL. The summary
+shows estimated spend, distinct requests, input and output tokens, and average cost per request. The trend and
+attribution table use the same recorded events. Attribution can group by workspace, key owner, inference key, served
+model, provider, or provider credential. Selecting a group opens the matching Requests view.
+
+One `request_id` is one logical request, even when fallback creates several provider attempts. A denial before routing
+is one request with no provider attempt. Recorded cost and tokens add across attempts, including failed attempts with
+recorded usage. A request belongs to the period of its request start time, even if an attempt finishes later. Model,
+provider, and credential filters select matching attempt contributions; a request can therefore appear in multiple
+groups. Its detail view shows all authorized attempts and identifies the matching contributions. Group request counts
+may overlap, while spend and tokens reconcile with the report total.
+
+The Requests page supports exact request ID lookup and pagination. Detail
+shows approximate attempt order from start timestamps. Key owner means the owner of the inference key, not the end
+customer of an application. Deleted resources remain identifiable by their recorded IDs when names are unavailable.
+Prompt and response content are not part of usage reporting.
+
+Costs are gateway estimates recorded at request time; current catalog prices are not used to recalculate history.
+Events arrive asynchronously, so a refreshed report can change as late events arrive. The report cannot infer a
+request or attempt that never produced an accepted event. A reported status is the latest status observed in stored
+events, not proof that no later event will arrive.
+
+The shared API includes `/usage`, `/attribution`, `/filter-options`, `/requests`, and `/requests/{request_id}`.
+Periods include Today, 7 days, 30 days, month to date, and custom dates. Reports compare with the
+preceding interval of equal duration. Request lists use an opaque cursor ordered by request start time and request ID;
+attribution uses `limit` and `offset`.
+Request list and detail responses include current workspace, inference key, and user display names; attempts include
+credential names. When a referenced resource is no longer available, its identifier is shown instead.
+They also include cache read and write counts. Total tokens are input plus output; cache counts are included in input.
+
+## Inspect events
 
 ```bash
 airmux events list
 airmux events tail --interval 2 --keep 30
 ```
 
-The console shows workspace usage and instance or organization activity where the current principal has permission. The
-management API supports opaque cursor pagination.
+Add `-f json` for complete event fields. The default table drops columns to fit a narrow terminal.
 
 ## Gateway health
 
 ```bash
-airmux gateways list
 curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
+airmux gateways list
 ```
 
-`/healthz` reports the number and age of queued events. `/readyz` returns `503` when the gateway has no usable bundle or
-rejected the latest manifest. A gateway is reported offline after 90 seconds without a heartbeat.
+`gateways list` needs instance-scoped `data-planes.read` permission. An organization owner cannot run it and receives
+`403`. Use the health endpoints, which are public, to check a gateway from an organization context.
+
+`/healthz` is dependency-free process liveness. `/readyz` returns `503` when the gateway has no accepted bundle. Inspect
+`/metrics` on the data plane's internal listener for queue depth, durable backlog age, export failures, and rejected
+bundle manifests. A gateway is reported offline after 90 seconds without a heartbeat. See
+[production operations](/docs/deployment/operations#opentelemetry-metrics) for the metric reference and export guidance.
 
 ## Audit activity
 

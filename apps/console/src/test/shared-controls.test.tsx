@@ -36,6 +36,24 @@ describe('shared controls', () => {
 
     expect(screen.getByRole('dialog', { name: 'Policy' })).toHaveClass('grid-cols-1');
     expect(screen.getByRole('combobox', { name: 'Applies to' })).toHaveTextContent(label);
+    expect(screen.getByRole('combobox', { name: 'Applies to' })).toHaveClass('leading-normal');
+  });
+
+  it('fits the status choices without an unnecessary scroll affordance', async () => {
+    const user = userEvent.setup();
+    render(
+      <Dropdown
+        value="all"
+        onValueChange={() => {}}
+        options={['All statuses', 'Succeeded', 'Denied', 'Upstream error', 'Credential rejected', 'Timeout', 'Rate limited', 'Cancelled'].map(
+          (label) => ({ value: label === 'All statuses' ? 'all' : label, label }),
+        )}
+        aria-label="Status"
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Status' }));
+    expect(screen.getByRole('listbox')).toHaveClass('[&_[data-radix-select-viewport]]:max-h-96');
   });
 
   it('composes button styling onto navigation without nesting interactive controls', () => {

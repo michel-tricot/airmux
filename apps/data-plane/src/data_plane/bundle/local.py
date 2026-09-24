@@ -68,11 +68,18 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
     if not taxonomy.providers or not taxonomy.models:
         message = "a local taxonomy must contain providers and models"
         raise ValueError(message)
-    keys = [
-        KeyEntry(key_id=f"local-{position}", org_id=LOCAL_ORG, workspace_id=LOCAL_WORKSPACE, user_id=key.user_id, token_hash=token_hash(key.token))
+    keys = tuple(
+        KeyEntry(
+            key_id=f"local-{position}",
+            request_source="inference_key",
+            org_id=LOCAL_ORG,
+            workspace_id=LOCAL_WORKSPACE,
+            user_id=key.user_id,
+            token_hash=token_hash(key.token),
+        )
         for position, key in enumerate(spec.keys)
-    ]
-    credentials = [
+    )
+    credentials = tuple(
         CredentialEntry(
             ref=SecretRef(
                 purpose=SecretPurpose.provider,
@@ -86,7 +93,7 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
             version=1,
         )
         for provider in taxonomy.providers
-    ]
+    )
     return BundleV1(
         bundle_id=uuid5(_NAMESPACE, raw),
         org_id=LOCAL_ORG,
@@ -94,18 +101,18 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
         keys=keys,
         policies=spec.policies,
         catalog=Catalog(
-            providers=[
+            providers=tuple(
                 ProviderEntry(
                     provider_id=provider.provider_id,
                     kind=provider.kind,
                     base_url=provider.base_url,
                     param_aliases=provider.param_aliases,
-                    accepted_params=provider.accepted_params,
+                    accepted_params=tuple(provider.accepted_params) if provider.accepted_params is not None else None,
                     params_closed=provider.params_closed,
                 )
                 for provider in taxonomy.providers
-            ],
-            models=[
+            ),
+            models=tuple(
                 ModelEntry(
                     model_id=model.model_id,
                     provider_id=model.provider_id,
@@ -117,13 +124,13 @@ def compile_local(spec: LocalBundleSpec, taxonomy: TaxonomySpec, raw: str, now: 
                     cache_write_price_per_mtok=model.cache_write_price_per_mtok,
                     context_window=model.context_window,
                     max_output_tokens=model.max_output_tokens,
-                    input_modalities=model.input_modalities,
-                    output_modalities=model.output_modalities,
-                    capabilities=model.capabilities,
+                    input_modalities=tuple(model.input_modalities),
+                    output_modalities=tuple(model.output_modalities),
+                    capabilities=tuple(model.capabilities),
                     parameter_support=model.parameter_support,
                 )
                 for model in taxonomy.models
-            ],
+            ),
             credentials=credentials,
         ),
     )

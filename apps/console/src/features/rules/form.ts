@@ -7,7 +7,10 @@ export const ruleFormSchema = z
     matchModels: z.array(z.string()),
     matchStream: z.enum(['any', 'streaming', 'non_streaming']),
     matchCapabilities: z.array(z.enum(['tools', 'reasoning', 'structured_output'])),
-    kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback']),
+    kind: z.enum(['models', 'providers', 'deny', 'strict_parameters', 'price_limit', 'request_limits', 'credential_access', 'fallback', 'budget']),
+    budgetAmount: z.string(),
+    budgetPeriod: z.enum(['day', 'month']),
+    budgetAggregation: z.enum(['shared', 'per_key']),
     names: z.array(z.string()),
     message: z.string(),
     maxInputPrice: z.string(),
@@ -26,6 +29,8 @@ export const ruleFormSchema = z
     if (values.kind === 'fallback' && values.names.length > 4) issue('names', 'Choose at most four backup models');
     if (values.kind === 'fallback' && !values.reasons.length) issue('reasons', 'Select at least one failure reason');
     if (values.kind === 'deny' && (!values.message.trim() || values.message.length > 200)) issue('message', 'Enter a message of 1 to 200 characters');
+    if (values.kind === 'budget' && (!/^\d{1,16}(\.\d{1,12})?$/.test(values.budgetAmount) || !/[1-9]/.test(values.budgetAmount)))
+      issue('budgetAmount', 'Enter a positive USD amount with at most 12 decimal places');
     if (values.kind === 'price_limit') {
       if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxInputPrice)) issue('maxInputPrice', 'Enter a non-negative USD rate');
       if (!/^\d{1,10}(\.\d{1,6})?$/.test(values.maxOutputPrice)) issue('maxOutputPrice', 'Enter a non-negative USD rate');
@@ -49,6 +54,9 @@ export const ruleDefaults: RuleForm = {
   matchStream: 'any',
   matchCapabilities: [],
   kind: 'credential_access',
+  budgetAmount: '',
+  budgetPeriod: 'month',
+  budgetAggregation: 'shared',
   names: [],
   message: '',
   maxInputPrice: '',
@@ -62,6 +70,8 @@ export const ruleDefaults: RuleForm = {
 
 function action(values: RuleForm): RuleDefinitionInput['action'] {
   switch (values.kind) {
+    case 'budget':
+      return { kind: 'budget', amount_usd: values.budgetAmount, period: values.budgetPeriod, aggregation: values.budgetAggregation };
     case 'models':
       return { kind: 'models', names: values.names };
     case 'providers':
@@ -104,6 +114,7 @@ export function ruleForm(rule: RuleDefinitionInput | RuleDefinitionOutput): Rule
     matchCapabilities: match.kind === 'request' ? (match.capabilities ?? []) : [],
     kind: action.kind,
     names: action.kind === 'models' || action.kind === 'providers' ? action.names : action.kind === 'fallback' ? action.models : [],
+    ...(action.kind === 'budget' ? { budgetAmount: action.amount_usd, budgetPeriod: action.period, budgetAggregation: action.aggregation } : {}),
     ...(action.kind === 'deny' ? { message: action.message } : {}),
     ...(action.kind === 'price_limit'
       ? { maxInputPrice: String(action.max_input_price_per_mtok), maxOutputPrice: String(action.max_output_price_per_mtok) }

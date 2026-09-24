@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from contract import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
+from data_plane.canonical import GatewayErrorCode
 from data_plane.errors import RequestRejectedError
 
 if TYPE_CHECKING:
@@ -32,11 +33,11 @@ def authenticate(bearer: str, index: Mapping[str, KeyEntry], now: datetime) -> K
 def authenticate_request(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
     bundle_set = holder.current
     if not bundle_set.snapshots:
-        raise RequestRejectedError(503, "bundle_unavailable")
+        raise RequestRejectedError(503, GatewayErrorCode.bundle_unavailable)
     token = _request_token(request)
     key = authenticate(token, bundle_set.key_index, datetime.now(tz=UTC))
     if key is None:
-        raise RequestRejectedError(401, "invalid_token")
+        raise RequestRejectedError(401, GatewayErrorCode.invalid_token)
     return key, bundle_set.snapshots[key.org_id]
 
 
@@ -48,9 +49,9 @@ def _request_token(request: Request) -> str:
         return token
     token = request.cookies.get(PLAYGROUND_COOKIE, "")
     if not token:
-        raise RequestRejectedError(401, "missing_bearer_token")
+        raise RequestRejectedError(401, GatewayErrorCode.missing_bearer_token)
     if request.headers.get("x-requested-with") is None:
-        raise RequestRejectedError(403, "missing_requested_with")
+        raise RequestRejectedError(403, GatewayErrorCode.missing_requested_with)
     if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
-        raise RequestRejectedError(403, "cross_site_request")
+        raise RequestRejectedError(403, GatewayErrorCode.cross_site_request)
     return token

@@ -3,9 +3,10 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING
 
-import httpx
+import aiohttp
 
 from contract import HeartbeatV1
+from data_plane.control_plane_link import complete_response
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -27,7 +28,7 @@ class Heartbeat:
         interval_s: float,
         holder: BundleHolder,
         instance_id: UUID,
-        http_client: httpx.AsyncClient,
+        http_client: aiohttp.ClientSession,
     ) -> None:
         self._control_plane = control_plane
         self._interval_s = interval_s
@@ -42,17 +43,18 @@ class Heartbeat:
             version=VERSION,
             bundle_id=snapshots[0].bundle.bundle_id if len(snapshots) == 1 else None,
         )
-        response = await self._http_client.post(
+        async with self._http_client.post(
             f"{self._control_plane.url}/api/v1/heartbeat",
             headers={"authorization": f"Bearer {self._control_plane.management_key}"},
             json=body.model_dump(mode="json"),
-        )
-        response.raise_for_status()
+            allow_redirects=False,
+        ) as response:
+            await complete_response(response)
 
     async def run(self) -> None:
         await run_periodic(
             self.once,
             self._interval_s,
-            (httpx.HTTPError, OSError),
+            (aiohttp.ClientError, TimeoutError, OSError),
             "heartbeat",
         )

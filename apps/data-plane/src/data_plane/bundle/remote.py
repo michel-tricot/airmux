@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
+import aiohttp
 from pydantic import ValidationError
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1
@@ -12,6 +12,7 @@ from data_plane.bundle.base import BundleSource
 from data_plane.bundle.holder import BundleSet
 from data_plane.cache import CachedBundles, read_cached_bundles, write_cached_bundles
 from data_plane.cache import instance_id as cache_instance_id
+from data_plane.control_plane_link import complete_response
 from data_plane.heartbeat import Heartbeat
 from data_plane.tasks import run_periodic
 
@@ -29,7 +30,7 @@ class RemoteBundleSource(BundleSource):
         self,
         config: RemoteBundleConfig,
         holder: BundleHolder,
-        http_client: httpx.AsyncClient,
+        http_client: aiohttp.ClientSession,
     ) -> None:
         self._config = config
         self._holder = holder
@@ -37,27 +38,35 @@ class RemoteBundleSource(BundleSource):
         self._bundles_by_ref: dict[tuple[UUID, UUID], BundleV1] = {}
 
     async def once(self) -> None:
+        changed = False
         try:
-            response = await self._http_client.get(
+            async with self._http_client.get(
                 f"{self._config.control_plane.url}/api/v1/bundles/manifest",
                 headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
-            )
-            response.raise_for_status()
-            manifest = BundleManifest.model_validate(response.json()["data"])
+                allow_redirects=False,
+            ) as response:
+                await complete_response(response)
+                payload = await response.json(content_type=None)
+            manifest = BundleManifest.model_validate(payload["data"])
             current_refs = tuple(sorted(self._bundles_by_ref))
             if _manifest_refs(manifest) != current_refs:
                 bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
                 self._adopt(bundles, source="polled", persist=True, expected=manifest.bundles)
-        except (ValidationError, ValueError) as error:
-            self._holder.reject_manifest(str(error))
+                changed = True
+        except (ValidationError, ValueError):
+            self._holder.reject_manifest()
             raise
-        self._holder.accept_manifest()
+        except (aiohttp.ClientError, TimeoutError, OSError):
+            self._holder.record_poll("failed")
+            raise
+        if not changed:
+            self._holder.record_poll("unchanged")
 
     async def run(self) -> None:
         await run_periodic(
             self.once,
             self._config.poll_interval_s,
-            (httpx.HTTPError, ValidationError, OSError, ValueError),
+            (aiohttp.ClientError, TimeoutError, ValidationError, OSError, ValueError),
             "bundle poll",
         )
 
@@ -91,7 +100,7 @@ class RemoteBundleSource(BundleSource):
         source: str,
         *,
         persist: bool,
-        expected: list[BundleManifestEntry] | None,
+        expected: tuple[BundleManifestEntry, ...] | None,
     ) -> None:
         if expected is not None:
             for entry, bundle in zip(expected, bundles, strict=True):
@@ -110,12 +119,14 @@ class RemoteBundleSource(BundleSource):
         existing = self._bundles_by_ref.get((entry.org_id, entry.bundle_id))
         if existing is not None:
             return existing
-        response = await self._http_client.get(
+        async with self._http_client.get(
             f"{self._config.control_plane.url}/api/v1/bundles/{entry.bundle_id}",
             headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
-        )
-        response.raise_for_status()
-        return BundleV1.model_validate(response.json()["data"])
+            allow_redirects=False,
+        ) as response:
+            await complete_response(response)
+            payload = await response.json(content_type=None)
+        return BundleV1.model_validate(payload["data"])
 
 
 def _manifest_refs(manifest: BundleManifest) -> tuple[tuple[UUID, UUID], ...]:

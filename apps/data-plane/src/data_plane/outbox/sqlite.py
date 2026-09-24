@@ -7,10 +7,11 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import httpx
+import aiohttp
 from pydantic import TypeAdapter
 
 from contract import UsageEvent
+from data_plane.control_plane_link import complete_response
 from data_plane.outbox.queued import QueuedOutbox
 from data_plane.tasks import run_periodic
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from data_plane.config import SqliteOutboxConfig
+    from data_plane.metrics import DataPlaneMetrics
     from data_plane.outbox.base import OutboxStat
 
 logger = logging.getLogger("data_plane")
@@ -62,14 +64,15 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 
 
 class SqliteOutbox(QueuedOutbox):
-    def __init__(self, config: SqliteOutboxConfig, http_client: httpx.AsyncClient) -> None:
+    def __init__(self, config: SqliteOutboxConfig, http_client: aiohttp.ClientSession, metrics: DataPlaneMetrics) -> None:
         self._config = config
         self._http_client = http_client
         self._owner = str(os.getpid())
-        super().__init__("airmux-sqlite-outbox")
+        super().__init__("airmux-sqlite-outbox", metrics)
 
     def _open_storage(self) -> None:
         self._conn = _connect(self._config.cache_dir)
+        self._update_backlog_metrics()
 
     def _persist(self, events: Sequence[UsageEvent], /) -> None:
         with self._conn:
@@ -77,6 +80,7 @@ class SqliteOutbox(QueuedOutbox):
                 "INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)",
                 ((str(event.event_id), event.model_dump_json()) for event in events),
             )
+        self._update_backlog_metrics()
 
     def _close_storage(self) -> None:
         self._conn.close()
@@ -108,6 +112,7 @@ class SqliteOutbox(QueuedOutbox):
     def _acknowledge(self, event_ids: Sequence[str]) -> None:
         with self._conn:
             self._conn.executemany("DELETE FROM outbox WHERE event_id = ?", ((event_id,) for event_id in event_ids))
+        self._update_backlog_metrics()
 
     async def acknowledge(self, event_ids: Sequence[str], /) -> None:
         await self._storage_call(lambda: self._acknowledge(event_ids))
@@ -128,14 +133,28 @@ class SqliteOutbox(QueuedOutbox):
         events = await self.next_batch(BATCH_SIZE)
         if not events:
             return 0
-        response = await self._http_client.post(
-            f"{self._config.control_plane.url}/api/v1/events",
-            headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
-            json=[event.model_dump(mode="json") for event in events],
-        )
-        response.raise_for_status()
-        await self.acknowledge([str(event.event_id) for event in events])
+        started_at = time.monotonic()
+        try:
+            async with self._http_client.post(
+                f"{self._config.control_plane.url}/api/v1/events",
+                headers={"authorization": f"Bearer {self._config.control_plane.management_key}"},
+                json=[event.model_dump(mode="json") for event in events],
+                allow_redirects=False,
+            ) as response:
+                await complete_response(response)
+            await self.acknowledge([str(event.event_id) for event in events])
+        except (aiohttp.ClientError, TimeoutError, OSError, sqlite3.Error):
+            self._metrics.observe_metering_export("failed", started_at)
+            raise
+        self._metrics.observe_metering_export("success", started_at)
         return len(events)
+
+    def _update_backlog_metrics(self) -> None:
+        backlog = self._durable_backlog()
+        self._metrics.set_metering_outbox(backlog.events, backlog.oldest_event_at)
+
+    async def refresh_metrics(self) -> None:
+        await self._storage_call(self._update_backlog_metrics)
 
     async def export_available(self) -> int:
         sent_total = 0
@@ -150,7 +169,7 @@ class SqliteOutbox(QueuedOutbox):
         await run_periodic(
             self._export_and_log,
             self._config.flush_interval_s,
-            (httpx.HTTPError, OSError, sqlite3.Error),
+            (aiohttp.ClientError, TimeoutError, OSError, sqlite3.Error),
             "event export",
         )
 

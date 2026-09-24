@@ -9,6 +9,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, captured_sql, inference_key_body, make_org, make_workspace, setup_control_plane, wait_for_publication
+from prometheus_client.parser import text_string_to_metric_families
 from sqlalchemy import text
 
 from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, BundleV1, token_hash
@@ -34,6 +35,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert len(bundles) == 1
         assert bundle.bundle_id == bundles[-1].id
         assert [k.key_id for k in bundle.keys] == [key["id"]]
+        assert [k.request_source for k in bundle.keys] == ["inference_key"]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
         (model,) = bundle.catalog.models
@@ -43,6 +45,14 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert model.cache_read_price_per_mtok == Decimal("0.1")
         assert model.cache_write_price_per_mtok == Decimal("1.25")
         assert model.parameter_support == {"temperature": "unsupported"}
+        samples = [sample for family in text_string_to_metric_families(c.get("/metrics").text) for sample in family.samples]
+        successes = next(
+            sample.value
+            for sample in samples
+            if sample.name == "airmux_control_plane_bundle_publications_total" and sample.labels == {"outcome": "success"}
+        )
+        assert successes >= 1
+        assert next(sample.value for sample in samples if sample.name == "airmux_control_plane_bundle_publication_pending") == 0
 
 
 def test_revocation_lands_in_next_bundle(tmp_path):
@@ -57,7 +67,7 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         ]
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
         bundle = BundleV1.model_validate(wait_for_publication(c, org_id, org))
-        assert bundle.keys == []
+        assert bundle.keys == ()
         assert len(asyncio.run(_bundles(cp.db_url, org_id))) == 1
 
 
@@ -80,7 +90,7 @@ def test_inference_key_changes_publish_without_manual_action(tmp_path):
         assert c.delete(f"/api/v1/organizations/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
         revoked = BundleV1.model_validate(wait_for_publication(c, org_id, org, created.bundle_id))
         assert revoked.bundle_id != created.bundle_id
-        assert revoked.keys == []
+        assert revoked.keys == ()
 
 
 def test_bundle_manifest_follows_the_management_key_scope(tmp_path):

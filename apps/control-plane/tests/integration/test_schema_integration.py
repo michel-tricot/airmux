@@ -108,6 +108,7 @@ def test_migrated_tables_carry_the_tombstone_columns(pg_db):
     columns_by_table = _run_sync(url, lambda conn: {t.name: {c["name"] for c in inspect(conn).get_columns(t.name)} for t in tombstoned_tables()})
     for table in tombstoned_tables():
         assert columns_by_table[table.name] >= TOMBSTONE_COLUMNS, table.name
+        assert "deleted_at" not in columns_by_table[table.name], table.name
 
 
 def test_migrations_produce_the_model_schema(pg_db):

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class CompiledRule:
     policy: PolicyEntry
+    rule_index: int
     definition: RuleDefinition
     selected_key_ids: frozenset[str] | None
     selected_user_ids: frozenset[UUID] | None
@@ -53,6 +54,7 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
             workspace_id: tuple(
                 CompiledRule(
                     policy=policy,
+                    rule_index=rule_index,
                     definition=rule,
                     selected_key_ids=(frozenset(policy.definition.target.key_ids) if isinstance(policy.definition.target, SelectedKeys) else None),
                     selected_user_ids=(frozenset(policy.definition.target.user_ids) if isinstance(policy.definition.target, SelectedUsers) else None),
@@ -60,7 +62,7 @@ def compile_policies(policies: tuple[PolicyEntry, ...]) -> PolicyIndex:
                     capabilities=frozenset(rule.match.capabilities) if isinstance(rule.match, RequestMatch) else frozenset(),
                 )
                 for policy in entries
-                for rule in policy.definition.rules
+                for rule_index, rule in enumerate(policy.definition.rules)
             )
             for workspace_id, entries in grouped
         }

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from control_plane.deps import get_session
 from control_plane.models.common.wire import Envelope, PageEnvelope
+from control_plane.throttling import ThrottleMiddleware
 
 if TYPE_CHECKING:
     from control_plane.throttling import ThrottleRoute
@@ -43,6 +44,17 @@ def test_every_endpoint_declares_an_envelope():
     assert offenders == [], (
         f"Every endpoint responds {{'data': ...}}: annotate these with `-> Envelope[YourOut]` and return Envelope(data=...): {offenders}"
     )
+
+
+def test_event_ingestion_schema_is_a_discriminated_contract_list():
+    schema = make_app().openapi()
+    body = schema["paths"]["/api/v1/events"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+
+    assert body["type"] == "array"
+    assert body["maxItems"] == 1000
+    assert body["items"]["discriminator"]["propertyName"] == "status"
+    for reference in body["items"]["discriminator"]["mapping"].values():
+        assert reference.rsplit("/", 1)[1] in schema["components"]["schemas"]
 
 
 def test_every_endpoint_is_tagged_for_docs():
@@ -140,7 +152,10 @@ def test_every_endpoint_declares_one_throttle_group():
 
 def test_throttle_route_map_uses_mounted_api_paths():
     app = make_app()
-    routes = cast("tuple[ThrottleRoute, ...]", app.user_middleware[0].kwargs["routes"])
+    routes = cast(
+        "tuple[ThrottleRoute, ...]",
+        next(middleware.kwargs["routes"] for middleware in app.user_middleware if middleware.cls is ThrottleMiddleware),
+    )
     groups = [group for pattern, methods, group in routes if "POST" in methods and pattern.fullmatch("/api/v1/auth/cli/start")]
     assert groups == ["cli"]
 
@@ -247,6 +262,11 @@ def test_response_schemas_are_envelopes():
             if set(schema.get("properties", {})) not in ({"data"}, {"data", "page"}):
                 offenders.append(f"{method.upper()} {path}")
     assert offenders == []
+
+
+def test_only_delete_action_results_expose_deleted_at():
+    schemas = make_app().openapi()["components"]["schemas"]
+    assert {name for name, schema in schemas.items() if "deleted_at" in schema.get("properties", {})} == {"DeletedOut_UUID_", "DeletedOut_str_"}
 
 
 def test_paginated_operations_share_one_query_contract():

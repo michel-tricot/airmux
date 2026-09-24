@@ -38,7 +38,6 @@ def provider(provider_id: UUID, name: str) -> ProviderOut:
         params_closed=False,
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
     )
 
 
@@ -61,7 +60,6 @@ def model(provider_id: UUID, name: str) -> ModelOut:
         parameter_support={},
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
     )
 
 
@@ -81,7 +79,6 @@ def credential(provider_id: UUID, name: str, enabled: bool) -> ProviderCredentia
         fingerprint="test",
         created_at=NOW,
         updated_at=NOW,
-        deleted_at=None,
         scope="platform",
     )
 
@@ -326,7 +323,6 @@ def _quickstart(
             personal_for=None,
             created_at=NOW,
             updated_at=NOW,
-            deleted_at=None,
         ),
     )
     monkeypatch.setattr(auth, "_organization_management_key", lambda _client, _org_id: "control-token")
@@ -340,7 +336,6 @@ def _quickstart(
             name="Default",
             created_at=NOW,
             updated_at=NOW,
-            deleted_at=None,
         ),
     )
     monkeypatch.setattr(auth, "upsert_url_profile", lambda name, values: saved.update(name=name, values=values))

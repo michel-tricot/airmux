@@ -12,6 +12,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from airmux_runtime.observability import log_event
 from airmux_runtime.secrets import SecretNotFoundError, SecretStoreUnavailableError
 from contract import CredentialEntry
 
@@ -21,12 +22,14 @@ if TYPE_CHECKING:
 
     from airmux_runtime.secrets import Secret, SecretReader
     from contract import BundleV1
+    from data_plane.metrics import DataPlaneMetrics
 
 logger = logging.getLogger("data_plane")
 
 CACHE_TTL_S = 300.0
 NEGATIVE_TTL_S = 15.0
 RATE_LIMIT_COOLDOWN_S = 30.0
+CACHE_SWEEP_INTERVAL_S = 1.0
 
 type CredentialIndex = Mapping[tuple[UUID | None, str], tuple[CredentialEntry, ...]]
 
@@ -69,13 +72,21 @@ class CredentialResolver:
     it is a fact about infrastructure, and a store that is down must not look like a missing key.
     """
 
-    def __init__(self, store: SecretReader, ttl_s: float = CACHE_TTL_S, negative_ttl_s: float = NEGATIVE_TTL_S) -> None:
+    def __init__(
+        self,
+        store: SecretReader,
+        metrics: DataPlaneMetrics,
+        ttl_s: float = CACHE_TTL_S,
+        negative_ttl_s: float = NEGATIVE_TTL_S,
+    ) -> None:
         self.store = store
         self.ttl_s = ttl_s
         self.negative_ttl_s = negative_ttl_s
+        self.metrics = metrics
         self._values: dict[tuple[UUID, int], tuple[float, Secret | None]] = {}
         self._locks: dict[tuple[UUID, int], asyncio.Lock] = {}
         self._cooldowns: dict[tuple[UUID, int], float] = {}
+        self._next_sweep_at = 0.0
 
     def forget(self, entry: CredentialEntry) -> None:
         """Drop a cached value after upstream rejected it, so a key rotated out of band is refetched
@@ -89,6 +100,8 @@ class CredentialResolver:
     def available(self, entries: tuple[CredentialEntry, ...]) -> tuple[CredentialEntry, ...]:
         now = time.monotonic()
         self._prune(now)
+        if not self._cooldowns:
+            return entries
         available = tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
         if available or not entries:
             return available
@@ -109,28 +122,37 @@ class CredentialResolver:
         self._prune(now)
         cached = self._values.get(key)
         if cached is not None and cached[0] > now:
+            self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
             return cached[1]
         lock = self._locks.setdefault(key, asyncio.Lock())
         async with lock:
             cached = self._values.get(key)
             if cached is not None and cached[0] > time.monotonic():
+                self.metrics.observe_credential_cache("hit" if cached[1] is not None else "negative_hit")
                 return cached[1]
             return await self._load(key, entry)
 
     async def _load(self, key: tuple[UUID, int], entry: CredentialEntry) -> Secret | None:
+        started_at = time.monotonic()
         try:
             secret = await self.store.get(entry.ref)
         except SecretNotFoundError:
-            logger.warning("credential %s (%s) is in the bundle but has no value in the store", entry.ref.name, entry.ref.secret_id)
+            self.metrics.observe_credential_load("miss", "missing", started_at)
+            log_event(logger, logging.WARNING, "credential_missing", outcome="missing")
             self._values[key] = (time.monotonic() + self.negative_ttl_s, None)
             return None
         except SecretStoreUnavailableError:
+            self.metrics.observe_credential_load("backend_unavailable", "backend_unavailable", started_at)
             self._locks.pop(key, None)
             raise
+        self.metrics.observe_credential_load("miss", "success", started_at)
         self._values[key] = (time.monotonic() + self.ttl_s, secret)
         return secret
 
     def _prune(self, now: float) -> None:
+        if now < self._next_sweep_at:
+            return
+        self._next_sweep_at = now + CACHE_SWEEP_INTERVAL_S
         for key, (expires, _) in tuple(self._values.items()):
             if expires > now:
                 continue

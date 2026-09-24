@@ -6,10 +6,10 @@ import tomllib
 from pathlib import Path
 
 
-def test_contract_has_only_its_validation_dependency():
+def test_contract_has_only_validation_and_identity_dependencies():
     project = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8"))["project"]
 
-    assert project["dependencies"] == ["pydantic>=2"]
+    assert project["dependencies"] == ["pydantic>=2", "uuid-utils>=1.0,<2"]
 
 
 def test_runtime_and_data_plane_keep_the_database_driver_optional():

@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from functools import partial
+from typing import TYPE_CHECKING, Literal, Self
+from unittest.mock import Mock
 from uuid import UUID, uuid4
 
+import aiohttp
 import httpx
 import pytest
-import respx
+from aiohttp.abc import AbstractStreamWriter
+from aioresponses import aioresponses
 
 from airmux_runtime.secrets import Secret
 from contract import (
@@ -32,13 +37,19 @@ from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
+from data_plane.http_client import build_http_client
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.outbox import SqliteOutbox
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Mapping
+    from contextlib import AbstractAsyncContextManager
+    from types import TracebackType
 
     from starlette.testclient import TestClient
     from starlette.types import ASGIApp
+
+    from data_plane.config import HttpConfig
 
 
 class GatewayTransport(httpx.BaseTransport):
@@ -53,6 +64,44 @@ class GatewayTransport(httpx.BaseTransport):
             content=request.read(),
         )
         return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
+
+class _AiohttpProviderResponse:
+    def __init__(self, response: aiohttp.ClientResponse) -> None:
+        self.status = response.status
+        self._response = response
+
+    async def read(self) -> bytes:
+        return await self._response.read()
+
+    async def iter_any(self) -> AsyncIterator[bytes]:
+        async for chunk in self._response.content.iter_any():
+            yield chunk
+
+
+class AiohttpProviderClient:
+    def __init__(self, client: aiohttp.ClientSession) -> None:
+        self._client = client
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None) -> None:
+        await self._client.close()
+
+    def request(
+        self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None = None, stream: bool = False
+    ) -> AbstractAsyncContextManager[_AiohttpProviderResponse]:
+        return self._request(method, url, headers=headers, data=data)
+
+    @contextlib.asynccontextmanager
+    async def _request(self, method: str, url: str, *, headers: Mapping[str, str], data: bytes | None) -> AsyncIterator[_AiohttpProviderResponse]:
+        async with self._client.request(method, url, headers=headers, data=data, allow_redirects=False) as response:
+            yield _AiohttpProviderResponse(response)
+
+
+def _build_aiohttp_provider_client(config: HttpConfig) -> AiohttpProviderClient:
+    return AiohttpProviderClient(build_http_client(config))
 
 
 NOW = datetime.now(tz=UTC)
@@ -73,9 +122,9 @@ MODEL = ModelEntry(
     cache_write_price_per_mtok="1.25",
     context_window=128000,
     max_output_tokens=4096,
-    input_modalities=["text", "image", "pdf"],
-    output_modalities=["text"],
-    capabilities=["streaming", "tools", "reasoning", "structured_output"],
+    input_modalities=("text", "image", "pdf"),
+    output_modalities=("text",),
+    capabilities=("streaming", "tools", "reasoning", "structured_output"),
 )
 
 
@@ -94,7 +143,9 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
 def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE, user: UUID = USER):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token))
+    return token, KeyEntry(
+        key_id=str(key_id), request_source="inference_key", org_id=org, workspace_id=workspace, user_id=user, token_hash=token_hash(token)
+    )
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -102,9 +153,9 @@ def make_bundle(keys=(), catalog=None, org=ORG):
         bundle_id=uuid4(),
         org_id=org,
         issued_at=NOW,
-        keys=list(keys),
+        keys=tuple(keys),
         policies=(),
-        catalog=catalog or Catalog(providers=[], models=[]),
+        catalog=catalog or Catalog(providers=(), models=()),
     )
 
 
@@ -122,7 +173,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
     )
 
 
-def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+def make_outbox(tmp_path, http_client: aiohttp.ClientSession, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         SqliteOutboxConfig(
             control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token"),
@@ -130,6 +181,7 @@ def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: floa
             flush_interval_s=flush_interval_s,
         ),
         http_client=http_client,
+        metrics=DataPlaneMetrics(),
     )
 
 
@@ -142,22 +194,29 @@ def read_and_close_outbox(outbox: SqliteOutbox, limit: int = 10):
     return asyncio.run(read_and_close())
 
 
-def mock_control_plane() -> None:
-    respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest").mock(return_value=httpx.Response(503))
-    respx.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat").mock(return_value=httpx.Response(200))
-    respx.post(f"{CONTROL_PLANE_URL}/api/v1/events").mock(return_value=httpx.Response(503))
+def mock_control_plane(http_mock: aioresponses) -> None:
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/policy-state/sync", status=503, repeat=True)
+    http_mock.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest", status=503, repeat=True)
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat", status=200, repeat=True)
+    http_mock.post(f"{CONTROL_PLANE_URL}/api/v1/events", status=503, repeat=True)
 
 
 PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
 CTX = Ctx(
     request_id=uuid7(),
+    request_started_at=datetime.now(UTC),
+    attempt_started_at=datetime.now(UTC),
     model=MODEL,
     provider=PROVIDER,
     stream=True,
     org_id=ORG,
     workspace_id=WORKSPACE,
     key_id="k-dev",
+    request_source="inference_key",
+    user_id=ORG,
+    requested_model_id="gpt-test",
+    requested_capabilities=frozenset(),
     credential_id=uuid7(),
     credential_scope="workspace",
     bundle_id=uuid7(),
@@ -208,7 +267,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     file is test_config.py's job.
     """
     caller_token, entry = make_key()
-    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    catalog = Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=(PLATFORM_CREDENTIAL,))
     bundle = make_bundle(keys=[entry], catalog=catalog)
     write_cached_bundles(tmp_path, CachedBundles(bundles=[bundle]))
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, management_key="dp-token")
@@ -216,6 +275,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
         bundle=RemoteBundleConfig(control_plane=control_plane, cache_dir=tmp_path),
         events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", _build_aiohttp_provider_client)
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), api_key=caller_token)
 
@@ -231,6 +291,15 @@ def dp_app(booted: BootedApp) -> ASGIApp:
 
 
 @pytest.fixture
-async def http_client() -> AsyncIterator[httpx.AsyncClient]:
-    async with httpx.AsyncClient() as client:
+async def http_client() -> AsyncIterator[aiohttp.ClientSession]:
+    async with aiohttp.ClientSession() as client:
         yield client
+
+
+@pytest.fixture
+def http_mock(monkeypatch):
+    response = partial(aiohttp.ClientResponse, stream_writer=Mock(spec=AbstractStreamWriter, output_size=0))
+    monkeypatch.setattr("aioresponses.core.ClientResponse", response)
+    monkeypatch.setattr("data_plane.app.build_provider_http_client", _build_aiohttp_provider_client)
+    with aioresponses() as mocked:
+        yield mocked

@@ -172,4 +172,3 @@ class WorkspaceOut(RecordOut[Workspace]):
     slug: str
     created_at: datetime
     updated_at: datetime
-    deleted_at: datetime | None

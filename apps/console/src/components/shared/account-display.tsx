@@ -1,9 +1,8 @@
-import { Link } from 'wouter';
 import { Avatar, AvatarFallback, Badge } from '@/components/ui/elements';
-import { cn } from '@/lib/utils';
+import { TableLink } from '@/components/shared/table-link';
 
 export function AccountIdentity({ name, href }: { name: string; href?: string }) {
-  const className = cn('flex min-w-0 items-center gap-2', href && 'transition-colors hover:text-primary');
+  const className = 'flex min-w-0 items-center gap-2';
   const identity = (
     <>
       <Avatar aria-hidden="true" className="h-6 w-6 shrink-0">
@@ -15,9 +14,9 @@ export function AccountIdentity({ name, href }: { name: string; href?: string })
     </>
   );
   return href ? (
-    <Link href={href} className={className}>
+    <TableLink href={href} className={className}>
       {identity}
-    </Link>
+    </TableLink>
   ) : (
     <span className={className}>{identity}</span>
   );

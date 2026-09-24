@@ -1,6 +1,6 @@
 import {
   useListOrgEventsInfinite,
-  useListWorkspaceEventsInfinite,
+  useListWorkspaceEvents,
   useListActivityInfinite,
   useListDataPlanes,
   useListInstanceActivityInfinite,
@@ -20,11 +20,11 @@ export function useOrgEvents(orgId: string, params: ListOrgEventsParams, { enabl
 export function useWorkspaceEvents(
   orgId: string,
   workspaceRef: string,
-  params: ListWorkspaceEventsParams,
+  params: Pick<ListWorkspaceEventsParams, 'limit'>,
   { enabled = true }: EnabledQueryOptions = {},
 ) {
-  return useListWorkspaceEventsInfinite(orgId, workspaceRef, params, {
-    query: { enabled, refetchInterval: 3_000, ...paginatedQueryOptions, select: flattenPages },
+  return useListWorkspaceEvents(orgId, workspaceRef, params, {
+    query: { enabled, refetchInterval: 3_000, select: (page) => page.items },
   });
 }
 

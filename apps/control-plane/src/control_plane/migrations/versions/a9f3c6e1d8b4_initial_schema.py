@@ -109,7 +109,6 @@ def upgrade() -> None:
         "user",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("email", postgresql.CITEXT(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -128,7 +127,6 @@ def upgrade() -> None:
         "org",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("slug", postgresql.CITEXT(), nullable=False),
@@ -160,7 +158,6 @@ def upgrade() -> None:
         "provider",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("name", postgresql.CITEXT(), nullable=False),
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -176,15 +173,22 @@ def upgrade() -> None:
         "usage_event",
         sa.Column("event_id", sa.Uuid(), nullable=False),
         sa.Column("request_id", sa.Uuid(), nullable=False),
+        sa.Column("request_started_at", UTCDateTime(), nullable=False),
+        sa.Column("attempt_started_at", UTCDateTime(), nullable=True),
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("request_source", sa.String(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("requested_model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("requested_capabilities", sa.ARRAY(sa.String()), nullable=False),
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bundle_id", sa.Uuid(), nullable=False),
         sa.Column("input_tokens", sa.Integer(), nullable=False),
         sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("token_usage_source", sa.String(), nullable=False),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("cost_usd", sa.Numeric(precision=28, scale=12), nullable=False),
         sa.Column("cost_input_usd", sa.Numeric(precision=28, scale=12), nullable=False),
@@ -201,6 +205,12 @@ def upgrade() -> None:
     op.create_index("usage_event_org_occurred_event_idx", "usage_event", ["org_id", "occurred_at", "event_id"], unique=False)
     op.create_index("usage_event_org_event_idx", "usage_event", ["org_id", "event_id"], unique=False)
     op.create_index("usage_event_org_workspace_event_idx", "usage_event", ["org_id", "workspace_id", "event_id"], unique=False)
+    op.create_index("usage_event_org_request_idx", "usage_event", ["org_id", "request_id"], unique=False)
+    op.create_index("usage_event_org_status_request_idx", "usage_event", ["org_id", "status", "request_id"], unique=False)
+    op.create_index("usage_event_org_request_started_idx", "usage_event", ["org_id", "request_started_at", "request_id"], unique=False)
+    op.create_index(
+        "usage_event_org_workspace_request_started_idx", "usage_event", ["org_id", "workspace_id", "request_started_at", "request_id"], unique=False
+    )
     op.create_index(
         "usage_event_org_workspace_occurred_event_idx",
         "usage_event",
@@ -211,7 +221,6 @@ def upgrade() -> None:
         "auth_identity",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -228,7 +237,6 @@ def upgrade() -> None:
         "auth_session",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -260,7 +268,6 @@ def upgrade() -> None:
         "model",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sa.Uuid(), nullable=False),
@@ -287,7 +294,6 @@ def upgrade() -> None:
         "org_membership",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("role", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -307,7 +313,6 @@ def upgrade() -> None:
         "cli_auth_request",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_code_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("poll_secret_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -334,7 +339,6 @@ def upgrade() -> None:
         "workspace",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -351,7 +355,6 @@ def upgrade() -> None:
         "workspace_membership",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
@@ -373,7 +376,6 @@ def upgrade() -> None:
         "management_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=True),
@@ -397,7 +399,6 @@ def upgrade() -> None:
         "inference_key",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
@@ -425,7 +426,6 @@ def upgrade() -> None:
         "provider_credential",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=True),
         sa.Column("workspace_id", sa.Uuid(), nullable=True),
@@ -465,7 +465,6 @@ def upgrade() -> None:
         "org_invitation",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("email", postgresql.CITEXT(), nullable=False),
@@ -535,7 +534,6 @@ def upgrade() -> None:
         "playground_session",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
@@ -561,7 +559,6 @@ def upgrade() -> None:
         "policy",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
@@ -635,6 +632,10 @@ def downgrade() -> None:
     op.drop_table("auth_identity")
     op.drop_index("usage_event_org_workspace_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_workspace_event_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_request_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_status_request_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_workspace_request_started_idx", table_name="usage_event")
+    op.drop_index("usage_event_org_request_started_idx", table_name="usage_event")
     op.drop_index("usage_event_org_occurred_event_idx", table_name="usage_event")
     op.drop_index("usage_event_org_event_idx", table_name="usage_event")
     op.drop_table("usage_event")

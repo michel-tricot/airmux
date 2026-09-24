@@ -69,11 +69,14 @@ Both cross the same canonical middle.
 | `POST /inf/v1/responses` | OpenAI Responses surface |
 | `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
-| `GET /readyz` | `200` when this worker holds a bundle snapshot, otherwise `503` |
+| `GET /readyz` | `200` when this worker holds a bundle snapshot and can admit metering work, otherwise `503` |
+| `GET /metrics` | Prometheus metrics on a standalone plane's internal listener |
 
-The health routes require no authentication. Readiness means only that a bundle has been admitted.
-It does not prove that the control plane, secret store, event exporter, or any upstream provider is
-currently reachable.
+The health routes require no authentication. Readiness means that a bundle has been admitted and the
+metering writer can accept work. It does not prove that the control plane, secret store, event exporter,
+or any upstream provider is currently reachable. Rejecting a newer manifest does not remove an accepted snapshot from service;
+the rejection is reported through metrics and structured logs instead. Restrict a directly exposed
+standalone plane's `/metrics` endpoint to the monitoring network.
 
 ### Authentication
 
@@ -315,8 +318,8 @@ with the required SQLite and atomic-rename semantics.
 
 ## Configuration
 
-`Config` is frozen and rejects unknown top-level fields. It contains a discriminated bundle config,
-a secret-store config, a discriminated event-outbox config, and the CLI-derived development flag.
+`Config` is frozen and rejects unknown top-level fields. It contains discriminated bundle, event-outbox,
+and budget-backend configs, a secret-store config, and the CLI-derived development flag.
 
 There is no global control-plane setting. Each component that uses the control plane owns a complete
 `ControlPlaneLink` containing its URL and management key. The bundle poller and event exporter may use
@@ -339,6 +342,11 @@ data_plane:
     kind: sqlite
     control_plane: *control_plane
     flush_interval_s: 5
+
+  budget:
+    kind: control_plane
+    control_plane: *control_plane
+    poll_interval_s: 5
 ```
 
 The anchor is YAML reuse only. Both nested configs validate their own complete link, and no equality
@@ -393,6 +401,12 @@ discover `.env` files or mutate the process environment.
 
 Provider credential values are never in the bundle. The bundle is org-sensitive because it contains
 live inference-key hashes, but reading it does not reveal the original keys.
+
+Bundle validation rejects unknown fields and applies the shared catalog identifier and token-limit
+constraints. Issue times and key expiries must include a timezone, so authentication can compare
+expiries with its UTC clock. In memory, bundle collections are tuples and parameter maps are copied
+into read-only mappings, including compiled provider aliases. Frozen models alone would still allow
+requests to mutate nested lists or dictionaries. JSON continues to use arrays and objects.
 
 ### Remote source
 
@@ -782,7 +796,7 @@ These are properties of the current implementation, not promises that another la
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
 - OpenAI egress does not replay canonical reasoning parts in prior messages
-- `readyz` reports bundle presence only
+- `readyz` reports accepted bundle presence and local worker availability only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk
 - SQLite durability and leasing coordinate processes on one compatible filesystem, not a distributed cluster
 
@@ -806,3 +820,27 @@ Before merging a data-plane change, verify:
 - Component configs contain their own required dependencies
 - Discovery needs no registry edit and rejects discriminator collisions
 - Tests assert behavior, and a real running request proves the change
+
+## Budget state
+
+The control-plane budget backend fetches current budget rules and exhaustion state through
+`/api/v1/policy-state/sync` on its own polling interval and connection. It runs independently from bundle polling
+and event export. It samples the organization IDs in the currently admitted bundle set, so polling begins without
+waiting for inference traffic. A `none` budget backend disables state polling and always accepts requests.
+`BudgetStateHolder` compiles exhausted-bucket lookups off the request path and replaces a
+per-organization snapshot at once. The existing policy index matches requests, then budget admission performs
+indexed memory lookups before each upstream attempt.
+`evaluate()` remains pure; no database driver or control-plane import enters the data plane.
+
+Missing, mismatched, or expired state allows the request because enforcement is best effort. Each fallback increments
+`airmux_data_plane_budget_state_fallbacks_total` with its reason. Usable state is enforced independently for every
+matching rule, so one unavailable rule does not disable another exhausted rule. Failed or incomplete refreshes leave
+the last complete snapshot. Exhaustion returns `429 budget_exhausted` with a reset-based `Retry-After`. Streams already
+in flight finish.
+
+No local spending delta is maintained. Overspend includes usage awaiting export, the next state poll, and
+in-flight attempts. There is no strict overspend bound during outages. All deployments contribute to the same history
+when they use the control-plane budget backend.
+
+The metric `airmux_data_plane_budget_state_computed_timestamp_seconds` exposes the calculation timestamp of
+the last accepted budget snapshot. It describes state age, not completeness of exporter delivery.

@@ -23,6 +23,10 @@ data_plane:
     control_plane: *control_plane
     cache_dir: /state/data-plane
     flush_interval_s: 5
+  budget:
+    kind: control_plane
+    control_plane: *control_plane
+    poll_interval_s: 5
   secrets:
     kind: file
     path: /state/secrets

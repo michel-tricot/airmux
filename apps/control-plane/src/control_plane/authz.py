@@ -38,6 +38,7 @@ class Permission(StrEnum):
     policies_read = "policies.read"
     policies_manage = "policies.manage"
     playground_execute = "playground.execute"
+    policy_state_sync = "policy-state.sync"
     bundles_read = "bundles.read"
     usage_read = "usage.read"
     usage_ingest = "usage.ingest"
@@ -90,6 +91,7 @@ DATA_PLANE_PERMISSIONS = frozenset(
     {
         Permission.bundles_read,
         Permission.usage_ingest,
+        Permission.policy_state_sync,
         Permission.data_planes_heartbeat,
     }
 )

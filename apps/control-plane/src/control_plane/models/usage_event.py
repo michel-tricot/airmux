@@ -6,9 +6,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import Column, Index, Numeric, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, col, select
 
-from contract import CredentialScope, UsageStatus, UsdAmount
+from contract import CredentialScope, RequestSource, TokenUsageSource, UsageStatus, UsdAmount
+from contract.model_types import RequestCapability
 from contract.money import ZERO_USD
 from control_plane.models.common import PageQuery, PageSlice, keyset_page
 from control_plane.models.common.base import Record
@@ -22,19 +24,30 @@ class UsageEvent(Record, table=True):
         Index("usage_event_org_workspace_occurred_event_idx", "org_id", "workspace_id", "occurred_at", "event_id"),
         Index("usage_event_org_event_idx", "org_id", "event_id"),
         Index("usage_event_org_workspace_event_idx", "org_id", "workspace_id", "event_id"),
+        Index("usage_event_org_request_idx", "org_id", "request_id"),
+        Index("usage_event_org_status_request_idx", "org_id", "status", "request_id"),
+        Index("usage_event_org_request_started_idx", "org_id", "request_started_at", "request_id"),
+        Index("usage_event_org_workspace_request_started_idx", "org_id", "workspace_id", "request_started_at", "request_id"),
     )
 
     event_id: UUID = Field(primary_key=True)
     request_id: UUID
+    request_started_at: datetime = Field(sa_type=UTCDateTime)
+    attempt_started_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
     occurred_at: datetime = Field(sa_type=UTCDateTime)
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource = Field(sa_type=String)
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability] = Field(sa_column=Column(ARRAY(String), nullable=False))
     model_id: str
     provider_id: str
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    token_usage_source: TokenUsageSource = Field(sa_type=String)
     max_output_tokens: int | None = None
     cost_usd: UsdAmount = Field(sa_column=Column(Numeric(28, 12), nullable=False))
     cost_input_usd: UsdAmount = Field(default=ZERO_USD, sa_column=Column(Numeric(28, 12), nullable=False))
@@ -57,26 +70,31 @@ class UsageEvent(Record, table=True):
         statement = select(cls).where(cls.org_id == org_id)
         if workspace_id is not None:
             statement = statement.where(cls.workspace_id == workspace_id)
-        return await keyset_page(
-            statement,
-            page,
-            col(cls.event_id),
-            UUID,
-        )
+        return await keyset_page(statement, page, col(cls.event_id), UUID)
 
 
 class UsageEventOut(RecordOut[UsageEvent]):
     event_id: UUID
     request_id: UUID
+    request_started_at: datetime
+    attempt_started_at: datetime | None
     occurred_at: datetime
     org_id: UUID
     workspace_id: UUID
     key_id: str
+    request_source: RequestSource
+    user_id: UUID
+    requested_model_id: str
+    requested_capabilities: list[RequestCapability]
     model_id: str
     provider_id: str
     bundle_id: UUID
     input_tokens: int
     output_tokens: int
+    token_usage_source: TokenUsageSource = Field(
+        description="Token-count provenance: provider, estimated (including partial provider counts), or not_applicable for denials; "
+        "independent of cost estimates"
+    )
     max_output_tokens: int | None
     cost_usd: UsdAmount
     cost_input_usd: UsdAmount
@@ -93,3 +111,4 @@ class UsageEventOut(RecordOut[UsageEvent]):
 class EventsIngestedOut(BaseModel):
     received: int
     ingested: int
+    rejected: int

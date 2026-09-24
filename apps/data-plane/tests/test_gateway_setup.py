@@ -14,6 +14,7 @@ from cli.gateway import gateway_app as app
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
 from data_plane.config import load_config
+from data_plane.metrics import DataPlaneMetrics
 from data_plane.setup import describe_configuration, initialize
 
 TAXONOMY = {
@@ -34,7 +35,7 @@ def test_external_taxonomy_reloads_and_keeps_last_good_snapshot(tmp_path, monkey
     bundle.write_text("keys: [{token: '${env:AIRMUX_INFERENCE_KEY}', user_id: 00000000-0000-0000-0000-000000000001}]\ntaxonomy: taxonomy.yml\n")
     monkeypatch.setenv("AIRMUX_INFERENCE_KEY", "sk-inf-private")
     monkeypatch.chdir(tmp_path.parent)
-    holder = BundleHolder()
+    holder = BundleHolder(DataPlaneMetrics())
     source = LocalBundleSource(LocalBundleConfig(kind="local", path=bundle), holder)
     source.load()
     initial = holder.current.snapshots[LOCAL_ORG]

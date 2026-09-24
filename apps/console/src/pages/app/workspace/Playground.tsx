@@ -110,7 +110,7 @@ function MessageBubble({ message }: { message: PlaygroundMessage }) {
                 <>
                   <span>{message.interaction.model}</span>
                   <span>{message.interaction.inputTokens + message.interaction.outputTokens} total</span>
-                  <span>Est. {formatUsd(message.interaction.estimatedCostPicoUsd)}</span>
+                  <span>{formatUsd(message.interaction.estimatedCostPicoUsd)}</span>
                   <span>{formatDuration(message.interaction.durationMs)}</span>
                   <Button
                     variant="ghost"

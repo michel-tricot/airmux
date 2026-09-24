@@ -89,30 +89,31 @@ def test_policy_save_serializes_competing_writes_for_the_last_slot(policy_worksp
     asyncio.run(compete())
 
 
-def test_policy_save_rejects_an_unknown_model(policy_workspace):
+def test_policy_save_preserves_symbolic_catalog_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
-    invalid_definition = definition(
+    symbolic_definition = definition(
         RuleDefinition.model_validate({"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}})
     )
 
     async def save():
         async with standalone_transaction(cp.db_url):
             await set_actor("root")
-            await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
+            await Policy(org_id=org_id, workspace_id=workspace_id, name="Symbolic", definition=symbolic_definition).save()
 
-    with pytest.raises(InvalidPolicyError):
-        asyncio.run(save())
+    asyncio.run(save())
 
     async def persisted():
         async with standalone_transaction(cp.db_url):
             return await Policy.for_workspace(workspace_id)
 
-    assert asyncio.run(persisted()) == []
+    policies = asyncio.run(persisted())
+    assert len(policies) == 1
+    assert policies[0].definition == symbolic_definition
 
 
-def test_policy_save_checks_capacity_before_catalog_references(policy_workspace):
+def test_policy_save_checks_capacity_with_symbolic_catalog_references(policy_workspace):
     cp, org_id, workspace_id = policy_workspace
-    invalid_definition = definition(
+    symbolic_definition = definition(
         RuleDefinition.model_validate({"match": {"kind": "request", "models": ["unknown"]}, "action": {"kind": "models", "names": ["unknown"]}})
     )
 
@@ -125,6 +126,6 @@ def test_policy_save_checks_capacity_before_catalog_references(policy_workspace)
             for position in range(1, MAX_WORKSPACE_RULES - 1):
                 await Policy(org_id=org_id, workspace_id=workspace_id, name=f"existing-{position}", definition=valid_definition).save()
             with pytest.raises(InvalidPolicyError, match=f"at most {MAX_WORKSPACE_RULES} active policy rules"):
-                await Policy(org_id=org_id, workspace_id=workspace_id, name="Invalid", definition=invalid_definition).save()
+                await Policy(org_id=org_id, workspace_id=workspace_id, name="Symbolic", definition=symbolic_definition).save()
 
     asyncio.run(save())
