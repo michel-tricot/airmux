@@ -1,6 +1,6 @@
 # Public release security audit
 
-Reviewed base commit: `4e57e4b64c0b53af9f02f2d313ba9d046250bdfc` on 2026-09-23
+Reviewed base commit: `123a31b336da086212f445b176cefc3f44c74b33` on 2026-09-23
 
 This review covers the all-in-one and split full-platform deployments, the native and container gateway-only deployments, and the build and release path. It is a point-in-time assessment, not a claim that the project has no other vulnerabilities. No production system or paid provider was tested.
 
@@ -77,6 +77,8 @@ Provider base URLs are set through instance catalog management or local operator
 
 The Compose files default to a development Postgres password while leaving the database off the host port. Production instructions require an operator-set password before database initialization. The audit did not treat this as a remotely reachable default exploit, but public deployment documentation must keep the setup requirement prominent. The packaged proxy provides CSP, response cache controls, and a request-body ceiling; direct processes and replacement proxies need equivalent edge controls. The runtime image uses an unprivileged user, while its base image tags are mutable until the resulting candidate is built and verified by digest.
 
+The full-platform quickstart now binds Compose to loopback while the first owner claims the instance. The general Compose file still publishes its port on all host interfaces by default; operators using it outside the quickstart must restrict access before the owner claim or set an explicit bind address.
+
 ## Checks performed
 
 - Python data-plane, runtime, and contract suite on the reviewed base: 1,091 passed, one skipped
@@ -84,7 +86,7 @@ The Compose files default to a development Postgres password while leaving the d
 - Complete control-plane suite on the reviewed base, including Postgres integration: 522 passed
 - CLI and model-audit suites on the reviewed base: 317 passed
 - Console and API client unit suites on the reviewed base: 257 passed; workspace TypeScript typecheck passed
-- Documentation and CI release-policy checks on the reviewed base: 193 passed
+- Documentation and CI release-policy checks on the reviewed base: 198 passed
 - Python typecheck: `ty check .` passed on the reviewed base
 - `bun audit` on the reviewed base: no known vulnerabilities found
 - Locked `pip-audit --strict --disable-pip --no-deps` on the reviewed base: no known vulnerabilities found
@@ -92,5 +94,6 @@ The Compose files default to a development Postgres password while leaving the d
 - Temporary native state creation under `022`: directory `0755`, cache and outbox files `0644`
 - Read-only live GitHub policy diff did not confirm the requested CodeQL, secret-scanning, and push-protection settings; plan or repository visibility may affect the API result
 - Selected local full-stack account, invitation, offboarding, outage, and budget scenarios on the reviewed base: 11 passed
+- `docker compose config` confirmed the quickstart override publishes port 8080 only on `127.0.0.1`
 
 Dependency advisories and tests cannot establish absence of application vulnerabilities. The remaining release decisions and untested environments above stay open.
