@@ -178,5 +178,4 @@ class PolicyEntry(_PolicyModel):
     id: UUID
     workspace_id: UUID
     name: PolicyName
-    priority: int = Field(ge=0, le=10000)
     definition: PolicyDefinition

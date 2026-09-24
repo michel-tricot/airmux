@@ -30,7 +30,6 @@ def test_workspace_policy_crud_validation_and_isolation(tmp_path):
         body = {
             "name": "Team credentials only",
             "enabled": True,
-            "priority": 100,
             "definition": policy_definition(),
         }
         created = client.post(path, headers=headers, json=body)
@@ -80,42 +79,8 @@ def test_workspace_policy_permissions(tmp_path, role):
         assert client.get(path, headers=session_headers).status_code == 200
         expected = 200 if role == "admin" else 403
         assert client.post(path, headers=session_headers, json={"name": "Second", "definition": definition}).status_code == expected
-        policy_ids = [policy["id"] for policy in client.get(path, headers=session_headers).json()["data"]]
-        assert client.put(f"{path}/order", headers=session_headers, json={"policy_ids": policy_ids}).status_code == expected
         assert client.patch(f"{path}/{created['id']}", headers=session_headers, json={"enabled": False}).status_code == expected
         assert client.delete(f"{path}/{created['id']}", headers=session_headers).status_code == expected
-
-
-def test_workspace_policy_order_is_replaced_atomically(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as client:
-        org = make_org(client, cp.headers(), "policies")
-        headers = cp.headers(org)
-        workspace = make_workspace(client, headers, "production")
-        base = f"/api/v1/organizations/{org}/workspaces/{workspace}"
-        path = f"{base}/policies"
-        definition = policy_definition()
-        policies = [
-            client.post(path, headers=headers, json={"name": name, "priority": priority, "definition": definition}).json()["data"]
-            for name, priority in (("First", 10), ("Second", 20), ("Third", 30))
-        ]
-        ordered_ids = [policy["id"] for policy in reversed(policies)]
-        bundle_before = wait_for_publication(client, org, headers)
-
-        reordered = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids})
-
-        assert reordered.status_code == 200, reordered.text
-        assert [policy["id"] for policy in reordered.json()["data"]] == ordered_ids
-        assert [policy["priority"] for policy in reordered.json()["data"]] == [0, 1, 2]
-        assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
-        bundle = BundleV1.model_validate(wait_for_publication(client, org, headers, bundle_before["bundle_id"]))
-        assert {str(policy.id): policy.priority for policy in bundle.policies} == dict(zip(ordered_ids, range(3), strict=True))
-
-        incomplete = client.put(f"{path}/order", headers=headers, json={"policy_ids": ordered_ids[:-1]})
-        assert incomplete.status_code == 422
-        duplicate = client.put(f"{path}/order", headers=headers, json={"policy_ids": [ordered_ids[0], ordered_ids[0], ordered_ids[2]]})
-        assert duplicate.status_code == 422
-        assert [policy["id"] for policy in client.get(path, headers=headers).json()["data"]] == ordered_ids
 
 
 def test_policy_rejects_multiple_fallback_rules(tmp_path):

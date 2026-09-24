@@ -265,7 +265,6 @@
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policy-users",
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies",
                       "POST /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies",
-                      "PUT /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/order",
                       "PATCH /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
                       "DELETE /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}",
                       "GET /api/v1/organizations/{org_id}/workspaces/{workspace_ref}/policies/{policy_id}/status"

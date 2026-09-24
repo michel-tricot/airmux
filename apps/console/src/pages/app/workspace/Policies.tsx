@@ -66,8 +66,6 @@ function PoliciesContent({ orgId, workspaceRef }: { orgId: string; workspaceRef:
         onBudgetStatus={authorization.can(policyAccess.status) ? setBudgetPolicy : undefined}
         canManage={canManage}
         editorReady={editorReady}
-        isReordering={policyMutations.reorder.isPending}
-        onReorder={(policyIds) => policyMutations.reorder.mutateAsync({ orgId, workspaceRef, data: { policy_ids: policyIds } })}
         onEdit={editPolicy}
         onDelete={(policy) => policyMutations.remove.mutateAsync({ orgId, workspaceRef, policyId: policy.id })}
         deletePending={policyMutations.remove.isPending}

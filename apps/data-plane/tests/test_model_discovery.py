@@ -123,7 +123,6 @@ def discovery_bundle(action, *, match=None, target=None, workspace=WORKSPACE, cr
         id=uuid7(),
         workspace_id=workspace,
         name="discovery",
-        priority=100,
         definition=PolicyDefinition.model_validate({"target": target or {"kind": "workspace"}, "rules": [rule]}),
     )
     bundle = make_bundle(keys=[key], catalog=Catalog(providers=(PROVIDER,), models=(MODEL,), credentials=tuple(credentials)))

@@ -6,11 +6,11 @@ set of inference keys in that workspace. Disabled policies are stored but exclud
 
 ## Contract and execution
 
-Each policy has a name, priority, target, and an unordered nonempty collection of rules. Each rule has
+Each policy has a name, target, and an unordered nonempty collection of rules. Each rule has
 a typed request match and one typed action. Rules are inline values with no identity or lifecycle outside their policy. They compose within and across policies:
-every matching restriction must pass. Lower policy priorities run first, and policy UUID breaks ties.
-Priority cannot override a restriction. A policy may contain at most one fallback rule, and the
-first matching policy with one supplies the ordered backup list.
+every matching restriction must pass. Policies are traversed by UUID for deterministic evaluation.
+A policy may contain at most one fallback rule, and the first matching policy with one supplies the
+ordered backup list.
 
 The control plane validates request matches and catalog names when saving. Its existing transaction
 publication mechanism includes policies in the organization's bundle. The data plane compiles
@@ -113,7 +113,6 @@ create, patch, and delete. Successful responses use the standard envelope. Creat
 {
   "name": "Production fallback",
   "enabled": true,
-  "priority": 100,
   "definition": {
     "target": { "kind": "workspace" },
     "rules": [

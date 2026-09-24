@@ -564,14 +564,12 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(length=200), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False),
-        sa.Column("priority", sa.Integer(), nullable=False),
         sa.Column("definition", sa.JSON(), nullable=False),
         sa.ForeignKeyConstraint(["org_id"], ["org.id"]),
         sa.ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
-        sa.CheckConstraint("priority >= 0 AND priority <= 10000", name="policy_priority_valid"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("policy_workspace_priority_id_idx", "policy", ["workspace_id", "priority", "id"], unique=False)
+    op.create_index("policy_workspace_id_idx", "policy", ["workspace_id", "id"], unique=False)
     op.create_index(
         "policy_active_workspace_id_idx",
         "policy",
@@ -610,7 +608,7 @@ def downgrade() -> None:
     op.drop_table("insecure_vault_secret")
     op.drop_index("policy_active_org_id_idx", table_name="policy")
     op.drop_index("policy_active_workspace_id_idx", table_name="policy")
-    op.drop_index("policy_workspace_priority_id_idx", table_name="policy")
+    op.drop_index("policy_workspace_id_idx", table_name="policy")
     op.drop_table("policy")
     op.drop_table("playground_session")
     op.drop_table("bundle_state")

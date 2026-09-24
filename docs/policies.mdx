@@ -10,9 +10,10 @@ Policies control which requests a workspace accepts, which models and credential
 - Every matching restriction must pass
 - Rules within a policy are unordered
 - All matching policies compose
-- Lower priority numbers are evaluated first
-- The first matching fallback policy supplies the fallback plan
+- Policies are traversed by ID for deterministic evaluation
+- The first matching fallback policy in that order supplies the fallback plan
 - Exact duplicate rules are invalid
+- Editing one policy cannot change another policy
 
 Routing changes take effect after gateways adopt the updated workspace bundle. Budget state refreshes separately. See the [budget tutorial](/docs/guides/budgets) for spending and status checks.
 
@@ -175,7 +176,6 @@ Save this as `policy.json`:
 {
   "name": "Production output limit",
   "enabled": true,
-  "priority": 10,
   "definition": {
     "target": {"kind": "workspace"},
     "rules": [
