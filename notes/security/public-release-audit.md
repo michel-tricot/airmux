@@ -1,6 +1,6 @@
 # Public release security audit
 
-Reviewed commit: `7dc9bb7a1830eb8cfec7beed84209f7c03973e20` on 2026-09-23
+Reviewed base commit: `4e57e4b64c0b53af9f02f2d313ba9d046250bdfc` on 2026-09-23
 
 This review covers the all-in-one and split full-platform deployments, the native and container gateway-only deployments, and the build and release path. It is a point-in-time assessment, not a claim that the project has no other vulnerabilities. No production system or paid provider was tested.
 
@@ -50,7 +50,7 @@ Do not publish yet. The owner claim window, budget enforcement, and stale-key be
 
 ### Payload and state limits
 
-The packaged Nginx proxy sets a 32 MiB client-body limit, but standalone `complete()` reads `request.body()` without a limit. A 33 MiB invalid JSON request sent to an isolated running gateway returned a normal `400` parse error and left the process alive, showing that the direct request reached full buffering. Buffered provider responses use `response.content`; streaming error responses use `aread()`; SSE framing retains incomplete lines and accumulated content without a byte ceiling. An attacker needs an inference key for request-body abuse, while a faulty or attacker-controlled upstream can trigger the response path. The separate [#339](https://github.com/michel-tricot/airmux/issues/339) requires bounded real-request proof.
+The packaged Nginx proxy sets a 32 MiB client-body limit, but standalone `complete()` reads `request.body()` without a limit. A 33 MiB invalid JSON request sent to an isolated running gateway returned a normal `400` parse error and left the process alive, showing that the direct request reached full buffering. The current PyReqwest wrapper reads complete buffered responses and streaming error responses without a byte ceiling; SSE framing also retains incomplete lines and accumulated content without a ceiling. An attacker needs an inference key for request-body abuse, while a faulty or attacker-controlled upstream can trigger the response path. The separate [#339](https://github.com/michel-tricot/airmux/issues/339) requires bounded real-request proof.
 
 Under a `022` umask, a temporary native gateway state directory was created as `0755`; `instance_id`, `bundles.json`, and `events.db` were created as `0644`. A local user with access to the host can read bundle metadata and usage records. The packaged image initializes `/state/data-plane` privately, but native paths and user-provided mounts do not inherit that protection. [#340](https://github.com/michel-tricot/airmux/issues/340) requires mode tests under an unsafe umask and an existing mount.
 
@@ -79,18 +79,18 @@ The Compose files default to a development Postgres password while leaving the d
 
 ## Checks performed
 
-- Python data-plane, runtime, and contract suite: 851 passed in the sandbox; four localhost-listener failures were rerun with local network permission and passed
-- Selected real gateway acceptance suite with local stub providers: 189 passed
-- Complete Postgres control-plane integration suite: 388 passed
-- Remaining control-plane unit, CLI, and model-audit suite: 448 passed
-- Console unit suite: 243 passed; workspace TypeScript typecheck passed
-- Documentation and release-policy checks: 171 passed
-- Python typecheck: `ty check .` passed
-- `bun audit`: no known vulnerabilities found
-- Locked `pip-audit --strict --disable-pip --no-deps`: no known vulnerabilities found
-- Isolated real gateway request: 33 MiB invalid JSON reached parsing and returned `400`
+- Python data-plane, runtime, and contract suite on the reviewed base: 1,091 passed, one skipped
+- Selected real gateway acceptance suite on the reviewed base with local stub providers: 210 passed across basic, protocol, failure, and runtime scenarios
+- Complete control-plane suite on the reviewed base, including Postgres integration: 522 passed
+- CLI and model-audit suites on the reviewed base: 317 passed
+- Console and API client unit suites on the reviewed base: 257 passed; workspace TypeScript typecheck passed
+- Documentation and CI release-policy checks on the reviewed base: 193 passed
+- Python typecheck: `ty check .` passed on the reviewed base
+- `bun audit` on the reviewed base: no known vulnerabilities found
+- Locked `pip-audit --strict --disable-pip --no-deps` on the reviewed base: no known vulnerabilities found
+- Isolated real gateway request on the reviewed base: 33 MiB invalid JSON reached parsing and returned `400`; the process remained ready
 - Temporary native state creation under `022`: directory `0755`, cache and outbox files `0644`
 - Read-only live GitHub policy diff did not confirm the requested CodeQL, secret-scanning, and push-protection settings; plan or repository visibility may affect the API result
-- Selected local full-stack account, invitation, offboarding, outage, and budget scenarios: 11 passed
+- Selected local full-stack account, invitation, offboarding, outage, and budget scenarios on the reviewed base: 11 passed
 
 Dependency advisories and tests cannot establish absence of application vulnerabilities. The remaining release decisions and untested environments above stay open.
