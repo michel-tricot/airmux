@@ -17,7 +17,7 @@ jobs:
   prepare:
     if: github.repository == 'michel-tricot/airmux' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
@@ -69,7 +69,7 @@ jobs:
         with:
           script: |
             const required = new Map([['ci.yml', 'required'], ['security.yml', 'dependency-security']]);
-            const deadline = Date.now() + 30 * 60 * 1000;
+            const deadline = Date.now() + 20 * 60 * 1000;
             for (const [filename, check] of required) {
               const {data: workflow} = await github.rest.actions.getWorkflow({...context.repo, workflow_id: filename});
               if (workflow.path !== `.github/workflows/${filename}` || workflow.state !== 'active') {
@@ -82,7 +82,7 @@ jobs:
                   head_sha: process.env.RELEASE_SHA, per_page: 1
                 });
                 run = data.workflow_runs[0];
-                if (Date.now() >= deadline) throw new Error(`${filename} did not finish within 30 minutes`);
+                if (Date.now() >= deadline) throw new Error(`${filename} did not finish within 20 minutes`);
                 if (!run || run.status !== 'completed') await new Promise(resolve => setTimeout(resolve, 15000));
               }
               if (run.head_sha !== process.env.RELEASE_SHA || run.event !== 'push' || run.head_branch !== 'main' ||
