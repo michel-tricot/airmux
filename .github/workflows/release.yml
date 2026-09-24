@@ -257,7 +257,7 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           candidate="$(cat image)"
           [[ "$candidate" =~ ^ghcr\.io/michel-tricot/airmux@sha256:[0-9a-f]{64}$ ]]
-          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" "$candidate"
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:$VERSION" --tag "$IMAGE:latest" "$candidate"
           digest="$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "image=$IMAGE@$digest" >> "$GITHUB_OUTPUT"
@@ -324,10 +324,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           IMAGE: ${{ needs.publish.outputs.image }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           docker pull "$IMAGE"
           test "$(docker run --rm --entrypoint airmux "$IMAGE" --version)" = "airmux $VERSION"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$VERSION"
+          test "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$RELEASE_SHA"
+          docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' | jq -e --arg digest "${IMAGE##*@}" '.digest == $digest'
+          latest_digest="$(docker buildx imagetools inspect "ghcr.io/michel-tricot/airmux:latest" --format '{{json .Manifest}}' | jq -r .digest)"
+          test "$latest_digest" = "${IMAGE##*@}"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
   announce:

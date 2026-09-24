@@ -45,6 +45,11 @@ RUN bun install --frozen-lockfile
 RUN bun run --filter '@workspace/gateway-console' build
 
 FROM python:3.13-slim-bookworm AS image
+ARG AIRMUX_VERSION
+ARG AIRMUX_REVISION
+LABEL org.opencontainers.image.source="https://github.com/michel-tricot/airmux" \
+    org.opencontainers.image.version="$AIRMUX_VERSION" \
+    org.opencontainers.image.revision="$AIRMUX_REVISION"
 RUN groupadd --system --gid 10001 airmux && useradd --system --uid 10001 --gid airmux --home-dir /state --shell /usr/sbin/nologin airmux \
     && install -d -m 0700 -o airmux -g airmux /state /state/runtime /state/secrets /state/data-plane \
     && apt-get update && apt-get install -y --no-install-recommends nginx gettext-base tini \
